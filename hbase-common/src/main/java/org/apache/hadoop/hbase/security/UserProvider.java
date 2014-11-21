@@ -28,7 +28,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * Provide an instance of a user. Allows custom {@link User} creation.
  */
-
 @InterfaceAudience.Private
 public class UserProvider extends BaseConfigurable {
 

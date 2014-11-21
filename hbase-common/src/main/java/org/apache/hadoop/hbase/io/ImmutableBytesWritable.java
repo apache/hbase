@@ -228,6 +228,8 @@ implements WritableComparable<ImmutableBytesWritable> {
 
   /** A Comparator optimized for ImmutableBytesWritable.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static class Comparator extends WritableComparator {
     private BytesWritable.Comparator comparator =
       new BytesWritable.Comparator();

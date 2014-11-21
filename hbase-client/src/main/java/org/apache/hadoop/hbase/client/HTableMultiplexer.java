@@ -57,20 +57,20 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * Each put will be sharded into different buffer queues based on its destination region server.
  * So each region server buffer queue will only have the puts which share the same destination.
  * And each queue will have a flush worker thread to flush the puts request to the region server.
- * If any queue is full, the HTableMultiplexer starts to drop the Put requests for that 
+ * If any queue is full, the HTableMultiplexer starts to drop the Put requests for that
  * particular queue.
- * 
+ *
  * Also all the puts will be retried as a configuration number before dropping.
  * And the HTableMultiplexer can report the number of buffered requests and the number of the
  * failed (dropped) requests in total or on per region server basis.
- * 
+ *
  * This class is thread safe.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HTableMultiplexer {
   private static final Log LOG = LogFactory.getLog(HTableMultiplexer.class.getName());
-  
+
   public static final String TABLE_MULTIPLEXER_FLUSH_PERIOD_MS =
       "hbase.tablemultiplexer.flush.period.ms";
   public static final String TABLE_MULTIPLEXER_INIT_THREADS = "hbase.tablemultiplexer.init.threads";
@@ -89,7 +89,7 @@ public class HTableMultiplexer {
   private final int maxKeyValueSize;
   private final ScheduledExecutorService executor;
   private final long flushPeriod;
-  
+
   /**
    * @param conf The HBaseConfiguration
    * @param perRegionServerBufferQueueSize determines the max number of the buffered Put ops for
@@ -128,7 +128,7 @@ public class HTableMultiplexer {
   }
 
   /**
-   * The puts request will be buffered by their corresponding buffer queue. 
+   * The puts request will be buffered by their corresponding buffer queue.
    * Return the list of puts which could not be queued.
    * @param tableName
    * @param puts
@@ -138,13 +138,13 @@ public class HTableMultiplexer {
   public List<Put> put(TableName tableName, final List<Put> puts) {
     if (puts == null)
       return null;
-    
+
     List <Put> failedPuts = null;
     boolean result;
     for (Put put : puts) {
       result = put(tableName, put, this.retryNum);
       if (result == false) {
-        
+
         // Create the failed puts list if necessary
         if (failedPuts == null) {
           failedPuts = new ArrayList<Put>();
@@ -163,7 +163,7 @@ public class HTableMultiplexer {
   public List<Put> put(byte[] tableName, final List<Put> puts) {
     return put(TableName.valueOf(tableName), puts);
   }
-  
+
   /**
    * The put request will be buffered by its corresponding buffer queue. And the put request will be
    * retried before dropping the request.
@@ -185,7 +185,7 @@ public class HTableMultiplexer {
 
         // Generate a MultiPutStatus object and offer it into the queue
         PutStatus s = new PutStatus(loc.getRegionInfo(), put, retry);
-        
+
         return queue.offer(s);
       }
     } catch (IOException e) {
@@ -209,7 +209,7 @@ public class HTableMultiplexer {
   public boolean put(final byte[] tableName, Put put) {
     return put(TableName.valueOf(tableName), put);
   }
-  
+
   /**
    * @return the current HTableMultiplexerStatus
    */
@@ -239,6 +239,8 @@ public class HTableMultiplexer {
    * report the number of buffered requests and the number of the failed (dropped) requests
    * in total or on per region server basis.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class HTableMultiplexerStatus {
     private long totalFailedPutCounter;
     private long totalBufferedPutCounter;
@@ -339,7 +341,7 @@ public class HTableMultiplexer {
       return this.serverToAverageLatencyMap;
     }
   }
-  
+
   private static class PutStatus {
     public final HRegionInfo regionInfo;
     public final Put put;
@@ -406,7 +408,7 @@ public class HTableMultiplexer {
     private final ScheduledExecutorService executor;
     private final int maxRetryInQueue;
     private final AtomicInteger retryInQueue = new AtomicInteger(0);
-    
+
     public FlushWorker(Configuration conf, ClusterConnection conn, HRegionLocation addr,
         HTableMultiplexer htableMultiplexer, int perRegionServerBufferQueueSize,
         ExecutorService pool, ScheduledExecutorService executor) {
@@ -443,7 +445,7 @@ public class HTableMultiplexer {
     private boolean resubmitFailedPut(PutStatus ps, HRegionLocation oldLoc) throws IOException {
       // Decrease the retry count
       final int retryCount = ps.retryCount - 1;
-      
+
       if (retryCount <= 0) {
         // Update the failed counter and no retry any more.
         return false;

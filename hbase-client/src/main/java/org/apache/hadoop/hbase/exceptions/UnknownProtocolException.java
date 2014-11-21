@@ -19,10 +19,15 @@
 
 package org.apache.hadoop.hbase.exceptions;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * An error requesting an RPC protocol that the server is not serving.
  */
 @SuppressWarnings("serial")
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class UnknownProtocolException extends org.apache.hadoop.hbase.DoNotRetryIOException {
   private Class<?> protocol;
 

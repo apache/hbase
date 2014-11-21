@@ -354,6 +354,7 @@ public class TablePermission extends Permission {
     return result;
   }
 
+  @Override
   public String toString() {
     StringBuilder str = new StringBuilder("[TablePermission: ");
     if(namespace != null) {

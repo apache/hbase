@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * Used to communicate with a single HBase table.
  * Obtain an instance from an {@link HConnection}.
@@ -29,6 +32,8 @@ import java.util.List;
  * @deprecated use {@link org.apache.hadoop.hbase.client.Table} instead
  */
 @Deprecated
+@InterfaceAudience.Private
+@InterfaceStability.Stable
 public interface HTableInterface extends Table {
 
   /**

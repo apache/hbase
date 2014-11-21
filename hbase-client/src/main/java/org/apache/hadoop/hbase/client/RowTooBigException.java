@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.RegionException;
 
 /**
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.RegionException;
  * hbase.table.max.rowsize).
  */
 @InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RowTooBigException extends RegionException {
 
   public RowTooBigException(String message) {

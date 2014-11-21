@@ -37,6 +37,7 @@ import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -155,6 +156,7 @@ import com.google.protobuf.TextFormat;
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED",
   justification="None. Address sometime.")
+@InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
 
   private ProtobufUtil() {

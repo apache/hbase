@@ -183,6 +183,7 @@ public class UserPermission extends TablePermission {
     return result;
   }
 
+  @Override
   public String toString() {
     StringBuilder str = new StringBuilder("UserPermission: ")
         .append("user=").append(Bytes.toString(user))

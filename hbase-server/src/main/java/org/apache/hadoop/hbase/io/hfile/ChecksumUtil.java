@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 /**
  * Utility methods to compute and validate checksums.
  */
+@InterfaceAudience.Private
 public class ChecksumUtil {
 
   /** This is used to reserve space in a byte buffer */

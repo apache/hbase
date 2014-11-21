@@ -80,6 +80,8 @@ public class RegexStringComparator extends ByteArrayComparable {
   private Engine engine;
 
   /** Engine implementation type (default=JAVA) */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public enum EngineType {
     JAVA,
     JONI
@@ -154,6 +156,7 @@ public class RegexStringComparator extends ByteArrayComparable {
   /**
    * @return The comparator serialized using pb
    */
+  @Override
   public byte [] toByteArray() {
     return engine.toByteArray();
   }
@@ -176,7 +179,7 @@ public class RegexStringComparator extends ByteArrayComparable {
     if (proto.hasEngine()) {
       EngineType engine = EngineType.valueOf(proto.getEngine());
       comparator = new RegexStringComparator(proto.getPattern(), proto.getPatternFlags(),
-        engine);      
+        engine);
     } else {
       comparator = new RegexStringComparator(proto.getPattern(), proto.getPatternFlags());
     }
@@ -196,6 +199,7 @@ public class RegexStringComparator extends ByteArrayComparable {
    * @return true if and only if the fields of the comparator that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
+  @Override
   boolean areSerializedFieldsEqual(ByteArrayComparable other) {
     if (other == this) return true;
     if (!(other instanceof RegexStringComparator)) return false;
@@ -213,7 +217,7 @@ public class RegexStringComparator extends ByteArrayComparable {
 
   /**
    * This is an internal interface for abstracting access to different regular
-   * expression matching engines. 
+   * expression matching engines.
    */
   static interface Engine {
     /**
@@ -221,7 +225,7 @@ public class RegexStringComparator extends ByteArrayComparable {
      * for matching
      */
     String getPattern();
-    
+
     /**
      * Returns the set of configured match flags, a bit mask that may include
      * {@link Pattern} flags
@@ -413,7 +417,7 @@ public class RegexStringComparator extends ByteArrayComparable {
         encoding = e.getEncoding();
       } else {
         throw new IllegalCharsetNameException(name);
-      }    
+      }
     }
   }
 }

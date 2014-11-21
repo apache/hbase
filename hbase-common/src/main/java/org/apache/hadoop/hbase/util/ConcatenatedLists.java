@@ -25,12 +25,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
  * A collection class that contains multiple sub-lists, which allows us to not copy lists.
  * This class does not support modification. The derived classes that add modifications are
  * not thread-safe.
  * NOTE: Doesn't implement list as it is not necessary for current usage, feel free to add.
  */
+@InterfaceAudience.Private
 public class ConcatenatedLists<T> implements Collection<T> {
   protected final ArrayList<List<T>> components = new ArrayList<List<T>>();
   protected int size = 0;

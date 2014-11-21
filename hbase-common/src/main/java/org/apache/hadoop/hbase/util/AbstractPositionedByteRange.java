@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 import com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -28,6 +31,8 @@ import com.google.common.annotations.VisibleForTesting;
  * {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
  * {@link #equals(Object)}. {@code Position} is retained by copy operations.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public abstract class AbstractPositionedByteRange extends AbstractByteRange implements
     PositionedByteRange {
   /**
@@ -74,7 +79,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
   /**
    * Update the beginning of this range. {@code offset + length} may not be
    * greater than {@code bytes.length}. Resets {@code position} to 0.
-   * 
+   *
    * @param offset
    *          the new start of this range.
    * @return this.
@@ -90,7 +95,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
    * Update the length of this range. {@code offset + length} should not be
    * greater than {@code bytes.length}. If {@code position} is greater than the
    * new {@code length}, sets {@code position} to {@code length}.
-   * 
+   *
    * @param length
    *          The new length of this range.
    * @return this.
@@ -153,28 +158,28 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
 
   @Override
   public abstract PositionedByteRange put(byte[] val, int offset, int length);
-  
+
   @Override
-  public abstract PositionedByteRange putInt(int index, int val); 
+  public abstract PositionedByteRange putInt(int index, int val);
 
   @Override
   public abstract PositionedByteRange putLong(int index, long val);
-  
+
   @Override
   public abstract PositionedByteRange putShort(int index, short val);
-  
+
   @Override
   public abstract PositionedByteRange putInt(int val);
-  
+
   @Override
   public abstract PositionedByteRange putLong(long val);
-  
+
   @Override
   public abstract PositionedByteRange putShort(short val);
-  
+
   @Override
   public abstract int putVLong(int index, long val);
-  
+
   @Override
   public abstract int putVLong(long val);
   /**

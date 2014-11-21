@@ -31,12 +31,16 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+
+import com.google.protobuf.ServiceException;
+
 import org.htrace.Trace;
 
 import java.io.IOException;
@@ -58,6 +62,7 @@ import java.util.concurrent.TimeoutException;
  * the first answer. If the answer comes from one of the secondary replica, it will
  * be marked as stale.
  */
+@InterfaceAudience.Private
 public class RpcRetryingCallerWithReadReplicas {
   static final Log LOG = LogFactory.getLog(RpcRetryingCallerWithReadReplicas.class);
 

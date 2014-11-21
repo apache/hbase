@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public class DelegatingRetryingCallable<T, D extends RetryingCallable<T>> implements
     RetryingCallable<T> {
   protected final D delegate;

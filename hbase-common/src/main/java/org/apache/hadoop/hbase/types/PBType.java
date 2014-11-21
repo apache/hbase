@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.types;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Order;
+import org.apache.hadoop.hbase.util.PositionedByteRange;
+
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
@@ -27,6 +32,8 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * A base-class for {@link DataType} implementations backed by protobuf. See
  * {@code PBKeyValue} in {@code hbase-examples} module.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class PBType<T extends Message> implements DataType<T> {
   @Override
   public boolean isOrderPreserving() {
