@@ -180,6 +180,11 @@ class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
+  public HTableDescriptor[] listTables(String regex) throws IOException {
+    return wrappedConnection.listTables(regex);
+  }
+
+  @Override
   public String[] getTableNames() throws IOException {
     return wrappedConnection.getTableNames();
   }

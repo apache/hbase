@@ -1227,6 +1227,17 @@ public final class RequestConverter {
   }
 
   /**
+   * Creates a protocol buffer GetTableDescriptorsRequest
+   *
+   * @return a GetTableDescriptorsRequest
+   */
+  public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(final String pattern) {
+    GetTableDescriptorsRequest.Builder builder = GetTableDescriptorsRequest.newBuilder();
+    builder.setRegex(pattern);
+    return builder.build();
+  }
+
+  /**
    * Creates a protocol buffer GetTableStateRequest
    *
    * @param tableName table to get request for

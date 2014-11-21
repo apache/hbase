@@ -314,6 +314,7 @@ message GetSchemaAlterStatusResponse {
 
 message GetTableDescriptorsRequest {
   repeated TableName table_names = 1;
+  optional string regex = 2;
 }
 
 message GetTableDescriptorsResponse {

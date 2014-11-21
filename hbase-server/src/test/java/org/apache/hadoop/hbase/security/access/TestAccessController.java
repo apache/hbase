@@ -19,10 +19,13 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -2425,6 +2428,40 @@ public class TestAccessController extends SecureTestUtil {
         TEST_TABLE.getTableName().getNameAsString());
       assertTrue(perms != null);
       assertEquals(existingPerms.size(), perms.size());
+    } catch (Throwable e) {
+      throw new HBaseIOException(e);
+    }
+  }
+
+  @Test
+  public void testAccessControlClientUserPerms() throws Exception {
+    try {
+      final String regex = TEST_TABLE.getTableName().getNameAsString();
+      User testUserPerms = User.createUserForTesting(conf, "testUserPerms", new String[0]);
+
+      PrivilegedAction<List<UserPermission>> listTablesRestrictedAction =
+          new PrivilegedAction<List<UserPermission>>() {
+            @Override
+            public List<UserPermission> run() {
+              try {
+                return AccessControlClient.getUserPermissions(conf, regex);
+              } catch (Throwable e) {
+                LOG.error("error during call of AccessControlClient.getUserPermissions. "
+                    + e.getStackTrace());
+                return null;
+              }
+            }
+          };
+      assertNull(testUserPerms.runAs(listTablesRestrictedAction));
+
+      // Grant TABLE ADMIN privs to testUserPerms
+      grantOnTable(TEST_UTIL, testUserPerms.getShortName(),
+          TEST_TABLE.getTableName(), null, null,
+          Permission.Action.ADMIN);
+      List<UserPermission> perms = testUserPerms.runAs(listTablesRestrictedAction);
+      assertNotNull(perms);
+      // USER_ADMIN, USER_CREATE, USER_RW, USER_RO, testUserPerms has row each.
+      assertEquals(5, perms.size());
     } catch (Throwable e) {
       throw new HBaseIOException(e);
     }

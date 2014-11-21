@@ -22,16 +22,18 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -39,7 +41,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
@@ -49,11 +51,14 @@ import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.*;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
@@ -789,9 +794,12 @@ public class MasterRpcServices extends RSRpcServices
       tableNameList.add(ProtobufUtil.toTableName(tableNamePB));
     }
     boolean bypass = false;
+    String regex = req.hasRegex() ? req.getRegex() : null;
     if (master.cpHost != null) {
       try {
         bypass = master.cpHost.preGetTableDescriptors(tableNameList, descriptors);
+        // method required for AccessController.
+        bypass |= master.cpHost.preGetTableDescriptors(tableNameList, descriptors, regex);
       } catch (IOException ioe) {
         throw new ServiceException(ioe);
       }
@@ -826,14 +834,28 @@ public class MasterRpcServices extends RSRpcServices
         }
       }
 
+      // Retains only those matched by regular expression.
+      if(regex != null) {
+        Pattern pat = Pattern.compile(regex);
+        for (Iterator<HTableDescriptor> itr = descriptors.iterator(); itr.hasNext(); ) {
+          HTableDescriptor htd = itr.next();
+          if (!pat.matcher(htd.getTableName().getNameAsString()).matches()) {
+            itr.remove();
+          }
+        }
+      }
+
       if (master.cpHost != null) {
         try {
           master.cpHost.postGetTableDescriptors(descriptors);
+          // method required for AccessController.
+          master.cpHost.postGetTableDescriptors(descriptors, regex);
         } catch (IOException ioe) {
           throw new ServiceException(ioe);
         }
       }
     }
+
 
     GetTableDescriptorsResponse.Builder builder = GetTableDescriptorsResponse.newBuilder();
     for (HTableDescriptor htd: descriptors) {

@@ -753,6 +753,11 @@ public class TestMasterObserver {
       postDeleteSnapshotCalled = true;
     }
 
+    @Override
+    public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<TableName> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
+    }
+
     public boolean wasDeleteSnapshotCalled() {
       return preDeleteSnapshotCalled && postDeleteSnapshotCalled;
     }
@@ -986,7 +991,7 @@ public class TestMasterObserver {
 
     @Override
     public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<TableName> tableNamesList, List<HTableDescriptor> descriptors)
+        List<TableName> tableNamesList, List<HTableDescriptor> descriptors, String regex)
         throws IOException {
       preGetTableDescriptorsCalled = true;
     }
@@ -994,6 +999,11 @@ public class TestMasterObserver {
     @Override
     public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
         List<HTableDescriptor> descriptors) throws IOException {
+    }
+
+    @Override
+    public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<HTableDescriptor> descriptors, String regex) throws IOException {
       postGetTableDescriptorsCalled = true;
     }
 
