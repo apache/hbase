@@ -404,7 +404,7 @@ public class HMobStore extends HStore {
         if (zk.lockColumnFamily(getTableName().getNameAsString(), getFamily().getNameAsString())) {
           try {
             LOG.info("Obtain the lock for the store[" + this
-                + "], forcing the delete markers to be retained");
+                + "], ready to perform the major compaction");
             // check the sweeping node to find out whether the sweeping is in progress.
             boolean hasSweeper = zk.isSweeperZNodeExist(getTableName().getNameAsString(),
                 getFamily().getNameAsString());
