@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -320,6 +321,11 @@ public class TestAssignmentManagerOnCluster {
       ServerName masterServerName = TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName();
       TEST_UTIL.getMiniHBaseCluster().stopMaster(masterServerName);
       TEST_UTIL.getMiniHBaseCluster().startMaster();
+      // Wait till master is active and is initialized
+      while (TEST_UTIL.getMiniHBaseCluster().getMaster() == null || 
+          !TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
+        Threads.sleep(1);
+      }
     }
   }
 
