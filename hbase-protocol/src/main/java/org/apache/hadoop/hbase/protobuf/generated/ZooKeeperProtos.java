@@ -16,7 +16,8 @@ public final class ZooKeeperProtos {
      * <code>required .ServerName server = 1;</code>
      *
      * <pre>
-     * The ServerName hosting the meta region currently.
+     * The ServerName hosting the meta region currently, or destination server,
+     * if meta region is in transition.
      * </pre>
      */
     boolean hasServer();
@@ -24,7 +25,8 @@ public final class ZooKeeperProtos {
      * <code>required .ServerName server = 1;</code>
      *
      * <pre>
-     * The ServerName hosting the meta region currently.
+     * The ServerName hosting the meta region currently, or destination server,
+     * if meta region is in transition.
      * </pre>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
@@ -32,7 +34,8 @@ public final class ZooKeeperProtos {
      * <code>required .ServerName server = 1;</code>
      *
      * <pre>
-     * The ServerName hosting the meta region currently.
+     * The ServerName hosting the meta region currently, or destination server,
+     * if meta region is in transition.
      * </pre>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
@@ -58,6 +61,24 @@ public final class ZooKeeperProtos {
      * </pre>
      */
     int getRpcVersion();
+
+    // optional .RegionState.State state = 3;
+    /**
+     * <code>optional .RegionState.State state = 3;</code>
+     *
+     * <pre>
+     * State of the region transition. OPEN means fully operational 'hbase:meta'
+     * </pre>
+     */
+    boolean hasState();
+    /**
+     * <code>optional .RegionState.State state = 3;</code>
+     *
+     * <pre>
+     * State of the region transition. OPEN means fully operational 'hbase:meta'
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State getState();
   }
   /**
    * Protobuf type {@code MetaRegionServer}
@@ -133,6 +154,17 @@ public final class ZooKeeperProtos {
               rpcVersion_ = input.readUInt32();
               break;
             }
+            case 24: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State value = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(3, rawValue);
+              } else {
+                bitField0_ |= 0x00000004;
+                state_ = value;
+              }
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -180,7 +212,8 @@ public final class ZooKeeperProtos {
      * <code>required .ServerName server = 1;</code>
      *
      * <pre>
-     * The ServerName hosting the meta region currently.
+     * The ServerName hosting the meta region currently, or destination server,
+     * if meta region is in transition.
      * </pre>
      */
     public boolean hasServer() {
@@ -190,7 +223,8 @@ public final class ZooKeeperProtos {
      * <code>required .ServerName server = 1;</code>
      *
      * <pre>
-     * The ServerName hosting the meta region currently.
+     * The ServerName hosting the meta region currently, or destination server,
+     * if meta region is in transition.
      * </pre>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
@@ -200,7 +234,8 @@ public final class ZooKeeperProtos {
      * <code>required .ServerName server = 1;</code>
      *
      * <pre>
-     * The ServerName hosting the meta region currently.
+     * The ServerName hosting the meta region currently, or destination server,
+     * if meta region is in transition.
      * </pre>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
@@ -235,9 +270,34 @@ public final class ZooKeeperProtos {
       return rpcVersion_;
     }
 
+    // optional .RegionState.State state = 3;
+    public static final int STATE_FIELD_NUMBER = 3;
+    private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State state_;
+    /**
+     * <code>optional .RegionState.State state = 3;</code>
+     *
+     * <pre>
+     * State of the region transition. OPEN means fully operational 'hbase:meta'
+     * </pre>
+     */
+    public boolean hasState() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional .RegionState.State state = 3;</code>
+     *
+     * <pre>
+     * State of the region transition. OPEN means fully operational 'hbase:meta'
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State getState() {
+      return state_;
+    }
+
     private void initFields() {
       server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       rpcVersion_ = 0;
+      state_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.OFFLINE;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -265,6 +325,9 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt32(2, rpcVersion_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeEnum(3, state_.getNumber());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -281,6 +344,10 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(2, rpcVersion_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(3, state_.getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -315,6 +382,11 @@ public final class ZooKeeperProtos {
         result = result && (getRpcVersion()
             == other.getRpcVersion());
       }
+      result = result && (hasState() == other.hasState());
+      if (hasState()) {
+        result = result &&
+            (getState() == other.getState());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -335,6 +407,10 @@ public final class ZooKeeperProtos {
       if (hasRpcVersion()) {
         hash = (37 * hash) + RPC_VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getRpcVersion();
+      }
+      if (hasState()) {
+        hash = (37 * hash) + STATE_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getState());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -459,6 +535,8 @@ public final class ZooKeeperProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         rpcVersion_ = 0;
         bitField0_ = (bitField0_ & ~0x00000002);
+        state_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.OFFLINE;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -499,6 +577,10 @@ public final class ZooKeeperProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.rpcVersion_ = rpcVersion_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.state_ = state_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -520,6 +602,9 @@ public final class ZooKeeperProtos {
         }
         if (other.hasRpcVersion()) {
           setRpcVersion(other.getRpcVersion());
+        }
+        if (other.hasState()) {
+          setState(other.getState());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -564,7 +649,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       public boolean hasServer() {
@@ -574,7 +660,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
@@ -588,7 +675,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       public Builder setServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
@@ -608,7 +696,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       public Builder setServer(
@@ -626,7 +715,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       public Builder mergeServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
@@ -649,7 +739,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       public Builder clearServer() {
@@ -666,7 +757,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerBuilder() {
@@ -678,7 +770,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
@@ -692,7 +785,8 @@ public final class ZooKeeperProtos {
        * <code>required .ServerName server = 1;</code>
        *
        * <pre>
-       * The ServerName hosting the meta region currently.
+       * The ServerName hosting the meta region currently, or destination server,
+       * if meta region is in transition.
        * </pre>
        */
       private com.google.protobuf.SingleFieldBuilder<
@@ -762,6 +856,58 @@ public final class ZooKeeperProtos {
       public Builder clearRpcVersion() {
         bitField0_ = (bitField0_ & ~0x00000002);
         rpcVersion_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional .RegionState.State state = 3;
+      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State state_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.OFFLINE;
+      /**
+       * <code>optional .RegionState.State state = 3;</code>
+       *
+       * <pre>
+       * State of the region transition. OPEN means fully operational 'hbase:meta'
+       * </pre>
+       */
+      public boolean hasState() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional .RegionState.State state = 3;</code>
+       *
+       * <pre>
+       * State of the region transition. OPEN means fully operational 'hbase:meta'
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State getState() {
+        return state_;
+      }
+      /**
+       * <code>optional .RegionState.State state = 3;</code>
+       *
+       * <pre>
+       * State of the region transition. OPEN means fully operational 'hbase:meta'
+       * </pre>
+       */
+      public Builder setState(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
+        state_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .RegionState.State state = 3;</code>
+       *
+       * <pre>
+       * State of the region transition. OPEN means fully operational 'hbase:meta'
+       * </pre>
+       */
+      public Builder clearState() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        state_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.OFFLINE;
         onChanged();
         return this;
       }
@@ -10596,43 +10742,44 @@ public final class ZooKeeperProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ZooKeeper.proto\032\013HBase.proto\"D\n\020MetaRe" +
-      "gionServer\022\033\n\006server\030\001 \002(\0132\013.ServerName\022" +
-      "\023\n\013rpc_version\030\002 \001(\r\"M\n\006Master\022\033\n\006master" +
-      "\030\001 \002(\0132\013.ServerName\022\023\n\013rpc_version\030\002 \001(\r" +
-      "\022\021\n\tinfo_port\030\003 \001(\r\"\037\n\tClusterUp\022\022\n\nstar" +
-      "t_date\030\001 \002(\t\"\210\001\n\020RegionTransition\022\027\n\017eve" +
-      "nt_type_code\030\001 \002(\r\022\023\n\013region_name\030\002 \002(\014\022" +
-      "\023\n\013create_time\030\003 \002(\004\022 \n\013server_name\030\004 \002(" +
-      "\0132\013.ServerName\022\017\n\007payload\030\005 \001(\014\"\214\002\n\014Spli" +
-      "tLogTask\022\"\n\005state\030\001 \002(\0162\023.SplitLogTask.S",
-      "tate\022 \n\013server_name\030\002 \002(\0132\013.ServerName\0221" +
-      "\n\004mode\030\003 \001(\0162\032.SplitLogTask.RecoveryMode" +
-      ":\007UNKNOWN\"C\n\005State\022\016\n\nUNASSIGNED\020\000\022\t\n\005OW" +
-      "NED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022\007\n\003ERR\020\004\">" +
-      "\n\014RecoveryMode\022\013\n\007UNKNOWN\020\000\022\021\n\rLOG_SPLIT" +
-      "TING\020\001\022\016\n\nLOG_REPLAY\020\002\"n\n\005Table\022$\n\005state" +
-      "\030\001 \002(\0162\014.Table.State:\007ENABLED\"?\n\005State\022\013" +
-      "\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\022\r\n\tDISABLING\020\002" +
-      "\022\014\n\010ENABLING\020\003\"\215\001\n\017ReplicationPeer\022\022\n\ncl" +
-      "usterkey\030\001 \002(\t\022\037\n\027replicationEndpointImp",
-      "l\030\002 \001(\t\022\035\n\004data\030\003 \003(\0132\017.BytesBytesPair\022&" +
-      "\n\rconfiguration\030\004 \003(\0132\017.NameStringPair\"^" +
-      "\n\020ReplicationState\022&\n\005state\030\001 \002(\0162\027.Repl" +
-      "icationState.State\"\"\n\005State\022\013\n\007ENABLED\020\000" +
-      "\022\014\n\010DISABLED\020\001\"+\n\027ReplicationHLogPositio" +
-      "n\022\020\n\010position\030\001 \002(\003\"%\n\017ReplicationLock\022\022" +
-      "\n\nlock_owner\030\001 \002(\t\"\230\001\n\tTableLock\022\036\n\ntabl" +
-      "e_name\030\001 \001(\0132\n.TableName\022\037\n\nlock_owner\030\002" +
-      " \001(\0132\013.ServerName\022\021\n\tthread_id\030\003 \001(\003\022\021\n\t" +
-      "is_shared\030\004 \001(\010\022\017\n\007purpose\030\005 \001(\t\022\023\n\013crea",
-      "te_time\030\006 \001(\003\";\n\017StoreSequenceId\022\023\n\013fami" +
-      "ly_name\030\001 \002(\014\022\023\n\013sequence_id\030\002 \002(\004\"g\n\026Re" +
-      "gionStoreSequenceIds\022 \n\030last_flushed_seq" +
-      "uence_id\030\001 \002(\004\022+\n\021store_sequence_id\030\002 \003(" +
-      "\0132\020.StoreSequenceIdBE\n*org.apache.hadoop" +
-      ".hbase.protobuf.generatedB\017ZooKeeperProt" +
-      "osH\001\210\001\001\240\001\001"
+      "\n\017ZooKeeper.proto\032\013HBase.proto\032\023ClusterS" +
+      "tatus.proto\"g\n\020MetaRegionServer\022\033\n\006serve" +
+      "r\030\001 \002(\0132\013.ServerName\022\023\n\013rpc_version\030\002 \001(" +
+      "\r\022!\n\005state\030\003 \001(\0162\022.RegionState.State\"M\n\006" +
+      "Master\022\033\n\006master\030\001 \002(\0132\013.ServerName\022\023\n\013r" +
+      "pc_version\030\002 \001(\r\022\021\n\tinfo_port\030\003 \001(\r\"\037\n\tC" +
+      "lusterUp\022\022\n\nstart_date\030\001 \002(\t\"\210\001\n\020RegionT" +
+      "ransition\022\027\n\017event_type_code\030\001 \002(\r\022\023\n\013re" +
+      "gion_name\030\002 \002(\014\022\023\n\013create_time\030\003 \002(\004\022 \n\013" +
+      "server_name\030\004 \002(\0132\013.ServerName\022\017\n\007payloa",
+      "d\030\005 \001(\014\"\214\002\n\014SplitLogTask\022\"\n\005state\030\001 \002(\0162" +
+      "\023.SplitLogTask.State\022 \n\013server_name\030\002 \002(" +
+      "\0132\013.ServerName\0221\n\004mode\030\003 \001(\0162\032.SplitLogT" +
+      "ask.RecoveryMode:\007UNKNOWN\"C\n\005State\022\016\n\nUN" +
+      "ASSIGNED\020\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004D" +
+      "ONE\020\003\022\007\n\003ERR\020\004\">\n\014RecoveryMode\022\013\n\007UNKNOW" +
+      "N\020\000\022\021\n\rLOG_SPLITTING\020\001\022\016\n\nLOG_REPLAY\020\002\"n" +
+      "\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table.State:\007EN" +
+      "ABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020" +
+      "\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"\215\001\n\017Repli",
+      "cationPeer\022\022\n\nclusterkey\030\001 \002(\t\022\037\n\027replic" +
+      "ationEndpointImpl\030\002 \001(\t\022\035\n\004data\030\003 \003(\0132\017." +
+      "BytesBytesPair\022&\n\rconfiguration\030\004 \003(\0132\017." +
+      "NameStringPair\"^\n\020ReplicationState\022&\n\005st" +
+      "ate\030\001 \002(\0162\027.ReplicationState.State\"\"\n\005St" +
+      "ate\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\"+\n\027Replic" +
+      "ationHLogPosition\022\020\n\010position\030\001 \002(\003\"%\n\017R" +
+      "eplicationLock\022\022\n\nlock_owner\030\001 \002(\t\"\230\001\n\tT" +
+      "ableLock\022\036\n\ntable_name\030\001 \001(\0132\n.TableName" +
+      "\022\037\n\nlock_owner\030\002 \001(\0132\013.ServerName\022\021\n\tthr",
+      "ead_id\030\003 \001(\003\022\021\n\tis_shared\030\004 \001(\010\022\017\n\007purpo" +
+      "se\030\005 \001(\t\022\023\n\013create_time\030\006 \001(\003\";\n\017StoreSe" +
+      "quenceId\022\023\n\013family_name\030\001 \002(\014\022\023\n\013sequenc" +
+      "e_id\030\002 \002(\004\"g\n\026RegionStoreSequenceIds\022 \n\030" +
+      "last_flushed_sequence_id\030\001 \002(\004\022+\n\021store_" +
+      "sequence_id\030\002 \003(\0132\020.StoreSequenceIdBE\n*o" +
+      "rg.apache.hadoop.hbase.protobuf.generate" +
+      "dB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -10644,7 +10791,7 @@ public final class ZooKeeperProtos {
           internal_static_MetaRegionServer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MetaRegionServer_descriptor,
-              new java.lang.String[] { "Server", "RpcVersion", });
+              new java.lang.String[] { "Server", "RpcVersion", "State", });
           internal_static_Master_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_Master_fieldAccessorTable = new
@@ -10724,6 +10871,7 @@ public final class ZooKeeperProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.getDescriptor(),
         }, assigner);
   }
 

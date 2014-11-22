@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -1810,7 +1811,7 @@ public class HRegionServer extends HasThread implements
 
     // Update ZK, or META
     if (r.getRegionInfo().isMetaRegion()) {
-      MetaTableLocator.setMetaLocation(getZooKeeper(), serverName);
+      MetaTableLocator.setMetaLocation(getZooKeeper(), serverName, State.OPEN);
     } else if (useZKForAssignment) {
       MetaTableAccessor.updateRegionLocation(shortCircuitConnection, r.getRegionInfo(),
         this.serverName, openSeqNum);

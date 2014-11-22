@@ -18,12 +18,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.net.ConnectException;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -106,6 +108,39 @@ public class TestMetaTableLocator {
   }
 
   /**
+   * Test normal operations
+   */
+  @Test public void testMetaLookup()
+          throws IOException, InterruptedException, ServiceException, KeeperException {
+    final ClientProtos.ClientService.BlockingInterface client =
+            Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
+
+    Mockito.when(client.get((RpcController)Mockito.any(), (GetRequest)Mockito.any())).
+            thenReturn(GetResponse.newBuilder().build());
+
+    final MetaTableLocator mtl = new MetaTableLocator();
+    assertNull(mtl.getMetaRegionLocation(this.watcher));
+    for (RegionState.State state : RegionState.State.values()) {
+      if (state.equals(RegionState.State.OPEN))
+        continue;
+      MetaTableLocator.setMetaLocation(this.watcher, SN, state);
+      assertNull(mtl.getMetaRegionLocation(this.watcher));
+      assertEquals(state, MetaTableLocator.getMetaRegionState(this.watcher).getState());
+    }
+    MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
+    assertEquals(mtl.getMetaRegionLocation(this.watcher), SN);
+    assertEquals(RegionState.State.OPEN,
+      MetaTableLocator.getMetaRegionState(this.watcher).getState());
+
+    mtl.deleteMetaLocation(this.watcher);
+    assertNull(MetaTableLocator.getMetaRegionState(this.watcher).getServerName());
+    assertEquals(MetaTableLocator.getMetaRegionState(this.watcher).getState(),
+      RegionState.State.OFFLINE);
+    assertNull(mtl.getMetaRegionLocation(this.watcher));
+  }
+
+
+  /**
    * Test interruptable while blocking wait on meta.
    * @throws IOException
    * @throws ServiceException
@@ -121,7 +156,7 @@ public class TestMetaTableLocator {
 
     final MetaTableLocator mtl = new MetaTableLocator();
     ServerName meta = new MetaTableLocator().getMetaRegionLocation(this.watcher);
-    Assert.assertNull(meta);
+    assertNull(meta);
     Thread t = new Thread() {
       @Override
       public void run() {
@@ -153,11 +188,15 @@ public class TestMetaTableLocator {
     Mockito.when(implementation.get((RpcController) Mockito.any(), (GetRequest) Mockito.any())).
       thenThrow(new ServiceException(ex));
 
-    MetaTableLocator.setMetaLocation(this.watcher, SN);
     long timeout = UTIL.getConfiguration().
-      getLong("hbase.catalog.verification.timeout", 1000);
-    Assert.assertFalse(new MetaTableLocator().verifyMetaRegionLocation(
+            getLong("hbase.catalog.verification.timeout", 1000);
+    MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPENING);
+    assertFalse(new MetaTableLocator().verifyMetaRegionLocation(
       connection, watcher, timeout));
+
+    MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
+    assertFalse(new MetaTableLocator().verifyMetaRegionLocation(
+            connection, watcher, timeout));
   }
 
   /**
@@ -213,9 +252,13 @@ public class TestMetaTableLocator {
     Mockito.when(connection.getAdmin(Mockito.any(ServerName.class), Mockito.anyBoolean())).
       thenReturn(implementation);
 
+    ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());
     MetaTableLocator.setMetaLocation(this.watcher,
-      ServerName.valueOf("example.com", 1234, System.currentTimeMillis()));
-    Assert.assertFalse(new MetaTableLocator().verifyMetaRegionLocation(connection, watcher, 100));
+            sn,
+            RegionState.State.OPENING);
+    assertFalse(new MetaTableLocator().verifyMetaRegionLocation(connection, watcher, 100));
+    MetaTableLocator.setMetaLocation(this.watcher, sn, RegionState.State.OPEN);
+    assertFalse(new MetaTableLocator().verifyMetaRegionLocation(connection, watcher, 100));
   }
 
   @Test (expected = NotAllMetaRegionsOnlineException.class)
@@ -234,22 +277,18 @@ public class TestMetaTableLocator {
   throws IOException, InterruptedException, KeeperException {
     final MetaTableLocator mtl = new MetaTableLocator();
     ServerName hsa = mtl.getMetaRegionLocation(watcher);
-    Assert.assertNull(hsa);
+    assertNull(hsa);
 
     // Now test waiting on meta location getting set.
     Thread t = new WaitOnMetaThread();
     startWaitAliveThenWaitItLives(t, 1);
     // Set a meta location.
-    hsa = setMetaLocation();
+    MetaTableLocator.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
+    hsa = SN;
     // Join the thread... should exit shortly.
     t.join();
     // Now meta is available.
-    Assert.assertTrue(mtl.getMetaRegionLocation(watcher).equals(hsa));
-  }
-
-  private ServerName setMetaLocation() throws KeeperException {
-    MetaTableLocator.setMetaLocation(this.watcher, SN);
-    return SN;
+    assertTrue(mtl.getMetaRegionLocation(watcher).equals(hsa));
   }
 
   /**
@@ -302,7 +341,7 @@ public class TestMetaTableLocator {
     }
     // Wait one second.
     Threads.sleep(ms);
-    Assert.assertTrue("Assert " + t.getName() + " still waiting", t.isAlive());
+    assertTrue("Assert " + t.getName() + " still waiting", t.isAlive());
   }
 
   /**

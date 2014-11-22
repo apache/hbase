@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import com.google.common.base.Stopwatch;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -30,11 +32,13 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -51,6 +55,8 @@ import java.rmi.UnknownHostException;
 
 import java.util.List;
 import java.util.ArrayList;
+
+import javax.annotation.Nullable;
 
 /**
  * Utility class to perform operation (get/wait for/verify/set/delete) on znode in ZooKeeper
@@ -121,18 +127,13 @@ public class MetaTableLocator {
    * @param zkw zookeeper connection to use
    * @return server name or null if we failed to get the data.
    */
+  @Nullable
   public ServerName getMetaRegionLocation(final ZooKeeperWatcher zkw) {
     try {
-      try {
-        return ServerName.parseFrom(ZKUtil.getData(zkw, zkw.metaServerZNode));
-      } catch (DeserializationException e) {
-        throw ZKUtil.convert(e);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        return null;
-      }
+      RegionState state = getMetaRegionState(zkw);
+      return state.isOpened() ? state.getServerName() : null;
     } catch (KeeperException ke) {
-        return null;
+      return null;
     }
   }
 
@@ -216,9 +217,8 @@ public class MetaTableLocator {
     } catch (RegionServerStoppedException e) {
       // Pass -- server name sends us to a server that is dying or already dead.
     }
-    return (service == null)? false:
-      verifyRegionLocation(service,
-          getMetaRegionLocation(zkw), META_REGION_NAME);
+    return (service != null) && verifyRegionLocation(service,
+            getMetaRegionLocation(zkw), META_REGION_NAME);
   }
 
   /**
@@ -342,44 +342,65 @@ public class MetaTableLocator {
    * Sets the location of <code>hbase:meta</code> in ZooKeeper to the
    * specified server address.
    * @param zookeeper zookeeper reference
-   * @param location The server hosting <code>hbase:meta</code>
+   * @param serverName The server hosting <code>hbase:meta</code>
+   * @param state The region transition state
    * @throws KeeperException unexpected zookeeper exception
    */
   public static void setMetaLocation(ZooKeeperWatcher zookeeper,
-                                     final ServerName location)
-  throws KeeperException {
-    LOG.info("Setting hbase:meta region location in ZooKeeper as " + location);
+      ServerName serverName, RegionState.State state) throws KeeperException {
+    LOG.info("Setting hbase:meta region location in ZooKeeper as " + serverName);
     // Make the MetaRegionServer pb and then get its bytes and save this as
     // the znode content.
-    byte [] data = toByteArray(location);
+    MetaRegionServer pbrsr = MetaRegionServer.newBuilder()
+      .setServer(ProtobufUtil.toServerName(serverName))
+      .setRpcVersion(HConstants.RPC_CURRENT_VERSION)
+      .setState(state.convert()).build();
+    byte[] data = ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
     try {
-      ZKUtil.createAndWatch(zookeeper, zookeeper.metaServerZNode, data);
-    } catch(KeeperException.NodeExistsException nee) {
-      LOG.debug("META region location already existed, updated location");
       ZKUtil.setData(zookeeper, zookeeper.metaServerZNode, data);
+    } catch(KeeperException.NoNodeException nne) {
+      LOG.debug("META region location doesn't existed, create it");
+      ZKUtil.createAndWatch(zookeeper, zookeeper.metaServerZNode, data);
     }
   }
 
   /**
-   * Build up the znode content.
-   * @param sn What to put into the znode.
-   * @return The content of the meta-region-server znode
+   * Load the meta region state from the meta server ZNode.
    */
-  private static byte [] toByteArray(final ServerName sn) {
-    // ZNode content is a pb message preceded by some pb magic.
-    HBaseProtos.ServerName pbsn =
-      HBaseProtos.ServerName.newBuilder()
-                            .setHostName(sn.getHostname())
-                            .setPort(sn.getPort())
-                            .setStartCode(sn.getStartcode())
-                            .build();
-
-    ZooKeeperProtos.MetaRegionServer pbrsr =
-      ZooKeeperProtos.MetaRegionServer.newBuilder()
-                                      .setServer(pbsn)
-                                      .setRpcVersion(HConstants.RPC_CURRENT_VERSION)
-                                      .build();
-    return ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
+  public static RegionState getMetaRegionState(ZooKeeperWatcher zkw) throws KeeperException {
+    RegionState.State state = RegionState.State.OPEN;
+    ServerName serverName = null;
+    try {
+      byte[] data = ZKUtil.getData(zkw, zkw.metaServerZNode);
+      if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
+        try {
+          int prefixLen = ProtobufUtil.lengthOfPBMagic();
+          ZooKeeperProtos.MetaRegionServer rl =
+            ZooKeeperProtos.MetaRegionServer.PARSER.parseFrom
+              (data, prefixLen, data.length - prefixLen);
+          if (rl.hasState()) {
+            state = RegionState.State.convert(rl.getState());
+          }
+          HBaseProtos.ServerName sn = rl.getServer();
+          serverName = ServerName.valueOf(
+            sn.getHostName(), sn.getPort(), sn.getStartCode());
+        } catch (InvalidProtocolBufferException e) {
+          throw new DeserializationException("Unable to parse meta region location");
+        }
+      } else {
+        // old style of meta region location?
+        serverName = ServerName.parseFrom(data);
+      }
+    } catch (DeserializationException e) {
+      throw ZKUtil.convert(e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+    if (serverName == null) {
+      state = RegionState.State.OFFLINE;
+    }
+    return new RegionState(HRegionInfo.FIRST_META_REGIONINFO,
+      state, serverName);
   }
 
   /**
@@ -389,7 +410,7 @@ public class MetaTableLocator {
    */
   public void deleteMetaLocation(ZooKeeperWatcher zookeeper)
   throws KeeperException {
-    LOG.info("Unsetting hbase:meta region location in ZooKeeper");
+    LOG.info("Deleting hbase:meta region location in ZooKeeper");
     try {
       // Just delete the node.  Don't need any watches.
       ZKUtil.deleteNode(zookeeper, zookeeper.metaServerZNode);
@@ -399,7 +420,7 @@ public class MetaTableLocator {
   }
 
   /**
-   * Wait until the meta region is available.
+   * Wait until the meta region is available and is not in transition.
    * @param zkw zookeeper connection to use
    * @param timeout maximum time to wait, in millis
    * @return ServerName or null if we timed out.
@@ -408,14 +429,23 @@ public class MetaTableLocator {
   public ServerName blockUntilAvailable(final ZooKeeperWatcher zkw,
       final long timeout)
   throws InterruptedException {
-    byte [] data = ZKUtil.blockUntilAvailable(zkw, zkw.metaServerZNode, timeout);
-    if (data == null) return null;
+    if (timeout < 0) throw new IllegalArgumentException();
+    if (zkw == null) throw new IllegalArgumentException();
+    Stopwatch sw = new Stopwatch().start();
+    ServerName sn = null;
     try {
-      return ServerName.parseFrom(data);
-    } catch (DeserializationException e) {
-      LOG.warn("Failed parse", e);
-      return null;
+      while (true) {
+        sn = getMetaRegionLocation(zkw);
+        if (sn != null || sw.elapsedMillis()
+            > timeout - HConstants.SOCKET_RETRY_WAIT_MS) {
+          break;
+        }
+        Thread.sleep(HConstants.SOCKET_RETRY_WAIT_MS);
+      }
+    } finally {
+      sw.stop();
     }
+    return sn;
   }
 
   /**

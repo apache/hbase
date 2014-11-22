@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -142,12 +143,15 @@ public class TestAssignmentManagerOnCluster {
           Bytes.toBytes(metaServerName.getServerName()));
         master.assignmentManager.waitUntilNoRegionsInTransition(60000);
       }
+      RegionState metaState =
+          MetaTableLocator.getMetaRegionState(master.getZooKeeper());
+        assertEquals("Meta should be not in transition",
+            metaState.getState(), RegionState.State.OPEN);
       assertNotEquals("Meta should be moved off master",
         metaServerName, master.getServerName());
       cluster.killRegionServer(metaServerName);
       stoppedARegionServer = true;
       cluster.waitForRegionServerToStop(metaServerName, 60000);
-
       // Wait for SSH to finish
       final ServerManager serverManager = master.getServerManager();
       TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
@@ -160,6 +164,14 @@ public class TestAssignmentManagerOnCluster {
       // Now, make sure meta is assigned
       assertTrue("Meta should be assigned",
         regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
+      // Now, make sure meta is registered in zk
+      metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
+      assertEquals("Meta should be not in transition",
+          metaState.getState(), RegionState.State.OPEN);
+      assertEquals("Meta should be assigned", metaState.getServerName(),
+        regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
+      assertNotEquals("Meta should be assigned on a different server",
+        metaState.getServerName(), metaServerName);
     } finally {
       if (stoppedARegionServer) {
         cluster.startRegionServer();
