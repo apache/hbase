@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.RpcClient.FailedServerException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -273,6 +274,16 @@ public class CatalogTracker {
     }
     return sn;
   }
+  
+  /**
+   * Get meta region state
+   * @return RegionState
+   */
+  public RegionState getMetaRegionState() {
+    return metaRegionTracker.getMetaRegionState();
+  }
+  
+  
 
   /**
    * Gets a connection to the server hosting meta, as reported by ZooKeeper,

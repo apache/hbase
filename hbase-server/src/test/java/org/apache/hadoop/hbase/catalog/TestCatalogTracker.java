@@ -18,7 +18,10 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -43,6 +46,8 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -137,7 +142,7 @@ public class TestCatalogTracker {
     constructAndStartCatalogTracker(connection);
 
     MetaRegionTracker.setMetaLocation(this.watcher,
-        ServerName.valueOf("example.com", 1234, System.currentTimeMillis()));
+        ServerName.valueOf("example.com", 1234, System.currentTimeMillis()), State.OPEN);
   }
 
   /**
@@ -190,7 +195,7 @@ public class TestCatalogTracker {
     // Now start up the catalogtracker with our doctored Connection.
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
 
-    MetaRegionTracker.setMetaLocation(this.watcher, SN);
+    MetaRegionTracker.setMetaLocation(this.watcher, SN, State.OPEN);
     long timeout = UTIL.getConfiguration().
       getLong("hbase.catalog.verification.timeout", 1000);
     Assert.assertFalse(ct.verifyMetaRegionLocation(timeout));
@@ -251,7 +256,7 @@ public class TestCatalogTracker {
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
 
     MetaRegionTracker.setMetaLocation(this.watcher,
-        ServerName.valueOf("example.com", 1234, System.currentTimeMillis()));
+        ServerName.valueOf("example.com", 1234, System.currentTimeMillis()), State.OPEN);
     Assert.assertFalse(ct.verifyMetaRegionLocation(100));
   }
 
@@ -286,9 +291,39 @@ public class TestCatalogTracker {
     // Now meta is available.
     Assert.assertTrue(ct.getMetaLocation().equals(hsa));
   }
+  
+  
+  /**
+   * Test normal operations
+   */
+  @Test 
+  public void testMetaLookup()
+          throws IOException, InterruptedException, ServiceException, KeeperException {
+    HConnection connection = Mockito.mock(HConnection.class);
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    
+    assertNull(ct.getMetaLocation());
+    for (RegionState.State state : RegionState.State.values()) {
+      if (state.equals(RegionState.State.OPEN))
+        continue;
+      MetaRegionTracker.setMetaLocation(this.watcher, SN, state);
+      assertNull(ct.getMetaLocation());
+      assertEquals(state, ct.getMetaRegionState().getState());
+    }
+    MetaRegionTracker.setMetaLocation(this.watcher, SN, RegionState.State.OPEN);
+    assertEquals(ct.getMetaLocation(), SN);
+    assertEquals(RegionState.State.OPEN,
+      ct.getMetaRegionState().getState());
 
+    MetaRegionTracker.deleteMetaLocation(this.watcher);
+    assertNull(ct.getMetaRegionState().getServerName());
+    assertEquals(ct.getMetaRegionState().getState(),
+      RegionState.State.OFFLINE);
+    assertNull(ct.getMetaLocation());
+  }
+  
   private ServerName setMetaLocation() throws KeeperException {
-    MetaRegionTracker.setMetaLocation(this.watcher, SN);
+    MetaRegionTracker.setMetaLocation(this.watcher, SN, State.OPEN);
     return SN;
   }
 
@@ -385,7 +420,7 @@ public class TestCatalogTracker {
 
     void doWaiting() throws InterruptedException {
       try {
-        while (this.ct.waitForMeta(100) == null);
+        while (this.ct.waitForMeta(10000) == null);
       } catch (NotAllMetaRegionsOnlineException e) {
         // Ignore.
       }

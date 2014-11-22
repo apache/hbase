@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -156,7 +157,7 @@ public class TestMasterNoCluster {
     final MockRegionServer rs2 = new MockRegionServer(conf, sn2);
     // Put some data into the servers.  Make it look like sn0 has the metaH
     // Put data into sn2 so it looks like it has a few regions for a table named 't'.
-    MetaRegionTracker.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName());
+    MetaRegionTracker.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName(), State.OPEN);
     final TableName tableName = TableName.valueOf("t");
     Result [] results = new Result [] {
       MetaMockingUtil.getMetaTableRowResult(
@@ -343,7 +344,7 @@ public class TestMasterNoCluster {
       // when its figured it just opened the meta region by setting the meta
       // location up into zk.  Since we're mocking regionserver, need to do this
       // ourselves.
-      MetaRegionTracker.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName());
+      MetaRegionTracker.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName(), State.OPEN);
       // Master should now come up.
       while (!master.isInitialized()) {Threads.sleep(10);}
       assertTrue(master.isInitialized());
