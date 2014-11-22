@@ -161,6 +161,11 @@ set PATH=%PATH%;"%HADOOP_HOME%\bin"
 set HADOOP_IN_PATH=hadoop.cmd
 
 if exist "%HADOOP_HOME%\bin\%HADOOP_IN_PATH%" (
+  set hadoopCpCommand=call %HADOOP_IN_PATH% classpath 2^>nul
+  for /f "eol= delims=" %%i in ('!hadoopCpCommand!') do set CLASSPATH_FROM_HADOOP=%%i
+  if defined CLASSPATH_FROM_HADOOP (
+    set CLASSPATH=%CLASSPATH%;!CLASSPATH_FROM_HADOOP!
+  )
   set HADOOP_CLASSPATH=%CLASSPATH%
 
   set hadoopJLPCommand=call %HADOOP_IN_PATH% org.apache.hadoop.hbase.util.GetJavaProperty java.library.path 2^>nul
