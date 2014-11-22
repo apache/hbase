@@ -21,13 +21,9 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
 import java.util.UUID;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -40,27 +36,24 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
+import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.ipc.RemoteException;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Service;
 
 /**
  * Class that handles the source of a replication stream.
@@ -81,9 +74,9 @@ public class ReplicationSource extends Thread
   public static final Log LOG = LogFactory.getLog(ReplicationSource.class);
   // Queue of logs to process
   private PriorityBlockingQueue<Path> queue;
-  private HConnection conn;
   private ReplicationQueues replicationQueues;
   private ReplicationPeers replicationPeers;
+
   private Configuration conf;
   private ReplicationQueueInfo replicationQueueInfo;
   // id of the peer cluster this source replicates to
@@ -117,8 +110,6 @@ public class ReplicationSource extends Thread
   private String peerClusterZnode;
   // Maximum number of retries before taking bold actions
   private int maxRetriesMultiplier;
-  // Socket timeouts require even bolder actions since we don't want to DDOS
-  private int socketTimeoutMultiplier;
   // Current number of operations (Put/Delete) that we need to replicate
   private int currentNbOperations = 0;
   // Current size of data we need to replicate
@@ -129,10 +120,14 @@ public class ReplicationSource extends Thread
   private MetricsSource metrics;
   // Handle on the log reader helper
   private ReplicationHLogReaderManager repLogReader;
-  // Handles connecting to peer region servers
-  private ReplicationSinkManager replicationSinkMgr;
   //WARN threshold for the number of queued logs, defaults to 2
   private int logQueueWarnThreshold;
+  // ReplicationEndpoint which will handle the actual replication
+  private ReplicationEndpoint replicationEndpoint;
+  // A filter (or a chain of filters) for the WAL entries.
+  private WALEntryFilter walEntryFilter;
+  // Context for ReplicationEndpoint#replicate()
+  private ReplicationEndpoint.ReplicateContext replicateContext;
   // throttler
   private ReplicationThrottler throttler;
 
@@ -144,30 +139,30 @@ public class ReplicationSource extends Thread
    * @param manager replication manager to ping to
    * @param stopper     the atomic boolean to use to stop the regionserver
    * @param peerClusterZnode the name of our znode
+   * @param clusterId unique UUID for the cluster
+   * @param replicationEndpoint the replication endpoint implementation
+   * @param metrics metrics for replication source
    * @throws IOException
    */
+  @Override
   public void init(final Configuration conf, final FileSystem fs,
       final ReplicationSourceManager manager, final ReplicationQueues replicationQueues,
       final ReplicationPeers replicationPeers, final Stoppable stopper,
-      final String peerClusterZnode, final UUID clusterId) throws IOException {
+      final String peerClusterZnode, final UUID clusterId, ReplicationEndpoint replicationEndpoint,
+      final MetricsSource metrics)
+          throws IOException {
     this.stopper = stopper;
-    this.conf = HBaseConfiguration.create(conf);
+    this.conf = conf;
     decorateConf();
     this.replicationQueueSizeCapacity =
         this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
     this.replicationQueueNbCapacity =
         this.conf.getInt("replication.source.nb.capacity", 25000);
     this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 10);
-    this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
-        maxRetriesMultiplier * maxRetriesMultiplier);
     this.queue =
         new PriorityBlockingQueue<Path>(
             this.conf.getInt("hbase.regionserver.maxlogs", 32),
             new LogsComparator());
-    // TODO: This connection is replication specific or we should make it particular to
-    // replication and make replication specific settings such as compression or codec to use
-    // passing Cells.
-    this.conn = HConnectionManager.getConnection(this.conf);
     long bandwidth = this.conf.getLong("replication.source.per.peer.node.bandwidth", 0);
     this.throttler = new ReplicationThrottler((double)bandwidth/10.0);
     this.replicationQueues = replicationQueues;
@@ -176,7 +171,7 @@ public class ReplicationSource extends Thread
     this.sleepForRetries =
         this.conf.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
-    this.metrics = new MetricsSource(peerClusterZnode);
+    this.metrics = metrics;
     this.repLogReader = new ReplicationHLogReaderManager(this.fs, this.conf);
     this.clusterId = clusterId;
 
@@ -184,8 +179,10 @@ public class ReplicationSource extends Thread
     this.replicationQueueInfo = new ReplicationQueueInfo(peerClusterZnode);
     // ReplicationQueueInfo parses the peerId out of the znode for us
     this.peerId = this.replicationQueueInfo.getPeerId();
-    this.replicationSinkMgr = new ReplicationSinkManager(conn, peerId, replicationPeers, this.conf);
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
+    this.replicationEndpoint = replicationEndpoint;
+
+    this.replicateContext = new ReplicationEndpoint.ReplicateContext();
   }
 
   private void decorateConf() {
@@ -208,30 +205,48 @@ public class ReplicationSource extends Thread
   }
 
   private void uninitialize() {
-    if (this.conn != null) {
-      try {
-        this.conn.close();
-      } catch (IOException e) {
-        LOG.debug("Attempt to close connection failed", e);
-      }
-    }
     LOG.debug("Source exiting " + this.peerId);
     metrics.clear();
+    if (replicationEndpoint.state() == Service.State.STARTING
+        || replicationEndpoint.state() == Service.State.RUNNING) {
+      replicationEndpoint.stopAndWait();
+    }
   }
 
   @Override
   public void run() {
-    connectToPeers();
     // We were stopped while looping to connect to sinks, just abort
     if (!this.isActive()) {
       uninitialize();
       return;
     }
 
+    try {
+      // start the endpoint, connect to the cluster
+      Service.State state = replicationEndpoint.start().get();
+      if (state != Service.State.RUNNING) {
+        LOG.warn("ReplicationEndpoint was not started. Exiting");
+        uninitialize();
+        return;
+      }
+    } catch (Exception ex) {
+      LOG.warn("Error starting ReplicationEndpoint, exiting", ex);
+      throw new RuntimeException(ex);
+    }
+
+    // get the WALEntryFilter from ReplicationEndpoint and add it to default filters
+    ArrayList<WALEntryFilter> filters = Lists.newArrayList(
+      (WALEntryFilter)new SystemTableWALEntryFilter());
+    WALEntryFilter filterFromEndpoint = this.replicationEndpoint.getWALEntryfilter();
+    if (filterFromEndpoint != null) {
+      filters.add(filterFromEndpoint);
+    }
+    this.walEntryFilter = new ChainWALEntryFilter(filters);
+
     int sleepMultiplier = 1;
     // delay this until we are in an asynchronous thread
     while (this.isActive() && this.peerClusterId == null) {
-      this.peerClusterId = replicationPeers.getPeerUUID(this.peerId);
+      this.peerClusterId = replicationEndpoint.getPeerUUID();
       if (this.isActive() && this.peerClusterId == null) {
         if (sleepForRetries("Cannot contact the peer's zk ensemble", sleepMultiplier)) {
           sleepMultiplier++;
@@ -249,9 +264,10 @@ public class ReplicationSource extends Thread
 
     // In rare case, zookeeper setting may be messed up. That leads to the incorrect
     // peerClusterId value, which is the same as the source clusterId
-    if (clusterId.equals(peerClusterId)) {
+    if (clusterId.equals(peerClusterId) && !replicationEndpoint.canReplicateToSameCluster()) {
       this.terminate("ClusterId " + clusterId + " is replicating to itself: peerClusterId "
-          + peerClusterId);
+          + peerClusterId + " which is not allowed by ReplicationEndpoint:"
+          + replicationEndpoint.getClass().getName(), null, false);
     }
     LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
 
@@ -399,8 +415,8 @@ public class ReplicationSource extends Thread
    * entries
    * @throws IOException
    */
-  protected boolean readAllEntriesToReplicateOrNextFile(boolean currentWALisBeingWrittenTo, List<HLog.Entry> entries)
-      throws IOException{
+  protected boolean readAllEntriesToReplicateOrNextFile(boolean currentWALisBeingWrittenTo,
+      List<HLog.Entry> entries) throws IOException{
     long seenEntries = 0;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Seeking in " + this.currentPath + " at position "
@@ -411,18 +427,22 @@ public class ReplicationSource extends Thread
     HLog.Entry entry =
         this.repLogReader.readNextAndSetPosition();
     while (entry != null) {
-      WALEdit edit = entry.getEdit();
       this.metrics.incrLogEditsRead();
       seenEntries++;
-      // Remove all KVs that should not be replicated
-      HLogKey logKey = entry.getKey();
+
       // don't replicate if the log entries have already been consumed by the cluster
-      if (!logKey.getClusterIds().contains(peerClusterId)) {
-        removeNonReplicableEdits(entry);
-        // Don't replicate catalog entries, if the WALEdit wasn't
-        // containing anything to replicate and if we're currently not set to replicate
-        if (!logKey.getTablename().equals(TableName.META_TABLE_NAME) &&
-            edit.size() != 0) {
+      if (replicationEndpoint.canReplicateToSameCluster()
+          || !entry.getKey().getClusterIds().contains(peerClusterId)) {
+        // Remove all KVs that should not be replicated
+        entry = walEntryFilter.filter(entry);
+        WALEdit edit = null;
+        HLogKey logKey = null;
+        if (entry != null) {
+          edit = entry.getEdit();
+          logKey = entry.getKey();
+        }
+
+        if (edit != null && edit.size() != 0) {
           //Mark that the current cluster has the change
           logKey.addClusterId(clusterId);
           currentNbOperations += countDistinctRowKeys(edit);
@@ -451,20 +471,6 @@ public class ReplicationSource extends Thread
     // If we didn't get anything and the queue has an object, it means we
     // hit the end of the file for sure
     return seenEntries == 0 && processEndOfFile();
-  }
-
-  private void connectToPeers() {
-    int sleepMultiplier = 1;
-
-    // Connect to peer cluster first, unless we have to stop
-    while (this.isActive() && replicationSinkMgr.getSinks().size() == 0) {
-      replicationSinkMgr.chooseSinks();
-      if (this.isActive() && replicationSinkMgr.getSinks().size() == 0) {
-        if (sleepForRetries("Waiting for peers", sleepMultiplier)) {
-          sleepMultiplier++;
-        }
-      }
-    }
   }
 
   /**
@@ -596,8 +602,8 @@ public class ReplicationSource extends Thread
   /*
    * Checks whether the current log file is empty, and it is not a recovered queue. This is to
    * handle scenario when in an idle cluster, there is no entry in the current log and we keep on
-   * trying to read the log file and get EOFEception. In case of a recovered queue the last log file
-   * may be empty, and we don't want to retry that.
+   * trying to read the log file and get EOFException. In case of a recovered queue the last log
+   * file may be empty, and we don't want to retry that.
    */
   private boolean isCurrentLogEmpty() {
     return (this.repLogReader.getPosition() == 0 &&
@@ -621,47 +627,6 @@ public class ReplicationSource extends Thread
       Thread.currentThread().interrupt();
     }
     return sleepMultiplier < maxRetriesMultiplier;
-  }
-
-  /**
-   * We only want KVs that are scoped other than local
-   * @param entry The entry to check for replication
-   */
-  protected void removeNonReplicableEdits(HLog.Entry entry) {
-    String tabName = entry.getKey().getTablename().getNameAsString();
-    ArrayList<KeyValue> kvs = entry.getEdit().getKeyValues();
-    Map<String, List<String>> tableCFs = null;
-    try {
-      tableCFs = this.replicationPeers.getTableCFs(peerId);
-    } catch (IllegalArgumentException e) {
-      LOG.error("should not happen: can't get tableCFs for peer " + peerId +
-          ", degenerate as if it's not configured by keeping tableCFs==null");
-    }
-    int size = kvs.size();
-
-    // clear kvs(prevent replicating) if logKey's table isn't in this peer's
-    // replicable table list (empty tableCFs means all table are replicable)
-    if (tableCFs != null && !tableCFs.containsKey(tabName)) {
-      kvs.clear();
-    } else {
-      NavigableMap<byte[], Integer> scopes = entry.getKey().getScopes();
-      List<String> cfs = (tableCFs == null) ? null : tableCFs.get(tabName);
-      for (int i = size - 1; i >= 0; i--) {
-        KeyValue kv = kvs.get(i);
-        // The scope will be null or empty if
-        // there's nothing to replicate in that WALEdit
-        // ignore(remove) kv if its cf isn't in the replicable cf list
-        // (empty cfs means all cfs of this table are replicable)
-        if (scopes == null || !scopes.containsKey(kv.getFamily()) ||
-            (cfs != null && !cfs.contains(Bytes.toString(kv.getFamily())))) {
-          kvs.remove(i);
-        }
-      }
-    }
-
-    if (kvs.size() < size/2) {
-      kvs.trimToSize();
-    }
   }
 
   /**
@@ -694,13 +659,6 @@ public class ReplicationSource extends Thread
       return;
     }
     while (this.isActive()) {
-      if (!isPeerEnabled()) {
-        if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
-          sleepMultiplier++;
-        }
-        continue;
-      }
-      SinkPeer sinkPeer = null;
       try {
         if (this.throttler.isEnabled()) {
           long sleepTicks = this.throttler.getNextSleepInterval(currentSize);
@@ -721,14 +679,15 @@ public class ReplicationSource extends Thread
             this.throttler.resetStartTick();
           }
         }
-        sinkPeer = replicationSinkMgr.getReplicationSink();
-        BlockingInterface rrs = sinkPeer.getRegionServer();
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Replicating " + entries.size() +
-              " entries of total size " + currentSize);
+        replicateContext.setEntries(entries).setSize(currentSize);
+
+        // send the edits to the endpoint. Will block until the edits are shipped and acknowledged
+        boolean replicated = replicationEndpoint.replicate(replicateContext);
+
+        if (!replicated) {
+          continue;
         }
-        ReplicationProtbufUtil.replicateWALEntry(rrs,
-            entries.toArray(new HLog.Entry[entries.size()]));
+
         if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
           this.manager.logPositionAndCleanOldLogs(this.currentPath,
               this.peerClusterZnode, this.repLogReader.getPosition(),
@@ -747,50 +706,9 @@ public class ReplicationSource extends Thread
               + this.totalReplicatedOperations + " operations");
         }
         break;
-
-      } catch (IOException ioe) {
-        // Didn't ship anything, but must still age the last time we did
-        this.metrics.refreshAgeOfLastShippedOp();
-        if (ioe instanceof RemoteException) {
-          ioe = ((RemoteException) ioe).unwrapRemoteException();
-          LOG.warn("Can't replicate because of an error on the remote cluster: ", ioe);
-          if (ioe instanceof TableNotFoundException) {
-            if (sleepForRetries("A table is missing in the peer cluster. "
-                + "Replication cannot proceed without losing data.", sleepMultiplier)) {
-              sleepMultiplier++;
-            }
-            // current thread might be interrupted to terminate
-            // directly go back to while() for confirm this
-            if (isInterrupted()) {
-              continue;
-            }
-          }
-        } else {
-          if (ioe instanceof SocketTimeoutException) {
-            // This exception means we waited for more than 60s and nothing
-            // happened, the cluster is alive and calling it right away
-            // even for a test just makes things worse.
-            sleepForRetries("Encountered a SocketTimeoutException. Since the " +
-              "call to the remote cluster timed out, which is usually " +
-              "caused by a machine failure or a massive slowdown",
-              this.socketTimeoutMultiplier);
-            // current thread might be interrupted to terminate
-            // directly go back to while() for confirm this
-            if (isInterrupted()) {
-              continue;
-            }
-          } else if (ioe instanceof ConnectException) {
-            LOG.warn("Peer is unavailable, rechecking all sinks: ", ioe);
-            replicationSinkMgr.chooseSinks();
-          } else {
-            LOG.warn("Can't replicate because of a local or network error: ", ioe);
-          }
-        }
-
-        if (sinkPeer != null) {
-          replicationSinkMgr.reportBadSink(sinkPeer);
-        }
-        if (sleepForRetries("Since we are unable to replicate", sleepMultiplier)) {
+      } catch (Exception ex) {
+        LOG.warn(replicationEndpoint.getClass().getName() + " threw unknown exception:" + ex);
+        if (sleepForRetries("ReplicationEndpoint threw exception", sleepMultiplier)) {
           sleepMultiplier++;
         }
       }
@@ -803,7 +721,7 @@ public class ReplicationSource extends Thread
    * @return true if the peer is enabled, otherwise false
    */
   protected boolean isPeerEnabled() {
-    return this.replicationPeers.getStatusOfConnectedPeer(this.peerId);
+    return this.replicationPeers.getStatusOfPeer(this.peerId);
   }
 
   /**
@@ -837,10 +755,12 @@ public class ReplicationSource extends Thread
     return false;
   }
 
+  @Override
   public void startup() {
     String n = Thread.currentThread().getName();
     Thread.UncaughtExceptionHandler handler =
         new Thread.UncaughtExceptionHandler() {
+          @Override
           public void uncaughtException(final Thread t, final Throwable e) {
             LOG.error("Unexpected exception in ReplicationSource," +
               " currentPath=" + currentPath, e);
@@ -851,11 +771,17 @@ public class ReplicationSource extends Thread
         this.peerClusterZnode, handler);
   }
 
+  @Override
   public void terminate(String reason) {
     terminate(reason, null);
   }
 
+  @Override
   public void terminate(String reason, Exception cause) {
+    terminate(reason, cause, true);
+  }
+
+  public void terminate(String reason, Exception cause, boolean join) {
     if (cause == null) {
       LOG.info("Closing source "
           + this.peerClusterZnode + " because: " + reason);
@@ -866,17 +792,33 @@ public class ReplicationSource extends Thread
     }
     this.running = false;
     this.interrupt();
-    Threads.shutdown(this, this.sleepForRetries * this.maxRetriesMultiplier);
+    ListenableFuture<Service.State> future = null;
+    if (this.replicationEndpoint != null) {
+      future = this.replicationEndpoint.stop();
+    }
+    if (join) {
+      Threads.shutdown(this, this.sleepForRetries);
+      if (future != null) {
+        try {
+          future.get();
+        } catch (Exception e) {
+          LOG.warn("Got exception:" + e);
+        }
+      }
+    }
   }
 
+  @Override
   public String getPeerClusterZnode() {
     return this.peerClusterZnode;
   }
 
+  @Override
   public String getPeerClusterId() {
     return this.peerId;
   }
 
+  @Override
   public Path getCurrentPath() {
     return this.currentPath;
   }

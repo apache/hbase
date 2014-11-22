@@ -21,10 +21,12 @@ package org.apache.hadoop.hbase.client.replication;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Map.Entry;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -34,13 +36,17 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * <p>
@@ -80,6 +86,8 @@ public class ReplicationAdmin implements Closeable {
       .toString(HConstants.REPLICATION_SCOPE_GLOBAL);
 
   private final HConnection connection;
+  // TODO: replication should be managed by master. All the classes except ReplicationAdmin should
+  // be moved to hbase-server. Resolve it in HBASE-11392.
   private final ReplicationQueuesClient replicationQueuesClient;
   private final ReplicationPeers replicationPeers;
 
@@ -126,27 +134,65 @@ public class ReplicationAdmin implements Closeable {
     });
   }
 
-
   /**
    * Add a new peer cluster to replicate to.
-   * @param id a short that identifies the cluster
+   * @param id a short name that identifies the cluster
    * @param clusterKey the concatenation of the slave cluster's
    * <code>hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent</code>
    * @throws IllegalStateException if there's already one slave since
    * multi-slave isn't supported yet.
+   * @deprecated Use addPeer(String, ReplicationPeerConfig, Map) instead.
    */
+  @Deprecated
   public void addPeer(String id, String clusterKey) throws ReplicationException {
-    this.replicationPeers.addPeer(id, clusterKey);
+    this.addPeer(id, new ReplicationPeerConfig().setClusterKey(clusterKey), null);
   }
 
+  @Deprecated
   public void addPeer(String id, String clusterKey, String tableCFs)
     throws ReplicationException {
-    this.replicationPeers.addPeer(id, clusterKey, tableCFs);
+    this.replicationPeers.addPeer(id,
+      new ReplicationPeerConfig().setClusterKey(clusterKey), tableCFs);
+  }
+
+  /**
+   * Add a new remote slave cluster for replication.
+   * @param id a short name that identifies the cluster
+   * @param peerConfig configuration for the replication slave cluster
+   * @param tableCfs the table and column-family list which will be replicated for this peer.
+   * A map from tableName to column family names. An empty collection can be passed
+   * to indicate replicating all column families. Pass null for replicating all table and column
+   * families
+   */
+  public void addPeer(String id, ReplicationPeerConfig peerConfig,
+      Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException {
+    this.replicationPeers.addPeer(id, peerConfig, getTableCfsStr(tableCfs));
+  }
+
+  @VisibleForTesting
+  static String getTableCfsStr(Map<TableName, ? extends Collection<String>> tableCfs) {
+    String tableCfsStr = null;
+    if (tableCfs != null) {
+      // Format: table1:cf1,cf2;table2:cfA,cfB;table3
+      StringBuilder builder = new StringBuilder();
+      for (Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
+        if (builder.length() > 0) {
+          builder.append(";");
+        }
+        builder.append(entry.getKey());
+        if (entry.getValue() != null && !entry.getValue().isEmpty()) {
+          builder.append(":");
+          builder.append(StringUtils.join(entry.getValue(), ","));
+        }
+      }
+      tableCfsStr = builder.toString();
+    }
+    return tableCfsStr;
   }
 
   /**
    * Removes a peer cluster and stops the replication to it.
-   * @param id a short that identifies the cluster
+   * @param id a short name that identifies the cluster
    */
   public void removePeer(String id) throws ReplicationException {
     this.replicationPeers.removePeer(id);
@@ -154,7 +200,7 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Restart the replication stream to the specified peer.
-   * @param id a short that identifies the cluster
+   * @param id a short name that identifies the cluster
    */
   public void enablePeer(String id) throws ReplicationException {
     this.replicationPeers.enablePeer(id);
@@ -162,7 +208,7 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Stop the replication stream to the specified peer.
-   * @param id a short that identifies the cluster
+   * @param id a short name that identifies the cluster
    */
   public void disablePeer(String id) throws ReplicationException {
     this.replicationPeers.disablePeer(id);
@@ -179,14 +225,30 @@ public class ReplicationAdmin implements Closeable {
   /**
    * Map of this cluster's peers for display.
    * @return A map of peer ids to peer cluster keys
+   * @deprecated use {@link #listPeerConfigs()}
    */
+  @Deprecated
   public Map<String, String> listPeers() {
-    return this.replicationPeers.getAllPeerClusterKeys();
+    Map<String, ReplicationPeerConfig> peers = this.listPeerConfigs();
+    Map<String, String> ret = new HashMap<String, String>(peers.size());
+
+    for (Map.Entry<String, ReplicationPeerConfig> entry : peers.entrySet()) {
+      ret.put(entry.getKey(), entry.getValue().getClusterKey());
+    }
+    return ret;
+  }
+
+  public Map<String, ReplicationPeerConfig> listPeerConfigs() {
+    return this.replicationPeers.getAllPeerConfigs();
+  }
+
+  public ReplicationPeerConfig getPeerConfig(String id) throws ReplicationException {
+    return this.replicationPeers.getReplicationPeerConfig(id);
   }
 
   /**
    * Get the replicable table-cf config of the specified peer.
-   * @param id a short that identifies the cluster
+   * @param id a short name that identifies the cluster
    */
   public String getPeerTableCFs(String id) throws ReplicationException {
     return this.replicationPeers.getPeerTableCFsConfig(id);
@@ -194,16 +256,31 @@ public class ReplicationAdmin implements Closeable {
 
   /**
    * Set the replicable table-cf config of the specified peer
-   * @param id a short that identifies the cluster
+   * @param id a short name that identifies the cluster
+   * @deprecated use {@link #setPeerTableCFs(String, Map)}
    */
+  @Deprecated
   public void setPeerTableCFs(String id, String tableCFs) throws ReplicationException {
     this.replicationPeers.setPeerTableCFsConfig(id, tableCFs);
   }
 
   /**
+   * Set the replicable table-cf config of the specified peer
+   * @param id a short name that identifies the cluster
+   * @param tableCfs the table and column-family list which will be replicated for this peer.
+   * A map from tableName to column family names. An empty collection can be passed
+   * to indicate replicating all column families. Pass null for replicating all table and column
+   * families
+   */
+  public void setPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
+      throws ReplicationException {
+    this.replicationPeers.setPeerTableCFsConfig(id, getTableCfsStr(tableCfs));
+  }
+
+  /**
    * Get the state of the specified peer cluster
-   * @param id String format of the Short that identifies the peer, an IllegalArgumentException
-   *           is thrown if it doesn't exist
+   * @param id String format of the Short name that identifies the peer,
+   * an IllegalArgumentException is thrown if it doesn't exist
    * @return true if replication is enabled to that peer, false if it isn't
    */
   public boolean getPeerState(String id) throws ReplicationException {
@@ -217,7 +294,7 @@ public class ReplicationAdmin implements Closeable {
     }
   }
 
-  
+
   /**
    * Find all column families that are replicated from this cluster
    * @return the full list of the replicated column families of this cluster as:
@@ -227,7 +304,7 @@ public class ReplicationAdmin implements Closeable {
    * types may be extended here. For example
    *  1) the replication may only apply to selected peers instead of all peers
    *  2) the replicationType may indicate the host Cluster servers as Slave
-   *     for the table:columnFam.         
+   *     for the table:columnFam.
    */
   public List<HashMap<String, String>> listReplicated() throws IOException {
     List<HashMap<String, String>> replicationColFams = new ArrayList<HashMap<String, String>>();
@@ -249,5 +326,5 @@ public class ReplicationAdmin implements Closeable {
     }
 
     return replicationColFams;
-  } 
+  }
 }

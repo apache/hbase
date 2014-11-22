@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -119,6 +120,7 @@ public interface HLog {
    * Only used when splitting logs.
    */
   // TODO: Remove this Writable.
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
   class Entry implements Writable {
     private WALEdit edit;
     private HLogKey key;
@@ -212,12 +214,12 @@ public interface HLog {
    * @return the number of HLog files
    */
   int getNumLogFiles();
-  
+
   /**
    * @return the size of HLog files
    */
   long getLogFileSize();
-  
+
   // TODO: Log rolling should not be in this interface.
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
@@ -300,6 +302,7 @@ public interface HLog {
    * @return txid of this transaction
    * @throws IOException
    */
+  @Deprecated
   long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
       List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
       boolean isInMemstore, long nonceGroup, long nonce) throws IOException;

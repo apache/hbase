@@ -22,13 +22,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * This class is for maintaining the various replication statistics for a source and publishing them
  * through the metrics interfaces.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class MetricsSource {
 
   public static final String SOURCE_SIZE_OF_LOG_QUEUE = "source.sizeOfLogQueue";
@@ -152,7 +153,7 @@ public class MetricsSource {
     rms.incCounters(shippedKBsKey, sizeInKB);
     rms.incCounters(SOURCE_SHIPPED_KBS, sizeInKB);
   }
-  
+
   /** increase the byte number read by source from log file */
   public void incrLogReadInBytes(long readInBytes) {
     rms.incCounters(logReadInBytesKey, readInBytes);

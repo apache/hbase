@@ -24,7 +24,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -40,11 +42,13 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mapreduce.TableSplit;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
-import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -168,6 +172,7 @@ public class VerifyReplication extends Configured implements Tool {
       LOG.error(counter.toString() + ", rowkey=" + Bytes.toString(row.getRow()));
     }
     
+    @Override
     protected void cleanup(Context context) {
       if (replicatedScanner != null) {
         try {
@@ -188,7 +193,7 @@ public class VerifyReplication extends Configured implements Tool {
 
   private static String getPeerQuorumAddress(final Configuration conf) throws IOException {
     ZooKeeperWatcher localZKW = null;
-    ReplicationPeer peer = null;
+    ReplicationPeerZKImpl peer = null;
     try {
       localZKW = new ZooKeeperWatcher(conf, "VerifyReplication",
           new Abortable() {
@@ -199,11 +204,11 @@ public class VerifyReplication extends Configured implements Tool {
       ReplicationPeers rp = ReplicationFactory.getReplicationPeers(localZKW, conf, localZKW);
       rp.init();
 
-      Configuration peerConf = rp.getPeerConf(peerId);
-      if (peerConf == null) {
+      Pair<ReplicationPeerConfig, Configuration> pair = rp.getPeerConf(peerId);
+      if (pair == null) {
         throw new IOException("Couldn't get peer conf!");
       }
-
+      Configuration peerConf = rp.getPeerConf(peerId).getSecond();
       return ZKUtil.getZooKeeperClusterKey(peerConf);
     } catch (ReplicationException e) {
       throw new IOException(

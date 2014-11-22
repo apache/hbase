@@ -19,19 +19,21 @@
 package org.apache.hadoop.hbase.replication;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.ServerName;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.ServerName;
 
 /**
  * This class is responsible for the parsing logic for a znode representing a queue.
  * It will extract the peerId if it's recovered as well as the dead region servers
  * that were part of the queue's history.
  */
+@InterfaceAudience.Private
 public class ReplicationQueueInfo {
   private static final Log LOG = LogFactory.getLog(ReplicationQueueInfo.class);
 

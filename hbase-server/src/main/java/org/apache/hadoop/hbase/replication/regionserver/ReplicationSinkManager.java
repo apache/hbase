@@ -29,8 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.replication.ReplicationPeers;
-
+import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -61,7 +60,7 @@ public class ReplicationSinkManager {
 
   private final String peerClusterId;
 
-  private final ReplicationPeers replicationPeers;
+  private final HBaseReplicationEndpoint endpoint;
 
   // Count of "bad replication sink" reports per peer sink
   private final Map<ServerName, Integer> badReportCounts;
@@ -85,15 +84,15 @@ public class ReplicationSinkManager {
    * Instantiate for a single replication peer cluster.
    * @param conn connection to the peer cluster
    * @param peerClusterId identifier of the peer cluster
-   * @param replicationPeers manages peer clusters being replicated to
+   * @param endpoint replication endpoint for inter cluster replication
    * @param conf HBase configuration, used for determining replication source ratio and bad peer
    *          threshold
    */
   public ReplicationSinkManager(HConnection conn, String peerClusterId,
-      ReplicationPeers replicationPeers, Configuration conf) {
+      HBaseReplicationEndpoint endpoint, Configuration conf) {
     this.conn = conn;
     this.peerClusterId = peerClusterId;
-    this.replicationPeers = replicationPeers;
+    this.endpoint = endpoint;
     this.badReportCounts = Maps.newHashMap();
     this.ratio = conf.getFloat("replication.source.ratio", DEFAULT_REPLICATION_SOURCE_RATIO);
     this.badSinkThreshold = conf.getInt("replication.bad.sink.threshold",
@@ -107,8 +106,7 @@ public class ReplicationSinkManager {
    * @return a replication sink to replicate to
    */
   public SinkPeer getReplicationSink() throws IOException {
-    if (replicationPeers.getTimestampOfLastChangeToPeer(peerClusterId) > this.lastUpdateToPeers ||
-        sinks.isEmpty()) {
+    if (endpoint.getLastRegionServerUpdate() > this.lastUpdateToPeers || sinks.isEmpty()) {
       LOG.info("Current list of sinks is out of date, updating");
       chooseSinks();
     }
@@ -143,8 +141,7 @@ public class ReplicationSinkManager {
   }
 
   void chooseSinks() {
-    List<ServerName> slaveAddresses =
-                        replicationPeers.getRegionServersOfConnectedPeer(peerClusterId);
+    List<ServerName> slaveAddresses = endpoint.getRegionServers();
     Collections.shuffle(slaveAddresses, random);
     int numSinks = (int) Math.ceil(slaveAddresses.size() * ratio);
     sinks = slaveAddresses.subList(0, numSinks);

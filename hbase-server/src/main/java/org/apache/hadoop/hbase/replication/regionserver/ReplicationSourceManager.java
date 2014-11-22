@@ -44,9 +44,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationListener;
+import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
+import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationTracker;
 import org.apache.zookeeper.KeeperException;
@@ -119,7 +123,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       final Configuration conf, final Stoppable stopper, final FileSystem fs, final Path logDir,
       final Path oldLogDir, final UUID clusterId) {
     //CopyOnWriteArrayList is thread-safe.
-    //Generally, reading is more than modifying. 
+    //Generally, reading is more than modifying.
     this.sources = new CopyOnWriteArrayList<ReplicationSourceInterface>();
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
@@ -209,7 +213,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * old region server hlog queues
    */
   protected void init() throws IOException, ReplicationException {
-    for (String id : this.replicationPeers.getConnectedPeers()) {
+    for (String id : this.replicationPeers.getPeerIds()) {
       addSource(id);
     }
     List<String> currentReplicators = this.replicationQueues.getListOfReplicators();
@@ -236,9 +240,12 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   protected ReplicationSourceInterface addSource(String id) throws IOException,
       ReplicationException {
+    ReplicationPeerConfig peerConfig
+      = replicationPeers.getReplicationPeerConfig(id);
+    ReplicationPeer peer = replicationPeers.getPeer(id);
     ReplicationSourceInterface src =
         getReplicationSource(this.conf, this.fs, this, this.replicationQueues,
-          this.replicationPeers, stopper, id, this.clusterId);
+          this.replicationPeers, stopper, id, this.clusterId, peerConfig, peer);
     synchronized (this.hlogsById) {
       this.sources.add(src);
       this.hlogsById.put(id, new TreeSet<String>());
@@ -269,7 +276,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void deleteSource(String peerId, boolean closeConnection) {
     this.replicationQueues.removeQueue(peerId);
     if (closeConnection) {
-      this.replicationPeers.disconnectFromPeer(peerId);
+      this.replicationPeers.peerRemoved(peerId);
     }
   }
 
@@ -362,7 +369,9 @@ public class ReplicationSourceManager implements ReplicationListener {
   protected ReplicationSourceInterface getReplicationSource(final Configuration conf,
       final FileSystem fs, final ReplicationSourceManager manager,
       final ReplicationQueues replicationQueues, final ReplicationPeers replicationPeers,
-      final Stoppable stopper, final String peerId, final UUID clusterId) throws IOException {
+      final Stoppable stopper, final String peerId, final UUID clusterId,
+      final ReplicationPeerConfig peerConfig, final ReplicationPeer replicationPeer)
+          throws IOException {
     ReplicationSourceInterface src;
     try {
       @SuppressWarnings("rawtypes")
@@ -373,9 +382,32 @@ public class ReplicationSourceManager implements ReplicationListener {
       LOG.warn("Passed replication source implementation throws errors, " +
           "defaulting to ReplicationSource", e);
       src = new ReplicationSource();
-
     }
-    src.init(conf, fs, manager, replicationQueues, replicationPeers, stopper, peerId, clusterId);
+
+    ReplicationEndpoint replicationEndpoint = null;
+    try {
+      String replicationEndpointImpl = peerConfig.getReplicationEndpointImpl();
+      if (replicationEndpointImpl == null) {
+        // Default to HBase inter-cluster replication endpoint
+        replicationEndpointImpl = HBaseInterClusterReplicationEndpoint.class.getName();
+      }
+      @SuppressWarnings("rawtypes")
+      Class c = Class.forName(replicationEndpointImpl);
+      replicationEndpoint = (ReplicationEndpoint) c.newInstance();
+    } catch (Exception e) {
+      LOG.warn("Passed replication endpoint implementation throws errors", e);
+      throw new IOException(e);
+    }
+
+    MetricsSource metrics = new MetricsSource(peerId);
+    // init replication source
+    src.init(conf, fs, manager, replicationQueues, replicationPeers, stopper, peerId,
+      clusterId, replicationEndpoint, metrics);
+
+    // init replication endpoint
+    replicationEndpoint.init(new ReplicationEndpoint.Context(replicationPeer.getConfiguration(),
+      fs, peerConfig, peerId, clusterId, replicationPeer, metrics));
+
     return src;
   }
 
@@ -464,7 +496,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   public void peerListChanged(List<String> peerIds) {
     for (String id : peerIds) {
       try {
-        boolean added = this.replicationPeers.connectToPeer(id);
+        boolean added = this.replicationPeers.peerAdded(id);
         if (added) {
           addSource(id);
         }
@@ -530,10 +562,26 @@ public class ReplicationSourceManager implements ReplicationListener {
       for (Map.Entry<String, SortedSet<String>> entry : newQueues.entrySet()) {
         String peerId = entry.getKey();
         try {
+          // there is not an actual peer defined corresponding to peerId for the failover.
+          ReplicationQueueInfo replicationQueueInfo = new ReplicationQueueInfo(peerId);
+          String actualPeerId = replicationQueueInfo.getPeerId();
+          ReplicationPeer peer = replicationPeers.getPeer(actualPeerId);
+          ReplicationPeerConfig peerConfig = null;
+          try {
+            peerConfig = replicationPeers.getReplicationPeerConfig(actualPeerId);
+          } catch (ReplicationException ex) {
+            LOG.warn("Received exception while getting replication peer config, skipping replay"
+                + ex);
+          }
+          if (peer == null || peerConfig == null) {
+            LOG.warn("Skipping failover for peer:" + actualPeerId + " of node" + rsZnode);
+            continue;
+          }
+
           ReplicationSourceInterface src =
               getReplicationSource(conf, fs, ReplicationSourceManager.this, this.rq, this.rp,
-                stopper, peerId, this.clusterId);
-          if (!this.rp.getConnectedPeers().contains((src.getPeerClusterId()))) {
+                stopper, peerId, this.clusterId, peerConfig, peer);
+          if (!this.rp.getPeerIds().contains((src.getPeerClusterId()))) {
             src.terminate("Recovered queue doesn't belong to any current peer");
             break;
           }
@@ -586,7 +634,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       stats.append(source.getStats() + "\n");
     }
     for (ReplicationSourceInterface oldSource : oldsources) {
-      stats.append("Recovered source for cluster/machine(s) " + oldSource.getPeerClusterId() + ": ");
+      stats.append("Recovered source for cluster/machine(s) " + oldSource.getPeerClusterId()+": ");
       stats.append(oldSource.getStats()+ "\n");
     }
     return stats.toString();

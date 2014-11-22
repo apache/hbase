@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -37,6 +38,7 @@ import org.apache.zookeeper.KeeperException;
  * responsible for handling replication events that are defined in the ReplicationListener
  * interface.
  */
+@InterfaceAudience.Private
 public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements ReplicationTracker {
 
   private static final Log LOG = LogFactory.getLog(ReplicationTrackerZKImpl.class);
@@ -157,6 +159,7 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
      * Called when a node has been deleted
      * @param path full path of the deleted node
      */
+    @Override
     public void nodeDeleted(String path) {
       List<String> peers = refreshPeersList(path);
       if (peers == null) {
@@ -175,6 +178,7 @@ public class ReplicationTrackerZKImpl extends ReplicationStateZKBase implements 
      * Called when an existing node has a child node added or removed.
      * @param path full path of the node whose children have changed
      */
+    @Override
     public void nodeChildrenChanged(String path) {
       List<String> peers = refreshPeersList(path);
       if (peers == null) {

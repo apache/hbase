@@ -26,14 +26,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -58,12 +55,12 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
-   // all members of this class are null if replication is disabled, 
+   // all members of this class are null if replication is disabled,
    // so we cannot filter the files
     if (this.getConf() == null) {
       return files;
     }
-    
+
     final Set<String> hlogs = loadHLogsFromQueues();
     return Iterables.filter(files, new Predicate<FileStatus>() {
       @Override
@@ -138,8 +135,6 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
       LOG.info("Stopping " + this.zkw);
       this.zkw.close();
     }
-    // Not sure why we're deleting a connection that we never acquired or used
-    HConnectionManager.deleteConnection(this.getConf());
   }
 
   @Override

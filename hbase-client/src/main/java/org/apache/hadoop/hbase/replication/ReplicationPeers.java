@@ -18,14 +18,14 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * This provides an interface for maintaining a set of peer clusters. These peers are remote slave
@@ -44,28 +44,26 @@ public interface ReplicationPeers {
    * Initialize the ReplicationPeers interface.
    */
   void init() throws ReplicationException;
-  /**
-   * Add a new remote slave cluster for replication.
-   * @param peerId a short that identifies the cluster
-   * @param clusterKey the concatenation of the slave cluster's:
-   *          hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
-   */
-  void addPeer(String peerId, String clusterKey) throws ReplicationException;
 
   /**
    * Add a new remote slave cluster for replication.
    * @param peerId a short that identifies the cluster
-   * @param clusterKey the concatenation of the slave cluster's:
-   *          hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
-   * @param tableCFs the table and column-family list which will be replicated for this peer
+   * @param peerConfig configuration for the replication slave cluster
+   * @param tableCFs the table and column-family list which will be replicated for this peer or null
+   * for all table and column families
    */
-  void addPeer(String peerId, String clusterKey, String tableCFs) throws ReplicationException;
+  void addPeer(String peerId, ReplicationPeerConfig peerConfig, String tableCFs)
+      throws ReplicationException;
 
   /**
    * Removes a remote slave cluster and stops the replication to it.
    * @param peerId a short that identifies the cluster
    */
   void removePeer(String peerId) throws ReplicationException;
+
+  boolean peerAdded(String peerId) throws ReplicationException;
+
+  void peerRemoved(String peerId);
 
   /**
    * Restart the replication to the specified remote slave cluster.
@@ -100,6 +98,19 @@ public interface ReplicationPeers {
   public Map<String, List<String>> getTableCFs(String peerId);
 
   /**
+   * Returns the ReplicationPeer
+   * @param peerId id for the peer
+   * @return ReplicationPeer object
+   */
+  ReplicationPeer getPeer(String peerId);
+
+  /**
+   * Returns the set of peerIds defined
+   * @return a Set of Strings for peerIds
+   */
+  public Set<String> getPeerIds();
+
+  /**
    * Get the replication status for the specified connected remote slave cluster.
    * The value might be read from cache, so it is recommended to
    * use {@link #getStatusOfPeerFromBackingStore(String)}
@@ -107,7 +118,7 @@ public interface ReplicationPeers {
    * @param peerId a short that identifies the cluster
    * @return true if replication is enabled, false otherwise.
    */
-  boolean getStatusOfConnectedPeer(String peerId);
+  boolean getStatusOfPeer(String peerId);
 
   /**
    * Get the replication status for the specified remote slave cluster, which doesn't
@@ -119,17 +130,11 @@ public interface ReplicationPeers {
   boolean getStatusOfPeerFromBackingStore(String peerId) throws ReplicationException;
 
   /**
-   * Get a set of all connected remote slave clusters.
-   * @return set of peer ids
-   */
-  Set<String> getConnectedPeers();
-
-  /**
-   * List the cluster keys of all remote slave clusters (whether they are enabled/disabled or
-   * connected/disconnected).
+   * List the cluster replication configs of all remote slave clusters (whether they are
+   * enabled/disabled or connected/disconnected).
    * @return A map of peer ids to peer cluster keys
    */
-  Map<String, String> getAllPeerClusterKeys();
+  Map<String, ReplicationPeerConfig> getAllPeerConfigs();
 
   /**
    * List the peer ids of all remote slave clusters (whether they are enabled/disabled or
@@ -139,45 +144,16 @@ public interface ReplicationPeers {
   List<String> getAllPeerIds();
 
   /**
-   * Attempt to connect to a new remote slave cluster.
-   * @param peerId a short that identifies the cluster
-   * @return true if a new connection was made, false if no new connection was made.
+   * Returns the configured ReplicationPeerConfig for this peerId
+   * @param peerId a short name that identifies the cluster
+   * @return ReplicationPeerConfig for the peer
    */
-  boolean connectToPeer(String peerId) throws ReplicationException;
-
-  /**
-   * Disconnect from a remote slave cluster.
-   * @param peerId a short that identifies the cluster
-   */
-  void disconnectFromPeer(String peerId);
-
-  /**
-   * Returns all region servers from given connected remote slave cluster.
-   * @param peerId a short that identifies the cluster
-   * @return addresses of all region servers in the peer cluster. Returns an empty list if the peer
-   *         cluster is unavailable or there are no region servers in the cluster.
-   */
-  List<ServerName> getRegionServersOfConnectedPeer(String peerId);
-
-  /**
-   * Get the timestamp of the last change in composition of a given peer cluster.
-   * @param peerId identifier of the peer cluster for which the timestamp is requested
-   * @return the timestamp (in milliseconds) of the last change to the composition of
-   *         the peer cluster
-   */
-  long getTimestampOfLastChangeToPeer(String peerId);
-
-  /**
-   * Returns the UUID of the provided peer id.
-   * @param peerId the peer's ID that will be converted into a UUID
-   * @return a UUID or null if the peer cluster does not exist or is not connected.
-   */
-  UUID getPeerUUID(String peerId);
+  ReplicationPeerConfig getReplicationPeerConfig(String peerId) throws ReplicationException;
 
   /**
    * Returns the configuration needed to talk to the remote slave cluster.
    * @param peerId a short that identifies the cluster
    * @return the configuration for the peer cluster, null if it was unable to get the configuration
    */
-  Configuration getPeerConf(String peerId) throws ReplicationException;
+  Pair<ReplicationPeerConfig, Configuration> getPeerConf(String peerId) throws ReplicationException;
 }
