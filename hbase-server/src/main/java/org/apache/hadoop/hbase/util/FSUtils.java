@@ -1445,7 +1445,7 @@ public abstract class FSUtils {
     public boolean accept(Path rd) {
       try {
         // only files
-        return !fs.getFileStatus(rd).isDirectory() && StoreFileInfo.isHFile(rd);
+        return !fs.getFileStatus(rd).isDir() && StoreFileInfo.isHFile(rd);
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
         LOG.warn("Skipping file " + rd +" due to IOException", ioe);
@@ -1466,7 +1466,7 @@ public abstract class FSUtils {
     public boolean accept(Path rd) {
       try {
         // only files can be references.
-        return !fs.getFileStatus(rd).isDirectory() && StoreFileInfo.isReference(rd);
+        return !fs.getFileStatus(rd).isDir() && StoreFileInfo.isReference(rd);
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
         LOG.warn("Skipping file " + rd +" due to IOException", ioe);
