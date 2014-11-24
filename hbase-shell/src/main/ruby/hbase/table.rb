@@ -19,7 +19,7 @@
 
 include Java
 
-# Wrapper for org.apache.hadoop.hbase.client.HTable
+# Wrapper for org.apache.hadoop.hbase.client.Table
 
 module Hbase
   class Table
@@ -112,12 +112,29 @@ EOF
     attr_reader :name
 
     def initialize(configuration, table_name, shell)
+      # Commenting out the HTable.new() calls and uncommenting the @connection approach causes
+      # Zookeepr exceptions.  Interestingly, there were changes in admin.rb to convert 
+      # HBaseAdmin.new() calls to ConnectionFactory.createConnection().getAdmin().  Either change
+      # of ConnectionFactory.createConnection().getTable() or
+      # ConnectionFactory.createConnection().getAdmin() by itself doesn't cause the Zookeper 
+      # exception.  Somehow the combination of the two causes the issue.
+
+      # TODO: Uncomment the createConnection approach after the underlying problem is fixed.
+ 
       if @@thread_pool then
-        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name.to_java_bytes, @@thread_pool)
+        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name.to_java_bytes,
+          @@thread_pool)
+        # @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(
+        #  configuration, @@thread_pool)
+        # @table = @connection.getTable(table_name)
       else
+        # @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(
+        #  configuration)
+        # @table = @connection.getTable(table_name)
         @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
         @@thread_pool = @table.getPool()
       end
+      
       @name = table_name
       @shell = shell
       @converters = Hash.new()

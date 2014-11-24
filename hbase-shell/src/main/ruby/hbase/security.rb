@@ -26,7 +26,8 @@ module Hbase
 
     def initialize(configuration, formatter)
       @config = configuration
-      @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
+      @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(@config)
+      @admin = @connection.getAdmin()
       @formatter = formatter
     end
 
@@ -37,7 +38,7 @@ module Hbase
       # TODO: need to validate user name
 
       begin
-        meta_table = org.apache.hadoop.hbase.client.HTable.new(@config,
+        meta_table = @connection.getTable(
           org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
         service = meta_table.coprocessorService(
           org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)
@@ -101,7 +102,7 @@ module Hbase
       # TODO: need to validate user name
 
       begin
-        meta_table = org.apache.hadoop.hbase.client.HTable.new(@config,
+        meta_table = @connection.getTable(
           org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
         service = meta_table.coprocessorService(
           org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)

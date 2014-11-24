@@ -36,7 +36,8 @@ module Hbase
   class QuotasAdmin
     def initialize(configuration, formatter)
       @config = configuration
-      @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
+      @connection = org.apache.hadoop.hbase.client.ConnectionFactor.createConnection(Configuration)
+      @admin = connection.getAdmin()
       @formatter = formatter
     end
 

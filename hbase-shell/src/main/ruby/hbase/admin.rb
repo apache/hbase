@@ -32,7 +32,9 @@ module Hbase
     include HBaseConstants
 
     def initialize(configuration, formatter)
-      @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
+      # @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
+      @conn = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(configuration)
+      @admin = @conn.getAdmin()
       connection = @admin.getConnection()
       @conf = configuration
       @zk_wrapper = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(configuration,
@@ -183,7 +185,7 @@ module Hbase
       tableExists(table_name)
       raise ArgumentError, "Table #{table_name} is enabled. Disable it first.'" if enabled?(table_name)
 
-      @admin.deleteTable(table_name)
+      @admin.deleteTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -353,8 +355,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name, conf = @conf)
-      h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
-      table_description = h_table.getTableDescriptor()
+      table_description = @admin.getTableDescriptor(table_name.to_java_bytes)
       raise ArgumentError, "Table #{table_name} is not enabled. Enable it first.'" unless enabled?(table_name)
       yield 'Disabling table...' if block_given?
       @admin.disableTable(table_name)
@@ -369,7 +370,7 @@ module Hbase
         if rootCause.kind_of?(org.apache.hadoop.hbase.DoNotRetryIOException) then
           # Handle the compatibility case, where the truncate method doesn't exists on the Master
           yield 'Dropping table...' if block_given?
-          @admin.deleteTable(table_name)
+          @admin.deleteTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
 
           yield 'Creating table...' if block_given?
           @admin.createTable(table_description)
@@ -382,7 +383,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
     def truncate_preserve(table_name, conf = @conf)
-      h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
+      h_table = @connection.getTable(table_name)
       splits = h_table.getRegionLocations().keys().map{|i| Bytes.toString(i.getStartKey)}.delete_if{|k| k == ""}.to_java :String
       splits = org.apache.hadoop.hbase.util.Bytes.toByteArrays(splits)
       table_description = h_table.getTableDescriptor()
@@ -399,7 +400,7 @@ module Hbase
         if rootCause.kind_of?(org.apache.hadoop.hbase.DoNotRetryIOException) then
           # Handle the compatibility case, where the truncate method doesn't exists on the Master
           yield 'Dropping table...' if block_given?
-          @admin.deleteTable(table_name)
+          @admin.deleteTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
 
           yield 'Creating table with region boundaries...' if block_given?
           @admin.createTable(table_description, splits)
@@ -714,8 +715,7 @@ module Hbase
     # Enables/disables a region by name
     def online(region_name, on_off)
       # Open meta table
-      meta = org.apache.hadoop.hbase.client.HTable.new(
-          org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
+      meta = connection.getTable(org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
 
       # Read region info
       # FIXME: fail gracefully if can't find the region
