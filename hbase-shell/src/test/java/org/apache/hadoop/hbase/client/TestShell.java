@@ -65,6 +65,9 @@ public class TestShell {
     loadPaths.add("src/test/ruby");
     jruby.getProvider().setLoadPaths(loadPaths);
     jruby.put("$TEST_CLUSTER", TEST_UTIL);
+    System.setProperty("jruby.jit.logging.verbose", "true");
+    System.setProperty("jruby.jit.logging", "true");
+    System.setProperty("jruby.native.verbose", "true");
   }
 
   @AfterClass
