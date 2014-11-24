@@ -68,7 +68,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    */
   @Before
   public void setUp() throws Exception {
-    htable1.setAutoFlush(true, true);
+    ((HTable)htable1).setAutoFlush(true, true);
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
     for ( JVMClusterUtil.RegionServerThread r :
@@ -246,7 +246,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     LOG.info("testSmallBatch");
     Put put;
     // normal Batch tests
-    htable1.setAutoFlush(false, true);
+    ((HTable)htable1).setAutoFlush(false, true);
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       put = new Put(Bytes.toBytes(i));
       put.add(famName, row, row);
@@ -386,7 +386,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   public void testLoading() throws Exception {
     LOG.info("Writing out rows to table1 in testLoading");
     htable1.setWriteBufferSize(1024);
-    htable1.setAutoFlush(false, true);
+    ((HTable)htable1).setAutoFlush(false, true);
     for (int i = 0; i < NB_ROWS_IN_BIG_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.add(famName, row, row);

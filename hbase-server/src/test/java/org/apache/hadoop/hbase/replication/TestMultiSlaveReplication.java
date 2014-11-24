@@ -131,7 +131,7 @@ public class TestMultiSlaveReplication {
     htable2.setWriteBufferSize(1024);
     Table htable3 = new HTable(conf3, tableName);
     htable3.setWriteBufferSize(1024);
-    
+
     admin1.addPeer("1", utility2.getClusterKey());
 
     // put "row" and wait 'til it got around, then delete
@@ -175,7 +175,7 @@ public class TestMultiSlaveReplication {
     // Even if the log was rolled in the middle of the replication
     // "row" is still replication.
     checkRow(row, 1, htable2);
-    // Replication thread of cluster 2 may be sleeping, and since row2 is not there in it, 
+    // Replication thread of cluster 2 may be sleeping, and since row2 is not there in it,
     // we should wait before checking.
     checkWithWait(row, 1, htable3);
 
@@ -187,7 +187,7 @@ public class TestMultiSlaveReplication {
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
   }
- 
+
   private void checkWithWait(byte[] row, int count, Table table) throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
@@ -209,7 +209,7 @@ public class TestMultiSlaveReplication {
       }
     }
   }
-  
+
   private void checkRow(byte[] row, int count, Table... tables) throws IOException {
     Get get = new Get(row);
     for (Table table : tables) {
@@ -240,7 +240,7 @@ public class TestMultiSlaveReplication {
       if (removedFromAll) {
         break;
       } else {
-        Thread.sleep(SLEEP_TIME);        
+        Thread.sleep(SLEEP_TIME);
       }
     }
   }

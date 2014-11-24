@@ -250,15 +250,18 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * Get the ServerName of region server serving the first hbase:meta region
    */
   public ServerName getServerHoldingMeta() throws IOException {
-    return getServerHoldingRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+    return getServerHoldingRegion(TableName.META_TABLE_NAME,
+      HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
   }
 
   /**
    * Get the ServerName of region server serving the specified region
    * @param regionName Name of the region in bytes
+   * @param tn Table name that has the region.
    * @return ServerName that hosts the region or null
    */
-  public abstract ServerName getServerHoldingRegion(byte[] regionName) throws IOException;
+  public abstract ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
+  throws IOException;
 
   /**
    * @return whether we are interacting with a distributed cluster as opposed to an

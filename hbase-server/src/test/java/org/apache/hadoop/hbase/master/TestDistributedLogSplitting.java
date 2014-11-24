@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -332,7 +333,7 @@ public class TestDistributedLogSplitting {
     HTable ht = installTable(zkw, TABLE_NAME, FAMILY_NAME, NUM_REGIONS_TO_CREATE);
     NonceGeneratorWithDups ng = new NonceGeneratorWithDups();
     NonceGenerator oldNg =
-        ConnectionUtils.injectNonceGeneratorForTesting(ht.getConnection(), ng);
+        ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection)ht.getConnection(), ng);
 
     try {
       List<Increment> reqs = new ArrayList<Increment>();
@@ -366,7 +367,7 @@ public class TestDistributedLogSplitting {
         }
       }
     } finally {
-      ConnectionUtils.injectNonceGeneratorForTesting(ht.getConnection(), oldNg);
+      ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection) ht.getConnection(), oldNg);
       ht.close();
       zkw.close();
     }
@@ -1386,7 +1387,7 @@ public class TestDistributedLogSplitting {
     HLogUtil.writeRegionOpenSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);
     // current SeqId file has seqid=2001
     assertEquals(3001, HLogUtil.writeRegionOpenSequenceIdFile(fs, regionDirs.get(0) , 3L, 1000L));
-    
+
     Path editsdir = HLogUtil.getRegionDirRecoveredEditsDir(regionDirs.get(0));
     FileStatus[] files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
       @Override
@@ -1399,14 +1400,14 @@ public class TestDistributedLogSplitting {
     });
     // only one seqid file should exist
     assertEquals(1, files.length);
-    
+
     // verify all seqId files aren't treated as recovered.edits files
     NavigableSet<Path> recoveredEdits = HLogUtil.getSplitEditFilesSorted(fs, regionDirs.get(0));
     assertEquals(0, recoveredEdits.size());
-    
+
     ht.close();
-  } 
-  
+  }
+
   HTable installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {
     return installTable(zkw, tname, fname, nrs, 0);
   }

@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -54,7 +55,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
     Thread killer = killARegionServer(util, 5000, rsToKill1);
 
     LOG.info("Start loading table");
-    int initialCount = utility1.loadTable(htable1, famName);
+    int initialCount = utility1.loadTable((HTable)htable1, famName);
     LOG.info("Done loading table");
     killer.join(5000);
     LOG.info("Done waiting for threads");

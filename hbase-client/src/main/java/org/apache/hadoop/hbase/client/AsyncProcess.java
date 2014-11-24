@@ -163,7 +163,7 @@ class AsyncProcess {
   // TODO: many of the fields should be made private
   protected final long id;
 
-  protected final ClusterConnection hConnection;
+  protected final ClusterConnection connection;
   protected final RpcRetryingCallerFactory rpcCallerFactory;
   protected final RpcControllerFactory rpcFactory;
   protected final BatchErrors globalErrors;
@@ -246,7 +246,7 @@ class AsyncProcess {
       throw new IllegalArgumentException("HConnection cannot be null.");
     }
 
-    this.hConnection = hc;
+    this.connection = hc;
     this.pool = pool;
     this.globalErrors = useGlobalErrors ? new BatchErrors() : null;
 
@@ -340,7 +340,7 @@ class AsyncProcess {
         new HashMap<ServerName, MultiAction<Row>>();
     List<Action<Row>> retainedActions = new ArrayList<Action<Row>>(rows.size());
 
-    NonceGenerator ng = this.hConnection.getNonceGenerator();
+    NonceGenerator ng = this.connection.getNonceGenerator();
     long nonceGroup = ng.getNonceGroup(); // Currently, nonce group is per entire client.
 
     // Location errors that happen before we decide what requests to take.
@@ -363,7 +363,7 @@ class AsyncProcess {
         try {
           if (r == null) throw new IllegalArgumentException("#" + id + ", row cannot be null");
           // Make sure we get 0-s replica.
-          RegionLocations locs = hConnection.locateRegion(
+          RegionLocations locs = connection.locateRegion(
               tableName, r.getRow(), true, true, RegionReplicaUtil.DEFAULT_REPLICA_ID);
           if (locs == null || locs.isEmpty() || locs.getDefaultRegionLocation() == null) {
             throw new IOException("#" + id + ", no location found, aborting submit for"
@@ -535,7 +535,7 @@ class AsyncProcess {
 
     // The position will be used by the processBatch to match the object array returned.
     int posInList = -1;
-    NonceGenerator ng = this.hConnection.getNonceGenerator();
+    NonceGenerator ng = this.connection.getNonceGenerator();
     for (Row r : rows) {
       posInList++;
       if (r instanceof Put) {
@@ -910,7 +910,7 @@ class AsyncProcess {
           ", row cannot be null");
       RegionLocations loc = null;
       try {
-        loc = hConnection.locateRegion(
+        loc = connection.locateRegion(
             tableName, action.getAction().getRow(), useCache, true, action.getReplicaId());
       } catch (IOException ex) {
         manageLocationError(action, ex);
@@ -1025,7 +1025,7 @@ class AsyncProcess {
 
       if (tableName == null) {
         // tableName is null when we made a cross-table RPC call.
-        hConnection.clearCaches(server);
+        connection.clearCaches(server);
       }
       int failed = 0, stopped = 0;
       List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
@@ -1036,7 +1036,7 @@ class AsyncProcess {
         // any of the regions in the MultiAction.
         // TODO: depending on type of exception we might not want to update cache at all?
         if (tableName != null) {
-          hConnection.updateCachedLocations(tableName, regionName, row, null, server);
+          connection.updateCachedLocations(tableName, regionName, row, null, server);
         }
         for (Action<Row> action : e.getValue()) {
           Retry retry = manageError(
@@ -1150,7 +1150,7 @@ class AsyncProcess {
             // Register corresponding failures once per server/once per region.
             if (!regionFailureRegistered) {
               regionFailureRegistered = true;
-              hConnection.updateCachedLocations(
+              connection.updateCachedLocations(
                   tableName, regionName, row.getRow(), result, server);
             }
             if (failureCount == 0) {
@@ -1199,7 +1199,7 @@ class AsyncProcess {
           errorsByServer.reportServerError(server);
           canRetry = errorsByServer.canRetryMore(numAttempt);
         }
-        hConnection.updateCachedLocations(
+        connection.updateCachedLocations(
             tableName, region, actions.get(0).getAction().getRow(), throwable, server);
         failureCount += actions.size();
 
@@ -1513,7 +1513,7 @@ class AsyncProcess {
   @VisibleForTesting
   protected MultiServerCallable<Row> createCallable(final ServerName server,
       TableName tableName, final MultiAction<Row> multi) {
-    return new MultiServerCallable<Row>(hConnection, tableName, server, this.rpcFactory, multi);
+    return new MultiServerCallable<Row>(connection, tableName, server, this.rpcFactory, multi);
   }
 
   /**
