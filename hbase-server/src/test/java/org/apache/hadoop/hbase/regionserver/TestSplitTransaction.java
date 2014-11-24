@@ -297,7 +297,7 @@ public class TestSplitTransaction {
     SplitTransaction spiedUponSt = spy(st);
     doNothing().when(spiedUponSt).assertReferenceFileCount(anyInt(),
         eq(parent.getRegionFileSystem().getSplitsDir(st.getFirstDaughter())));
-    when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter(), 1)).
+    when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter())).
         thenThrow(new MockedFailedDaughterCreation());
     // Run the execute.  Look at what it returns.
     boolean expectedException = false;
