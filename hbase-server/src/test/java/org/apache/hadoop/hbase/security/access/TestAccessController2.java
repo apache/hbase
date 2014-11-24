@@ -86,7 +86,7 @@ public class TestAccessController2 extends SecureTestUtil {
       public Object run() throws Exception {
         HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
         desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        Admin admin = new HBaseAdmin(conf);
+        Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
         try {
           admin.createTable(desc);
         } finally {

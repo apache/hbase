@@ -79,7 +79,7 @@ public class ConnectionUtils {
    * @return old nonce generator.
    */
   public static NonceGenerator injectNonceGeneratorForTesting(
-      HConnection conn, NonceGenerator cnm) {
+      ClusterConnection conn, NonceGenerator cnm) {
     return ConnectionManager.injectNonceGeneratorForTesting(conn, cnm);
   }
 
@@ -111,7 +111,7 @@ public class ConnectionUtils {
    * @param client the client interface of the local server
    * @return an adapted/decorated HConnection
    */
-  public static HConnection createShortCircuitHConnection(final HConnection conn,
+  public static HConnection createShortCircuitHConnection(final Connection conn,
       final ServerName serverName, final AdminService.BlockingInterface admin,
       final ClientService.BlockingInterface client) {
     return new ConnectionAdapter(conn) {

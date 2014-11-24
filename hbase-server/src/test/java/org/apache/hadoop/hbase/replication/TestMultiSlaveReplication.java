@@ -224,7 +224,8 @@ public class TestMultiSlaveReplication {
     region.getWAL().registerWALActionsListener(listener);
 
     // request a roll
-    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getRegionName()));
+    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getTableDesc().getTableName(),
+      region.getRegionName()));
 
     // wait
     try {

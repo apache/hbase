@@ -107,8 +107,8 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
- * Like {@link TestSplitTransaction} in that we're testing {@link SplitTransaction}
- * only the below tests are against a running cluster where {@link TestSplitTransaction}
+ * Like TestSplitTransaction in that we're testing {@link SplitTransaction}
+ * only the below tests are against a running cluster where TestSplitTransaction
  * is tests against a bare {@link HRegion}.
  */
 @Category({RegionServerTests.class, LargeTests.class})
@@ -904,7 +904,7 @@ public class TestSplitTransactionOnCluster {
       fail("Each table should have at least one region.");
     }
     ServerName serverName =
-        cluster.getServerHoldingRegion(firstTableRegions.get(0).getRegionName());
+        cluster.getServerHoldingRegion(firstTable, firstTableRegions.get(0).getRegionName());
     admin.move(secondTableRegions.get(0).getRegionInfo().getEncodedNameAsBytes(),
       Bytes.toBytes(serverName.getServerName()));
     Table table1 = null;

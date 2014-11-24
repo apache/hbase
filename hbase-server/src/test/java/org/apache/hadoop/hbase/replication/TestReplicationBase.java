@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -29,15 +28,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -48,10 +45,10 @@ import org.junit.BeforeClass;
  * All other tests should have their own classes and extend this one
  */
 public class TestReplicationBase {
-
+/*
   {
     ((Log4JLogger) ReplicationSource.LOG).getLogger().setLevel(Level.ALL);
-  }
+  }*/
 
   private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
 
@@ -64,7 +61,7 @@ public class TestReplicationBase {
 
   protected static ReplicationAdmin admin;
 
-  protected static HTable htable1;
+  protected static Table htable1;
   protected static Table htable2;
 
   protected static HBaseTestingUtility utility1;
@@ -138,15 +135,19 @@ public class TestReplicationBase {
     table.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     table.addFamily(fam);
-    Admin admin1 = new HBaseAdmin(conf1);
-    Admin admin2 = new HBaseAdmin(conf2);
-    admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    Connection connection1 = ConnectionFactory.createConnection(conf1);
+    Connection connection2 = ConnectionFactory.createConnection(conf2);
+    try (Admin admin1 = connection1.getAdmin()) {
+      admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    }
+    try (Admin admin2 = connection2.getAdmin()) {
+      admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    }
     utility1.waitUntilAllRegionsAssigned(tableName);
-    admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     utility2.waitUntilAllRegionsAssigned(tableName);
-    htable1 = new HTable(conf1, tableName);
+    htable1 = connection1.getTable(tableName);
     htable1.setWriteBufferSize(1024);
-    htable2 = new HTable(conf2, tableName);
+    htable2 = connection2.getTable(tableName);
   }
 
   /**
@@ -154,10 +155,10 @@ public class TestReplicationBase {
    */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    htable2.close();
+    htable1.close();
+    admin.close();
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
   }
-
-
 }
-

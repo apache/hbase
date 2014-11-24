@@ -26,16 +26,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -49,6 +54,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationEndpoint extends TestReplicationBase {
+  static final Log LOG = LogFactory.getLog(TestReplicationEndpoint.class);
 
   static int numRegionServers;
 
@@ -72,13 +78,14 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     ReplicationEndpointForTest.contructedCount.set(0);
     ReplicationEndpointForTest.startedCount.set(0);
     ReplicationEndpointForTest.replicateCount.set(0);
+    ReplicationEndpointReturningFalse.replicated.set(false);
     ReplicationEndpointForTest.lastEntries = null;
     for (RegionServerThread rs : utility1.getMiniHBaseCluster().getRegionServerThreads()) {
       utility1.getHBaseAdmin().rollWALWriter(rs.getRegionServer().getServerName());
     }
   }
 
-  @Test
+  @Test (timeout=120000)
   public void testCustomReplicationEndpoint() throws Exception {
     // test installing a custom replication endpoint other than the default one.
     admin.addPeer("testCustomReplicationEndpoint",
@@ -117,17 +124,32 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     admin.removePeer("testCustomReplicationEndpoint");
   }
 
-  @Test
+  @Test (timeout=120000)
   public void testReplicationEndpointReturnsFalseOnReplicate() throws Exception {
-    admin.addPeer("testReplicationEndpointReturnsFalseOnReplicate",
+    Assert.assertEquals(0, ReplicationEndpointForTest.replicateCount.get());
+    Assert.assertTrue(!ReplicationEndpointReturningFalse.replicated.get());
+    int peerCount = admin.getPeersCount();
+    final String id = "testReplicationEndpointReturnsFalseOnReplicate";
+    admin.addPeer(id,
       new ReplicationPeerConfig().setClusterKey(ZKUtil.getZooKeeperClusterKey(conf1))
         .setReplicationEndpointImpl(ReplicationEndpointReturningFalse.class.getName()), null);
-    // now replicate some data.
+    // This test is flakey and then there is so much stuff flying around in here its, hard to
+    // debug.  Peer needs to be up for the edit to make it across. This wait on
+    // peer count seems to be a hack that has us not progress till peer is up.
+    if (admin.getPeersCount() <= peerCount) {
+      LOG.info("Waiting on peercount to go up from " + peerCount);
+      Threads.sleep(100);
+    }
+    // now replicate some data
     doPut(row);
 
     Waiter.waitFor(conf1, 60000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
+        // Looks like replication endpoint returns false unless we put more than 10 edits. We
+        // only send over one edit.
+        int count = ReplicationEndpointForTest.replicateCount.get();
+        LOG.info("count=" + count);
         return ReplicationEndpointReturningFalse.replicated.get();
       }
     });
@@ -138,15 +160,17 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     admin.removePeer("testReplicationEndpointReturnsFalseOnReplicate");
   }
 
-  @Test
+  @Test (timeout=120000)
   public void testWALEntryFilterFromReplicationEndpoint() throws Exception {
     admin.addPeer("testWALEntryFilterFromReplicationEndpoint",
       new ReplicationPeerConfig().setClusterKey(ZKUtil.getZooKeeperClusterKey(conf1))
         .setReplicationEndpointImpl(ReplicationEndpointWithWALEntryFilter.class.getName()), null);
     // now replicate some data.
-    doPut(Bytes.toBytes("row1"));
-    doPut(row);
-    doPut(Bytes.toBytes("row2"));
+    try (Connection connection = ConnectionFactory.createConnection(conf1)) {
+      doPut(connection, Bytes.toBytes("row1"));
+      doPut(connection, row);
+      doPut(connection, Bytes.toBytes("row2"));
+    }
 
     Waiter.waitFor(conf1, 60000, new Waiter.Predicate<Exception>() {
       @Override
@@ -161,11 +185,17 @@ public class TestReplicationEndpoint extends TestReplicationBase {
 
 
   private void doPut(byte[] row) throws IOException {
-    Put put = new Put(row);
-    put.add(famName, row, row);
-    htable1 = new HTable(conf1, tableName);
-    htable1.put(put);
-    htable1.close();
+    try (Connection connection = ConnectionFactory.createConnection(conf1)) {
+      doPut(connection, row);
+    }
+  }
+
+  private void doPut(final Connection connection, final byte [] row) throws IOException {
+    try (Table t = connection.getTable(tableName)) {
+      Put put = new Put(row);
+      put.add(famName, row, row);
+      t.put(put);
+    }
   }
 
   private static void doAssert(byte[] row) throws Exception {
@@ -217,6 +247,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   }
 
   public static class ReplicationEndpointReturningFalse extends ReplicationEndpointForTest {
+    static int COUNT = 10;
     static AtomicReference<Exception> ex = new AtomicReference<Exception>(null);
     static AtomicBoolean replicated = new AtomicBoolean(false);
     @Override
@@ -229,8 +260,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       }
 
       super.replicate(replicateContext);
+      LOG.info("Replicated " + row + ", count=" + replicateCount.get());
 
-      replicated.set(replicateCount.get() > 10); // first 10 times, we return false
+      replicated.set(replicateCount.get() > COUNT); // first 10 times, we return false
       return replicated.get();
     }
   }
