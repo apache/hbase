@@ -124,7 +124,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
@@ -1843,18 +1842,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Update flushed sequence id of a recovering region in ZK
     updateRecoveringRegionLastFlushedSequenceId(r);
 
-    if (useZKForAssignment) {
-      if (r.getRegionInfo().isMetaRegion()) {
-        LOG.info("Updating zk with meta location");
-        // The state field is for zk less assignment 
-        // For zk assignment, always set it to OPEN
-        MetaRegionTracker.setMetaLocation(getZooKeeper(), this.serverNameFromMasterPOV, State.OPEN);
-      } else {
-        MetaEditor.updateRegionLocation(ct, r.getRegionInfo(), this.serverNameFromMasterPOV,
-          openSeqNum);
-      }
+    // Update ZK, or META
+    if (r.getRegionInfo().isMetaRegion()) {
+      MetaRegionTracker.setMetaLocation(getZooKeeper(),
+          this.serverNameFromMasterPOV);
+    } else if (useZKForAssignment) {
+      MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
+        this.serverNameFromMasterPOV, openSeqNum);
     }
-     if (!useZKForAssignment
+    if (!useZKForAssignment
         && !reportRegionStateTransition(TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
       throw new IOException("Failed to report opened region to master: "
           + r.getRegionNameAsString());

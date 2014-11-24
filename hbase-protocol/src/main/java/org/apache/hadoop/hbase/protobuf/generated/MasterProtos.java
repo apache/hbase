@@ -44066,8 +44066,6 @@ public final class MasterProtos {
       }
 
     }
-
-    // @@protoc_insertion_point(class_scope:MasterService)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor

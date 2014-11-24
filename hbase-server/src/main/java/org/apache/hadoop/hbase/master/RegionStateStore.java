@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -41,8 +40,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.MultiHConnection;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
-import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Preconditions;
 
@@ -55,7 +52,6 @@ public class RegionStateStore {
   private static final Log LOG = LogFactory.getLog(RegionStateStore.class);
 
   private volatile HRegion metaRegion;
-  private volatile HRegion rootRegion;
   private volatile boolean initialized;
 
   private final boolean noPersistence;
@@ -132,6 +128,7 @@ public class RegionStateStore {
         // increasing this value might improve the write throughput.
         multiHConnection =
             new MultiHConnection(conf, conf.getInt("hbase.regionstatestore.meta.connection", 1));
+
       }
     }
     initialized = true;
@@ -144,32 +141,22 @@ public class RegionStateStore {
     }
   }
 
-  void updateRegionState(long openSeqNum, RegionState newState, RegionState oldState) {
-    if (noPersistence) {
+  void updateRegionState(long openSeqNum,
+      RegionState newState, RegionState oldState) {
+    if (noPersistence || !initialized) {
       return;
     }
+
+    HRegionInfo hri = newState.getRegion();
+    if (!shouldPersistStateChange(hri, newState, oldState)) {
+      return;
+    }
+
+    ServerName oldServer = oldState != null ? oldState.getServerName() : null;
+    ServerName serverName = newState.getServerName();
+    State state = newState.getState();
+
     try {
-      HRegionInfo hri = newState.getRegion();
-      // update meta before checking for initialization.
-      // meta state stored in zk.
-      if (hri.isMetaRegion()) {
-        // persist meta state in MetaRegionTracker
-        try {
-          MetaRegionTracker.setMetaLocation(server.getZooKeeper(), newState.getServerName(),
-            newState.getState());
-          return; // Done
-        } catch (KeeperException e) {
-          throw new IOException("Failed to update meta ZNode", e);
-        }
-      }
-
-      if (!initialized || !shouldPersistStateChange(hri, newState, oldState)) {
-        return;
-      }
-
-      ServerName oldServer = oldState != null ? oldState.getServerName() : null;
-      ServerName serverName = newState.getServerName();
-      State state = newState.getState();
       Put put = new Put(hri.getRegionName());
       StringBuilder info = new StringBuilder("Updating row ");
       info.append(hri.getRegionNameAsString()).append(" with state=").append(state);
@@ -193,6 +180,8 @@ public class RegionStateStore {
       put.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STATE_QUALIFIER,
         Bytes.toBytes(state.name()));
       LOG.info(info);
+
+
       // Persist the state change to meta
       if (metaRegion != null) {
         try {
@@ -234,5 +223,4 @@ public class RegionStateStore {
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
     MetaEditor.mergeRegions(catalogTracker, p, a, b, sn);
   }
-  
 }

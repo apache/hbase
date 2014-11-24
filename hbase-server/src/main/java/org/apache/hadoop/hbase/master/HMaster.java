@@ -25,7 +25,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -220,7 +219,6 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -1003,27 +1001,16 @@ MasterServices, Server {
     status.setStatus("Assigning hbase:meta region");
 
     RegionStates regionStates = assignmentManager.getRegionStates();
-    
-    RegionState regionState = this.catalogTracker.getMetaRegionState();
-    ServerName currentMetaServer = regionState.getServerName();
-    
-    if (!ConfigUtil.useZKForAssignment(conf)) {
-      regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO, regionState.getState(),
-        currentMetaServer);
-    } else {
-      regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
-    }
-    boolean rit =
-     this.assignmentManager
-         .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
+    regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
+    boolean rit = this.assignmentManager
+      .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
     boolean metaRegionLocation = this.catalogTracker.verifyMetaRegionLocation(timeout);
-    if (!metaRegionLocation || !regionState.isOpened()) {
+    ServerName currentMetaServer = this.catalogTracker.getMetaLocation();
+    if (!metaRegionLocation) {
       // Meta location is not verified. It should be in transition, or offline.
       // We will wait for it to be assigned in enableSSHandWaitForMeta below.
       assigned++;
-      if (!ConfigUtil.useZKForAssignment(conf)) {
-        assignMetaZkLess(regionStates, regionState, timeout, previouslyFailedMetaRSs);
-      } else if (!rit) {
+      if (!rit) {
         // Assign meta since not already in transition
         if (currentMetaServer != null) {
           // If the meta server is not known to be dead or online,
@@ -1070,24 +1057,6 @@ MasterServices, Server {
     status.setStatus("META assigned.");
   }
 
-  private void assignMetaZkLess(RegionStates regionStates, RegionState regionState, long timeout,
-      Set<ServerName> previouslyFailedRs) throws IOException, KeeperException {
-    ServerName currentServer = regionState.getServerName();
-    if (serverManager.isServerOnline(currentServer)) {
-      LOG.info("Meta was in transition on " + currentServer);
-      assignmentManager.processRegionInTransitionZkLess();
-    } else {
-      if (currentServer != null) {
-        splitMetaLogBeforeAssignment(currentServer);
-        regionStates.logSplit(HRegionInfo.FIRST_META_REGIONINFO);
-        previouslyFailedRs.add(currentServer);
-      }
-      LOG.info("Re-assigning hbase:meta, it was on " + currentServer);
-      regionStates.updateRegionState(HRegionInfo.FIRST_META_REGIONINFO, State.OFFLINE);
-      assignmentManager.assignMeta();
-    }
-  }
-  
   void initNamespace() throws IOException {
     //create namespace manager
     tableNamespaceManager = new TableNamespaceManager(this);
@@ -3254,9 +3223,7 @@ MasterServices, Server {
       RegionStateTransition rt = req.getTransition(0);
       TableName tableName = ProtobufUtil.toTableName(
         rt.getRegionInfo(0).getTableName());
-      RegionStates regionStates = assignmentManager.getRegionStates();
-      if (!(TableName.META_TABLE_NAME.equals(tableName)
-          && regionStates.getRegionState(HRegionInfo.FIRST_META_REGIONINFO) != null)
+      if (!TableName.META_TABLE_NAME.equals(tableName)
           && !assignmentManager.isFailoverCleanupDone()) {
         // Meta region is assigned before master finishes the
         // failover cleanup. So no need this check for it

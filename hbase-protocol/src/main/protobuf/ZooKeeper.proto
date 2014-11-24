@@ -26,7 +26,6 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
-import "ClusterStatus.proto";
 
 /**
  * Content of the meta-region-server znode.
@@ -38,8 +37,6 @@ message MetaRegionServer {
   // clients connecting to the cluster can have prior knowledge of what version
   // to send to a RegionServer.  AsyncHBase will use this to detect versions.
   optional uint32 rpc_version = 2;
-  // State of the region transition. OPEN means fully operational 'hbase:meta'
-  optional RegionState.State state = 3;
 }
 
 /**

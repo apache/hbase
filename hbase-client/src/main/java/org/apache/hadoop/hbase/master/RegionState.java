@@ -53,125 +53,9 @@ public class RegionState {
     SPLITTING_NEW,  // new region to be created when RS splits a parent
                     // region but hasn't be created yet, or master doesn't
                     // know it's already created
-    MERGING_NEW;    // new region to be created when RS merges two
+    MERGING_NEW     // new region to be created when RS merges two
                     // daughter regions but hasn't be created yet, or
                     // master doesn't know it's already created
-
-    /**
-     * Convert to protobuf ClusterStatusProtos.RegionState.State
-     */
-    public ClusterStatusProtos.RegionState.State convert() {
-      ClusterStatusProtos.RegionState.State rs;
-      switch (this) {
-      case OFFLINE:
-        rs = ClusterStatusProtos.RegionState.State.OFFLINE;
-        break;
-      case PENDING_OPEN:
-        rs = ClusterStatusProtos.RegionState.State.PENDING_OPEN;
-        break;
-      case OPENING:
-        rs = ClusterStatusProtos.RegionState.State.OPENING;
-        break;
-      case OPEN:
-        rs = ClusterStatusProtos.RegionState.State.OPEN;
-        break;
-      case PENDING_CLOSE:
-        rs = ClusterStatusProtos.RegionState.State.PENDING_CLOSE;
-        break;
-      case CLOSING:
-        rs = ClusterStatusProtos.RegionState.State.CLOSING;
-        break;
-      case CLOSED:
-        rs = ClusterStatusProtos.RegionState.State.CLOSED;
-        break;
-      case SPLITTING:
-        rs = ClusterStatusProtos.RegionState.State.SPLITTING;
-        break;
-      case SPLIT:
-        rs = ClusterStatusProtos.RegionState.State.SPLIT;
-        break;
-      case FAILED_OPEN:
-        rs = ClusterStatusProtos.RegionState.State.FAILED_OPEN;
-        break;
-      case FAILED_CLOSE:
-        rs = ClusterStatusProtos.RegionState.State.FAILED_CLOSE;
-        break;
-      case MERGING:
-        rs = ClusterStatusProtos.RegionState.State.MERGING;
-        break;
-      case MERGED:
-        rs = ClusterStatusProtos.RegionState.State.MERGED;
-        break;
-      case SPLITTING_NEW:
-        rs = ClusterStatusProtos.RegionState.State.SPLITTING_NEW;
-        break;
-      case MERGING_NEW:
-        rs = ClusterStatusProtos.RegionState.State.MERGING_NEW;
-        break;
-      default:
-        throw new IllegalStateException("");
-      }
-      return rs;
-    }
-
-    /**
-     * Convert a protobuf HBaseProtos.RegionState.State to a RegionState.State
-     *
-     * @return the RegionState.State
-     */
-    public static State convert(ClusterStatusProtos.RegionState.State protoState) {
-      State state;
-      switch (protoState) {
-      case OFFLINE:
-        state = OFFLINE;
-        break;
-      case PENDING_OPEN:
-        state = PENDING_OPEN;
-        break;
-      case OPENING:
-        state = OPENING;
-        break;
-      case OPEN:
-        state = OPEN;
-        break;
-      case PENDING_CLOSE:
-        state = PENDING_CLOSE;
-        break;
-      case CLOSING:
-        state = CLOSING;
-        break;
-      case CLOSED:
-        state = CLOSED;
-        break;
-      case SPLITTING:
-        state = SPLITTING;
-        break;
-      case SPLIT:
-        state = SPLIT;
-        break;
-      case FAILED_OPEN:
-        state = FAILED_OPEN;
-        break;
-      case FAILED_CLOSE:
-        state = FAILED_CLOSE;
-        break;
-      case MERGING:
-        state = MERGING;
-        break;
-      case MERGED:
-        state = MERGED;
-        break;
-      case SPLITTING_NEW:
-        state = SPLITTING_NEW;
-        break;
-      case MERGING_NEW:
-        state = MERGING_NEW;
-        break;
-      default:
-        throw new IllegalStateException("");
-      }
-      return state;
-    }
   }
 
   // Many threads can update the state at the stamp at the same time
@@ -380,8 +264,58 @@ public class RegionState {
    */
   public ClusterStatusProtos.RegionState convert() {
     ClusterStatusProtos.RegionState.Builder regionState = ClusterStatusProtos.RegionState.newBuilder();
+    ClusterStatusProtos.RegionState.State rs;
+    switch (this.state) {
+    case OFFLINE:
+      rs = ClusterStatusProtos.RegionState.State.OFFLINE;
+      break;
+    case PENDING_OPEN:
+      rs = ClusterStatusProtos.RegionState.State.PENDING_OPEN;
+      break;
+    case OPENING:
+      rs = ClusterStatusProtos.RegionState.State.OPENING;
+      break;
+    case OPEN:
+      rs = ClusterStatusProtos.RegionState.State.OPEN;
+      break;
+    case PENDING_CLOSE:
+      rs = ClusterStatusProtos.RegionState.State.PENDING_CLOSE;
+      break;
+    case CLOSING:
+      rs = ClusterStatusProtos.RegionState.State.CLOSING;
+      break;
+    case CLOSED:
+      rs = ClusterStatusProtos.RegionState.State.CLOSED;
+      break;
+    case SPLITTING:
+      rs = ClusterStatusProtos.RegionState.State.SPLITTING;
+      break;
+    case SPLIT:
+      rs = ClusterStatusProtos.RegionState.State.SPLIT;
+      break;
+    case FAILED_OPEN:
+      rs = ClusterStatusProtos.RegionState.State.FAILED_OPEN;
+      break;
+    case FAILED_CLOSE:
+      rs = ClusterStatusProtos.RegionState.State.FAILED_CLOSE;
+      break;
+    case MERGING:
+      rs = ClusterStatusProtos.RegionState.State.MERGING;
+      break;
+    case MERGED:
+      rs = ClusterStatusProtos.RegionState.State.MERGED;
+      break;
+    case SPLITTING_NEW:
+      rs = ClusterStatusProtos.RegionState.State.SPLITTING_NEW;
+      break;
+    case MERGING_NEW:
+      rs = ClusterStatusProtos.RegionState.State.MERGING_NEW;
+      break;
+    default:
+      throw new IllegalStateException("");
+    }
     regionState.setRegionInfo(HRegionInfo.convert(hri));
-    regionState.setState(state.convert());
+    regionState.setState(rs);
     regionState.setStamp(getStamp());
     return regionState.build();
   }
@@ -392,8 +326,58 @@ public class RegionState {
    * @return the RegionState
    */
   public static RegionState convert(ClusterStatusProtos.RegionState proto) {
-    return new RegionState(HRegionInfo.convert(proto.getRegionInfo()),
-      State.convert(proto.getState()), proto.getStamp(), null);
+    RegionState.State state;
+    switch (proto.getState()) {
+    case OFFLINE:
+      state = State.OFFLINE;
+      break;
+    case PENDING_OPEN:
+      state = State.PENDING_OPEN;
+      break;
+    case OPENING:
+      state = State.OPENING;
+      break;
+    case OPEN:
+      state = State.OPEN;
+      break;
+    case PENDING_CLOSE:
+      state = State.PENDING_CLOSE;
+      break;
+    case CLOSING:
+      state = State.CLOSING;
+      break;
+    case CLOSED:
+      state = State.CLOSED;
+      break;
+    case SPLITTING:
+      state = State.SPLITTING;
+      break;
+    case SPLIT:
+      state = State.SPLIT;
+      break;
+    case FAILED_OPEN:
+      state = State.FAILED_OPEN;
+      break;
+    case FAILED_CLOSE:
+      state = State.FAILED_CLOSE;
+      break;
+    case MERGING:
+      state = State.MERGING;
+      break;
+    case MERGED:
+      state = State.MERGED;
+      break;
+    case SPLITTING_NEW:
+      state = State.SPLITTING_NEW;
+      break;
+    case MERGING_NEW:
+      state = State.MERGING_NEW;
+      break;
+    default:
+      throw new IllegalStateException("");
+    }
+
+    return new RegionState(HRegionInfo.convert(proto.getRegionInfo()),state,proto.getStamp(),null);
   }
 
   protected void setTimestamp(final long timestamp) {
