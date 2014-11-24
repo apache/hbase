@@ -99,8 +99,6 @@ public class TestReplicationBase {
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setInt("replication.stats.thread.period.seconds", 5);
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
-    conf1.setLong("replication.sleep.before.failover", 2000);
-    conf1.setInt("replication.source.maxretriesmultiplier", 10);
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
@@ -141,9 +139,7 @@ public class TestReplicationBase {
     Admin admin1 = new HBaseAdmin(conf1);
     Admin admin2 = new HBaseAdmin(conf2);
     admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-    utility1.waitUntilAllRegionsAssigned(tableName);
     admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
-    utility2.waitUntilAllRegionsAssigned(tableName);
     htable1 = new HTable(conf1, tableName);
     htable1.setWriteBufferSize(1024);
     htable2 = new HTable(conf2, tableName);

@@ -22,6 +22,8 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.ClassFinder.ClassFilter;
+import org.apache.hadoop.hbase.ClassFinder.FileNameFilter;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.Suite;

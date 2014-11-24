@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
@@ -86,7 +85,6 @@ public class TestWideScanner extends HBaseTestCase {
     return count;
   }
 
-  @Test
   public void testWideScanBatching() throws IOException {
     final int batch = 256;
     try {

@@ -24,17 +24,17 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -50,6 +50,8 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
 
   /** The Cell previously appended. Becomes the last cell in the file.*/
   protected Cell lastCell = null;
+
+  protected int lastKeyLength = -1;
 
   /** FileSystem stream to write into. */
   protected FSDataOutputStream outputStream;
@@ -81,11 +83,8 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   /** {@link Writable}s representing meta block data. */
   protected List<Writable> metaData = new ArrayList<Writable>();
 
-  /**
-   * First cell in a block.
-   * This reference should be short-lived since we write hfiles in a burst.
-   */
-  protected Cell firstCellInBlock = null;
+  /** First key in a block. */
+  protected byte[] firstKeyInBlock = null;
 
   /** May be null if we were passed a stream. */
   protected final Path path;
@@ -135,7 +134,8 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
     if (lastCell != null) {
       // Make a copy. The copy is stuffed into our fileinfo map. Needs a clean
       // byte buffer. Won't take a tuple.
-      byte [] lastKey = CellUtil.getCellKeySerializedAsKeyValueKey(this.lastCell);
+      byte[] lastKey = new byte[lastKeyLength];
+      KeyValueUtil.appendKeyTo(lastCell, lastKey, 0);
       fileInfo.append(FileInfo.LASTKEY, lastKey, false);
     }
 

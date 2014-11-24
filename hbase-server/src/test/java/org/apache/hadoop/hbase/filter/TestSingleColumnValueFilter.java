@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.KeyValue;
@@ -94,25 +93,6 @@ public class TestSingleColumnValueFilter {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
         CompareOp.EQUAL,
         new RegexStringComparator(pattern.pattern(), pattern.flags()));
-  }
-
-  @Test
-  public void testLongComparator() throws IOException {
-    Filter filter = new SingleColumnValueFilter(COLUMN_FAMILY,
-        COLUMN_QUALIFIER, CompareOp.GREATER, new LongComparator(100L));
-    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      Bytes.toBytes(1L));
-    assertTrue("less than", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
-    filter.reset();
-
-    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      Bytes.toBytes(100L));
-    assertTrue("Equals 100", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
-    filter.reset();
-
-    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
-      Bytes.toBytes(120L));
-    assertTrue("include 120", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
   }
 
   private void basicFilterTests(SingleColumnValueFilter filter)

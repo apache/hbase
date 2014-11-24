@@ -51,10 +51,4 @@ public abstract class ChaosMonkey implements Stoppable {
   public abstract boolean isStopped();
 
   public abstract void waitForStop() throws InterruptedException;
-
-  /**
-   * Returns whether the CM does destructive actions (killing servers) so that a cluster restore
-   * is needed after CM is stopped. Otherwise cluster will be left as it is
-   */
-  public abstract boolean isDestructive();
 }

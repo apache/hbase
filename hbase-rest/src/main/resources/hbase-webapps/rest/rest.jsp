@@ -86,7 +86,7 @@ String listenPort = conf.get("hbase.rest.port", "8080");
         </tr>
         <tr>
             <td>HBase Version</td>
-            <td><%= VersionInfo.getVersion() %>, revision=<%= VersionInfo.getRevision() %></td>
+            <td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td>
             <td>HBase version and revision</td>
         </tr>
         <tr>

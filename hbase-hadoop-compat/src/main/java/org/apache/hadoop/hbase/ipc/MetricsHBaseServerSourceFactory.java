@@ -47,9 +47,9 @@ public abstract class MetricsHBaseServerSourceFactory {
    * @return The Camel Cased context name.
    */
   protected static String createContextName(String serverName) {
-    if (serverName.contains("HMaster") || serverName.contains("master")) {
+    if (serverName.contains("HMaster")) {
       return "Master";
-    } else if (serverName.contains("HRegion") || serverName.contains("regionserver")) {
+    } else if (serverName.contains("HRegion")) {
       return "RegionServer";
     }
     return "IPC";

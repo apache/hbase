@@ -146,7 +146,7 @@ public class TestHFileWriterV2 {
                         .withCompression(compressAlgo)
                         .build();
     
-    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(fsdis, fileSize, meta);
+    HFileBlock.FSReader blockReader = new HFileBlock.FSReaderV2(fsdis, fileSize, meta);
     // Comparator class name is stored in the trailer in version 2.
     KVComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =

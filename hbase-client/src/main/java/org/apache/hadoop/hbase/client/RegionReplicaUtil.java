@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.client;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * Utility methods which contain the logic for regions and replicas.

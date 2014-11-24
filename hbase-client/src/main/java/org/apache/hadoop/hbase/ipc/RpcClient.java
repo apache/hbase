@@ -19,51 +19,26 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.Closeable;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
-import java.io.OutputStream;
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.security.PrivilegedExceptionAction;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.net.SocketFactory;
-import javax.security.sasl.SaslException;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
+import com.google.protobuf.Message.Builder;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
-import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -99,14 +74,37 @@ import org.htrace.Span;
 import org.htrace.Trace;
 import org.htrace.TraceScope;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.Message;
-import com.google.protobuf.Message.Builder;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import javax.net.SocketFactory;
+import javax.security.sasl.SaslException;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.Closeable;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Does RPC against a cluster.  Manages connections per regionserver in the cluster.
@@ -338,8 +336,7 @@ public class RpcClient {
 
   protected final static Map<AuthenticationProtos.TokenIdentifier.Kind,
       TokenSelector<? extends TokenIdentifier>> tokenHandlers =
-      new HashMap<AuthenticationProtos.TokenIdentifier.Kind,
-        TokenSelector<? extends TokenIdentifier>>();
+      new HashMap<AuthenticationProtos.TokenIdentifier.Kind, TokenSelector<? extends TokenIdentifier>>();
   static {
     tokenHandlers.put(AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN,
         new AuthenticationTokenSelector());
@@ -503,7 +500,7 @@ public class RpcClient {
       private void cleanup() {
         assert shouldCloseConnection.get();
 
-        IOException ie = new ConnectionClosingException("Connection to " + server + " is closing.");
+        IOException ie = new IOException("Connection to " + server + " is closing.");
         while (true) {
           CallFuture cts = callsToWrite.poll();
           if (cts == null) {
@@ -653,21 +650,18 @@ public class RpcClient {
           socket.getOutputStream().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
-        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
       }
       try {
         if (socket.getInputStream() != null) {
           socket.getInputStream().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
-        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
       }
       try {
         if (socket.getChannel() != null) {
           socket.getChannel().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
-        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
       }
       try {
         socket.close();
@@ -721,7 +715,7 @@ public class RpcClient {
      */
     private void checkIsOpen() throws IOException {
       if (shouldCloseConnection.get()) {
-        throw new ConnectionClosingException(getName() + " is closing");
+        throw new IOException(getName() + " is closing");
       }
     }
 
@@ -911,7 +905,7 @@ public class RpcClient {
       }
 
       if (shouldCloseConnection.get()){
-        throw new ConnectionClosingException("This connection is closing");
+        throw new IOException("This connection is closing");
       }
 
       if (failedServers.isFailedServer(remoteId.getAddress())) {
@@ -1165,18 +1159,18 @@ public class RpcClient {
           int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
           int whatIsLeftToRead = totalSize - readSoFar;
           IOUtils.skipFully(in, whatIsLeftToRead);
-          return;
         }
         if (responseHeader.hasException()) {
           ExceptionResponse exceptionResponse = responseHeader.getException();
           RemoteException re = createRemoteException(exceptionResponse);
-          call.setException(re);
+          if (expectedCall) call.setException(re);
           if (isFatalConnectionException(exceptionResponse)) {
             markClosed(re);
           }
         } else {
           Message value = null;
-          if (call.responseDefaultType != null) {
+          // Call may be null because it may have timeout and been cleaned up on this side already
+          if (expectedCall && call.responseDefaultType != null) {
             Builder builder = call.responseDefaultType.newBuilderForType();
             builder.mergeDelimitedFrom(in);
             value = builder.build();
@@ -1188,7 +1182,9 @@ public class RpcClient {
             IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
             cellBlockScanner = ipcUtil.createCellScanner(this.codec, this.compressor, cellBlock);
           }
-          call.setResponse(value, cellBlockScanner);
+          // it's possible that this call may have been cleaned up due to a RPC
+          // timeout, so check if it still exists before setting the value.
+          if (expectedCall) call.setResponse(value, cellBlockScanner);
         }
       } catch (IOException e) {
         if (expectedCall) call.setException(e);
@@ -1196,7 +1192,6 @@ public class RpcClient {
           // Clean up open calls but don't treat this as a fatal condition,
           // since we expect certain responses to not make it by the specified
           // {@link ConnectionId#rpcTimeout}.
-          if (LOG.isTraceEnabled()) LOG.trace("ignored", e);
         } else {
           // Treat this as a fatal condition and close this connection
           markClosed(e);
@@ -1257,7 +1252,7 @@ public class RpcClient {
           itor.remove();
         } else if (allCalls) {
           long waitTime = EnvironmentEdgeManager.currentTime() - c.getStartTime();
-          IOException ie = new ConnectionClosingException("Connection to " + getRemoteAddress()
+          IOException ie = new IOException("Connection to " + getRemoteAddress()
               + " is closing. Call id=" + c.id + ", waitTime=" + waitTime);
           c.setException(ie);
           itor.remove();
@@ -1492,6 +1487,7 @@ public class RpcClient {
           @Override
           public void run(Object parameter) {
             connection.callSender.remove(cts);
+            call.callComplete();
           }
         });
         if (pcrc.isCanceled()) {
@@ -1512,8 +1508,8 @@ public class RpcClient {
         break;
       }
       if (connection.shouldCloseConnection.get()) {
-        throw new ConnectionClosingException("Call id=" + call.id +
-            " on server " + addr + " aborted: connection is closing");
+        throw new IOException("Call id=" + call.id + " on server "
+            + addr + " aborted: connection is closing");
       }
       try {
         synchronized (call) {
@@ -1561,9 +1557,6 @@ public class RpcClient {
     } else if (exception instanceof SocketTimeoutException) {
       return (SocketTimeoutException)new SocketTimeoutException("Call to " + addr +
         " failed because " + exception).initCause(exception);
-    } else if (exception instanceof ConnectionClosingException){
-      return (ConnectionClosingException) new ConnectionClosingException(
-          "Call to " + addr + " failed on local exception: " + exception).initCause(exception);
     } else {
       return (IOException)new IOException("Call to " + addr + " failed on local exception: " +
         exception).initCause(exception);
@@ -1664,7 +1657,7 @@ public class RpcClient {
     public int hashCode() {
       int hashcode = (address.hashCode() +
         PRIME * (PRIME * this.serviceName.hashCode() ^
-        (ticket == null ? 0 : ticket.hashCode())));
+        (ticket == null ? 0 : ticket.hashCode()) ));
       return hashcode;
     }
   }

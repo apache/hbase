@@ -38,10 +38,10 @@ public abstract class StateDumpServlet extends HttpServlet {
 
   protected void dumpVersionInfo(PrintWriter out) {
     VersionInfo.writeTo(out);
-
+  
     out.println("Hadoop " + org.apache.hadoop.util.VersionInfo.getVersion());
-    out.println("Source code repository " + org.apache.hadoop.util.VersionInfo.getUrl()
-      + " revision=" + org.apache.hadoop.util.VersionInfo.getRevision());
+    out.println("Subversion " + org.apache.hadoop.util.VersionInfo.getUrl() + " -r " +
+        org.apache.hadoop.util.VersionInfo.getRevision());
     out.println("Compiled by " + org.apache.hadoop.util.VersionInfo.getUser() +
         " on " + org.apache.hadoop.util.VersionInfo.getDate());
   }

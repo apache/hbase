@@ -43,29 +43,12 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class Action {
 
-  public static final String KILL_MASTER_TIMEOUT_KEY =
-      "hbase.chaosmonkey.action.killmastertimeout";
-  public static final String START_MASTER_TIMEOUT_KEY =
-      "hbase.chaosmonkey.action.startmastertimeout";
-  public static final String KILL_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.killrstimeout";
-  public static final String START_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.startrstimeout";
-
   protected static Log LOG = LogFactory.getLog(Action.class);
-
-  protected static final long KILL_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
-  protected static final long START_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
-  protected static final long KILL_RS_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
-  protected static final long START_RS_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
 
   protected ActionContext context;
   protected HBaseCluster cluster;
   protected ClusterStatus initialStatus;
   protected ServerName[] initialServers;
-
-  protected long killMasterTimeout;
-  protected long startMasterTimeout;
-  protected long killRsTimeout;
-  protected long startRsTimeout;
 
   public void init(ActionContext context) throws IOException {
     this.context = context;
@@ -73,13 +56,6 @@ public class Action {
     initialStatus = cluster.getInitialClusterStatus();
     Collection<ServerName> regionServers = initialStatus.getServers();
     initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
-
-    killMasterTimeout = cluster.getConf().getLong(KILL_MASTER_TIMEOUT_KEY,
-        KILL_MASTER_TIMEOUT_DEFAULT);
-    startMasterTimeout = cluster.getConf().getLong(START_MASTER_TIMEOUT_KEY,
-        START_MASTER_TIMEOUT_DEFAULT);
-    killRsTimeout = cluster.getConf().getLong(KILL_RS_TIMEOUT_KEY, KILL_RS_TIMEOUT_DEFAULT);
-    startRsTimeout = cluster.getConf().getLong(START_RS_TIMEOUT_KEY, START_RS_TIMEOUT_DEFAULT);
   }
 
   public void perform() throws Exception { }
@@ -108,21 +84,21 @@ public class Action {
   protected void killMaster(ServerName server) throws IOException {
     LOG.info("Killing master:" + server);
     cluster.killMaster(server);
-    cluster.waitForMasterToStop(server, killMasterTimeout);
+    cluster.waitForMasterToStop(server, PolicyBasedChaosMonkey.TIMEOUT);
     LOG.info("Killed master server:" + server);
   }
 
   protected void startMaster(ServerName server) throws IOException {
     LOG.info("Starting master:" + server.getHostname());
     cluster.startMaster(server.getHostname());
-    cluster.waitForActiveAndReadyMaster(startMasterTimeout);
+    cluster.waitForActiveAndReadyMaster(PolicyBasedChaosMonkey.TIMEOUT);
     LOG.info("Started master: " + server);
   }
 
   protected void killRs(ServerName server) throws IOException {
     LOG.info("Killing region server:" + server);
     cluster.killRegionServer(server);
-    cluster.waitForRegionServerToStop(server, killRsTimeout);
+    cluster.waitForRegionServerToStop(server, PolicyBasedChaosMonkey.TIMEOUT);
     LOG.info("Killed region server:" + server + ". Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
   }
@@ -130,7 +106,7 @@ public class Action {
   protected void startRs(ServerName server) throws IOException {
     LOG.info("Starting region server:" + server.getHostname());
     cluster.startRegionServer(server.getHostname());
-    cluster.waitForRegionServerToStart(server.getHostname(), startRsTimeout);
+    cluster.waitForRegionServerToStart(server.getHostname(), PolicyBasedChaosMonkey.TIMEOUT);
     LOG.info("Started region server:" + server + ". Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
   }

@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.logging.LogFactory;
 import java.io.PrintWriter;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.VersionAnnotation;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.VersionAnnotation;
+import org.apache.commons.logging.Log;
 
 /**
  * This class finds the package info for hbase and the VersionAnnotation
@@ -93,7 +93,7 @@ public class VersionInfo {
   static String[] versionReport() {
     return new String[] {
       "HBase " + getVersion(),
-      "Source code repository " + getUrl() + " revision=" + getRevision(),
+      "Source code repository " + getUrl() + " -r " + getRevision(),
       "Compiled by " + getUser() + " on " + getDate(),
       "From source with checksum " + getSrcChecksum()
       };

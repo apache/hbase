@@ -48,10 +48,10 @@
   String tableHeader;
   boolean withReplica = false;
   if (table.getTableDescriptor().getRegionReplication() > 1) {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th><th>ReplicaID</th></tr>";
     withReplica = true;
   } else {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
   }
   ServerName rl = metaTableLocator.getMetaRegionLocation(master.getZooKeeper());
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
@@ -212,10 +212,9 @@
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
     <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
+    <td>-</td>
     <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
-    <td>-</td>
-    <td>-</td>
 </tr>
 <%  } %>
 </table>
@@ -269,7 +268,7 @@
     HRegionInfo regionInfo = hriEntry.getKey();
     ServerName addr = hriEntry.getValue();
     long req = 0;
-    float locality = 0.0f;
+
     String urlRegionServer = null;
 
     if (addr != null) {
@@ -278,7 +277,6 @@
         Map<byte[], RegionLoad> map = sl.getRegionsLoad();
         if (map.containsKey(regionInfo.getRegionName())) {
           req = map.get(regionInfo.getRegionName()).getRequestsCount();
-          locality = map.get(regionInfo.getRegionName()).getDataLocality();
         }
         Integer i = regDistribution.get(addr);
         if (null == i) i = Integer.valueOf(0);
@@ -307,7 +305,6 @@
                     conf))) %></td>
   <td><%= escapeXml(Bytes.toStringBinary(HRegionInfo.getEndKeyForDisplay(regionInfo,
                     conf))) %></td>
-  <td><%= locality%></td>
   <td><%= req%></td>
   <%
   if (withReplica) {

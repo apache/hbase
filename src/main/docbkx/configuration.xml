@@ -368,7 +368,7 @@ hadoop  -       nproc   32000
         <title>Hadoop 2.x is recommended.</title>
         <para>Hadoop 2.x is faster and includes features, such as short-circuit reads, which will
           help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes
-          that will improve your overall HBase experience. HBase 0.98 drops support for Hadoop 1.0, deprecates use of Hadoop 1.1+,
+          that will improve your overall HBase experience. HBase 0.98 deprecates use of Hadoop 1.x,
           and HBase 1.0 will not support Hadoop 1.x.</para>
       </tip>
       <para>Use the following legend to interpret this table:</para>
@@ -411,7 +411,7 @@ hadoop  -       nproc   32000
               <entry>HBase-0.92.x</entry>
               <entry>HBase-0.94.x</entry>
               <entry>HBase-0.96.x</entry>
-              <entry><para>HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.)</para></entry>
+              <entry><para>HBase-0.98.x (Support for Hadoop 1.x is deprecated.)</para></entry>
               <entry><para>HBase-1.0.x (Hadoop 1.x is NOT supported)</para></entry>
             </row>
           </thead>
@@ -433,10 +433,20 @@ hadoop  -       nproc   32000
               <entry>X</entry>
             </row>
             <row>
-              <entry>Hadoop-1.0.x</entry>
+              <entry><para>Hadoop-1.0.0-1.0.2 (HBase requires hadoop 1.0.3 at a minimum; there is an
+                  issue where we cannot find KerberosUtil compiling against earlier versions of
+                  Hadoop.)</para></entry>
               <entry>X</entry>
               <entry>X</entry>
               <entry>X</entry>
+              <entry>X</entry>
+              <entry>X</entry>
+            </row>
+            <row>
+              <entry>Hadoop-1.0.3+</entry>
+              <entry>S</entry>
+              <entry>S</entry>
+              <entry>S</entry>
               <entry>X</entry>
               <entry>X</entry>
             </row>
@@ -445,7 +455,7 @@ hadoop  -       nproc   32000
               <entry>NT</entry>
               <entry>S</entry>
               <entry>S</entry>
-              <entry>NT</entry>
+              <entry>X</entry>
               <entry>X</entry>
             </row>
             <row>
@@ -661,14 +671,6 @@ Index: pom.xml
       </section>
     </section>
     <!--  hadoop -->
-    <section xml:id="zookeeper.requirements">
-      <title>ZooKeeper Requirements</title>
-      <para>ZooKeeper 3.4.x is required as of HBase 1.0.0. HBase makes use of the
-        <methodname>multi</methodname> functionality that is only available since 3.4.0
-        (The <property>useMulti</property> is defaulted true in HBase 1.0.0).
-        See <link href="https://issues.apache.org/jira/browse/HBASE-12241">HBASE-12241 The crash of regionServer when taking deadserver's replication queue breaks replication</link>
-        and <link href="https://issues.apache.org/jira/browse/HBASE-6775">Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix</link> for background.</para>
-    </section>
   </section>
 
   <section
@@ -1631,23 +1633,5 @@ jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
 
   </section>
   <!--  important config -->
-  <section xml:id="dyn_config">
-    <title>Dynamic Configuration</title>
-    <subtitle>Changing Configuration Without Restarting Servers</subtitle>
-    <para>Since HBase 1.0.0, it is possible to change a subset of the configuration without
-      requiring a server restart. In the hbase shell, there are new operators,
-      <command>update_config</command> and <command>update_all_config</command> that
-      will prompt a server or all servers to reload configuration.</para>
-    <para>Only a subset of all configurations can currently be changed in the running server.
-      Here is an incomplete list:
-      <property>hbase.regionserver.thread.compaction.large</property>,
-      <property>hbase.regionserver.thread.compaction.small</property>,
-      <property>hbase.regionserver.thread.split</property>,
-      <property>hbase.regionserver.thread.merge</property>, as well as compaction
-      policy and configurations and adjustment to offpeak hours.
-      For the full list consult the patch attached to 
-      <link xlink:href="https://issues.apache.org/jira/browse/HBASE-12147">HBASE-12147 Porting Online Config Change from 89-fb</link>.
-    </para>
 
-  </section>
 </chapter>

@@ -203,7 +203,7 @@ public class TestSplitLogManager {
     Mockito.when(sm.isServerOnline(Mockito.any(ServerName.class))).thenReturn(true);
     Mockito.when(master.getServerManager()).thenReturn(sm);
 
-    to = 12000;
+    to = 6000;
     conf.setInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT, to);
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 2 * to);
 

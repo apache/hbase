@@ -19,10 +19,10 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * Read-only table descriptor.
@@ -64,11 +64,6 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    */
   @Override
   public HTableDescriptor addFamily(final HColumnDescriptor family) {
-    throw new UnsupportedOperationException("HTableDescriptor is read-only");
-  }
-
-  @Override
-  public HTableDescriptor modifyFamily(HColumnDescriptor family) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 

@@ -94,7 +94,7 @@ public abstract class AbstractHBaseTool implements Tool {
       cmd = parseArgs(args);
       cmdLineArgs = args;
     } catch (ParseException e) {
-      LOG.error("Error when parsing command-line arguments", e);
+      LOG.error("Error when parsing command-line arguemnts", e);
       printUsage();
       return EXIT_FAILURE;
     }

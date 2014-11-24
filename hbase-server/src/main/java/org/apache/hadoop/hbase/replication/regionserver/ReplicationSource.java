@@ -161,10 +161,7 @@ public class ReplicationSource extends Thread
         this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
     this.replicationQueueNbCapacity =
         this.conf.getInt("replication.source.nb.capacity", 25000);
-    this.sleepForRetries =
-        this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
-    this.maxRetriesMultiplier =
-        this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
+    this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 10);
     this.queue =
         new PriorityBlockingQueue<Path>(
             this.conf.getInt("hbase.regionserver.maxlogs", 32),
@@ -174,6 +171,8 @@ public class ReplicationSource extends Thread
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.manager = manager;
+    this.sleepForRetries =
+        this.conf.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
     this.metrics = metrics;
     this.repLogReader = new ReplicationHLogReaderManager(this.fs, this.conf);

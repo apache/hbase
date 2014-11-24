@@ -132,7 +132,7 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
         </tr>
         <tr>
             <td>HBase Version</td>
-            <td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, revision=<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td>
+            <td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td>
             <td>HBase version and revision</td>
         </tr>
         <tr>
@@ -144,16 +144,6 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
             <td>HBase Source Checksum</td>
             <td><% org.apache.hadoop.util.VersionInfo.getSrcChecksum() %></td>
             <td>HBase source MD5 checksum</td>
-        </tr>
-        <tr>
-            <td>Hadoop Version</td>
-            <td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, revision=<% org.apache.hadoop.util.VersionInfo.getRevision() %></td>
-            <td>Hadoop version and revision</td>
-        </tr>
-        <tr>
-            <td>Hadoop Compiled</td>
-            <td><% org.apache.hadoop.util.VersionInfo.getDate() %>, <% org.apache.hadoop.util.VersionInfo.getUser() %></td>
-            <td>When Hadoop version was compiled and by whom</td>
         </tr>
         <tr>
             <td>Zookeeper Quorum</td>

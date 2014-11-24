@@ -31,38 +31,27 @@ public class RpcRetryingCallerFactory {
   protected final Configuration conf;
   private final long pause;
   private final int retries;
-  private final RetryingCallerInterceptor interceptor;
 
   public RpcRetryingCallerFactory(Configuration conf) {
-    this(conf, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR);
-  }
-  
-  public RpcRetryingCallerFactory(Configuration conf, RetryingCallerInterceptor interceptor) {
     this.conf = conf;
     pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
-    this.interceptor = interceptor;
   }
 
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
-    return new RpcRetryingCaller<T>(pause, retries, interceptor);
+    return new RpcRetryingCaller<T>(pause, retries);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration) {
-    return instantiate(configuration, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR);
-  }
-  
-  public static RpcRetryingCallerFactory instantiate(Configuration configuration,
-      RetryingCallerInterceptor interceptor) {
     String clazzName = RpcRetryingCallerFactory.class.getName();
     String rpcCallerFactoryClazz =
         configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY, clazzName);
     if (rpcCallerFactoryClazz.equals(clazzName)) {
-      return new RpcRetryingCallerFactory(configuration, interceptor);
+      return new RpcRetryingCallerFactory(configuration);
     }
     return ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
       new Class[] { Configuration.class }, new Object[] { configuration });

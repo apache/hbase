@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * This class makes it convenient for one to execute a command in the context

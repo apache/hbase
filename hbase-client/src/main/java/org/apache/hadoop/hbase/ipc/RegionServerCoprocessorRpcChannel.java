@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.util.ByteStringer;
 
+
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 

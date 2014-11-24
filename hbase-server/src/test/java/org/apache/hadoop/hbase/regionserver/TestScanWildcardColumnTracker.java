@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
@@ -36,7 +35,6 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
   final static int VERSIONS = 2;
 
-  @Test
   public void testCheckColumn_Ok() throws IOException {
     ScanWildcardColumnTracker tracker =
       new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);
@@ -70,7 +68,6 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     }
   }
 
-  @Test
   public void testCheckColumn_EnforceVersions() throws IOException {
     ScanWildcardColumnTracker tracker =
       new ScanWildcardColumnTracker(0, VERSIONS, Long.MIN_VALUE);

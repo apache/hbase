@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -66,7 +65,6 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
 
 
 
-  @Test
   public void testUsingMetaAndBinary() throws IOException {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = testDir;
@@ -190,7 +188,6 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
    * Test file of multiple deletes and with deletes as final key.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-751">HBASE-751</a>
    */
-  @Test
   public void testGetClosestRowBefore3() throws IOException{
     HRegion region = null;
     byte [] c0 = COLUMNS[0];
@@ -299,7 +296,6 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
   }
 
   /** For HBASE-694 */
-  @Test
   public void testGetClosestRowBefore2() throws IOException{
     HRegion region = null;
     byte [] c0 = COLUMNS[0];

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
@@ -73,7 +72,7 @@ public class ScanQueryMatcher {
   private boolean retainDeletesInOutput;
 
   /** whether to return deleted rows */
-  private final KeepDeletedCells keepDeletedCells;
+  private final boolean keepDeletedCells;
   /** whether time range queries can see rows "behind" a delete */
   private final boolean seePastDeleteMarkers;
 
@@ -100,7 +99,6 @@ public class ScanQueryMatcher {
    * deleted KVs.
    */
   private final long earliestPutTs;
-  private final long ttl;
 
   /** readPoint over which the KVs are unconditionally included */
   protected long maxReadPointToTrackVersions;
@@ -166,18 +164,15 @@ public class ScanQueryMatcher {
     this.earliestPutTs = earliestPutTs;
     this.maxReadPointToTrackVersions = readPointToUse;
     this.timeToPurgeDeletes = scanInfo.getTimeToPurgeDeletes();
-    this.ttl = oldestUnexpiredTS;
 
     /* how to deal with deletes */
     this.isUserScan = scanType == ScanType.USER_SCAN;
     // keep deleted cells: if compaction or raw scan
-    this.keepDeletedCells = scan.isRaw() ? KeepDeletedCells.TRUE :
-      isUserScan ? KeepDeletedCells.FALSE : scanInfo.getKeepDeletedCells();
-    // retain deletes: if minor compaction or raw scanisDone
+    this.keepDeletedCells = (scanInfo.getKeepDeletedCells() && !isUserScan) || scan.isRaw();
+    // retain deletes: if minor compaction or raw scan
     this.retainDeletesInOutput = scanType == ScanType.COMPACT_RETAIN_DELETES || scan.isRaw();
     // seePastDeleteMarker: user initiated scans
-    this.seePastDeleteMarkers =
-        scanInfo.getKeepDeletedCells() != KeepDeletedCells.FALSE && isUserScan;
+    this.seePastDeleteMarkers = scanInfo.getKeepDeletedCells() && isUserScan;
 
     int maxVersions =
         scan.isRaw() ? scan.getMaxVersions() : Math.min(scan.getMaxVersions(),
@@ -323,8 +318,7 @@ public class ScanQueryMatcher {
     byte typeByte = cell.getTypeByte();
     long mvccVersion = cell.getMvccVersion();
     if (CellUtil.isDelete(cell)) {
-      if (keepDeletedCells == KeepDeletedCells.FALSE
-          || (keepDeletedCells == KeepDeletedCells.TTL && timestamp < ttl)) {
+      if (!keepDeletedCells) {
         // first ignore delete markers if the scanner can do so, and the
         // range does not include the marker
         //
@@ -354,8 +348,7 @@ public class ScanQueryMatcher {
           // otherwise (i.e. a "raw" scan) we fall through to normal version and timerange checking
           return MatchCode.INCLUDE;
         }
-      } else if (keepDeletedCells == KeepDeletedCells.TRUE
-          || (keepDeletedCells == KeepDeletedCells.TTL && timestamp >= ttl)) {
+      } else if (keepDeletedCells) {
         if (timestamp < earliestPutTs) {
           // keeping delete rows, but there are no puts older than
           // this delete in the store files.

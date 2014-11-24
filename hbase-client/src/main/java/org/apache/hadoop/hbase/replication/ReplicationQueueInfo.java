@@ -19,13 +19,13 @@
 package org.apache.hadoop.hbase.replication;
 
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * This class is responsible for the parsing logic for a znode representing a queue.

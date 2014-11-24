@@ -103,7 +103,7 @@ public class PrefixTreeCell implements Cell, SettableSequenceId, Comparable<Cell
 
   @Override
   public int compareTo(Cell other) {
-    return CellComparator.compare(this, other, false);
+    return CellComparator.compareStatic(this, other, false);
   }
 
   @Override

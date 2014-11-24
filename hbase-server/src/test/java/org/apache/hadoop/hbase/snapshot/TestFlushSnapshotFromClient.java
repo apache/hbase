@@ -85,11 +85,9 @@ public class TestFlushSnapshotFromClient {
    */
   @BeforeClass
   public static void setupCluster() throws Exception {
-    // Uncomment the following lines if more verbosity is needed for
-    // debugging (see HBASE-12285 for details).
-    //((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
   }

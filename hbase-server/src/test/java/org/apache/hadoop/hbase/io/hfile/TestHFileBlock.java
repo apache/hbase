@@ -313,7 +313,7 @@ public class TestHFileBlock {
         .withIncludesMvcc(includesMemstoreTS)
         .withIncludesTags(includesTag)
         .withCompression(algo).build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta);
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, totalSize, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
         assertEquals(0, HFile.getChecksumFailuresCount());
@@ -326,7 +326,7 @@ public class TestHFileBlock {
 
         if (algo == GZ) {
           is = fs.open(path);
-          hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta);
+          hbr = new HFileBlock.FSReaderV2(is, totalSize, meta);
           b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE +
                                 b.totalChecksumBytes(), -1, pread);
           assertEquals(expected, b);
@@ -412,7 +412,7 @@ public class TestHFileBlock {
                 .withIncludesMvcc(includesMemstoreTS)
                 .withIncludesTags(includesTag)
                 .build();
-          HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta);
+          HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, totalSize, meta);
           hbr.setDataBlockEncoder(dataBlockEncoder);
           hbr.setIncludesMemstoreTS(includesMemstoreTS);
           HFileBlock blockFromHFile, blockUnpacked;
@@ -540,7 +540,7 @@ public class TestHFileBlock {
                               .withIncludesMvcc(includesMemstoreTS)
                               .withIncludesTags(includesTag)
                               .withCompression(algo).build();
-          HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, totalSize, meta);
+          HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, totalSize, meta);
           long curOffset = 0;
           for (int i = 0; i < NUM_TEST_BLOCKS; ++i) {
             if (!pread) {
@@ -725,7 +725,7 @@ public class TestHFileBlock {
                           .withIncludesTags(includesTag)
                           .withCompression(compressAlgo)
                           .build();
-      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(is, fileSize, meta);
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, fileSize, meta);
 
       Executor exec = Executors.newFixedThreadPool(NUM_READER_THREADS);
       ExecutorCompletionService<Boolean> ecs =

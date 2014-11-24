@@ -21,17 +21,17 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SettableSequenceId;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -137,7 +137,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       }
     }
 
-    protected void setKey(byte[] keyBuffer, long memTS) {
+    protected void createKeyOnlyKeyValue(byte[] keyBuffer, long memTS) {
       currentKey.setKey(keyBuffer, 0, keyLength);
       memstoreTS = memTS;
     }
@@ -302,8 +302,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public String toString() {
-      return KeyValue.keyToString(this.keyBuffer, 0, KeyValueUtil.keyLength(this)) + "/vlen="
-          + getValueLength() + "/seqid=" + memstoreTS;
+      KeyValue kv = KeyValueUtil.copyToNewKeyValue(this);
+      if (kv == null) {
+        return "null";
+      }
+      return kv.toString();
     }
 
     public Cell shallowCopy() {
@@ -328,7 +331,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   protected static class ClonedSeekerState implements Cell, HeapSize, SettableSequenceId {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
         + (4 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
-        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (2 * ClassSize.ARRAY));
+        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE));
     private byte[] keyOnlyBuffer;
     private ByteBuffer currentBuffer;
     private short rowLength;
@@ -512,7 +515,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public long heapSize() {
-      return FIXED_OVERHEAD + rowLength + familyLength + qualifierLength + valueLength + tagsLength;
+      return FIXED_OVERHEAD + rowLength + familyLength + qualifierLength + valueLength + tagsLength
+          + KeyValue.TIMESTAMP_TYPE_SIZE;
     }
   }
 
@@ -572,7 +576,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         current.tagCompressionContext = tagCompressionContext;
       }
       decodeFirst();
-      current.setKey(current.keyBuffer, current.memstoreTS);
+      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
@@ -585,10 +589,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public ByteBuffer getValueShallowCopy() {
-      ByteBuffer dup = currentBuffer.duplicate();
-      dup.position(current.valueOffset);
-      dup.limit(current.valueOffset + current.valueLength);
-      return dup.slice();
+      return ByteBuffer.wrap(currentBuffer.array(),
+          currentBuffer.arrayOffset() + current.valueOffset,
+          current.valueLength);
     }
 
     @Override
@@ -597,7 +600,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       kvBuffer.putInt(current.keyLength);
       kvBuffer.putInt(current.valueLength);
       kvBuffer.put(current.keyBuffer, 0, current.keyLength);
-      ByteBufferUtils.copyFromBufferToBuffer(kvBuffer, currentBuffer, current.valueOffset,
+      kvBuffer.put(currentBuffer.array(),
+          currentBuffer.arrayOffset() + current.valueOffset,
           current.valueLength);
       if (current.tagsLength > 0) {
         // Put short as unsigned
@@ -606,7 +610,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (current.tagsOffset != -1) {
           // the offset of the tags bytes in the underlying buffer is marked. So the temp
           // buffer,tagsBuffer was not been used.
-          ByteBufferUtils.copyFromBufferToBuffer(kvBuffer, currentBuffer, current.tagsOffset,
+          kvBuffer.put(currentBuffer.array(), currentBuffer.arrayOffset() + current.tagsOffset,
               current.tagsLength);
         } else {
           // When tagsOffset is marked as -1, tag compression was present and so the tags were
@@ -636,7 +640,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         tagCompressionContext.clear();
       }
       decodeFirst();
-      current.setKey(current.keyBuffer, current.memstoreTS);
+      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
@@ -646,7 +650,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         return false;
       }
       decodeNext();
-      current.setKey(current.keyBuffer, current.memstoreTS);
+      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
       return true;
     }
@@ -669,7 +673,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         }
         current.tagsOffset = -1;
       } else {
-        // When tag compress is not used, let us not do copying of tags bytes into tagsBuffer.
+        // When tag compress is not used, let us not do temp copying of tags bytes into tagsBuffer.
         // Just mark the tags Offset so as to create the KV buffer later in getKeyValueBuffer()
         current.tagsOffset = currentBuffer.position();
         ByteBufferUtils.skip(currentBuffer, current.tagsLength);
@@ -780,7 +784,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (currentBuffer.hasRemaining()) {
           previous.copyFromNext(current);
           decodeNext();
-          current.setKey(current.keyBuffer, current.memstoreTS);
+          current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
         } else {
           break;
         }

@@ -607,20 +607,6 @@ java.lang.Thread.State: WAITING (on object monitor)
       <para>See <xref
           linkend="perf.hbase.client.caching" />. </para>
     </section>
-    <section>
-      <title>Performance Differences in Thrift and Java APIs</title>
-      <para>Poor performance, or even <code>ScannerTimeoutExceptions</code>, can occur if
-          <code>Scan.setCaching</code> is too high, as discussed in <xref
-          linkend="trouble.client.scantimeout"/>. If the Thrift client uses the wrong caching
-        settings for a given workload, performance can suffer compared to the Java API. To set
-        caching for a given scan in the Thrift client, use the <code>scannerGetList(scannerId,
-          numRows)</code> method, where <code>numRows</code> is an integer representing the number
-        of rows to cache. In one case, it was found that reducing the cache for Thrift scans from
-        1000 to 100 increased performance to near parity with the Java API given the same
-        queries.</para>
-      <para>See also Jesse Andersen's <link xlink:href="http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/">blog post</link> 
-        about using Scans with Thrift.</para>
-    </section>
     <section
       xml:id="trouble.client.lease.exception">
       <title><classname>LeaseException</classname> when calling

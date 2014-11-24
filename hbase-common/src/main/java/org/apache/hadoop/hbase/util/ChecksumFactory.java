@@ -20,8 +20,9 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
+import java.lang.ClassNotFoundException;
 import java.util.zip.Checksum;
+import java.lang.reflect.Constructor;
 
 /**
  * Utility class that is used to generate a Checksum object.

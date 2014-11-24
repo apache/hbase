@@ -19,10 +19,10 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
+import java.io.IOException;
 
 /**
  * A collection of interfaces and utilities used for interacting with custom RPC

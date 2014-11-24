@@ -238,7 +238,6 @@ public class HTableWrapper implements HTableInterface {
    * @deprecated If any exception is thrown by one of the actions, there is no way to
    * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
    */
-  @Deprecated
   @Override
   public Object[] batch(List<? extends Row> actions)
       throws IOException, InterruptedException {
@@ -258,7 +257,6 @@ public class HTableWrapper implements HTableInterface {
    * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
    * instead.
    */
-  @Deprecated
   @Override
   public <R> Object[] batchCallback(List<? extends Row> actions,
       Batch.Callback<R> callback) throws IOException, InterruptedException {

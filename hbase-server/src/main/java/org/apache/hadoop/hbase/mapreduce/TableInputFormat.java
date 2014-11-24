@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,8 +33,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
@@ -84,8 +80,6 @@ implements Configurable {
   public static final String SCAN_CACHEDROWS = "hbase.mapreduce.scan.cachedrows";
   /** Set the maximum number of values to return for each call to next(). */
   public static final String SCAN_BATCHSIZE = "hbase.mapreduce.scan.batchsize";
-  /** Specify if we have to shuffle the map tasks. */
-  public static final String SHUFFLE_MAPS = "hbase.mapreduce.inputtable.shufflemaps";
 
   /** The configuration. */
   private Configuration conf = null;
@@ -119,7 +113,7 @@ implements Configurable {
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }
-
+    
     Scan scan = null;
 
     if (conf.get(SCAN) != null) {
@@ -179,7 +173,7 @@ implements Configurable {
 
     setScan(scan);
   }
-
+  
   /**
    * Parses a combined family and qualifier and adds either both or just the
    * family in case there is no qualifier. This assumes the older colon
@@ -217,25 +211,6 @@ implements Configurable {
   }
 
   /**
-   * Calculates the splits that will serve as input for the map tasks. The
-   * number of splits matches the number of regions in a table. Splits are shuffled if
-   * required.
-   * @param context  The current job context.
-   * @return The list of input splits.
-   * @throws IOException When creating the list of splits fails.
-   * @see org.apache.hadoop.mapreduce.InputFormat#getSplits(
-   *   org.apache.hadoop.mapreduce.JobContext)
-   */
-  @Override
-  public List<InputSplit> getSplits(JobContext context) throws IOException {
-    List<InputSplit> splits = super.getSplits(context);
-    if ((conf.get(SHUFFLE_MAPS) != null) && "true".equals(conf.get(SHUFFLE_MAPS).toLowerCase())) {
-      Collections.shuffle(splits);
-    }
-    return splits;
-  }
-
-  /**
    * Convenience method to parse a string representation of an array of column specifiers.
    *
    * @param scan The Scan to update.
@@ -260,7 +235,7 @@ implements Configurable {
 
     return super.getStartEndKeys();
   }
-
+  
   /**
    * Sets split table in map-reduce job.
    */

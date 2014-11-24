@@ -526,7 +526,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NM_FIELD_NAMING_CONVENTION",
         justification="Mistake. Too disruptive to change now")
-    public static final Action NullAction = new Action(Type.NULL);
+    public static Action NullAction = new Action(Type.NULL);
 
     public void doAction(Action action) {
       switch (action.type) {

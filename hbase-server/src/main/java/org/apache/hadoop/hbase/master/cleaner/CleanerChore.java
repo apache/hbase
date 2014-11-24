@@ -226,7 +226,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     Iterable<FileStatus> deletableValidFiles = validFiles;
     // check each of the cleaners for the valid files
     for (T cleaner : cleanersChain) {
-      if (cleaner.isStopped() || this.getStopper().isStopped()) {
+      if (cleaner.isStopped() || this.stopper.isStopped()) {
         LOG.warn("A file cleaner" + this.getName() + " is stopped, won't delete any more files in:"
             + this.oldFileDir);
         return false;

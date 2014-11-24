@@ -41,9 +41,4 @@ public class CalmChaosMonkey extends ChaosMonkey {
   public void waitForStop() throws InterruptedException {
 
   }
-
-  @Override
-  public boolean isDestructive() {
-    return false;
-  }
 }

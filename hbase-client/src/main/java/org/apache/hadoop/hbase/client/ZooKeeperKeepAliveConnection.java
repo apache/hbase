@@ -20,10 +20,10 @@
 package org.apache.hadoop.hbase.client;
 
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+
+import java.io.IOException;
 
 /**
  * We inherit the current ZooKeeperWatcher implementation to change the semantic

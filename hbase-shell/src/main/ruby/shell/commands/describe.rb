@@ -28,20 +28,17 @@ Describe the named table. For example:
 
 Alternatively, you can use the abbreviated 'desc' for the same thing.
   hbase> desc 't1'
-  hbase> desc 'ns1:t1'
+  hbase> desc 'nds1:t1'
 EOF
       end
 
       def command(table)
         now = Time.now
 
-        column_families = admin.get_column_families(table)
+        desc = admin.describe(table)
 
-        formatter.header(["Table " + table.to_s + " is " + if admin.enabled?(table) then "ENABLED" else "DISABLED" end])
-        formatter.header([ "COLUMN FAMILIES DESCRIPTION" ])
-        column_families.each do |column_family|
-          formatter.row([ column_family.to_s ], true)
-        end
+        formatter.header([ "DESCRIPTION", "ENABLED" ], [ 64 ])
+        formatter.row([ desc, admin.enabled?(table).to_s ], true, [ 64 ])
         formatter.footer(now)
       end
     end

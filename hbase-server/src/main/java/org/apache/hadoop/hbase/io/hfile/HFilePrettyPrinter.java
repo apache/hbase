@@ -228,7 +228,6 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         processFile(fileName);
       } catch (IOException ex) {
         LOG.error("Error reading " + fileName, ex);
-        System.exit(-2);
       }
     }
 
@@ -245,7 +244,6 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     FileSystem fs = file.getFileSystem(getConf());
     if (!fs.exists(file)) {
       System.err.println("ERROR, file doesnt exist: " + file);
-      System.exit(-2);
     }
 
     HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(getConf()), getConf());
@@ -349,8 +347,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         if (CellComparator.compareRows(pCell, cell) > 0) {
           System.err.println("WARNING, previous row is greater then"
               + " current row\n\tfilename -> " + file + "\n\tprevious -> "
-              + CellUtil.getCellKeyAsString(pCell) + "\n\tcurrent  -> "
-              + CellUtil.getCellKeyAsString(cell));
+              + CellUtil.getCellKey(pCell) + "\n\tcurrent  -> "
+              + CellUtil.getCellKey(cell));
         }
       }
       // check if families are consistent
@@ -360,13 +358,13 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         if (!file.toString().contains(fam)) {
           System.err.println("WARNING, filename does not match kv family,"
               + "\n\tfilename -> " + file + "\n\tkeyvalue -> "
-              + CellUtil.getCellKeyAsString(cell));
+              + CellUtil.getCellKey(cell));
         }
         if (pCell != null && CellComparator.compareFamilies(pCell, cell) != 0) {
           System.err.println("WARNING, previous kv has different family"
               + " compared to current key\n\tfilename -> " + file
-              + "\n\tprevious -> " + CellUtil.getCellKeyAsString(pCell)
-              + "\n\tcurrent  -> " + CellUtil.getCellKeyAsString(cell));
+              + "\n\tprevious -> " + CellUtil.getCellKey(pCell)
+              + "\n\tcurrent  -> " + CellUtil.getCellKey(cell));
         }
       }
       pCell = cell;

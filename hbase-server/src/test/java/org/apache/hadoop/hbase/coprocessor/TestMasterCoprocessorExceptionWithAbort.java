@@ -198,7 +198,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     // Test (part of the) output that should have be printed by master when it aborts:
     // (namely the part that shows the set of loaded coprocessors).
     // In this test, there is only a single coprocessor (BuggyMasterObserver).
-    assertTrue(HMaster.getLoadedCoprocessors().
+    assertTrue(master.getLoadedCoprocessors().
       contains(TestMasterCoprocessorExceptionWithAbort.BuggyMasterObserver.class.getName()));
 
     CreateTableThread createTableThread = new CreateTableThread(UTIL);

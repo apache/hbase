@@ -331,10 +331,7 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Copy from one buffer to another from given offset.
-   * <p>
-   * Note : This will advance the position marker of {@code out} but not change the position maker
-   * for {@code in}
+   * Copy from one buffer to another from given offset
    * @param out destination buffer
    * @param in source buffer
    * @param sourceOffset offset in the source buffer
@@ -350,27 +347,6 @@ public final class ByteBufferUtils {
     } else {
       for (int i = 0; i < length; ++i) {
         out.put(in.get(sourceOffset + i));
-      }
-    }
-  }
-
-  /**
-   * Copy from one buffer to another from given offset. This will be absolute positional copying and
-   * won't affect the position of any of the buffers.
-   * @param out
-   * @param in
-   * @param sourceOffset
-   * @param destinationOffset
-   * @param length
-   */
-  public static void copyFromBufferToBuffer(ByteBuffer out, ByteBuffer in, int sourceOffset,
-      int destinationOffset, int length) {
-    if (in.hasArray() && out.hasArray()) {
-      System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out.array(), out.arrayOffset()
-          + destinationOffset, length);
-    } else {
-      for (int i = 0; i < length; ++i) {
-        out.put((destinationOffset + i), in.get(sourceOffset + i));
       }
     }
   }
@@ -478,35 +454,4 @@ public final class ByteBufferUtils {
     return output;
   }
 
-  /**
-   * Copy the given number of bytes from specified offset into a new byte[]
-   * @param buffer
-   * @param offset
-   * @param length
-   * @return a new byte[] containing the bytes in the specified range
-   */
-  public static byte[] toBytes(ByteBuffer buffer, int offset, int length) {
-    byte[] output = new byte[length];
-    for (int i = 0; i < length; i++) {
-      output[i] = buffer.get(offset + i);
-    }
-    return output;
-  }
-
-  public static int compareTo(ByteBuffer buf1, int o1, int len1, ByteBuffer buf2, int o2, int len2) {
-    if (buf1.hasArray() && buf2.hasArray()) {
-      return Bytes.compareTo(buf1.array(), buf1.arrayOffset() + o1, len1, buf2.array(),
-          buf2.arrayOffset() + o2, len2);
-    }
-    int end1 = o1 + len1;
-    int end2 = o2 + len2;
-    for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
-      int a = buf1.get(i) & 0xFF;
-      int b = buf2.get(j) & 0xFF;
-      if (a != b) {
-        return a - b;
-      }
-    }
-    return len1 - len2;
-  }
 }

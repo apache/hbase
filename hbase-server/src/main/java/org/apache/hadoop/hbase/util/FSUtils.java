@@ -656,11 +656,11 @@ public abstract class FSUtils {
             if (s != null) s.close();
           } catch (IOException ignore) { }
         }
-        LOG.info("Created version file at " + rootdir.toString() + " with version=" + version);
+        LOG.debug("Created version file at " + rootdir.toString() + " with version=" + version);
         return;
       } catch (IOException e) {
         if (retries > 0) {
-          LOG.debug("Unable to create version file at " + rootdir.toString() + ", retrying", e);
+          LOG.warn("Unable to create version file at " + rootdir.toString() + ", retrying", e);
           fs.delete(versionFile, false);
           try {
             if (wait > 0) {

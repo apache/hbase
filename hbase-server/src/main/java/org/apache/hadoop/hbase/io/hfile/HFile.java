@@ -341,11 +341,7 @@ public class HFile {
     }
   }
 
-  /**
-   * An abstraction used by the block index.
-   * Implementations will check cache for any asked-for block and return cached block if found.
-   * Otherwise, after reading from fs, will try and put block into cache before returning.
-   */
+  /** An abstraction used by the block index */
   public interface CachingBlockReader {
     /**
      * Read in a file block.
@@ -354,13 +350,15 @@ public class HFile {
      * @param cacheBlock
      * @param pread
      * @param isCompaction is this block being read as part of a compaction
-     * @param expectedBlockType the block type we are expecting to read with this read operation,
-     *  or null to read whatever block type is available and avoid checking (that might reduce
-     *  caching efficiency of encoded data blocks)
-     * @param expectedDataBlockEncoding the data block encoding the caller is expecting data blocks
-     *  to be in, or null to not perform this check and return the block irrespective of the
-     *  encoding. This check only applies to data blocks and can be set to null when the caller is
-     *  expecting to read a non-data block and has set expectedBlockType accordingly.
+     * @param expectedBlockType the block type we are expecting to read with this read operation, or
+     *          null to read whatever block type is available and avoid checking (that might reduce
+     *          caching efficiency of encoded data blocks)
+     * @param expectedDataBlockEncoding the data block encoding the caller is
+     *          expecting data blocks to be in, or null to not perform this
+     *          check and return the block irrespective of the encoding. This
+     *          check only applies to data blocks and can be set to null when
+     *          the caller is expecting to read a non-data block and has set
+     *          expectedBlockType accordingly.
      * @return Block wrapped in a ByteBuffer.
      * @throws IOException
      */
@@ -382,9 +380,11 @@ public class HFile {
 
     KVComparator getComparator();
 
-    HFileScanner getScanner(boolean cacheBlocks, final boolean pread, final boolean isCompaction);
+    HFileScanner getScanner(boolean cacheBlocks,
+       final boolean pread, final boolean isCompaction);
 
-    ByteBuffer getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException;
+    ByteBuffer getMetaBlock(String metaBlockName,
+       boolean cacheBlock) throws IOException;
 
     Map<byte[], byte[]> loadFileInfo() throws IOException;
 

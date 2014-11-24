@@ -24,6 +24,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -38,9 +40,6 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
-
-import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -159,7 +158,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Default setting for preventing deleted from being collected immediately.
    */
-  public static final KeepDeletedCells DEFAULT_KEEP_DELETED = KeepDeletedCells.FALSE;
+  public static final boolean DEFAULT_KEEP_DELETED = false;
 
   /**
    * Default setting for whether to use a block cache or not.
@@ -426,7 +425,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   @Deprecated
   public HColumnDescriptor(final byte[] familyName, final int minVersions,
-      final int maxVersions, final KeepDeletedCells keepDeletedCells,
+      final int maxVersions, final boolean keepDeletedCells,
       final String compression, final boolean encodeOnDisk,
       final String dataBlockEncoding, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
@@ -632,7 +631,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
         Integer.decode(value): Integer.valueOf(DEFAULT_BLOCKSIZE);
     }
     return this.blocksize.intValue();
-
   }
 
   /**
@@ -665,10 +663,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     return setValue(COMPRESSION, type.getName().toUpperCase());
   }
 
-  /**
-   * @return data block encoding algorithm used on disk
-   * @deprecated See getDataBlockEncoding()
-   */
+  /** @return data block encoding algorithm used on disk */
   @Deprecated
   public DataBlockEncoding getDataBlockEncodingOnDisk() {
     return getDataBlockEncoding();
@@ -678,7 +673,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * This method does nothing now. Flag ENCODE_ON_DISK is not used
    * any more. Data blocks have the same encoding in cache as on disk.
    * @return this (for chained invocation)
-   * @deprecated This does nothing now.
    */
   @Deprecated
   public HColumnDescriptor setEncodeOnDisk(boolean encodeOnDisk) {
@@ -726,23 +720,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
    *         DataBlockEncoding is been used, this is having no effect.
-   * @deprecated Use {@link #isCompressTags()} instead
    */
-  @Deprecated
   public boolean shouldCompressTags() {
-    String compressTagsStr = getValue(COMPRESS_TAGS);
-    boolean compressTags = DEFAULT_COMPRESS_TAGS;
-    if (compressTagsStr != null) {
-      compressTags = Boolean.valueOf(compressTagsStr);
-    }
-    return compressTags;
-  }
-
-  /**
-   * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
-   *         DataBlockEncoding is been used, this is having no effect.
-   */
-  public boolean isCompressTags() {
     String compressTagsStr = getValue(COMPRESS_TAGS);
     boolean compressTags = DEFAULT_COMPRESS_TAGS;
     if (compressTagsStr != null) {
@@ -791,11 +770,10 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     return setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
   }
 
-  public KeepDeletedCells getKeepDeletedCells() {
+  public boolean getKeepDeletedCells() {
     String value = getValue(KEEP_DELETED_CELLS);
     if (value != null) {
-      // toUpperCase for backwards compatibility
-      return KeepDeletedCells.valueOf(value.toUpperCase());
+      return Boolean.valueOf(value).booleanValue();
     }
     return DEFAULT_KEEP_DELETED;
   }
@@ -804,21 +782,9 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * @param keepDeletedCells True if deleted rows should not be collected
    * immediately.
    * @return this (for chained invocation)
-   * @deprecated use {@link #setKeepDeletedCells(KeepDeletedCells)}
    */
-  @Deprecated
   public HColumnDescriptor setKeepDeletedCells(boolean keepDeletedCells) {
-    return setValue(KEEP_DELETED_CELLS, (keepDeletedCells ? KeepDeletedCells.TRUE
-        : KeepDeletedCells.FALSE).toString());
-  }
-
-  /**
-   * @param keepDeletedCells True if deleted rows should not be collected
-   * immediately.
-   * @return this (for chained invocation)
-   */
-  public HColumnDescriptor setKeepDeletedCells(KeepDeletedCells keepDeletedCells) {
-    return setValue(KEEP_DELETED_CELLS, keepDeletedCells.toString());
+    return setValue(KEEP_DELETED_CELLS, Boolean.toString(keepDeletedCells));
   }
 
   /**
@@ -914,17 +880,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should cache data blocks on write
-   * @deprecated Use {@link #isCacheDataOnWrite()} instead
    */
-  @Deprecated
   public boolean shouldCacheDataOnWrite() {
-    return setAndGetBoolean(CACHE_DATA_ON_WRITE, DEFAULT_CACHE_DATA_ON_WRITE);
-  }
-
-  /**
-   * @return true if we should cache data blocks on write
-   */
-  public boolean isCacheDataOnWrite() {
     return setAndGetBoolean(CACHE_DATA_ON_WRITE, DEFAULT_CACHE_DATA_ON_WRITE);
   }
 
@@ -939,18 +896,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * @return true if we should cache data blocks in the L1 cache (if block cache deploy
    * has more than one tier; e.g. we are using CombinedBlockCache).
-   * @deprecated Use {@link #isCacheDataInL1()} instead
    */
-  @Deprecated
   public boolean shouldCacheDataInL1() {
-    return setAndGetBoolean(CACHE_DATA_IN_L1, DEFAULT_CACHE_DATA_IN_L1);
-  }
-
-  /**
-   * @return true if we should cache data blocks in the L1 cache (if block cache deploy has more
-   *         than one tier; e.g. we are using CombinedBlockCache).
-   */
-  public boolean isCacheDataInL1() {
     return setAndGetBoolean(CACHE_DATA_IN_L1, DEFAULT_CACHE_DATA_IN_L1);
   }
 
@@ -971,17 +918,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should cache index blocks on write
-   * @deprecated Use {@link #isCacheIndexesOnWrite()} instead
    */
-  @Deprecated
   public boolean shouldCacheIndexesOnWrite() {
-    return setAndGetBoolean(CACHE_INDEX_ON_WRITE, DEFAULT_CACHE_INDEX_ON_WRITE);
-  }
-
-  /**
-   * @return true if we should cache index blocks on write
-   */
-  public boolean isCacheIndexesOnWrite() {
     return setAndGetBoolean(CACHE_INDEX_ON_WRITE, DEFAULT_CACHE_INDEX_ON_WRITE);
   }
 
@@ -995,17 +933,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should cache bloomfilter blocks on write
-   * @deprecated Use {@link #isCacheBloomsOnWrite()} instead
    */
-  @Deprecated
   public boolean shouldCacheBloomsOnWrite() {
-    return setAndGetBoolean(CACHE_BLOOMS_ON_WRITE, DEFAULT_CACHE_BLOOMS_ON_WRITE);
-  }
-
-  /**
-   * @return true if we should cache bloomfilter blocks on write
-   */
-  public boolean isCacheBloomsOnWrite() {
     return setAndGetBoolean(CACHE_BLOOMS_ON_WRITE, DEFAULT_CACHE_BLOOMS_ON_WRITE);
   }
 
@@ -1020,17 +949,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * @return true if we should evict cached blocks from the blockcache on
    * close
-   * @deprecated {@link #isEvictBlocksOnClose()} instead
    */
-  @Deprecated
   public boolean shouldEvictBlocksOnClose() {
-    return setAndGetBoolean(EVICT_BLOCKS_ON_CLOSE, DEFAULT_EVICT_BLOCKS_ON_CLOSE);
-  }
-
-  /**
-   * @return true if we should evict cached blocks from the blockcache on close
-   */
-  public boolean isEvictBlocksOnClose() {
     return setAndGetBoolean(EVICT_BLOCKS_ON_CLOSE, DEFAULT_EVICT_BLOCKS_ON_CLOSE);
   }
 
@@ -1045,17 +965,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should prefetch blocks into the blockcache on open
-   * @deprecated Use {@link #isPrefetchBlocksOnOpen()} instead
    */
-  @Deprecated
   public boolean shouldPrefetchBlocksOnOpen() {
-    return setAndGetBoolean(PREFETCH_BLOCKS_ON_OPEN, DEFAULT_PREFETCH_BLOCKS_ON_OPEN);
-  }
-
-  /**
-   * @return true if we should prefetch blocks into the blockcache on open
-   */
-  public boolean isPrefetchBlocksOnOpen() {
     return setAndGetBoolean(PREFETCH_BLOCKS_ON_OPEN, DEFAULT_PREFETCH_BLOCKS_ON_OPEN);
   }
 

@@ -128,7 +128,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     htd.setConfiguration(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true");
 
     admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE.getTableName());
+
+    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
   }
 
   @After

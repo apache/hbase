@@ -239,9 +239,7 @@ if "%servercommand%" == "true" (
 if defined service_entry (
   set HBASE_LOG_PREFIX=hbase-%hbase-command%-%COMPUTERNAME%
   set HBASE_LOGFILE=!HBASE_LOG_PREFIX!.log
-  if not defined HBASE_ROOT_LOGGER (
-	set HBASE_ROOT_LOGGER=INFO,DRFA
-  )
+  set HBASE_ROOT_LOGGER=INFO,DRFA
   set HBASE_SECURITY_LOGGER=INFO,DRFAS
   set loggc=!HBASE_LOG_DIR!\!HBASE_LOG_PREFIX!.gc
   set loglog=!HBASE_LOG_DIR!\!HBASE_LOGFILE!

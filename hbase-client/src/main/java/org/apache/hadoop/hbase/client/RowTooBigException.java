@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.RegionException;
 
 /**
  * Gets or Scans throw this exception if running without in-row scan flag

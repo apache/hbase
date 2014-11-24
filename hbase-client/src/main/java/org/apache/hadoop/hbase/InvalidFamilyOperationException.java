@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
+import java.io.IOException;
+
 /**
  * Thrown if a request is table schema modification is requested but
  * made for an invalid family name.

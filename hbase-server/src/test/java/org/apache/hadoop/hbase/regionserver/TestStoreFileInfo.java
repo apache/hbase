@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -36,7 +35,6 @@ public class TestStoreFileInfo extends HBaseTestCase {
   /**
    * Validate that we can handle valid tables with '.', '_', and '-' chars.
    */
-  @Test
   public void testStoreFileNames() {
     String[] legalHFileLink = { "MyTable_02=abc012-def345", "MyTable_02.300=abc012-def345",
       "MyTable_02-400=abc012-def345", "MyTable_02-400.200=abc012-def345",

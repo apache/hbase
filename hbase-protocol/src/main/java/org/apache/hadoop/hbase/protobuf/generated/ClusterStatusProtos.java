@@ -2153,24 +2153,6 @@ public final class ClusterStatusProtos {
      * </pre>
      */
     long getCompleteSequenceId();
-
-    // optional float data_locality = 16;
-    /**
-     * <code>optional float data_locality = 16;</code>
-     *
-     * <pre>
-     ** The current data locality for region in the regionserver 
-     * </pre>
-     */
-    boolean hasDataLocality();
-    /**
-     * <code>optional float data_locality = 16;</code>
-     *
-     * <pre>
-     ** The current data locality for region in the regionserver 
-     * </pre>
-     */
-    float getDataLocality();
   }
   /**
    * Protobuf type {@code RegionLoad}
@@ -2304,11 +2286,6 @@ public final class ClusterStatusProtos {
             case 120: {
               bitField0_ |= 0x00004000;
               completeSequenceId_ = input.readUInt64();
-              break;
-            }
-            case 133: {
-              bitField0_ |= 0x00008000;
-              dataLocality_ = input.readFloat();
               break;
             }
           }
@@ -2729,30 +2706,6 @@ public final class ClusterStatusProtos {
       return completeSequenceId_;
     }
 
-    // optional float data_locality = 16;
-    public static final int DATA_LOCALITY_FIELD_NUMBER = 16;
-    private float dataLocality_;
-    /**
-     * <code>optional float data_locality = 16;</code>
-     *
-     * <pre>
-     ** The current data locality for region in the regionserver 
-     * </pre>
-     */
-    public boolean hasDataLocality() {
-      return ((bitField0_ & 0x00008000) == 0x00008000);
-    }
-    /**
-     * <code>optional float data_locality = 16;</code>
-     *
-     * <pre>
-     ** The current data locality for region in the regionserver 
-     * </pre>
-     */
-    public float getDataLocality() {
-      return dataLocality_;
-    }
-
     private void initFields() {
       regionSpecifier_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       stores_ = 0;
@@ -2769,7 +2722,6 @@ public final class ClusterStatusProtos {
       totalStaticIndexSizeKB_ = 0;
       totalStaticBloomSizeKB_ = 0;
       completeSequenceId_ = 0L;
-      dataLocality_ = 0F;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2835,9 +2787,6 @@ public final class ClusterStatusProtos {
       }
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         output.writeUInt64(15, completeSequenceId_);
-      }
-      if (((bitField0_ & 0x00008000) == 0x00008000)) {
-        output.writeFloat(16, dataLocality_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -2907,10 +2856,6 @@ public final class ClusterStatusProtos {
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(15, completeSequenceId_);
-      }
-      if (((bitField0_ & 0x00008000) == 0x00008000)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeFloatSize(16, dataLocality_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3010,10 +2955,6 @@ public final class ClusterStatusProtos {
         result = result && (getCompleteSequenceId()
             == other.getCompleteSequenceId());
       }
-      result = result && (hasDataLocality() == other.hasDataLocality());
-      if (hasDataLocality()) {
-        result = result && (Float.floatToIntBits(getDataLocality())    == Float.floatToIntBits(other.getDataLocality()));
-      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -3086,11 +3027,6 @@ public final class ClusterStatusProtos {
       if (hasCompleteSequenceId()) {
         hash = (37 * hash) + COMPLETE_SEQUENCE_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getCompleteSequenceId());
-      }
-      if (hasDataLocality()) {
-        hash = (37 * hash) + DATA_LOCALITY_FIELD_NUMBER;
-        hash = (53 * hash) + Float.floatToIntBits(
-            getDataLocality());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -3236,8 +3172,6 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00002000);
         completeSequenceId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00004000);
-        dataLocality_ = 0F;
-        bitField0_ = (bitField0_ & ~0x00008000);
         return this;
       }
 
@@ -3330,10 +3264,6 @@ public final class ClusterStatusProtos {
           to_bitField0_ |= 0x00004000;
         }
         result.completeSequenceId_ = completeSequenceId_;
-        if (((from_bitField0_ & 0x00008000) == 0x00008000)) {
-          to_bitField0_ |= 0x00008000;
-        }
-        result.dataLocality_ = dataLocality_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3394,9 +3324,6 @@ public final class ClusterStatusProtos {
         }
         if (other.hasCompleteSequenceId()) {
           setCompleteSequenceId(other.getCompleteSequenceId());
-        }
-        if (other.hasDataLocality()) {
-          setDataLocality(other.getDataLocality());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -4284,55 +4211,6 @@ public final class ClusterStatusProtos {
       public Builder clearCompleteSequenceId() {
         bitField0_ = (bitField0_ & ~0x00004000);
         completeSequenceId_ = 0L;
-        onChanged();
-        return this;
-      }
-
-      // optional float data_locality = 16;
-      private float dataLocality_ ;
-      /**
-       * <code>optional float data_locality = 16;</code>
-       *
-       * <pre>
-       ** The current data locality for region in the regionserver 
-       * </pre>
-       */
-      public boolean hasDataLocality() {
-        return ((bitField0_ & 0x00008000) == 0x00008000);
-      }
-      /**
-       * <code>optional float data_locality = 16;</code>
-       *
-       * <pre>
-       ** The current data locality for region in the regionserver 
-       * </pre>
-       */
-      public float getDataLocality() {
-        return dataLocality_;
-      }
-      /**
-       * <code>optional float data_locality = 16;</code>
-       *
-       * <pre>
-       ** The current data locality for region in the regionserver 
-       * </pre>
-       */
-      public Builder setDataLocality(float value) {
-        bitField0_ |= 0x00008000;
-        dataLocality_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional float data_locality = 16;</code>
-       *
-       * <pre>
-       ** The current data locality for region in the regionserver 
-       * </pre>
-       */
-      public Builder clearDataLocality() {
-        bitField0_ = (bitField0_ & ~0x00008000);
-        dataLocality_ = 0F;
         onChanged();
         return this;
       }
@@ -10472,7 +10350,7 @@ public final class ClusterStatusProtos {
       "PLITTING_NEW\020\r\022\017\n\013MERGING_NEW\020\016\"X\n\022Regio",
       "nInTransition\022\036\n\004spec\030\001 \002(\0132\020.RegionSpec" +
       "ifier\022\"\n\014region_state\030\002 \002(\0132\014.RegionStat" +
-      "e\"\347\003\n\nRegionLoad\022*\n\020region_specifier\030\001 \002" +
+      "e\"\320\003\n\nRegionLoad\022*\n\020region_specifier\030\001 \002" +
       "(\0132\020.RegionSpecifier\022\016\n\006stores\030\002 \001(\r\022\022\n\n" +
       "storefiles\030\003 \001(\r\022\"\n\032store_uncompressed_s" +
       "ize_MB\030\004 \001(\r\022\031\n\021storefile_size_MB\030\005 \001(\r\022" +
@@ -10483,27 +10361,27 @@ public final class ClusterStatusProtos {
       "ompacted_KVs\030\013 \001(\004\022\032\n\022root_index_size_KB" +
       "\030\014 \001(\r\022\"\n\032total_static_index_size_KB\030\r \001" +
       "(\r\022\"\n\032total_static_bloom_size_KB\030\016 \001(\r\022\034" +
-      "\n\024complete_sequence_id\030\017 \001(\004\022\025\n\rdata_loc" +
-      "ality\030\020 \001(\002\"\212\002\n\nServerLoad\022\032\n\022number_of_" +
-      "requests\030\001 \001(\r\022 \n\030total_number_of_reques" +
-      "ts\030\002 \001(\r\022\024\n\014used_heap_MB\030\003 \001(\r\022\023\n\013max_he" +
-      "ap_MB\030\004 \001(\r\022!\n\014region_loads\030\005 \003(\0132\013.Regi" +
-      "onLoad\022\"\n\014coprocessors\030\006 \003(\0132\014.Coprocess" +
-      "or\022\031\n\021report_start_time\030\007 \001(\004\022\027\n\017report_",
-      "end_time\030\010 \001(\004\022\030\n\020info_server_port\030\t \001(\r" +
-      "\"O\n\016LiveServerInfo\022\033\n\006server\030\001 \002(\0132\013.Ser" +
-      "verName\022 \n\013server_load\030\002 \002(\0132\013.ServerLoa" +
-      "d\"\340\002\n\rClusterStatus\022/\n\rhbase_version\030\001 \001" +
-      "(\0132\030.HBaseVersionFileContent\022%\n\014live_ser" +
-      "vers\030\002 \003(\0132\017.LiveServerInfo\022!\n\014dead_serv" +
-      "ers\030\003 \003(\0132\013.ServerName\0222\n\025regions_in_tra" +
-      "nsition\030\004 \003(\0132\023.RegionInTransition\022\036\n\ncl" +
-      "uster_id\030\005 \001(\0132\n.ClusterId\022)\n\023master_cop" +
-      "rocessors\030\006 \003(\0132\014.Coprocessor\022\033\n\006master\030",
-      "\007 \001(\0132\013.ServerName\022#\n\016backup_masters\030\010 \003" +
-      "(\0132\013.ServerName\022\023\n\013balancer_on\030\t \001(\010BF\n*" +
-      "org.apache.hadoop.hbase.protobuf.generat" +
-      "edB\023ClusterStatusProtosH\001\240\001\001"
+      "\n\024complete_sequence_id\030\017 \001(\004\"\212\002\n\nServerL" +
+      "oad\022\032\n\022number_of_requests\030\001 \001(\r\022 \n\030total" +
+      "_number_of_requests\030\002 \001(\r\022\024\n\014used_heap_M" +
+      "B\030\003 \001(\r\022\023\n\013max_heap_MB\030\004 \001(\r\022!\n\014region_l" +
+      "oads\030\005 \003(\0132\013.RegionLoad\022\"\n\014coprocessors\030" +
+      "\006 \003(\0132\014.Coprocessor\022\031\n\021report_start_time" +
+      "\030\007 \001(\004\022\027\n\017report_end_time\030\010 \001(\004\022\030\n\020info_",
+      "server_port\030\t \001(\r\"O\n\016LiveServerInfo\022\033\n\006s" +
+      "erver\030\001 \002(\0132\013.ServerName\022 \n\013server_load\030" +
+      "\002 \002(\0132\013.ServerLoad\"\340\002\n\rClusterStatus\022/\n\r" +
+      "hbase_version\030\001 \001(\0132\030.HBaseVersionFileCo" +
+      "ntent\022%\n\014live_servers\030\002 \003(\0132\017.LiveServer" +
+      "Info\022!\n\014dead_servers\030\003 \003(\0132\013.ServerName\022" +
+      "2\n\025regions_in_transition\030\004 \003(\0132\023.RegionI" +
+      "nTransition\022\036\n\ncluster_id\030\005 \001(\0132\n.Cluste" +
+      "rId\022)\n\023master_coprocessors\030\006 \003(\0132\014.Copro" +
+      "cessor\022\033\n\006master\030\007 \001(\0132\013.ServerName\022#\n\016b",
+      "ackup_masters\030\010 \003(\0132\013.ServerName\022\023\n\013bala" +
+      "ncer_on\030\t \001(\010BF\n*org.apache.hadoop.hbase" +
+      ".protobuf.generatedB\023ClusterStatusProtos" +
+      "H\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -10527,7 +10405,7 @@ public final class ClusterStatusProtos {
           internal_static_RegionLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionLoad_descriptor,
-              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", "DataLocality", });
+              new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", });
           internal_static_ServerLoad_descriptor =
             getDescriptor().getMessageTypes().get(3);
           internal_static_ServerLoad_fieldAccessorTable = new

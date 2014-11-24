@@ -178,9 +178,6 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
   public abstract void setUpCluster() throws Exception;
 
   public void cleanUpCluster() throws Exception {
-    if (util.isDistributedCluster() &&  (monkey == null || !monkey.isDestructive())) {
-      noClusterCleanUp = true;
-    }
     if (noClusterCleanUp) {
       LOG.debug("noClusterCleanUp is set, skip restoring the cluster");
       return;

@@ -129,8 +129,6 @@ public class TestReplicationSourceManager {
         ReplicationSourceDummy.class.getCanonicalName());
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY,
         HConstants.REPLICATION_ENABLE_DEFAULT);
-    conf.setLong("replication.sleep.before.failover", 2000);
-    conf.setInt("replication.source.maxretriesmultiplier", 10);
     utility = new HBaseTestingUtility(conf);
     utility.startMiniZKCluster();
 

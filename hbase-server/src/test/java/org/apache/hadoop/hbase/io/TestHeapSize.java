@@ -39,7 +39,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.LruCachedBlock;
@@ -373,7 +372,7 @@ public class TestHeapSize  {
 
     byte[] row = new byte[] { 0 };
     cl = Put.class;
-    actual = Mutation.MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
+    actual = new Put(row).MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
     expected = ClassSize.estimateBase(cl, false);
     //The actual TreeMap is not included in the above calculation
     expected += ClassSize.align(ClassSize.TREEMAP);
@@ -383,7 +382,7 @@ public class TestHeapSize  {
     }
 
     cl = Delete.class;
-    actual = Mutation.MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
+    actual = new Delete(row).MUTATION_OVERHEAD + ClassSize.align(ClassSize.ARRAY);
     expected  = ClassSize.estimateBase(cl, false);
     //The actual TreeMap is not included in the above calculation
     expected += ClassSize.align(ClassSize.TREEMAP);

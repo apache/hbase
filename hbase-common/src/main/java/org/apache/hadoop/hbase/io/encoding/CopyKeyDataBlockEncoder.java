@@ -21,12 +21,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
@@ -68,12 +68,10 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   @Override
   public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
     int keyLength = block.getInt(Bytes.SIZEOF_INT);
-    ByteBuffer dup = block.duplicate();
-    int pos = 3 * Bytes.SIZEOF_INT;
-    dup.position(pos);
-    dup.limit(pos + keyLength);
-    return dup.slice();
+    return ByteBuffer.wrap(block.array(),
+        block.arrayOffset() + 3 * Bytes.SIZEOF_INT, keyLength).slice();
   }
+
 
   @Override
   public String toString() {
@@ -125,4 +123,5 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
     return buffer;
   }
+
 }

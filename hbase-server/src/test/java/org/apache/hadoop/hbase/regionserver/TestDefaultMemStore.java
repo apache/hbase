@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -94,9 +93,8 @@ public class TestDefaultMemStore extends TestCase {
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners(0);
     Scan scan = new Scan();
     List<Cell> result = new ArrayList<Cell>();
-    ScanInfo scanInfo =
-        new ScanInfo(null, 0, 1, HConstants.LATEST_TIMESTAMP, KeepDeletedCells.FALSE, 0,
-            this.memstore.comparator);
+    ScanInfo scanInfo = new ScanInfo(null, 0, 1, HConstants.LATEST_TIMESTAMP, false,
+        0, this.memstore.comparator);
     ScanType scanType = ScanType.USER_SCAN;
     StoreScanner s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     int count = 0;
@@ -515,7 +513,7 @@ public class TestDefaultMemStore extends TestCase {
     }
     //starting from each row, validate results should contain the starting row
     for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
-      ScanInfo scanInfo = new ScanInfo(FAMILY, 0, 1, Integer.MAX_VALUE, KeepDeletedCells.FALSE,
+      ScanInfo scanInfo = new ScanInfo(FAMILY, 0, 1, Integer.MAX_VALUE, false,
           0, this.memstore.comparator);
       ScanType scanType = ScanType.USER_SCAN;
       InternalScanner scanner = new StoreScanner(new Scan(

@@ -19,14 +19,14 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

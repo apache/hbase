@@ -137,8 +137,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.fs = fs;
     this.logDir = logDir;
     this.oldLogDir = oldLogDir;
-    this.sleepBeforeFailover =
-        conf.getLong("replication.sleep.before.failover", 30000); // 30 seconds
+    this.sleepBeforeFailover = conf.getLong("replication.sleep.before.failover", 2000);
     this.clusterId = clusterId;
     this.replicationTracker.registerListener(this);
     this.replicationPeers.getAllPeerIds();
@@ -152,7 +151,6 @@ public class ReplicationSourceManager implements ReplicationListener {
         new LinkedBlockingQueue<Runnable>());
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setNameFormat("ReplicationExecutor-%d");
-    tfb.setDaemon(true);
     this.executor.setThreadFactory(tfb.build());
     this.rand = new Random();
   }

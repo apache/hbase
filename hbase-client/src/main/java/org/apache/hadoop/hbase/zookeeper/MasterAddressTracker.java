@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
 
 /**
  * Manages the location of the current active Master for the RegionServer.

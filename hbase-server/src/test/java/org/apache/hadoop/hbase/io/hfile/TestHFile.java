@@ -45,9 +45,6 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -70,12 +67,12 @@ public class TestHFile extends HBaseTestCase {
   private static CacheConfig cacheConf = null;
   private Map<String, Long> startingMetrics;
 
-  @Before
+  @Override
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  @After
+  @Override
   public void tearDown() throws Exception {
     super.tearDown();
   }
@@ -86,7 +83,6 @@ public class TestHFile extends HBaseTestCase {
    * Test all features work reasonably when hfile is empty of entries.
    * @throws IOException
    */
-  @Test
   public void testEmptyHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
@@ -103,7 +99,6 @@ public class TestHFile extends HBaseTestCase {
   /**
    * Create 0-length hfile and show that it fails
    */
-  @Test
   public void testCorrupt0LengthHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
@@ -137,7 +132,6 @@ public class TestHFile extends HBaseTestCase {
   /**
    * Create a truncated hfile and verify that exception thrown.
    */
-  @Test
   public void testCorruptTruncatedHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
@@ -287,13 +281,11 @@ public class TestHFile extends HBaseTestCase {
     fs.delete(ncTFile, true);
   }
 
-  @Test
   public void testTFileFeatures() throws IOException {
     testTFilefeaturesInternals(false);
     testTFilefeaturesInternals(true);
   }
 
-  @Test
   protected void testTFilefeaturesInternals(boolean useTags) throws IOException {
     basicWithSomeCodec("none", useTags);
     basicWithSomeCodec("gz", useTags);
@@ -361,13 +353,11 @@ public class TestHFile extends HBaseTestCase {
   }
 
   // test meta blocks for tfiles
-  @Test
   public void testMetaBlocks() throws Exception {
     metablocks("none");
     metablocks("gz");
   }
 
-  @Test
   public void testNullMetaBlocks() throws Exception {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     for (Compression.Algorithm compressAlgo : 

@@ -229,12 +229,9 @@ public class CreateTableHandler extends EventHandler {
       ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);
     }
 
-    // 8. Enable table
+    // 6. Enable table
     assignmentManager.getTableStateManager().setTableState(tableName,
             TableState.State.ENABLED);
-
-    // 9. Update the tabledescriptor cache.
-    ((HMaster) this.server).getTableDescriptors().get(tableName);
   }
 
   /**

@@ -28,8 +28,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.Test;
 
 /** Tests the HColumnDescriptor with appropriate arguments */
 @Category({MiscTests.class, SmallTests.class})
@@ -51,7 +51,7 @@ public class TestHColumnDescriptor {
     assertEquals(v, hcd.getMaxVersions());
     hcd.setMinVersions(v);
     assertEquals(v, hcd.getMinVersions());
-    hcd.setKeepDeletedCells(KeepDeletedCells.TRUE);
+    hcd.setKeepDeletedCells(!HColumnDescriptor.DEFAULT_KEEP_DELETED);
     hcd.setInMemory(!HColumnDescriptor.DEFAULT_IN_MEMORY);
     boolean inmemory = hcd.isInMemory();
     hcd.setScope(v);

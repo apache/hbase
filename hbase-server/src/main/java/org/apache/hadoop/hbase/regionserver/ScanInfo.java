@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -34,7 +33,7 @@ public class ScanInfo {
   private int minVersions;
   private int maxVersions;
   private long ttl;
-  private KeepDeletedCells keepDeletedCells;
+  private boolean keepDeletedCells;
   private long timeToPurgeDeletes;
   private KVComparator comparator;
 
@@ -66,7 +65,7 @@ public class ScanInfo {
    * @param comparator The store's comparator
    */
   public ScanInfo(final byte[] family, final int minVersions, final int maxVersions,
-      final long ttl, final KeepDeletedCells keepDeletedCells, final long timeToPurgeDeletes,
+      final long ttl, final boolean keepDeletedCells, final long timeToPurgeDeletes,
       final KVComparator comparator) {
     this.family = family;
     this.minVersions = minVersions;
@@ -93,7 +92,7 @@ public class ScanInfo {
     return ttl;
   }
 
-  public KeepDeletedCells getKeepDeletedCells() {
+  public boolean getKeepDeletedCells() {
     return keepDeletedCells;
   }
 

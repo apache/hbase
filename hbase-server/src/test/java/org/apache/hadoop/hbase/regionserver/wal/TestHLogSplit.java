@@ -95,11 +95,9 @@ import com.google.common.collect.ImmutableList;
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestHLogSplit {
   {
-    // Uncomment the following lines if more verbosity is needed for
-    // debugging (see HBASE-12285 for details).
-    //((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
   }
   private final static Log LOG = LogFactory.getLog(TestHLogSplit.class);
 

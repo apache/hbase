@@ -64,11 +64,11 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
@@ -1974,10 +1974,7 @@ public class HLogSplitter {
       List<Tag> newTags = new ArrayList<Tag>();
       Tag replayTag = new Tag(TagType.LOG_REPLAY_TAG_TYPE, Bytes.toBytes(seqId));
       newTags.add(replayTag);
-      if (cell.getTagsLength() > 0) {
-        newTags.addAll(Tag.asList(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength()));
-      }
-      return new TagRewriteCell(cell, Tag.fromList(newTags));
+      return KeyValue.cloneAndAddTags(cell, newTags);
     }
     return cell;
   }
@@ -2048,7 +2045,9 @@ public class HLogSplitter {
         }
         ((Put) m).add(tmpNewCell);
       }
-      m.setDurability(durability);
+      if (m != null) {
+        m.setDurability(durability);
+      }
       previousCell = cell;
     }
 

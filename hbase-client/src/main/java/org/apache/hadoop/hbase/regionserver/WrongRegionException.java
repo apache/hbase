@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
+import java.io.IOException;
 
 /**
  * Thrown when a request contains a key which is not part of this region

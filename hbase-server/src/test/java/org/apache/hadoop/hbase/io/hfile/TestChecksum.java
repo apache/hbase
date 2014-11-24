@@ -49,6 +49,10 @@ import org.junit.experimental.categories.Category;
 
 @Category({IOTests.class, SmallTests.class})
 public class TestChecksum {
+  // change this value to activate more logs
+  private static final boolean detailedLogging = true;
+  private static final boolean[] BOOLEAN_VALUES = new boolean[] { false, true };
+
   private static final Log LOG = LogFactory.getLog(TestHFileBlock.class);
 
   static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
@@ -114,7 +118,7 @@ public class TestChecksum {
               .withIncludesTags(useTags)
               .withHBaseCheckSum(true)
               .build();
-        HFileBlock.FSReader hbr = new FSReaderImplTest(is, totalSize, fs, path, meta);
+        HFileBlock.FSReader hbr = new FSReaderV2Test(is, totalSize, fs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
@@ -156,7 +160,7 @@ public class TestChecksum {
         HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
-        hbr = new FSReaderImplTest(is, totalSize, newfs, path, meta);
+        hbr = new FSReaderV2Test(is, totalSize, newfs, path, meta);
         b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
         b.sanityCheck();
@@ -239,7 +243,7 @@ public class TestChecksum {
                .withHBaseCheckSum(true)
                .withBytesPerCheckSum(bytesPerChecksum)
                .build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(
             is, nochecksum), totalSize, hfs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
@@ -279,8 +283,8 @@ public class TestChecksum {
    * reading  data from hfiles. This should trigger the hdfs level
    * checksum validations.
    */
-  static private class FSReaderImplTest extends HFileBlock.FSReaderImpl {
-    public FSReaderImplTest(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
+  static private class FSReaderV2Test extends HFileBlock.FSReaderV2 {
+    public FSReaderV2Test(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
         Path path, HFileContext meta) throws IOException {
       super(istream, fileSize, (HFileSystem) fs, path, meta);
     }

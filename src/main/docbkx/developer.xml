@@ -1780,40 +1780,6 @@ justification="I know what I'm doing")</programlisting>
               </section>
           </section>
 
-        <section xml:id="git.best.practices">
-            <title>Git Best Practices</title>
-            <itemizedlist>
-                <listitem>
-                    <para>Use the correct method to create patches. See <xref
-                            linkend="submitting.patches"/>.</para>
-                </listitem>
-                <listitem>
-                    <para>Avoid git merges. Use <code>git pull --rebase</code> or <code>git
-                            fetch</code> followed by <code>git rebase</code>.</para>
-                </listitem>
-                <listitem>
-                    <para>Do not use <code>git push --force</code>. If the push does not work, fix
-                        the problem or ask for help.</para>
-                </listitem>
-            </itemizedlist>
-            <para>Please contribute to this document if you think of other Git best
-                practices.</para>
-            <section>
-                <title><code>rebase_all_git_branches.sh</code></title>
-                <para>The <filename>dev-support/rebase_all_git_branches.sh</filename> script is
-                    provided to help keep your Git repository clean. Use the <code>-h</code>
-                    parameter to get usage instructions. The script automatically refreshes your
-                    tracking branches, attempts an automatic rebase of each local branch against its
-                    remote branch, and gives you the option to delete any branch which represents a
-                    closed <literal>HBASE-</literal> JIRA. The script has one optional configuration
-                    option, the location of your Git directory. You can set a default by editing the
-                    script. Otherwise, you can pass the git directory manually by using the
-                        <code>-d</code> parameter, followed by an absolute or relative directory
-                    name, or even '.' for the current working directory. The script checks the
-                    directory for sub-directory called <filename>.git/</filename>, before
-                    proceeding.</para>
-            </section>
-        </section>
 
         <section xml:id="submitting.patches">
             <title>Submitting Patches</title>
@@ -1821,8 +1787,7 @@ justification="I know what I'm doing")</programlisting>
                 contribute patches in our new GIT context, caveat the fact that we have a different
                 branching model and that we don't currently do the merge practice described in the
                 following, the <link xlink:href="http://accumulo.apache.org/git.html">accumulo doc
-                    on how to contribute and develop</link> after our move to GIT is worth a read.
-                See also <xref linkend="git.best.practices"/>.</para>
+                    on how to contribute and develop</link> after our move to GIT is worth a read. </para>
 
             <para>If you are new to submitting patches to open source or new to submitting patches
                 to Apache, start by reading the <link
@@ -1832,34 +1797,6 @@ justification="I know what I'm doing")</programlisting>
                 Apache HBase Project.</para>
             <section xml:id="submitting.patches.create">
                 <title>Create Patch</title>
-                <para>The script <filename>dev-support/make_patch.sh</filename> has been provided to
-                    help you adhere to patch-creation guidelines. The script has the following syntax:
-                </para>
-                <screen>$ make_patch.sh [-a] [-p &lt;patch_dir&gt;]</screen>
-                <orderedlist>
-                    <listitem>
-                        <para>If you do not pass a <code>patch_dir</code>, the script defaults to
-                                <filename>~/patches/</filename>. If the <code>patch_dir</code> does
-                            not exist, it is created.</para>
-                    </listitem>
-                    <listitem>
-                        <para>By default, if an existing patch exists with the JIRA ID, the version
-                            of the new patch is incremented
-                                (<filename>HBASE-XXXX-v3.patch</filename>). If the <code>-a</code>
-                            option is passed, the version is not incremented, but the suffix
-                                <literal>-addendum</literal> is added
-                                (<filename>HBASE-XXXX-v2-addendum.patch</filename>). A second
-                            addendum to a given version is not supported.</para>
-                    </listitem>
-                    <listitem>
-                        <para>Detects whether you have more than one local commit on your branch. If
-                            you do, the script offers you the chance to run <command>git rebase
-                                -i</command> to squash the changes into a single commit so that it
-                            can use <command>git format-patch</command>. If you decline, the script
-                            uses <command>git diff</command> instead. The patch is saved in a
-                            configurable directory and is ready to be attached to your JIRA.</para>
-                    </listitem>
-                </orderedlist>
                 <itemizedlist>
                     <title>Patching Workflow</title>
                     <listitem>
@@ -1933,8 +1870,8 @@ justification="I know what I'm doing")</programlisting>
                         <term>Git</term>
                         <listitem>
                             <para><code>git format-patch</code> is preferred because it preserves
-                                commit messages. Use <code>git rebase -i</code> first, to combine
-                                (squash) smaller commits into a single larger one.</para>
+                                commit messages. Use <code>git squash</code> first, to combine
+                                smaller commits into a single larger one.</para>
                             <note>
                                 <para>Do not use <code>--no-prefix</code>, even if you were in the
                                     habit of doing it previously.</para>

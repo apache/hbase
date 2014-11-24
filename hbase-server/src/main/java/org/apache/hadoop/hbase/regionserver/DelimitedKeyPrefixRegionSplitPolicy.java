@@ -50,14 +50,20 @@ public class DelimitedKeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundR
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
-    // read the prefix length from the table descriptor
-    String delimiterString = region.getTableDesc().getValue(DELIMITER_KEY);
-    if (delimiterString == null || delimiterString.length() == 0) {
-      LOG.error(DELIMITER_KEY + " not specified for table " + region.getTableDesc().getTableName() +
-        ". Using default RegionSplitPolicy");
-      return;
+    if (region != null) {
+
+      // read the prefix length from the table descriptor
+      String delimiterString = region.getTableDesc().getValue(
+          DELIMITER_KEY);
+      if (delimiterString == null || delimiterString.length() == 0) {
+        LOG.error(DELIMITER_KEY + " not specified for table "
+            + region.getTableDesc().getTableName()
+            + ". Using default RegionSplitPolicy");
+        return;
+      }
+
+      delimiter = Bytes.toBytes(delimiterString);
     }
-    delimiter = Bytes.toBytes(delimiterString);
   }
 
   @Override

@@ -212,6 +212,40 @@ public class TestRegionServerNoMaster {
     openRegion(HTU, getRS(), hri);
   }
 
+  /**
+   * Test that we can send multiple openRegion to the region server.
+   * This is used when:
+   * - there is a SocketTimeout: in this case, the master does not know if the region server
+   * received the request before the timeout.
+   * - We have a socket error during the operation: same stuff: we don't know
+   * - a master failover: if we find a znode in thz M_ZK_REGION_OFFLINE, we don't know if
+   * the region server has received the query or not. Only solution to be efficient: re-ask
+   * immediately.
+   */
+  @Test(timeout = 60000)
+  public void testMultipleOpen() throws Exception {
+
+    // We close
+    closeRegionNoZK();
+    checkRegionIsClosed(HTU, getRS(), hri);
+
+    // We're sending multiple requests in a row. The region server must handle this nicely.
+    for (int i = 0; i < 10; i++) {
+      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
+        getRS().getServerName(), hri, null, null);
+      AdminProtos.OpenRegionResponse responseOpen = getRS().rpcServices.openRegion(null, orr);
+      Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
+
+      AdminProtos.OpenRegionResponse.RegionOpeningState ors = responseOpen.getOpeningState(0);
+      Assert.assertTrue("request " + i + " failed",
+          ors.equals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED) ||
+              ors.equals(AdminProtos.OpenRegionResponse.RegionOpeningState.ALREADY_OPENED)
+      );
+    }
+
+    checkRegionIsOpened(HTU, getRS(), hri);
+  }
+
   @Test(timeout = 60000)
   public void testMultipleCloseFromMaster() throws Exception {
     for (int i = 0; i < 10; i++) {

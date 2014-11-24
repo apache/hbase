@@ -25,11 +25,11 @@ import java.net.SocketTimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -135,7 +135,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
 
   @Override
   public String getExceptionMessageAdditionalDetail() {
-    return "row '" + Bytes.toString(row) + "' on table '" + tableName + "' at " + location;
+    return "row '" + Bytes.toString(row) + "' on table '" + tableName;
   }
 
   @Override

@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -59,7 +60,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
@@ -583,8 +583,6 @@ class ConnectionManager {
 
     private RpcControllerFactory rpcControllerFactory;
 
-    private final RetryingCallerInterceptor interceptor;
-
     /**
      * Cluster registry of basic info such as clusterid and meta region location.
      */
@@ -615,6 +613,7 @@ class ConnectionManager {
       retrieveClusterId();
 
       this.rpcClient = new RpcClient(this.conf, this.clusterId);
+      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
 
       // Do we publish the status?
@@ -665,8 +664,6 @@ class ConnectionManager {
         this.nonceGenerator = new NoNonceGenerator();
       }
       this.asyncProcess = createAsyncProcess(this.conf);
-      this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
-      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor);
     }
 
     @Override
@@ -2511,11 +2508,6 @@ class ConnectionManager {
       } finally {
         master.close();
       }
-    }
-
-    @Override
-    public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
-      return RpcRetryingCallerFactory.instantiate(conf, this.interceptor);
     }
   }
 

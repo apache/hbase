@@ -19,12 +19,13 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import com.google.common.base.Objects;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.util.Bytes;
 
 
 /**

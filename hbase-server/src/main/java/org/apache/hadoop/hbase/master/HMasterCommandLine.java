@@ -166,10 +166,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         // login the zookeeper server principal (if using security)
         ZKUtil.loginServer(conf, "hbase.zookeeper.server.keytab.file",
           "hbase.zookeeper.server.kerberos.principal", null);
-        int localZKClusterSessionTimeout =
-          conf.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", 10*1000);
-        conf.setInt(HConstants.ZK_SESSION_TIMEOUT, localZKClusterSessionTimeout);
-        LOG.info("Starting a zookeeper cluster");
+
         int clientPort = zooKeeperCluster.startup(zkDataPath);
         if (clientPort != zkClientPort) {
           String errorMsg = "Could not start ZK at requested port of " +
@@ -179,15 +176,13 @@ public class HMasterCommandLine extends ServerCommandLine {
           System.err.println(errorMsg);
           throw new IOException(errorMsg);
         }
-        conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(clientPort));
+        conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
+                 Integer.toString(clientPort));
+        conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 10 *1000);
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.
-        int mastersCount = conf.getInt("hbase.masters", 1);
-        int regionServersCount = conf.getInt("hbase.regionservers", 1);
-        LOG.info("Starting up instance of localHBaseCluster; master=" + mastersCount +
-          ", regionserversCount=" + regionServersCount);
-        LocalHBaseCluster cluster = new LocalHBaseCluster(conf, mastersCount, regionServersCount,
-          LocalHMaster.class, HRegionServer.class);
+        LocalHBaseCluster cluster = new LocalHBaseCluster(conf, conf.getInt("hbase.masters", 1),
+          conf.getInt("hbase.regionservers", 1), LocalHMaster.class, HRegionServer.class);
         ((LocalHMaster)cluster.getMaster(0)).setZKCluster(zooKeeperCluster);
         cluster.startup();
         waitOnMasterThreads(cluster);

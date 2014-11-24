@@ -31,13 +31,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
-import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -90,7 +90,7 @@ public class TestIPCUtil {
   static CellScanner getSizedCellScanner(final Cell [] cells) {
     int size = -1;
     for (Cell cell: cells) {
-      size += CellUtil.estimatedSerializedSizeOf(cell);
+      size += CellUtil.estimatedSizeOf(cell);
     }
     final int totalSize = ClassSize.align(size);
     final CellScanner cellScanner = CellUtil.createCellScanner(cells);

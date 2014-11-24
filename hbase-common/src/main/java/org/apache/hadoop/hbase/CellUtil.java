@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
@@ -40,11 +40,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class CellUtil {
-
-  /**
-   * Private constructor to keep this class from being instantiated.
-   */
-  private CellUtil(){}
 
   /******************* ByteRange *******************************/
 
@@ -167,20 +162,8 @@ public final class CellUtil {
     // I need a Cell Factory here.  Using KeyValue for now. TODO.
     // TODO: Make a new Cell implementation that just carries these
     // byte arrays.
-    // TODO: Call factory to create Cell
-    return new KeyValue(row, family, qualifier, timestamp, KeyValue.Type.codeToType(type), value);
-  }
-
-  public static Cell createCell (final byte [] rowArray, final int rowOffset, final int rowLength,
-      final byte [] familyArray, final int familyOffset, final int familyLength,
-      final byte [] qualifierArray, final int qualifierOffset, final int qualifierLength) {
-    // See createCell(final byte [] row, final byte [] value) for why we default Maximum type.
-    return new KeyValue(rowArray, rowOffset, rowLength,
-        familyArray, familyOffset, familyLength,
-        qualifierArray, qualifierOffset, qualifierLength,
-        HConstants.LATEST_TIMESTAMP,
-        KeyValue.Type.Maximum,
-        HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length);
+    return new KeyValue(row, family, qualifier, timestamp,
+      KeyValue.Type.codeToType(type), value);
   }
 
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
@@ -192,8 +175,7 @@ public final class CellUtil {
   }
 
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value, byte[] tags,
-      final long memstoreTS) {
+      final long timestamp, final byte type, final byte[] value, byte[] tags, final long memstoreTS) {
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
         KeyValue.Type.codeToType(type), value, tags);
     keyValue.setSequenceId(memstoreTS);
@@ -207,7 +189,7 @@ public final class CellUtil {
   }
 
   /**
-   * Create a Cell with specific row.  Other fields defaulted.
+   * Create a Cell with specific row.  Other fields are arbitrary choices.
    * @param row
    * @return Cell with passed row but all other fields are arbitrary
    */
@@ -216,39 +198,21 @@ public final class CellUtil {
   }
 
   /**
-   * Create a Cell with specific row and value.  Other fields are defaulted.
+   * Create a Cell with specific row and value.  Other fields are arbitrary choices.
    * @param row
    * @param value
    * @return Cell with passed row and value but all other fields are arbitrary
    */
   public static Cell createCell(final byte [] row, final byte [] value) {
-    // An empty family + empty qualifier + Type.Minimum is used as flag to indicate last on row.
-    // See the CellComparator and KeyValue comparator.  Search for compareWithoutRow.
-    // Lets not make a last-on-row key as default but at same time, if you are making a key
-    // without specifying type, etc., flag it as weird by setting type to be Maximum.
-    return createCell(row, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum.getCode(), value);
-  }
-
-  /**
-   * Create a Cell with specific row.  Other fields defaulted.
-   * @param row
-   * @param family
-   * @param qualifier
-   * @return Cell with passed row but all other fields are arbitrary
-   */
-  public static Cell createCell(final byte [] row, final byte [] family, final byte [] qualifier) {
-    // See above in createCell(final byte [] row, final byte [] value) why we set type to Maximum.
-    return createCell(row, family, qualifier,
-        HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum.getCode(), HConstants.EMPTY_BYTE_ARRAY);
+    return createCell(row, HConstants.CATALOG_FAMILY, HConstants.SERVERNAME_QUALIFIER,
+      HConstants.LATEST_TIMESTAMP, (byte)0, value);
   }
 
   /**
    * @param cellScannerables
    * @return CellScanner interface over <code>cellIterables</code>
    */
-  public static CellScanner createCellScanner(
-      final List<? extends CellScannable> cellScannerables) {
+  public static CellScanner createCellScanner(final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
       private final Iterator<? extends CellScannable> iterator = cellScannerables.iterator();
       private CellScanner cellScanner = null;
@@ -508,44 +472,21 @@ public final class CellUtil {
    * @param cell
    * @return Estimate of the <code>cell</code> size in bytes.
    */
-  public static int estimatedSerializedSizeOf(final Cell cell) {
+  public static int estimatedSizeOf(final Cell cell) {
     // If a KeyValue, we can give a good estimate of size.
     if (cell instanceof KeyValue) {
       return ((KeyValue)cell).getLength() + Bytes.SIZEOF_INT;
     }
     // TODO: Should we add to Cell a sizeOf?  Would it help? Does it make sense if Cell is
     // prefix encoded or compressed?
-    return getSumOfCellElementLengths(cell) +
+    return cell.getRowLength() + cell.getFamilyLength() +
+      cell.getQualifierLength() +
+      cell.getValueLength() +
       // Use the KeyValue's infrastructure size presuming that another implementation would have
       // same basic cost.
       KeyValue.KEY_INFRASTRUCTURE_SIZE +
       // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
       Bytes.SIZEOF_INT;
-  }
-
-  /**
-   * @param cell
-   * @return Sum of the lengths of all the elements in a Cell; does not count in any infrastructure
-   */
-  private static int getSumOfCellElementLengths(final Cell cell) {
-    return getSumOfCellKeyElementLengths(cell) + cell.getValueLength() + cell.getTagsLength();
-  }
-
-  /**
-   * @param cell
-   * @return Sum of all elements that make up a key; does not include infrastructure, tags or
-   * values.
-   */
-  private static int getSumOfCellKeyElementLengths(final Cell cell) {
-    return cell.getRowLength() + cell.getFamilyLength() +
-    cell.getQualifierLength() +
-    KeyValue.TIMESTAMP_TYPE_SIZE;
-  }
-
-  public static int estimatedSerializedSizeOfKey(final Cell cell) {
-    if (cell instanceof KeyValue) return ((KeyValue)cell).getKeyLength();
-    // This will be a low estimate.  Will do for now.
-    return getSumOfCellKeyElementLengths(cell);
   }
 
   /**
@@ -560,8 +501,8 @@ public final class CellUtil {
     if (cell instanceof HeapSize) {
       return ((HeapSize) cell).heapSize();
     }
-    // TODO: Add sizing of references that hold the row, family, etc., arrays.
-    return estimatedSerializedSizeOf(cell);
+    return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
+        + cell.getValueLength() + cell.getTagsLength() + KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 
   /********************* tags *************************************/
@@ -693,6 +634,20 @@ public final class CellUtil {
   }
 
   /**
+   * Estimation of total number of bytes used by the cell to store its key, value and tags. When the
+   * cell is a {@link KeyValue} we include the extra infrastructure size used by it.
+   * @param cell
+   * @return estimated length
+   */
+  public static int estimatedLengthOf(final Cell cell) {
+    if (cell instanceof KeyValue) {
+      return ((KeyValue)cell).getLength();
+    }
+    return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
+        + cell.getValueLength() + cell.getTagsLength() + KeyValue.TIMESTAMP_TYPE_SIZE;
+  }
+
+  /**
    * Writes the Cell's key part as it would have serialized in a KeyValue. The format is &lt;2 bytes
    * rk len&gt;&lt;rk&gt;&lt;1 byte cf len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes
    * timestamp&gt;&lt;1 byte type&gt;
@@ -714,43 +669,13 @@ public final class CellUtil {
 
   /**
    * @param cell
-   * @return The Key portion of the passed <code>cell</code> as a String.
+   * @return Key portion of the Cell including rk, cf, qualifier, ts and type.
    */
-  public static String getCellKeyAsString(Cell cell) {
-    StringBuilder sb = new StringBuilder(Bytes.toStringBinary(
-      cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
-    sb.append('/');
-    sb.append(cell.getFamilyLength() == 0? "":
-      Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
-    // KeyValue only added ':' if family is non-null.  Do same.
-    if (cell.getFamilyLength() > 0) sb.append(':');
-    sb.append(cell.getQualifierLength() == 0? "":
-      Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
-        cell.getQualifierLength()));
-    sb.append('/');
-    sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
-    sb.append('/');
-    sb.append(Type.codeToType(cell.getTypeByte()));
-    sb.append("/vlen=");
-    sb.append(cell.getValueLength());
-    sb.append("/seqid=");
-    sb.append(cell.getSequenceId());
-    return sb.toString();
-  }
-
-  /**
-   * This method exists just to encapsulate how we serialize keys.  To be replaced by a factory
-   * that we query to figure what the Cell implementation is and then, what serialization engine
-   * to use and further, how to serialize the key for inclusion in hfile index. TODO.
-   * @param cell
-   * @return The key portion of the Cell serialized in the old-school KeyValue way or null if
-   * passed a null <code>cell</code>
-   */
-  public static byte [] getCellKeySerializedAsKeyValueKey(final Cell cell) {
-    if (cell == null) return null;
-    byte [] b = new byte[KeyValueUtil.keyLength(cell)];
-    KeyValueUtil.appendKeyTo(cell, b, 0);
-    return b;
+  public static CellKey getCellKey(Cell cell){
+    return new CellKey(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+        cell.getTimestamp(), cell.getTypeByte());
   }
 
   /**

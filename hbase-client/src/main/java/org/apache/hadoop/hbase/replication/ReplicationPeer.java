@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.replication;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * ReplicationPeer manages enabled / disabled state for the peer.

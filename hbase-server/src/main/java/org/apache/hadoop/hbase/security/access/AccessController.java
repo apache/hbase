@@ -49,8 +49,9 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -62,7 +63,6 @@ import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterAndRegionObserver;
-import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
@@ -84,8 +84,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest;
-import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
@@ -152,7 +150,7 @@ import com.google.protobuf.Service;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class AccessController extends BaseMasterAndRegionObserver
     implements RegionServerObserver,
-      AccessControlService.Interface, CoprocessorService, EndpointObserver, BulkLoadObserver {
+      AccessControlService.Interface, CoprocessorService, EndpointObserver {
 
   public static final Log LOG = LogFactory.getLog(AccessController.class);
 
@@ -774,7 +772,13 @@ public class AccessController extends BaseMasterAndRegionObserver
             tags.add(tagIterator.next());
           }
         }
-        newCells.add(new TagRewriteCell(cell, Tag.fromList(tags)));
+        newCells.add(
+          new KeyValue(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+            cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+            cell.getTimestamp(), KeyValue.Type.codeToType(cell.getTypeByte()),
+            cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
+            tags));
       }
       // This is supposed to be safe, won't CME
       e.setValue(newCells);
@@ -1070,7 +1074,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getMasterServices()
       .getShortCircuitConnection(), AccessControlLists.ACL_TABLE_NAME)) {
       // initialize the ACL storage table
-      AccessControlLists.createACLTable(ctx.getEnvironment().getMasterServices());
+      AccessControlLists.init(ctx.getEnvironment().getMasterServices());
     } else {
       aclTabAvailable = true;
     }
@@ -1296,7 +1300,7 @@ public class AccessController extends BaseMasterAndRegionObserver
             ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,
               Lists.newArrayList(ourFilter, filter));
           }
-          authResult.setAllowed(true);
+          authResult.setAllowed(true);;
           authResult.setReason("Access allowed with filter");
           switch (opType) {
           case GET:
@@ -1322,7 +1326,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,
             Lists.newArrayList(ourFilter, filter));
         }
-        authResult.setAllowed(true);
+        authResult.setAllowed(true);;
         authResult.setReason("Access allowed with filter");
         switch (opType) {
         case GET:
@@ -1780,8 +1784,17 @@ public class AccessController extends BaseMasterAndRegionObserver
       return newCell;
     }
 
-    Cell rewriteCell = new TagRewriteCell(newCell, Tag.fromList(tags));
-    return rewriteCell;
+    // We need to create another KV, unfortunately, because the current new KV
+    // has no space for tags
+    KeyValue rewriteKv = new KeyValue(newCell.getRowArray(), newCell.getRowOffset(),
+        newCell.getRowLength(), newCell.getFamilyArray(), newCell.getFamilyOffset(),
+        newCell.getFamilyLength(), newCell.getQualifierArray(), newCell.getQualifierOffset(),
+        newCell.getQualifierLength(), newCell.getTimestamp(), KeyValue.Type.codeToType(newCell
+            .getTypeByte()), newCell.getValueArray(), newCell.getValueOffset(),
+        newCell.getValueLength(), tags);
+    // Preserve mvcc data
+    rewriteKv.setSequenceId(newCell.getSequenceId());
+    return rewriteKv;
   }
 
   @Override
@@ -1878,15 +1891,11 @@ public class AccessController extends BaseMasterAndRegionObserver
   /**
    * Authorization check for
    * SecureBulkLoadProtocol.prepareBulkLoad()
-   * @param ctx the context
-   * @param request the request
+   * @param e
    * @throws IOException
    */
-  @Override
-  public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-                                 PrepareBulkLoadRequest request) throws IOException {
-    RegionCoprocessorEnvironment e = ctx.getEnvironment();
-
+  //TODO this should end up as a coprocessor hook
+  public void prePrepareBulkLoad(RegionCoprocessorEnvironment e) throws IOException {
     AuthResult authResult = hasSomeAccess(e, "prePrepareBulkLoad", Action.WRITE);
     logResult(authResult);
     if (!authResult.isAllowed()) {
@@ -1898,15 +1907,11 @@ public class AccessController extends BaseMasterAndRegionObserver
   /**
    * Authorization security check for
    * SecureBulkLoadProtocol.cleanupBulkLoad()
-   * @param ctx the context
-   * @param request the request
+   * @param e
    * @throws IOException
    */
-  @Override
-  public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
-                                 CleanupBulkLoadRequest request) throws IOException {
-    RegionCoprocessorEnvironment e = ctx.getEnvironment();
-
+  //TODO this should end up as a coprocessor hook
+  public void preCleanupBulkLoad(RegionCoprocessorEnvironment e) throws IOException {
     AuthResult authResult = hasSomeAccess(e, "preCleanupBulkLoad", Action.WRITE);
     logResult(authResult);
     if (!authResult.isAllowed()) {

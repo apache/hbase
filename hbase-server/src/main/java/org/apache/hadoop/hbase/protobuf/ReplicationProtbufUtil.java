@@ -138,7 +138,7 @@ public class ReplicationProtbufUtil {
       List<Cell> cells = edit.getCells();
       // Add up the size.  It is used later serializing out the kvs.
       for (Cell cell: cells) {
-        size += CellUtil.estimatedSerializedSizeOf(cell);
+        size += CellUtil.estimatedLengthOf(cell);
       }
       // Collect up the cells
       allCells.add(cells);

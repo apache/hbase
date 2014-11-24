@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
+import java.io.IOException;
 
 /**
  * Thrown when we fail close of the write-ahead-log file.

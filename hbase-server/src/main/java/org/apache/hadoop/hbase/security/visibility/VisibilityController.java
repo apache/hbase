@@ -43,7 +43,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TagRewriteCell;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -314,7 +315,12 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
               List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
                   cell.getTagsLength());
               tags.addAll(visibilityTags);
-              Cell updatedCell = new TagRewriteCell(cell, Tag.fromList(tags));
+              Cell updatedCell = new KeyValue(cell.getRowArray(), cell.getRowOffset(),
+                  cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(),
+                  cell.getFamilyLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
+                  cell.getQualifierLength(), cell.getTimestamp(), Type.codeToType(cell
+                      .getTypeByte()), cell.getValueArray(), cell.getValueOffset(),
+                  cell.getValueLength(), tags);
               updatedCells.add(updatedCell);
             }
             m.getFamilyCellMap().clear();
@@ -324,6 +330,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
                 Put p = (Put) m;
                 p.add(cell);
               } else if (m instanceof Delete) {
+                // TODO : Cells without visibility tags would be handled in follow up issue
                 Delete d = (Delete) m;
                 d.addDeleteMarker(cell);
               }
@@ -607,8 +614,17 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       }
     }
 
-    Cell rewriteCell = new TagRewriteCell(newCell, Tag.fromList(tags));
-    return rewriteCell;
+    // We need to create another KV, unfortunately, because the current new KV
+    // has no space for tags
+    KeyValue rewriteKv = new KeyValue(newCell.getRowArray(), newCell.getRowOffset(),
+        newCell.getRowLength(), newCell.getFamilyArray(), newCell.getFamilyOffset(),
+        newCell.getFamilyLength(), newCell.getQualifierArray(), newCell.getQualifierOffset(),
+        newCell.getQualifierLength(), newCell.getTimestamp(), KeyValue.Type.codeToType(newCell
+            .getTypeByte()), newCell.getValueArray(), newCell.getValueOffset(),
+        newCell.getValueLength(), tags);
+    // Preserve mvcc data
+    rewriteKv.setSequenceId(newCell.getSequenceId());
+    return rewriteKv;
   }
 
   @Override
@@ -724,7 +740,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
           User requestingUser = VisibilityUtils.getActiveUser();
           throw new AccessDeniedException("User '"
               + (requestingUser != null ? requestingUser.getShortName() : "null")
-              + "' is not authorized to perform this action.");
+              + " is not authorized to perform this action.");
         }
         labels = this.visibilityLabelService.getAuths(user, false);
       } catch (IOException e) {

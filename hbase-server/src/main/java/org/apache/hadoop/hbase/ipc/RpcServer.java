@@ -146,7 +146,7 @@ import com.google.protobuf.TextFormat;
  * and keep taking while the server is up.
  *
  * CallRunner#run executes the call.  When done, asks the included Call to put itself on new
- * queue for Responder to pull from and return result to client.
+ * queue for {@link Responder} to pull from and return result to client.
  *
  * @see RpcClient
  */
@@ -685,7 +685,6 @@ public class RpcServer implements RpcServerInterface {
                   doAccept(key);
               }
             } catch (IOException ignored) {
-              if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
             }
             key = null;
           }
@@ -723,9 +722,7 @@ public class RpcServer implements RpcServerInterface {
         try {
           acceptChannel.close();
           selector.close();
-        } catch (IOException ignored) {
-          if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
-        }
+        } catch (IOException ignored) { }
 
         selector= null;
         acceptChannel= null;
@@ -873,28 +870,22 @@ public class RpcServer implements RpcServerInterface {
 
     /**
      * Take the list of the connections that want to write, and register them
-     * in the selector.
+     *  in the selector.
      */
-    private void registerWrites() {
+    private void registerWrites(){
       Iterator<Connection> it = writingCons.iterator();
-      while (it.hasNext()) {
+      while (it.hasNext()){
         Connection c = it.next();
         it.remove();
         SelectionKey sk = c.channel.keyFor(writeSelector);
-        try {
-          if (sk == null) {
-            try {
-              c.channel.register(writeSelector, SelectionKey.OP_WRITE, c);
-            } catch (ClosedChannelException e) {
-              // ignore: the client went away.
-              if (LOG.isTraceEnabled()) LOG.trace("ignored", e);
-            }
-          } else {
-            sk.interestOps(SelectionKey.OP_WRITE);
+        if (sk == null){
+          try {
+            c.channel.register(writeSelector, SelectionKey.OP_WRITE, c);
+          } catch (ClosedChannelException e) {
+            // ignore: the client went away.
           }
-        } catch (CancelledKeyException e) {
-          // ignore: the client went away.
-          if (LOG.isTraceEnabled()) LOG.trace("ignored", e);
+        } else {
+          sk.interestOps(SelectionKey.OP_WRITE);
         }
       }
     }
@@ -1057,17 +1048,15 @@ public class RpcServer implements RpcServerInterface {
     /**
      * Process all the responses for this connection
      *
-     * @return true if all the calls were processed or that someone else is doing it.
-     * false if there * is still some work to do. In this case, we expect the caller to
-     * delay us.
+     * @return true if all the calls were processed or that someone else is doing it. false if there
+     * is still some work to do. In this case, we expect the caller to delay us.
      * @throws IOException
      */
     private boolean processAllResponses(final Connection connection) throws IOException {
       // We want only one writer on the channel for a connection at a time.
       connection.responseWriteLock.lock();
       try {
-        for (int i = 0; i < 20; i++) {
-          // protection if some handlers manage to need all the responder
+        for (int i = 0; i < 20; i++) { // protection if some handlers manage to need all the responder
           Call call = connection.responseQueue.pollFirst();
           if (call == null) {
             return true;
@@ -1290,7 +1279,8 @@ public class RpcServer implements RpcServerInterface {
                       secretManager, this));
               break;
             default:
-              UserGroupInformation current = UserGroupInformation.getCurrentUser();
+              UserGroupInformation current = UserGroupInformation
+              .getCurrentUser();
               String fullName = current.getUserName();
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Kerberos principal name is " + fullName);

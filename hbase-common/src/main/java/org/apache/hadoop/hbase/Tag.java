@@ -173,26 +173,7 @@ public class Tag {
     }
     return tags;
   }
-
-  /**
-   * Write a list of tags into a byte array
-   * @param tags
-   * @return the serialized tag data as bytes
-   */
-  public static byte[] fromList(List<Tag> tags) {
-    int length = 0;
-    for (Tag tag: tags) {
-      length += tag.length;
-    }
-    byte[] b = new byte[length];
-    int pos = 0;
-    for (Tag tag: tags) {
-      System.arraycopy(tag.bytes, tag.offset, b, pos, tag.length);
-      pos += tag.length;
-    }
-    return b;
-  }
-
+  
   /**
    * Retrieve the first tag from the tags byte array matching the passed in tag type
    * @param b

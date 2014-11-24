@@ -119,9 +119,7 @@ import org.junit.experimental.categories.Category;
 public class TestDistributedLogSplitting {
   private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
   static {
-    // Uncomment the following line if more verbosity is needed for
-    // debugging (see HBASE-12285 for details).
-    //Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
+    Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
 
     // test ThreeRSAbort fails under hadoop2 (2.0.2-alpha) if shortcircuit-read (scr) is on. this
     // turns it off for this test.  TODO: Figure out why scr breaks recovery.

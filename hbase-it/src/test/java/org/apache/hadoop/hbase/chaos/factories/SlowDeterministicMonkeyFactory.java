@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.CompositeSequentialPolicy;
 import org.apache.hadoop.hbase.chaos.policies.DoActionsOncePolicy;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
+import org.junit.Assert;
 
 public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
 

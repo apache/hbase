@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import java.io.IOException;
 
 /**
  * Thrown by a region server if it is sent a request for a region it is not

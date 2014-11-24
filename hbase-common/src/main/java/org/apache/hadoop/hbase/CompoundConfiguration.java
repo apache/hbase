@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.DataOutput;
-import java.io.IOException;
+import java.io.IOException; 
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,8 +29,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections.iterators.UnmodifiableIterator;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -72,11 +73,11 @@ public class CompoundConfiguration extends Configuration {
     int size();
   }
 
-  private final List<ImmutableConfigMap> configs
+  protected List<ImmutableConfigMap> configs
     = new ArrayList<ImmutableConfigMap>();
 
   static class ImmutableConfWrapper implements  ImmutableConfigMap {
-   private final Configuration c;
+    Configuration c;
     
     ImmutableConfWrapper(Configuration conf) {
       c = conf;
@@ -163,7 +164,7 @@ public class CompoundConfiguration extends Configuration {
 
     // put new map at the front of the list (top priority)
     this.configs.add(0, new ImmutableConfigMap() {
-      private final Map<Bytes, Bytes> m = map;
+      Map<Bytes, Bytes> m = map;
 
       @Override
       public Iterator<Map.Entry<String,String>> iterator() {
@@ -224,7 +225,7 @@ public class CompoundConfiguration extends Configuration {
 
     // put new map at the front of the list (top priority)
     this.configs.add(0, new ImmutableConfigMap() {
-      private final Map<String, String> m = map;
+      Map<String, String> m = map;
 
       @Override
       public Iterator<Map.Entry<String,String>> iterator() {

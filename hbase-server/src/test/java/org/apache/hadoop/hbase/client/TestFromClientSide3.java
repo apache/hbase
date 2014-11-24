@@ -222,7 +222,7 @@ public class TestFromClientSide3 {
     LOG.info("hbase.hstore.compaction.min should now be 2");
     HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
     hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
-    htd.modifyFamily(hcd);
+    htd.addFamily(hcd);
     admin.modifyTable(TABLE, htd);
     while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
       LOG.debug(st.getFirst() + " regions left to update");
@@ -257,7 +257,7 @@ public class TestFromClientSide3 {
     LOG.info("hbase.hstore.compaction.min should now be 5");
     hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
     hcd.setValue("hbase.hstore.compaction.min", null);
-    htd.modifyFamily(hcd);
+    htd.addFamily(hcd);
     admin.modifyTable(TABLE, htd);
     while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
       LOG.debug(st.getFirst() + " regions left to update");
