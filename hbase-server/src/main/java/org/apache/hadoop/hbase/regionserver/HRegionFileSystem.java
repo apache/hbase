@@ -518,11 +518,9 @@ public class HRegionFileSystem {
    * to the proper location in the filesystem.
    *
    * @param regionInfo                 daughter {@link org.apache.hadoop.hbase.HRegionInfo}
-   * @param expectedReferenceFileCount number of expected reference files to have created and to
-   *                                   move into the new location.
    * @throws IOException
    */
-  Path commitDaughterRegion(final HRegionInfo regionInfo, int expectedReferenceFileCount)
+  Path commitDaughterRegion(final HRegionInfo regionInfo)
       throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
     Path daughterTmpDir = this.getSplitsDir(regionInfo);

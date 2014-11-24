@@ -428,8 +428,7 @@ public class SplitTransaction {
     this.journal.add(new JournalEntry(JournalEntryType.STARTED_REGION_A_CREATION));
     assertReferenceFileCount(expectedReferences.getFirst(),
         this.parent.getRegionFileSystem().getSplitsDir(this.hri_a));
-    HRegion a = this.parent.createDaughterRegionFromSplits(this.hri_a,
-        expectedReferences.getFirst());
+    HRegion a = this.parent.createDaughterRegionFromSplits(this.hri_a);
     assertReferenceFileCount(expectedReferences.getFirst(),
         new Path(this.parent.getRegionFileSystem().getTableDir(), this.hri_a.getEncodedName()));
 
@@ -437,8 +436,7 @@ public class SplitTransaction {
     this.journal.add(new JournalEntry(JournalEntryType.STARTED_REGION_B_CREATION));
     assertReferenceFileCount(expectedReferences.getSecond(),
         this.parent.getRegionFileSystem().getSplitsDir(this.hri_b));
-    HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b,
-        expectedReferences.getSecond());
+    HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b);
     assertReferenceFileCount(expectedReferences.getSecond(),
         new Path(this.parent.getRegionFileSystem().getTableDir(), this.hri_b.getEncodedName()));
 
