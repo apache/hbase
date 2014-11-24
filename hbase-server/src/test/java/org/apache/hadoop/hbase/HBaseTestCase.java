@@ -52,7 +52,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
  * like an HBaseConfiguration and filesystem.
  * @deprecated Write junit4 unit tests using {@link HBaseTestingUtility}
  */
-@Deprecated
 public abstract class HBaseTestCase extends TestCase {
   private static final Log LOG = LogFactory.getLog(HBaseTestCase.class);
 
@@ -112,12 +111,12 @@ public abstract class HBaseTestCase extends TestCase {
     }
     try {
       if (localfs) {
-        testDir = getUnitTestdir(getName());
+        this.testDir = getUnitTestdir(getName());
         if (fs.exists(testDir)) {
           fs.delete(testDir, true);
         }
       } else {
-        testDir = FSUtils.getRootDir(conf);
+        this.testDir = FSUtils.getRootDir(conf);
       }
     } catch (Exception e) {
       LOG.fatal("error during setup", e);
@@ -207,7 +206,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @return Column descriptor.
    */
   protected HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
+      final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
       htd.addFamily(new HColumnDescriptor(cfName)

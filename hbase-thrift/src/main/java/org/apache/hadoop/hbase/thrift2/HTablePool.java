@@ -235,7 +235,6 @@ public class HTablePool implements Closeable {
    *          the proxy table user got from pool
    * @deprecated
    */
-  @Deprecated
   public void putTable(HTableInterface table) throws IOException {
     // we need to be sure nobody puts a proxy implementation in the pool
     // but if the client code is not updated
@@ -396,7 +395,6 @@ public class HTablePool implements Closeable {
      * @deprecated If any exception is thrown by one of the actions, there is no way to
      * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
      */
-    @Deprecated
     @Override
     public Object[] batch(List<? extends Row> actions) throws IOException,
         InterruptedException {
@@ -590,7 +588,6 @@ public class HTablePool implements Closeable {
      * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
      * instead.
      */
-    @Deprecated
     @Override
     public <R> Object[] batchCallback(List<? extends Row> actions,
         Callback<R> callback) throws IOException, InterruptedException {

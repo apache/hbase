@@ -21,14 +21,13 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
@@ -271,14 +270,4 @@ public interface ClusterConnection extends HConnection {
    * @return Default AsyncProcess associated with this connection.
    */
   AsyncProcess getAsyncProcess();
-
-  /**
-   * Returns a new RpcRetryingCallerFactory from the given {@link Configuration}.
-   * This RpcRetryingCallerFactory lets the users create {@link RpcRetryingCaller}s which can be
-   * intercepted with the configured {@link RetryingCallerInterceptor}
-   * @param conf
-   * @return RpcRetryingCallerFactory
-   */
-  RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf);
 }
-

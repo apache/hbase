@@ -33,9 +33,6 @@ import java.io.IOException;
  * It's provided to have a way for coprocessors to observe, rewrite,
  * or skip WALEdits as they are being written to the WAL.
  *
- * Note that implementers of WALObserver will not see WALEdits that report themselves
- * as empty via {@link WALEdit#isEmpty()}.
- *
  * {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} provides
  * hooks for adding logic for WALEdits in the region context during reconstruction,
  *

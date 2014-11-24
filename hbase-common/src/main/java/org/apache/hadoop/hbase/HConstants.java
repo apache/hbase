@@ -150,9 +150,7 @@ public final class HConstants {
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
 
-  /**
-   * by default every master is a possible primary master unless the conf explicitly overrides it
-   */
+  /** by default every master is a possible primary master unless the conf explicitly overrides it */
   public static final boolean DEFAULT_MASTER_TYPE_BACKUP = false;
 
   /** Name of ZooKeeper quorum configuration parameter. */
@@ -181,11 +179,8 @@ public final class HConstants {
   /** Default client port that the zookeeper listens on */
   public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
 
-  /**
-   * Parameter name for the wait time for the recoverable zookeeper
-   */
-  public static final String ZOOKEEPER_RECOVERABLE_WAITTIME =
-      "hbase.zookeeper.recoverable.waittime";
+  /** Parameter name for the wait time for the recoverable zookeeper */
+  public static final String ZOOKEEPER_RECOVERABLE_WAITTIME = "hbase.zookeeper.recoverable.waittime";
 
   /** Default wait time for the recoverable zookeeper */
   public static final long DEFAULT_ZOOKEPER_RECOVERABLE_WAITIME = 10000;
@@ -385,10 +380,7 @@ public final class HConstants {
   // should go down.
 
 
-  /**
-   * The hbase:meta table's name.
-   * 
-   */
+  /** The hbase:meta table's name. */
   @Deprecated  // for compat from 0.94 -> 0.96.
   public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
 
@@ -1068,33 +1060,6 @@ public final class HConstants {
    * memory size to give to the cache (if < 1.0) OR, it is the capacity in megabytes of the cache.
    */
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
-
-  /**
-   * HConstants for fast fail on the client side follow
-   */
-  /**
-   * Config for enabling/disabling the fast fail mode.
-   */
-  public static final String HBASE_CLIENT_FAST_FAIL_MODE_ENABLED =
-      "hbase.client.fast.fail.mode.enabled";
-
-  public static final boolean HBASE_CLIENT_ENABLE_FAST_FAIL_MODE_DEFAULT =
-      false;
-
-  public static final String HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS =
-      "hbase.client.fastfail.threshold";
-  
-  public static final long HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT =
-      60000;
-
-  public static final String HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS =
-      "hbase.client.fast.fail.cleanup.duration";
-
-  public static final long HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT =
-      600000;
-
-  public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
-      "hbase.client.fast.fail.interceptor.impl"; 
 
   private HConstants() {
     // Can't be instantiated with this ctor.

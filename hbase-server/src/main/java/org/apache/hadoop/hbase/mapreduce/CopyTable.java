@@ -65,8 +65,7 @@ public class CopyTable extends Configured implements Tool {
   String peerAddress = null;
   String families = null;
   boolean allCells = false;
-  static boolean shuffle = false;
-
+  
   boolean bulkload = false;
   Path bulkloadDir = null;
 
@@ -87,7 +86,7 @@ public class CopyTable extends Configured implements Tool {
     if (!doCommandLine(args)) {
       return null;
     }
-
+    
     Job job = Job.getInstance(getConf(), getConf().get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
@@ -99,27 +98,24 @@ public class CopyTable extends Configured implements Tool {
     if (allCells) {
       scan.setRaw(true);
     }
-    if (shuffle) {
-      job.getConfiguration().set(TableInputFormat.SHUFFLE_MAPS, "true");
-    }
     if (versions >= 0) {
       scan.setMaxVersions(versions);
     }
-
+    
     if (startRow != null) {
       scan.setStartRow(Bytes.toBytes(startRow));
     }
-
+    
     if (stopRow != null) {
       scan.setStopRow(Bytes.toBytes(stopRow));
     }
-
+    
     if(families != null) {
       String[] fams = families.split(",");
       Map<String,String> cfRenameMap = new HashMap<String,String>();
       for(String fam : fams) {
         String sourceCf;
-        if(fam.contains(":")) {
+        if(fam.contains(":")) { 
             // fam looks like "sourceCfName:destCfName"
             String[] srcAndDest = fam.split(":", 2);
             sourceCf = srcAndDest[0];
@@ -127,21 +123,21 @@ public class CopyTable extends Configured implements Tool {
             cfRenameMap.put(sourceCf, destCf);
         } else {
             // fam is just "sourceCf"
-            sourceCf = fam;
+            sourceCf = fam; 
         }
         scan.addFamily(Bytes.toBytes(sourceCf));
       }
       Import.configureCfRenaming(job.getConfiguration(), cfRenameMap);
     }
     job.setNumReduceTasks(0);
-
+    
     if (bulkload) {
       TableMapReduceUtil.initTableMapperJob(tableName, scan, Import.KeyValueImporter.class, null,
         null, job);
-
+      
       // We need to split the inputs by destination tables so that output of Map can be bulk-loaded.
       TableInputFormat.configureSplitTable(job, TableName.valueOf(dstTableName));
-
+      
       FileSystem fs = FileSystem.get(getConf());
       Random rand = new Random();
       Path root = new Path(fs.getWorkingDirectory(), "copytable");
@@ -152,7 +148,7 @@ public class CopyTable extends Configured implements Tool {
           break;
         }
       }
-
+      
       System.out.println("HFiles will be stored at " + this.bulkloadDir);
       HFileOutputFormat2.setOutputPath(job, bulkloadDir);
       try (Connection conn = ConnectionFactory.createConnection(getConf());
@@ -162,11 +158,11 @@ public class CopyTable extends Configured implements Tool {
     } else {
       TableMapReduceUtil.initTableMapperJob(tableName, scan,
         Import.Importer.class, null, null, job);
-
+      
       TableMapReduceUtil.initTableReducerJob(dstTableName, null, job, null, peerAddress, null,
         null);
     }
-
+    
     return job;
   }
 
@@ -231,19 +227,19 @@ public class CopyTable extends Configured implements Tool {
           printUsage(null);
           return false;
         }
-
+        
         final String startRowArgKey = "--startrow=";
         if (cmd.startsWith(startRowArgKey)) {
           startRow = cmd.substring(startRowArgKey.length());
           continue;
         }
-
+        
         final String stopRowArgKey = "--stoprow=";
         if (cmd.startsWith(stopRowArgKey)) {
           stopRow = cmd.substring(stopRowArgKey.length());
           continue;
         }
-
+        
         final String startTimeArgKey = "--starttime=";
         if (cmd.startsWith(startTimeArgKey)) {
           startTime = Long.parseLong(cmd.substring(startTimeArgKey.length()));
@@ -284,14 +280,9 @@ public class CopyTable extends Configured implements Tool {
           allCells = true;
           continue;
         }
-
+        
         if (cmd.startsWith("--bulkload")) {
           bulkload = true;
-          continue;
-        }
-
-        if (cmd.startsWith("--shuffle")) {
-          shuffle = true;
           continue;
         }
 
@@ -311,12 +302,12 @@ public class CopyTable extends Configured implements Tool {
         printUsage("Invalid time range filter: starttime=" + startTime + " >  endtime=" + endTime);
         return false;
       }
-
+      
       if (bulkload && peerAddress != null) {
         printUsage("Remote bulkload is not supported!");
         return false;
       }
-
+      
       // set dstTableName if necessary
       if (dstTableName == null) {
         dstTableName = tableName;

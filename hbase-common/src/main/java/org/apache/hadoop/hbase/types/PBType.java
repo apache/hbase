@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import org.apache.hadoop.hbase.util.Order;
-import org.apache.hadoop.hbase.util.PositionedByteRange;
-
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
+import org.apache.hadoop.hbase.util.Order;
+import org.apache.hadoop.hbase.util.PositionedByteRange;
 
 /**
  * A base-class for {@link DataType} implementations backed by protobuf. See

@@ -531,19 +531,6 @@ public class TestClassLoading {
     assertEquals(loadedMasterCoprocessorsVerify, loadedMasterCoprocessors);
   }
 
-  @Test
-  public void testFindCoprocessors() {
-    // HBASE 12277: 
-    CoprocessorHost masterCpHost =
-                             TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost();
-
-    List<MasterObserver> masterObservers = masterCpHost.findCoprocessors(MasterObserver.class);
-
-    assertTrue(masterObservers != null && masterObservers.size() > 0);
-    assertEquals(masterCoprocessor.getSimpleName(),
-                 masterObservers.get(0).getClass().getSimpleName());
-  }
-
   private void waitForTable(TableName name) throws InterruptedException, IOException {
     // First wait until all regions are online
     TEST_UTIL.waitTableEnabled(name);

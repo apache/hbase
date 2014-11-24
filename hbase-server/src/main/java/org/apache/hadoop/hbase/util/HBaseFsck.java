@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -118,6 +119,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
@@ -226,7 +228,6 @@ public class HBaseFsck extends Configured {
   private boolean fixReferenceFiles = false; // fix lingering reference store file
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
   private boolean fixTableLocks = false; // fix table locks which are expired
-  private boolean fixAny = false; // Set to true if any of the fix is required.
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
   // hbase:meta are always checked
@@ -379,7 +380,6 @@ public class HBaseFsck extends Configured {
     // kill the hbck with a ctrl-c, we want to cleanup the lock so that
     // it is available for further calls
     Runtime.getRuntime().addShutdownHook(new Thread() {
-      @Override
       public void run() {
           unlockHbck();
       }
@@ -1133,7 +1133,7 @@ public class HBaseFsck extends Configured {
       FSTableDescriptors fstd = new FSTableDescriptors(getConf());
       while (iter.hasNext()) {
         Entry<TableName, Set<String>> entry =
-            iter.next();
+            (Entry<TableName, Set<String>>) iter.next();
         TableName tableName = entry.getKey();
         LOG.info("Trying to fix orphan table error: " + tableName);
         if (j < htds.length) {
@@ -3401,7 +3401,7 @@ public class HBaseFsck extends Configured {
   static ErrorReporter getErrorReporter(
       final Configuration conf) throws ClassNotFoundException {
     Class<? extends ErrorReporter> reporter = conf.getClass("hbasefsck.errorreporter", PrintingErrorReporter.class, ErrorReporter.class);
-    return ReflectionUtils.newInstance(reporter, conf);
+    return (ErrorReporter)ReflectionUtils.newInstance(reporter, conf);
   }
 
   public interface ErrorReporter {
@@ -3743,7 +3743,7 @@ public class HBaseFsck extends Configured {
    * Display the full report from fsck. This displays all live and dead region
    * servers, and all known regions.
    */
-  public void setDisplayFullReport() {
+  public static void setDisplayFullReport() {
     details = true;
   }
 
@@ -3776,7 +3776,6 @@ public class HBaseFsck extends Configured {
    */
   public void setFixTableLocks(boolean shouldFix) {
     fixTableLocks = shouldFix;
-    fixAny |= shouldFix;
   }
 
   /**
@@ -3799,7 +3798,6 @@ public class HBaseFsck extends Configured {
    */
   public void setFixAssignments(boolean shouldFix) {
     fixAssignments = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixAssignments() {
@@ -3808,7 +3806,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixMeta(boolean shouldFix) {
     fixMeta = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixMeta() {
@@ -3817,7 +3814,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixEmptyMetaCells(boolean shouldFix) {
     fixEmptyMetaCells = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixEmptyMetaCells() {
@@ -3834,7 +3830,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixHdfsHoles(boolean shouldFix) {
     fixHdfsHoles = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixHdfsHoles() {
@@ -3843,7 +3838,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixTableOrphans(boolean shouldFix) {
     fixTableOrphans = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixTableOrphans() {
@@ -3852,7 +3846,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixHdfsOverlaps(boolean shouldFix) {
     fixHdfsOverlaps = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixHdfsOverlaps() {
@@ -3861,7 +3854,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixHdfsOrphans(boolean shouldFix) {
     fixHdfsOrphans = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixHdfsOrphans() {
@@ -3870,7 +3862,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixVersionFile(boolean shouldFix) {
     fixVersionFile = shouldFix;
-    fixAny |= shouldFix;
   }
 
   public boolean shouldFixVersionFile() {
@@ -3887,7 +3878,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixSplitParents(boolean shouldFix) {
     fixSplitParents = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixSplitParents() {
@@ -3896,7 +3886,6 @@ public class HBaseFsck extends Configured {
 
   public void setFixReferenceFiles(boolean shouldFix) {
     fixReferenceFiles = shouldFix;
-    fixAny |= shouldFix;
   }
 
   boolean shouldFixReferenceFiles() {
@@ -3904,7 +3893,7 @@ public class HBaseFsck extends Configured {
   }
 
   public boolean shouldIgnorePreCheckPermission() {
-    return !fixAny || ignorePreCheckPermission;
+    return ignorePreCheckPermission;
   }
 
   public void setIgnorePreCheckPermission(boolean ignorePreCheckPermission) {

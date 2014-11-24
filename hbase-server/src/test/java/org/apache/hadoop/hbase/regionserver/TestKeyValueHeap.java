@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
@@ -54,7 +52,6 @@ public class TestKeyValueHeap extends HBaseTestCase {
   private byte[] col4;
   private byte[] col5;
 
-  @Before
   public void setUp() throws Exception {
     super.setUp();
     data = Bytes.toBytes("data");
@@ -69,7 +66,6 @@ public class TestKeyValueHeap extends HBaseTestCase {
     col5 = Bytes.toBytes("col5");
   }
 
-  @Test
   public void testSorted() throws IOException{
     //Cases that need to be checked are:
     //1. The "smallest" KeyValue is in the same scanners as current
@@ -132,7 +128,6 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
   }
 
-  @Test
   public void testSeek() throws IOException {
     //Cases:
     //1. Seek KeyValue that is not in scanner
@@ -181,7 +176,6 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
   }
 
-  @Test
   public void testScannerLeak() throws IOException {
     // Test for unclosed scanners (HBASE-1927)
 

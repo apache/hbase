@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.mapreduce.hadoopbackport.JarFinder;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.User;
@@ -833,7 +836,8 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Finds the Jar for a class or creates it if it doesn't exist. If the class is in
+   * If org.apache.hadoop.util.JarFinder is available (0.23+ hadoop), finds
+   * the Jar for a class or creates it if it doesn't exist. If the class is in
    * a directory in the classpath, it creates a Jar on the fly with the
    * contents of the directory and returns the path to that Jar. If a Jar is
    * created, it is created in the system temporary directory. Otherwise,
@@ -927,16 +931,29 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Invoke 'getJar' on a custom JarFinder implementation. Useful for some job
-   * configuration contexts (HBASE-8140) and also for testing on MRv2.
-   * check if we have HADOOP-9426.
+   * Invoke 'getJar' on a JarFinder implementation. Useful for some job
+   * configuration contexts (HBASE-8140) and also for testing on MRv2. First
+   * check if we have HADOOP-9426. Lacking that, fall back to the backport.
    * @param my_class the class to find.
    * @return a jar file that contains the class, or null.
    */
   private static String getJar(Class<?> my_class) {
     String ret = null;
+    String hadoopJarFinder = "org.apache.hadoop.util.JarFinder";
+    Class<?> jarFinder = null;
     try {
+      LOG.debug("Looking for " + hadoopJarFinder + ".");
+      jarFinder = Class.forName(hadoopJarFinder);
+      LOG.debug(hadoopJarFinder + " found.");
+      Method getJar = jarFinder.getMethod("getJar", Class.class);
+      ret = (String) getJar.invoke(null, my_class);
+    } catch (ClassNotFoundException e) {
+      LOG.debug("Using backported JarFinder.");
       ret = JarFinder.getJar(my_class);
+    } catch (InvocationTargetException e) {
+      // function was properly called, but threw it's own exception. Unwrap it
+      // and pass it on.
+      throw new RuntimeException(e.getCause());
     } catch (Exception e) {
       // toss all other exceptions, related to reflection failure
       throw new RuntimeException("getJar invocation failed.", e);

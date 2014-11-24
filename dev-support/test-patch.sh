@@ -517,18 +517,14 @@ checkCheckstyleErrors() {
 
                 JIRA_COMMENT="$JIRA_COMMENT
 
-                {color:red}-1 checkstyle{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the trunk's current $trunkCheckstyleErrors errors)."
+                {color:red}-1 javac{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the trunk's current $trunkCheckstyleErrors errors)."
         return 1
     fi
     echo "There were $patchCheckstyleErrors checkstyle errors in this patch compared to $trunkCheckstyleErrors on master."
   fi
-  JIRA_COMMENT_FOOTER="Checkstyle Errors: $BUILD_URL/artifact/patchprocess/checkstyle-aggregate.html
-
-  $JIRA_COMMENT_FOOTER"
-
   JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:green}+1 checkstyle{color}.  The applied patch does not increase the total number of checkstyle errors"
+    {color:green}+1 javac{color}.  The applied patch does not increase the total number of checkstyle errors"
   return 0
 
 }
@@ -583,7 +579,7 @@ checkReleaseAuditWarnings () {
     {color:red}-1 release audit{color}.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $OK_RELEASEAUDIT_WARNINGS warnings)."
         $GREP '\!?????' $PATCH_DIR/patchReleaseAuditWarnings.txt > $PATCH_DIR/patchReleaseAuditProblems.txt
         echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." >> $PATCH_DIR/patchReleaseAuditProblems.txt
-        JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/patchprocess/patchReleaseAuditWarnings.txt
+        JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/trunk/patchprocess/patchReleaseAuditProblems.txt
 $JIRA_COMMENT_FOOTER"
         return 1
       fi

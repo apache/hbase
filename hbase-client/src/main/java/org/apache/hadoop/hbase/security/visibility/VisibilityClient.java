@@ -22,12 +22,13 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ServiceException;
@@ -92,11 +92,7 @@ public class VisibilityClient {
             }
           }
           service.addLabels(controller, builder.build(), rpcCallback);
-          VisibilityLabelsResponse response = rpcCallback.get();
-          if (controller.failedOnException()) {
-            throw controller.getFailedOn();
-          }
-          return response;
+          return rpcCallback.get();
         }
       };
       Map<byte[], VisibilityLabelsResponse> result = ht.coprocessorService(
@@ -144,11 +140,7 @@ public class VisibilityClient {
           GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
           getAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
           service.getAuths(controller, getAuthReqBuilder.build(), rpcCallback);
-          GetAuthsResponse response = rpcCallback.get();
-          if (controller.failedOnException()) {
-            throw controller.getFailedOn();
-          }
-          return response;
+          return rpcCallback.get();
         }
       };
       Map<byte[], GetAuthsResponse> result = ht.coprocessorService(VisibilityLabelsService.class,
@@ -199,11 +191,7 @@ public class VisibilityClient {
           } else {
             service.clearAuths(controller, setAuthReqBuilder.build(), rpcCallback);
           }
-          VisibilityLabelsResponse response = rpcCallback.get();
-          if (controller.failedOnException()) {
-            throw controller.getFailedOn();
-          }
-          return response;
+          return rpcCallback.get();
         }
       };
       Map<byte[], VisibilityLabelsResponse> result = ht.coprocessorService(

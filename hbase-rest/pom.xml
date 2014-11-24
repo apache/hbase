@@ -233,7 +233,7 @@
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
-      <id>skipRestTests</id>
+      <id>skipRestTets</id>
       <activation>
         <property>
           <name>skipRestTests</name>

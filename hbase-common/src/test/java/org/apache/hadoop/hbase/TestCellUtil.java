@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -371,30 +369,5 @@ public class TestCellUtil {
     Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength(),
         CellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, false));
-  }
-
-  /**
-   * Assert CellUtil makes Cell toStrings same way we do KeyValue toStrings.
-   */
-  @Test
-  public void testToString() {
-    byte [] row = Bytes.toBytes("row");
-    long ts = 123l;
-    // Make a KeyValue and a Cell and see if same toString result.
-    KeyValue kv = new KeyValue(row, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
-        ts, KeyValue.Type.Minimum, HConstants.EMPTY_BYTE_ARRAY);
-    Cell cell = CellUtil.createCell(row, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
-        ts, KeyValue.Type.Minimum.getCode(), HConstants.EMPTY_BYTE_ARRAY);
-    String cellToString = CellUtil.getCellKeyAsString(cell);
-    assertEquals(kv.toString(), cellToString);
-    // Do another w/ non-null family.
-    byte [] f = new byte [] {'f'};
-    byte [] q = new byte [] {'q'};
-    kv = new KeyValue(row, f, q, ts, KeyValue.Type.Minimum, HConstants.EMPTY_BYTE_ARRAY);
-    cell = CellUtil.createCell(row, f, q, ts, KeyValue.Type.Minimum.getCode(),
-        HConstants.EMPTY_BYTE_ARRAY);
-    cellToString = CellUtil.getCellKeyAsString(cell);
-    assertEquals(kv.toString(), cellToString);
-    
   }
 }

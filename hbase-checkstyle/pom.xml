@@ -28,46 +28,5 @@
 <name>HBase - Checkstyle</name>
 <description>Module to hold Checkstyle properties for HBase.</description>
 
-  <parent>
-    <artifactId>hbase</artifactId>
-    <groupId>org.apache.hbase</groupId>
-    <version>2.0.0-SNAPSHOT</version>
-    <relativePath>..</relativePath>
-  </parent>
 
-<build>
-  <plugins>
-
-    <plugin>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-site-plugin</artifactId>
-      <configuration>
-        <skip>true</skip>
-      </configuration>
-    </plugin>
-    <plugin>
-      <!--Make it so assembly:single does nothing in here-->
-      <artifactId>maven-assembly-plugin</artifactId>
-      <configuration>
-        <skipAssembly>true</skipAssembly>
-      </configuration>
-    </plugin>
-    <plugin>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-surefire-plugin</artifactId>
-      <executions>
-        <execution>
-          <id>secondPartTestsExecution</id>
-          <phase>test</phase>
-          <goals>
-            <goal>test</goal>
-          </goals>
-          <configuration>
-            <skip>true</skip>
-          </configuration>
-        </execution>
-      </executions>
-    </plugin>
-  </plugins>
-</build>
 </project>

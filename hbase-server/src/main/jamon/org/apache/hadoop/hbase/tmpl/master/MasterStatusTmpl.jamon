@@ -225,7 +225,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 </tr>
                 <tr>
                     <td>HBase Version</td>
-                    <td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, revision=<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and revision</td>
+                    <td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and revision</td>
                 </tr>
                 <tr>
                     <td>HBase Compiled</td>
@@ -239,7 +239,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                 </tr>
                 <tr>
                     <td>Hadoop Version</td>
-                    <td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, revision=<% org.apache.hadoop.util.VersionInfo.getRevision() %></td>
+                    <td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.util.VersionInfo.getRevision() %></td>
                     <td>Hadoop version and revision</td>
                 </tr>
                 <tr>

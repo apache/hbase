@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -253,7 +252,7 @@ public class TestReversibleScanners {
 
     ScanType scanType = ScanType.USER_SCAN;
     ScanInfo scanInfo = new ScanInfo(FAMILYNAME, 0, Integer.MAX_VALUE,
-        Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, KeyValue.COMPARATOR);
+        Long.MAX_VALUE, false, 0, KeyValue.COMPARATOR);
 
     // Case 1.Test a full reversed scan
     Scan scan = new Scan();

@@ -268,7 +268,7 @@ public class BucketCache implements BlockCache, HeapSize {
         ", capacity=" + StringUtils.byteDesc(capacity) +
       ", blockSize=" + StringUtils.byteDesc(blockSize) + ", writerThreadNum=" +
         writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath=" +
-      persistencePath + ", bucketAllocator=" + this.bucketAllocator.getClass().getName());
+      persistencePath + ", bucketAllocator=" + this.bucketAllocator);
   }
 
   /**

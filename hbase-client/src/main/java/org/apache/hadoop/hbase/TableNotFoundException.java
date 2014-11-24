@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /** Thrown when a table can not be located */

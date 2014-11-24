@@ -156,13 +156,13 @@ module Hbase
       count  = 0
       all_perms.each do |value|
           user_name = String.from_java_bytes(value.getUser)
-          if (table_regex != nil && isNamespace?(table_regex))
+          if (isNamespace?(table_regex))
             namespace = table_regex[1...table_regex.length]
           else
             namespace = (value.getTableName != nil) ? value.getTableName.getNamespaceAsString() : ''
           end
           table = (value.getTableName != nil) ? value.getTableName.getNameAsString() : ''
-          family = (value.getFamily != nil) ?
+          family = (value.getFamily != nil) ? 
             org.apache.hadoop.hbase.util.Bytes::toStringBinary(value.getFamily) :
             ''
           qualifier = (value.getQualifier != nil) ?

@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
  * The exception that is thrown if there's duplicate execution of non-idempotent operation.

@@ -183,10 +183,6 @@ public class IntegrationTestMTTR {
   }
 
   private static void setupActions() throws IOException {
-    // allow a little more time for RS restart actions because RS start depends on having a master
-    // to report to and the master is also being monkeyed.
-    util.getConfiguration().setLong(Action.START_RS_TIMEOUT_KEY, 3 * 60 * 1000);
-
     // Set up the action that will restart a region server holding a region from our table
     // because this table should only have one region we should be good.
     restartRSAction = new RestartRsHoldingTableAction(sleepTime, tableName.getNameAsString());
@@ -282,7 +278,6 @@ public class IntegrationTestMTTR {
 
   public void run(Callable<Boolean> monkeyCallable, String testName) throws Exception {
     int maxIters = util.getHBaseClusterInterface().isDistributedCluster() ? 10 : 3;
-    LOG.info("Starting " + testName + " with " + maxIters + " iterations.");
 
     // Array to keep track of times.
     ArrayList<TimingResult> resultPuts = new ArrayList<TimingResult>(maxIters);
@@ -290,39 +285,33 @@ public class IntegrationTestMTTR {
     ArrayList<TimingResult> resultAdmin = new ArrayList<TimingResult>(maxIters);
     long start = System.nanoTime();
 
-    try {
-      // We're going to try this multiple times
-      for (int fullIterations = 0; fullIterations < maxIters; fullIterations++) {
-        // Create and start executing a callable that will kill the servers
-        Future<Boolean> monkeyFuture = executorService.submit(monkeyCallable);
+    // We're going to try this multiple times
+    for (int fullIterations = 0; fullIterations < maxIters; fullIterations++) {
+      // Create and start executing a callable that will kill the servers
+      Future<Boolean> monkeyFuture = executorService.submit(monkeyCallable);
 
-        // Pass that future to the timing Callables.
-        Future<TimingResult> putFuture = executorService.submit(new PutCallable(monkeyFuture));
-        Future<TimingResult> scanFuture = executorService.submit(new ScanCallable(monkeyFuture));
-        Future<TimingResult> adminFuture = executorService.submit(new AdminCallable(monkeyFuture));
+      // Pass that future to the timing Callables.
+      Future<TimingResult> putFuture = executorService.submit(new PutCallable(monkeyFuture));
+      Future<TimingResult> scanFuture = executorService.submit(new ScanCallable(monkeyFuture));
+      Future<TimingResult> adminFuture = executorService.submit(new AdminCallable(monkeyFuture));
 
-        Future<Boolean> loadFuture = executorService.submit(new LoadCallable(monkeyFuture));
+      Future<Boolean> loadFuture = executorService.submit(new LoadCallable(monkeyFuture));
 
-        monkeyFuture.get();
-        loadFuture.get();
+      monkeyFuture.get();
+      loadFuture.get();
 
-        // Get the values from the futures.
-        TimingResult putTime = putFuture.get();
-        TimingResult scanTime = scanFuture.get();
-        TimingResult adminTime = adminFuture.get();
+      // Get the values from the futures.
+      TimingResult putTime = putFuture.get();
+      TimingResult scanTime = scanFuture.get();
+      TimingResult adminTime = adminFuture.get();
 
-        // Store the times to display later.
-        resultPuts.add(putTime);
-        resultScan.add(scanTime);
-        resultAdmin.add(adminTime);
+      // Store the times to display later.
+      resultPuts.add(putTime);
+      resultScan.add(scanTime);
+      resultAdmin.add(adminTime);
 
-        // Wait some time for everything to settle down.
-        Thread.sleep(5000l);
-      }
-    } catch (Exception e) {
-      long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
-      LOG.info(testName + " failed after " + runtimeMs + "ms.", e);
-      throw e;
+      // Wait some time for everything to settle down.
+      Thread.sleep(5000l);
     }
 
     long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);

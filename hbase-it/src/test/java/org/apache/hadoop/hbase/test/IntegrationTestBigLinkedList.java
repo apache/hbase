@@ -39,7 +39,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
@@ -1039,34 +1037,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
   }
 
-  private static class Clean extends Configured implements Tool {
-
-    @Override public int run(String[] args) throws Exception {
-      if (args.length < 1) {
-        System.err.println("Usage: Clean <output dir>");
-        return -1;
-      }
-
-      Path p = new Path(args[0]);
-      Configuration conf = getConf();
-      TableName tableName = getTableName(conf);
-
-      FileSystem fs = HFileSystem.get(conf);
-      Admin admin = new HBaseAdmin(conf);
-
-      if (admin.tableExists(tableName)) {
-        admin.disableTable(tableName);
-        admin.deleteTable(tableName);
-      }
-
-      if (fs.exists(p)) {
-        fs.delete(p, true);
-      }
-
-      return 0;
-    }
-  }
-
   static TableName getTableName(Configuration conf) {
     return TableName.valueOf(conf.get(TABLE_NAME_KEY, DEFAULT_TABLE_NAME));
   }
@@ -1140,7 +1110,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     System.err.println("                             single node.");
     System.err.println("  Loop                       A program to Loop through Generator and");
     System.err.println("                             Verify steps");
-    System.err.println("  Clean                      A program to clean all left over detritus.");
     System.err.println("\t  ");
     System.err.flush();
   }
@@ -1176,8 +1145,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       tool = new Print();
     } else if (toRun.equals("Delete")) {
       tool = new Delete();
-    } else if (toRun.equals("Clean")) {
-      tool = new Clean();
     } else {
       usage();
       throw new RuntimeException("Unknown arg");

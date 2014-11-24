@@ -517,7 +517,7 @@ public class HRegionServer extends HasThread implements
     this.fs = new HFileSystem(this.conf, useHBaseChecksum);
     this.rootDir = FSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(this.conf,
-      this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
+      this.fs, this.rootDir, !canUpdateTableDescriptor());
 
     service = new ExecutorService(getServerName().toShortString());
     spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
@@ -1357,8 +1357,6 @@ public class HRegionServer extends HasThread implements
           (int) (store.getTotalStaticBloomSize() / 1024);
       }
     }
-    float dataLocality =
-        r.getHDFSBlocksDistribution().getBlockLocalityIndex(serverName.getHostname());
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }
@@ -1381,8 +1379,7 @@ public class HRegionServer extends HasThread implements
       .setWriteRequestsCount(r.writeRequestsCount.get())
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
-      .setCompleteSequenceId(r.lastFlushSeqId)
-      .setDataLocality(dataLocality);
+      .setCompleteSequenceId(r.lastFlushSeqId);
 
     return regionLoadBldr.build();
   }

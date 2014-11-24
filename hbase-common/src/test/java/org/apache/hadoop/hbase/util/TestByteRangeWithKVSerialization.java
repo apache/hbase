@@ -21,9 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.Tag;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

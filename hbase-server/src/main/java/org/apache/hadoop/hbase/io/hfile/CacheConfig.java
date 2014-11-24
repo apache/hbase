@@ -189,18 +189,18 @@ public class CacheConfig {
         // For the following flags we enable them regardless of per-schema settings
         // if they are enabled in the global configuration.
         conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY,
-            DEFAULT_CACHE_DATA_ON_WRITE) || family.isCacheDataOnWrite(),
+            DEFAULT_CACHE_DATA_ON_WRITE) || family.shouldCacheDataOnWrite(),
         conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
-            DEFAULT_CACHE_INDEXES_ON_WRITE) || family.isCacheIndexesOnWrite(),
+            DEFAULT_CACHE_INDEXES_ON_WRITE) || family.shouldCacheIndexesOnWrite(),
         conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
-            DEFAULT_CACHE_BLOOMS_ON_WRITE) || family.isCacheBloomsOnWrite(),
+            DEFAULT_CACHE_BLOOMS_ON_WRITE) || family.shouldCacheBloomsOnWrite(),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY,
-            DEFAULT_EVICT_ON_CLOSE) || family.isEvictBlocksOnClose(),
+            DEFAULT_EVICT_ON_CLOSE) || family.shouldEvictBlocksOnClose(),
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY,
-            DEFAULT_PREFETCH_ON_OPEN) || family.isPrefetchBlocksOnOpen(),
+            DEFAULT_PREFETCH_ON_OPEN) || family.shouldPrefetchBlocksOnOpen(),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
-            HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1()
+            HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.shouldCacheDataInL1()
      );
   }
 

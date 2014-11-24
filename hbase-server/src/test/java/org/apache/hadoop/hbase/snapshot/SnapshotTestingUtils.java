@@ -554,6 +554,7 @@ public class SnapshotTestingUtils {
     private SnapshotBuilder createSnapshot(final String snapshotName, final int version)
         throws IOException {
       HTableDescriptor htd = createHtd(snapshotName);
+      htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
       RegionData[] regions = createTable(htd, TEST_NUM_REGIONS);
 

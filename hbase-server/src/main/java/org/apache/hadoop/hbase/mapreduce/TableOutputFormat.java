@@ -29,8 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -48,7 +46,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * while the output value <u>must</u> be either a {@link Put} or a
  * {@link Delete} instance.
  *
- * <p><KEY> is the type of the key. Ignored in this class.
+ * @param <KEY>  The type of the key. Ignored in this class.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -81,16 +79,27 @@ implements Configurable {
   /** The configuration. */
   private Configuration conf = null;
 
-  private Table table;
-  private Connection connection;
+  private HTable table;
 
   /**
    * Writes the reducer output to an HBase table.
    *
    * @param <KEY>  The type of the key.
    */
-  protected class TableRecordWriter
+  protected static class TableRecordWriter<KEY>
   extends RecordWriter<KEY, Mutation> {
+
+    /** The table to write to. */
+    private Table table;
+
+    /**
+     * Instantiate a TableRecordWriter with the HBase HClient for writing.
+     *
+     * @param table  The table to write to.
+     */
+    public TableRecordWriter(Table table) {
+      this.table = table;
+    }
 
     /**
      * Closes the writer, in this case flush table commits.
@@ -103,7 +112,6 @@ implements Configurable {
     public void close(TaskAttemptContext context)
     throws IOException {
       table.close();
-      connection.close();
     }
 
     /**
@@ -117,8 +125,8 @@ implements Configurable {
     @Override
     public void write(KEY key, Mutation value)
     throws IOException {
-      if (value instanceof Put) table.put(new Put((Put)value));
-      else if (value instanceof Delete) table.delete(new Delete((Delete)value));
+      if (value instanceof Put) this.table.put(new Put((Put)value));
+      else if (value instanceof Delete) this.table.delete(new Delete((Delete)value));
       else throw new IOException("Pass a Delete or a Put");
     }
   }
@@ -136,7 +144,7 @@ implements Configurable {
   public RecordWriter<KEY, Mutation> getRecordWriter(
     TaskAttemptContext context)
   throws IOException, InterruptedException {
-    return new TableRecordWriter();
+    return new TableRecordWriter<KEY>(this.table);
   }
 
   /**
@@ -197,9 +205,8 @@ implements Configurable {
       if (zkClientPort != 0) {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
-      this.connection = ConnectionFactory.createConnection(this.conf);
-      this.table = connection.getTable(TableName.valueOf(tableName));
-      ((HTable) this.table).setAutoFlush(false, true);
+      this.table = new HTable(this.conf, TableName.valueOf(tableName));
+      this.table.setAutoFlush(false, true);
       LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {
       LOG.error(e);

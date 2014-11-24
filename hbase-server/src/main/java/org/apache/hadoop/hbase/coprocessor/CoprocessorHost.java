@@ -281,26 +281,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   }
 
   /**
-   * Find list of coprocessors that extend/implement the given class/interface
-   * @param cls the class/interface to look for
-   * @return the list of coprocessors, or null if not found
-   */
-  public <T extends Coprocessor> List<T> findCoprocessors(Class<T> cls) {
-    ArrayList<T> ret = new ArrayList<T>();
-
-    for (E env: coprocessors) {
-      Coprocessor cp = env.getInstance();
-
-      if(cp != null) {
-        if (cls.isAssignableFrom(cp.getClass())) {
-          ret.add((T)cp);
-        }
-      }
-    }
-    return ret;
-  }
-
-  /**
    * Find a coprocessor environment by class name
    * @param className the class name
    * @return the coprocessor, or null if not found

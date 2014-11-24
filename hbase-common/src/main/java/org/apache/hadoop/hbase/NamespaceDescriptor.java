@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -25,10 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Namespace POJO class. Used to represent and define namespaces.

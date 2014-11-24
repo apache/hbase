@@ -21,12 +21,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -317,7 +317,6 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBuffer result = ByteBuffer.allocate(keyLength);
 
     // copy row
-    assert !(result.isDirect());
     int pos = result.arrayOffset();
     block.get(result.array(), pos, Bytes.SIZEOF_SHORT);
     pos += Bytes.SIZEOF_SHORT;

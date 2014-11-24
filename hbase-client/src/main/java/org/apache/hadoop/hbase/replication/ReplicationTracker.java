@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import java.util.List;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import java.util.List;
 
 /**
  * This is the interface for a Replication Tracker. A replication tracker provides the facility to

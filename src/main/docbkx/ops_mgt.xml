@@ -1122,163 +1122,16 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
         </listitem>
       </itemizedlist>
     </section>
-    <section xml:id="master_metrics">
-      <title>Most Important Master Metrics</title>
-      <para>Note: Counts are usually over the last metrics reporting interval.</para>
-      <variablelist>
-        <varlistentry>
-          <term>hbase.master.numRegionServers</term>
-          <listitem><para>Number of live regionservers</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.master.numDeadRegionServers</term>
-          <listitem><para>Number of dead regionservers</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.master.ritCount </term>
-          <listitem><para>The number of regions in transition</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.master.ritCountOverThreshold</term>
-          <listitem><para>The number of regions that have been in transition longer than
-            a threshold time (default: 60 seconds)</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.master.ritOldestAge</term>
-          <listitem><para>The age of the longest region in transition, in milliseconds
-            </para></listitem>
-        </varlistentry>
-      </variablelist>
-    </section>
     <section xml:id="rs_metrics">
       <title>Most Important RegionServer Metrics</title>
-      <para>Note: Counts are usually over the last metrics reporting interval.</para>
-      <variablelist>
-        <varlistentry>
-          <term>hbase.regionserver.regionCount</term>
-          <listitem><para>The number of regions hosted by the regionserver</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.storeFileCount</term>
-          <listitem><para>The number of store files on disk currently managed by the
-            regionserver</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.storeFileSize</term>
-          <listitem><para>Aggregate size of the store files on disk</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.hlogFileCount</term>
-          <listitem><para>The number of write ahead logs not yet archived</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.totalRequestCount</term>
-          <listitem><para>The total number of requests received</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.readRequestCount</term>
-          <listitem><para>The number of read requests received</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.writeRequestCount</term>
-          <listitem><para>The number of write requests received</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.numOpenConnections</term>
-          <listitem><para>The number of open connections at the RPC layer</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.numActiveHandler</term>
-          <listitem><para>The number of RPC handlers actively servicing requests</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.numCallsInGeneralQueue</term>
-          <listitem><para>The number of currently enqueued user requests</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.numCallsInReplicationQueue</term>
-          <listitem><para>The number of currently enqueued operations received from
-            replication</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.numCallsInPriorityQueue</term>
-          <listitem><para>The number of currently enqueued priority (internal housekeeping)
-            requests</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.flushQueueLength</term>
-          <listitem><para>Current depth of the memstore flush queue. If increasing, we are falling
-            behind with clearing memstores out to HDFS.</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.updatesBlockedTime</term>
-          <listitem><para>Number of milliseconds updates have been blocked so the memstore can be
-            flushed</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.compactionQueueLength</term>
-          <listitem><para>Current depth of the compaction request queue. If increasing, we are
-            falling behind with storefile compaction.</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.blockCacheHitCount</term>
-          <listitem><para>The number of block cache hits</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.blockCacheMissCount</term>
-          <listitem><para>The number of block cache misses</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.blockCacheExpressHitPercent </term>
-          <listitem><para>The percent of the time that requests with the cache turned on hit the
-            cache</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.percentFilesLocal</term>
-          <listitem><para>Percent of store file data that can be read from the local DataNode,
-            0-100</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.&lt;op&gt;_&lt;measure&gt;</term>
-          <listitem><para>Operation latencies, where &lt;op&gt; is one of Append, Delete, Mutate,
-            Get, Replay, Increment; and where &lt;measure&gt; is one of min, max, mean, median,
-            75th_percentile, 95th_percentile, 99th_percentile</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.slow&lt;op&gt;Count </term>
-          <listitem><para>The number of operations we thought were slow, where &lt;op&gt; is one
-            of the list above</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.GcTimeMillis</term>
-          <listitem><para>Time spent in garbage collection, in milliseconds</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.GcTimeMillisParNew</term>
-          <listitem><para>Time spent in garbage collection of the young generation, in
-            milliseconds</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.GcTimeMillisConcurrentMarkSweep</term>
-          <listitem><para>Time spent in garbage collection of the old generation, in
-            milliseconds</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.authenticationSuccesses</term>
-          <listitem><para>Number of client connections where authentication succeeded</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.authenticationFailures</term>
-          <listitem><para>Number of client connection authentication failures</para></listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>hbase.regionserver.mutationsWithoutWALCount </term>
-          <listitem><para>Count of writes submitted with a flag indicating they should bypass the
-            write ahead log</para></listitem>
-        </varlistentry>
-      </variablelist>
+      <para>Previously, this section contained a list of the most important RegionServer metrics.
+        However, the list was extremely out of date. In some cases, the name of a given metric has
+        changed. In other cases, the metric seems to no longer be exposed. An effort is underway to
+        create automatic documentation for each metric based upon information pulled from its
+        implementation.</para>
     </section>
   </section>      
+
 
   <section
     xml:id="ops.monitoring">

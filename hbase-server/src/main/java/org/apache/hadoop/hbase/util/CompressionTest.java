@@ -127,7 +127,7 @@ public class CompressionTest {
     // Write any-old Cell...
     final byte [] rowKey = Bytes.toBytes("compressiontestkey");
     Cell c = CellUtil.createCell(rowKey, Bytes.toBytes("compressiontestval"));
-    writer.append(c);
+    writer.append(c);;
     writer.appendFileInfo(Bytes.toBytes("compressioninfokey"), Bytes.toBytes("compressioninfoval"));
     writer.close();
     Cell cc = null;

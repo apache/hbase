@@ -225,39 +225,4 @@ public class TestHTableDescriptor {
 
     BuilderStyleTest.assertClassesAreBuilderStyle(HTableDescriptor.class);
   }
-
-  @Test
-  public void testModifyFamily() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
-    byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(1000);
-    htd.addFamily(hcd);
-    assertEquals(1000, htd.getFamily(familyName).getBlocksize());
-    hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(2000);
-    htd.modifyFamily(hcd);
-    assertEquals(2000, htd.getFamily(familyName).getBlocksize());
-  }
-
-  @Test(expected=IllegalArgumentException.class)
-  public void testModifyInexistentFamily() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
-    byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    htd.modifyFamily(hcd);
-  }
-
-  @Test(expected=IllegalArgumentException.class)
-  public void testAddDuplicateFamilies() {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("table"));
-    byte[] familyName = Bytes.toBytes("cf");
-    HColumnDescriptor hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(1000);
-    htd.addFamily(hcd);
-    assertEquals(1000, htd.getFamily(familyName).getBlocksize());
-    hcd = new HColumnDescriptor(familyName);
-    hcd.setBlocksize(2000);
-    htd.addFamily(hcd);
-  }
 }

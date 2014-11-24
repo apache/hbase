@@ -1890,7 +1890,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     }
 
     public int compareOnlyKeyPortion(Cell left, Cell right) {
-      return CellComparator.compare(left, right, true);
+      return CellComparator.compareStatic(left, right, true);
     }
 
     /**
@@ -1899,7 +1899,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      */
     @Override
     public int compare(final Cell left, final Cell right) {
-      int compare = CellComparator.compare(left, right, false);
+      int compare = CellComparator.compareStatic(left, right, false);
       return compare;
     }
 
@@ -2213,9 +2213,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * @param leftKey
      * @param rightKey
      * @return 0 if equal, <0 if left smaller, >0 if right smaller
-     * @deprecated Since 0.99.2; Use {@link CellComparator#getMidpoint(Cell, Cell)} instead.
      */
-    @Deprecated
     public byte[] getShortMidpointKey(final byte[] leftKey, final byte[] rightKey) {
       if (rightKey == null) {
         throw new IllegalArgumentException("rightKey can not be null");
@@ -2511,10 +2509,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
       return "org.apache.hadoop.hbase.util.Bytes$ByteArrayComparator";
     }
 
-    /**
-     * @deprecated Since 0.99.2.
-     */
-    @Deprecated
     public int compareFlatKey(byte[] left, int loffset, int llength, byte[] right,
         int roffset, int rlength) {
       return Bytes.BYTES_RAWCOMPARATOR.compare(left,  loffset, llength, right, roffset, rlength);

@@ -20,19 +20,19 @@
 package org.apache.hadoop.hbase.client;
 
 
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Client scanner for small reversed scan. Generally, only one RPC is called to fetch the

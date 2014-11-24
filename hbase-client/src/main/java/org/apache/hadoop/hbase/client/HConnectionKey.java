@@ -26,7 +26,6 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 
@@ -48,8 +47,7 @@ class HConnectionKey {
       HConstants.HBASE_RPC_TIMEOUT_KEY,
       HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.HBASE_CLIENT_INSTANCE_ID,
-      HConstants.RPC_CODEC_CONF_KEY,
-      RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY};
+      HConstants.RPC_CODEC_CONF_KEY };
 
   private Map<String, String> properties;
   private String username;

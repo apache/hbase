@@ -1475,7 +1475,7 @@ class FSHLog implements HLog, Syncable {
   public long postAppend(final Entry e, final long elapsedTime) {
     long len = 0;
     if (this.metrics == null) return len;
-    for (Cell cell : e.getEdit().getCells()) len += CellUtil.estimatedSerializedSizeOf(cell);
+    for (Cell cell : e.getEdit().getCells()) len += CellUtil.estimatedLengthOf(cell);
     metrics.finishAppend(elapsedTime, len);
     return len;
   }

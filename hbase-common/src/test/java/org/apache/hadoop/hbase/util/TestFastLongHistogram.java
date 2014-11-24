@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.util;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

@@ -22,8 +22,8 @@ java_import java.util.Arrays
 java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
-java_import org.apache.hadoop.hbase.ServerName
 java_import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos::SnapshotDescription
+java_import org.apache.commons.collections.MapUtils
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -212,33 +212,26 @@ module Hbase
         unless arg.kind_of?(String) || arg.kind_of?(Hash)
           raise(ArgumentError, "#{arg.class} of #{arg.inspect} is not of Hash or String type")
         end
-
+        
         # First, handle all the cases where arg is a column family.
         if arg.kind_of?(String) or arg.has_key?(NAME)
           # If the arg is a string, default action is to add a column to the table.
           # If arg has a name, it must also be a column descriptor.
-          descriptor = hcd(arg, htd);
-          # Warn if duplicate columns are added
-          if htd.hasFamily(descriptor.getName)
-            puts "Family '" + descriptor.getNameAsString() + "' already exists, the old one will be replaced"
-            htd.modifyFamily(descriptor)
-          else
-            htd.addFamily(descriptor)
-          end
+          htd.addFamily(hcd(arg, htd))
           has_columns = true
           next
         end
         if arg.has_key?(REGION_REPLICATION)
           region_replication = JInteger.valueOf(arg.delete(REGION_REPLICATION))
           htd.setRegionReplication(region_replication)
-        end
-
+        end 
+        
         # Get rid of the "METHOD", which is deprecated for create.
         # We'll do whatever it used to do below if it's table_att.
         if (method = arg.delete(METHOD))
             raise(ArgumentError, "table_att is currently the only supported method") unless method == 'table_att'
         end
-
+        
         # The hash is not a column family. Figure out what's in it.
         # First, handle splits.
         if arg.has_key?(SPLITS_FILE)
@@ -253,7 +246,7 @@ module Hbase
           htd.setValue(SPLITS_FILE, arg[SPLITS_FILE])
         end
 
-        if arg.has_key?(SPLITS)
+        if arg.has_key?(SPLITS) 
           splits = Java::byte[][arg[SPLITS].size].new
           idx = 0
           arg.delete(SPLITS).each do |split|
@@ -269,9 +262,9 @@ module Hbase
           split_algo = RegionSplitter.newSplitAlgoInstance(@conf, arg.delete(SPLITALGO))
           splits = split_algo.split(JInteger.valueOf(num_regions))
         end
-
+        
         # Done with splits; apply formerly-table_att parameters.
-        htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER]
+        htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER] 
         htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
         htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
         htd.setCompactionEnabled(JBoolean.valueOf(arg[COMPACTION_ENABLED])) if arg[COMPACTION_ENABLED]
@@ -280,15 +273,15 @@ module Hbase
         htd.setDurability(org.apache.hadoop.hbase.client.Durability.valueOf(arg.delete(DURABILITY))) if arg[DURABILITY]
         set_user_metadata(htd, arg.delete(METADATA)) if arg[METADATA]
         set_descriptor_config(htd, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
-
+        
         arg.each_key do |ignored_key|
           puts("An argument ignored (unknown or overridden): %s" % [ ignored_key ])
         end
       end
-
+      
       # Fail if no column families defined
       raise(ArgumentError, "Table must have at least one column family") if !has_columns
-
+      
       if splits.nil?
         # Perform the create table call
         @admin.createTable(htd)
@@ -297,15 +290,15 @@ module Hbase
         @admin.createTable(htd, splits)
       end
     end
-
+    
     #----------------------------------------------------------------------------------------------
     # Closes a region.
     # If server name is nil, we presume region_name is full region name (HRegionInfo.getRegionName).
     # If server name is not nil, we presume it is the region's encoded name (HRegionInfo.getEncodedName)
     def close_region(region_name, server)
-      if (server == nil || !closeEncodedRegion?(region_name, server))
+      if (server == nil || !closeEncodedRegion?(region_name, server))         
       	@admin.closeRegion(region_name, server)
-      end
+      end	
     end
 
     #----------------------------------------------------------------------------------------------
@@ -326,7 +319,7 @@ module Hbase
     def move(encoded_region_name, server = nil)
       @admin.move(encoded_region_name.to_java_bytes, server ? server.to_java_bytes: nil)
     end
-
+    
     #----------------------------------------------------------------------------------------------
     # Merge two regions
     def merge_region(encoded_region_a_name, encoded_region_b_name, force)
@@ -337,10 +330,6 @@ module Hbase
     # Returns table's structure description
     def describe(table_name)
       @admin.getTableDescriptor(table_name.to_java_bytes).to_s
-    end
-
-    def get_column_families(table_name)
-      @admin.getTableDescriptor(table_name.to_java_bytes).getColumnFamilies()
     end
 
     #----------------------------------------------------------------------------------------------
@@ -441,14 +430,14 @@ module Hbase
 
       # Process all args
       args.each do |arg|
-
-
+      
+      
         # Normalize args to support column name only alter specs
         arg = { NAME => arg } if arg.kind_of?(String)
 
         # Normalize args to support shortcut delete syntax
         arg = { METHOD => 'delete', NAME => arg['delete'] } if arg['delete']
-
+        
         # There are 3 possible options.
         # 1) Column family spec. Distinguished by having a NAME and no METHOD.
         method = arg.delete(METHOD)
@@ -467,12 +456,12 @@ module Hbase
             puts "Updating all regions with the new schema..."
             alter_status(table_name)
           end
-
+          
           # We bypass descriptor when adding column families; refresh it to apply other args correctly.
           htd = @admin.getTableDescriptor(table_name.to_java_bytes)
           next
         end
-
+          
         # 2) Method other than table_att, with some args.
         name = arg.delete(NAME)
         if method != nil and method != "table_att"
@@ -492,26 +481,26 @@ module Hbase
           else
             raise ArgumentError, "Unknown method: #{method}"
           end
-
+          
           arg.each_key do |unknown_key|
             puts("Unknown argument ignored: %s" % [unknown_key])
           end
-
+          
           if wait == true
             puts "Updating all regions with the new schema..."
             alter_status(table_name)
           end
-
+          
           if method == "delete"
             # We bypass descriptor when deleting column families; refresh it to apply other args correctly.
             htd = @admin.getTableDescriptor(table_name.to_java_bytes)
           end
-          next
+          next          
         end
-
+        
         # 3) Some args for the table, optionally with METHOD => table_att (deprecated)
         raise(ArgumentError, "NAME argument in an unexpected place") if name
-        htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER]
+        htd.setOwnerString(arg.delete(OWNER)) if arg[OWNER] 
         htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
         htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
         htd.setCompactionEnabled(JBoolean.valueOf(arg[COMPACTION_ENABLED])) if arg[COMPACTION_ENABLED]
@@ -552,17 +541,17 @@ module Hbase
               valid_coproc_keys << key
             end
           end
-
+          
           valid_coproc_keys.each do |key|
             arg.delete(key)
           end
 
           @admin.modifyTable(table_name.to_java_bytes, htd)
-
+                    
           arg.each_key do |unknown_key|
             puts("Unknown argument ignored: %s" % [unknown_key])
           end
-
+          
           if wait == true
             puts "Updating all regions with the new schema..."
             alter_status(table_name)
@@ -629,7 +618,7 @@ module Hbase
     def exists?(table_name)
       @admin.tableExists(table_name)
     end
-
+    
     #----------------------------------------------------------------------------------------------
     # Is table enabled
     def enabled?(table_name)
@@ -640,7 +629,7 @@ module Hbase
     #Is supplied region name is encoded region name
     def closeEncodedRegion?(region_name, server)
        @admin.closeRegionWithEncodedRegionName(region_name, server)
-    end
+    end   
 
     #----------------------------------------------------------------------------------------------
     # Return a new HColumnDescriptor made of passed args
@@ -662,15 +651,15 @@ module Hbase
       family.setBlocksize(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE)
       family.setMaxVersions(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS)
       family.setMinVersions(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::MIN_VERSIONS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::MIN_VERSIONS)
-      family.setKeepDeletedCells(org.apache.hadoop.hbase.KeepDeletedCells.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS).to_s.upcase)) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS)
+      family.setKeepDeletedCells(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::KEEP_DELETED_CELLS)
       family.setCompressTags(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESS_TAGS))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESS_TAGS)
       family.setPrefetchBlocksOnOpen(JBoolean.valueOf(arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::PREFETCH_BLOCKS_ON_OPEN))) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::PREFETCH_BLOCKS_ON_OPEN)
       family.setValue(COMPRESSION_COMPACT, arg.delete(COMPRESSION_COMPACT)) if arg.include?(COMPRESSION_COMPACT)
       if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER)
         bloomtype = arg.delete(org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER).upcase
         unless org.apache.hadoop.hbase.regionserver.BloomType.constants.include?(bloomtype)
-          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(" "))
-        else
+          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(" ")) 
+        else 
           family.setBloomFilterType(org.apache.hadoop.hbase.regionserver.BloomType.valueOf(bloomtype))
         end
       end
@@ -699,7 +688,7 @@ module Hbase
       arg.each_key do |unknown_key|
         puts("Unknown argument ignored for column family %s: %s" % [name, unknown_key])
       end
-
+      
       return family
     end
 
@@ -734,7 +723,7 @@ module Hbase
           descriptor.setValue(k, v)
         end
     end
-
+    
     #----------------------------------------------------------------------------------------------
     # Take a snapshot of specified table
     def snapshot(table, snapshot_name, *args)
@@ -788,18 +777,6 @@ module Hbase
           v = v.to_s unless v.nil?
           descriptor.setConfiguration(k, v)
         end
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Updates the configuration of one regionserver.
-    def update_config(serverName)
-      @admin.updateConfiguration(ServerName.valueOf(serverName));
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Updates the configuration of all the regionservers.
-    def update_all_config()
-      @admin.updateConfiguration();
     end
 
     #----------------------------------------------------------------------------------------------

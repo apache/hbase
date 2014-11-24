@@ -24,17 +24,13 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ClassSize;
 
 /**
  * These methods have the same definition as any implementation of the EncodedSeeker.
@@ -275,10 +271,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    * of the key part is deep copied
    *
    */
-  private static class ClonedPrefixTreeCell implements Cell, SettableSequenceId, HeapSize {
-    private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
-        + (5 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (4 * Bytes.SIZEOF_INT)
-        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (5 * ClassSize.ARRAY));
+  private static class ClonedPrefixTreeCell implements Cell, SettableSequenceId {
     private byte[] row;
     private short rowLength;
     private byte[] fam;
@@ -289,7 +282,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     private int valOffset;
     private int valLength;
     private byte[] tag;
-    private int tagsLength;
+    private int tagLength;
     private long ts;
     private long seqId;
     private byte type;
@@ -309,7 +302,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
       this.qualLength = qualLength;
       this.tag = new byte[tagLength];
       System.arraycopy(tag, tagOffset, this.tag, 0, tagLength);
-      this.tagsLength = tagLength;
+      this.tagLength = tagLength;
       this.val = val;
       this.valLength = valLength;
       this.valOffset = valOffset;
@@ -416,7 +409,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
     @Override
     public int getTagsLength() {
-      return this.tagsLength;
+      return this.tagLength;
     }
 
     @Override
@@ -445,18 +438,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
     @Override
     public String toString() {
-      String row = Bytes.toStringBinary(getRowArray(), getRowOffset(), getRowLength());
-      String family = Bytes.toStringBinary(getFamilyArray(), getFamilyOffset(), getFamilyLength());
-      String qualifier = Bytes.toStringBinary(getQualifierArray(), getQualifierOffset(),
-          getQualifierLength());
-      String timestamp = String.valueOf((getTimestamp()));
-      return row + "/" + family + (family != null && family.length() > 0 ? ":" : "") + qualifier
-          + "/" + timestamp + "/" + Type.codeToType(type);
-    }
-
-    @Override
-    public long heapSize() {
-      return FIXED_OVERHEAD + rowLength + famLength + qualLength + valLength + tagsLength;
+      return KeyValueUtil.copyToNewKeyValue(this).toString();
     }
   }
 }

@@ -169,7 +169,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     //trivial override to confirm intent (findbugs)
     return super.equals(obj);
   }
-
+  
   @Override
   public int hashCode() {
     return super.hashCode();
@@ -370,7 +370,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   /***************** helper methods **************************/
 
   protected void appendCurrentTokenToRowBuffer() {
-    System.arraycopy(block, currentRowNode.getTokenArrayOffset(), rowBuffer, rowLength,
+    System.arraycopy(block, currentRowNode.getTokenArrayOffset(), rowBuffer, rowLength, 
       currentRowNode.getTokenLength());
     rowLength += currentRowNode.getTokenLength();
   }
@@ -430,7 +430,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected int populateNonRowFieldsAndCompareTo(int cellNum, Cell key) {
     populateNonRowFields(cellNum);
-    return CellComparator.compare(this, key, true);
+    return CellComparator.compareStatic(this, key, true);
   }
 
   protected void populateFirstNonRowFields() {

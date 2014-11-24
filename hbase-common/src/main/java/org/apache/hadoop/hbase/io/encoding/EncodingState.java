@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 
 /**
  * Keeps track of the encoding state.

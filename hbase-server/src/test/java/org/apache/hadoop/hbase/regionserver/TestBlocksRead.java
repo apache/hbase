@@ -48,8 +48,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -77,13 +75,13 @@ public class TestBlocksRead extends HBaseTestCase {
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
    */
   @SuppressWarnings("deprecation")
-  @Before
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
   }
 
   @SuppressWarnings("deprecation")
-  @After
+  @Override
   protected void tearDown() throws Exception {
     super.tearDown();
     EnvironmentEdgeManagerTestHelper.reset();

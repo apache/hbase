@@ -18,13 +18,13 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 import java.util.Map;
 import java.util.TreeMap;
 
 import javax.security.sasl.Sasl;
-
-import org.apache.commons.codec.binary.Base64;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class SaslUtil {

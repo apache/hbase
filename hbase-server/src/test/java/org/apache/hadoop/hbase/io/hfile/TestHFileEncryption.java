@@ -93,7 +93,7 @@ public class TestHFileEncryption {
     return hbw.getOnDiskSizeWithHeader();
   }
 
-  private long readAndVerifyBlock(long pos, HFileContext ctx, HFileBlock.FSReaderImpl hbr, int size)
+  private long readAndVerifyBlock(long pos, HFileContext ctx, HFileBlock.FSReaderV2 hbr, int size)
       throws IOException {
     HFileBlock b = hbr.readBlockData(pos, -1, -1, false);
     assertEquals(0, HFile.getChecksumFailuresCount());
@@ -139,7 +139,7 @@ public class TestHFileEncryption {
       }
       FSDataInputStream is = fs.open(path);
       try {
-        HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(is, totalSize, fileContext);
+        HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, totalSize, fileContext);
         long pos = 0;
         for (int i = 0; i < blocks; i++) {
           pos += readAndVerifyBlock(pos, fileContext, hbr, blockSizes[i]);

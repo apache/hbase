@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.mapreduce;
+package org.apache.hadoop.hbase.mapreduce.hadoopbackport;
 
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,7 +42,7 @@ import java.util.jar.Manifest;
 /**
  * This file was forked from hadoop/common/branches/branch-2@1350012.
  */
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestJarFinder {
 
   @Test

@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,13 +42,11 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -79,12 +76,6 @@ public class TestRegionReplicas {
 
   @BeforeClass
   public static void before() throws Exception {
-    // Reduce the hdfs block size and prefetch to trigger the file-link reopen
-    // when the file is moved to archive (e.g. compaction)
-    HTU.getConfiguration().setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 8192);
-    HTU.getConfiguration().setInt(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 1);
-    HTU.getConfiguration().setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 128 * 1024 * 1024);
-
     HTU.startMiniCluster(NB_SERVERS);
     final TableName tableName = TableName.valueOf(TestRegionReplicas.class.getSimpleName());
 
@@ -408,67 +399,9 @@ public class TestRegionReplicas {
       for (AtomicReference<Exception> exRef : exceptions) {
         Assert.assertNull(exRef.get());
       }
+
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, startKey, endKey);
-      closeRegion(HTU, getRS(), hriSecondary);
-    }
-  }
-
-  @Test(timeout = 300000)
-  public void testVerifySecondaryAbilityToReadWithOnFiles() throws Exception {
-    // disable the store file refresh chore (we do this by hand)
-    HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 0);
-    restartRegionServer();
-
-    try {
-      LOG.info("Opening the secondary region " + hriSecondary.getEncodedName());
-      openRegion(HTU, getRS(), hriSecondary);
-
-      // load some data to primary
-      LOG.info("Loading data to primary region");
-      for (int i = 0; i < 3; ++i) {
-        HTU.loadNumericRows(table, f, i * 1000, (i + 1) * 1000);
-        getRS().getRegionByEncodedName(hriPrimary.getEncodedName()).flushcache();
-      }
-
-      HRegion primaryRegion = getRS().getFromOnlineRegions(hriPrimary.getEncodedName());
-      Assert.assertEquals(3, primaryRegion.getStore(f).getStorefilesCount());
-
-      // Refresh store files on the secondary
-      HRegion secondaryRegion = getRS().getFromOnlineRegions(hriSecondary.getEncodedName());
-      secondaryRegion.getStore(f).refreshStoreFiles();
-      Assert.assertEquals(3, secondaryRegion.getStore(f).getStorefilesCount());
-
-      // force compaction
-      LOG.info("Force Major compaction on primary region " + hriPrimary);
-      primaryRegion.compactStores(true);
-      Assert.assertEquals(1, primaryRegion.getStore(f).getStorefilesCount());
-
-      // scan all the hfiles on the secondary.
-      // since there are no read on the secondary when we ask locations to
-      // the NN a FileNotFound exception will be returned and the FileLink
-      // should be able to deal with it giving us all the result we expect.
-      int keys = 0;
-      int sum = 0;
-      for (StoreFile sf: secondaryRegion.getStore(f).getStorefiles()) {
-        // Our file does not exist anymore. was moved by the compaction above.
-        LOG.debug(getRS().getFileSystem().exists(sf.getPath()));
-        Assert.assertFalse(getRS().getFileSystem().exists(sf.getPath()));
-
-        HFileScanner scanner = sf.getReader().getScanner(false, false);
-        scanner.seekTo();
-        do {
-          keys++;
-
-          Cell cell = scanner.getKeyValue();
-          sum += Integer.parseInt(Bytes.toString(cell.getRowArray(),
-            cell.getRowOffset(), cell.getRowLength()));
-        } while (scanner.next());
-      }
-      Assert.assertEquals(3000, keys);
-      Assert.assertEquals(4498500, sum);
-    } finally {
-      HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, 0, 1000);
       closeRegion(HTU, getRS(), hriSecondary);
     }
   }

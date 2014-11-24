@@ -1599,7 +1599,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Column descriptor.
    */
   public HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
+      final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
       htd.addFamily(new HColumnDescriptor(cfName)

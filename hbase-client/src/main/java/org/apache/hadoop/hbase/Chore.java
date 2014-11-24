@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 public abstract class Chore extends HasThread {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final Sleeper sleeper;
-  private final Stoppable stopper;
+  protected final Stoppable stopper;
 
   /**
    * @param p Period at which we should run.  Will be adjusted appropriately
@@ -145,13 +145,5 @@ public abstract class Chore extends HasThread {
    * extra overhead
    */
   protected void cleanup() {
-  }
-
-  protected Stoppable getStopper() {
-    return stopper;
-  }
-
-  protected Sleeper getSleeper() {
-    return sleeper;
   }
 }

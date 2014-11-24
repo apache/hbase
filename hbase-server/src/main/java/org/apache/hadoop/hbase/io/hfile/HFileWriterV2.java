@@ -27,15 +27,14 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -76,11 +75,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   /** The offset of the last data block or 0 if the file is empty. */
   protected long lastDataBlockOffset;
 
-  /**
-   * The last(stop) Cell of the previous data block.
-   * This reference should be short-lived since we write hfiles in a burst.
-   */
-  private Cell lastCellOfPreviousBlock = null;
+  /** The last(stop) Key of the previous data block. */
+  private byte[] lastKeyOfPreviousBlock = null;
 
   /** Additional data items to be written to the "load-on-open" section. */
   private List<BlockWritable> additionalLoadOnOpenData =
@@ -162,11 +158,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     fsBlockWriter.writeHeaderAndData(outputStream);
     int onDiskSize = fsBlockWriter.getOnDiskSizeWithHeader();
 
-    // Rather than CellComparator, we should be making use of an Interface here with the
-    // implementation class serialized out to the HFile metadata. TODO.
-    Cell indexEntry = CellComparator.getMidpoint(lastCellOfPreviousBlock, firstCellInBlock);
-    dataBlockIndexWriter.addEntry(CellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
-      lastDataBlockOffset, onDiskSize);
+    byte[] indexKey = comparator.calcIndexKey(lastKeyOfPreviousBlock, firstKeyInBlock);
+    dataBlockIndexWriter.addEntry(indexKey, lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
     if (cacheConf.shouldCacheDataOnWrite()) {
       doCacheOnWrite(lastDataBlockOffset);
@@ -212,9 +205,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   protected void newBlock() throws IOException {
     // This is where the next block begins.
     fsBlockWriter.startWriting(BlockType.DATA);
-    firstCellInBlock = null;
-    if (lastCell != null) {
-      lastCellOfPreviousBlock = lastCell;
+    firstKeyInBlock = null;
+    if (lastKeyLength > 0) {
+      lastKeyOfPreviousBlock = new byte[lastKeyLength];
+      KeyValueUtil.appendKeyTo(lastCell, lastKeyOfPreviousBlock, 0);
     }
   }
 
@@ -254,6 +248,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   @Override
   public void append(final Cell cell) throws IOException {
+    int klength = KeyValueUtil.keyLength(cell);
     byte[] value = cell.getValueArray();
     int voffset = cell.getValueOffset();
     int vlength = cell.getValueLength();
@@ -269,19 +264,18 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     fsBlockWriter.write(cell);
 
-    totalKeyLength += CellUtil.estimatedSerializedSizeOfKey(cell);
+    totalKeyLength += klength;
     totalValueLength += vlength;
 
     // Are we the first key in this block?
-    if (firstCellInBlock == null) {
-      // If cell is big, block will be closed and this firstCellInBlock reference will only last
-      // a short while.
-      firstCellInBlock = cell;
+    if (firstKeyInBlock == null) {
+      // Copy the key for use as first key in block. It is put into file index.
+      firstKeyInBlock = new byte[klength];
+      KeyValueUtil.appendKeyTo(cell, firstKeyInBlock, 0);
     }
 
-    // TODO: What if cell is 10MB and we write infrequently?  We'll hold on to the cell here
-    // indefinetly?
     lastCell = cell;
+    lastKeyLength = klength;
     entryCount++;
     this.maxMemstoreTS = Math.max(this.maxMemstoreTS, cell.getSequenceId());
   }

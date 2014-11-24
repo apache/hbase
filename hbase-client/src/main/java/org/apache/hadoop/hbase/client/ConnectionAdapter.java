@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -29,7 +30,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -439,10 +439,5 @@ class ConnectionAdapter implements ClusterConnection {
   @Override
   public AsyncProcess getAsyncProcess() {
     return wrappedConnection.getAsyncProcess();
-  }
-
-  @Override
-  public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
-    return wrappedConnection.getNewRpcRetryingCallerFactory(conf);
   }
 }

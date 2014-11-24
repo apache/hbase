@@ -332,7 +332,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scanner.seek(seekKey);
           Cell c = scanner.peek();
           if (c != null ) {
-            totalScannersSoughtBytes += CellUtil.estimatedSerializedSizeOf(c);
+            totalScannersSoughtBytes += CellUtil.estimatedSizeOf(c);
           }
         }
       } else {
@@ -515,7 +515,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (this.countPerRow > storeOffset) {
             outResult.add(cell);
             count++;
-            totalBytesRead += CellUtil.estimatedSerializedSizeOf(cell);
+            totalBytesRead += CellUtil.estimatedSizeOf(cell);
             if (totalBytesRead > maxRowSize) {
               throw new RowTooBigException("Max row size allowed: " + maxRowSize
               + ", but the row is bigger than that.");

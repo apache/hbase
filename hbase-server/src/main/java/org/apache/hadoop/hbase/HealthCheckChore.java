@@ -58,7 +58,7 @@ import org.apache.hadoop.util.StringUtils;
     if (!isHealthy) {
       boolean needToStop = decideToStop();
       if (needToStop) {
-        this.getStopper().stop("The  node reported unhealthy " + threshold
+        this.stopper.stop("The  node reported unhealthy " + threshold
             + " number of times consecutively.");
       }
       // Always log health report.

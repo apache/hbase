@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,13 +33,12 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 
-import javax.annotation.Nonnull;
-
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -50,8 +50,6 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
@@ -767,33 +765,11 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * Adds a column family.
-   * For the updating purpose please use {@link #modifyFamily(HColumnDescriptor)} instead.
    * @param family HColumnDescriptor of family to add.
    */
   public HTableDescriptor addFamily(final HColumnDescriptor family) {
     if (family.getName() == null || family.getName().length <= 0) {
-      throw new IllegalArgumentException("Family name cannot be null or empty");
-    }
-    if (hasFamily(family.getName())) {
-      throw new IllegalArgumentException("Family '" +
-        family.getNameAsString() + "' already exists so cannot be added");
-    }
-    this.families.put(family.getName(), family);
-    return this;
-  }
-
-  /**
-   * Modifies the existing column family.
-   * @param family HColumnDescriptor of family to update
-   * @return this (for chained invocation)
-   */
-  public HTableDescriptor modifyFamily(final HColumnDescriptor family) {
-    if (family.getName() == null || family.getName().length <= 0) {
-      throw new IllegalArgumentException("Family name cannot be null or empty");
-    }
-    if (!hasFamily(family.getName())) {
-      throw new IllegalArgumentException("Column family '" + family.getNameAsString()
-        + "' does not exist");
+      throw new NullPointerException("Family name cannot be null or empty");
     }
     this.families.put(family.getName(), family);
     return this;

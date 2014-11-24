@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-package org.apache.hadoop.hbase.mapreduce;
+package org.apache.hadoop.hbase.mapreduce.hadoopbackport;
 
 import com.google.common.base.Preconditions;
 
@@ -36,7 +36,7 @@ import java.util.zip.ZipOutputStream;
  * classpath, it creates a Jar on the fly with the contents of the directory
  * and returns the path to that Jar. If a Jar is created, it is created in
  * the system temporary directory.
- *
+ * 
  * This file was forked from hadoop/common/branches/branch-2@1377176.
  */
 public class JarFinder {
@@ -161,7 +161,6 @@ public class JarFinder {
             }
             File tempJar = File.createTempFile("hadoop-", "", testDir);
             tempJar = new File(tempJar.getAbsolutePath() + ".jar");
-            tempJar.deleteOnExit();
             createJar(baseDir, tempJar);
             return tempJar.getAbsolutePath();
           }

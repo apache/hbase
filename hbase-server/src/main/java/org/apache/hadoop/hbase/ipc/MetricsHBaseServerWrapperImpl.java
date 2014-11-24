@@ -27,13 +27,9 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
     this.server = server;
   }
 
-  private boolean isServerStarted() {
-    return this.server != null && this.server.isStarted();
-  }
-
   @Override
   public long getTotalQueueSize() {
-    if (!isServerStarted()) {
+    if (this.server == null) {
       return 0;
     }
     return server.callQueueSize.get();
@@ -41,7 +37,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getGeneralQueueLength() {
-    if (!isServerStarted() || this.server.getScheduler() == null) {
+    if (this.server == null || this.server.getScheduler() == null) {
       return 0;
     }
     return server.getScheduler().getGeneralQueueLength();
@@ -49,7 +45,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getReplicationQueueLength() {
-    if (!isServerStarted() || this.server.getScheduler() == null) {
+    if (this.server == null || this.server.getScheduler() == null) {
       return 0;
     }
     return server.getScheduler().getReplicationQueueLength();
@@ -57,7 +53,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getPriorityQueueLength() {
-    if (!isServerStarted() || this.server.getScheduler() == null) {
+    if (this.server == null || this.server.getScheduler() == null) {
       return 0;
     }
     return server.getScheduler().getPriorityQueueLength();
@@ -65,7 +61,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getNumOpenConnections() {
-    if (!isServerStarted() || this.server.connectionList == null) {
+    if (this.server == null || this.server.connectionList == null) {
       return 0;
     }
     return server.connectionList.size();
@@ -73,7 +69,7 @@ public class MetricsHBaseServerWrapperImpl implements MetricsHBaseServerWrapper 
 
   @Override
   public int getActiveRpcHandlerCount() {
-    if (!isServerStarted() || this.server.getScheduler() == null) {
+    if (this.server == null || this.server.getScheduler() == null) {
       return 0;
     }
     return server.getScheduler().getActiveRpcHandlerCount();

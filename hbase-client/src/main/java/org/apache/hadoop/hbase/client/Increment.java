@@ -25,11 +25,11 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
@@ -95,6 +95,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @return this
    * @throws java.io.IOException e
    */
+  @SuppressWarnings("unchecked")
   public Increment add(Cell cell) throws IOException{
     byte [] family = CellUtil.cloneFamily(cell);
     List<Cell> list = getCellList(family);
@@ -120,6 +121,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @param amount amount to increment by
    * @return the Increment object
    */
+  @SuppressWarnings("unchecked")
   public Increment addColumn(byte [] family, byte [] qualifier, long amount) {
     if (family == null) {
       throw new IllegalArgumentException("family cannot be null");
@@ -237,7 +239,7 @@ public class Increment extends Mutation implements Comparable<Row> {
           } else {
             moreThanOneB = true;
           }
-          sb.append(CellUtil.getCellKeyAsString(cell) + "+=" +
+          sb.append(CellUtil.getCellKey(cell) + "+=" +
               Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         }
         sb.append("}");

@@ -20,6 +20,9 @@
 package org.apache.hadoop.hbase.util;
 
 
+import com.google.common.base.Supplier;
+import com.google.common.collect.Multiset;
+
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Set;
@@ -29,9 +32,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-
-import com.google.common.base.Supplier;
-import com.google.common.collect.Multiset;
 
 /**
  * A simple concurrent map of sets. This is similar in concept to

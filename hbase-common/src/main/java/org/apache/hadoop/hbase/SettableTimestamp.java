@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -32,12 +30,12 @@ public interface SettableTimestamp {
    * Sets with the given timestamp.
    * @param ts
    */
-  void setTimestamp(long ts) throws IOException;
+  void setTimestamp(long ts);
 
   /**
    * Sets with the given timestamp.
    * @param ts buffer containing the timestamp value
    * @param tsOffset offset to the new timestamp
    */
-  void setTimestamp(byte[] ts, int tsOffset) throws IOException;
+  void setTimestamp(byte[] ts, int tsOffset);
 }

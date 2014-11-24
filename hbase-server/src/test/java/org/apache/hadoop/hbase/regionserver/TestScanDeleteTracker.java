@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
@@ -36,13 +34,11 @@ public class TestScanDeleteTracker extends HBaseTestCase {
   private long timestamp = 10L;
   private byte deleteType = 0;
 
-  @Before
   public void setUp() throws Exception {
     super.setUp();
     sdt = new ScanDeleteTracker();
   }
 
-  @Test
   public void testDeletedBy_Delete() {
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"),
         Bytes.toBytes("qualifier"), timestamp, KeyValue.Type.Delete);
@@ -51,7 +47,6 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     assertEquals(DeleteResult.VERSION_DELETED, ret);
   }
 
-  @Test
   public void testDeletedBy_DeleteColumn() {
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"),
         Bytes.toBytes("qualifier"), timestamp, KeyValue.Type.DeleteColumn);
@@ -63,7 +58,6 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     assertEquals(DeleteResult.COLUMN_DELETED, ret);
   }
 
-  @Test
   public void testDeletedBy_DeleteFamily() {
     KeyValue kv = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("f"),
         Bytes.toBytes("qualifier"), timestamp, KeyValue.Type.DeleteFamily);
@@ -75,7 +69,6 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     assertEquals(DeleteResult.FAMILY_DELETED, ret);
   }
 
-  @Test
   public void testDeletedBy_DeleteFamilyVersion() {
     byte [] qualifier1 = Bytes.toBytes("qualifier1");
     byte [] qualifier2 = Bytes.toBytes("qualifier2");
@@ -120,7 +113,6 @@ public class TestScanDeleteTracker extends HBaseTestCase {
   }
 
 
-  @Test
   public void testDelete_DeleteColumn() {
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.Delete.getCode();
@@ -142,7 +134,6 @@ public class TestScanDeleteTracker extends HBaseTestCase {
   }
 
 
-  @Test
   public void testDeleteColumn_Delete() {
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.DeleteColumn.getCode();
@@ -163,7 +154,6 @@ public class TestScanDeleteTracker extends HBaseTestCase {
   //Testing new way where we save the Delete in case of a Delete for specific
   //ts, could have just added the last line to the first test, but rather keep
   //them separated
-  @Test
   public void testDelete_KeepDelete(){
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.Delete.getCode();
@@ -174,7 +164,6 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     assertEquals(false ,sdt.isEmpty());
   }
 
-  @Test
   public void testDelete_KeepVersionZero(){
     byte [] qualifier = Bytes.toBytes("qualifier");
     deleteType = KeyValue.Type.Delete.getCode();

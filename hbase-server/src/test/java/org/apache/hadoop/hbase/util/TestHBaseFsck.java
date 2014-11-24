@@ -110,7 +110,6 @@ import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -554,7 +553,6 @@ public class TestHBaseFsck {
 
     class RunHbck implements Callable<HBaseFsck>{
       boolean fail = true;
-      @Override
       public HBaseFsck call(){
         try{
           return doFsck(conf, false);
@@ -2555,20 +2553,4 @@ public class TestHBaseFsck {
 
   @org.junit.Rule
   public TestName name = new TestName();
-
-  @Test
-  public void testReadOnlyProperty() throws Exception {
-    HBaseFsck hbck = doFsck(conf, false);
-    Assert.assertEquals("shouldIgnorePreCheckPermission", true,
-      hbck.shouldIgnorePreCheckPermission());
-
-    hbck = doFsck(conf, true);
-    Assert.assertEquals("shouldIgnorePreCheckPermission", false,
-      hbck.shouldIgnorePreCheckPermission());
-
-    hbck = doFsck(conf, true);
-    hbck.setIgnorePreCheckPermission(true);
-    Assert.assertEquals("shouldIgnorePreCheckPermission", true,
-      hbck.shouldIgnorePreCheckPermission());
-  }
 }

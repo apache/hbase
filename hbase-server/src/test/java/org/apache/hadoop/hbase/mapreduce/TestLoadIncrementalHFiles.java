@@ -432,33 +432,5 @@ public class TestLoadIncrementalHFiles {
     String[] args = { "directory", "nonExistingTable" };
     loader.run(args);
   }
-
-  @Test
-  public void testTableWithCFNameStartWithUnderScore() throws Exception {
-    Path dir = util.getDataTestDirOnTestFS("cfNameStartWithUnderScore");
-    FileSystem fs = util.getTestFileSystem();
-    dir = dir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
-    String family = "_cf";
-    Path familyDir = new Path(dir, family);
-
-    byte[] from = Bytes.toBytes("begin");
-    byte[] to = Bytes.toBytes("end");
-    Configuration conf = util.getConfiguration();
-    String tableName = "mytable_cfNameStartWithUnderScore";
-    Table table = util.createTable(TableName.valueOf(tableName), family);
-    HFileTestUtil.createHFile(conf, fs, new Path(familyDir, "hfile"), Bytes.toBytes(family),
-      QUALIFIER, from, to, 1000);
-
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
-    String[] args = { dir.toString(), tableName };
-    try {
-      loader.run(args);
-      assertEquals(1000, util.countRows(table));
-    } finally {
-      if (null != table) {
-        table.close();
-      }
-    }
-  }
 }
 

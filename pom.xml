@@ -65,14 +65,6 @@
     <module>hbase-rest</module>
     <module>hbase-checkstyle</module>
   </modules>
-  <!--Add apache snapshots in case we want to use unreleased versions of plugins:
-      e.g. surefire 2.18-SNAPSHOT-->
-  <pluginRepositories>
-    <pluginRepository>
-      <id>apache.snapshots</id>
-      <url>http://repository.apache.org/snapshots/</url>
-    </pluginRepository>
-  </pluginRepositories>
   <scm>
     <connection>scm:git:git://git.apache.org/hbase.git</connection>
     <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/hbase.git</developerConnection>
@@ -424,6 +416,16 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
+          <version>2.4.1</version>
+          <!--Making a release I've been using mvn 3.0 and specifying the apache-release
+              profile on the command line as follows:
+
+              $ ~/bin/mvn/bin/mvn  -Papache-release release:perform
+
+              I've also been kiling the release:prepare step mid-way to check the
+              release.properties it generates at the top-level.  Sometimes it refers
+              to HEAD rather than to the svn branch.
+           -->
           <configuration>
             <!--You need this profile. It'll sign your artifacts.
                 I'm not sure if this config. actually works though.
@@ -438,9 +440,8 @@
           </configuration>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.2</version>
+          <version>2.5.1</version>
           <configuration>
             <source>${compileSource}</source>
             <target>${compileSource}</target>
@@ -448,27 +449,9 @@
             <showDeprecation>false</showDeprecation>
             <compilerArgument>-Xlint:-options</compilerArgument>
           </configuration>
-          <dependencies>
-           <dependency>
-             <groupId>com.google.errorprone</groupId>
-             <artifactId>error_prone_core</artifactId>
-             <version>1.1.1</version>
-           </dependency>
-           <dependency>
-             <groupId>org.codehaus.plexus</groupId>
-             <artifactId>plexus-compiler-javac</artifactId>
-             <version>2.3</version>
-           </dependency>
-           <dependency>
-             <groupId>org.codehaus.plexus</groupId>
-             <artifactId>plexus-compiler-javac-errorprone</artifactId>
-             <version>2.3</version>
-           </dependency>
-         </dependencies>   
         </plugin>
         <!-- Test oriented plugins -->
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire.version}</version>
           <dependencies>
@@ -514,12 +497,10 @@
           </executions>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-report-plugin</artifactId>
           <version>${surefire.version}</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-clean-plugin</artifactId>
           <configuration>
             <filesets>
@@ -534,8 +515,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>3.0.0</version>
-          <!--NOTE: Findbugs 3.0.0 requires jdk7-->
+          <version>${findbugs-maven-plugin.version}</version>
           <configuration>
             <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
             <findbugsXmlOutput>true</findbugsXmlOutput>
@@ -546,7 +526,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.9.1</version>
+          <version>1.5</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
@@ -602,7 +582,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>
-          <version>2.9</version>
+          <version>2.8</version>
         </plugin>
         <!--This plugin's configuration is used to store Eclipse m2e settings only. It
           has no influence on the Maven build itself. m2e does not provide any safeguards against
@@ -619,7 +599,7 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.11</version>
+          <version>0.8</version>
           <configuration>
             <excludes>
               <exclude>**/*.versionsBackup</exclude>
@@ -704,43 +684,6 @@
       </plugins>
     </pluginManagement>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <!-- version set by parent -->
-        <configuration>
-          <rules>
-            <!-- The earliest maven version we verify builds for via ASF Jenkins -->
-            <requireMavenVersion>
-              <version>[${maven.min.version},)</version>
-              <message>Maven is out of date.
-  HBase requires at least version ${maven.min.version} of Maven to properly build from source.
-  You appear to be using an older version. You can use either "mvn -version" or
-  "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
-              </message>
-            </requireMavenVersion>
-            <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
-            <requireJavaVersion>
-              <version>[${java.min.version},)</version>
-              <message>Java is out of date.
-  HBase requirs at least version ${java.min.version} of the JDK to properly build from source.
-  You appear to be using an older version. You can use either "mvn -version" or
-  "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
-              </message>
-            </requireJavaVersion>
-          </rules>
-        </configuration>
-        <executions>
-          <execution>
-            <id>enforce</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
       <!-- parent-module only plugins -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -883,6 +826,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
+        <version>${maven.resources.plugin.version}</version>
         <!--$NO-MVN-MAN-VER$ -->
         <inherited>false</inherited>
         <executions>
@@ -930,7 +874,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
-        <version>3.4</version>
+        <version>${maven.site.version}</version>
         <inherited>false</inherited>
         <dependencies>
           <dependency>
@@ -982,20 +926,17 @@
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.7</compileSource>
-    <!-- Build dependencies -->
-    <maven.min.version>3.0.3</maven.min.version>
-    <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-two.version>2.5.1</hadoop-two.version>
+    <hadoop-two.version>2.4.0</hadoop-two.version>
     <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
     <commons-cli.version>1.2</commons-cli.version>
-    <commons-codec.version>1.9</commons-codec.version>
+    <commons-codec.version>1.7</commons-codec.version>
     <!-- pretty outdated -->
     <commons-io.version>2.4</commons-io.version>
     <commons-lang.version>2.6</commons-lang.version>
-    <commons-logging.version>1.2</commons-logging.version>
-    <commons-math.version>2.2</commons-math.version>
-    <disruptor.version>3.3.0</disruptor.version>
+    <commons-logging.version>1.1.3</commons-logging.version>
+    <commons-math.version>2.1</commons-math.version>
+    <disruptor.version>3.2.0</disruptor.version>
     <collections.version>3.2.1</collections.version>
     <httpclient.version>3.1</httpclient.version>
     <metrics-core.version>2.2.0</metrics-core.version>
@@ -1010,23 +951,26 @@
     <junit.version>4.11</junit.version>
     <htrace.version>3.0.4</htrace.version>
     <log4j.version>1.2.17</log4j.version>
-    <mockito-all.version>1.10.8</mockito-all.version>
+    <mockito-all.version>1.9.0</mockito-all.version>
     <protobuf.version>2.5.0</protobuf.version>
     <thrift.version>0.9.0</thrift.version>
     <zookeeper.version>3.4.6</zookeeper.version>
-    <slf4j.version>1.7.7</slf4j.version>
+    <slf4j.version>1.7.5</slf4j.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
     <jamon-runtime.version>2.3.1</jamon-runtime.version>
-    <jettison.version>1.3.3</jettison.version>
-    <netty.version>4.0.23.Final</netty.version>
+    <jettison.version>1.3.1</jettison.version>
+    <netty.version>4.0.19.Final</netty.version>
     <joni.version>2.1.2</joni.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
+    <findbugs-maven-plugin.version>2.5.2</findbugs-maven-plugin.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
+    <maven.site.version>3.3</maven.site.version>
     <javadoc.version>2.9</javadoc.version>
+    <maven.resources.plugin.version>2.6</maven.resources.plugin.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -1040,8 +984,7 @@
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
     <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
-    <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
-    <surefire.version>2.18-SNAPSHOT</surefire.version>
+    <surefire.version>2.17</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
@@ -1085,7 +1028,7 @@
         <artifactId>hbase-annotations</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
-        <!--Was test scope only but if we want to run hbase-it tests, need the annotations test jar-->
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>

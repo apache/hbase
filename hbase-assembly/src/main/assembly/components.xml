@@ -119,14 +119,6 @@
       <fileMode>0644</fileMode>
     </fileSet>
     <fileSet>
-        <directory>${project.basedir}/../hbase-annotations/target/</directory>
-      <outputDirectory>lib</outputDirectory>
-      <includes>
-        <include>${annotations.test.jar}</include>
-      </includes>
-      <fileMode>0644</fileMode>
-    </fileSet>
-    <fileSet>
         <directory>${project.basedir}/../hbase-common/target/</directory>
       <outputDirectory>lib</outputDirectory>
       <includes>

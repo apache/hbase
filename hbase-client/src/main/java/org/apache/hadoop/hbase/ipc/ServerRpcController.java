@@ -18,15 +18,14 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
-
-import org.apache.hadoop.util.StringUtils;
-
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
+import org.apache.hadoop.util.StringUtils;
+
+import java.io.IOException;
 
 /**
  * Used for server-side protobuf RPC service invocations.  This handler allows

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseIOException;
 
 /**
  * Subclass if exception is not meant to be retried: e.g.

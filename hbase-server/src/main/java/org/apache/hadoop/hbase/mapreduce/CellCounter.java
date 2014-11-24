@@ -127,10 +127,9 @@ public class CellCounter extends Configured implements Tool {
           if (!thisRowFamilyName.equals(currentFamilyName)) {
             currentFamilyName = thisRowFamilyName;
             context.getCounter("CF", thisRowFamilyName).increment(1);
-            if (1 == context.getCounter("CF", thisRowFamilyName).getValue()) {
-              context.write(new Text("Total Families Across all Rows"), new IntWritable(1));
-              context.write(new Text(thisRowFamilyName), new IntWritable(1));
-            }
+            context.write(new Text("Total Families Across all Rows"),
+              new IntWritable(1));
+            context.write(new Text(thisRowFamilyName), new IntWritable(1));
           }
           String thisRowQualifierName = thisRowFamilyName + separator
               + Bytes.toStringBinary(CellUtil.cloneQualifier(value));
@@ -242,7 +241,7 @@ public class CellCounter extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    if (otherArgs.length < 2) {
+    if (otherArgs.length < 1) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
       System.err.println("Usage: CellCounter <tablename> <outputDir> <reportSeparator> " +
           "[^[regex pattern] or [Prefix] for row filter]] ");

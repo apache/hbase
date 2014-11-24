@@ -5038,7 +5038,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     if (this.metricsRegion != null) {
       long totalSize = 0l;
       for (Cell cell : results) {
-        totalSize += CellUtil.estimatedSerializedSizeOf(cell);
+        totalSize += CellUtil.estimatedLengthOf(cell);
       }
       this.metricsRegion.updateGet(totalSize);
     }

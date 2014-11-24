@@ -95,14 +95,12 @@ import org.junit.experimental.categories.Category;
 public class TestHLog  {
   private static final Log LOG = LogFactory.getLog(TestHLog.class);
   {
-    // Uncomment the following lines if more verbosity is needed for
-    // debugging (see HBASE-12285 for details).
-    //((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.server.namenode.FSNamesystem"))
-    //    .getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.server.namenode.FSNamesystem"))
+      .getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
   }
 
   private static Configuration conf;

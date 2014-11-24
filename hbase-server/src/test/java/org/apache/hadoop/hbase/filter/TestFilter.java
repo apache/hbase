@@ -141,6 +141,7 @@ public class TestFilter {
     htd.addFamily(new HColumnDescriptor(FAMILIES_1[1]));
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[1]));
+    htd.addFamily(new HColumnDescriptor(FAMILIES_1[1]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
             TEST_UTIL.getConfiguration(), htd);

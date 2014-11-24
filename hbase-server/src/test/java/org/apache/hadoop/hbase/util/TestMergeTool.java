@@ -46,9 +46,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /** Test stand alone merge tool that can merge arbitrary regions */
@@ -66,7 +63,7 @@ public class TestMergeTool extends HBaseTestCase {
   private byte [][][] rows;
   private MiniDFSCluster dfsCluster = null;
 
-  @Before
+  @Override
   public void setUp() throws Exception {
     // Set the timeout down else this test will take a while to complete.
     this.conf.setLong("hbase.zookeeper.recoverable.waittime", 10);
@@ -150,14 +147,15 @@ public class TestMergeTool extends HBaseTestCase {
     try {
       // Create meta region
       createMetaRegion();
-      new FSTableDescriptors(this.conf, this.fs, testDir).createTableDescriptor(
+      new FSTableDescriptors(this.conf, this.fs, this.testDir).createTableDescriptor(
           new TableDescriptor(this.desc));
       /*
        * Create the regions we will merge
        */
       for (int i = 0; i < sourceRegions.length; i++) {
         regions[i] =
-          HRegion.createHRegion(this.sourceRegions[i], testDir, this.conf, this.desc);
+          HRegion.createHRegion(this.sourceRegions[i], this.testDir, this.conf,
+              this.desc);
         /*
          * Insert data
          */
@@ -178,7 +176,7 @@ public class TestMergeTool extends HBaseTestCase {
     }
   }
 
-  @After
+  @Override
   public void tearDown() throws Exception {
     super.tearDown();
     for (int i = 0; i < sourceRegions.length; i++) {
@@ -258,7 +256,6 @@ public class TestMergeTool extends HBaseTestCase {
    * Test merge tool.
    * @throws Exception
    */
-  @Test
   public void testMergeTool() throws Exception {
     // First verify we can read the rows from the source regions and that they
     // contain the right data.

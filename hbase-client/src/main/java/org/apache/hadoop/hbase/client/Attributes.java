@@ -19,10 +19,10 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.util.Map;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+
+import java.util.Map;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable

@@ -68,9 +68,11 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.MasterCoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionServerCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -83,6 +85,9 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -106,6 +111,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnaps
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
@@ -661,24 +668,47 @@ public class HBaseAdmin implements Admin {
     // Wait until all regions deleted
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       try {
-        // Find whether all regions are deleted.
-        List<RegionLocations> regionLations =
-            MetaScanner.listTableRegionLocations(conf, connection, tableName);
+        HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
+        Scan scan = MetaTableAccessor.getScanForTableName(tableName);
+        scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+        ScanRequest request = RequestConverter.buildScanRequest(
+          firstMetaServer.getRegionInfo().getRegionName(), scan, 1, true);
+        Result[] values = null;
+        // Get a batch at a time.
+        ClientService.BlockingInterface server = connection.getClient(firstMetaServer
+            .getServerName());
+        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        try {
+          controller.setPriority(tableName);
+          ScanResponse response = server.scan(controller, request);
+          values = ResponseConverter.getResults(controller.cellScanner(), response);
+        } catch (ServiceException se) {
+          throw ProtobufUtil.getRemoteException(se);
+        }
 
         // let us wait until hbase:meta table is updated and
         // HMaster removes the table from its HTableDescriptors
-        if (regionLations == null || regionLations.size() == 0) {
-          HTableDescriptor htd = getTableDescriptorByTableName(tableName);
-
-          if (htd == null) {
-            // table could not be found in master - we are done.
-            tableExists = false;
+        if (values == null || values.length == 0) {
+          tableExists = false;
+          GetTableDescriptorsResponse htds;
+          MasterKeepAliveConnection master = connection.getKeepAliveMasterService();
+          try {
+            GetTableDescriptorsRequest req =
+              RequestConverter.buildGetTableDescriptorsRequest(tableName);
+            htds = master.getTableDescriptors(null, req);
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          } finally {
+            master.close();
+          }
+          tableExists = !htds.getTableSchemaList().isEmpty();
+          if (!tableExists) {
             break;
           }
         }
       } catch (IOException ex) {
         failures++;
-        if(failures >= numRetries - 1) {           // no more tries left
+        if(failures == numRetries - 1) {           // no more tries left
           if (ex instanceof RemoteException) {
             throw ((RemoteException) ex).unwrapRemoteException();
           } else {
@@ -2587,27 +2617,6 @@ public class HBaseAdmin implements Admin {
   public HTableDescriptor[] getTableDescriptorsByTableName(List<TableName> tableNames)
   throws IOException {
     return this.connection.getHTableDescriptorsByTableName(tableNames);
-  }
-
-  /**
-   * Get tableDescriptor
-   * @param tableName one table name
-   * @return HTD the HTableDescriptor or null if the table not exists
-   * @throws IOException if a remote or network exception occurs
-   */
-  private HTableDescriptor getTableDescriptorByTableName(TableName tableName)
-      throws IOException {
-    List<TableName> tableNames = new ArrayList<TableName>(1);
-    tableNames.add(tableName);
-
-    HTableDescriptor[] htdl = getTableDescriptorsByTableName(tableNames);
-
-    if (htdl == null || htdl.length == 0) {
-      return null;
-    }
-    else {
-      return htdl[0];
-    }
   }
 
   /**

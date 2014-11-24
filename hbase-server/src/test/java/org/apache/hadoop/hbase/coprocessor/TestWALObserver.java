@@ -230,36 +230,6 @@ public class TestWALObserver {
   }
 
   /**
-   * Coprocessors shouldn't get notice of empty waledits.
-   */
-  @Test
-  public void testEmptyWALEditAreNotSeen() throws Exception {
-    final HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(TEST_TABLE));
-    final HTableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
-    final AtomicLong sequenceId = new AtomicLong(0);
-
-    HLog log = HLogFactory.createHLog(this.fs, hbaseRootDir,
-        TestWALObserver.class.getName(), this.conf);
-    try {
-      SampleRegionWALObserver cp = getCoprocessor(log);
-
-      cp.setTestValues(TEST_TABLE, null, null, null, null, null, null, null);
-
-      assertFalse(cp.isPreWALWriteCalled());
-      assertFalse(cp.isPostWALWriteCalled());
-
-      final long now = EnvironmentEdgeManager.currentTime();
-      log.append(hri, hri.getTable(), new WALEdit(), now, htd, sequenceId);
-      log.sync();
-
-      assertFalse("Empty WALEdit should skip coprocessor evaluation.", cp.isPreWALWriteCalled());
-      assertFalse("Empty WALEdit should skip coprocessor evaluation.", cp.isPostWALWriteCalled());
-    } finally {
-      log.closeAndDelete();
-    }
-  }
-
-  /**
    * Test WAL replay behavior with WALObserver.
    */
   @Test

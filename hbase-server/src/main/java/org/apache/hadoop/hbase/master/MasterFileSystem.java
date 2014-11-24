@@ -621,7 +621,7 @@ public class MasterFileSystem {
       throw new InvalidFamilyOperationException("Family '" +
         Bytes.toString(familyName) + "' doesn't exists so cannot be modified");
     }
-    htd.modifyFamily(hcd);
+    htd.addFamily(hcd);
     this.services.getTableDescriptors().add(htd);
     return htd;
   }

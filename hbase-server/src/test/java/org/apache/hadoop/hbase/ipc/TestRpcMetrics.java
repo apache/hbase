@@ -48,8 +48,8 @@ public class TestRpcMetrics {
     assertEquals("Master,sub=IPC", masterSource.getMetricsJmxContext());
     assertEquals("RegionServer,sub=IPC", rsSource.getMetricsJmxContext());
 
-    assertEquals("Master", masterSource.getMetricsName());
-    assertEquals("RegionServer", rsSource.getMetricsName());
+    assertEquals("IPC", masterSource.getMetricsName());
+    assertEquals("IPC", rsSource.getMetricsName());
   }
 
   /**

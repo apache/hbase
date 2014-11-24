@@ -176,7 +176,7 @@ public class TestHFileWriterV3 {
                         .withIncludesTags(useTags)
                         .withHBaseCheckSum(true).build();
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderImpl(fsdis, fileSize, meta);
+        new HFileBlock.FSReaderV2(fsdis, fileSize, meta);
  // Comparator class name is stored in the trailer in version 2.
     KVComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =

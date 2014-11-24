@@ -43,34 +43,36 @@ public class KeyPrefixRegionSplitPolicy extends IncreasingToUpperBoundRegionSpli
   @Override
   protected void configureForRegion(HRegion region) {
     super.configureForRegion(region);
-    prefixLength = 0;
+    if (region != null) {
+      prefixLength = 0;
 
-    // read the prefix length from the table descriptor
-    String prefixLengthString = region.getTableDesc().getValue(
-        PREFIX_LENGTH_KEY);
-    if (prefixLengthString == null) {
-      //read the deprecated value
-      prefixLengthString = region.getTableDesc().getValue(PREFIX_LENGTH_KEY_DEPRECATED);
+      // read the prefix length from the table descriptor
+      String prefixLengthString = region.getTableDesc().getValue(
+          PREFIX_LENGTH_KEY);
       if (prefixLengthString == null) {
-        LOG.error(PREFIX_LENGTH_KEY + " not specified for table "
-            + region.getTableDesc().getTableName()
-            + ". Using default RegionSplitPolicy");
+        //read the deprecated value
+        prefixLengthString = region.getTableDesc().getValue(PREFIX_LENGTH_KEY_DEPRECATED);
+        if (prefixLengthString == null) {
+          LOG.error(PREFIX_LENGTH_KEY + " not specified for table "
+              + region.getTableDesc().getTableName()
+              + ". Using default RegionSplitPolicy");
+          return;
+        }
+      }
+      try {
+        prefixLength = Integer.parseInt(prefixLengthString);
+      } catch (NumberFormatException nfe) {
+        /* Differentiate NumberFormatException from an invalid value range reported below. */
+        LOG.error("Number format exception when parsing " + PREFIX_LENGTH_KEY + " for table "
+            + region.getTableDesc().getTableName() + ":"
+            + prefixLengthString + ". " + nfe);
         return;
       }
-    }
-    try {
-      prefixLength = Integer.parseInt(prefixLengthString);
-    } catch (NumberFormatException nfe) {
-      /* Differentiate NumberFormatException from an invalid value range reported below. */
-      LOG.error("Number format exception when parsing " + PREFIX_LENGTH_KEY + " for table "
-          + region.getTableDesc().getTableName() + ":"
-          + prefixLengthString + ". " + nfe);
-      return;
-    }
-    if (prefixLength <= 0) {
-      LOG.error("Invalid value for " + PREFIX_LENGTH_KEY + " for table "
-          + region.getTableDesc().getTableName() + ":"
-          + prefixLengthString + ". Using default RegionSplitPolicy");
+      if (prefixLength <= 0) {
+        LOG.error("Invalid value for " + PREFIX_LENGTH_KEY + " for table "
+            + region.getTableDesc().getTableName() + ":"
+            + prefixLengthString + ". Using default RegionSplitPolicy");
+      }
     }
   }
 

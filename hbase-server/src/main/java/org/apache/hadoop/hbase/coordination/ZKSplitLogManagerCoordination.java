@@ -98,6 +98,8 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   SplitLogManagerDetails details;
 
+  private final Stoppable stopper = null;
+
   // When lastRecoveringNodeCreationTime is older than the following threshold, we'll check
   // whether to GC stale recovering znodes
   private volatile long lastRecoveringNodeCreationTime = 0;
@@ -667,7 +669,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         } catch (InterruptedException e) {
           throw new InterruptedIOException();
         }
-      } while ((--retries) > 0);
+      } while ((--retries) > 0 && (!this.stopper.isStopped()));
     }
   }
 
