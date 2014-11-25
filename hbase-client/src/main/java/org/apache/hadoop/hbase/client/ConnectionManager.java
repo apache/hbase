@@ -563,6 +563,10 @@ class ConnectionManager {
 
     private final Configuration conf;
 
+    // cache the configuration value for tables so that we can avoid calling
+    // the expensive Configuration to fetch the value multiple times.
+    private final TableConfiguration tableConfig;
+
     // Client rpc instance.
     private RpcClient rpcClient;
 
@@ -642,11 +646,11 @@ class ConnectionManager {
      */
     protected HConnectionImplementation(Configuration conf) {
       this.conf = conf;
+      this.tableConfig = new TableConfiguration(conf);
       this.closed = false;
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
           HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-      this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+      this.numTries = tableConfig.getRetriesNumber();
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
@@ -695,7 +699,7 @@ class ConnectionManager {
       if (managed) {
         throw new IOException("The connection has to be unmanaged.");
       }
-      return new HTable(tableName, this, pool);
+      return new HTable(tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, pool);
     }
 
     @Override
@@ -703,7 +707,8 @@ class ConnectionManager {
       if (managed) {
         throw new IOException("The connection has to be unmanaged.");
       }
-      return new HTable(tableName, this, getBatchPool());
+      return new HTable(
+        tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, getBatchPool());
     }
 
     @Override
