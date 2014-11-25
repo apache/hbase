@@ -19,15 +19,12 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -35,18 +32,19 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Helper class to interact with the quota table
@@ -85,90 +83,89 @@ public class QuotaUtil extends QuotaTableUtil {
   /* =========================================================================
    *  Quota "settings" helpers
    */
-  public static void addTableQuota(final Configuration conf, final TableName table,
+  public static void addTableQuota(final Connection connection, final TableName table,
       final Quotas data) throws IOException {
-    addQuotas(conf, getTableRowKey(table), data);
+    addQuotas(connection, getTableRowKey(table), data);
   }
 
-  public static void deleteTableQuota(final Configuration conf, final TableName table)
+  public static void deleteTableQuota(final Connection connection, final TableName table)
       throws IOException {
-    deleteQuotas(conf, getTableRowKey(table));
+    deleteQuotas(connection, getTableRowKey(table));
   }
 
-  public static void addNamespaceQuota(final Configuration conf, final String namespace,
+  public static void addNamespaceQuota(final Connection connection, final String namespace,
       final Quotas data) throws IOException {
-    addQuotas(conf, getNamespaceRowKey(namespace), data);
+    addQuotas(connection, getNamespaceRowKey(namespace), data);
   }
 
-  public static void deleteNamespaceQuota(final Configuration conf, final String namespace)
+  public static void deleteNamespaceQuota(final Connection connection, final String namespace)
       throws IOException {
-    deleteQuotas(conf, getNamespaceRowKey(namespace));
+    deleteQuotas(connection, getNamespaceRowKey(namespace));
   }
 
-  public static void addUserQuota(final Configuration conf, final String user,
+  public static void addUserQuota(final Connection connection, final String user,
       final Quotas data) throws IOException {
-    addQuotas(conf, getUserRowKey(user), data);
+    addQuotas(connection, getUserRowKey(user), data);
   }
 
-  public static void addUserQuota(final Configuration conf, final String user,
+  public static void addUserQuota(final Connection connection, final String user,
       final TableName table, final Quotas data) throws IOException {
-    addQuotas(conf, getUserRowKey(user),
-        getSettingsQualifierForUserTable(table), data);
+    addQuotas(connection, getUserRowKey(user), getSettingsQualifierForUserTable(table), data);
   }
 
-  public static void addUserQuota(final Configuration conf, final String user,
+  public static void addUserQuota(final Connection connection, final String user,
       final String namespace, final Quotas data) throws IOException {
-    addQuotas(conf, getUserRowKey(user),
+    addQuotas(connection, getUserRowKey(user),
         getSettingsQualifierForUserNamespace(namespace), data);
   }
 
-  public static void deleteUserQuota(final Configuration conf, final String user)
+  public static void deleteUserQuota(final Connection connection, final String user)
       throws IOException {
-    deleteQuotas(conf, getUserRowKey(user));
+    deleteQuotas(connection, getUserRowKey(user));
   }
 
-  public static void deleteUserQuota(final Configuration conf, final String user,
+  public static void deleteUserQuota(final Connection connection, final String user,
       final TableName table) throws IOException {
-    deleteQuotas(conf, getUserRowKey(user),
+    deleteQuotas(connection, getUserRowKey(user),
         getSettingsQualifierForUserTable(table));
   }
 
-  public static void deleteUserQuota(final Configuration conf, final String user,
+  public static void deleteUserQuota(final Connection connection, final String user,
       final String namespace) throws IOException {
-    deleteQuotas(conf, getUserRowKey(user),
+    deleteQuotas(connection, getUserRowKey(user),
         getSettingsQualifierForUserNamespace(namespace));
   }
 
-  private static void addQuotas(final Configuration conf, final byte[] rowKey,
+  private static void addQuotas(final Connection connection, final byte[] rowKey,
       final Quotas data) throws IOException {
-    addQuotas(conf, rowKey, QUOTA_QUALIFIER_SETTINGS, data);
+    addQuotas(connection, rowKey, QUOTA_QUALIFIER_SETTINGS, data);
   }
 
-  private static void addQuotas(final Configuration conf, final byte[] rowKey,
+  private static void addQuotas(final Connection connection, final byte[] rowKey,
       final byte[] qualifier, final Quotas data) throws IOException {
     Put put = new Put(rowKey);
     put.add(QUOTA_FAMILY_INFO, qualifier, quotasToData(data));
-    doPut(conf, put);
+    doPut(connection, put);
   }
 
-  private static void deleteQuotas(final Configuration conf, final byte[] rowKey)
+  private static void deleteQuotas(final Connection connection, final byte[] rowKey)
       throws IOException {
-    deleteQuotas(conf, rowKey, null);
+    deleteQuotas(connection, rowKey, null);
   }
 
-  private static void deleteQuotas(final Configuration conf, final byte[] rowKey,
+  private static void deleteQuotas(final Connection connection, final byte[] rowKey,
       final byte[] qualifier) throws IOException {
     Delete delete = new Delete(rowKey);
     if (qualifier != null) {
       delete.deleteColumns(QUOTA_FAMILY_INFO, qualifier);
     }
-    doDelete(conf, delete);
+    doDelete(connection, delete);
   }
 
-  public static Map<String, UserQuotaState> fetchUserQuotas(final Configuration conf,
+  public static Map<String, UserQuotaState> fetchUserQuotas(final Connection connection,
       final List<Get> gets) throws IOException {
     long nowTs = EnvironmentEdgeManager.currentTime();
-    Result[] results = doGet(conf, gets);
+    Result[] results = doGet(connection, gets);
 
     Map<String, UserQuotaState> userQuotas = new HashMap<String, UserQuotaState>(results.length);
     for (int i = 0; i < results.length; ++i) {
@@ -207,9 +204,9 @@ public class QuotaUtil extends QuotaTableUtil {
     return userQuotas;
   }
 
-  public static Map<TableName, QuotaState> fetchTableQuotas(final Configuration conf,
+  public static Map<TableName, QuotaState> fetchTableQuotas(final Connection connection,
       final List<Get> gets) throws IOException {
-    return fetchGlobalQuotas("table", conf, gets, new KeyFromRow<TableName>() {
+    return fetchGlobalQuotas("table", connection, gets, new KeyFromRow<TableName>() {
       @Override
       public TableName getKeyFromRow(final byte[] row) {
         assert isTableRowKey(row);
@@ -218,9 +215,9 @@ public class QuotaUtil extends QuotaTableUtil {
     });
   }
 
-  public static Map<String, QuotaState> fetchNamespaceQuotas(final Configuration conf,
+  public static Map<String, QuotaState> fetchNamespaceQuotas(final Connection connection,
       final List<Get> gets) throws IOException {
-    return fetchGlobalQuotas("namespace", conf, gets, new KeyFromRow<String>() {
+    return fetchGlobalQuotas("namespace", connection, gets, new KeyFromRow<String>() {
       @Override
       public String getKeyFromRow(final byte[] row) {
         assert isNamespaceRowKey(row);
@@ -230,9 +227,10 @@ public class QuotaUtil extends QuotaTableUtil {
   }
 
   public static <K> Map<K, QuotaState> fetchGlobalQuotas(final String type,
-      final Configuration conf, final List<Get> gets, final KeyFromRow<K> kfr) throws IOException {
+      final Connection connection, final List<Get> gets, final KeyFromRow<K> kfr)
+  throws IOException {
     long nowTs = EnvironmentEdgeManager.currentTime();
-    Result[] results = doGet(conf, gets);
+    Result[] results = doGet(connection, gets);
 
     Map<K, QuotaState> globalQuotas = new HashMap<K, QuotaState>(results.length);
     for (int i = 0; i < results.length; ++i) {
@@ -266,23 +264,17 @@ public class QuotaUtil extends QuotaTableUtil {
   /* =========================================================================
    *  HTable helpers
    */
-  private static void doPut(final Configuration conf, final Put put)
-      throws IOException {
-    HTable table = new HTable(conf, QuotaUtil.QUOTA_TABLE_NAME);
-    try {
+  private static void doPut(final Connection connection, final Put put)
+  throws IOException {
+    try (Table table = connection.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
       table.put(put);
-    } finally {
-      table.close();
     }
   }
 
-  private static void doDelete(final Configuration conf, final Delete delete)
-      throws IOException {
-    HTable table = new HTable(conf, QuotaUtil.QUOTA_TABLE_NAME);
-    try {
+  private static void doDelete(final Connection connection, final Delete delete)
+  throws IOException {
+    try (Table table = connection.getTable(QuotaUtil.QUOTA_TABLE_NAME)) {
       table.delete(delete);
-    } finally {
-      table.close();
     }
   }
 

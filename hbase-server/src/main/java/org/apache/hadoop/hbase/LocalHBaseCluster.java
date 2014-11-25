@@ -363,12 +363,10 @@ public class LocalHBaseCluster {
    * @return Name of master that just went down.
    */
   public String waitOnMaster(int serverNumber) {
-    JVMClusterUtil.MasterThread masterThread =
-      this.masterThreads.remove(serverNumber);
+    JVMClusterUtil.MasterThread masterThread = this.masterThreads.remove(serverNumber);
     while (masterThread.isAlive()) {
       try {
-        LOG.info("Waiting on " +
-          masterThread.getMaster().getServerName().toString());
+        LOG.info("Waiting on " + masterThread.getMaster().getServerName().toString());
         masterThread.join();
       } catch (InterruptedException e) {
         e.printStackTrace();

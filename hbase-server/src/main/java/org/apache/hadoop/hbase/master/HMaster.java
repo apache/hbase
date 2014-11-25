@@ -538,12 +538,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.serverManager = createServerManager(this, this);
 
-    synchronized (this) {
-      if (shortCircuitConnection == null) {
-        shortCircuitConnection = createShortCircuitConnection();
-        metaTableLocator = new MetaTableLocator();
-      }
-    }
+    setupClusterConnection();
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
@@ -721,7 +716,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       metaState.getState(), metaState.getServerName(), null);
 
     if (!metaState.isOpened() || !metaTableLocator.verifyMetaRegionLocation(
-        this.getShortCircuitConnection(), this.getZooKeeper(), timeout)) {
+        this.getConnection(), this.getZooKeeper(), timeout)) {
       ServerName currentMetaServer = metaState.getServerName();
       if (serverManager.isServerOnline(currentMetaServer)) {
         LOG.info("Meta was in transition on " + currentMetaServer);
@@ -1492,6 +1487,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * is found, but not currently deployed, the second element of the pair
    * may be null.
    */
+  @VisibleForTesting // Used by TestMaster.
   Pair<HRegionInfo, ServerName> getTableRegionForRow(
       final TableName tableName, final byte [] rowKey)
   throws IOException {
@@ -1542,7 +1538,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    if (!MetaTableAccessor.tableExists(getShortCircuitConnection(), tableName)) {
+    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
       throw new TableNotFoundException(tableName);
     }
     if (!getAssignmentManager().getTableStateManager().

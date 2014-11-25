@@ -40,9 +40,10 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -81,13 +82,14 @@ public class OfflineMetaRebuildTestCore {
   private final static byte[] FAM = Bytes.toBytes("fam");
 
   // for the instance, reset every test run
-  protected HTable htbl;
+  protected Table htbl;
   protected final static byte[][] splits = new byte[][] { Bytes.toBytes("A"),
       Bytes.toBytes("B"), Bytes.toBytes("C") };
 
   private final static String TABLE_BASE = "tableMetaRebuild";
   private static int tableIdx = 0;
   protected TableName table = TableName.valueOf("tableMetaRebuild");
+  protected Connection connection;
 
   @Before
   public void setUpBefore() throws Exception {
@@ -95,6 +97,7 @@ public class OfflineMetaRebuildTestCore {
     TEST_UTIL.getConfiguration().setInt("dfs.datanode.max.xceivers", 9192);
     TEST_UTIL.startMiniCluster(3);
     conf = TEST_UTIL.getConfiguration();
+    this.connection = ConnectionFactory.createConnection(conf);
     assertEquals(0, TEST_UTIL.getHBaseAdmin().listTables().length);
 
     // setup the table
@@ -112,8 +115,12 @@ public class OfflineMetaRebuildTestCore {
 
   @After
   public void tearDownAfter() throws Exception {
+    if (this.htbl != null) {
+      this.htbl.close();
+      this.htbl = null;
+    }
+    this.connection.close();
     TEST_UTIL.shutdownMiniCluster();
-    HConnectionManager.deleteConnection(conf);
   }
 
   /**
@@ -123,12 +130,12 @@ public class OfflineMetaRebuildTestCore {
    * @throws InterruptedException
    * @throws KeeperException
    */
-  private HTable setupTable(TableName tablename) throws Exception {
+  private Table setupTable(TableName tablename) throws Exception {
     HTableDescriptor desc = new HTableDescriptor(tablename);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
     TEST_UTIL.getHBaseAdmin().createTable(desc, splits);
-    return new HTable(TEST_UTIL.getConfiguration(), tablename);
+    return this.connection.getTable(tablename);
   }
 
   private void dumpMeta(HTableDescriptor htd) throws IOException {
@@ -167,14 +174,14 @@ public class OfflineMetaRebuildTestCore {
     }
   }
 
-  protected void deleteRegion(Configuration conf, final HTable tbl,
+  protected void deleteRegion(Configuration conf, final Table tbl,
       byte[] startKey, byte[] endKey) throws IOException {
 
     LOG.info("Before delete:");
     HTableDescriptor htd = tbl.getTableDescriptor();
     dumpMeta(htd);
 
-    Map<HRegionInfo, ServerName> hris = tbl.getRegionLocations();
+    Map<HRegionInfo, ServerName> hris = ((HTable)tbl).getRegionLocations();
     for (Entry<HRegionInfo, ServerName> e : hris.entrySet()) {
       HRegionInfo hri = e.getKey();
       ServerName hsa = e.getValue();
@@ -192,10 +199,10 @@ public class OfflineMetaRebuildTestCore {
             hri.getEncodedName());
         fs.delete(p, true);
 
-        Table meta = new HTable(conf, TableName.META_TABLE_NAME);
-        Delete delete = new Delete(deleteRow);
-        meta.delete(delete);
-        meta.close();
+        try (Table meta = this.connection.getTable(TableName.META_TABLE_NAME)) {
+          Delete delete = new Delete(deleteRow);
+          meta.delete(delete);
+        }
       }
       LOG.info(hri.toString() + hsa.toString());
     }
@@ -288,5 +295,15 @@ public class OfflineMetaRebuildTestCore {
     }
     meta.close();
     return count;
+  }
+
+  protected HTableDescriptor[] getTables(final Configuration configuration) throws IOException {
+    HTableDescriptor[] htbls = null;
+    try (Connection connection = ConnectionFactory.createConnection(configuration)) {
+      try (Admin admin = connection.getAdmin()) {
+        htbls = admin.listTables();
+      }
+    }
+    return htbls;
   }
 }

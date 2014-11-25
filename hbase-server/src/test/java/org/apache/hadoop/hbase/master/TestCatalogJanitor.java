@@ -38,25 +38,28 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableDescriptor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.MetaMockingUtil;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
+import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLogManagerDetails;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
@@ -99,7 +102,7 @@ public class TestCatalogJanitor {
    * Be sure to call stop on the way out else could leave some mess around.
    */
   class MockServer implements Server {
-    private final HConnection connection;
+    private final ClusterConnection connection;
     private final Configuration c;
 
     MockServer(final HBaseTestingUtility htu)
@@ -145,7 +148,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return this.connection;
     }
 
@@ -171,7 +174,12 @@ public class TestCatalogJanitor {
 
     @Override
     public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
+      BaseCoordinatedStateManager m = Mockito.mock(BaseCoordinatedStateManager.class);
+      SplitLogManagerCoordination c = Mockito.mock(SplitLogManagerCoordination.class);
+      Mockito.when(m.getSplitLogManagerCoordination()).thenReturn(c);
+      SplitLogManagerDetails d = Mockito.mock(SplitLogManagerDetails.class);
+      Mockito.when(c.getDetails()).thenReturn(d);
+      return m;
     }
 
     @Override
@@ -266,7 +274,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -885,6 +893,7 @@ public class TestCatalogJanitor {
     MasterServices services = new MockMasterServices(server);
 
     // create the janitor
+    
     CatalogJanitor janitor = new CatalogJanitor(server, services);
 
     // Create regions.

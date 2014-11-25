@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -138,7 +138,7 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public HConnection getShortCircuitConnection() {
+  public ClusterConnection getConnection() {
     return null;
   }
 

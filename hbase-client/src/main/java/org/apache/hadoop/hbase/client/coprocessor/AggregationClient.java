@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -36,7 +37,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -72,19 +74,32 @@ import com.google.protobuf.Message;
  * <li>For methods to find maximum, minimum, sum, rowcount, it returns the
  * parameter type. For average and std, it returns a double value. For row
  * count, it returns a long value.
+ * <p>Call {@link #close()} when done.
  */
 @InterfaceAudience.Private
-public class AggregationClient {
-
+public class AggregationClient implements Closeable {
+  // TODO: This class is not used.  Move to examples?
   private static final Log log = LogFactory.getLog(AggregationClient.class);
-  Configuration conf;
+  private final Connection connection;
 
   /**
    * Constructor with Conf object
    * @param cfg
    */
   public AggregationClient(Configuration cfg) {
-    this.conf = cfg;
+    try {
+      // Create a connection on construction. Will use it making each of the calls below.
+      this.connection = ConnectionFactory.createConnection(cfg);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (this.connection != null && !this.connection.isClosed()) {
+      this.connection.close();
+    }
   }
 
   /**
@@ -101,15 +116,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R max(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
       return max(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
@@ -196,15 +205,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R min(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
       return min(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
@@ -276,15 +279,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> long rowCount(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return rowCount(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
+        return rowCount(table, ci, scan);
     }
   }
 
@@ -350,15 +347,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> S sum(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return sum(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
+        return sum(table, ci, scan);
     }
   }
 
@@ -424,14 +415,8 @@ public class AggregationClient {
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long> getAvgArgs(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return getAvgArgs(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return getAvgArgs(table, ci, scan);
     }
   }
 
@@ -615,14 +600,8 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message>
   double std(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return std(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return std(table, ci, scan);
     }
   }
 
@@ -728,14 +707,8 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message>
   R median(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return median(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return median(table, ci, scan);
     }
   }
 

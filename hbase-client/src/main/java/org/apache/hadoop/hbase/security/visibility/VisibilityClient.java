@@ -26,7 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
@@ -73,40 +74,39 @@ public class VisibilityClient {
    */
   public static VisibilityLabelsResponse addLabels(Configuration conf, final String[] labels)
       throws Throwable {
-    Table ht = null;
-    try {
-      ht = new HTable(conf, LABELS_TABLE_NAME);
-      Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
-          new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
-        ServerRpcController controller = new ServerRpcController();
-        BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback = 
-            new BlockingRpcCallback<VisibilityLabelsResponse>();
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(LABELS_TABLE_NAME)) {
+        Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
+            new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
+          ServerRpcController controller = new ServerRpcController();
+          BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback = 
+              new BlockingRpcCallback<VisibilityLabelsResponse>();
 
-        public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
-          VisibilityLabelsRequest.Builder builder = VisibilityLabelsRequest.newBuilder();
-          for (String label : labels) {
-            if (label.length() > 0) {
-              VisibilityLabel.Builder newBuilder = VisibilityLabel.newBuilder();
-              newBuilder.setLabel(ByteStringer.wrap(Bytes.toBytes(label)));
-              builder.addVisLabel(newBuilder.build());
+          public VisibilityLabelsResponse call(VisibilityLabelsService service)
+          throws IOException {
+            VisibilityLabelsRequest.Builder builder = VisibilityLabelsRequest.newBuilder();
+            for (String label : labels) {
+              if (label.length() > 0) {
+                VisibilityLabel.Builder newBuilder = VisibilityLabel.newBuilder();
+                newBuilder.setLabel(ByteStringer.wrap(Bytes.toBytes(label)));
+                builder.addVisLabel(newBuilder.build());
+              }
             }
+            service.addLabels(controller, builder.build(), rpcCallback);
+            VisibilityLabelsResponse response = rpcCallback.get();
+            if (controller.failedOnException()) {
+              throw controller.getFailedOn();
+            }
+            return response;
           }
-          service.addLabels(controller, builder.build(), rpcCallback);
-          VisibilityLabelsResponse response = rpcCallback.get();
-          if (controller.failedOnException()) {
-            throw controller.getFailedOn();
-          }
-          return response;
-        }
-      };
-      Map<byte[], VisibilityLabelsResponse> result = ht.coprocessorService(
-          VisibilityLabelsService.class, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
-          callable);
-      return result.values().iterator().next(); // There will be exactly one region for labels
-                                                // table and so one entry in result Map.
-    } finally {
-      if (ht != null) {
-        ht.close();
+        };
+        Map<byte[], VisibilityLabelsResponse> result =
+          table.coprocessorService(VisibilityLabelsService.class, HConstants.EMPTY_BYTE_ARRAY,
+            HConstants.EMPTY_BYTE_ARRAY, callable);
+        return result.values().iterator().next(); // There will be exactly one region for labels
+        // table and so one entry in result Map.
       }
     }
   }
@@ -131,33 +131,32 @@ public class VisibilityClient {
    * @throws Throwable
    */
   public static GetAuthsResponse getAuths(Configuration conf, final String user) throws Throwable {
-    Table ht = null;
-    try {
-      ht = new HTable(conf, LABELS_TABLE_NAME);
-      Batch.Call<VisibilityLabelsService, GetAuthsResponse> callable = 
-          new Batch.Call<VisibilityLabelsService, GetAuthsResponse>() {
-        ServerRpcController controller = new ServerRpcController();
-        BlockingRpcCallback<GetAuthsResponse> rpcCallback = 
-            new BlockingRpcCallback<GetAuthsResponse>();
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(LABELS_TABLE_NAME)) {
+        Batch.Call<VisibilityLabelsService, GetAuthsResponse> callable = 
+            new Batch.Call<VisibilityLabelsService, GetAuthsResponse>() {
+          ServerRpcController controller = new ServerRpcController();
+          BlockingRpcCallback<GetAuthsResponse> rpcCallback = 
+              new BlockingRpcCallback<GetAuthsResponse>();
 
-        public GetAuthsResponse call(VisibilityLabelsService service) throws IOException {
-          GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
-          getAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
-          service.getAuths(controller, getAuthReqBuilder.build(), rpcCallback);
-          GetAuthsResponse response = rpcCallback.get();
-          if (controller.failedOnException()) {
-            throw controller.getFailedOn();
+          public GetAuthsResponse call(VisibilityLabelsService service) throws IOException {
+            GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
+            getAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
+            service.getAuths(controller, getAuthReqBuilder.build(), rpcCallback);
+            GetAuthsResponse response = rpcCallback.get();
+            if (controller.failedOnException()) {
+              throw controller.getFailedOn();
+            }
+            return response;
           }
-          return response;
-        }
-      };
-      Map<byte[], GetAuthsResponse> result = ht.coprocessorService(VisibilityLabelsService.class,
-          HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, callable);
-      return result.values().iterator().next(); // There will be exactly one region for labels
-                                                // table and so one entry in result Map.
-    } finally {
-      if (ht != null) {
-        ht.close();
+        };
+        Map<byte[], GetAuthsResponse> result =
+          table.coprocessorService(VisibilityLabelsService.class,
+            HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, callable);
+        return result.values().iterator().next(); // There will be exactly one region for labels
+        // table and so one entry in result Map.
       }
     }
   }
@@ -177,43 +176,41 @@ public class VisibilityClient {
 
   private static VisibilityLabelsResponse setOrClearAuths(Configuration conf, final String[] auths,
       final String user, final boolean setOrClear) throws IOException, ServiceException, Throwable {
-    Table ht = null;
-    try {
-      ht = new HTable(conf, LABELS_TABLE_NAME);
-      Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
-          new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
-        ServerRpcController controller = new ServerRpcController();
-        BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback = 
-            new BlockingRpcCallback<VisibilityLabelsResponse>();
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(LABELS_TABLE_NAME)) {
+        Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
+            new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
+          ServerRpcController controller = new ServerRpcController();
+          BlockingRpcCallback<VisibilityLabelsResponse> rpcCallback = 
+              new BlockingRpcCallback<VisibilityLabelsResponse>();
 
-        public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
-          SetAuthsRequest.Builder setAuthReqBuilder = SetAuthsRequest.newBuilder();
-          setAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
-          for (String auth : auths) {
-            if (auth.length() > 0) {
-              setAuthReqBuilder.addAuth(ByteStringer.wrap(Bytes.toBytes(auth)));
+          public VisibilityLabelsResponse call(VisibilityLabelsService service) throws IOException {
+            SetAuthsRequest.Builder setAuthReqBuilder = SetAuthsRequest.newBuilder();
+            setAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
+            for (String auth : auths) {
+              if (auth.length() > 0) {
+                setAuthReqBuilder.addAuth(ByteStringer.wrap(Bytes.toBytes(auth)));
+              }
             }
+            if (setOrClear) {
+              service.setAuths(controller, setAuthReqBuilder.build(), rpcCallback);
+            } else {
+              service.clearAuths(controller, setAuthReqBuilder.build(), rpcCallback);
+            }
+            VisibilityLabelsResponse response = rpcCallback.get();
+            if (controller.failedOnException()) {
+              throw controller.getFailedOn();
+            }
+            return response;
           }
-          if (setOrClear) {
-            service.setAuths(controller, setAuthReqBuilder.build(), rpcCallback);
-          } else {
-            service.clearAuths(controller, setAuthReqBuilder.build(), rpcCallback);
-          }
-          VisibilityLabelsResponse response = rpcCallback.get();
-          if (controller.failedOnException()) {
-            throw controller.getFailedOn();
-          }
-          return response;
-        }
-      };
-      Map<byte[], VisibilityLabelsResponse> result = ht.coprocessorService(
-          VisibilityLabelsService.class, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
-          callable);
-      return result.values().iterator().next(); // There will be exactly one region for labels
-                                                // table and so one entry in result Map.
-    } finally {
-      if (ht != null) {
-        ht.close();
+        };
+        Map<byte[], VisibilityLabelsResponse> result = table.coprocessorService(
+            VisibilityLabelsService.class, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
+            callable);
+        return result.values().iterator().next(); // There will be exactly one region for labels
+        // table and so one entry in result Map.
       }
     }
   }

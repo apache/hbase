@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -304,7 +304,7 @@ public class TestActiveMasterManager {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -322,4 +322,3 @@ public class TestActiveMasterManager {
     }
   }
 }
-

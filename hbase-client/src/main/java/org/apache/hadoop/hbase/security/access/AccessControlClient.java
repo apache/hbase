@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -50,11 +50,7 @@ public class AccessControlClient {
   public static final TableName ACL_TABLE_NAME =
       TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
 
-  private static HTable getAclTable(Configuration conf) throws IOException {
-    return new HTable(conf, ACL_TABLE_NAME);
-  }
-
-  private static BlockingInterface getAccessControlServiceStub(HTable ht)
+  private static BlockingInterface getAccessControlServiceStub(Table ht)
       throws IOException {
     CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
     BlockingInterface protocol =
@@ -75,14 +71,12 @@ public class AccessControlClient {
   public static void grant(Configuration conf, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual,
       final Permission.Action... actions) throws Throwable {
-    HTable ht = null;
-    try {
-      ht = getAclTable(conf);
-      ProtobufUtil.grant(getAccessControlServiceStub(ht), userName, tableName, family, qual,
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, tableName, family, qual,
           actions);
-    } finally {
-      if (ht != null) {
-        ht.close();
       }
     }
   }
@@ -97,26 +91,22 @@ public class AccessControlClient {
    */
   public static void grant(Configuration conf, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
-    HTable ht = null;
-    try {
-      ht = getAclTable(conf);
-      ProtobufUtil.grant(getAccessControlServiceStub(ht), userName, namespace, actions);
-    } finally {
-      if (ht != null) {
-        ht.close();
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, namespace, actions);
       }
     }
   }
 
   public static boolean isAccessControllerRunning(Configuration conf)
       throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    HBaseAdmin ha = null;
-    try {
-      ha = new HBaseAdmin(conf);
-      return ha.isTableAvailable(ACL_TABLE_NAME);
-    } finally {
-      if (ha != null) {
-        ha.close();
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Admin admin = connection.getAdmin()) {
+        return admin.isTableAvailable(ACL_TABLE_NAME);
       }
     }
   }
@@ -134,14 +124,12 @@ public class AccessControlClient {
   public static void revoke(Configuration conf, final TableName tableName,
       final String username, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Throwable {
-    HTable ht = null;
-    try {
-      ht = getAclTable(conf);
-      ProtobufUtil.revoke(getAccessControlServiceStub(ht), username, tableName, family, qualifier,
-          actions);
-    } finally {
-      if (ht != null) {
-        ht.close();
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        ProtobufUtil.revoke(getAccessControlServiceStub(table), username, tableName, family,
+          qualifier, actions);
       }
     }
   }
@@ -156,13 +144,11 @@ public class AccessControlClient {
    */
   public static void revoke(Configuration conf, final String namespace,
     final String userName, final Permission.Action... actions) throws Throwable {
-    HTable ht = null;
-    try {
-      ht = getAclTable(conf);
-      ProtobufUtil.revoke(getAccessControlServiceStub(ht), userName, namespace, actions);
-    } finally {
-      if (ht != null) {
-        ht.close();
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, namespace, actions);
       }
     }
   }
@@ -177,36 +163,29 @@ public class AccessControlClient {
   public static List<UserPermission> getUserPermissions(Configuration conf, String tableRegex)
       throws Throwable {
     List<UserPermission> permList = new ArrayList<UserPermission>();
-    Table ht = null;
-    Admin ha = null;
-    try {
-      ha = new HBaseAdmin(conf);
-      ht = new HTable(conf, ACL_TABLE_NAME);
-      CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
-      BlockingInterface protocol = AccessControlProtos.AccessControlService
-          .newBlockingStub(service);
-      HTableDescriptor[] htds = null;
-
-      if (tableRegex == null || tableRegex.isEmpty()) {
-        permList = ProtobufUtil.getUserPermissions(protocol);
-      } else if (tableRegex.charAt(0) == '@') {
-        String namespace = tableRegex.substring(1);
-        permList = ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(namespace));
-      } else {
-        htds = ha.listTables(Pattern.compile(tableRegex));
-        for (HTableDescriptor hd : htds) {
-          permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        try (Admin admin = connection.getAdmin()) {
+          CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
+          BlockingInterface protocol =
+            AccessControlProtos.AccessControlService.newBlockingStub(service);
+          HTableDescriptor[] htds = null;
+          if (tableRegex == null || tableRegex.isEmpty()) {
+            permList = ProtobufUtil.getUserPermissions(protocol);
+          } else if (tableRegex.charAt(0) == '@') {
+            String namespace = tableRegex.substring(1);
+            permList = ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(namespace));
+          } else {
+            htds = admin.listTables(Pattern.compile(tableRegex));
+            for (HTableDescriptor hd : htds) {
+              permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
+            }
+          }
         }
-      }
-    } finally {
-      if (ht != null) {
-        ht.close();
-      }
-      if (ha != null) {
-        ha.close();
       }
     }
     return permList;
   }
-
 }

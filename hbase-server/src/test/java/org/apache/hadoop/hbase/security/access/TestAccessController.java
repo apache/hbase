@@ -27,8 +27,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,6 +42,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -61,6 +60,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -436,20 +436,19 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testMove() throws Exception {
-    Map<HRegionInfo, ServerName> regions;
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE.getTableName());
-    try {
-      regions = table.getRegionLocations();
-    } finally {
-      table.close();
+    List<HRegionLocation> regions;
+    try (RegionLocator locator =
+      TEST_UTIL.getConnection().getRegionLocator(TEST_TABLE.getTableName())) {
+      regions = locator.getAllRegionLocations();
     }
-    final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
-    final ServerName server = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
+    HRegionLocation location = regions.get(0);
+    final HRegionInfo hri = location.getRegionInfo();
+    final ServerName server = location.getServerName();
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preMove(ObserverContext.createAndPrepare(CP_ENV, null),
-          firstRegion.getKey(), server, server);
+          hri, server, server);
         return null;
       }
     };
@@ -460,20 +459,17 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testAssign() throws Exception {
-    Map<HRegionInfo, ServerName> regions;
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE.getTableName());
-    try {
-      regions = table.getRegionLocations();
-    } finally {
-      table.close();
+    List<HRegionLocation> regions;
+    try (RegionLocator locator =
+      TEST_UTIL.getConnection().getRegionLocator(TEST_TABLE.getTableName())) {
+      regions = locator.getAllRegionLocations();
     }
-    final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
-
+    HRegionLocation location = regions.get(0);
+    final HRegionInfo hri = location.getRegionInfo();
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preAssign(ObserverContext.createAndPrepare(CP_ENV, null),
-          firstRegion.getKey());
+        ACCESS_CONTROLLER.preAssign(ObserverContext.createAndPrepare(CP_ENV, null), hri);
         return null;
       }
     };
@@ -484,20 +480,17 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testUnassign() throws Exception {
-    Map<HRegionInfo, ServerName> regions;
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE.getTableName());
-    try {
-      regions = table.getRegionLocations();
-    } finally {
-      table.close();
+    List<HRegionLocation> regions;
+    try (RegionLocator locator =
+      TEST_UTIL.getConnection().getRegionLocator(TEST_TABLE.getTableName())) {
+      regions = locator.getAllRegionLocations();
     }
-    final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
-
+    HRegionLocation location = regions.get(0);
+    final HRegionInfo hri = location.getRegionInfo();
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preUnassign(ObserverContext.createAndPrepare(CP_ENV, null),
-          firstRegion.getKey(), false);
+        ACCESS_CONTROLLER.preUnassign(ObserverContext.createAndPrepare(CP_ENV, null), hri, false);
         return null;
       }
     };
@@ -508,20 +501,17 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testRegionOffline() throws Exception {
-    Map<HRegionInfo, ServerName> regions;
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE.getTableName());
-    try {
-      regions = table.getRegionLocations();
-    } finally {
-      table.close();
+    List<HRegionLocation> regions;
+    try (RegionLocator locator =
+      TEST_UTIL.getConnection().getRegionLocator(TEST_TABLE.getTableName())) {
+      regions = locator.getAllRegionLocations();
     }
-    final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet().iterator().next();
-
+    HRegionLocation location = regions.get(0);
+    final HRegionInfo hri = location.getRegionInfo();
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preRegionOffline(ObserverContext.createAndPrepare(CP_ENV, null),
-          firstRegion.getKey());
+        ACCESS_CONTROLLER.preRegionOffline(ObserverContext.createAndPrepare(CP_ENV, null), hri);
         return null;
       }
     };
@@ -922,14 +912,12 @@ public class TestAccessController extends SecureTestUtil {
       //set global read so RegionServer can move it
       setPermission(loadPath, FsPermission.valueOf("-rwxrwxrwx"));
 
-      HTable table = new HTable(conf, tableName);
-      try {
-        Admin admin = TEST_UTIL.getHBaseAdmin();
-        TEST_UTIL.waitTableEnabled(admin, tableName.getName());
-        LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
-        loader.doBulkLoad(loadPath, table);
-      } finally {
-        table.close();
+      try (HTable table = (HTable)TEST_UTIL.getConnection().getTable(tableName)) {
+        try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+          TEST_UTIL.waitTableEnabled(admin, tableName.getName());
+          LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+          loader.doBulkLoad(loadPath, table);
+        }
       }
     }
 
@@ -1988,18 +1976,19 @@ public class TestAccessController extends SecureTestUtil {
     final HRegionServer newRs = newRsThread.getRegionServer();
 
     // Move region to the new RegionServer.
-    final HTable table = new HTable(TEST_UTIL.getConfiguration(), TEST_TABLE2);
-    try {
-      NavigableMap<HRegionInfo, ServerName> regions = table
-          .getRegionLocations();
-      final Map.Entry<HRegionInfo, ServerName> firstRegion = regions.entrySet()
-          .iterator().next();
-
+    List<HRegionLocation> regions;
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TEST_TABLE2)) {
+      regions = locator.getAllRegionLocations();
+    }
+    HRegionLocation location = regions.get(0);
+    final HRegionInfo hri = location.getRegionInfo();
+    final ServerName server = location.getServerName();
+    try (HTable table = (HTable)TEST_UTIL.getConnection().getTable(TEST_TABLE2)) {
       AccessTestAction moveAction = new AccessTestAction() {
         @Override
         public Object run() throws Exception {
-          admin.move(firstRegion.getKey().getEncodedNameAsBytes(),
-              Bytes.toBytes(newRs.getServerName().getServerName()));
+          admin.move(hri.getEncodedNameAsBytes(),
+            Bytes.toBytes(newRs.getServerName().getServerName()));
           return null;
         }
       };
@@ -2031,8 +2020,6 @@ public class TestAccessController extends SecureTestUtil {
         }
       };
       USER_ADMIN.runAs(putAction);
-    } finally {
-      table.close();
     }
   }
 

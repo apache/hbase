@@ -23,19 +23,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -240,7 +237,7 @@ public class QuotaCache implements Stoppable {
         @Override
         public Map<String, QuotaState> fetchEntries(final List<Get> gets)
             throws IOException {
-          return QuotaUtil.fetchNamespaceQuotas(QuotaCache.this.getConfiguration(), gets);
+          return QuotaUtil.fetchNamespaceQuotas(rsServices.getConnection(), gets);
         }
       });
     }
@@ -255,7 +252,7 @@ public class QuotaCache implements Stoppable {
         @Override
         public Map<TableName, QuotaState> fetchEntries(final List<Get> gets)
             throws IOException {
-          return QuotaUtil.fetchTableQuotas(QuotaCache.this.getConfiguration(), gets);
+          return QuotaUtil.fetchTableQuotas(rsServices.getConnection(), gets);
         }
       });
     }
@@ -272,7 +269,7 @@ public class QuotaCache implements Stoppable {
         @Override
         public Map<String, UserQuotaState> fetchEntries(final List<Get> gets)
             throws IOException {
-          return QuotaUtil.fetchUserQuotas(QuotaCache.this.getConfiguration(), gets);
+          return QuotaUtil.fetchUserQuotas(rsServices.getConnection(), gets);
         }
       });
     }

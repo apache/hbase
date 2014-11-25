@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
@@ -154,7 +154,7 @@ public class TestSplitLogManager {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -162,7 +162,6 @@ public class TestSplitLogManager {
     public MetaTableLocator getMetaTableLocator() {
       return null;
     }
-
   }
 
   static Stoppable stopper = new Stoppable() {

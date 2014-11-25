@@ -25,21 +25,21 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RackManager;
@@ -121,12 +121,14 @@ public class FavoredNodeAssignmentHelper {
       }
     }
     // Write the region assignments to the meta table.
-    Table metaTable = null;
-    try {
-      metaTable = new HTable(conf, TableName.META_TABLE_NAME);
-      metaTable.put(puts);
-    } finally {
-      if (metaTable != null) metaTable.close();
+    // TODO: See above overrides take a Connection rather than a Configuration only the
+    // Connection is a short circuit connection. That is not going to good in all cases, when
+    // master and meta are not colocated. Fix when this favored nodes feature is actually used
+    // someday.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
+        metaTable.put(puts);
+      }
     }
     LOG.info("Added " + puts.size() + " regions in META");
   }
@@ -304,7 +306,6 @@ public class FavoredNodeAssignmentHelper {
    * primary/secondary/tertiary RegionServers 
    * @param primaryRSMap
    * @return the map of regions to the servers the region-files should be hosted on
-   * @throws IOException
    */
   public Map<HRegionInfo, ServerName[]> placeSecondaryAndTertiaryWithRestrictions(
       Map<HRegionInfo, ServerName> primaryRSMap) {

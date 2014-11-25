@@ -25,9 +25,12 @@ import java.net.InetAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -45,7 +48,7 @@ public class TestClockSkewDetection {
     final Configuration conf = HBaseConfiguration.create();
     ServerManager sm = new ServerManager(new Server() {
       @Override
-      public HConnection getShortCircuitConnection() {
+      public ClusterConnection getConnection() {
         return null;
       }
 
@@ -89,7 +92,8 @@ public class TestClockSkewDetection {
 
       @Override
       public void stop(String why) {
-      }}, null, false);
+      }
+    }, null, false);
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();

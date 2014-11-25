@@ -209,12 +209,12 @@ public class TestRegionMergeTransactionOnCluster {
       table.close();
 
       List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor
-          .getTableRegionsAndLocations(master.getShortCircuitConnection(), tableName);
+          .getTableRegionsAndLocations(master.getConnection(), tableName);
       HRegionInfo mergedRegionInfo = tableRegions.get(0).getFirst();
       HTableDescriptor tableDescritor = master.getTableDescriptors().get(
           tableName);
       Result mergedRegionResult = MetaTableAccessor.getRegionResult(
-        master.getShortCircuitConnection(), mergedRegionInfo.getRegionName());
+        master.getConnection(), mergedRegionInfo.getRegionName());
 
       // contains merge reference in META
       assertTrue(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
@@ -257,7 +257,7 @@ public class TestRegionMergeTransactionOnCluster {
       assertFalse(fs.exists(regionBdir));
 
       mergedRegionResult = MetaTableAccessor.getRegionResult(
-        master.getShortCircuitConnection(), mergedRegionInfo.getRegionName());
+        master.getConnection(), mergedRegionInfo.getRegionName());
       assertFalse(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
           HConstants.MERGEA_QUALIFIER) != null);
       assertFalse(mergedRegionResult.getValue(HConstants.CATALOG_FAMILY,
@@ -327,13 +327,13 @@ public class TestRegionMergeTransactionOnCluster {
     createTableAndLoadData(master, tableName, 5, 2);
     List<Pair<HRegionInfo, ServerName>> initialRegionToServers =
         MetaTableAccessor.getTableRegionsAndLocations(
-            master.getShortCircuitConnection(), tableName);
+            master.getConnection(), tableName);
     // Merge 1st and 2nd region
     PairOfSameType<HRegionInfo> mergedRegions = mergeRegionsAndVerifyRegionNum(master, tableName,
         0, 2, 5 * 2 - 2);
     List<Pair<HRegionInfo, ServerName>> currentRegionToServers =
         MetaTableAccessor.getTableRegionsAndLocations(
-            master.getShortCircuitConnection(), tableName);
+            master.getConnection(), tableName);
     List<HRegionInfo> initialRegions = new ArrayList<HRegionInfo>();
     for (Pair<HRegionInfo, ServerName> p : initialRegionToServers) {
       initialRegions.add(p.getFirst());
@@ -373,7 +373,7 @@ public class TestRegionMergeTransactionOnCluster {
       int regionAnum, int regionBnum) throws Exception {
     List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor
         .getTableRegionsAndLocations(
-          master.getShortCircuitConnection(), tablename);
+          master.getConnection(), tablename);
     HRegionInfo regionA = tableRegions.get(regionAnum).getFirst();
     HRegionInfo regionB = tableRegions.get(regionBnum).getFirst();
     TEST_UTIL.getHBaseAdmin().mergeRegions(
@@ -389,7 +389,7 @@ public class TestRegionMergeTransactionOnCluster {
     long timeout = System.currentTimeMillis() + waitTime;
     while (System.currentTimeMillis() < timeout) {
       tableRegionsInMeta = MetaTableAccessor.getTableRegionsAndLocations(
-        master.getShortCircuitConnection(), tablename);
+        master.getConnection(), tablename);
       tableRegionsInMaster = master.getAssignmentManager().getRegionStates()
           .getRegionsOfTable(tablename);
       if (tableRegionsInMeta.size() == expectedRegionNum
@@ -400,7 +400,7 @@ public class TestRegionMergeTransactionOnCluster {
     }
 
     tableRegionsInMeta = MetaTableAccessor.getTableRegionsAndLocations(
-      master.getShortCircuitConnection(), tablename);
+      master.getConnection(), tablename);
     LOG.info("Regions after merge:" + Joiner.on(',').join(tableRegionsInMeta));
     assertEquals(expectedRegionNum, tableRegionsInMeta.size());
   }
@@ -430,14 +430,14 @@ public class TestRegionMergeTransactionOnCluster {
     List<Pair<HRegionInfo, ServerName>> tableRegions;
     while (System.currentTimeMillis() < timeout) {
       tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
-        master.getShortCircuitConnection(), tablename);
+        master.getConnection(), tablename);
       if (tableRegions.size() == numRegions * replication)
         break;
       Thread.sleep(250);
     }
 
     tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
-      master.getShortCircuitConnection(), tablename);
+      master.getConnection(), tablename);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(numRegions * replication, tableRegions.size());
     return table;

@@ -30,10 +30,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.util.StringUtils;
 
@@ -47,23 +49,40 @@ public class QuotaRetriever implements Closeable, Iterable<QuotaSettings> {
 
   private final Queue<QuotaSettings> cache = new LinkedList<QuotaSettings>();
   private ResultScanner scanner;
-  private HTable table;
+  /**
+   * Connection to use.
+   * Could pass one in and have this class use it but this class wants to be standalone.
+   */
+  private Connection connection;
+  private Table table;
 
   private QuotaRetriever() {
   }
 
   void init(final Configuration conf, final Scan scan) throws IOException {
-    table = new HTable(conf, QuotaTableUtil.QUOTA_TABLE_NAME);
+    this.connection = ConnectionFactory.createConnection(conf);
+    this.table = this.connection.getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
     try {
       scanner = table.getScanner(scan);
     } catch (IOException e) {
-      table.close();
+      try {
+        close();
+      } catch (IOException ioe) {
+        LOG.warn("Failed getting scanner and then failed close on cleanup", e);
+      }
       throw e;
     }
   }
 
   public void close() throws IOException {
-    table.close();
+    if (this.table != null) {
+      this.table.close();
+      this.table = null;
+    }
+    if (this.connection != null) {
+      this.connection.close();
+      this.connection = null;
+    }
   }
 
   public QuotaSettings next() throws IOException {

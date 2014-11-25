@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -218,8 +219,8 @@ public class TestMasterFailover {
     assertTrue(master.isInitialized());
 
     // Create a table with a region online
-    RegionLocator onlineTable = TEST_UTIL.createTable(TableName.valueOf("onlineTable"), "family");
-
+    Table onlineTable = TEST_UTIL.createTable(TableName.valueOf("onlineTable"), "family");
+    onlineTable.close();
     // Create a table in META, so it has a region offline
     HTableDescriptor offlineTable = new HTableDescriptor(
       TableName.valueOf(Bytes.toBytes("offlineTable")));
@@ -232,16 +233,18 @@ public class TestMasterFailover {
 
     HRegionInfo hriOffline = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(hriOffline, rootdir, conf, offlineTable);
-    MetaTableAccessor.addRegionToMeta(master.getShortCircuitConnection(), hriOffline);
+    MetaTableAccessor.addRegionToMeta(master.getConnection(), hriOffline);
 
     log("Regions in hbase:meta and namespace have been created");
 
     // at this point we only expect 3 regions to be assigned out
     // (catalogs and namespace, + 1 online region)
     assertEquals(3, cluster.countServedRegions());
-    HRegionInfo hriOnline = onlineTable.getRegionLocation(
-      HConstants.EMPTY_START_ROW).getRegionInfo();
-
+    HRegionInfo hriOnline = null;
+    try (RegionLocator locator =
+        TEST_UTIL.getConnection().getRegionLocator(TableName.valueOf("onlineTable"))) {
+      hriOnline = locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
+    }
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     RegionStateStore stateStore = master.getAssignmentManager().getRegionStateStore();
 

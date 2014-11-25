@@ -35,14 +35,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -73,6 +75,7 @@ public class TestZooKeeperTableArchiveClient {
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
   private static ZKTableArchiveClient archivingClient;
   private final List<Path> toCleanup = new ArrayList<Path>();
+  private static ClusterConnection CONNECTION;
 
   /**
    * Setup the config for the cluster
@@ -81,8 +84,8 @@ public class TestZooKeeperTableArchiveClient {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniZKCluster();
-    archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), UTIL.getHBaseAdmin()
-        .getConnection());
+    CONNECTION = (ClusterConnection)ConnectionFactory.createConnection(UTIL.getConfiguration());
+    archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), CONNECTION);
     // make hfile archiving node so we can archive files
     ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
     String archivingZNode = ZKTableArchiveClient.getArchiveZNode(UTIL.getConfiguration(), watcher);
@@ -115,6 +118,7 @@ public class TestZooKeeperTableArchiveClient {
   @AfterClass
   public static void cleanupTest() throws Exception {
     try {
+      CONNECTION.close();
       UTIL.shutdownMiniZKCluster();
     } catch (Exception e) {
       LOG.warn("problem shutting down cluster", e);

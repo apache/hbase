@@ -109,7 +109,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
     MasterFileSystem fileSystemManager = masterServices.getMasterFileSystem();
-    Connection conn = masterServices.getShortCircuitConnection();
+    Connection conn = masterServices.getConnection();
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
     TableName tableName = hTableDescriptor.getTableName();
@@ -163,7 +163,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       if (metaChanges.hasRegionsToRestore()) {
         MetaTableAccessor.overwriteRegions(conn, metaChanges.getRegionsToRestore());
       }
-      metaChanges.updateMetaParentRegions(this.server.getShortCircuitConnection(), hris);
+      metaChanges.updateMetaParentRegions(this.server.getConnection(), hris);
 
       // At this point the restore is complete. Next step is enabling the table.
       LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +

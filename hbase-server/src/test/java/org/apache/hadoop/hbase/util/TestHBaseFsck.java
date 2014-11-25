@@ -230,14 +230,9 @@ public class TestHBaseFsck {
   @Test(timeout=180000)
   public void testFixAssignmentsWhenMETAinTransition() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    Admin admin = null;
-    try {
-      admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-      admin.closeRegion(cluster.getServerHoldingMeta(),
-          HRegionInfo.FIRST_META_REGIONINFO);
-    } finally {
-      if (admin != null) {
-        admin.close();
+    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      try (Admin admin = connection.getAdmin()) {
+        admin.closeRegion(cluster.getServerHoldingMeta(), HRegionInfo.FIRST_META_REGIONINFO);
       }
     }
     regionStates.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
@@ -391,8 +386,7 @@ public class TestHBaseFsck {
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
     TEST_UTIL.getHBaseAdmin().createTable(desc, SPLITS);
-    tbl = new HTable(TEST_UTIL.getConfiguration(), tablename, executorService);
-
+    tbl = (HTable)TEST_UTIL.getConnection().getTable(tablename, executorService);
     List<Put> puts = new ArrayList<Put>();
     for (byte[] row : ROWKEYS) {
       Put p = new Put(row);
@@ -821,8 +815,7 @@ public class TestHBaseFsck {
    */
   @Test
   public void testDegenerateRegions() throws Exception {
-    TableName table =
-        TableName.valueOf("tableDegenerateRegions");
+    TableName table = TableName.valueOf("tableDegenerateRegions");
     try {
       setupTable(table);
       assertNoErrors(doFsck(conf,false));

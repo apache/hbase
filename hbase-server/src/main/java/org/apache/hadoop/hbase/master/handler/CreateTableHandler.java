@@ -119,7 +119,7 @@ public class CreateTableHandler extends EventHandler {
     boolean success = false;
     try {
       TableName tableName = this.hTableDescriptor.getTableName();
-      if (MetaTableAccessor.tableExists(this.server.getShortCircuitConnection(), tableName)) {
+      if (MetaTableAccessor.tableExists(this.server.getConnection(), tableName)) {
         throw new TableExistsException(tableName);
       }
       success = true;
@@ -289,6 +289,6 @@ public class CreateTableHandler extends EventHandler {
    */
   protected void addRegionsToMeta(final List<HRegionInfo> regionInfos)
       throws IOException {
-    MetaTableAccessor.addRegionsToMeta(this.server.getShortCircuitConnection(), regionInfos);
+    MetaTableAccessor.addRegionsToMeta(this.server.getConnection(), regionInfos);
   }
 }

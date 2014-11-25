@@ -52,8 +52,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * To scan everything for each row, instantiate a Scan object.
  * <p>
  * To modify scanner caching for just this scan, use {@link #setCaching(int) setCaching}.
- * If caching is NOT set, we will use the caching value of the hosting {@link HTable}.  See
- * {@link HTable#setScannerCaching(int)}. In addition to row caching, it is possible to specify a
+ * If caching is NOT set, we will use the caching value of the hosting {@link Table}.
+ * In addition to row caching, it is possible to specify a
  * maximum result size, using {@link #setMaxResultSize(long)}. When both are used,
  * single server requests are limited by either number of rows or maximum result size, whichever
  * limit comes first.
@@ -478,7 +478,8 @@ public class Scan extends Query {
 
   /**
    * Set the number of rows for caching that will be passed to scanners.
-   * If not set, the default setting from {@link HTable#getScannerCaching()} will apply.
+   * If not set, the Configuration setting {@link HConstants#HBASE_CLIENT_SCANNER_CACHING} will
+   * apply.
    * Higher caching values will enable faster scanners but will use more memory.
    * @param caching the number of rows for caching
    */
@@ -894,4 +895,21 @@ public class Scan extends Query {
     return (Scan) super.setIsolationLevel(level);
   }
 
+  /**
+   * Utility that creates a Scan that will do a  small scan in reverse from passed row
+   * looking for next closest row.
+   * @param row
+   * @param family
+   * @return An instance of Scan primed with passed <code>row</code> and <code>family</code> to
+   * scan in reverse for one row only.
+   */
+  static Scan createGetClosestRowOrBeforeReverseScan(byte[] row) {
+    // Below does not work if you add in family; need to add the family qualifier that is highest
+    // possible family qualifier.  Do we have such a notion?  Would have to be magic.
+    Scan scan = new Scan(row);
+    scan.setSmall(true);
+    scan.setReversed(true);
+    scan.setCaching(1);
+    return scan;
+  }
 }

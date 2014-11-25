@@ -658,7 +658,7 @@ public class RegionMergeTransaction {
     // Get merge regions if it is a merged region and already has merge
     // qualifier
     Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaTableAccessor
-        .getRegionsFromMergeQualifier(services.getShortCircuitConnection(), regionName);
+        .getRegionsFromMergeQualifier(services.getConnection(), regionName);
     if (mergeRegions != null &&
         (mergeRegions.getFirst() != null || mergeRegions.getSecond() != null)) {
       // It has merge qualifier

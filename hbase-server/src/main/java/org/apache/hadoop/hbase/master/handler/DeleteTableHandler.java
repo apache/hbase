@@ -135,7 +135,7 @@ public class DeleteTableHandler extends TableEventHandler {
     try {
       // 1. Remove regions from META
       LOG.debug("Deleting regions from META");
-      MetaTableAccessor.deleteRegions(this.server.getShortCircuitConnection(), regions);
+      MetaTableAccessor.deleteRegions(this.server.getConnection(), regions);
 
       // -----------------------------------------------------------------------
       // NOTE: At this point we still have data on disk, but nothing in hbase:meta

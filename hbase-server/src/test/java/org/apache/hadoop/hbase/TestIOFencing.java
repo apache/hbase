@@ -28,12 +28,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
@@ -50,11 +50,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.log4j.Level;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -259,13 +254,13 @@ public class TestIOFencing {
     LOG.info("Starting mini cluster");
     TEST_UTIL.startMiniCluster(1);
     CompactionBlockerRegion compactingRegion = null;
-    HBaseAdmin admin = null;
+    Admin admin = null;
     try {
       LOG.info("Creating admin");
-      admin = new HBaseAdmin(c);
+      admin = TEST_UTIL.getConnection().getAdmin();
       LOG.info("Creating table");
       TEST_UTIL.createTable(TABLE_NAME, FAMILY);
-      HTable table = new HTable(c, TABLE_NAME);
+      Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
       LOG.info("Loading test table");
       // Find the region
       List<HRegion> testRegions = TEST_UTIL.getMiniHBaseCluster().findRegionsForTable(TABLE_NAME);
@@ -299,7 +294,7 @@ public class TestIOFencing {
       assertTrue(compactingRegion.countStoreFiles() > 1);
       final byte REGION_NAME[] = compactingRegion.getRegionName();
       LOG.info("Asking for compaction");
-      admin.majorCompact(TABLE_NAME.getName());
+      ((HBaseAdmin)admin).majorCompact(TABLE_NAME.getName());
       LOG.info("Waiting for compaction to be about to start");
       compactingRegion.waitForCompactionToBlock();
       LOG.info("Starting a new server");
@@ -339,7 +334,7 @@ public class TestIOFencing {
       // If we survive the split keep going...
       // Now we make sure that the region isn't totally confused.  Load up more rows.
       TEST_UTIL.loadNumericRows(table, FAMILY, FIRST_BATCH_COUNT, FIRST_BATCH_COUNT + SECOND_BATCH_COUNT);
-      admin.majorCompact(TABLE_NAME.getName());
+      ((HBaseAdmin)admin).majorCompact(TABLE_NAME.getName());
       startWaitTime = System.currentTimeMillis();
       while (newRegion.compactCount == 0) {
         Thread.sleep(1000);

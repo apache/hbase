@@ -47,7 +47,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * Convert Map/Reduce output and write it to an HBase table. The KEY is ignored
  * while the output value <u>must</u> be either a {@link Put} or a
  * {@link Delete} instance.
- *
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

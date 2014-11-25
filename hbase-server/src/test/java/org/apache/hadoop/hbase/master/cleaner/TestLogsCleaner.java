@@ -26,9 +26,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -160,7 +164,7 @@ public class TestLogsCleaner {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -190,6 +194,4 @@ public class TestLogsCleaner {
       return false;
     }
   }
-
 }
-

@@ -91,7 +91,7 @@ public class EnableTableHandler extends EventHandler {
     boolean success = false;
     try {
       // Check if table exists
-      if (!MetaTableAccessor.tableExists(this.server.getShortCircuitConnection(), tableName)) {
+      if (!MetaTableAccessor.tableExists(this.server.getConnection(), tableName)) {
         // retainAssignment is true only during recovery.  In normal case it is false
         if (!this.skipTableStateCheck) {
           throw new TableNotFoundException(tableName);
@@ -177,7 +177,7 @@ public class EnableTableHandler extends EventHandler {
         server.getZooKeeper());
     } else {
       tableRegionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
-        server.getShortCircuitConnection(), tableName, true);
+        server.getConnection(), tableName, true);
     }
 
     int countOfRegionsInTable = tableRegionsAndLocations.size();

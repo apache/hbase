@@ -41,9 +41,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -401,86 +404,90 @@ public class ImportTsv extends Configured implements Tool {
    */
   public static Job createSubmittableJob(Configuration conf, String[] args)
       throws IOException, ClassNotFoundException {
-
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    // Support non-XML supported characters
-    // by re-encoding the passed separator as a Base64 string.
-    String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
-    if (actualSeparator != null) {
-      conf.set(SEPARATOR_CONF_KEY,
-               Base64.encodeBytes(actualSeparator.getBytes()));
-    }
-
-    // See if a non-default Mapper was set
-    String mapperClassName = conf.get(MAPPER_CONF_KEY);
-    Class mapperClass = mapperClassName != null ?
-        Class.forName(mapperClassName) : DEFAULT_MAPPER;
-
-    TableName tableName = TableName.valueOf(args[0]);
-    Path inputDir = new Path(args[1]);
-    String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName.getNameAsString());
-    Job job = Job.getInstance(conf, jobName);
-    job.setJarByClass(mapperClass);
-    FileInputFormat.setInputPaths(job, inputDir);
-    job.setInputFormatClass(TextInputFormat.class);
-    job.setMapperClass(mapperClass);
-    String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
-    String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
-    if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
-      String fileLoc = conf.get(CREDENTIALS_LOCATION);
-      Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
-      job.getCredentials().addAll(cred);
-    }
-
-    if (hfileOutPath != null) {
-      if (!admin.tableExists(tableName)) {
-        String errorMsg = format("Table '%s' does not exist.", tableName);
-        if ("yes".equalsIgnoreCase(conf.get(CREATE_TABLE_CONF_KEY, "yes"))) {
-          LOG.warn(errorMsg);
-          // TODO: this is backwards. Instead of depending on the existence of a table,
-          // create a sane splits file for HFileOutputFormat based on data sampling.
-          createTable(admin, tableName, columns);
-        } else {
-          LOG.error(errorMsg);
-          throw new TableNotFoundException(errorMsg);
+    Job job = null;
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Admin admin = connection.getAdmin()) {
+        // Support non-XML supported characters
+        // by re-encoding the passed separator as a Base64 string.
+        String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
+        if (actualSeparator != null) {
+          conf.set(SEPARATOR_CONF_KEY,
+              Base64.encodeBytes(actualSeparator.getBytes()));
         }
-      }
-      HTable table = new HTable(conf, tableName);
-      job.setReducerClass(PutSortReducer.class);
-      Path outputDir = new Path(hfileOutPath);
-      FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-      if (mapperClass.equals(TsvImporterTextMapper.class)) {
-        job.setMapOutputValueClass(Text.class);
-        job.setReducerClass(TextSortReducer.class);
-      } else {
-        job.setMapOutputValueClass(Put.class);
-        job.setCombinerClass(PutCombiner.class);
-      }
-      HFileOutputFormat.configureIncrementalLoad(job, table);
-    } else {
-      if (!admin.tableExists(tableName)) {
-        String errorMsg = format("Table '%s' does not exist.", tableName);
-        LOG.error(errorMsg);
-        throw new TableNotFoundException(errorMsg);
-      }
-      if (mapperClass.equals(TsvImporterTextMapper.class)) {
-        usage(TsvImporterTextMapper.class.toString()
-            + " should not be used for non bulkloading case. use "
-            + TsvImporterMapper.class.toString()
-            + " or custom mapper whose value type is Put.");
-        System.exit(-1);
-      }
-      // No reducers. Just write straight to table. Call initTableReducerJob
-      // to set up the TableOutputFormat.
-      TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null,
-          job);
-      job.setNumReduceTasks(0);
-    }
 
-    TableMapReduceUtil.addDependencyJars(job);
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
-        com.google.common.base.Function.class /* Guava used by TsvParser */);
+        // See if a non-default Mapper was set
+        String mapperClassName = conf.get(MAPPER_CONF_KEY);
+        Class mapperClass =
+          mapperClassName != null ? Class.forName(mapperClassName) : DEFAULT_MAPPER;
+
+          TableName tableName = TableName.valueOf(args[0]);
+          Path inputDir = new Path(args[1]);
+          String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName.getNameAsString());
+          job = Job.getInstance(conf, jobName);
+          job.setJarByClass(mapperClass);
+          FileInputFormat.setInputPaths(job, inputDir);
+          job.setInputFormatClass(TextInputFormat.class);
+          job.setMapperClass(mapperClass);
+          String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
+          String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
+          if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
+            String fileLoc = conf.get(CREDENTIALS_LOCATION);
+            Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
+            job.getCredentials().addAll(cred);
+          }
+
+          if (hfileOutPath != null) {
+            if (!admin.tableExists(tableName)) {
+              String errorMsg = format("Table '%s' does not exist.", tableName);
+              if ("yes".equalsIgnoreCase(conf.get(CREATE_TABLE_CONF_KEY, "yes"))) {
+                LOG.warn(errorMsg);
+                // TODO: this is backwards. Instead of depending on the existence of a table,
+                // create a sane splits file for HFileOutputFormat based on data sampling.
+                createTable(admin, tableName, columns);
+              } else {
+                LOG.error(errorMsg);
+                throw new TableNotFoundException(errorMsg);
+              }
+            }
+            try (HTable table = (HTable)connection.getTable(tableName)) {
+              job.setReducerClass(PutSortReducer.class);
+              Path outputDir = new Path(hfileOutPath);
+              FileOutputFormat.setOutputPath(job, outputDir);
+              job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+              if (mapperClass.equals(TsvImporterTextMapper.class)) {
+                job.setMapOutputValueClass(Text.class);
+                job.setReducerClass(TextSortReducer.class);
+              } else {
+                job.setMapOutputValueClass(Put.class);
+                job.setCombinerClass(PutCombiner.class);
+              }
+              HFileOutputFormat.configureIncrementalLoad(job, table);
+            }
+          } else {
+            if (!admin.tableExists(tableName)) {
+              String errorMsg = format("Table '%s' does not exist.", tableName);
+              LOG.error(errorMsg);
+              throw new TableNotFoundException(errorMsg);
+            }
+            if (mapperClass.equals(TsvImporterTextMapper.class)) {
+              usage(TsvImporterTextMapper.class.toString()
+                  + " should not be used for non bulkloading case. use "
+                  + TsvImporterMapper.class.toString()
+                  + " or custom mapper whose value type is Put.");
+              System.exit(-1);
+            }
+            // No reducers. Just write straight to table. Call initTableReducerJob
+            // to set up the TableOutputFormat.
+            TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null,
+                job);
+            job.setNumReduceTasks(0);
+          }
+
+          TableMapReduceUtil.addDependencyJars(job);
+          TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+              com.google.common.base.Function.class /* Guava used by TsvParser */);
+      }
+    }
     return job;
   }
 

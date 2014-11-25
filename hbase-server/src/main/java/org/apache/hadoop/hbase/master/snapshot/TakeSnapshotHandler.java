@@ -174,7 +174,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
           server.getZooKeeper());
       } else {
         regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
-          server.getShortCircuitConnection(), snapshotTable, false);
+          server.getConnection(), snapshotTable, false);
       }
 
       // run the snapshot

@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -39,23 +39,28 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 
 import com.google.common.base.Preconditions;
@@ -332,11 +337,11 @@ public class RegionSplitter {
 
     if (2 != cmd.getArgList().size() || !oneOperOnly || cmd.hasOption("h")) {
       new HelpFormatter().printHelp("RegionSplitter <TABLE> <SPLITALGORITHM>\n"+
-		  "SPLITALGORITHM is a java class name of a class implementing " +
-		  "SplitAlgorithm, or one of the special strings HexStringSplit " +
-		  "or UniformSplit, which are built-in split algorithms. " +
-		  "HexStringSplit treats keys as hexadecimal ASCII, and " +
-		  "UniformSplit treats keys as arbitrary bytes.", opt);
+          "SPLITALGORITHM is a java class name of a class implementing " +
+          "SplitAlgorithm, or one of the special strings HexStringSplit " +
+          "or UniformSplit, which are built-in split algorithms. " +
+          "HexStringSplit treats keys as hexadecimal ASCII, and " +
+          "UniformSplit treats keys as arbitrary bytes.", opt);
       return;
     }
     TableName tableName = TableName.valueOf(cmd.getArgs()[0]);
@@ -364,8 +369,8 @@ public class RegionSplitter {
   }
 
   static void createPresplitTable(TableName tableName, SplitAlgorithm splitAlgo,
-          String[] columnFamilies, Configuration conf) throws IOException,
-          InterruptedException {
+          String[] columnFamilies, Configuration conf)
+  throws IOException, InterruptedException {
     final int splitCount = conf.getInt("split.count", 0);
     Preconditions.checkArgument(splitCount > 1, "Split count must be > 1");
 
@@ -378,237 +383,260 @@ public class RegionSplitter {
     for (String cf : columnFamilies) {
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes(cf)));
     }
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    try {
-      Preconditions.checkArgument(!admin.tableExists(tableName),
-        "Table already exists: " + tableName);
-      admin.createTable(desc, splitAlgo.split(splitCount));
-    } finally {
-      admin.close();
-    }
-    LOG.debug("Table created!  Waiting for regions to show online in META...");
-    if (!conf.getBoolean("split.verify", true)) {
-      // NOTE: createTable is synchronous on the table, but not on the regions
-      int onlineRegions = 0;
-      while (onlineRegions < splitCount) {
-        onlineRegions = MetaTableAccessor.getRegionCount(conf, tableName);
-        LOG.debug(onlineRegions + " of " + splitCount + " regions online...");
-        if (onlineRegions < splitCount) {
-          Thread.sleep(10 * 1000); // sleep
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      Admin admin = connection.getAdmin();
+      try {
+        Preconditions.checkArgument(!admin.tableExists(tableName),
+          "Table already exists: " + tableName);
+        admin.createTable(desc, splitAlgo.split(splitCount));
+      } finally {
+        admin.close();
+      }
+      LOG.debug("Table created!  Waiting for regions to show online in META...");
+      if (!conf.getBoolean("split.verify", true)) {
+        // NOTE: createTable is synchronous on the table, but not on the regions
+        int onlineRegions = 0;
+        while (onlineRegions < splitCount) {
+          onlineRegions = MetaTableAccessor.getRegionCount(connection, tableName);
+          LOG.debug(onlineRegions + " of " + splitCount + " regions online...");
+          if (onlineRegions < splitCount) {
+            Thread.sleep(10 * 1000); // sleep
+          }
         }
       }
+      LOG.debug("Finished creating table with " + splitCount + " regions");
     }
-
-    LOG.debug("Finished creating table with " + splitCount + " regions");
   }
 
-  static void rollingSplit(TableName tableName, SplitAlgorithm splitAlgo,
-          Configuration conf) throws IOException, InterruptedException {
-    final int minOS = conf.getInt("split.outstanding", 2);
-
-    HTable table = new HTable(conf, tableName);
-
-    // max outstanding splits. default == 50% of servers
-    final int MAX_OUTSTANDING =
-        Math.max(table.getConnection().getCurrentNrHRS() / 2, minOS);
-
-    Path hbDir = FSUtils.getRootDir(conf);
-    Path tableDir = FSUtils.getTableDir(hbDir, table.getName());
-    Path splitFile = new Path(tableDir, "_balancedSplit");
-    FileSystem fs = FileSystem.get(conf);
-
-    // get a list of daughter regions to create
-    LinkedList<Pair<byte[], byte[]>> tmpRegionSet = getSplits(table, splitAlgo);
-    LinkedList<Pair<byte[], byte[]>> outstanding = Lists.newLinkedList();
-    int splitCount = 0;
-    final int origCount = tmpRegionSet.size();
-
-    // all splits must compact & we have 1 compact thread, so 2 split
-    // requests to the same RS can stall the outstanding split queue.
-    // To fix, group the regions into an RS pool and round-robin through it
-    LOG.debug("Bucketing regions by regionserver...");
-    TreeMap<String, LinkedList<Pair<byte[], byte[]>>> daughterRegions =
-      Maps.newTreeMap();
-    for (Pair<byte[], byte[]> dr : tmpRegionSet) {
-      String rsLocation = table.getRegionLocation(dr.getSecond()).
-        getHostnamePort();
-      if (!daughterRegions.containsKey(rsLocation)) {
-        LinkedList<Pair<byte[], byte[]>> entry = Lists.newLinkedList();
-        daughterRegions.put(rsLocation, entry);
-      }
-      daughterRegions.get(rsLocation).add(dr);
+  /**
+   * Alternative getCurrentNrHRS which is no longer available.
+   * @param connection
+   * @return Rough count of regionservers out on cluster.
+   * @throws IOException 
+   */
+  private static int getRegionServerCount(final Connection connection) throws IOException {
+    try (Admin admin = connection.getAdmin()) {
+      ClusterStatus status = admin.getClusterStatus();
+      Collection<ServerName> servers = status.getServers();
+      return servers == null || servers.isEmpty()? 0: servers.size();
     }
-    LOG.debug("Done with bucketing.  Split time!");
-    long startTime = System.currentTimeMillis();
+  }
 
-    // open the split file and modify it as splits finish
-    FSDataInputStream tmpIn = fs.open(splitFile);
-    byte[] rawData = new byte[tmpIn.available()];
-    tmpIn.readFully(rawData);
-    tmpIn.close();
-    FSDataOutputStream splitOut = fs.create(splitFile);
-    splitOut.write(rawData);
-
+  private static byte [] readFile(final FileSystem fs, final Path path) throws IOException {
+    FSDataInputStream tmpIn = fs.open(path);
     try {
-      // *** split code ***
-      while (!daughterRegions.isEmpty()) {
-        LOG.debug(daughterRegions.size() + " RS have regions to splt.");
-
-        // Get RegionServer : region count mapping
-        final TreeMap<ServerName, Integer> rsSizes = Maps.newTreeMap();
-        Map<HRegionInfo, ServerName> regionsInfo = table.getRegionLocations();
-        for (ServerName rs : regionsInfo.values()) {
-          if (rsSizes.containsKey(rs)) {
-            rsSizes.put(rs, rsSizes.get(rs) + 1);
-          } else {
-            rsSizes.put(rs, 1);
-          }
-        }
-
-        // sort the RS by the number of regions they have
-        List<String> serversLeft = Lists.newArrayList(daughterRegions .keySet());
-        Collections.sort(serversLeft, new Comparator<String>() {
-          public int compare(String o1, String o2) {
-            return rsSizes.get(o1).compareTo(rsSizes.get(o2));
-          }
-        });
-
-        // round-robin through the RS list. Choose the lightest-loaded servers
-        // first to keep the master from load-balancing regions as we split.
-        for (String rsLoc : serversLeft) {
-          Pair<byte[], byte[]> dr = null;
-
-          // find a region in the RS list that hasn't been moved
-          LOG.debug("Finding a region on " + rsLoc);
-          LinkedList<Pair<byte[], byte[]>> regionList = daughterRegions
-              .get(rsLoc);
-          while (!regionList.isEmpty()) {
-            dr = regionList.pop();
-
-            // get current region info
-            byte[] split = dr.getSecond();
-            HRegionLocation regionLoc = table.getRegionLocation(split);
-
-            // if this region moved locations
-            String newRs = regionLoc.getHostnamePort();
-            if (newRs.compareTo(rsLoc) != 0) {
-              LOG.debug("Region with " + splitAlgo.rowToStr(split)
-                  + " moved to " + newRs + ". Relocating...");
-              // relocate it, don't use it right now
-              if (!daughterRegions.containsKey(newRs)) {
-                LinkedList<Pair<byte[], byte[]>> entry = Lists.newLinkedList();
-                daughterRegions.put(newRs, entry);
-              }
-              daughterRegions.get(newRs).add(dr);
-              dr = null;
-              continue;
-            }
-
-            // make sure this region wasn't already split
-            byte[] sk = regionLoc.getRegionInfo().getStartKey();
-            if (sk.length != 0) {
-              if (Bytes.equals(split, sk)) {
-                LOG.debug("Region already split on "
-                    + splitAlgo.rowToStr(split) + ".  Skipping this region...");
-                ++splitCount;
-                dr = null;
-                continue;
-              }
-              byte[] start = dr.getFirst();
-              Preconditions.checkArgument(Bytes.equals(start, sk), splitAlgo
-                  .rowToStr(start) + " != " + splitAlgo.rowToStr(sk));
-            }
-
-            // passed all checks! found a good region
-            break;
-          }
-          if (regionList.isEmpty()) {
-            daughterRegions.remove(rsLoc);
-          }
-          if (dr == null)
-            continue;
-
-          // we have a good region, time to split!
-          byte[] split = dr.getSecond();
-          LOG.debug("Splitting at " + splitAlgo.rowToStr(split));
-          HBaseAdmin admin = new HBaseAdmin(table.getConfiguration());
-          try {
-            admin.split(table.getTableName(), split);
-          } finally {
-            admin.close();
-          }
-
-          LinkedList<Pair<byte[], byte[]>> finished = Lists.newLinkedList();
-          LinkedList<Pair<byte[], byte[]>> local_finished = Lists.newLinkedList();
-          if (conf.getBoolean("split.verify", true)) {
-            // we need to verify and rate-limit our splits
-            outstanding.addLast(dr);
-            // with too many outstanding splits, wait for some to finish
-            while (outstanding.size() >= MAX_OUTSTANDING) {
-              LOG.debug("Wait for outstanding splits " + outstanding.size());
-              local_finished = splitScan(outstanding, table, splitAlgo);
-              if (local_finished.isEmpty()) {
-                Thread.sleep(30 * 1000);
-              } else {
-                finished.addAll(local_finished);
-                outstanding.removeAll(local_finished);
-                LOG.debug(local_finished.size() + " outstanding splits finished");
-              }
-            }
-          } else {
-            finished.add(dr);
-          }
-
-          // mark each finished region as successfully split.
-          for (Pair<byte[], byte[]> region : finished) {
-            splitOut.writeChars("- " + splitAlgo.rowToStr(region.getFirst())
-                + " " + splitAlgo.rowToStr(region.getSecond()) + "\n");
-            splitCount++;
-            if (splitCount % 10 == 0) {
-              long tDiff = (System.currentTimeMillis() - startTime)
-                  / splitCount;
-              LOG.debug("STATUS UPDATE: " + splitCount + " / " + origCount
-                  + ". Avg Time / Split = "
-                  + org.apache.hadoop.util.StringUtils.formatTime(tDiff));
-            }
-          }
-        }
-      }
-      if (conf.getBoolean("split.verify", true)) {
-        while (!outstanding.isEmpty()) {
-          LOG.debug("Finally Wait for outstanding splits " + outstanding.size());
-          LinkedList<Pair<byte[], byte[]>> finished = splitScan(outstanding,
-              table, splitAlgo);
-          if (finished.isEmpty()) {
-            Thread.sleep(30 * 1000);
-          } else {
-            outstanding.removeAll(finished);
-            for (Pair<byte[], byte[]> region : finished) {
-              splitOut.writeChars("- " + splitAlgo.rowToStr(region.getFirst())
-                  + " " + splitAlgo.rowToStr(region.getSecond()) + "\n");
-              splitCount++;
-            }
-            LOG.debug("Finally " + finished.size() + " outstanding splits finished");
-          }
-        }
-      }
-      LOG.debug("All regions have been successfully split!");
+      byte [] rawData = new byte[tmpIn.available()];
+      tmpIn.readFully(rawData);
+      return rawData;
     } finally {
-      long tDiff = System.currentTimeMillis() - startTime;
-      LOG.debug("TOTAL TIME = "
-          + org.apache.hadoop.util.StringUtils.formatTime(tDiff));
-      LOG.debug("Splits = " + splitCount);
-      if (0 < splitCount) {
-        LOG.debug("Avg Time / Split = "
-            + org.apache.hadoop.util.StringUtils.formatTime(tDiff / splitCount));
-      }
+      tmpIn.close();
+    }
+  }
 
-      splitOut.close();
-      if (table != null){
-        table.close();
+  static void rollingSplit(TableName tableName, SplitAlgorithm splitAlgo, Configuration conf)
+  throws IOException, InterruptedException {
+    final int minOS = conf.getInt("split.outstanding", 2);
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      // Max outstanding splits. default == 50% of servers
+      final int MAX_OUTSTANDING = Math.max(getRegionServerCount(connection) / 2, minOS);
+
+      Path hbDir = FSUtils.getRootDir(conf);
+      Path tableDir = FSUtils.getTableDir(hbDir, tableName);
+      Path splitFile = new Path(tableDir, "_balancedSplit");
+      FileSystem fs = FileSystem.get(conf);
+
+      // Get a list of daughter regions to create
+      LinkedList<Pair<byte[], byte[]>> tmpRegionSet = null;
+      try (Table table = connection.getTable(tableName)) {
+        tmpRegionSet = getSplits(connection, tableName, splitAlgo);
+      }
+      LinkedList<Pair<byte[], byte[]>> outstanding = Lists.newLinkedList();
+      int splitCount = 0;
+      final int origCount = tmpRegionSet.size();
+
+      // all splits must compact & we have 1 compact thread, so 2 split
+      // requests to the same RS can stall the outstanding split queue.
+      // To fix, group the regions into an RS pool and round-robin through it
+      LOG.debug("Bucketing regions by regionserver...");
+      TreeMap<String, LinkedList<Pair<byte[], byte[]>>> daughterRegions =
+          Maps.newTreeMap();
+      // Get a regionLocator.  Need it in below.
+      try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
+        for (Pair<byte[], byte[]> dr : tmpRegionSet) {
+          String rsLocation = regionLocator.getRegionLocation(dr.getSecond()).getHostnamePort();
+          if (!daughterRegions.containsKey(rsLocation)) {
+            LinkedList<Pair<byte[], byte[]>> entry = Lists.newLinkedList();
+            daughterRegions.put(rsLocation, entry);
+          }
+          daughterRegions.get(rsLocation).add(dr);
+        }
+        LOG.debug("Done with bucketing.  Split time!");
+        long startTime = System.currentTimeMillis();
+
+        // Open the split file and modify it as splits finish
+        byte[] rawData = readFile(fs, splitFile);
+
+        FSDataOutputStream splitOut = fs.create(splitFile);
+        try {
+          splitOut.write(rawData);
+
+          try {
+            // *** split code ***
+            while (!daughterRegions.isEmpty()) {
+              LOG.debug(daughterRegions.size() + " RS have regions to splt.");
+
+              // Get ServerName to region count mapping
+              final TreeMap<ServerName, Integer> rsSizes = Maps.newTreeMap();
+              List<HRegionLocation> hrls = regionLocator.getAllRegionLocations();
+              for (HRegionLocation hrl: hrls) {
+                ServerName sn = hrl.getServerName();
+                if (rsSizes.containsKey(sn)) {
+                  rsSizes.put(sn, rsSizes.get(sn) + 1);
+                } else {
+                  rsSizes.put(sn, 1);
+                }
+              }
+
+              // Sort the ServerNames by the number of regions they have
+              List<String> serversLeft = Lists.newArrayList(daughterRegions .keySet());
+              Collections.sort(serversLeft, new Comparator<String>() {
+                public int compare(String o1, String o2) {
+                  return rsSizes.get(o1).compareTo(rsSizes.get(o2));
+                }
+              });
+
+              // Round-robin through the ServerName list. Choose the lightest-loaded servers
+              // first to keep the master from load-balancing regions as we split.
+              for (String rsLoc : serversLeft) {
+                Pair<byte[], byte[]> dr = null;
+
+                // Find a region in the ServerName list that hasn't been moved
+                LOG.debug("Finding a region on " + rsLoc);
+                LinkedList<Pair<byte[], byte[]>> regionList = daughterRegions.get(rsLoc);
+                while (!regionList.isEmpty()) {
+                  dr = regionList.pop();
+
+                  // get current region info
+                  byte[] split = dr.getSecond();
+                  HRegionLocation regionLoc = regionLocator.getRegionLocation(split);
+
+                  // if this region moved locations
+                  String newRs = regionLoc.getHostnamePort();
+                  if (newRs.compareTo(rsLoc) != 0) {
+                    LOG.debug("Region with " + splitAlgo.rowToStr(split)
+                        + " moved to " + newRs + ". Relocating...");
+                    // relocate it, don't use it right now
+                    if (!daughterRegions.containsKey(newRs)) {
+                      LinkedList<Pair<byte[], byte[]>> entry = Lists.newLinkedList();
+                      daughterRegions.put(newRs, entry);
+                    }
+                    daughterRegions.get(newRs).add(dr);
+                    dr = null;
+                    continue;
+                  }
+
+                  // make sure this region wasn't already split
+                  byte[] sk = regionLoc.getRegionInfo().getStartKey();
+                  if (sk.length != 0) {
+                    if (Bytes.equals(split, sk)) {
+                      LOG.debug("Region already split on "
+                          + splitAlgo.rowToStr(split) + ".  Skipping this region...");
+                      ++splitCount;
+                      dr = null;
+                      continue;
+                    }
+                    byte[] start = dr.getFirst();
+                    Preconditions.checkArgument(Bytes.equals(start, sk), splitAlgo
+                        .rowToStr(start) + " != " + splitAlgo.rowToStr(sk));
+                  }
+
+                  // passed all checks! found a good region
+                  break;
+                }
+                if (regionList.isEmpty()) {
+                  daughterRegions.remove(rsLoc);
+                }
+                if (dr == null)
+                  continue;
+
+                // we have a good region, time to split!
+                byte[] split = dr.getSecond();
+                LOG.debug("Splitting at " + splitAlgo.rowToStr(split));
+                try (Admin admin = connection.getAdmin()) {
+                  admin.split(tableName, split);
+                }
+
+                LinkedList<Pair<byte[], byte[]>> finished = Lists.newLinkedList();
+                LinkedList<Pair<byte[], byte[]>> local_finished = Lists.newLinkedList();
+                if (conf.getBoolean("split.verify", true)) {
+                  // we need to verify and rate-limit our splits
+                  outstanding.addLast(dr);
+                  // with too many outstanding splits, wait for some to finish
+                  while (outstanding.size() >= MAX_OUTSTANDING) {
+                    LOG.debug("Wait for outstanding splits " + outstanding.size());
+                    local_finished = splitScan(outstanding, connection, tableName, splitAlgo);
+                    if (local_finished.isEmpty()) {
+                      Thread.sleep(30 * 1000);
+                    } else {
+                      finished.addAll(local_finished);
+                      outstanding.removeAll(local_finished);
+                      LOG.debug(local_finished.size() + " outstanding splits finished");
+                    }
+                  }
+                } else {
+                  finished.add(dr);
+                }
+
+                // mark each finished region as successfully split.
+                for (Pair<byte[], byte[]> region : finished) {
+                  splitOut.writeChars("- " + splitAlgo.rowToStr(region.getFirst())
+                      + " " + splitAlgo.rowToStr(region.getSecond()) + "\n");
+                  splitCount++;
+                  if (splitCount % 10 == 0) {
+                    long tDiff = (System.currentTimeMillis() - startTime)
+                        / splitCount;
+                    LOG.debug("STATUS UPDATE: " + splitCount + " / " + origCount
+                        + ". Avg Time / Split = "
+                        + org.apache.hadoop.util.StringUtils.formatTime(tDiff));
+                  }
+                }
+              }
+            }
+            if (conf.getBoolean("split.verify", true)) {
+              while (!outstanding.isEmpty()) {
+                LOG.debug("Finally Wait for outstanding splits " + outstanding.size());
+                LinkedList<Pair<byte[], byte[]>> finished = splitScan(outstanding,
+                    connection, tableName, splitAlgo);
+                if (finished.isEmpty()) {
+                  Thread.sleep(30 * 1000);
+                } else {
+                  outstanding.removeAll(finished);
+                  for (Pair<byte[], byte[]> region : finished) {
+                    splitOut.writeChars("- " + splitAlgo.rowToStr(region.getFirst())
+                        + " " + splitAlgo.rowToStr(region.getSecond()) + "\n");
+                    splitCount++;
+                  }
+                  LOG.debug("Finally " + finished.size() + " outstanding splits finished");
+                }
+              }
+            }
+            LOG.debug("All regions have been successfully split!");
+          } finally {
+            long tDiff = System.currentTimeMillis() - startTime;
+            LOG.debug("TOTAL TIME = "
+                + org.apache.hadoop.util.StringUtils.formatTime(tDiff));
+            LOG.debug("Splits = " + splitCount);
+            if (0 < splitCount) {
+              LOG.debug("Avg Time / Split = "
+                  + org.apache.hadoop.util.StringUtils.formatTime(tDiff / splitCount));
+            }
+          }
+        } finally {
+          splitOut.close();
+          fs.delete(splitFile, false);
+        }
       }
     }
-    fs.delete(splitFile, false);
   }
 
   /**
@@ -647,108 +675,134 @@ public class RegionSplitter {
   }
 
   static LinkedList<Pair<byte[], byte[]>> splitScan(
-      LinkedList<Pair<byte[], byte[]>> regionList, HTable table,
+      LinkedList<Pair<byte[], byte[]>> regionList,
+      final Connection connection,
+      final TableName tableName,
       SplitAlgorithm splitAlgo)
       throws IOException, InterruptedException {
     LinkedList<Pair<byte[], byte[]>> finished = Lists.newLinkedList();
     LinkedList<Pair<byte[], byte[]>> logicalSplitting = Lists.newLinkedList();
     LinkedList<Pair<byte[], byte[]>> physicalSplitting = Lists.newLinkedList();
 
-    // get table info
-    Path rootDir = FSUtils.getRootDir(table.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(rootDir, table.getName());
-    FileSystem fs = tableDir.getFileSystem(table.getConfiguration());
-    HTableDescriptor htd = table.getTableDescriptor();
+    // Get table info
+    Pair<Path, Path> tableDirAndSplitFile =
+      getTableDirAndSplitFile(connection.getConfiguration(), tableName);
+    Path tableDir = tableDirAndSplitFile.getFirst();
+    FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
+    // Clear the cache to forcibly refresh region information
+    ((ClusterConnection)connection).clearRegionCache();
+    HTableDescriptor htd = null;
+    try (Table table = connection.getTable(tableName)) {
+      htd = table.getTableDescriptor();
+    }
+    try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
 
-    // clear the cache to forcibly refresh region information
-    table.clearRegionCache();
+      // for every region that hasn't been verified as a finished split
+      for (Pair<byte[], byte[]> region : regionList) {
+        byte[] start = region.getFirst();
+        byte[] split = region.getSecond();
 
-    // for every region that hasn't been verified as a finished split
-    for (Pair<byte[], byte[]> region : regionList) {
-      byte[] start = region.getFirst();
-      byte[] split = region.getSecond();
-
-      // see if the new split daughter region has come online
-      try {
-        HRegionInfo dri = table.getRegionLocation(split).getRegionInfo();
-        if (dri.isOffline() || !Bytes.equals(dri.getStartKey(), split)) {
+        // see if the new split daughter region has come online
+        try {
+          HRegionInfo dri = regionLocator.getRegionLocation(split).getRegionInfo();
+          if (dri.isOffline() || !Bytes.equals(dri.getStartKey(), split)) {
+            logicalSplitting.add(region);
+            continue;
+          }
+        } catch (NoServerForRegionException nsfre) {
+          // NSFRE will occur if the old hbase:meta entry has no server assigned
+          LOG.info(nsfre);
           logicalSplitting.add(region);
           continue;
         }
-      } catch (NoServerForRegionException nsfre) {
-        // NSFRE will occur if the old hbase:meta entry has no server assigned
-        LOG.info(nsfre);
-        logicalSplitting.add(region);
-        continue;
-      }
 
-      try {
-        // when a daughter region is opened, a compaction is triggered
-        // wait until compaction completes for both daughter regions
-        LinkedList<HRegionInfo> check = Lists.newLinkedList();
-        check.add(table.getRegionLocation(start).getRegionInfo());
-        check.add(table.getRegionLocation(split).getRegionInfo());
-        for (HRegionInfo hri : check.toArray(new HRegionInfo[check.size()])) {
-          byte[] sk = hri.getStartKey();
-          if (sk.length == 0)
-            sk = splitAlgo.firstRow();
-          String startKey = splitAlgo.rowToStr(sk);
+        try {
+          // when a daughter region is opened, a compaction is triggered
+          // wait until compaction completes for both daughter regions
+          LinkedList<HRegionInfo> check = Lists.newLinkedList();
+          check.add(regionLocator.getRegionLocation(start).getRegionInfo());
+          check.add(regionLocator.getRegionLocation(split).getRegionInfo());
+          for (HRegionInfo hri : check.toArray(new HRegionInfo[check.size()])) {
+            byte[] sk = hri.getStartKey();
+            if (sk.length == 0)
+              sk = splitAlgo.firstRow();
 
-          HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
-              table.getConfiguration(), fs, tableDir, hri, true);
+            HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(
+                connection.getConfiguration(), fs, tableDir, hri, true);
 
-          // check every Column Family for that region
-          boolean refFound = false;
-          for (HColumnDescriptor c : htd.getFamilies()) {
-            if ((refFound = regionFs.hasReferences(htd.getTableName().getNameAsString()))) {
-              break;
+            // Check every Column Family for that region -- check does not have references.
+            boolean refFound = false;
+            for (HColumnDescriptor c : htd.getFamilies()) {
+              if ((refFound = regionFs.hasReferences(c.getNameAsString()))) {
+                break;
+              }
+            }
+
+            // compaction is completed when all reference files are gone
+            if (!refFound) {
+              check.remove(hri);
             }
           }
-
-          // compaction is completed when all reference files are gone
-          if (!refFound) {
-            check.remove(hri);
+          if (check.isEmpty()) {
+            finished.add(region);
+          } else {
+            physicalSplitting.add(region);
           }
-        }
-        if (check.isEmpty()) {
-          finished.add(region);
-        } else {
+        } catch (NoServerForRegionException nsfre) {
+          LOG.debug("No Server Exception thrown for: " + splitAlgo.rowToStr(start));
           physicalSplitting.add(region);
+          ((ClusterConnection)connection).clearRegionCache();
         }
-      } catch (NoServerForRegionException nsfre) {
-        LOG.debug("No Server Exception thrown for: " + splitAlgo.rowToStr(start));
-        physicalSplitting.add(region);
-        table.clearRegionCache();
       }
+
+      LOG.debug("Split Scan: " + finished.size() + " finished / "
+          + logicalSplitting.size() + " split wait / "
+          + physicalSplitting.size() + " reference wait");
+
+      return finished;
     }
-
-    LOG.debug("Split Scan: " + finished.size() + " finished / "
-        + logicalSplitting.size() + " split wait / "
-        + physicalSplitting.size() + " reference wait");
-
-    return finished;
   }
 
-  static LinkedList<Pair<byte[], byte[]>> getSplits(HTable table,
-      SplitAlgorithm splitAlgo) throws IOException {
-    Path hbDir = FSUtils.getRootDir(table.getConfiguration());
-    Path tableDir = FSUtils.getTableDir(hbDir, table.getName());
+  /**
+   * @param conf
+   * @param tableName
+   * @return A Pair where first item is table dir and second is the split file.
+   * @throws IOException 
+   */
+  private static Pair<Path, Path> getTableDirAndSplitFile(final Configuration conf,
+      final TableName tableName)
+  throws IOException {
+    Path hbDir = FSUtils.getRootDir(conf);
+    Path tableDir = FSUtils.getTableDir(hbDir, tableName);
     Path splitFile = new Path(tableDir, "_balancedSplit");
-    FileSystem fs = tableDir.getFileSystem(table.getConfiguration());
+    return new Pair<Path, Path>(tableDir, splitFile);
+  }
 
-    // using strings because (new byte[]{0}).equals(new byte[]{0}) == false
+  static LinkedList<Pair<byte[], byte[]>> getSplits(final Connection connection,
+      TableName tableName, SplitAlgorithm splitAlgo)
+  throws IOException {
+    Pair<Path, Path> tableDirAndSplitFile =
+      getTableDirAndSplitFile(connection.getConfiguration(), tableName);
+    Path tableDir = tableDirAndSplitFile.getFirst();
+    Path splitFile = tableDirAndSplitFile.getSecond();
+ 
+    FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
+
+    // Using strings because (new byte[]{0}).equals(new byte[]{0}) == false
     Set<Pair<String, String>> daughterRegions = Sets.newHashSet();
 
-    // does a split file exist?
+    // Does a split file exist?
     if (!fs.exists(splitFile)) {
       // NO = fresh start. calculate splits to make
-      LOG.debug("No _balancedSplit file.  Calculating splits...");
+      LOG.debug("No " + splitFile.getName() + " file. Calculating splits ");
 
-      // query meta for all regions in the table
+      // Query meta for all regions in the table
       Set<Pair<byte[], byte[]>> rows = Sets.newHashSet();
-      Pair<byte[][], byte[][]> tmp = table.getStartEndKeys();
-      Preconditions.checkArgument(
-          tmp.getFirst().length == tmp.getSecond().length,
+      Pair<byte[][], byte[][]> tmp = null;
+      try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
+        tmp = regionLocator.getStartEndKeys();
+      }
+      Preconditions.checkArgument(tmp.getFirst().length == tmp.getSecond().length,
           "Start and End rows should be equivalent");
       for (int i = 0; i < tmp.getFirst().length; ++i) {
         byte[] start = tmp.getFirst()[i], end = tmp.getSecond()[i];
@@ -758,8 +812,7 @@ public class RegionSplitter {
           end = splitAlgo.lastRow();
         rows.add(Pair.newPair(start, end));
       }
-      LOG.debug("Table " + Bytes.toString(table.getTableName()) + " has "
-          + rows.size() + " regions that will be split.");
+      LOG.debug("Table " + tableName + " has " + rows.size() + " regions that will be split.");
 
       // prepare the split file
       Path tmpFile = new Path(tableDir, "_balancedSplit_prepare");
@@ -780,8 +833,8 @@ public class RegionSplitter {
       fs.rename(tmpFile, splitFile);
     } else {
       LOG.debug("_balancedSplit file found. Replay log to restore state...");
-      FSUtils.getInstance(fs, table.getConfiguration())
-        .recoverFileLease(fs, splitFile, table.getConfiguration(), null);
+      FSUtils.getInstance(fs, connection.getConfiguration())
+        .recoverFileLease(fs, splitFile, connection.getConfiguration(), null);
 
       // parse split file and process remaining splits
       FSDataInputStream tmpIn = fs.open(splitFile);

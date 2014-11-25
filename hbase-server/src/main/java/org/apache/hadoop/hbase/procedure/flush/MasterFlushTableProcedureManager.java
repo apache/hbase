@@ -132,7 +132,7 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
           master.getZooKeeper());
       } else {
         regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
-          master.getShortCircuitConnection(), tableName, false);
+          master.getConnection(), tableName, false);
       }
     } catch (InterruptedException e1) {
       String msg = "Failed to get regions for '" + desc.getInstance() + "'";

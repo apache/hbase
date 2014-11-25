@@ -25,6 +25,9 @@ import static org.junit.Assert.assertFalse;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.HBaseFsck;
@@ -83,7 +86,7 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
 
     // Meta still messed up.
     assertEquals(1, scanMeta());
-    HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
+    HTableDescriptor[] htbls = getTables(TEST_UTIL.getConfiguration());
     LOG.info("Tables present after restart: " + Arrays.toString(htbls));
 
     // After HBASE-451 HBaseAdmin.listTables() gets table descriptors from FS,
@@ -94,6 +97,4 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
   }
-
 }
-

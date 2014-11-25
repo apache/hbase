@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -206,7 +206,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      public HConnection getShortCircuitConnection() {
+      public ClusterConnection getConnection() {
         // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
         // the conf from the master; the conf will already have an HConnection
         // associate so the below mocking of a connection will fail.
@@ -282,7 +282,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      public HConnection getShortCircuitConnection() {
+      public ClusterConnection getConnection() {
         // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
         // the conf from the master; the conf will already have an HConnection
         // associate so the below mocking of a connection will fail.

@@ -307,7 +307,7 @@ public class WALSplitter {
         return true;
       }
       if(csm != null) {
-        HConnection scc = csm.getServer().getShortCircuitConnection();
+        HConnection scc = csm.getServer().getConnection();
         TableName[] tables = scc.listTableNames();
         for (TableName table : tables) {
           if (scc.getTableState(table)

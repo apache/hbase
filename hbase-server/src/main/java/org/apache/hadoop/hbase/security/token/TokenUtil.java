@@ -23,13 +23,15 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedExceptionAction;
 
 import com.google.protobuf.ServiceException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -45,6 +47,7 @@ import org.apache.hadoop.security.token.Token;
  */
 @InterfaceAudience.Private
 public class TokenUtil {
+  // This class is referenced indirectly by User out in common; instances are created by reflection
   private static Log LOG = LogFactory.getLog(TokenUtil.class);
 
   /**
@@ -54,21 +57,19 @@ public class TokenUtil {
    */
   public static Token<AuthenticationTokenIdentifier> obtainToken(
       Configuration conf) throws IOException {
-    Table meta = null;
-    try {
-      meta = new HTable(conf, TableName.META_TABLE_NAME);
-      CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
-      AuthenticationProtos.AuthenticationService.BlockingInterface service =
-          AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);
-      AuthenticationProtos.GetAuthenticationTokenResponse response = service.getAuthenticationToken(null,
-          AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance());
+    // TODO: Pass in a Connection to used. Will this even work?
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table meta = connection.getTable(TableName.META_TABLE_NAME)) {
+        CoprocessorRpcChannel rpcChannel = meta.coprocessorService(HConstants.EMPTY_START_ROW);
+        AuthenticationProtos.AuthenticationService.BlockingInterface service =
+            AuthenticationProtos.AuthenticationService.newBlockingStub(rpcChannel);
+        AuthenticationProtos.GetAuthenticationTokenResponse response =
+          service.getAuthenticationToken(null,
+            AuthenticationProtos.GetAuthenticationTokenRequest.getDefaultInstance());
 
-      return ProtobufUtil.toToken(response.getToken());
-    } catch (ServiceException se) {
-      ProtobufUtil.toIOException(se);
-    } finally {
-      if (meta != null) {
-        meta.close();
+        return ProtobufUtil.toToken(response.getToken());
+      } catch (ServiceException se) {
+        ProtobufUtil.toIOException(se);
       }
     }
     // dummy return for ServiceException catch block

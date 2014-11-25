@@ -76,9 +76,9 @@ import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -207,12 +207,12 @@ public class HRegionServer extends HasThread implements
 
   protected HeapMemoryManager hMemManager;
 
-  /*
-   * Short-circuit (ie. bypassing RPC layer) HConnection to this Server
-   * to be used internally for miscellaneous needs. Initialized at the server startup
-   * and closed when server shuts down. Clients must never close it explicitly.
+  /**
+   * Cluster connection to be shared by services.
+   * Initialized at server startup and closed when server shuts down.
+   * Clients must never close it explicitly.
    */
-  protected HConnection shortCircuitConnection;
+  protected ClusterConnection clusterConnection;
 
   /*
    * Long-living meta table locator, which is created when the server is started and stopped
@@ -605,15 +605,20 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Create wrapped short-circuit connection to this server.
-   * In its own method so can intercept and mock it over in tests.
+   * Create a 'smarter' HConnection, one that is capable of by-passing RPC if the request is to
+   * the local server.  Safe to use going to local or remote server.
+   * Create this instance in a method can be intercepted and mocked in tests.
    * @throws IOException
    */
-  protected HConnection createShortCircuitConnection() throws IOException {
+  @VisibleForTesting
+  protected ClusterConnection createClusterConnection() throws IOException {
+    // Create a cluster connection that when appropriate, can short-circuit and go directly to the
+    // local server if the request is to the local server bypassing RPC. Can be used for both local
+    // and remote invocations.
     return ConnectionUtils.createShortCircuitHConnection(
       ConnectionFactory.createConnection(conf), serverName, rpcServices, rpcServices);
   }
-  
+
   /**
    * Run test on configured codecs to make sure supporting libs are in place.
    * @param c
@@ -636,6 +641,17 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
+   * Setup our cluster connection if not already initialized.
+   * @throws IOException
+   */
+  protected synchronized void setupClusterConnection() throws IOException {
+    if (clusterConnection == null) {
+      clusterConnection = createClusterConnection();
+      metaTableLocator = new MetaTableLocator();
+    }
+  }
+
+  /**
    * All initialization needed before we go register with Master.
    *
    * @throws IOException
@@ -643,12 +659,7 @@ public class HRegionServer extends HasThread implements
    */
   private void preRegistrationInitialization(){
     try {
-      synchronized (this) {
-        if (shortCircuitConnection == null) {
-          shortCircuitConnection = createShortCircuitConnection();
-          metaTableLocator = new MetaTableLocator();
-        }
-      }
+      setupClusterConnection();
 
       // Health checker thread.
       if (isHealthCheckerConfigured()) {
@@ -946,13 +957,13 @@ public class HRegionServer extends HasThread implements
 
     // so callers waiting for meta without timeout can stop
     if (this.metaTableLocator != null) this.metaTableLocator.stop();
-    if (this.shortCircuitConnection != null && !shortCircuitConnection.isClosed()) {
+    if (this.clusterConnection != null && !clusterConnection.isClosed()) {
       try {
-        this.shortCircuitConnection.close();
+        this.clusterConnection.close();
       } catch (IOException e) {
         // Although the {@link Closeable} interface throws an {@link
         // IOException}, in reality, the implementation would never do that.
-        LOG.error("Attempt to close server's short circuit HConnection failed.", e);
+        LOG.warn("Attempt to close server's short circuit HConnection failed.", e);
       }
     }
 
@@ -1737,8 +1748,8 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public HConnection getShortCircuitConnection() {
-    return this.shortCircuitConnection;
+  public ClusterConnection getConnection() {
+    return this.clusterConnection;
   }
 
   @Override
@@ -1829,7 +1840,7 @@ public class HRegionServer extends HasThread implements
           }
         } else {
           try {
-            MetaTableAccessor.updateRegionLocation(shortCircuitConnection,
+            MetaTableAccessor.updateRegionLocation(clusterConnection,
               hris[0], serverName, openSeqNum);
           } catch (IOException e) {
             LOG.info("Failed to update meta", e);
@@ -3047,7 +3058,7 @@ public class HRegionServer extends HasThread implements
     }
     return result;
   }
-  
+
   public CoprocessorServiceResponse execRegionServerService(final RpcController controller,
       final CoprocessorServiceRequest serviceRequest) throws ServiceException {
     try {
@@ -3094,7 +3105,7 @@ public class HRegionServer extends HasThread implements
       throw new ServiceException(ie);
     }
   }
-  
+
   /**
    * @return The cache config instance used by the regionserver.
    */
@@ -3108,7 +3119,7 @@ public class HRegionServer extends HasThread implements
   protected ConfigurationManager getConfigurationManager() {
     return configurationManager;
   }
-    
+
   /**
    * Reload the configuration from disk.
    */
@@ -3116,6 +3127,6 @@ public class HRegionServer extends HasThread implements
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
     conf.reloadConfiguration();
-    configurationManager.notifyAllObservers(conf);  
+    configurationManager.notifyAllObservers(conf);
   }
 }

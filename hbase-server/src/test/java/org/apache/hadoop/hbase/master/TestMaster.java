@@ -87,7 +87,7 @@ public class TestMaster {
     ht.close();
 
     List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
-        m.getShortCircuitConnection(), TABLENAME);
+        m.getConnection(), TABLENAME);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(1, tableRegions.size());
     assertArrayEquals(HConstants.EMPTY_START_ROW,
@@ -104,7 +104,7 @@ public class TestMaster {
       Thread.sleep(100);
     }
     LOG.info("Making sure we can call getTableRegions while opening");
-    tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getShortCircuitConnection(),
+    tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getConnection(),
       TABLENAME, false);
 
     LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
@@ -115,7 +115,7 @@ public class TestMaster {
         m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
     LOG.info("Result is: " + pair);
     Pair<HRegionInfo, ServerName> tableRegionFromName =
-        MetaTableAccessor.getRegion(m.getShortCircuitConnection(),
+        MetaTableAccessor.getRegion(m.getConnection(),
           pair.getFirst().getRegionName());
     assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
   }

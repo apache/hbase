@@ -23,31 +23,21 @@ import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
-import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleRequest;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleType;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaScope;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeUnit;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota;
 
 /**
  * Master Quota Manager.
@@ -80,7 +70,7 @@ public class MasterQuotaManager {
     }
 
     // Create the quota table if missing
-    if (!MetaTableAccessor.tableExists(masterServices.getShortCircuitConnection(),
+    if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
           QuotaUtil.QUOTA_TABLE_NAME)) {
       LOG.info("Quota table not found. Creating...");
       createQuotaTable();
@@ -99,10 +89,6 @@ public class MasterQuotaManager {
 
   public boolean isQuotaEnabled() {
     return enabled;
-  }
-
-  private Configuration getConfiguration() {
-    return masterServices.getConfiguration();
   }
 
   /* ==========================================================================
@@ -152,15 +138,15 @@ public class MasterQuotaManager {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public Quotas fetch() throws IOException {
-        return QuotaUtil.getUserQuota(getConfiguration(), userName);
+        return QuotaUtil.getUserQuota(masterServices.getConnection(), userName);
       }
       @Override
       public void update(final Quotas quotas) throws IOException {
-        QuotaUtil.addUserQuota(getConfiguration(), userName, quotas);
+        QuotaUtil.addUserQuota(masterServices.getConnection(), userName, quotas);
       }
       @Override
       public void delete() throws IOException {
-        QuotaUtil.deleteUserQuota(masterServices.getConfiguration(), userName);
+        QuotaUtil.deleteUserQuota(masterServices.getConnection(), userName);
       }
       @Override
       public void preApply(final Quotas quotas) throws IOException {
@@ -178,15 +164,15 @@ public class MasterQuotaManager {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public Quotas fetch() throws IOException {
-        return QuotaUtil.getUserQuota(getConfiguration(), userName, table);
+        return QuotaUtil.getUserQuota(masterServices.getConnection(), userName, table);
       }
       @Override
       public void update(final Quotas quotas) throws IOException {
-        QuotaUtil.addUserQuota(getConfiguration(), userName, table, quotas);
+        QuotaUtil.addUserQuota(masterServices.getConnection(), userName, table, quotas);
       }
       @Override
       public void delete() throws IOException {
-        QuotaUtil.deleteUserQuota(masterServices.getConfiguration(), userName, table);
+        QuotaUtil.deleteUserQuota(masterServices.getConnection(), userName, table);
       }
       @Override
       public void preApply(final Quotas quotas) throws IOException {
@@ -204,15 +190,15 @@ public class MasterQuotaManager {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public Quotas fetch() throws IOException {
-        return QuotaUtil.getUserQuota(getConfiguration(), userName, namespace);
+        return QuotaUtil.getUserQuota(masterServices.getConnection(), userName, namespace);
       }
       @Override
       public void update(final Quotas quotas) throws IOException {
-        QuotaUtil.addUserQuota(getConfiguration(), userName, namespace, quotas);
+        QuotaUtil.addUserQuota(masterServices.getConnection(), userName, namespace, quotas);
       }
       @Override
       public void delete() throws IOException {
-        QuotaUtil.deleteUserQuota(masterServices.getConfiguration(), userName, namespace);
+        QuotaUtil.deleteUserQuota(masterServices.getConnection(), userName, namespace);
       }
       @Override
       public void preApply(final Quotas quotas) throws IOException {
@@ -230,15 +216,15 @@ public class MasterQuotaManager {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public Quotas fetch() throws IOException {
-        return QuotaUtil.getTableQuota(getConfiguration(), table);
+        return QuotaUtil.getTableQuota(masterServices.getConnection(), table);
       }
       @Override
       public void update(final Quotas quotas) throws IOException {
-        QuotaUtil.addTableQuota(getConfiguration(), table, quotas);
+        QuotaUtil.addTableQuota(masterServices.getConnection(), table, quotas);
       }
       @Override
       public void delete() throws IOException {
-        QuotaUtil.deleteTableQuota(getConfiguration(), table);
+        QuotaUtil.deleteTableQuota(masterServices.getConnection(), table);
       }
       @Override
       public void preApply(final Quotas quotas) throws IOException {
@@ -256,15 +242,15 @@ public class MasterQuotaManager {
     setQuota(req, new SetQuotaOperations() {
       @Override
       public Quotas fetch() throws IOException {
-        return QuotaUtil.getNamespaceQuota(getConfiguration(), namespace);
+        return QuotaUtil.getNamespaceQuota(masterServices.getConnection(), namespace);
       }
       @Override
       public void update(final Quotas quotas) throws IOException {
-        QuotaUtil.addNamespaceQuota(getConfiguration(), namespace, quotas);
+        QuotaUtil.addNamespaceQuota(masterServices.getConnection(), namespace, quotas);
       }
       @Override
       public void delete() throws IOException {
-        QuotaUtil.deleteNamespaceQuota(getConfiguration(), namespace);
+        QuotaUtil.deleteNamespaceQuota(masterServices.getConnection(), namespace);
       }
       @Override
       public void preApply(final Quotas quotas) throws IOException {

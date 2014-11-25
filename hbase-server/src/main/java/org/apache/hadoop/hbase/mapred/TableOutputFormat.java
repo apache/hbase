@@ -20,23 +20,19 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
@@ -50,55 +46,51 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
-  private static final Log LOG = LogFactory.getLog(TableOutputFormat.class);
 
   /**
    * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable)
    * and write to an HBase table.
    */
   protected static class TableRecordWriter implements RecordWriter<ImmutableBytesWritable, Put> {
-    private final Connection conn;
-    private final Table table;
+    private Table m_table;
 
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing. Assumes control over the
      * lifecycle of {@code conn}.
      */
-    public TableRecordWriter(Connection conn, TableName tableName) throws IOException {
-      this.conn = conn;
-      this.table = conn.getTable(tableName);
-      ((HTable) this.table).setAutoFlush(false, true);
+    public TableRecordWriter(final Table table) throws IOException {
+      this.m_table = table;
     }
 
     public void close(Reporter reporter) throws IOException {
-      table.close();
-      conn.close();
+      this.m_table.close();
     }
 
     public void write(ImmutableBytesWritable key, Put value) throws IOException {
-      table.put(new Put(value));
+      m_table.put(new Put(value));
     }
   }
 
   @Override
-  public RecordWriter<ImmutableBytesWritable, Put> getRecordWriter(FileSystem ignored, JobConf job,
-      String name, Progressable progress) throws IOException {
+  public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name,
+      Progressable progress)
+  throws IOException {
+    // expecting exactly one path
     TableName tableName = TableName.valueOf(job.get(OUTPUT_TABLE));
-    Connection conn = null;
-    try {
-      conn = ConnectionFactory.createConnection(HBaseConfiguration.create(job));
-    } catch(IOException e) {
-      LOG.error(e);
-      throw e;
-    }
-    return new TableRecordWriter(conn, tableName);
+    Table table =  null;
+    // Connection is not closed. Dies with JVM.  No possibility for cleanup.
+    Connection connection = ConnectionFactory.createConnection(job);
+    table = connection.getTable(tableName);
+    // Clear write buffer on fail is true by default so no need to reset it.
+    table.setAutoFlushTo(false);
+    return new TableRecordWriter(table);
   }
 
   @Override
   public void checkOutputSpecs(FileSystem ignored, JobConf job)
-      throws FileAlreadyExistsException, InvalidJobConfException, IOException {
+  throws FileAlreadyExistsException, InvalidJobConfException, IOException {
     String tableName = job.get(OUTPUT_TABLE);
-    if(tableName == null) {
+    if (tableName == null) {
       throw new IOException("Must specify table name");
     }
   }

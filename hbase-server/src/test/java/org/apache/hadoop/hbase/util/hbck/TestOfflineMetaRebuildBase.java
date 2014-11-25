@@ -25,6 +25,9 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -57,7 +60,6 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     // shutdown the minicluster
     TEST_UTIL.shutdownMiniHBaseCluster();
     TEST_UTIL.shutdownMiniZKCluster();
-    HConnectionManager.deleteConnection(conf);
 
     // rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);
@@ -66,24 +68,22 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     // bring up the minicluster
     TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.restartHBaseCluster(3);
-    TEST_UTIL.getHBaseAdmin().enableTable(table);
+    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      Admin admin = connection.getAdmin();
+      admin.enableTable(table);
+      LOG.info("Waiting for no more RIT");
+      TEST_UTIL.waitUntilNoRegionsInTransition(60000);
+      LOG.info("No more RIT in ZK, now doing final test verification");
 
-    LOG.info("Waiting for no more RIT");
-    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-    LOG.info("No more RIT in ZK, now doing final test verification");
+      // everything is good again.
+      assertEquals(5, scanMeta());
+      HTableDescriptor[] htbls = admin.listTables();
+      LOG.info("Tables present after restart: " + Arrays.toString(htbls));
+      assertEquals(1, htbls.length);
+    }
 
-    // everything is good again.
-    assertEquals(5, scanMeta());
-    HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
-    LOG.info("Tables present after restart: " + Arrays.toString(htbls));
-
-    assertEquals(1, htbls.length);
     assertErrors(doFsck(conf, false), new ERROR_CODE[] {});
-    LOG.info("Table " + table + " has " + tableRowCount(conf, table)
-        + " entries.");
+    LOG.info("Table " + table + " has " + tableRowCount(conf, table) + " entries.");
     assertEquals(16, tableRowCount(conf, table));
   }
-
-
 }
-

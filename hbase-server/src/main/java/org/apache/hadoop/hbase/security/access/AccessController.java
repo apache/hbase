@@ -1087,7 +1087,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
     if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getMasterServices()
-      .getShortCircuitConnection(), AccessControlLists.ACL_TABLE_NAME)) {
+      .getConnection(), AccessControlLists.ACL_TABLE_NAME)) {
       // initialize the ACL storage table
       AccessControlLists.createACLTable(ctx.getEnvironment().getMasterServices());
     } else {

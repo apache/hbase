@@ -80,7 +80,7 @@ public class DisableTableHandler extends EventHandler {
     boolean success = false;
     try {
       // Check if table exists
-      if (!MetaTableAccessor.tableExists(this.server.getShortCircuitConnection(), tableName)) {
+      if (!MetaTableAccessor.tableExists(this.server.getConnection(), tableName)) {
         throw new TableNotFoundException(tableName);
       }
 

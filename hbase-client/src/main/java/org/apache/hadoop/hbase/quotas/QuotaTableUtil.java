@@ -27,15 +27,15 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -78,41 +78,42 @@ public class QuotaTableUtil {
   /* =========================================================================
    *  Quota "settings" helpers
    */
-  public static Quotas getTableQuota(final Configuration conf, final TableName table)
+  public static Quotas getTableQuota(final Connection connection, final TableName table)
       throws IOException {
-    return getQuotas(conf, getTableRowKey(table));
+    return getQuotas(connection, getTableRowKey(table));
   }
 
-  public static Quotas getNamespaceQuota(final Configuration conf, final String namespace)
+  public static Quotas getNamespaceQuota(final Connection connection, final String namespace)
       throws IOException {
-    return getQuotas(conf, getNamespaceRowKey(namespace));
+    return getQuotas(connection, getNamespaceRowKey(namespace));
   }
 
-  public static Quotas getUserQuota(final Configuration conf, final String user)
+  public static Quotas getUserQuota(final Connection connection, final String user)
       throws IOException {
-    return getQuotas(conf, getUserRowKey(user));
+    return getQuotas(connection, getUserRowKey(user));
   }
 
-  public static Quotas getUserQuota(final Configuration conf, final String user,
+  public static Quotas getUserQuota(final Connection connection, final String user,
       final TableName table) throws IOException {
-    return getQuotas(conf, getUserRowKey(user), getSettingsQualifierForUserTable(table));
+    return getQuotas(connection, getUserRowKey(user), getSettingsQualifierForUserTable(table));
   }
 
-  public static Quotas getUserQuota(final Configuration conf, final String user,
+  public static Quotas getUserQuota(final Connection connection, final String user,
       final String namespace) throws IOException {
-    return getQuotas(conf, getUserRowKey(user), getSettingsQualifierForUserNamespace(namespace));
+    return getQuotas(connection, getUserRowKey(user),
+      getSettingsQualifierForUserNamespace(namespace));
   }
 
-  private static Quotas getQuotas(final Configuration conf, final byte[] rowKey)
+  private static Quotas getQuotas(final Connection connection, final byte[] rowKey)
       throws IOException {
-    return getQuotas(conf, rowKey, QUOTA_QUALIFIER_SETTINGS);
+    return getQuotas(connection, rowKey, QUOTA_QUALIFIER_SETTINGS);
   }
 
-  private static Quotas getQuotas(final Configuration conf, final byte[] rowKey,
+  private static Quotas getQuotas(final Connection connection, final byte[] rowKey,
       final byte[] qualifier) throws IOException {
     Get get = new Get(rowKey);
     get.addColumn(QUOTA_FAMILY_INFO, qualifier);
-    Result result = doGet(conf, get);
+    Result result = doGet(connection, get);
     if (result.isEmpty()) {
       return null;
     }
@@ -321,23 +322,17 @@ public class QuotaTableUtil {
   /* =========================================================================
    *  HTable helpers
    */
-  protected static Result doGet(final Configuration conf, final Get get)
+  protected static Result doGet(final Connection connection, final Get get)
       throws IOException {
-    HTable table = new HTable(conf, QUOTA_TABLE_NAME);
-    try {
+    try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
       return table.get(get);
-    } finally {
-      table.close();
     }
   }
 
-  protected static Result[] doGet(final Configuration conf, final List<Get> gets)
+  protected static Result[] doGet(final Connection connection, final List<Get> gets)
       throws IOException {
-    HTable table = new HTable(conf, QUOTA_TABLE_NAME);
-    try {
+    try (Table table = connection.getTable(QUOTA_TABLE_NAME)) {
       return table.get(gets);
-    } finally {
-      table.close();
     }
   }
 

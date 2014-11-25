@@ -18,9 +18,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
@@ -41,16 +41,12 @@ public interface Server extends Abortable, Stoppable {
   ZooKeeperWatcher getZooKeeper();
 
   /**
-   * Returns reference to wrapped short-circuit (i.e. local, bypassing RPC layer entirely)
-   * HConnection to this server, which may be used for miscellaneous needs.
+   * Returns a reference to the servers' cluster connection.
    *
-   * Important note: this method returns reference to connection which is managed
+   * Important note: this method returns a reference to Connection which is managed
    * by Server itself, so callers must NOT attempt to close connection obtained.
-   *
-   * See {@link org.apache.hadoop.hbase.client.ConnectionUtils#createShortCircuitHConnection}
-   * for details on short-circuit connections.
    */
-  HConnection getShortCircuitConnection();
+  ClusterConnection getConnection();
 
   /**
    * Returns instance of {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}

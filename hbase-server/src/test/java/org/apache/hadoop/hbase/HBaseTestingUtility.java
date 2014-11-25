@@ -152,11 +152,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   private boolean passedZkCluster = false;
   private MiniDFSCluster dfsCluster = null;
 
-  private HBaseCluster hbaseCluster = null;
+  private volatile HBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
 
   /** If there is a mini cluster running for this testing utility instance. */
-  private boolean miniClusterRunning;
+  private volatile boolean miniClusterRunning;
 
   private String hadoopLogDir;
 
@@ -166,6 +166,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /** Directory on test filesystem where we put the data for this instance of
     * HBaseTestingUtility*/
   private Path dataTestDirOnTestFS = null;
+
+  /**
+   * Shared cluster connection.
+   */
+  private volatile Connection connection;
 
   /**
    * System property key to get test directory value.
@@ -965,6 +970,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void shutdownMiniCluster() throws Exception {
     LOG.info("Shutting down minicluster");
+    if (this.connection != null && !this.connection.isClosed()) {
+      this.connection.close();
+      this.connection = null;
+    }
     shutdownMiniHBaseCluster();
     if (!this.passedZkCluster){
       shutdownMiniZKCluster();
@@ -1083,7 +1092,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return An HTable instance for the created table.
    * @throws IOException
    */
-  public HTable createTable(TableName tableName, String family)
+  public Table createTable(TableName tableName, String family)
   throws IOException{
     return createTable(tableName, new String[]{family});
   }
@@ -1107,7 +1116,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return An HTable instance for the created table.
    * @throws IOException
    */
-  public HTable createTable(TableName tableName, String[] families)
+  public Table createTable(TableName tableName, String[] families)
   throws IOException {
     List<byte[]> fams = new ArrayList<byte[]>(families.length);
     for (String family : families) {
@@ -1146,13 +1155,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table.
    * @param tableName
    * @param families
-   * @return An HTable instance for the created table.
+   * @return An HT
+   * able instance for the created table.
    * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[][] families)
   throws IOException {
-    return createTable(tableName, families,
-        new Configuration(getConfiguration()));
+    return createTable(tableName, families, new Configuration(getConfiguration()));
   }
 
   public HTable createTable(byte[] tableName, byte[][] families,
@@ -1203,7 +1212,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(htd);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
-    return new HTable(c, htd.getTableName());
+    return (HTable)getConnection().getTable(htd.getTableName());
   }
 
   /**
@@ -2566,6 +2575,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Get a Connection to the cluster.
+   * Not thread-safe (This class needs a lot of work to make it thread-safe).
+   * @return A Connection that can be shared. Don't close. Will be closed on shutdown of cluster.
+   * @throws IOException 
+   */
+  public Connection getConnection() throws IOException {
+    if (this.connection == null) {
+      if (getMiniHBaseCluster() == null) {
+        throw new IllegalStateException("You cannot have a Connection if cluster is not up");
+      }
+      this.connection = ConnectionFactory.createConnection(this.conf);
+    }
+    return this.connection;
+  }
+
+  /**
    * Returns a Admin instance.
    * This instance is shared between HBaseTestingUtility instance users.
    * Closing it has no effect, it will be closed automatically when the
@@ -2577,21 +2602,22 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public synchronized HBaseAdmin getHBaseAdmin()
   throws IOException {
     if (hbaseAdmin == null){
-      hbaseAdmin = new HBaseAdminForTests(getConfiguration());
+      this.hbaseAdmin = new HBaseAdminForTests(getConnection());
     }
     return hbaseAdmin;
   }
 
   private HBaseAdminForTests hbaseAdmin = null;
   private static class HBaseAdminForTests extends HBaseAdmin {
-    public HBaseAdminForTests(Configuration c) throws MasterNotRunningException,
+    public HBaseAdminForTests(Connection connection) throws MasterNotRunningException,
         ZooKeeperConnectionException, IOException {
-      super(c);
+      super(connection);
     }
 
     @Override
     public synchronized void close() throws IOException {
-      LOG.warn("close() called on HBaseAdmin instance returned from HBaseTestingUtility.getHBaseAdmin()");
+      LOG.warn("close() called on HBaseAdmin instance returned from " +
+        "HBaseTestingUtility.getHBaseAdmin()");
     }
 
     private synchronized void close0() throws IOException {

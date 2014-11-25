@@ -50,6 +50,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -115,7 +117,7 @@ public class TestReplicationSourceManager {
   private static Path oldLogDir;
 
   private static Path logDir;
-  
+
   private static CountDownLatch latch;
 
   private static List<String> files = new ArrayList<String>();
@@ -154,7 +156,7 @@ public class TestReplicationSourceManager {
         HConstants.HREGION_LOGDIR_NAME);
     replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
     manager = replication.getReplicationManager();
-    
+
     manager.addSource(slaveId);
 
     htd = new HTableDescriptor(test);
@@ -243,7 +245,7 @@ public class TestReplicationSourceManager {
 
     // TODO Need a case with only 2 WALs and we only want to delete the first one
   }
-  
+
   @Test
   public void testClaimQueues() throws Exception {
     LOG.debug("testNodeFailoverWorkerCopyQueuesFromRSUsingMulti");
@@ -286,7 +288,7 @@ public class TestReplicationSourceManager {
     assertEquals(1, populatedMap);
     server.abort("", null);
   }
-  
+
   @Test
   public void testCleanupFailoverQueues() throws Exception {
     final Server server = new DummyServer("hostname1.example.org");
@@ -366,8 +368,8 @@ public class TestReplicationSourceManager {
 
     server.abort("", null);
   }
-  
-  
+
+
   static class DummyNodeFailoverWorker extends Thread {
     private SortedMap<String, SortedSet<String>> logZnodesMap;
     Server server;
@@ -416,7 +418,7 @@ public class TestReplicationSourceManager {
       return 0;
     }
   }
-  
+
   static class DummyServer implements Server {
     String hostname;
 
@@ -443,7 +445,7 @@ public class TestReplicationSourceManager {
       return null;
     }
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -477,6 +479,4 @@ public class TestReplicationSourceManager {
       return false; // To change body of implemented methods use File | Settings | File Templates.
     }
   }
-
 }
-

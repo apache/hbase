@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
  * A non-instantiable class that manages creation of {@link Connection}s.
  * Managing the lifecycle of the {@link Connection}s to the cluster is the responsibility of
  * the caller.
- * From this {@link Connection} {@link Table} implementations are retrieved
+ * From a {@link Connection}, {@link Table} implementations are retrieved
  * with {@link Connection#getTable(TableName)}. Example:
  * <pre>
  * Connection connection = ConnectionFactory.createConnection(config);

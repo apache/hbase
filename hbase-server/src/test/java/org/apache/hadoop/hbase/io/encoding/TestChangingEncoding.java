@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -47,9 +48,7 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -71,7 +70,6 @@ public class TestChangingEncoding {
 
   private static final int TIMEOUT_MS = 600000;
 
-  private HBaseAdmin admin;
   private HColumnDescriptor hcd;
 
   private TableName tableName;
@@ -93,7 +91,9 @@ public class TestChangingEncoding {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
-    admin.createTable(htd);
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      admin.createTable(htd);
+    }
     numBatchesWritten = 0;
   }
 
@@ -110,16 +110,6 @@ public class TestChangingEncoding {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    admin = new HBaseAdmin(conf);
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    admin.close();
   }
 
   private static byte[] getRowKey(int batchId, int i) {
@@ -184,12 +174,14 @@ public class TestChangingEncoding {
     LOG.debug("Setting CF encoding to " + encoding + " (ordinal="
       + encoding.ordinal() + "), onlineChange=" + onlineChange);
     hcd.setDataBlockEncoding(encoding);
-    if (!onlineChange) {
-      admin.disableTable(tableName);
-    }
-    admin.modifyColumn(tableName, hcd);
-    if (!onlineChange) {
-      admin.enableTable(tableName);
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      if (!onlineChange) {
+        admin.disableTable(tableName);
+      }
+      admin.modifyColumn(tableName, hcd);
+      if (!onlineChange) {
+        admin.enableTable(tableName);
+      }
     }
     // This is a unit test, not integration test. So let's
     // wait for regions out of transition. Otherwise, for online
@@ -227,6 +219,7 @@ public class TestChangingEncoding {
   private void compactAndWait() throws IOException, InterruptedException {
     LOG.debug("Compacting table " + tableName);
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.majorCompact(tableName);
 
     // Waiting for the compaction to start, at least .5s.

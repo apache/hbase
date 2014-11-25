@@ -32,11 +32,17 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -267,115 +273,127 @@ public class TestPerTableCFReplication {
   @Test(timeout=300000)
   public void testPerTableCFReplication() throws Exception {
     LOG.info("testPerTableCFReplication");
-    ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
+    ReplicationAdmin replicationAdmin = new ReplicationAdmin(conf1);
+    Connection connection1 = ConnectionFactory.createConnection(conf1);
+    Connection connection2 = ConnectionFactory.createConnection(conf2);
+    Connection connection3 = ConnectionFactory.createConnection(conf3);
+    try {
+      Admin admin1 = connection1.getAdmin();
+      Admin admin2 = connection2.getAdmin();
+      Admin admin3 = connection3.getAdmin();
 
-    new HBaseAdmin(conf1).createTable(tabA);
-    new HBaseAdmin(conf1).createTable(tabB);
-    new HBaseAdmin(conf1).createTable(tabC);
-    new HBaseAdmin(conf2).createTable(tabA);
-    new HBaseAdmin(conf2).createTable(tabB);
-    new HBaseAdmin(conf2).createTable(tabC);
-    new HBaseAdmin(conf3).createTable(tabA);
-    new HBaseAdmin(conf3).createTable(tabB);
-    new HBaseAdmin(conf3).createTable(tabC);
+      admin1.createTable(tabA);
+      admin1.createTable(tabB);
+      admin1.createTable(tabC);
+      admin2.createTable(tabA);
+      admin2.createTable(tabB);
+      admin2.createTable(tabC);
+      admin3.createTable(tabA);
+      admin3.createTable(tabB);
+      admin3.createTable(tabC);
 
-    Table htab1A = new HTable(conf1, tabAName);
-    Table htab2A = new HTable(conf2, tabAName);
-    Table htab3A = new HTable(conf3, tabAName);
+      Table htab1A = connection1.getTable(tabAName);
+      Table htab2A = connection2.getTable(tabAName);
+      Table htab3A = connection3.getTable(tabAName);
 
-    Table htab1B = new HTable(conf1, tabBName);
-    Table htab2B = new HTable(conf2, tabBName);
-    Table htab3B = new HTable(conf3, tabBName);
+      Table htab1B = connection1.getTable(tabBName);
+      Table htab2B = connection2.getTable(tabBName);
+      Table htab3B = connection3.getTable(tabBName);
 
-    Table htab1C = new HTable(conf1, tabCName);
-    Table htab2C = new HTable(conf2, tabCName);
-    Table htab3C = new HTable(conf3, tabCName);
+      Table htab1C = connection1.getTable(tabCName);
+      Table htab2C = connection2.getTable(tabCName);
+      Table htab3C = connection3.getTable(tabCName);
 
-    // A. add cluster2/cluster3 as peers to cluster1
-    admin1.addPeer("2", utility2.getClusterKey(), "TC;TB:f1,f3");
-    admin1.addPeer("3", utility3.getClusterKey(), "TA;TB:f1,f2");
+      // A. add cluster2/cluster3 as peers to cluster1
+      replicationAdmin.addPeer("2", utility2.getClusterKey(), "TC;TB:f1,f3");
+      replicationAdmin.addPeer("3", utility3.getClusterKey(), "TA;TB:f1,f2");
 
-    // A1. tableA can only replicated to cluster3
-    putAndWaitWithFamily(row1, f1Name, htab1A, htab3A);
-    ensureRowNotReplicated(row1, f1Name, htab2A);
-    deleteAndWaitWithFamily(row1, f1Name, htab1A, htab3A);
+      // A1. tableA can only replicated to cluster3
+      putAndWaitWithFamily(row1, f1Name, htab1A, htab3A);
+      ensureRowNotReplicated(row1, f1Name, htab2A);
+      deleteAndWaitWithFamily(row1, f1Name, htab1A, htab3A);
 
-    putAndWaitWithFamily(row1, f2Name, htab1A, htab3A);
-    ensureRowNotReplicated(row1, f2Name, htab2A);
-    deleteAndWaitWithFamily(row1, f2Name, htab1A, htab3A);
+      putAndWaitWithFamily(row1, f2Name, htab1A, htab3A);
+      ensureRowNotReplicated(row1, f2Name, htab2A);
+      deleteAndWaitWithFamily(row1, f2Name, htab1A, htab3A);
 
-    putAndWaitWithFamily(row1, f3Name, htab1A, htab3A);
-    ensureRowNotReplicated(row1, f3Name, htab2A);
-    deleteAndWaitWithFamily(row1, f3Name, htab1A, htab3A);
+      putAndWaitWithFamily(row1, f3Name, htab1A, htab3A);
+      ensureRowNotReplicated(row1, f3Name, htab2A);
+      deleteAndWaitWithFamily(row1, f3Name, htab1A, htab3A);
 
-    // A2. cf 'f1' of tableB can replicated to both cluster2 and cluster3
-    putAndWaitWithFamily(row1, f1Name, htab1B, htab2B, htab3B);
-    deleteAndWaitWithFamily(row1, f1Name, htab1B, htab2B, htab3B);
+      // A2. cf 'f1' of tableB can replicated to both cluster2 and cluster3
+      putAndWaitWithFamily(row1, f1Name, htab1B, htab2B, htab3B);
+      deleteAndWaitWithFamily(row1, f1Name, htab1B, htab2B, htab3B);
 
-    //  cf 'f2' of tableB can only replicated to cluster3
-    putAndWaitWithFamily(row1, f2Name, htab1B, htab3B);
-    ensureRowNotReplicated(row1, f2Name, htab2B);
-    deleteAndWaitWithFamily(row1, f2Name, htab1B, htab3B);
+      //  cf 'f2' of tableB can only replicated to cluster3
+      putAndWaitWithFamily(row1, f2Name, htab1B, htab3B);
+      ensureRowNotReplicated(row1, f2Name, htab2B);
+      deleteAndWaitWithFamily(row1, f2Name, htab1B, htab3B);
 
-    //  cf 'f3' of tableB can only replicated to cluster2
-    putAndWaitWithFamily(row1, f3Name, htab1B, htab2B);
-    ensureRowNotReplicated(row1, f3Name, htab3B);
-    deleteAndWaitWithFamily(row1, f3Name, htab1B, htab2B);
+      //  cf 'f3' of tableB can only replicated to cluster2
+      putAndWaitWithFamily(row1, f3Name, htab1B, htab2B);
+      ensureRowNotReplicated(row1, f3Name, htab3B);
+      deleteAndWaitWithFamily(row1, f3Name, htab1B, htab2B);
 
-    // A3. tableC can only replicated to cluster2
-    putAndWaitWithFamily(row1, f1Name, htab1C, htab2C);
-    ensureRowNotReplicated(row1, f1Name, htab3C);
-    deleteAndWaitWithFamily(row1, f1Name, htab1C, htab2C);
+      // A3. tableC can only replicated to cluster2
+      putAndWaitWithFamily(row1, f1Name, htab1C, htab2C);
+      ensureRowNotReplicated(row1, f1Name, htab3C);
+      deleteAndWaitWithFamily(row1, f1Name, htab1C, htab2C);
 
-    putAndWaitWithFamily(row1, f2Name, htab1C, htab2C);
-    ensureRowNotReplicated(row1, f2Name, htab3C);
-    deleteAndWaitWithFamily(row1, f2Name, htab1C, htab2C);
+      putAndWaitWithFamily(row1, f2Name, htab1C, htab2C);
+      ensureRowNotReplicated(row1, f2Name, htab3C);
+      deleteAndWaitWithFamily(row1, f2Name, htab1C, htab2C);
 
-    putAndWaitWithFamily(row1, f3Name, htab1C, htab2C);
-    ensureRowNotReplicated(row1, f3Name, htab3C);
-    deleteAndWaitWithFamily(row1, f3Name, htab1C, htab2C);
+      putAndWaitWithFamily(row1, f3Name, htab1C, htab2C);
+      ensureRowNotReplicated(row1, f3Name, htab3C);
+      deleteAndWaitWithFamily(row1, f3Name, htab1C, htab2C);
 
-    // B. change peers' replicable table-cf config
-    admin1.setPeerTableCFs("2", "TA:f1,f2; TC:f2,f3");
-    admin1.setPeerTableCFs("3", "TB; TC:f3");
+      // B. change peers' replicable table-cf config
+      replicationAdmin.setPeerTableCFs("2", "TA:f1,f2; TC:f2,f3");
+      replicationAdmin.setPeerTableCFs("3", "TB; TC:f3");
 
-    // B1. cf 'f1' of tableA can only replicated to cluster2
-    putAndWaitWithFamily(row2, f1Name, htab1A, htab2A);
-    ensureRowNotReplicated(row2, f1Name, htab3A);
-    deleteAndWaitWithFamily(row2, f1Name, htab1A, htab2A);
-    //     cf 'f2' of tableA can only replicated to cluster2
-    putAndWaitWithFamily(row2, f2Name, htab1A, htab2A);
-    ensureRowNotReplicated(row2, f2Name, htab3A);
-    deleteAndWaitWithFamily(row2, f2Name, htab1A, htab2A);
-    //     cf 'f3' of tableA isn't replicable to either cluster2 or cluster3
-    putAndWaitWithFamily(row2, f3Name, htab1A);
-    ensureRowNotReplicated(row2, f3Name, htab2A, htab3A);
-    deleteAndWaitWithFamily(row2, f3Name, htab1A);
+      // B1. cf 'f1' of tableA can only replicated to cluster2
+      putAndWaitWithFamily(row2, f1Name, htab1A, htab2A);
+      ensureRowNotReplicated(row2, f1Name, htab3A);
+      deleteAndWaitWithFamily(row2, f1Name, htab1A, htab2A);
+      //     cf 'f2' of tableA can only replicated to cluster2
+      putAndWaitWithFamily(row2, f2Name, htab1A, htab2A);
+      ensureRowNotReplicated(row2, f2Name, htab3A);
+      deleteAndWaitWithFamily(row2, f2Name, htab1A, htab2A);
+      //     cf 'f3' of tableA isn't replicable to either cluster2 or cluster3
+      putAndWaitWithFamily(row2, f3Name, htab1A);
+      ensureRowNotReplicated(row2, f3Name, htab2A, htab3A);
+      deleteAndWaitWithFamily(row2, f3Name, htab1A);
 
-    // B2. tableB can only replicated to cluster3
-    putAndWaitWithFamily(row2, f1Name, htab1B, htab3B);
-    ensureRowNotReplicated(row2, f1Name, htab2B);
-    deleteAndWaitWithFamily(row2, f1Name, htab1B, htab3B);
+      // B2. tableB can only replicated to cluster3
+      putAndWaitWithFamily(row2, f1Name, htab1B, htab3B);
+      ensureRowNotReplicated(row2, f1Name, htab2B);
+      deleteAndWaitWithFamily(row2, f1Name, htab1B, htab3B);
 
-    putAndWaitWithFamily(row2, f2Name, htab1B, htab3B);
-    ensureRowNotReplicated(row2, f2Name, htab2B);
-    deleteAndWaitWithFamily(row2, f2Name, htab1B, htab3B);
+      putAndWaitWithFamily(row2, f2Name, htab1B, htab3B);
+      ensureRowNotReplicated(row2, f2Name, htab2B);
+      deleteAndWaitWithFamily(row2, f2Name, htab1B, htab3B);
 
-    putAndWaitWithFamily(row2, f3Name, htab1B, htab3B);
-    ensureRowNotReplicated(row2, f3Name, htab2B);
-    deleteAndWaitWithFamily(row2, f3Name, htab1B, htab3B);
+      putAndWaitWithFamily(row2, f3Name, htab1B, htab3B);
+      ensureRowNotReplicated(row2, f3Name, htab2B);
+      deleteAndWaitWithFamily(row2, f3Name, htab1B, htab3B);
 
-    // B3. cf 'f1' of tableC non-replicable to either cluster
-    putAndWaitWithFamily(row2, f1Name, htab1C);
-    ensureRowNotReplicated(row2, f1Name, htab2C, htab3C);
-    deleteAndWaitWithFamily(row2, f1Name, htab1C);
-    //     cf 'f2' of tableC can only replicated to cluster2
-    putAndWaitWithFamily(row2, f2Name, htab1C, htab2C);
-    ensureRowNotReplicated(row2, f2Name, htab3C);
-    deleteAndWaitWithFamily(row2, f2Name, htab1C, htab2C);
-    //     cf 'f3' of tableC can replicated to cluster2 and cluster3
-    putAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
-    deleteAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
+      // B3. cf 'f1' of tableC non-replicable to either cluster
+      putAndWaitWithFamily(row2, f1Name, htab1C);
+      ensureRowNotReplicated(row2, f1Name, htab2C, htab3C);
+      deleteAndWaitWithFamily(row2, f1Name, htab1C);
+      //     cf 'f2' of tableC can only replicated to cluster2
+      putAndWaitWithFamily(row2, f2Name, htab1C, htab2C);
+      ensureRowNotReplicated(row2, f2Name, htab3C);
+      deleteAndWaitWithFamily(row2, f2Name, htab1C, htab2C);
+      //     cf 'f3' of tableC can replicated to cluster2 and cluster3
+      putAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
+      deleteAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
+    } finally {
+      connection1.close();
+      connection2.close();
+      connection3.close();
+    }
  }
 
   private void ensureRowNotReplicated(byte[] row, byte[] fam, Table... tables) throws IOException {

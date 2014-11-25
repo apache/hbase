@@ -155,7 +155,7 @@ public final class MasterSnapshotVerifier {
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       regions = new MetaTableLocator().getMetaRegions(services.getZooKeeper());
     } else {
-      regions = MetaTableAccessor.getTableRegions(services.getShortCircuitConnection(), tableName);
+      regions = MetaTableAccessor.getTableRegions(services.getConnection(), tableName);
     }
     // Remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);

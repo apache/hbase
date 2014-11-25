@@ -634,7 +634,7 @@ public class TestSplitTransactionOnCluster {
       admin.setBalancerRunning(false, true);
       // Turn off the meta scanner so it don't remove parent on us.
       cluster.getMaster().setCatalogJanitorEnabled(false);
-      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getShortCircuitConnection(),
+      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
         tableName);
       assertEquals("The specified table should present.", true, tableExists);
       final HRegion region = findSplittableRegion(regions);
@@ -646,7 +646,7 @@ public class TestSplitTransactionOnCluster {
       } catch (IOException e) {
 
       }
-      tableExists = MetaTableAccessor.tableExists(regionServer.getShortCircuitConnection(),
+      tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
         tableName);
       assertEquals("The specified table should present.", true, tableExists);
     } finally {
@@ -680,7 +680,7 @@ public class TestSplitTransactionOnCluster {
       admin.setBalancerRunning(false, true);
       // Turn off the meta scanner so it don't remove parent on us.
       cluster.getMaster().setCatalogJanitorEnabled(false);
-      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getShortCircuitConnection(),
+      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
           tableName);
       assertEquals("The specified table should be present.", true, tableExists);
       final HRegion region = findSplittableRegion(oldRegions);
@@ -703,7 +703,7 @@ public class TestSplitTransactionOnCluster {
         Thread.sleep(1000);
       } while ((newRegions.contains(oldRegions.get(0)) || newRegions.contains(oldRegions.get(1)))
           || newRegions.size() != 4);
-      tableExists = MetaTableAccessor.tableExists(regionServer.getShortCircuitConnection(),
+      tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
           tableName);
       assertEquals("The specified table should be present.", true, tableExists);
       // exists works on stale and we see the put after the flush

@@ -339,7 +339,7 @@ public class AssignmentManager {
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       hris = new MetaTableLocator().getMetaRegions(server.getZooKeeper());
     } else {
-      hris = MetaTableAccessor.getTableRegions(server.getShortCircuitConnection(), tableName, true);
+      hris = MetaTableAccessor.getTableRegions(server.getConnection(), tableName, true);
     }
 
     Integer pending = 0;
@@ -565,7 +565,7 @@ public class AssignmentManager {
           ((FavoredNodeLoadBalancer)this.balancer).getFavoredNodes(region));
     }
     FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
-      this.server.getShortCircuitConnection());
+      this.server.getConnection());
   }
 
   /**
@@ -1564,7 +1564,7 @@ public class AssignmentManager {
             TableState.State.ENABLING);
 
     // Region assignment from META
-    List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getShortCircuitConnection());
+    List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getConnection());
     // Get any new but slow to checkin region server that joined the cluster
     Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
     // Set of offline servers to be returned

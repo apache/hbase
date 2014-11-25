@@ -125,7 +125,7 @@ public class TruncateTableHandler extends DeleteTableHandler {
     }
 
     // 4. Add regions to META
-    MetaTableAccessor.addRegionsToMeta(masterServices.getShortCircuitConnection(),
+    MetaTableAccessor.addRegionsToMeta(masterServices.getConnection(),
       regionInfos);
 
     // 5. Trigger immediate assignment of the regions in round-robin fashion

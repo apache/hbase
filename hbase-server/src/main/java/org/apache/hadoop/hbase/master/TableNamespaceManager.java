@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.ZKNamespaceManager;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -69,7 +68,7 @@ public class TableNamespaceManager {
 
   private Configuration conf;
   private MasterServices masterServices;
-  private HTable nsTable;
+  private Table nsTable;
   private ZKNamespaceManager zkNamespaceManager;
   private boolean initialized;
 
@@ -82,7 +81,7 @@ public class TableNamespaceManager {
   }
 
   public void start() throws IOException {
-    if (!MetaTableAccessor.tableExists(masterServices.getShortCircuitConnection(),
+    if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
         TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
@@ -253,16 +252,14 @@ public class TableNamespaceManager {
   public synchronized boolean isTableAvailableAndInitialized() throws IOException {
     // Did we already get a table? If so, still make sure it's available
     if (initialized) {
-      if (nsTable.getConnection().isClosed()) {
-        nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
-      }
+      this.nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
       return true;
     }
 
     // Now check if the table is assigned, if not then fail fast
     if (isTableAssigned() && isTableEnabled()) {
       try {
-        nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
+        nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
         zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
         zkNamespaceManager.start();
 

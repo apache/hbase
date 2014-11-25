@@ -252,9 +252,10 @@ implements Configurable {
   protected Pair<byte[][], byte[][]> getStartEndKeys() throws IOException {
     if (conf.get(SPLIT_TABLE) != null) {
       TableName splitTableName = TableName.valueOf(conf.get(SPLIT_TABLE));
-      try (Connection conn = ConnectionFactory.createConnection(getConf());
-          RegionLocator rl = conn.getRegionLocator(splitTableName)) {
-        return rl.getStartEndKeys();
+      try (Connection conn = ConnectionFactory.createConnection(getConf())) {
+        try (RegionLocator rl = conn.getRegionLocator(splitTableName)) {
+          return rl.getStartEndKeys();
+        }
       }
     }
 
