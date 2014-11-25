@@ -110,6 +110,7 @@ public class HTable implements HTableInterface, RegionLocator {
   protected ClusterConnection connection;
   private final TableName tableName;
   private volatile Configuration configuration;
+  private TableConfiguration tableConfiguration;
   protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
   private long writeBufferSize;
   private boolean clearBufferOnFail = true;
@@ -117,15 +118,11 @@ public class HTable implements HTableInterface, RegionLocator {
   protected long currentWriteBufferSize = 0 ;
   private boolean closed = false;
   protected int scannerCaching;
-  private int maxKeyValueSize;
   private ExecutorService pool;  // For Multi & Scan
   private int operationTimeout;
-  private int retries;
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
   private Consistency defaultConsistency = Consistency.STRONG;
-  private int primaryCallTimeoutMicroSecond;
-  private int replicaCallTimeoutMicroSecondScan;
 
   /** The Async process for puts with autoflush set to false or multiputs */
   protected AsyncProcess ap;
@@ -283,7 +280,7 @@ public class HTable implements HTableInterface, RegionLocator {
   @Deprecated
   public HTable(TableName tableName, final Connection connection,
       final ExecutorService pool) throws IOException {
-    this(tableName, (ClusterConnection)connection, pool);
+    this(tableName, (ClusterConnection)connection, null, null, null, pool);
   }
 
   /**
@@ -297,6 +294,9 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @InterfaceAudience.Private
   public HTable(TableName tableName, final ClusterConnection connection,
+      final TableConfiguration tableConfig,
+      final RpcRetryingCallerFactory rpcCallerFactory,
+      final RpcControllerFactory rpcControllerFactory,
       final ExecutorService pool) throws IOException {
     if (connection == null || connection.isClosed()) {
       throw new IllegalArgumentException("Connection is null or closed.");
@@ -305,6 +305,7 @@ public class HTable implements HTableInterface, RegionLocator {
     this.cleanupConnectionOnClose = false;
     this.connection = connection;
     this.configuration = connection.getConfiguration();
+    this.tableConfiguration = tableConfig;
     this.pool = pool;
     if (pool == null) {
       this.pool = getDefaultExecutor(this.configuration);
@@ -312,6 +313,9 @@ public class HTable implements HTableInterface, RegionLocator {
     } else {
       this.cleanupPoolOnClose = false;
     }
+
+    this.rpcCallerFactory = rpcCallerFactory;
+    this.rpcControllerFactory = rpcControllerFactory;
 
     this.finishSetup();
   }
@@ -323,6 +327,7 @@ public class HTable implements HTableInterface, RegionLocator {
   @VisibleForTesting
   protected HTable() throws IOException {
     tableName = null;
+    tableConfiguration = new TableConfiguration();
     cleanupPoolOnClose = false;
     cleanupConnectionOnClose = false;
   }
@@ -338,30 +343,30 @@ public class HTable implements HTableInterface, RegionLocator {
    * setup this HTable's parameter based on the passed configuration
    */
   private void finishSetup() throws IOException {
-    this.operationTimeout = tableName.isSystemTable() ?
-      this.configuration.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT):
-      this.configuration.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
-    this.writeBufferSize = this.configuration.getLong(
-        "hbase.client.write.buffer", 2097152);
-    this.scannerCaching = this.configuration.getInt(
-        HConstants.HBASE_CLIENT_SCANNER_CACHING,
-        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
-    this.primaryCallTimeoutMicroSecond =
-        this.configuration.getInt("hbase.client.primaryCallTimeout.get", 10000); // 10 ms
-    this.replicaCallTimeoutMicroSecondScan =
-        this.configuration.getInt("hbase.client.replicaCallTimeout.scan", 1000000); // 1000 ms
-    this.retries = configuration.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-            HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    if (tableConfiguration == null) {
+      tableConfiguration = new TableConfiguration(configuration);
+    }
 
-    this.rpcCallerFactory = connection.getNewRpcRetryingCallerFactory(configuration);
-    this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);
+    this.operationTimeout = tableName.isSystemTable() ?
+        tableConfiguration.getMetaOperationTimeout() : tableConfiguration.getOperationTimeout();
+    this.writeBufferSize = tableConfiguration.getWriteBufferSize();
+    this.clearBufferOnFail = true;
+    this.autoFlush = true;
+    this.currentWriteBufferSize = 0;
+    this.scannerCaching = tableConfiguration.getScannerCaching();
+
+    if (this.rpcCallerFactory == null) {
+      this.rpcCallerFactory = connection.getNewRpcRetryingCallerFactory(configuration);
+    }
+    if (this.rpcControllerFactory == null) {
+      this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);
+    }
+
     // puts need to track errors globally due to how the APIs currently work.
     ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true, rpcControllerFactory);
     multiAp = this.connection.getAsyncProcess();
 
-    this.maxKeyValueSize = getMaxKeyValueSize(this.configuration);
+    this.closed = false;
   }
 
   /**
@@ -769,22 +774,22 @@ public class HTable implements HTableInterface, RegionLocator {
       if (scan.isSmall()) {
         return new ClientSmallReversedScanner(getConfiguration(), scan, getName(),
             this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-            pool, replicaCallTimeoutMicroSecondScan);
+            pool, tableConfiguration.getReplicaCallTimeoutMicroSecondScan());
       } else {
         return new ReversedClientScanner(getConfiguration(), scan, getName(),
             this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-            pool, replicaCallTimeoutMicroSecondScan);
+            pool, tableConfiguration.getReplicaCallTimeoutMicroSecondScan());
       }
     }
 
     if (scan.isSmall()) {
       return new ClientSmallScanner(getConfiguration(), scan, getName(),
           this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
-          pool, replicaCallTimeoutMicroSecondScan);
+          pool, tableConfiguration.getReplicaCallTimeoutMicroSecondScan());
     } else {
       return new ClientScanner(getConfiguration(), scan, getName(), this.connection,
           this.rpcCallerFactory, this.rpcControllerFactory,
-          pool, replicaCallTimeoutMicroSecondScan);
+          pool, tableConfiguration.getReplicaCallTimeoutMicroSecondScan());
     }
   }
 
@@ -845,8 +850,10 @@ public class HTable implements HTableInterface, RegionLocator {
 
     // Call that takes into account the replica
     RpcRetryingCallerWithReadReplicas callable = new RpcRetryingCallerWithReadReplicas(
-      rpcControllerFactory, tableName, this.connection, get, pool, retries,
-      operationTimeout, primaryCallTimeoutMicroSecond);
+      rpcControllerFactory, tableName, this.connection, get, pool,
+      tableConfiguration.getRetriesNumber(),
+      operationTimeout,
+      tableConfiguration.getPrimaryCallTimeoutMicroSecond());
     return callable.call();
   }
 
@@ -1499,7 +1506,7 @@ public class HTable implements HTableInterface, RegionLocator {
 
   // validate for well-formedness
   public void validatePut(final Put put) throws IllegalArgumentException {
-    validatePut(put, maxKeyValueSize);
+    validatePut(put, tableConfiguration.getMaxKeyValueSize());
   }
 
   // validate for well-formedness
