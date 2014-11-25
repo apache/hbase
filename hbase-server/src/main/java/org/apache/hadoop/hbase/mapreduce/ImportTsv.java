@@ -486,7 +486,7 @@ public class ImportTsv extends Configured implements Tool {
                 job.setMapOutputValueClass(Put.class);
                 job.setCombinerClass(PutCombiner.class);
               }
-              HFileOutputFormat.configureIncrementalLoad(job, table);
+              HFileOutputFormat2.configureIncrementalLoad(job, table, table);
             }
           } else {
             if (!admin.tableExists(tableName)) {

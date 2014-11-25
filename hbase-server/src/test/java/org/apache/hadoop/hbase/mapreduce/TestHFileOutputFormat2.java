@@ -336,7 +336,7 @@ public class TestHFileOutputFormat2  {
     job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
     HTable table = Mockito.mock(HTable.class);
     setupMockStartKeys(table);
-    HFileOutputFormat2.configureIncrementalLoad(job, table);
+    HFileOutputFormat2.configureIncrementalLoad(job, table, table);
     assertEquals(job.getNumReduceTasks(), 4);
   }
 
@@ -466,7 +466,7 @@ public class TestHFileOutputFormat2  {
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
         KeyValueSerialization.class.getName());
     setupRandomGeneratorMapper(job);
-    HFileOutputFormat2.configureIncrementalLoad(job, table);
+    HFileOutputFormat2.configureIncrementalLoad(job, table, table);
     FileOutputFormat.setOutputPath(job, outDir);
 
     assertFalse(util.getTestFileSystem().exists(outDir)) ;
@@ -809,7 +809,7 @@ public class TestHFileOutputFormat2  {
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
       setupRandomGeneratorMapper(job);
-      HFileOutputFormat2.configureIncrementalLoad(job, table);
+      HFileOutputFormat2.configureIncrementalLoad(job, table, table);
       FileOutputFormat.setOutputPath(job, dir);
       context = createTestTaskAttemptContext(job);
       HFileOutputFormat2 hof = new HFileOutputFormat2();

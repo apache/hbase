@@ -251,7 +251,7 @@ public class WALPlayer extends Configured implements Tool {
       Path outputDir = new Path(hfileOutPath);
       FileOutputFormat.setOutputPath(job, outputDir);
       job.setMapOutputValueClass(KeyValue.class);
-      HFileOutputFormat.configureIncrementalLoad(job, table);
+      HFileOutputFormat2.configureIncrementalLoad(job, table, table);
       TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
           com.google.common.base.Preconditions.class);
     } else {

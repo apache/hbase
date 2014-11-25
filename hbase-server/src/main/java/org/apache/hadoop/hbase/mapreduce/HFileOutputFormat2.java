@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -75,11 +76,11 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * Writes HFiles. Passed Cells must arrive in order.
  * Writes current time as the sequence id for the file. Sets the major compacted
- * attribute on created hfiles. Calling write(null,null) will forcibly roll
+ * attribute on created @{link {@link HFile}s. Calling write(null,null) will forcibly roll
  * all HFiles being written.
  * <p>
  * Using this class as part of a MapReduce job is best done
- * using {@link #configureIncrementalLoad(Job, HTable)}.
+ * using {@link #configureIncrementalLoad(Job, Table, RegionLocator, Class)}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -107,6 +108,7 @@ public class HFileOutputFormat2
   public static final String DATABLOCK_ENCODING_OVERRIDE_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.datablock.encoding";
 
+  @Override
   public RecordWriter<ImmutableBytesWritable, Cell> getRecordWriter(
       final TaskAttemptContext context) throws IOException, InterruptedException {
     return createRecordWriter(context);
@@ -114,7 +116,7 @@ public class HFileOutputFormat2
 
   static <V extends Cell> RecordWriter<ImmutableBytesWritable, V>
       createRecordWriter(final TaskAttemptContext context)
-          throws IOException, InterruptedException {
+          throws IOException {
 
     // Get the path of the temporary output file
     final Path outputPath = FileOutputFormat.getOutputPath(context);
@@ -155,6 +157,7 @@ public class HFileOutputFormat2
       private final byte [] now = Bytes.toBytes(System.currentTimeMillis());
       private boolean rollRequested = false;
 
+      @Override
       public void write(ImmutableBytesWritable row, V cell)
           throws IOException {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
@@ -267,6 +270,7 @@ public class HFileOutputFormat2
         }
       }
 
+      @Override
       public void close(TaskAttemptContext c)
       throws IOException, InterruptedException {
         for (WriterLength wl: this.writers.values()) {
@@ -354,13 +358,35 @@ public class HFileOutputFormat2
    * </ul>
    * The user should be sure to set the map output value class to either KeyValue or Put before
    * running this function.
+   * 
+   * @deprecated Use {@link #configureIncrementalLoad(Job, Table, RegionLocator)} instead.
    */
+  @Deprecated
   public static void configureIncrementalLoad(Job job, HTable table)
       throws IOException {
-    configureIncrementalLoad(job, table, HFileOutputFormat2.class);
+    configureIncrementalLoad(job, table, table);
   }
 
-  static void configureIncrementalLoad(Job job, HTable table,
+  /**
+   * Configure a MapReduce Job to perform an incremental load into the given
+   * table. This
+   * <ul>
+   *   <li>Inspects the table to configure a total order partitioner</li>
+   *   <li>Uploads the partitions file to the cluster and adds it to the DistributedCache</li>
+   *   <li>Sets the number of reduce tasks to match the current number of regions</li>
+   *   <li>Sets the output key/value class to match HFileOutputFormat2's requirements</li>
+   *   <li>Sets the reducer up to perform the appropriate sorting (either KeyValueSortReducer or
+   *     PutSortReducer)</li>
+   * </ul>
+   * The user should be sure to set the map output value class to either KeyValue or Put before
+   * running this function.
+   */
+  public static void configureIncrementalLoad(Job job, Table table, RegionLocator regionLocator)
+      throws IOException {
+    configureIncrementalLoad(job, table, regionLocator, HFileOutputFormat2.class);
+  }
+
+  static void configureIncrementalLoad(Job job, Table table, RegionLocator regionLocator,
       Class<? extends OutputFormat<?, ?>> cls) throws IOException {
     Configuration conf = job.getConfiguration();
 
@@ -386,8 +412,8 @@ public class HFileOutputFormat2
         KeyValueSerialization.class.getName());
 
     // Use table's region boundaries for TOP split points.
-    LOG.info("Looking up current regions for table " + Bytes.toString(table.getTableName()));
-    List<ImmutableBytesWritable> startKeys = getRegionStartKeys(table);
+    LOG.info("Looking up current regions for table " + table.getName());
+    List<ImmutableBytesWritable> startKeys = getRegionStartKeys(regionLocator);
     LOG.info("Configuring " + startKeys.size() + " reduce partitions " +
         "to match current region count");
     job.setNumReduceTasks(startKeys.size());
@@ -401,8 +427,7 @@ public class HFileOutputFormat2
 
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
-    LOG.info("Incremental table " + Bytes.toString(table.getTableName())
-      + " output configured.");
+    LOG.info("Incremental table " + table.getName() + " output configured.");
   }
   
   public static void configureIncrementalLoadMap(Job job, Table table) throws IOException {
