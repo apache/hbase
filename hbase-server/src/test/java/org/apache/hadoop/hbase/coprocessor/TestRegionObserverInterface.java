@@ -561,7 +561,7 @@ public class TestRegionObserverInterface {
     String testName = TestRegionObserverInterface.class.getName()+".bulkLoadHFileTest";
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".bulkLoadHFileTest");
     Configuration conf = util.getConfiguration();
-    Table table = util.createTable(tableName, new byte[][] {A, B, C});
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       verifyMethodResult(SimpleRegionObserver.class,
           new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},
@@ -575,8 +575,8 @@ public class TestRegionObserverInterface {
 
       createHFile(util.getConfiguration(), fs, new Path(familyDir,Bytes.toString(A)), A, A);
 
-      //Bulk load
-      new LoadIncrementalHFiles(conf).doBulkLoad(dir, new HTable(conf, tableName));
+      // Bulk load
+      new LoadIncrementalHFiles(conf).doBulkLoad(dir, table);
 
       verifyMethodResult(SimpleRegionObserver.class,
           new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},

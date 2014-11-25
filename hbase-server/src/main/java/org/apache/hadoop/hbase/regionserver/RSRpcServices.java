@@ -1321,7 +1321,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // See HBASE-5094. Cross check with hbase:meta if still this RS is owning
           // the region.
           Pair<HRegionInfo, ServerName> p = MetaTableAccessor.getRegion(
-            regionServer.getShortCircuitConnection(), region.getRegionName());
+            regionServer.getConnection(), region.getRegionName());
           if (regionServer.serverName.equals(p.getSecond())) {
             Boolean closing = regionServer.regionsInTransitionInRS.get(region.getEncodedNameAsBytes());
             // Map regionsInTransitionInRSOnly has an entry for a region only if the region

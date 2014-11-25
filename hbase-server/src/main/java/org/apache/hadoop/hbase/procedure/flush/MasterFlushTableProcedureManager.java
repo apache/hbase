@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.collect.Lists;
@@ -126,10 +128,13 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // We may still miss regions that need to be flushed.
     List<Pair<HRegionInfo, ServerName>> regionsAndLocations = null;
     try {
-      regionsAndLocations =
-          MetaTableAccessor.getTableRegionsAndLocations(this.master.getZooKeeper(),
-            this.master.getShortCircuitConnection(),
-            TableName.valueOf(desc.getInstance()), false);
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
+          master.getZooKeeper());
+      } else {
+        regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
+          master.getZooKeeper(), master.getConnection(), tableName, false);
+      }
     } catch (InterruptedException e1) {
       String msg = "Failed to get regions for '" + desc.getInstance() + "'";
       LOG.error(msg);

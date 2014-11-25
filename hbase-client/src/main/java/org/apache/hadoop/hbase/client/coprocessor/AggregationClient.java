@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -36,7 +37,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -72,19 +75,32 @@ import com.google.protobuf.Message;
  * <li>For methods to find maximum, minimum, sum, rowcount, it returns the
  * parameter type. For average and std, it returns a double value. For row
  * count, it returns a long value.
+ * <p>Call {@link #close()} when done.
  */
 @InterfaceAudience.Private
-public class AggregationClient {
-
+public class AggregationClient implements Closeable {
+  // TODO: This class is not used.  Move to examples?
   private static final Log log = LogFactory.getLog(AggregationClient.class);
-  Configuration conf;
+  private final Connection connection;
 
   /**
    * Constructor with Conf object
    * @param cfg
    */
   public AggregationClient(Configuration cfg) {
-    this.conf = cfg;
+    try {
+      // Create a connection on construction. Will use it making each of the calls below.
+      this.connection = ConnectionFactory.createConnection(cfg);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (this.connection != null && !this.connection.isClosed()) {
+      this.connection.close();
+    }
   }
 
   /**
@@ -101,15 +117,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R max(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
       return max(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
@@ -125,7 +135,7 @@ public class AggregationClient {
    *           The caller is supposed to handle the exception as they are thrown
    *           & propagated to it.
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> 
+  public <R, S, P extends Message, Q extends Message, T extends Message>
   R max(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
@@ -147,7 +157,7 @@ public class AggregationClient {
           @Override
           public R call(AggregateService instance) throws IOException {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<AggregateResponse> rpcCallback = 
+            BlockingRpcCallback<AggregateResponse> rpcCallback =
                 new BlockingRpcCallback<AggregateResponse>();
             instance.getMax(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
@@ -196,15 +206,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R min(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
       return min(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
@@ -218,7 +222,7 @@ public class AggregationClient {
    * @return min val <R>
    * @throws Throwable
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> 
+  public <R, S, P extends Message, Q extends Message, T extends Message>
   R min(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
@@ -242,7 +246,7 @@ public class AggregationClient {
           @Override
           public R call(AggregateService instance) throws IOException {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<AggregateResponse> rpcCallback = 
+            BlockingRpcCallback<AggregateResponse> rpcCallback =
                 new BlockingRpcCallback<AggregateResponse>();
             instance.getMin(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
@@ -276,15 +280,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> long rowCount(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return rowCount(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
+        return rowCount(table, ci, scan);
     }
   }
 
@@ -301,7 +299,7 @@ public class AggregationClient {
    * @return <R, S>
    * @throws Throwable
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> 
+  public <R, S, P extends Message, Q extends Message, T extends Message>
   long rowCount(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, true);
@@ -323,7 +321,7 @@ public class AggregationClient {
           @Override
           public Long call(AggregateService instance) throws IOException {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<AggregateResponse> rpcCallback = 
+            BlockingRpcCallback<AggregateResponse> rpcCallback =
                 new BlockingRpcCallback<AggregateResponse>();
             instance.getRowNum(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
@@ -350,15 +348,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> S sum(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return sum(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
+        return sum(table, ci, scan);
     }
   }
 
@@ -371,11 +363,11 @@ public class AggregationClient {
    * @return sum <S>
    * @throws Throwable
    */
-  public <R, S, P extends Message, Q extends Message, T extends Message> 
+  public <R, S, P extends Message, Q extends Message, T extends Message>
   S sum(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
-    
+
     class SumCallBack implements Batch.Callback<S> {
       S sumVal = null;
 
@@ -394,7 +386,7 @@ public class AggregationClient {
           @Override
           public S call(AggregateService instance) throws IOException {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<AggregateResponse> rpcCallback = 
+            BlockingRpcCallback<AggregateResponse> rpcCallback =
                 new BlockingRpcCallback<AggregateResponse>();
             instance.getSum(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
@@ -424,14 +416,8 @@ public class AggregationClient {
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long> getAvgArgs(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return getAvgArgs(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return getAvgArgs(table, ci, scan);
     }
   }
 
@@ -467,7 +453,7 @@ public class AggregationClient {
           @Override
           public Pair<S, Long> call(AggregateService instance) throws IOException {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<AggregateResponse> rpcCallback = 
+            BlockingRpcCallback<AggregateResponse> rpcCallback =
                 new BlockingRpcCallback<AggregateResponse>();
             instance.getAvg(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
@@ -571,7 +557,7 @@ public class AggregationClient {
           @Override
           public Pair<List<S>, Long> call(AggregateService instance) throws IOException {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<AggregateResponse> rpcCallback = 
+            BlockingRpcCallback<AggregateResponse> rpcCallback =
                 new BlockingRpcCallback<AggregateResponse>();
             instance.getStd(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
@@ -615,14 +601,8 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message>
   double std(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return std(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return std(table, ci, scan);
     }
   }
 
@@ -650,7 +630,7 @@ public class AggregationClient {
   }
 
   /**
-   * It helps locate the region with median for a given column whose weight 
+   * It helps locate the region with median for a given column whose weight
    * is specified in an optional column.
    * From individual regions, it obtains sum of values and sum of weights.
    * @param table
@@ -693,7 +673,7 @@ public class AggregationClient {
           @Override
           public List<S> call(AggregateService instance) throws IOException {
             ServerRpcController controller = new ServerRpcController();
-            BlockingRpcCallback<AggregateResponse> rpcCallback = 
+            BlockingRpcCallback<AggregateResponse> rpcCallback =
                 new BlockingRpcCallback<AggregateResponse>();
             instance.getMedian(controller, requestArg, rpcCallback);
             AggregateResponse response = rpcCallback.get();
@@ -728,14 +708,8 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message>
   R median(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
-    Table table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return median(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return median(table, ci, scan);
     }
   }
 
@@ -766,7 +740,7 @@ public class AggregationClient {
       weighted = true;
       halfSumVal = ci.divideForAvg(sumWeights, 2L);
     }
-    
+
     for (Map.Entry<byte[], List<S>> entry : map.entrySet()) {
       S s = weighted ? entry.getValue().get(1) : entry.getValue().get(0);
       double newSumVal = movingSumVal + ci.divideForAvg(s, 1L);
@@ -820,15 +794,15 @@ public class AggregationClient {
     return null;
   }
 
-  <R, S, P extends Message, Q extends Message, T extends Message> AggregateRequest 
+  <R, S, P extends Message, Q extends Message, T extends Message> AggregateRequest
   validateArgAndGetPB(Scan scan, ColumnInterpreter<R,S,P,Q,T> ci, boolean canFamilyBeAbsent)
       throws IOException {
     validateParameters(scan, canFamilyBeAbsent);
-    final AggregateRequest.Builder requestBuilder = 
+    final AggregateRequest.Builder requestBuilder =
         AggregateRequest.newBuilder();
     requestBuilder.setInterpreterClassName(ci.getClass().getCanonicalName());
     P columnInterpreterSpecificData = null;
-    if ((columnInterpreterSpecificData = ci.getRequestData()) 
+    if ((columnInterpreterSpecificData = ci.getRequestData())
        != null) {
       requestBuilder.setInterpreterSpecificBytes(columnInterpreterSpecificData.toByteString());
     }

@@ -962,7 +962,7 @@ public class RegionStates {
 
     try {
       Pair<HRegionInfo, ServerName> p =
-        MetaTableAccessor.getRegion(server.getShortCircuitConnection(), regionName);
+        MetaTableAccessor.getRegion(server.getConnection(), regionName);
       HRegionInfo hri = p == null ? null : p.getFirst();
       if (hri != null) {
         createRegionState(hri);

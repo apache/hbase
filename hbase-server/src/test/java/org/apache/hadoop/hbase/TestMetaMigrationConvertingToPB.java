@@ -177,9 +177,9 @@ public class TestMetaMigrationConvertingToPB {
   public void testMetaUpdatedFlagInROOT() throws Exception {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     boolean metaUpdated = MetaMigrationConvertingToPB.
-      isMetaTableUpdated(master.getShortCircuitConnection());
+      isMetaTableUpdated(master.getConnection());
     assertEquals(true, metaUpdated);
-    verifyMetaRowsAreUpdated(master.getShortCircuitConnection());
+    verifyMetaRowsAreUpdated(master.getConnection());
   }
 
   @Test
@@ -198,7 +198,7 @@ public class TestMetaMigrationConvertingToPB {
         htd.getTableName().getName(),
         regionNames);
     HConnection masterHConnection =
-      TEST_UTIL.getMiniHBaseCluster().getMaster().getShortCircuitConnection();
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getConnection();
     // Erase the current version of root meta for this test.
     undoVersionInRoot();
     MetaTableAccessor.fullScanMetaAndPrint(masterHConnection);
@@ -243,7 +243,7 @@ public class TestMetaMigrationConvertingToPB {
     createMultiRegionsWithWritableSerialization(conf,
         htd.getTableName().getName(), 10);
     HConnection masterHConnection =
-      TEST_UTIL.getMiniHBaseCluster().getMaster().getShortCircuitConnection();
+      TEST_UTIL.getMiniHBaseCluster().getMaster().getConnection();
     // Erase the current version of root meta for this test.
     undoVersionInRoot();
 

@@ -110,13 +110,13 @@ public class TestFromClientSide3 {
   }
 
   private void performMultiplePutAndFlush(HBaseAdmin admin, HTable table,
-      byte[] row, byte[] family, int nFlushes, int nPuts) throws Exception {
+      byte[] row, byte[] family, int nFlushes, int nPuts)
+  throws Exception {
 
     // connection needed for poll-wait
-    HConnection conn = HConnectionManager.getConnection(TEST_UTIL
-        .getConfiguration());
     HRegionLocation loc = table.getRegionLocation(row, true);
-    AdminProtos.AdminService.BlockingInterface server = conn.getAdmin(loc.getServerName());
+    AdminProtos.AdminService.BlockingInterface server =
+      admin.getConnection().getAdmin(loc.getServerName());
     byte[] regName = loc.getRegionInfo().getRegionName();
 
     for (int i = 0; i < nFlushes; i++) {
@@ -150,12 +150,10 @@ public class TestFromClientSide3 {
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
 
     String tableName = "testAdvancedConfigOverride";
-    TableName TABLE =
-        TableName.valueOf(tableName);
+    TableName TABLE = TableName.valueOf(tableName);
     HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    HConnection connection = HConnectionManager.getConnection(TEST_UTIL
-        .getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    ClusterConnection connection = (ClusterConnection)TEST_UTIL.getConnection();
 
     // Create 3 store files.
     byte[] row = Bytes.toBytes(random.nextInt());

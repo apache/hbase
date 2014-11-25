@@ -28,9 +28,11 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapred.TableOutputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Partitioner;
 
@@ -55,7 +57,9 @@ implements Configurable {
 
   private static final Log LOG = LogFactory.getLog(HRegionPartitioner.class);
   private Configuration conf = null;
-  private RegionLocator table;
+  // Connection and locator are not cleaned up; they just die when partitioner is done.
+  private Connection connection;
+  private RegionLocator locator;
   private byte[][] startKeys;
 
   /**
@@ -82,7 +86,7 @@ implements Configurable {
     try {
       // Not sure if this is cached after a split so we could have problems
       // here if a region splits while mapping
-      region = table.getRegionLocation(key.get()).getRegionInfo().getStartKey();
+      region = this.locator.getRegionLocation(key.get()).getRegionInfo().getStartKey();
     } catch (IOException e) {
       LOG.error(e);
     }
@@ -123,14 +127,14 @@ implements Configurable {
   public void setConf(Configuration configuration) {
     this.conf = HBaseConfiguration.create(configuration);
     try {
-      TableName tableName = TableName.valueOf(configuration
-          .get(TableOutputFormat.OUTPUT_TABLE));
-      this.table = new HTable(this.conf, tableName);
+      this.connection = ConnectionFactory.createConnection(HBaseConfiguration.create(conf));
+      TableName tableName = TableName.valueOf(conf.get(TableOutputFormat.OUTPUT_TABLE));
+      this.locator = this.connection.getRegionLocator(tableName);
     } catch (IOException e) {
       LOG.error(e);
     }
     try {
-      this.startKeys = this.table.getStartKeys();
+      this.startKeys = this.locator.getStartKeys();
     } catch (IOException e) {
       LOG.error(e);
     }

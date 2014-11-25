@@ -331,33 +331,33 @@ public class TestSplitTransactionOnCluster {
     byte[] cf = Bytes.toBytes("cf");
     htd.addFamily(new HColumnDescriptor(cf));
     admin.createTable(htd);
-    
+
     for (int i = 0; cluster.getRegions(tableName).size() == 0 && i < 100; i++) {
       Thread.sleep(100);
     }
     assertEquals(1, cluster.getRegions(tableName).size());
-    
+
     HRegion region = cluster.getRegions(tableName).get(0);
     Store store = region.getStore(cf);
     int regionServerIndex = cluster.getServerWith(region.getRegionName());
     HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
-    
+
     Table t  = new HTable(conf, tableName);
     // insert data
     insertData(tableName, admin, t);
     insertData(tableName, admin, t);
-    
+
     int fileNum = store.getStorefiles().size();
     // 0, Compaction Request
     store.triggerMajorCompaction();
     CompactionContext cc = store.requestCompaction();
     assertNotNull(cc);
-    // 1, A timeout split 
-    // 1.1 close region 
+    // 1, A timeout split
+    // 1.1 close region
     assertEquals(2, region.close(false).get(cf).size());
     // 1.2 rollback and Region initialize again
     region.initialize();
-    
+
     // 2, Run Compaction cc
     assertFalse(region.compact(cc, store));
     assertTrue(fileNum > store.getStorefiles().size());
@@ -368,7 +368,7 @@ public class TestSplitTransactionOnCluster {
     st.execute(regionServer, regionServer);
     assertEquals(2, cluster.getRegions(tableName).size());
   }
-  
+
   public static class FailingSplitRegionObserver extends BaseRegionObserver {
     static volatile CountDownLatch latch = new CountDownLatch(1);
     @Override
@@ -900,7 +900,7 @@ public class TestSplitTransactionOnCluster {
       admin.setBalancerRunning(false, true);
       // Turn off the meta scanner so it don't remove parent on us.
       cluster.getMaster().setCatalogJanitorEnabled(false);
-      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getShortCircuitConnection(),
+      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
         tableName);
       assertEquals("The specified table should present.", true, tableExists);
       final HRegion region = findSplittableRegion(regions);
@@ -912,15 +912,10 @@ public class TestSplitTransactionOnCluster {
       } catch (IOException e) {
 
       }
-      tableExists = MetaTableAccessor.tableExists(regionServer.getShortCircuitConnection(),
+      tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
         tableName);
       assertEquals("The specified table should present.", true, tableExists);
     } finally {
-      if (regions != null) {
-        String node = ZKAssign.getNodeName(zkw, regions.get(0).getRegionInfo()
-            .getEncodedName());
-        ZKUtil.deleteNodeFailSilent(zkw, node);
-      }
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();

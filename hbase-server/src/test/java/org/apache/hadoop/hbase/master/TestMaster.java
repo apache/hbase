@@ -18,28 +18,39 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.common.base.Joiner;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
+import com.google.common.base.Joiner;
 
 @Category(MediumTests.class)
 public class TestMaster {
@@ -74,9 +85,9 @@ public class TestMaster {
     TEST_UTIL.loadTable(ht, FAMILYNAME, false);
     ht.close();
 
-    List<Pair<HRegionInfo, ServerName>> tableRegions =
-      MetaTableAccessor.getTableRegionsAndLocations(m.getZooKeeper(),
-        m.getShortCircuitConnection(), TABLENAME);
+    List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
+        m.getZooKeeper(),
+        m.getConnection(), TABLENAME);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(1, tableRegions.size());
     assertArrayEquals(HConstants.EMPTY_START_ROW,
@@ -94,7 +105,8 @@ public class TestMaster {
     }
     LOG.info("Making sure we can call getTableRegions while opening");
     tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getZooKeeper(),
-      m.getShortCircuitConnection(), TABLENAME, false);
+      m.getConnection(),
+      TABLENAME, false);
 
     LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
     // We have three regions because one is split-in-progress
@@ -104,7 +116,7 @@ public class TestMaster {
         m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
     LOG.info("Result is: " + pair);
     Pair<HRegionInfo, ServerName> tableRegionFromName =
-        MetaTableAccessor.getRegion(m.getShortCircuitConnection(),
+        MetaTableAccessor.getRegion(m.getConnection(),
           pair.getFirst().getRegionName());
     assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
   }

@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -36,8 +37,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -111,7 +112,7 @@ import com.google.protobuf.ServiceException;
  * Use this when you can't bend Mockito to your liking (e.g. return null result
  * when 'scanning' until master timesout and then return a coherent meta row
  * result thereafter.  Have some facility for faking gets and scans.  See
- * {@link #setGetResult(byte[], byte[], Result)} for how to fill the backing data
+ * setGetResult(byte[], byte[], Result) for how to fill the backing data
  * store that the get pulls from.
  */
 class MockRegionServer
@@ -281,7 +282,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public HConnection getShortCircuitConnection() {
+  public ClusterConnection getConnection() {
     return null;
   }
 

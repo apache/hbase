@@ -527,12 +527,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.serverManager = createServerManager(this, this);
 
-    synchronized (this) {
-      if (shortCircuitConnection == null) {
-        shortCircuitConnection = createShortCircuitConnection();
-        metaTableLocator = new MetaTableLocator();
-      }
-    }
+    setupClusterConnection();
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
@@ -702,28 +697,27 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     int assigned = 0;
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
     status.setStatus("Assigning hbase:meta region");
-
+    // Get current meta state from zk.
     RegionStates regionStates = assignmentManager.getRegionStates();
-    RegionState regionState = MetaTableLocator.getMetaRegionState(this.getZooKeeper());
-    ServerName currentMetaServer = regionState.getServerName();
+    RegionState metaState = MetaTableLocator.getMetaRegionState(getZooKeeper());
+    ServerName currentMetaServer = metaState.getServerName();
     if (!ConfigUtil.useZKForAssignment(conf)) {
-      regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO, regionState.getState(),
+      regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO, metaState.getState(),
         currentMetaServer, null);
     } else {
       regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
     }
-    boolean rit = this.assignmentManager
-        .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
+    boolean rit = this.assignmentManager.
+      processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
     boolean metaRegionLocation = metaTableLocator.verifyMetaRegionLocation(
-      this.getShortCircuitConnection(), this.getZooKeeper(), timeout);
-    if (!metaRegionLocation || !regionState.isOpened()) {
+      this.getConnection(), this.getZooKeeper(), timeout);
+    if (!metaRegionLocation || !metaState.isOpened()) {
       // Meta location is not verified. It should be in transition, or offline.
       // We will wait for it to be assigned in enableSSHandWaitForMeta below.
       assigned++;
       if (!ConfigUtil.useZKForAssignment(conf)) {
-        assignMetaZkLess(regionStates, regionState, timeout, previouslyFailedMetaRSs);
+        assignMetaZkLess(regionStates, metaState, timeout, previouslyFailedMetaRSs);
       } else if (!rit) {
-      
         // Assign meta since not already in transition
         if (currentMetaServer != null) {
           // If the meta server is not known to be dead or online,
@@ -787,7 +781,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       assignmentManager.assignMeta();
     }
   }
-  
+
   void initNamespace() throws IOException {
     //create namespace manager
     tableNamespaceManager = new TableNamespaceManager(this);
@@ -1514,6 +1508,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * is found, but not currently deployed, the second element of the pair
    * may be null.
    */
+  @VisibleForTesting // Used by TestMaster.
   Pair<HRegionInfo, ServerName> getTableRegionForRow(
       final TableName tableName, final byte [] rowKey)
   throws IOException {
@@ -1564,7 +1559,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    if (!MetaTableAccessor.tableExists(getShortCircuitConnection(), tableName)) {
+    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
       throw new TableNotFoundException(tableName);
     }
     if (!getAssignmentManager().getTableStateManager().

@@ -1087,7 +1087,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       Pair<HRegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(master.getShortCircuitConnection(), regionName);
+        MetaTableAccessor.getRegion(master.getConnection(), regionName);
       if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
       HRegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {
@@ -1218,7 +1218,7 @@ public class MasterRpcServices extends RSRpcServices
           + " actual: " + type);
       }
       Pair<HRegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(master.getShortCircuitConnection(), regionName);
+        MetaTableAccessor.getRegion(master.getConnection(), regionName);
       if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
       HRegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {

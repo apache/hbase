@@ -20,41 +20,27 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.TableName;
 
 /**
- * Cluster registry.
- * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc.
- * Internal use only.
+ * Get instance of configured Registry.
  */
 @InterfaceAudience.Private
-interface Registry {
+class RegistryFactory {
   /**
-   * @param connection
-   */
-  void init(Connection connection);
-
-  /**
-   * @return Meta region location
+   * @return The cluster registry implementation to use.
    * @throws IOException
    */
-  RegionLocations getMetaRegionLocation() throws IOException;
-
-  /**
-   * @return Cluster id.
-   */
-  String getClusterId();
-
-  /**
-   * @param enabled Return true if table is enabled
-   * @throws IOException
-   */
-  boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException;
-
-  /**
-   * @return Count of 'running' regionservers
-   * @throws IOException
-   */
-  int getCurrentNrHRS() throws IOException;
+  static Registry getRegistry(final Connection connection)
+  throws IOException {
+    String registryClass = connection.getConfiguration().get("hbase.client.registry.impl",
+      ZooKeeperRegistry.class.getName());
+    Registry registry = null;
+    try {
+      registry = (Registry)Class.forName(registryClass).newInstance();
+    } catch (Throwable t) {
+      throw new IOException(t);
+    }
+    registry.init(connection);
+    return registry;
+  }
 }

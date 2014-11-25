@@ -28,11 +28,12 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -66,44 +67,55 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
   @Override
   public void init() {
     // Reading all the labels and ordinal.
-    // This scan should be done by user with global_admin previliges.. Ensure that it works
+    // This scan should be done by user with global_admin privileges.. Ensure that it works
     Table labelsTable = null;
+    Connection connection = null;
     try {
-      labelsTable = new HTable(conf, LABELS_TABLE_NAME);
-    } catch (TableNotFoundException e) {
-      // Just return with out doing any thing. When the VC is not used we wont be having 'labels'
-      // table in the cluster.
-      return;
-    } catch (IOException e) {
-      LOG.error("Error opening 'labels' table", e);
-      return;
-    }
-    Scan scan = new Scan();
-    scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
-    scan.addColumn(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
-    ResultScanner scanner = null;
-    try {
-      scanner = labelsTable.getScanner(scan);
-      Result next = null;
-      while ((next = scanner.next()) != null) {
-        byte[] row = next.getRow();
-        byte[] value = next.getValue(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
-        labels.put(Bytes.toString(value), Bytes.toInt(row));
-      }
-    } catch (IOException e) {
-      LOG.error("Error reading 'labels' table", e);
-    } finally {
+      connection = ConnectionFactory.createConnection(conf);
       try {
-        if (scanner != null) {
-          scanner.close();
+        labelsTable = connection.getTable(LABELS_TABLE_NAME);
+      } catch (TableNotFoundException e) {
+        // Just return with out doing any thing. When the VC is not used we wont be having 'labels'
+        // table in the cluster.
+        return;
+      } catch (IOException e) {
+        LOG.error("Error opening 'labels' table", e);
+        return;
+      }
+      Scan scan = new Scan();
+      scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
+      scan.addColumn(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
+      ResultScanner scanner = null;
+      try {
+        scanner = labelsTable.getScanner(scan);
+        Result next = null;
+        while ((next = scanner.next()) != null) {
+          byte[] row = next.getRow();
+          byte[] value = next.getValue(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
+          labels.put(Bytes.toString(value), Bytes.toInt(row));
         }
+      } catch (IOException e) {
+        LOG.error("Error scanning 'labels' table", e);
       } finally {
+        if (scanner != null) scanner.close();
+      }
+    } catch (IOException ioe) {
+      LOG.error("Failed reading 'labels' tags", ioe);
+      return;
+    } finally {
+      if (labelsTable != null) {
         try {
           labelsTable.close();
-        } catch (IOException e) {
-          LOG.warn("Error on closing 'labels' table", e);
+        } catch (IOException ioe) {
+          LOG.warn("Error closing 'labels' table", ioe);
         }
       }
+      if (connection != null)
+        try {
+          connection.close();
+        } catch (IOException ioe) {
+          LOG.warn("Failed close of temporary connection", ioe);
+        }
     }
   }
 

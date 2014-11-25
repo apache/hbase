@@ -33,8 +33,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -314,7 +314,7 @@ public class TestHeapMemoryManager {
   private static class BlockCacheStub implements ResizableBlockCache {
     CacheStats stats = new CacheStats("test");
     long maxSize = 0;
-    
+
     public BlockCacheStub(long size){
       this.maxSize = size;
     }
@@ -476,7 +476,7 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 

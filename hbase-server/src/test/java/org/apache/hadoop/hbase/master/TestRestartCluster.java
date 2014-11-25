@@ -159,7 +159,7 @@ public class TestRestartCluster {
     // We don't have to use SnapshotOfRegionAssignmentFromMeta.
     // We use it here because AM used to use it to load all user region placements
     SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
-      master.getShortCircuitConnection());
+      master.getConnection());
     snapshot.initialize();
     Map<HRegionInfo, ServerName> regionToRegionServerMap
       = snapshot.getRegionToRegionServerMap();
@@ -224,7 +224,7 @@ public class TestRestartCluster {
       Threads.sleep(100);
     }
 
-    snapshot =new SnapshotOfRegionAssignmentFromMeta(master.getShortCircuitConnection());
+    snapshot =new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
     snapshot.initialize();
     Map<HRegionInfo, ServerName> newRegionToRegionServerMap =
       snapshot.getRegionToRegionServerMap();

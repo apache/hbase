@@ -402,9 +402,14 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public Pair<Integer, Integer> getReopenStatus(TableName tableName)
       throws IOException {
-    List <HRegionInfo> hris =
-      MetaTableAccessor.getTableRegions(this.watcher, this.server.getShortCircuitConnection(),
-        tableName, true);
+    List<HRegionInfo> hris;
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      hris = new MetaTableLocator().getMetaRegions(server.getZooKeeper());
+    } else {
+      hris = MetaTableAccessor.getTableRegions(server.getZooKeeper(),
+        server.getConnection(), tableName, true);
+    }
+
     Integer pending = 0;
     for (HRegionInfo hri : hris) {
       String name = hri.getEncodedName();
@@ -1135,7 +1140,7 @@ public class AssignmentManager extends ZooKeeperListener {
           ((FavoredNodeLoadBalancer)this.balancer).getFavoredNodes(region));
     }
     FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
-      this.server.getShortCircuitConnection());
+      this.server.getConnection());
   }
 
   /**
@@ -1160,7 +1165,7 @@ public class AssignmentManager extends ZooKeeperListener {
           try {
             byte [] name = rt.getRegionName();
             Pair<HRegionInfo, ServerName> p = MetaTableAccessor.getRegion(
-              this.server.getShortCircuitConnection(), name);
+              this.server.getConnection(), name);
             regionInfo = p.getFirst();
           } catch (IOException e) {
             LOG.info("Exception reading hbase:meta doing HBCK repair operation", e);
@@ -1954,7 +1959,7 @@ public class AssignmentManager extends ZooKeeperListener {
       while (!server.isStopped()) {
         try {
           this.server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
-          Result r = MetaTableAccessor.getRegionResult(server.getShortCircuitConnection(),
+          Result r = MetaTableAccessor.getRegionResult(server.getConnection(),
             region.getRegionName());
           if (r == null || r.isEmpty()) return false;
           ServerName server = HRegionInfo.getServerName(r);
@@ -2803,7 +2808,7 @@ public class AssignmentManager extends ZooKeeperListener {
       ZooKeeperProtos.Table.State.ENABLING);
 
     // Region assignment from META
-    List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getShortCircuitConnection());
+    List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getConnection());
     // Get any new but slow to checkin region server that joined the cluster
     Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
     // Set of offline servers to be returned
@@ -2950,7 +2955,7 @@ public class AssignmentManager extends ZooKeeperListener {
       processRegionInTransitionZkLess();
     }
   }
-  
+
   void processRegionInTransitionZkLess() {
  // We need to send RPC call again for PENDING_OPEN/PENDING_CLOSE regions
     // in case the RPC call is not sent out yet before the master was shut down

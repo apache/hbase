@@ -25,9 +25,13 @@ import java.net.InetAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
@@ -43,7 +47,7 @@ public class TestClockSkewDetection {
     final Configuration conf = HBaseConfiguration.create();
     ServerManager sm = new ServerManager(new Server() {
       @Override
-      public HConnection getShortCircuitConnection() {
+      public ClusterConnection getConnection() {
         return null;
       }
 
@@ -74,7 +78,7 @@ public class TestClockSkewDetection {
 
       @Override
       public void abort(String why, Throwable e) {}
-      
+
       @Override
       public boolean isAborted() {
         return false;
@@ -87,7 +91,8 @@ public class TestClockSkewDetection {
 
       @Override
       public void stop(String why) {
-      }}, null, false);
+      }
+    }, null, false);
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();
@@ -108,7 +113,7 @@ public class TestClockSkewDetection {
       //we want an exception
       LOG.info("Recieved expected exception: "+e);
     }
-    
+
     try {
       // Master Time < Region Server Time
       LOG.debug("Test: Master Time < Region Server Time");
@@ -120,17 +125,17 @@ public class TestClockSkewDetection {
       // we want an exception
       LOG.info("Recieved expected exception: " + e);
     }
-    
+
     // make sure values above warning threshold but below max threshold don't kill
     LOG.debug("regionServerStartup 4");
     InetAddress ia4 = InetAddress.getLocalHost();
     sm.regionServerStartup(ia4, 1237, -1, System.currentTimeMillis() - warningSkew * 2);
-    
+
     // make sure values above warning threshold but below max threshold don't kill
     LOG.debug("regionServerStartup 5");
     InetAddress ia5 = InetAddress.getLocalHost();
     sm.regionServerStartup(ia5, 1238, -1, System.currentTimeMillis() + warningSkew * 2);
-    
+
   }
 
 }

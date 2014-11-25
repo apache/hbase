@@ -22,11 +22,12 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -47,26 +48,28 @@ import org.apache.hadoop.mapred.Partitioner;
 public class HRegionPartitioner<K2,V2>
 implements Partitioner<ImmutableBytesWritable, V2> {
   private static final Log LOG = LogFactory.getLog(HRegionPartitioner.class);
-  private RegionLocator table;
+  // Connection and locator are not cleaned up; they just die when partitioner is done.
+  private Connection connection;
+  private RegionLocator locator;
   private byte[][] startKeys;
 
   public void configure(JobConf job) {
     try {
-      this.table = new HTable(HBaseConfiguration.create(job),
-        TableName.valueOf(job.get(TableOutputFormat.OUTPUT_TABLE)));
+      this.connection = ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+      TableName tableName = TableName.valueOf(job.get(TableOutputFormat.OUTPUT_TABLE));
+      this.locator = this.connection.getRegionLocator(tableName);
     } catch (IOException e) {
       LOG.error(e);
     }
 
     try {
-      this.startKeys = this.table.getStartKeys();
+      this.startKeys = this.locator.getStartKeys();
     } catch (IOException e) {
       LOG.error(e);
     }
   }
 
-  public int getPartition(ImmutableBytesWritable key,
-      V2 value, int numPartitions) {
+  public int getPartition(ImmutableBytesWritable key, V2 value, int numPartitions) {
     byte[] region = null;
     // Only one region return 0
     if (this.startKeys.length == 1){
@@ -75,7 +78,7 @@ implements Partitioner<ImmutableBytesWritable, V2> {
     try {
       // Not sure if this is cached after a split so we could have problems
       // here if a region splits while mapping
-      region = table.getRegionLocation(key.get()).getRegionInfo().getStartKey();
+      region = locator.getRegionLocation(key.get()).getRegionInfo().getStartKey();
     } catch (IOException e) {
       LOG.error(e);
     }

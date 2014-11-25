@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
@@ -27,7 +29,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -76,7 +79,7 @@ public class TestAccessController2 extends SecureTestUtil {
   @Test
   public void testCreateWithCorrectOwner() throws Exception {
     // Create a test user
-    User testUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser",
+    final User testUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser",
       new String[0]);
     // Grant the test user the ability to create tables
     SecureTestUtil.grantGlobal(TEST_UTIL, testUser.getShortName(), Action.CREATE);
@@ -85,11 +88,11 @@ public class TestAccessController2 extends SecureTestUtil {
       public Object run() throws Exception {
         HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
         desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-        try {
-          admin.createTable(desc);
-        } finally {
-          admin.close();
+        try (Connection connection =
+            ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), testUser)) {
+          try (Admin admin = connection.getAdmin()) {
+            admin.createTable(desc);
+          }
         }
         return null;
       }
@@ -97,7 +100,8 @@ public class TestAccessController2 extends SecureTestUtil {
     TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
     // Verify that owner permissions have been granted to the test user on the
     // table just created
-    List<TablePermission> perms = AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName())
+    List<TablePermission> perms =
+      AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName())
        .get(testUser.getShortName());
     assertNotNull(perms);
     assertFalse(perms.isEmpty());

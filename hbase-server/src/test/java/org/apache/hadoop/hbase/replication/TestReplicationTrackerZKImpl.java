@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,25 +30,22 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.Ignore;
-
-import static org.junit.Assert.*;
-
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -181,7 +182,7 @@ public class TestReplicationTrackerZKImpl {
     int exists = 0;
     int hyphen = 0;
     rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
-    
+
     try{
       rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
     }catch(IllegalArgumentException e){
@@ -195,11 +196,11 @@ public class TestReplicationTrackerZKImpl {
     }
     assertEquals(1, exists);
     assertEquals(1, hyphen);
-    
+
     // clean up
     rp.removePeer("6");
   }
-  
+
   private class DummyReplicationListener implements ReplicationListener {
 
     @Override
@@ -250,7 +251,7 @@ public class TestReplicationTrackerZKImpl {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -286,4 +287,3 @@ public class TestReplicationTrackerZKImpl {
     }
   }
 }
-

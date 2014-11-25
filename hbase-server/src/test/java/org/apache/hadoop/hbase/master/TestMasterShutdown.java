@@ -25,6 +25,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -32,12 +34,18 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestMasterShutdown {
+  public static final Log LOG = LogFactory.getLog(TestMasterShutdown.class);
+
   /**
    * Simple test of shutdown.
    * <p>
@@ -45,9 +53,8 @@ public class TestMasterShutdown {
    * Verifies that all masters are properly shutdown.
    * @throws Exception
    */
-  @Test (timeout=240000)
+  @Test (timeout=120000)
   public void testMasterShutdown() throws Exception {
-
     final int NUM_MASTERS = 3;
     final int NUM_RS = 3;
 
@@ -55,9 +62,9 @@ public class TestMasterShutdown {
     Configuration conf = HBaseConfiguration.create();
 
     // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    HBaseTestingUtility htu = new HBaseTestingUtility(conf);
+    htu.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = htu.getHBaseCluster();
 
     // get all the master threads
     List<MasterThread> masterThreads = cluster.getMasterThreads();
@@ -83,19 +90,18 @@ public class TestMasterShutdown {
 
     // tell the active master to shutdown the cluster
     active.shutdown();
-    
+
     for (int i = NUM_MASTERS - 1; i >= 0 ;--i) {
       cluster.waitOnMaster(i);
     }
     // make sure all the masters properly shutdown
-    assertEquals(0,masterThreads.size());
-    
-    TEST_UTIL.shutdownMiniCluster();
+    assertEquals(0, masterThreads.size());
+
+    htu.shutdownMiniCluster();
   }
 
-  @Test(timeout = 180000)
+  @Test(timeout = 60000)
   public void testMasterShutdownBeforeStartingAnyRegionServer() throws Exception {
-
     final int NUM_MASTERS = 1;
     final int NUM_RS = 0;
 
@@ -105,25 +111,35 @@ public class TestMasterShutdown {
     conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
 
     // Start the cluster
-    final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniDFSCluster(3);
-    TEST_UTIL.startMiniZKCluster();
-    TEST_UTIL.createRootDir();
+    final HBaseTestingUtility util = new HBaseTestingUtility(conf);
+    util.startMiniDFSCluster(3);
+    util.startMiniZKCluster();
+    util.createRootDir();
     final LocalHBaseCluster cluster =
         new LocalHBaseCluster(conf, NUM_MASTERS, NUM_RS, HMaster.class,
             MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
-    final MasterThread master = cluster.getMasters().get(0);
+    final int MASTER_INDEX = 0;
+    final MasterThread master = cluster.getMasters().get(MASTER_INDEX);
     master.start();
+    LOG.info("Called master start on " + master.getName());
     Thread shutdownThread = new Thread() {
       public void run() {
+        LOG.info("Before call to shutdown master");
         try {
-          TEST_UTIL.getHBaseAdmin().shutdown();
-          cluster.waitOnMaster(0);
+          try (Connection connection =
+              ConnectionFactory.createConnection(util.getConfiguration())) {
+            try (Admin admin = connection.getAdmin()) {
+              admin.shutdown();
+            }
+          }
+          LOG.info("After call to shutdown master");
+          cluster.waitOnMaster(MASTER_INDEX);
         } catch (Exception e) {
         }
       };
     };
     shutdownThread.start();
+    LOG.info("Called master join on " + master.getName());
     master.join();
     shutdownThread.join();
 
@@ -131,10 +147,8 @@ public class TestMasterShutdown {
     // make sure all the masters properly shutdown
     assertEquals(0, masterThreads.size());
 
-    TEST_UTIL.shutdownMiniZKCluster();
-    TEST_UTIL.shutdownMiniDFSCluster();
-    TEST_UTIL.cleanupTestDir();
+    util.shutdownMiniZKCluster();
+    util.shutdownMiniDFSCluster();
+    util.cleanupTestDir();
   }
-
 }
-

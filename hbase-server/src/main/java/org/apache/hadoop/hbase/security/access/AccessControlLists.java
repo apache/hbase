@@ -33,7 +33,6 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -44,9 +43,11 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -170,12 +171,11 @@ public class AccessControlLists {
           Bytes.toString(key)+": "+Bytes.toStringBinary(value)
       );
     }
-    Table acls = null;
-    try {
-      acls = new HTable(conf, ACL_TABLE_NAME);
-      acls.put(p);
-    } finally {
-      if (acls != null) acls.close();
+    // TODO: Pass in a Connection rather than create one each time.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        table.put(p);
+      }
     }
   }
 
@@ -200,13 +200,12 @@ public class AccessControlLists {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing permission "+ userPerm.toString());
     }
-    d.deleteColumns(ACL_LIST_FAMILY, key);
-    Table acls = null;
-    try {
-      acls = new HTable(conf, ACL_TABLE_NAME);
-      acls.delete(d);
-    } finally {
-      if (acls != null) acls.close();
+    d.addColumns(ACL_LIST_FAMILY, key);
+    // TODO: Pass in a Connection rather than create one each time.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        table.delete(d);
+      }
     }
   }
 
@@ -220,13 +219,11 @@ public class AccessControlLists {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing permissions of removed table "+ tableName);
     }
-
-    Table acls = null;
-    try {
-      acls = new HTable(conf, ACL_TABLE_NAME);
-      acls.delete(d);
-    } finally {
-      if (acls != null) acls.close();
+    // TODO: Pass in a Connection rather than create one each time.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        table.delete(d);
+      }
     }
   }
 
@@ -241,12 +238,10 @@ public class AccessControlLists {
       LOG.debug("Removing permissions of removed namespace "+ namespace);
     }
 
-    Table acls = null;
-    try {
-      acls = new HTable(conf, ACL_TABLE_NAME);
-      acls.delete(d);
-    } finally {
-      if (acls != null) acls.close();
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        table.delete(d);
+      }
     }
   }
 
@@ -260,41 +255,38 @@ public class AccessControlLists {
       LOG.debug("Removing permissions of removed column " + Bytes.toString(column) +
                 " from table "+ tableName);
     }
+    // TODO: Pass in a Connection rather than create one each time.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        Scan scan = new Scan();
+        scan.addFamily(ACL_LIST_FAMILY);
 
-    Table acls = null;
-    try {
-      acls = new HTable(conf, ACL_TABLE_NAME);
+        String columnName = Bytes.toString(column);
+        scan.setFilter(new QualifierFilter(CompareOp.EQUAL, new RegexStringComparator(
+            String.format("(%s%s%s)|(%s%s)$",
+                ACL_KEY_DELIMITER, columnName, ACL_KEY_DELIMITER,
+                ACL_KEY_DELIMITER, columnName))));
 
-      Scan scan = new Scan();
-      scan.addFamily(ACL_LIST_FAMILY);
-
-      String columnName = Bytes.toString(column);
-      scan.setFilter(new QualifierFilter(CompareOp.EQUAL, new RegexStringComparator(
-                     String.format("(%s%s%s)|(%s%s)$",
-                     ACL_KEY_DELIMITER, columnName, ACL_KEY_DELIMITER,
-                     ACL_KEY_DELIMITER, columnName))));
-
-      Set<byte[]> qualifierSet = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-      ResultScanner scanner = acls.getScanner(scan);
-      try {
-        for (Result res : scanner) {
-          for (byte[] q : res.getFamilyMap(ACL_LIST_FAMILY).navigableKeySet()) {
-            qualifierSet.add(q);
+        Set<byte[]> qualifierSet = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+        ResultScanner scanner = table.getScanner(scan);
+        try {
+          for (Result res : scanner) {
+            for (byte[] q : res.getFamilyMap(ACL_LIST_FAMILY).navigableKeySet()) {
+              qualifierSet.add(q);
+            }
           }
+        } finally {
+          scanner.close();
         }
-      } finally {
-        scanner.close();
-      }
 
-      if (qualifierSet.size() > 0) {
-        Delete d = new Delete(tableName.getName());
-        for (byte[] qualifier : qualifierSet) {
-          d.deleteColumns(ACL_LIST_FAMILY, qualifier);
+        if (qualifierSet.size() > 0) {
+          Delete d = new Delete(tableName.getName());
+          for (byte[] qualifier : qualifierSet) {
+            d.addColumns(ACL_LIST_FAMILY, qualifier);
+          }
+          table.delete(d);
         }
-        acls.delete(d);
       }
-    } finally {
-      if (acls != null) acls.close();
     }
   }
 
@@ -422,19 +414,20 @@ public class AccessControlLists {
     Scan scan = new Scan();
     scan.addFamily(ACL_LIST_FAMILY);
 
-    Table acls = null;
     ResultScanner scanner = null;
-    try {
-      acls = new HTable(conf, ACL_TABLE_NAME);
-      scanner = acls.getScanner(scan);
-      for (Result row : scanner) {
-        ListMultimap<String,TablePermission> resultPerms =
-            parsePermissions(row.getRow(), row);
-        allPerms.put(row.getRow(), resultPerms);
+    // TODO: Pass in a Connection rather than create one each time.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        scanner = table.getScanner(scan);
+        try {
+          for (Result row : scanner) {
+            ListMultimap<String,TablePermission> resultPerms = parsePermissions(row.getRow(), row);
+            allPerms.put(row.getRow(), resultPerms);
+          }
+        } finally {
+          if (scanner != null) scanner.close();
+        }
       }
-    } finally {
-      if (scanner != null) scanner.close();
-      if (acls != null) acls.close();
     }
 
     return allPerms;
@@ -465,20 +458,19 @@ public class AccessControlLists {
 
     // for normal user tables, we just read the table row from _acl_
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
-    Table acls = null;
-    try {
-      acls = new HTable(conf, ACL_TABLE_NAME);
-      Get get = new Get(entryName);
-      get.addFamily(ACL_LIST_FAMILY);
-      Result row = acls.get(get);
-      if (!row.isEmpty()) {
-        perms = parsePermissions(entryName, row);
-      } else {
-        LOG.info("No permissions found in " + ACL_TABLE_NAME + " for acl entry "
-            + Bytes.toString(entryName));
+    // TODO: Pass in a Connection rather than create one each time.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        Get get = new Get(entryName);
+        get.addFamily(ACL_LIST_FAMILY);
+        Result row = table.get(get);
+        if (!row.isEmpty()) {
+          perms = parsePermissions(entryName, row);
+        } else {
+          LOG.info("No permissions found in " + ACL_TABLE_NAME + " for acl entry "
+              + Bytes.toString(entryName));
+        }
       }
-    } finally {
-      if (acls != null) acls.close();
     }
 
     return perms;

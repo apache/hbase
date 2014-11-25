@@ -80,23 +80,23 @@ import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
- *
- * HTable is no longer a client API. It is marked InterfaceAudience.Private indicating that
- * this is an HBase-internal class as defined in
- * https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/InterfaceClassification.html
- * There are no guarantees for backwards source / binary compatibility and methods or class can
- * change or go away without deprecation. Use {@link Connection#getTable(TableName)}
- * to obtain an instance of {@link Table} instead of constructing an HTable directly.
- * <p>An implementation of {@link Table}. Used to communicate with a single HBase table.
+ * An implementation of {@link Table}. Used to communicate with a single HBase table.
  * Lightweight. Get as needed and just close when done.
  * Instances of this class SHOULD NOT be constructed directly.
  * Obtain an instance via {@link Connection}. See {@link ConnectionFactory}
  * class comment for an example of how.
  *
- * <p>This class is NOT thread safe for reads nor write.
+ * <p>This class is NOT thread safe for reads nor writes.
  * In the case of writes (Put, Delete), the underlying write buffer can
  * be corrupted if multiple threads contend over a single HTable instance.
  * In the case of reads, some fields used by a Scan are shared among all threads.
+ *
+ * <p>HTable is no longer a client API. Use {@link Table} instead. It is marked
+ * InterfaceAudience.Private indicating that this is an HBase-internal class as defined in
+ * <a href="https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/InterfaceClassification.html">Hadoop
+ * Interface Classification</a>
+ * There are no guarantees for backwards source / binary compatibility and methods or class can
+ * change or go away without deprecation.
  *
  * @see Table
  * @see Admin
@@ -162,8 +162,6 @@ public class HTable implements HTableInterface, RegionLocator {
   throws IOException {
     this(conf, TableName.valueOf(tableName));
   }
-
-
 
   /**
    * Creates an object to access a HBase table.
@@ -291,6 +289,8 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * Creates an object to access a HBase table.
+   * Used by HBase internally.  DO NOT USE. See {@link ConnectionFactory} class comment for how to
+   * get a {@link Table} instance (use {@link Table} instead of {@link HTable}).
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @param pool ExecutorService to be used.
@@ -1791,20 +1791,6 @@ public class HTable implements HTableInterface, RegionLocator {
   @Override
   public String toString() {
     return tableName + ";" + connection;
-  }
-
-  /**
-   * Run basic test.
-   * @param args Pass table name and row and will get the content.
-   * @throws IOException
-   */
-  public static void main(String[] args) throws IOException {
-    Table t = new HTable(HBaseConfiguration.create(), args[0]);
-    try {
-      System.out.println(t.get(new Get(Bytes.toBytes(args[1]))));
-    } finally {
-      t.close();
-    }
   }
 
   /**

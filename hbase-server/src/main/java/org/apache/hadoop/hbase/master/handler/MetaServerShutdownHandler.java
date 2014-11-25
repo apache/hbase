@@ -154,7 +154,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       throws InterruptedException, IOException, KeeperException {
     long timeout = this.server.getConfiguration().
         getLong("hbase.catalog.verification.timeout", 1000);
-    if (!server.getMetaTableLocator().verifyMetaRegionLocation(server.getShortCircuitConnection(),
+    if (!server.getMetaTableLocator().verifyMetaRegionLocation(server.getConnection(),
       this.server.getZooKeeper(), timeout)) {
       this.services.getAssignmentManager().assignMeta();
     } else if (serverName.equals(server.getMetaTableLocator().getMetaRegionLocation(

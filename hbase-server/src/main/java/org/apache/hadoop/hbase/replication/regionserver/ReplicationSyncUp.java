@@ -24,12 +24,12 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -150,11 +150,6 @@ public class ReplicationSyncUp extends Configured implements Tool {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
-      return null;
-    }
-
-    @Override
     public MetaTableLocator getMetaTableLocator() {
       return null;
     }
@@ -180,6 +175,11 @@ public class ReplicationSyncUp extends Configured implements Tool {
     @Override
     public boolean isStopped() {
       return false;
+    }
+
+    @Override
+    public ClusterConnection getConnection() {
+      return null;
     }
   }
 }

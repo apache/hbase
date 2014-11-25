@@ -29,18 +29,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
@@ -62,6 +63,7 @@ public class CatalogJanitor extends Chore {
   private final MasterServices services;
   private AtomicBoolean enabled = new AtomicBoolean(true);
   private AtomicBoolean alreadyRunning = new AtomicBoolean(false);
+  private final Connection connection;
 
   CatalogJanitor(final Server server, final MasterServices services) {
     super("CatalogJanitor-" + server.getServerName().toShortString(),
@@ -69,6 +71,7 @@ public class CatalogJanitor extends Chore {
       server);
     this.server = server;
     this.services = services;
+    this.connection = server.getConnection();
   }
 
   @Override
@@ -163,7 +166,7 @@ public class CatalogJanitor extends Chore {
 
     // Run full scan of hbase:meta catalog table passing in our custom visitor with
     // the start row
-    MetaScanner.metaScan(server.getConfiguration(), null, visitor, tableName);
+    MetaScanner.metaScan(server.getConfiguration(), this.connection, visitor, tableName);
 
     return new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
         count.get(), mergedRegions, splitParents);
@@ -198,7 +201,7 @@ public class CatalogJanitor extends Chore {
           + " from fs because merged region no longer holds references");
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
-      MetaTableAccessor.deleteMergeQualifiers(server.getShortCircuitConnection(),
+      MetaTableAccessor.deleteMergeQualifiers(server.getConnection(),
         mergedRegion);
       return true;
     }
@@ -331,7 +334,7 @@ public class CatalogJanitor extends Chore {
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
       if (LOG.isTraceEnabled()) LOG.trace("Archiving parent region: " + parent);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
-      MetaTableAccessor.deleteRegion(this.server.getShortCircuitConnection(), parent);
+      MetaTableAccessor.deleteRegion(this.connection, parent);
       result = true;
     }
     return result;
@@ -404,7 +407,7 @@ public class CatalogJanitor extends Chore {
     // Get merge regions if it is a merged region and already has merge
     // qualifier
     Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaTableAccessor
-        .getRegionsFromMergeQualifier(this.services.getShortCircuitConnection(),
+        .getRegionsFromMergeQualifier(this.services.getConnection(),
           region.getRegionName());
     if (mergeRegions == null
         || (mergeRegions.getFirst() == null && mergeRegions.getSecond() == null)) {

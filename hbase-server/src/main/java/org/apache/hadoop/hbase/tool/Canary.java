@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.tool;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,15 +40,17 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -228,51 +231,59 @@ public final class Canary implements Tool {
       }
     }
 
-    // start to prepare the stuffs
+    // Start to prepare the stuffs
     Monitor monitor = null;
     Thread monitorThread = null;
     long startTime = 0;
     long currentTimeLength = 0;
+    // Get a connection to use in below.
+    // try-with-resources jdk7 construct. See
+    // http://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html
+    try (Connection connection = ConnectionFactory.createConnection(this.conf)) {
+      do {
+        // Do monitor !!
+        try {
+          monitor = this.newMonitor(connection, index, args);
+          monitorThread = new Thread(monitor);
+          startTime = System.currentTimeMillis();
+          monitorThread.start();
+          while (!monitor.isDone()) {
+            // wait for 1 sec
+            Thread.sleep(1000);
+            // exit if any error occurs
+            if (this.failOnError && monitor.hasError()) {
+              monitorThread.interrupt();
+              if (monitor.initialized) {
+                System.exit(monitor.errorCode);
+              } else {
+                System.exit(INIT_ERROR_EXIT_CODE);
+              }
+            }
+            currentTimeLength = System.currentTimeMillis() - startTime;
+            if (currentTimeLength > this.timeout) {
+              LOG.error("The monitor is running too long (" + currentTimeLength
+                  + ") after timeout limit:" + this.timeout
+                  + " will be killed itself !!");
+              if (monitor.initialized) {
+                System.exit(TIMEOUT_ERROR_EXIT_CODE);
+              } else {
+                System.exit(INIT_ERROR_EXIT_CODE);
+              }
+              break;
+            }
+          }
 
-    do {
-      // do monitor !!
-      monitor = this.newMonitor(index, args);
-      monitorThread = new Thread(monitor);
-      startTime = System.currentTimeMillis();
-      monitorThread.start();
-      while (!monitor.isDone()) {
-        // wait for 1 sec
-        Thread.sleep(1000);
-        // exit if any error occurs
-        if (this.failOnError && monitor.hasError()) {
-          monitorThread.interrupt();
-          if (monitor.initialized) {
+          if (this.failOnError && monitor.hasError()) {
+            monitorThread.interrupt();
             System.exit(monitor.errorCode);
-          } else {
-            System.exit(INIT_ERROR_EXIT_CODE);
           }
+        } finally {
+          if (monitor != null) monitor.close();
         }
-        currentTimeLength = System.currentTimeMillis() - startTime;
-        if (currentTimeLength > this.timeout) {
-          LOG.error("The monitor is running too long (" + currentTimeLength
-              + ") after timeout limit:" + this.timeout
-              + " will be killed itself !!");
-          if (monitor.initialized) {
-            System.exit(TIMEOUT_ERROR_EXIT_CODE);
-          } else {
-            System.exit(INIT_ERROR_EXIT_CODE);
-          }
-          break;
-        }
-      }
 
-      if (this.failOnError && monitor.hasError()) {
-        monitorThread.interrupt();
-        System.exit(monitor.errorCode);
-      }
-
-      Thread.sleep(interval);
-    } while (interval > 0);
+        Thread.sleep(interval);
+      } while (interval > 0);
+    } // try-with-resources close
 
     return(monitor.errorCode);
   }
@@ -296,13 +307,13 @@ public final class Canary implements Tool {
   }
 
   /**
-   * a Factory method for {@link Monitor}.
-   * Can be overrided by user.
+   * A Factory method for {@link Monitor}.
+   * Can be overridden by user.
    * @param index a start index for monitor target
    * @param args args passed from user
    * @return a Monitor instance
    */
-  public Monitor newMonitor(int index, String[] args) {
+  public Monitor newMonitor(final Connection connection, int index, String[] args) {
     Monitor monitor = null;
     String[] monitorTargets = null;
 
@@ -314,20 +325,20 @@ public final class Canary implements Tool {
 
     if(this.regionServerMode) {
       monitor = new RegionServerMonitor(
-          this.conf,
+          connection,
           monitorTargets,
           this.useRegExp,
           (ExtendedSink)this.sink);
     } else {
-      monitor = new RegionMonitor(this.conf, monitorTargets, this.useRegExp, this.sink);
+      monitor = new RegionMonitor(connection, monitorTargets, this.useRegExp, this.sink);
     }
     return monitor;
   }
 
   // a Monitor super-class can be extended by users
-  public static abstract class Monitor implements Runnable {
+  public static abstract class Monitor implements Runnable, Closeable {
 
-    protected Configuration config;
+    protected Connection connection;
     protected Admin admin;
     protected String[] targets;
     protected boolean useRegExp;
@@ -345,12 +356,16 @@ public final class Canary implements Tool {
       return errorCode != 0;
     }
 
-    protected Monitor(Configuration config, String[] monitorTargets,
-        boolean useRegExp, Sink sink) {
-      if (null == config)
-        throw new IllegalArgumentException("config shall not be null");
+    @Override
+    public void close() throws IOException {
+      if (this.admin != null) this.admin.close();
+    }
 
-      this.config = config;
+    protected Monitor(Connection connection, String[] monitorTargets,
+        boolean useRegExp, Sink sink) {
+      if (null == connection) throw new IllegalArgumentException("connection shall not be null");
+
+      this.connection = connection;
       this.targets = monitorTargets;
       this.useRegExp = useRegExp;
       this.sink = sink;
@@ -361,7 +376,7 @@ public final class Canary implements Tool {
     protected boolean initAdmin() {
       if (null == this.admin) {
         try {
-          this.admin = new HBaseAdmin(config);
+          this.admin = this.connection.getAdmin();
         } catch (Exception e) {
           LOG.error("Initial HBaseAdmin failed...", e);
           this.errorCode = INIT_ERROR_EXIT_CODE;
@@ -377,9 +392,9 @@ public final class Canary implements Tool {
   // a monitor for region mode
   private static class RegionMonitor extends Monitor {
 
-    public RegionMonitor(Configuration config, String[] monitorTargets,
+    public RegionMonitor(Connection connection, String[] monitorTargets,
         boolean useRegExp, Sink sink) {
-      super(config, monitorTargets, useRegExp, sink);
+      super(connection, monitorTargets, useRegExp, sink);
     }
 
     @Override
@@ -481,7 +496,7 @@ public final class Canary implements Tool {
     Table table = null;
 
     try {
-      table = new HTable(admin.getConfiguration(), tableDesc.getTableName());
+      table = admin.getConnection().getTable(tableDesc.getTableName());
     } catch (TableNotFoundException e) {
       return;
     }
@@ -556,9 +571,9 @@ public final class Canary implements Tool {
   //a monitor for regionserver mode
   private static class RegionServerMonitor extends Monitor {
 
-    public RegionServerMonitor(Configuration config, String[] monitorTargets,
+    public RegionServerMonitor(Connection connection, String[] monitorTargets,
         boolean useRegExp, ExtendedSink sink) {
-      super(config, monitorTargets, useRegExp, sink);
+      super(connection, monitorTargets, useRegExp, sink);
     }
 
     private ExtendedSink getSink() {
@@ -622,7 +637,7 @@ public final class Canary implements Tool {
         region = entry.getValue().get(0);
         try {
           tableName = region.getTable();
-          table = new HTable(this.admin.getConfiguration(), tableName);
+          table = admin.getConnection().getTable(tableName);
           startKey = region.getStartKey();
           // Can't do a get on empty start row so do a Scan of first element if any instead.
           if(startKey.length > 0) {
@@ -675,18 +690,19 @@ public final class Canary implements Tool {
 
     private Map<String, List<HRegionInfo>> getAllRegionServerByName() {
       Map<String, List<HRegionInfo>> rsAndRMap = new HashMap<String, List<HRegionInfo>>();
-      HTable table = null;
+      Table table = null;
+      RegionLocator regionLocator = null;
       try {
         HTableDescriptor[] tableDescs = this.admin.listTables();
         List<HRegionInfo> regions = null;
         for (HTableDescriptor tableDesc : tableDescs) {
-          table = new HTable(this.admin.getConfiguration(), tableDesc.getTableName());
+          table = this.admin.getConnection().getTable(tableDesc.getTableName());
+          regionLocator = this.admin.getConnection().getRegionLocator(tableDesc.getTableName());
 
-          for (Map.Entry<HRegionInfo, ServerName> entry : table
-              .getRegionLocations().entrySet()) {
-            ServerName rs = entry.getValue();
+          for (HRegionLocation location: regionLocator.getAllRegionLocations()) {
+            ServerName rs = location.getServerName();
             String rsName = rs.getHostname();
-            HRegionInfo r = entry.getKey();
+            HRegionInfo r = location.getRegionInfo();
 
             if (rsAndRMap.containsKey(rsName)) {
               regions = rsAndRMap.get(rsName);

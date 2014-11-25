@@ -338,11 +338,11 @@ public class SplitTransaction {
     // and assign the parent region.
     if (!testing && useZKForAssignment) {
       if (metaEntries == null || metaEntries.isEmpty()) {
-        MetaTableAccessor.splitRegion(server.getShortCircuitConnection(),
+        MetaTableAccessor.splitRegion(server.getConnection(),
           parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(),
           daughterRegions.getSecond().getRegionInfo(), server.getServerName());
       } else {
-        offlineParentInMetaAndputMetaEntries(server.getShortCircuitConnection(),
+        offlineParentInMetaAndputMetaEntries(server.getConnection(),
           parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(), daughterRegions
               .getSecond().getRegionInfo(), server.getServerName(), metaEntries);
       }

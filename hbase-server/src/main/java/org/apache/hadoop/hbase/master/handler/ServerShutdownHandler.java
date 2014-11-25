@@ -173,7 +173,7 @@ public class ServerShutdownHandler extends EventHandler {
           // Skip getting user regions if the server is stopped.
           if (!this.server.isStopped()) {
             if (ConfigUtil.useZKForAssignment(server.getConfiguration())) {
-              hris = MetaTableAccessor.getServerUserRegions(this.server.getShortCircuitConnection(),
+              hris = MetaTableAccessor.getServerUserRegions(this.server.getConnection(),
                 this.serverName).keySet();
             } else {
               // Not using ZK for assignment, regionStates has everything we want

@@ -176,7 +176,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
- * An internal, A non-instantiable class that manages creation of {@link HConnection}s.
+ * An internal, non-instantiable class that manages creation of {@link HConnection}s.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
@@ -770,16 +770,7 @@ class ConnectionManager {
      * @throws IOException
      */
     private Registry setupRegistry() throws IOException {
-      String registryClass = this.conf.get("hbase.client.registry.impl",
-        ZooKeeperRegistry.class.getName());
-      Registry registry = null;
-      try {
-        registry = (Registry)Class.forName(registryClass).newInstance();
-      } catch (Throwable t) {
-        throw new IOException(t);
-      }
-      registry.init(this);
-      return registry;
+      return RegistryFactory.getRegistry(this);
     }
 
     /**
@@ -1006,8 +997,8 @@ class ConnectionManager {
     @Override
     public List<HRegionLocation> locateRegions(final TableName tableName,
         final boolean useCache, final boolean offlined) throws IOException {
-      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, this,
-          tableName);
+      NavigableMap<HRegionInfo, ServerName> regions =
+        MetaScanner.allTableRegions(conf, this, tableName);
       final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
       for (HRegionInfo regionInfo : regions.keySet()) {
         RegionLocations list = locateRegion(tableName, regionInfo.getStartKey(), useCache, true);

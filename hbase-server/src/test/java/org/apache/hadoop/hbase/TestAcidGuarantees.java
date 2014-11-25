@@ -272,7 +272,7 @@ public class TestAcidGuarantees implements Tool {
     }
     // Add a flusher
     ctx.addThread(new RepeatingTestThread(ctx) {
-      HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
+      HBaseAdmin admin = util.getHBaseAdmin();
       public void doAnAction() throws Exception {
         try {
           admin.flush(TABLE_NAME);

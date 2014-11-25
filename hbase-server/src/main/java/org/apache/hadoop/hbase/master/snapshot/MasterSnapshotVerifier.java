@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
  * General snapshot verification on the master.
@@ -150,8 +151,13 @@ public final class MasterSnapshotVerifier {
    * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
   private void verifyRegions(final SnapshotManifest manifest) throws IOException {
-    List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(
-      this.services.getZooKeeper(), this.services.getShortCircuitConnection(), tableName);
+    List<HRegionInfo> regions;
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      regions = new MetaTableLocator().getMetaRegions(services.getZooKeeper());
+    } else {
+      regions = MetaTableAccessor.getTableRegions(services.getZooKeeper(),
+        services.getConnection(), tableName);
+    }
     // Remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
 

@@ -96,7 +96,7 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
 
     // Meta still messed up.
     assertEquals(1, scanMeta());
-    HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
+    HTableDescriptor[] htbls = getTables(TEST_UTIL.getConfiguration());
     LOG.info("Tables present after restart: " + Arrays.toString(htbls));
 
     // After HBASE-451 HBaseAdmin.listTables() gets table descriptors from FS,
@@ -109,6 +109,4 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
   }
-
 }
-

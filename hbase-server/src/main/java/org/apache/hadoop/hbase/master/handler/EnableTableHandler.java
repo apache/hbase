@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
  * Handler to run enable of a table.
@@ -91,11 +92,11 @@ public class EnableTableHandler extends EventHandler {
     boolean success = false;
     try {
       // Check if table exists
-      if (!MetaTableAccessor.tableExists(this.server.getShortCircuitConnection(), tableName)) {
+      if (!MetaTableAccessor.tableExists(this.server.getConnection(), tableName)) {
         // retainAssignment is true only during recovery.  In normal case it is false
         if (!this.skipTableStateCheck) {
           throw new TableNotFoundException(tableName);
-        } 
+        }
         try {
           this.assignmentManager.getTableStateManager().checkAndRemoveTableState(tableName,
             ZooKeeperProtos.Table.State.ENABLING, true);
@@ -189,9 +190,15 @@ public class EnableTableHandler extends EventHandler {
     ServerManager serverManager = ((HMaster)this.server).getServerManager();
     // Get the regions of this table. We're done when all listed
     // tables are onlined.
-    List<Pair<HRegionInfo, ServerName>> tableRegionsAndLocations = MetaTableAccessor
-      .getTableRegionsAndLocations(this.server.getZooKeeper(),
-           this.server.getShortCircuitConnection(), tableName, true);
+    List<Pair<HRegionInfo, ServerName>> tableRegionsAndLocations;
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      tableRegionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
+        server.getZooKeeper());
+    } else {
+      tableRegionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
+        server.getZooKeeper(), server.getConnection(), tableName, true);
+    }
+
     int countOfRegionsInTable = tableRegionsAndLocations.size();
     Map<HRegionInfo, ServerName> regionsToAssign =
         regionsToAssignWithServerName(tableRegionsAndLocations);
@@ -221,7 +228,7 @@ public class EnableTableHandler extends EventHandler {
         this.assignmentManager.getBalancer().retainAssignment(regionsToAssign, onlineServers);
     LOG.info("Bulk assigning " + regionsCount + " region(s) across " + bulkPlan.size()
       + " server(s), retainAssignment=true");
-    
+
     BulkAssigner ba = new GeneralBulkAssigner(this.server, bulkPlan, this.assignmentManager, true);
     try {
       if (ba.bulkAssign()) {

@@ -74,7 +74,7 @@ public class MetaMigrationConvertingToPB {
       migrateSplitIfNecessary(r, p, HConstants.SPLITA_QUALIFIER);
       migrateSplitIfNecessary(r, p, HConstants.SPLITB_QUALIFIER);
 
-      MetaTableAccessor.putToMetaTable(this.services.getShortCircuitConnection(), p);
+      MetaTableAccessor.putToMetaTable(this.services.getConnection(), p);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Migrated " + Bytes.toString(p.getRow()));
       }
@@ -127,7 +127,7 @@ public class MetaMigrationConvertingToPB {
    */
   public static long updateMetaIfNecessary(final MasterServices services)
   throws IOException {
-    if (isMetaTableUpdated(services.getShortCircuitConnection())) {
+    if (isMetaTableUpdated(services.getConnection())) {
       LOG.info("META already up-to date with PB serialization");
       return 0;
     }
@@ -149,7 +149,7 @@ public class MetaMigrationConvertingToPB {
   static long updateMeta(final MasterServices masterServices) throws IOException {
     LOG.info("Starting update of META");
     ConvertToPBMetaVisitor v = new ConvertToPBMetaVisitor(masterServices);
-    MetaTableAccessor.fullScan(masterServices.getShortCircuitConnection(), v);
+    MetaTableAccessor.fullScan(masterServices.getConnection(), v);
     LOG.info("Finished update of META. Total rows updated:" + v.numMigratedRows);
     return v.numMigratedRows;
   }

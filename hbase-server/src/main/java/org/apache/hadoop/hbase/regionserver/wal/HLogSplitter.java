@@ -291,11 +291,11 @@ public class HLogSplitter {
         LOG.warn("Nothing to split in log file " + logPath);
         return true;
       }
-      if(csm != null) {
+      if (csm != null) {
         try {
           TableStateManager tsm = csm.getTableStateManager();
           disablingOrDisabledTables = tsm.getTablesInStates(
-            ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING);
+          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING);
         } catch (CoordinatedStateException e) {
           throw new IOException("Can't get disabling/disabled tables", e);
         }

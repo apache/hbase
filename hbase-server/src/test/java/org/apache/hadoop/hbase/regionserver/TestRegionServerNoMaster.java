@@ -284,7 +284,7 @@ public class TestRegionServerNoMaster {
     try {
       // we re-opened meta so some of its data is lost
       ServerName sn = getRS().getServerName();
-      MetaTableAccessor.updateRegionLocation(getRS().getShortCircuitConnection(),
+      MetaTableAccessor.updateRegionLocation(getRS().getConnection(),
         hri, sn, getRS().getRegion(regionName).getOpenSeqNum());
       // fake region to be closing now, need to clear state afterwards
       getRS().regionsInTransitionInRS.put(hri.getEncodedNameAsBytes(), Boolean.FALSE);

@@ -104,14 +104,14 @@ public class ConnectionUtils {
 
   /**
    * Adapt a HConnection so that it can bypass the RPC layer (serialization,
-   * deserialization, networking, etc..) when it talks to a local server.
+   * deserialization, networking, etc..) -- i.e. short-circuit -- when talking to a local server.
    * @param conn the connection to adapt
    * @param serverName the local server name
    * @param admin the admin interface of the local server
    * @param client the client interface of the local server
    * @return an adapted/decorated HConnection
    */
-  public static HConnection createShortCircuitHConnection(final Connection conn,
+  public static ClusterConnection createShortCircuitHConnection(final Connection conn,
       final ServerName serverName, final AdminService.BlockingInterface admin,
       final ClientService.BlockingInterface client) {
     return new ConnectionAdapter(conn) {

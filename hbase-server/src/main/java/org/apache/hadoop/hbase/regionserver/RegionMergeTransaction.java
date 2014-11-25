@@ -324,11 +324,11 @@ public class RegionMergeTransaction {
     // rollback
     if (!testing && useCoordinationForAssignment) {
       if (metaEntries.isEmpty()) {
-        MetaTableAccessor.mergeRegions(server.getShortCircuitConnection(),
+        MetaTableAccessor.mergeRegions(server.getConnection(),
           mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
           server.getServerName());
       } else {
-        mergeRegionsAndPutMetaEntries(server.getShortCircuitConnection(),
+        mergeRegionsAndPutMetaEntries(server.getConnection(),
           mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
           server.getServerName(), metaEntries);
       }
@@ -755,7 +755,7 @@ public class RegionMergeTransaction {
     // Get merge regions if it is a merged region and already has merge
     // qualifier
     Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaTableAccessor
-        .getRegionsFromMergeQualifier(services.getShortCircuitConnection(), regionName);
+        .getRegionsFromMergeQualifier(services.getConnection(), regionName);
     if (mergeRegions != null &&
         (mergeRegions.getFirst() != null || mergeRegions.getSecond() != null)) {
       // It has merge qualifier

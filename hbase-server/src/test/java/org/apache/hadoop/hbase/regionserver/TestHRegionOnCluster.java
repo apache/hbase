@@ -56,6 +56,7 @@ public class TestHRegionOnCluster {
   public void testDataCorrectnessReplayingRecoveredEdits() throws Exception {
     final int NUM_MASTERS = 1;
     final int NUM_RS = 3;
+    Admin hbaseAdmin = null;
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
 
     try {
@@ -67,7 +68,7 @@ public class TestHRegionOnCluster {
       // Create table
       HTableDescriptor desc = new HTableDescriptor(TABLENAME);
       desc.addFamily(new HColumnDescriptor(FAMILY));
-      Admin hbaseAdmin = TEST_UTIL.getHBaseAdmin();
+      hbaseAdmin = master.getConnection().getAdmin();
       hbaseAdmin.createTable(desc);
 
       assertTrue(hbaseAdmin.isTableAvailable(TABLENAME));
@@ -129,6 +130,7 @@ public class TestHRegionOnCluster {
       putDataAndVerify(table, "r4", FAMILY, "v4", 4);
 
     } finally {
+      if (hbaseAdmin != null) hbaseAdmin.close();
       TEST_UTIL.shutdownMiniCluster();
     }
   }

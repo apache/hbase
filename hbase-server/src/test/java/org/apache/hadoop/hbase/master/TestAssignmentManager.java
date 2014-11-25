@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaMockingUtil;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
@@ -165,12 +166,12 @@ public class TestAssignmentManager {
     Mockito.when(server.getMetaTableLocator()).thenReturn(mtl);
 
     // Get a connection w/ mocked up common methods.
-    HConnection connection =
-      HConnectionTestingUtility.getMockedConnection(HTU.getConfiguration());
+    ClusterConnection connection =
+      (ClusterConnection)HConnectionTestingUtility.getMockedConnection(HTU.getConfiguration());
 
     // Make it so we can get a catalogtracker from servermanager.. .needed
     // down in guts of server shutdown handler.
-    Mockito.when(server.getShortCircuitConnection()).thenReturn(connection);
+    Mockito.when(server.getConnection()).thenReturn(connection);
 
     // Mock a ServerManager.  Say server SERVERNAME_{A,B} are online.  Also
     // make it so if close or open, we return 'success'.
@@ -654,13 +655,13 @@ public class TestAssignmentManager {
       });
 
     // Get a connection w/ mocked up common methods.
-    HConnection connection =
+    ClusterConnection connection =
       HConnectionTestingUtility.getMockedConnectionAndDecorate(HTU.getConfiguration(),
         null, implementation, SERVERNAME_B, REGIONINFO);
 
     // Make it so we can get a catalogtracker from servermanager.. .needed
     // down in guts of server shutdown handler.
-    Mockito.when(this.server.getShortCircuitConnection()).thenReturn(connection);
+    Mockito.when(this.server.getConnection()).thenReturn(connection);
 
     // Now make a server shutdown handler instance and invoke process.
     // Have it that SERVERNAME_A died.

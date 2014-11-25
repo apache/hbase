@@ -135,7 +135,6 @@ public class TestTableMapReduceUtil {
    * does not exceed the number of regions for the given table.
    */
   @Test
-  @SuppressWarnings("deprecation")
   public void shouldNumberOfReduceTaskNotExceedNumberOfRegionsForGivenTable()
       throws IOException {
     Assert.assertNotNull(presidentsTable);
@@ -154,7 +153,6 @@ public class TestTableMapReduceUtil {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void shouldNumberOfMapTaskNotExceedNumberOfRegionsForGivenTable()
       throws IOException {
     Configuration cfg = UTIL.getConfiguration();
