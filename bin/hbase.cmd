@@ -88,10 +88,15 @@ if "%hbase-command%"=="" (
 )
 
 set JAVA_HEAP_MAX=-Xmx1000m
+set JAVA_OFFHEAP_MAX=""
 
 rem check envvars which might override default args
 if defined HBASE_HEAPSIZE (
   set JAVA_HEAP_MAX=-Xmx%HBASE_HEAPSIZE%m
+)
+
+if defined HBASE_OFFHEAPSIZE (
+  set JAVA_OFFHEAP_MAX=-XX:MaxDirectMemory=%HBASE_OFFHEAPSIZE%m
 )
 
 set CLASSPATH=%HBASE_CONF_DIR%;%JAVA_HOME%\lib\tools.jar
@@ -288,7 +293,8 @@ if not defined HBASE_SECURITY_LOGGER (
 )
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger="%HBASE_SECURITY_LOGGER%"
 
-set java_arguments=%JAVA_HEAP_MAX% %HBASE_OPTS% -classpath "%CLASSPATH%" %CLASS% %hbase-command-arguments%
+set HEAP_SETTINGS="%JAVA_HEAP_MAX% %JAVA_OFFHEAP_MAX%"
+set java_arguments=%HEAP_SETTINGS% %HBASE_OPTS% -classpath "%CLASSPATH%" %CLASS% %hbase-command-arguments%
 
 if defined service_entry (
   call :makeServiceXml %java_arguments%
