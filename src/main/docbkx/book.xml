@@ -2398,12 +2398,12 @@ rs.close();
               </para>
               <step>
                 <para>First, edit the RegionServer's <filename>hbase-env.sh</filename> and set
-                  -XX:MaxDirectMemorySize to a value greater than the offheap size wanted, in
+                  <varname>HBASE_OFFHEAPSIZE</varname> to a value greater than the offheap size wanted, in
                   this case, 4 GB (expressed as 4G).  Lets set it to 5G.  That'll be 4G
                   for our offheap cache and 1G for any other uses of offheap memory (there are
                   other users of offheap memory other than BlockCache; e.g. DFSClient 
-                  in RegionServer can make use of offheap memory).</para>
-                <programlisting>-XX:MaxDirectMemorySize=5G</programlisting>
+                  in RegionServer can make use of offheap memory). See <xref linkend="direct.memory" />.</para>
+                <programlisting>HBASE_OFFHEAPSIZE=5G</programlisting>
               </step>
               <step>
                 <para>Next, add the following configuration to the RegionServer's

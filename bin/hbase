@@ -114,18 +114,23 @@ if [ -f "$HBASE_HOME/conf/hbase-env-$COMMAND.sh" ]; then
   . "$HBASE_HOME/conf/hbase-env-$COMMAND.sh"
 fi
 
-# check envvars which might override default args
-if [ "$HBASE_HEAPSIZE" != "" ]; then
-  SUFFIX="m"
-  if [ "${HBASE_HEAPSIZE: -1}" == "m" ] || [ "${HBASE_HEAPSIZE: -1}" == "M" ]; then
-    SUFFIX=""
-  fi
-  if [ "${HBASE_HEAPSIZE: -1}" == "g" ] || [ "${HBASE_HEAPSIZE: -1}" == "G" ]; then
-    SUFFIX=""
-  fi
-  #echo "run with heapsize $HBASE_HEAPSIZE"
-  JAVA_HEAP_MAX="-Xmx""$HBASE_HEAPSIZE""$SUFFIX"
-  #echo $JAVA_HEAP_MAX
+add_size_suffix() {
+    # add an 'm' suffix if the argument is missing one, otherwise use whats there
+    local val="$1"
+    local lastchar=${val: -1}
+    if [[ "mMgG" == *$lastchar* ]]; then
+        echo $val
+    else
+        echo ${val}m
+    fi
+}
+
+if [[ -n "$HBASE_HEAPSIZE" ]]; then
+    JAVA_HEAP_MAX="-Xmx$(add_size_suffix $HBASE_HEAPSIZE)"
+fi
+
+if [[ -n "$HBASE_OFFHEAPSIZE" ]]; then
+    JAVA_OFFHEAP_MAX="-XX:MaxDirectMemorySize=$(add_size_suffix $HBASE_OFFHEAPSIZE)"
 fi
 
 # so that filenames w/ spaces are handled correctly in loops below
@@ -380,10 +385,11 @@ else
   HBASE_OPTS="$HBASE_OPTS -Dhbase.security.logger=${HBASE_SECURITY_LOGGER:-INFO,NullAppender}"
 fi
 
+HEAP_SETTINGS="$JAVA_HEAP_MAX $JAVA_OFFHEAP_MAX"
 # Exec unless HBASE_NOEXEC is set.
 export CLASSPATH
 if [ "${HBASE_NOEXEC}" != "" ]; then
-  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $JAVA_HEAP_MAX $HBASE_OPTS $CLASS "$@"
+  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
 else
-  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $JAVA_HEAP_MAX $HBASE_OPTS $CLASS "$@"
+  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "$@"
 fi

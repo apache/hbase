@@ -27,6 +27,12 @@
 @rem The maximum amount of heap to use, in MB. Default is 1000.
 @rem set HBASE_HEAPSIZE=1000
 
+@rem Uncomment below if you intend to use off heap cache.
+@rem set HBASE_OFFHEAPSIZE=1000
+
+@rem For example, to allocate 8G of offheap, to 8G:
+@rem etHBASE_OFFHEAPSIZE=8G
+
 @rem Extra Java runtime options.
 @rem Below are what we set by default.  May only work with SUN JVM.
 @rem For more on why as well as other possible settings,

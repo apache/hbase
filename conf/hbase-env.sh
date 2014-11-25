@@ -34,6 +34,12 @@
 # The maximum amount of heap to use, in MB. Default is 1000.
 # export HBASE_HEAPSIZE=1000
 
+# Uncomment below if you intend to use off heap cache.
+# export HBASE_OFFHEAPSIZE=1000
+
+# For example, to allocate 8G of offheap, to 8G:
+# export HBASE_OFFHEAPSIZE=8G
+
 # Extra Java runtime options.
 # Below are what we set by default.  May only work with SUN JVM.
 # For more on why as well as other possible settings,
@@ -66,10 +72,6 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
 # If FILE-PATH is not replaced, the log file(.gc) would still be generated in the HBASE_LOG_DIR .
 # export CLIENT_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:<FILE-PATH> -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=1 -XX:GCLogFileSize=512M"
 
-# Uncomment below if you intend to use off heap cache.
-# export HBASE_OPTS="$HBASE_OPTS -XX:MaxDirectMemorySize=SET_THIS_TO_HOW_MANY_GIGS_OF_OFFHEAP"
-# For example, to allocate 8G of offheap, set SET_THIS_TO_HOW_MANY_GIGS_OF_OFFHEAP to 8G as in:
-# export HBASE_OPTS="$HBASE_OPTS -XX:MaxDirectMemorySize=8G"
 # See the package documentation for org.apache.hadoop.hbase.io.hfile for other configurations
 # needed setting up off-heap block caching. 
 
