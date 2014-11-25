@@ -452,7 +452,7 @@ public class Import extends Configured implements Tool {
       FileOutputFormat.setOutputPath(job, outputDir);
       job.setMapOutputKeyClass(ImmutableBytesWritable.class);
       job.setMapOutputValueClass(KeyValue.class);
-      HFileOutputFormat.configureIncrementalLoad(job, table);
+      HFileOutputFormat2.configureIncrementalLoad(job, table, table);
       TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
           com.google.common.base.Preconditions.class);
     } else {

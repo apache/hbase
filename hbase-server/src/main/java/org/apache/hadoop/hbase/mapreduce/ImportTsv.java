@@ -135,7 +135,7 @@ public class ImportTsv extends Configured implements Tool {
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.
      * The row key should be the special token TsvParser.ROWKEY_COLUMN_SPEC
-     * @param separatorStr 
+     * @param separatorStr
      */
     public TsvParser(String columnsSpecification, String separatorStr) {
       // Configure separator
@@ -259,7 +259,7 @@ public class ImportTsv extends Configured implements Tool {
       public int getRowKeyLength() {
         return getColumnLength(rowKeyColumnIndex);
       }
-      
+
       public long getTimestamp(long ts) throws BadTsvLineException {
         // Return ts if HBASE_TS_KEY is not configured in column spec
         if (!hasTimestamp()) {
@@ -285,7 +285,7 @@ public class ImportTsv extends Configured implements Tool {
               getColumnLength(attrKeyColumnIndex));
         }
       }
-      
+
       public String[] getIndividualAttributes() {
         String attributes = getAttributes();
         if (attributes != null) {
@@ -294,7 +294,7 @@ public class ImportTsv extends Configured implements Tool {
           return null;
         }
       }
-       
+
       public int getAttributeKeyOffset() {
         if (hasAttributes()) {
           return getColumnOffset(attrKeyColumnIndex);
@@ -486,7 +486,7 @@ public class ImportTsv extends Configured implements Tool {
                 job.setMapOutputValueClass(Put.class);
                 job.setCombinerClass(PutCombiner.class);
               }
-              HFileOutputFormat.configureIncrementalLoad(job, table);
+              HFileOutputFormat2.configureIncrementalLoad(job, table, table);
             }
           } else {
             if (!admin.tableExists(tableName)) {
@@ -550,7 +550,7 @@ public class ImportTsv extends Configured implements Tool {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    String usage = 
+    String usage =
       "Usage: " + NAME + " -D"+ COLUMNS_CONF_KEY + "=a,b,c <tablename> <inputdir>\n" +
       "\n" +
       "Imports the given input directory of TSV data into the specified table.\n" +
@@ -638,7 +638,7 @@ public class ImportTsv extends Configured implements Tool {
             + TsvParser.TIMESTAMPKEY_COLUMN_SPEC);
         return -1;
       }
-      
+
       int attrKeysFound = 0;
       for (String col : columns) {
         if (col.equals(TsvParser.ATTRIBUTES_COLUMN_SPEC))
@@ -649,7 +649,7 @@ public class ImportTsv extends Configured implements Tool {
             + TsvParser.ATTRIBUTES_COLUMN_SPEC);
         return -1;
       }
-    
+
       // Make sure one or more columns are specified excluding rowkey and
       // timestamp key
       if (columns.length - (rowkeysFound + tskeysFound + attrKeysFound) < 1) {
@@ -664,7 +664,7 @@ public class ImportTsv extends Configured implements Tool {
     // Set it back to replace invalid timestamp (non-numeric) with current
     // system time
     getConf().setLong(TIMESTAMP_CONF_KEY, timstamp);
-    
+
     Job job = createSubmittableJob(getConf(), otherArgs);
     return job.waitForCompletion(true) ? 0 : 1;
   }

@@ -275,7 +275,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     FileOutputFormat.setOutputPath(job, p);
 
     // Configure the partitioner and other things needed for HFileOutputFormat.
-    HFileOutputFormat.configureIncrementalLoad(job, table);
+    HFileOutputFormat2.configureIncrementalLoad(job, table, table);
 
     // Run the job making sure it works.
     assertEquals(true, job.waitForCompletion(true));

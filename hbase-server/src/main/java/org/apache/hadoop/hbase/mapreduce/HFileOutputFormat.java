@@ -65,6 +65,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   public static final String DATABLOCK_ENCODING_OVERRIDE_CONF_KEY =
     HFileOutputFormat2.DATABLOCK_ENCODING_OVERRIDE_CONF_KEY;
 
+  @Override
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(
       final TaskAttemptContext context) throws IOException, InterruptedException {
     return HFileOutputFormat2.createRecordWriter(context);
@@ -86,7 +87,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   public static void configureIncrementalLoad(Job job, HTable table)
       throws IOException {
-    HFileOutputFormat2.configureIncrementalLoad(job, table, HFileOutputFormat.class);
+    HFileOutputFormat2.configureIncrementalLoad(job, table, table);
   }
 
   /**
