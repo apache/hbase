@@ -907,10 +907,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster =
         new MiniHBaseCluster(c, numMasters, numSlaves, masterClass, regionserverClass);
-    // Cluster confguration should set HbaseTestingUtility Conf
-    MiniHBaseCluster miniHBaseCluster = (MiniHBaseCluster) this.hbaseCluster;
-    this.conf = miniHBaseCluster.getMaster().getConfiguration();
-
     // Don't leave here till we've done a successful scan of the hbase:meta
     Table t = new HTable(c, TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
@@ -922,7 +918,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     getHBaseAdmin(); // create immediately the hbaseAdmin
     LOG.info("Minicluster is up");
-    return miniHBaseCluster;
+    return (MiniHBaseCluster)this.hbaseCluster;
   }
 
   /**
