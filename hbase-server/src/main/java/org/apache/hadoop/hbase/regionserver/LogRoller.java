@@ -67,7 +67,7 @@ class LogRoller extends HasThread {
     if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
       wal.registerWALActionsListener(new WALActionsListener.Base() {
         @Override
-        public void logRollRequested() {
+        public void logRollRequested(boolean lowReplicas) {
           walNeedsRoll.put(wal, Boolean.TRUE);
           // TODO logs will contend with each other here, replace with e.g. DelayedQueue
           synchronized(rollLog) {

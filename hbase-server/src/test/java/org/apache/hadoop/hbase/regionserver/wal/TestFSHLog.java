@@ -85,13 +85,6 @@ import org.junit.rules.TestName;
 @Category(MediumTests.class)
 public class TestFSHLog {
   protected static final Log LOG = LogFactory.getLog(TestFSHLog.class);
-  {
-    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.server.namenode.FSNamesystem"))
-      .getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
-  }
 
   protected static Configuration conf;
   protected static FileSystem fs;

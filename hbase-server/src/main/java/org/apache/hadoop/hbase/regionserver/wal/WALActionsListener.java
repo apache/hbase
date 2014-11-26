@@ -67,7 +67,7 @@ public interface WALActionsListener {
   /**
    * A request was made that the WAL be rolled.
    */
-  void logRollRequested();
+  void logRollRequested(boolean tooFewReplicas);
 
   /**
    * The WAL is about to close.
@@ -127,7 +127,7 @@ public interface WALActionsListener {
     public void postLogArchive(Path oldPath, Path newPath) throws IOException {}
 
     @Override
-    public void logRollRequested() {}
+    public void logRollRequested(boolean tooFewReplicas) {}
 
     @Override
     public void logCloseRequested() {}

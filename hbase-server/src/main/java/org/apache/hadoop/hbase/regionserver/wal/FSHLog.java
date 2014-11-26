@@ -1344,7 +1344,9 @@ public class FSHLog implements WAL {
       rollWriterLock.unlock();
     }
     try {
-      if (lowReplication || writer != null && writer.getLength() > logrollsize) requestLogRoll();
+      if (lowReplication || writer != null && writer.getLength() > logrollsize) {
+        requestLogRoll(lowReplication);
+      }
     } catch (IOException e) {
       LOG.warn("Writer.getLength() failed; continuing", e);
     }
@@ -1560,9 +1562,13 @@ public class FSHLog implements WAL {
 
   // public only until class moves to o.a.h.h.wal
   public void requestLogRoll() {
+    requestLogRoll(false);
+  }
+
+  private void requestLogRoll(boolean tooFewReplicas) {
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i: this.listeners) {
-        i.logRollRequested();
+        i.logRollRequested(tooFewReplicas);
       }
     }
   }
