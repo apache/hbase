@@ -19,12 +19,12 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.util.StringUtils;
-
 
 /**
  * Class used to push numbers about the WAL into the metrics subsystem.  This will take a
@@ -37,12 +37,17 @@ public class MetricsWAL extends WALActionsListener.Base {
   private final MetricsWALSource source;
 
   public MetricsWAL() {
-    source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+    this(CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
+  }
+
+  @VisibleForTesting
+  MetricsWAL(MetricsWALSource s) {
+    this.source = s;
   }
 
   @Override
   public void postSync(final long timeInNanos, final int handlerSyncs) {
-    source.incrementSyncTime(timeInNanos/1000000l);
+    source.incrementSyncTime(timeInNanos/1000000L);
   }
 
   @Override
@@ -57,6 +62,14 @@ public class MetricsWAL extends WALActionsListener.Base {
           Thread.currentThread().getName(),
           time,
           StringUtils.humanReadableInt(size)));
+    }
+  }
+
+  @Override
+  public void logRollRequested(boolean underReplicated) {
+    source.incrementLogRollRequested();
+    if (underReplicated) {
+      source.incrementLowReplicationLogRoll();
     }
   }
 }
