@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -2274,21 +2273,21 @@ public class TestAccessController extends SecureTestUtil {
    }
 
   @Test
-  public void testTruncatePerms() throws Exception {
-    try {
-      List<UserPermission> existingPerms = AccessControlClient.getUserPermissions(conf, TEST_TABLE
-          .getTableName().getNameAsString());
+  public void testTruncatePerms() throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      List<UserPermission> existingPerms =
+          AccessControlClient.getUserPermissions(connection,
+              TEST_TABLE.getTableName().getNameAsString());
       assertTrue(existingPerms != null);
       assertTrue(existingPerms.size() > 1);
-      TEST_UTIL.getHBaseAdmin().disableTable(TEST_TABLE.getTableName());
-      TEST_UTIL.getHBaseAdmin().truncateTable(TEST_TABLE.getTableName(), true);
-      List<UserPermission> perms = AccessControlClient.getUserPermissions(conf, TEST_TABLE
-          .getTableName().getNameAsString());
+      try (Admin admin = connection.getAdmin()) {
+        admin.disableTable(TEST_TABLE.getTableName());
+        admin.truncateTable(TEST_TABLE.getTableName(), true);
+      }
+      List<UserPermission> perms = AccessControlClient.getUserPermissions(connection,
+        TEST_TABLE.getTableName().getNameAsString());
       assertTrue(perms != null);
       assertEquals(existingPerms.size(), perms.size());
-    } catch (Throwable e) {
-      throw new HBaseException(e);
     }
   }
-
 }

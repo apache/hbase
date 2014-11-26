@@ -38,7 +38,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -113,22 +114,22 @@ public class SecureTestUtil {
     checkTablePerms(conf, table, perms);
   }
 
-  public static void checkTablePerms(Configuration conf, TableName table, Permission... perms) throws IOException {
+  public static void checkTablePerms(Configuration conf, TableName table, Permission... perms)
+  throws IOException {
     CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
     for (Permission p : perms) {
       request.addPermission(ProtobufUtil.toPermission(p));
     }
-    Table acl = new HTable(conf, table);
-    try {
-      AccessControlService.BlockingInterface protocol =
-        AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
-      try {
-        protocol.checkPermissions(null, request.build());
-      } catch (ServiceException se) {
-        ProtobufUtil.toIOException(se);
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table acl = connection.getTable(table)) {
+        AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
+        try {
+          protocol.checkPermissions(null, request.build());
+        } catch (ServiceException se) {
+          ProtobufUtil.toIOException(se);
+        }
       }
-    } finally {
-      acl.close();
     }
   }
 
@@ -328,14 +329,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, user, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.grant(protocol, user, actions);
+          }
         }
         return null;
       }
@@ -352,14 +352,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, user, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.revoke(protocol, user, actions);
+          }
         }
         return null;
       }
@@ -376,14 +375,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, user, namespace, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.grant(protocol, user, namespace, actions);
+          }
         }
         return null;
       }
@@ -442,14 +440,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, user, namespace, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.revoke(protocol, user, namespace, actions);
+          }
         }
         return null;
       }
@@ -467,14 +464,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
+          }
         }
         return null;
       }
@@ -513,14 +509,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, user, table, family, qualifier, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.revoke(protocol, user, table, family, qualifier, actions);
+          }
         }
         return null;
       }

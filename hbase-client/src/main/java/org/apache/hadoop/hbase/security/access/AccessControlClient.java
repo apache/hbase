@@ -161,27 +161,39 @@ public class AccessControlClient {
    * @throws Throwable
    */
   public static List<UserPermission> getUserPermissions(Configuration conf, String tableRegex)
-      throws Throwable {
+  throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return getUserPermissions(connection, tableRegex);
+    }
+  }
+
+  /**
+   * List all the userPermissions matching the given pattern.
+   * @param connection
+   * @param tableRegex The regular expression string to match against
+   * @return - returns an array of UserPermissions
+   * @throws Throwable
+   */
+  public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex)
+  throws Throwable {
     List<UserPermission> permList = new ArrayList<UserPermission>();
     // TODO: Make it so caller passes in a Connection rather than have us do this expensive
     // setup each time.  This class only used in test and shell at moment though.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        try (Admin admin = connection.getAdmin()) {
-          CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
-          BlockingInterface protocol =
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      try (Admin admin = connection.getAdmin()) {
+        CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
+        BlockingInterface protocol =
             AccessControlProtos.AccessControlService.newBlockingStub(service);
-          HTableDescriptor[] htds = null;
-          if (tableRegex == null || tableRegex.isEmpty()) {
-            permList = ProtobufUtil.getUserPermissions(protocol);
-          } else if (tableRegex.charAt(0) == '@') {
-            String namespace = tableRegex.substring(1);
-            permList = ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(namespace));
-          } else {
-            htds = admin.listTables(Pattern.compile(tableRegex));
-            for (HTableDescriptor hd : htds) {
-              permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
-            }
+        HTableDescriptor[] htds = null;
+        if (tableRegex == null || tableRegex.isEmpty()) {
+          permList = ProtobufUtil.getUserPermissions(protocol);
+        } else if (tableRegex.charAt(0) == '@') {
+          String namespace = tableRegex.substring(1);
+          permList = ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(namespace));
+        } else {
+          htds = admin.listTables(Pattern.compile(tableRegex));
+          for (HTableDescriptor hd : htds) {
+            permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
           }
         }
       }

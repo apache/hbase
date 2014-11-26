@@ -37,8 +37,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -49,10 +49,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -111,8 +109,6 @@ public class TestReplicationSourceManager {
   private static final String slaveId = "1";
 
   private static FileSystem fs;
-
-  private static String logName;
 
   private static Path oldLogDir;
 
@@ -197,7 +193,7 @@ public class TestReplicationSourceManager {
 
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     listeners.add(replication);
-    HLog hlog = HLogFactory.createHLog(fs, utility.getDataTestDir(), logName,
+    HLog hlog = HLogFactory.createHLog(fs, utility.getDataTestDir(), "testLogRoll",
         conf, listeners, URLEncoder.encode("regionserver:60020", "UTF8"));
     final AtomicLong sequenceId = new AtomicLong(1);
     manager.init();

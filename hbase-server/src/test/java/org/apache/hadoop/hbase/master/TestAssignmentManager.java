@@ -942,7 +942,7 @@ public class TestAssignmentManager {
 
     // Make it so we can get a catalogtracker from servermanager.. .needed
     // down in guts of server shutdown handler.
-    Whitebox.setInternalState(server, "shortCircuitConnection", am.getConnection());
+    Whitebox.setInternalState(server, "clusterConnection", am.getConnection());
 
     AtomicBoolean gate = new AtomicBoolean(false);
     if (balancer instanceof MockedLoadBalancer) {
@@ -997,7 +997,7 @@ public class TestAssignmentManager {
 
     // Make it so we can get a catalogtracker from servermanager.. .needed
     // down in guts of server shutdown handler.
-    Whitebox.setInternalState(server, "shortCircuitConnection", am.getConnection());
+    Whitebox.setInternalState(server, "clusterConnection", am.getConnection());
 
     try {
       // set table in enabling state.
@@ -1046,7 +1046,7 @@ public class TestAssignmentManager {
 
     // Make it so we can get a catalogtracker from servermanager.. .needed
     // down in guts of server shutdown handler.
-    Whitebox.setInternalState(server, "shortCircuitConnection", am.getConnection());
+    Whitebox.setInternalState(server, "clusterConnection", am.getConnection());
 
     try {
       TableName tableName = TableName.valueOf("dummyTable");
