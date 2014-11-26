@@ -37,10 +37,6 @@ module Hbase
       @admin = @conn.getAdmin()
       connection = @admin.getConnection()
       @conf = configuration
-      @zk_wrapper = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(configuration,
-        "admin", nil)
-      zk = @zk_wrapper.getRecoverableZooKeeper().getZooKeeper()
-      @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
       @formatter = formatter
     end
 
@@ -197,6 +193,11 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns ZooKeeper status dump
     def zk_dump
+      @zk_wrapper = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(@conf,
+       "admin",
+        nil)
+      zk = @zk_wrapper.getRecoverableZooKeeper().getZooKeeper()
+      @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
       org.apache.hadoop.hbase.zookeeper.ZKUtil::dump(@zk_wrapper)
     end
 
