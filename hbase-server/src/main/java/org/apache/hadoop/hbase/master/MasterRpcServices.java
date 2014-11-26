@@ -839,10 +839,16 @@ public class MasterRpcServices extends RSRpcServices
         Pattern pat = Pattern.compile(regex);
         for (Iterator<HTableDescriptor> itr = descriptors.iterator(); itr.hasNext(); ) {
           HTableDescriptor htd = itr.next();
-          if (!pat.matcher(htd.getTableName().getNameAsString()).matches()) {
+          String tableName = htd.getTableName().getNameAsString();
+          String defaultNameSpace = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
+          boolean matched = pat.matcher(tableName).matches();
+          if(!matched && htd.getTableName().getNamespaceAsString().equals(defaultNameSpace)) {
+            matched = pat.matcher(defaultNameSpace + TableName.NAMESPACE_DELIM + tableName)
+                .matches();
+          }
+          if (!matched)
             itr.remove();
           }
-        }
       }
 
       if (master.cpHost != null) {

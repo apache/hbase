@@ -2420,38 +2420,74 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
-  @Test
-  public void testAccessControlClientUserPerms() throws Exception {
-    try {
-      final String regex = TEST_TABLE.getTableName().getNameAsString();
-      User testUserPerms = User.createUserForTesting(conf, "testUserPerms", new String[0]);
-
-      PrivilegedAction<List<UserPermission>> listTablesRestrictedAction =
-          new PrivilegedAction<List<UserPermission>>() {
-            @Override
-            public List<UserPermission> run() {
-              try {
-                return AccessControlClient.getUserPermissions(conf, regex);
-              } catch (Throwable e) {
-                LOG.error("error during call of AccessControlClient.getUserPermissions. "
-                    + e.getStackTrace());
-                return null;
-              }
-            }
-          };
-      assertNull(testUserPerms.runAs(listTablesRestrictedAction));
-
-      // Grant TABLE ADMIN privs to testUserPerms
-      grantOnTable(TEST_UTIL, testUserPerms.getShortName(),
-          TEST_TABLE.getTableName(), null, null,
-          Permission.Action.ADMIN);
-      List<UserPermission> perms = testUserPerms.runAs(listTablesRestrictedAction);
-      assertNotNull(perms);
-      // USER_ADMIN, USER_CREATE, USER_RW, USER_RO, testUserPerms has row each.
-      assertEquals(5, perms.size());
-    } catch (Throwable e) {
-      throw new HBaseIOException(e);
-    }
+  private PrivilegedAction<List<UserPermission>> getPrivilegedAction(final String regex) {
+    return new PrivilegedAction<List<UserPermission>>() {
+      @Override
+      public List<UserPermission> run() {
+        try {
+          return AccessControlClient.getUserPermissions(conf, regex);
+        } catch (Throwable e) {
+          LOG.error("error during call of AccessControlClient.getUserPermissions. "
+              + e.getStackTrace());
+          return null;
+        }
+      }
+    };
   }
 
+  @Test
+  public void testAccessControlClientUserPerms() throws Exception {
+    // adding default prefix explicitly as it is not included in the table name.
+    final String regex = TEST_TABLE.getTableName().getNamespaceAsString() + ":"
+        + TEST_TABLE.getTableName().getNameAsString();
+    User testUserPerms = User.createUserForTesting(conf, "testUserPerms", new String[0]);
+    assertNull(testUserPerms.runAs(getPrivilegedAction(regex)));
+    // Grant TABLE ADMIN privs to testUserPerms
+    grantOnTable(TEST_UTIL, testUserPerms.getShortName(), TEST_TABLE.getTableName(), null,
+      null, Action.ADMIN);
+    List<UserPermission> perms = testUserPerms.runAs(getPrivilegedAction(regex));
+    assertNotNull(perms);
+    // USER_ADMIN, USER_CREATE, USER_RW, USER_RO, testUserPerms has row each.
+    assertEquals(5, perms.size());
+  }
+
+
+
+  @Test
+  public void testAccessControllerRegexHandling() throws Exception {
+    User testRegexHandler = User.createUserForTesting(conf, "testRegexHandling", new String[0]);
+    String tableName = "testRegex";
+    final TableName table1 = TableName.valueOf(tableName);
+    final byte[] family = Bytes.toBytes("f1");
+
+    // create table in default ns
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    HTableDescriptor htd = new HTableDescriptor(table1);
+    htd.addFamily(new HColumnDescriptor(family));
+    admin.createTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(table1);
+
+    // creating the ns and table in it
+    String ns = "testNamespace";
+    NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
+    final TableName table2 = TableName.valueOf(ns + ":" + tableName);
+    TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
+    htd = new HTableDescriptor(table2);
+    htd.addFamily(new HColumnDescriptor(family));
+    admin.createTable(htd);
+
+    // Grant TABLE ADMIN privs to testUserPerms
+    grantOnTable(TEST_UTIL, testRegexHandler.getShortName(), table1, null, null, Action.ADMIN);
+    grantOnTable(TEST_UTIL, testRegexHandler.getShortName(), table2, null, null, Action.ADMIN);
+
+    // USER_ADMIN, testUserPerms must have a row each.
+    assertEquals(2, testRegexHandler.runAs(getPrivilegedAction(tableName)).size());
+    assertEquals(2, testRegexHandler.runAs(getPrivilegedAction("default:" + tableName)).size());
+    assertEquals(2, testRegexHandler.runAs(getPrivilegedAction(ns + ":" + tableName)).size());
+    assertEquals(0, testRegexHandler.runAs(getPrivilegedAction("notMatchingAny")).size());
+
+    TEST_UTIL.deleteTable(table1);
+    TEST_UTIL.deleteTable(table2);
+    TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(ns);
+  }
 }
