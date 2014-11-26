@@ -542,16 +542,17 @@ create 'bar', 'fam'
       <title>Data Model Operations</title>
       <para>The four primary data model operations are Get, Put, Scan, and Delete. Operations are
         applied via <link
-          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
-        instances. </para>
+          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html">Table</link>
+        instances.
+      </para>
       <section
         xml:id="get">
         <title>Get</title>
         <para><link
             xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link>
           returns attributes for a specified row. Gets are executed via <link
-            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#get%28org.apache.hadoop.hbase.client.Get%29">
-            HTable.get</link>. </para>
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#get(org.apache.hadoop.hbase.client.Get)">
+            Table.get</link>. </para>
       </section>
       <section
         xml:id="put">
@@ -560,10 +561,10 @@ create 'bar', 'fam'
             xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html">Put</link>
           either adds new rows to a table (if the key is new) or can update existing rows (if the
           key already exists). Puts are executed via <link
-            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#put%28org.apache.hadoop.hbase.client.Put%29">
-            HTable.put</link> (writeBuffer) or <link
-            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">
-            HTable.batch</link> (non-writeBuffer). </para>
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put(org.apache.hadoop.hbase.client.Put)">
+            Table.put</link> (writeBuffer) or <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List, java.lang.Object[])">
+            Table.batch</link> (non-writeBuffer). </para>
       </section>
       <section
         xml:id="scan">
@@ -571,27 +572,26 @@ create 'bar', 'fam'
         <para><link
             xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
           allow iteration over multiple rows for specified attributes. </para>
-        <para>The following is an example of a on an HTable table instance. Assume that a table is
+        <para>The following is an example of a Scan on a Table instance. Assume that a table is
           populated with rows with keys "row1", "row2", "row3", and then another set of rows with
           the keys "abc1", "abc2", and "abc3". The following example shows how to set a Scan
           instance to return the rows beginning with "row".</para>
-        <programlisting language="java">
+<programlisting language="java">
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
 
-HTable htable = ...      // instantiate HTable
+Table table = ...      // instantiate a Table instance
 
 Scan scan = new Scan();
 scan.addColumn(CF, ATTR);
 scan.setRowPrefixFilter(Bytes.toBytes("row"));
-ResultScanner rs = htable.getScanner(scan);
+ResultScanner rs = table.getScanner(scan);
 try {
   for (Result r = rs.next(); r != null; r = rs.next()) {
   // process result...
 } finally {
   rs.close();  // always close the ResultScanner!
-}
 </programlisting>
         <para>Note that generally the easiest way to specify a specific stop point for a scan is by
           using the <link
@@ -604,7 +604,7 @@ try {
         <para><link
             xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html">Delete</link>
           removes a row from a table. Deletes are executed via <link
-            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29">
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)">
             HTable.delete</link>. </para>
         <para>HBase does not modify data in place, and so deletes are handled by creating new
           markers called <emphasis>tombstones</emphasis>. These tombstones, along with the dead
@@ -737,7 +737,7 @@ public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
 Get get = new Get(Bytes.toBytes("row1"));
-Result r = htable.get(get);
+Result r = table.get(get);
 byte[] b = r.getValue(CF, ATTR);  // returns current version of value
 </programlisting>
         </section>
@@ -751,7 +751,7 @@ public static final byte[] ATTR = "attr".getBytes();
 ...
 Get get = new Get(Bytes.toBytes("row1"));
 get.setMaxVersions(3);  // will return last 3 versions of row
-Result r = htable.get(get);
+Result r = table.get(get);
 byte[] b = r.getValue(CF, ATTR);  // returns current version of value
 List&lt;KeyValue&gt; kv = r.getColumn(CF, ATTR);  // returns all versions of this column
 </programlisting>
@@ -779,7 +779,7 @@ public static final byte[] ATTR = "attr".getBytes();
 ...
 Put put = new Put(Bytes.toBytes(row));
 put.add(CF, ATTR, Bytes.toBytes( data));
-htable.put(put);
+table.put(put);
 </programlisting>
           </section>
           <section
@@ -793,7 +793,7 @@ public static final byte[] ATTR = "attr".getBytes();
 Put put = new Put( Bytes.toBytes(row));
 long explicitTimeInMs = 555;  // just an example
 put.add(CF, ATTR, explicitTimeInMs, Bytes.toBytes(data));
-htable.put(put);
+table.put(put);
 </programlisting>
             <para>Caution: the version timestamp is internally by HBase for things like time-to-live
               calculations. It's usually best to avoid setting this timestamp yourself. Prefer using
@@ -1456,7 +1456,7 @@ if (!b) {
         <title>HBase MapReduce Summary to HBase Without Reducer</title>
         <para>It is also possible to perform summaries without a reducer - if you use HBase as the
           reducer. </para>
-        <para>An HBase target table would need to exist for the job summary. The HTable method
+        <para>An HBase target table would need to exist for the job summary. The Table method
             <code>incrementColumnValue</code> would be used to atomically increment values. From a
           performance perspective, it might make sense to keep a Map of values with their values to
           be incremeneted for each map-task, and make one update per key at during the <code>
@@ -1508,12 +1508,14 @@ if (!b) {
       <title>Accessing Other HBase Tables in a MapReduce Job</title>
       <para>Although the framework currently allows one HBase table as input to a MapReduce job,
         other HBase tables can be accessed as lookup tables, etc., in a MapReduce job via creating
-        an HTable instance in the setup method of the Mapper.
+        an Table instance in the setup method of the Mapper.
         <programlisting language="java">public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
-  private HTable myOtherTable;
+  private Table myOtherTable;
 
   public void setup(Context context) {
-    myOtherTable = new HTable("myOtherTable");
+    // In here create a Connection to the cluster and save it or use the Connection
+    // from the existing table
+    myOtherTable = connection.getTable("myOtherTable");
   }
 
   public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
@@ -1701,9 +1703,7 @@ if (!b) {
     <section
       xml:id="client">
       <title>Client</title>
-      <para>The HBase client <link
-          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
-        is responsible for finding RegionServers that are serving the particular row range of
+      <para>The HBase client finds the RegionServers that are serving the particular row range of
         interest. It does this by querying the <code>hbase:meta</code> table. See <xref
           linkend="arch.catalog.meta" /> for details. After locating the required region(s), the
         client contacts the RegionServer serving that region, rather than going through the master,
@@ -1711,21 +1711,33 @@ if (!b) {
         subsequent requests need not go through the lookup process. Should a region be reassigned
         either by the master load balancer or because a RegionServer has died, the client will
         requery the catalog tables to determine the new location of the user region. </para>
+
       <para>See <xref
           linkend="master.runtime" /> for more information about the impact of the Master on HBase
         Client communication. </para>
-      <para>Administrative functions are handled through <link
-          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
+      <para>Administrative functions are done via an instance of <link
+          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html">Admin</link>
       </para>
+
       <section
         xml:id="client.connections">
-        <title>Connections</title>
-        <para>For connection configuration information, see <xref
-            linkend="client_dependencies" />. </para>
+        <title>Cluster Connections</title>
+        <para>The API changed in HBase 1.0. Its been cleaned up and users are returned
+          Interfaces to work against rather than particular types. In HBase 1.0,
+          obtain a cluster Connection from ConnectionFactory and thereafter, get from it
+          instances of Table, Admin, and RegionLocator on an as-need basis. When done, close
+          obtained instances.  Finally, be sure to cleanup your Connection instance before
+          exiting.  Connections are heavyweight objects. Create once and keep an instance around.
+          Table, Admin and RegionLocator instances are lightweight. Create as you go and then
+          let go as soon as you are done by closing them. See the
+          <link xlink:href="/Users/stack/checkouts/hbase.git/target/site/apidocs/org/apache/hadoop/hbase/client/package-summary.html">Client Package Javadoc Description</link> for example usage of the new HBase 1.0 API.</para>
+
+        <para>For connection configuration information, see <xref linkend="client_dependencies" />. </para>
+
         <para><emphasis><link
-              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
-            instances are not thread-safe</emphasis>. Only one thread use an instance of HTable at
-          any given time. When creating HTable instances, it is advisable to use the same <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html">Table</link>
+            instances are not thread-safe</emphasis>. Only one thread can use an instance of Table at
+          any given time. When creating Table instances, it is advisable to use the same <link
             xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
           instance. This will ensure sharing of ZooKeeper and socket instances to the RegionServers
           which is usually what you want. For example, this is preferred:</para>

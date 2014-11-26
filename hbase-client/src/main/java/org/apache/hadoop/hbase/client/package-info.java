@@ -82,9 +82,9 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 
-
 // Class that has nothing but a main.
 // Does a Put, Get and a Scan against an hbase table.
+// The API described here is since HBase 1.0.
 public class MyLittleHBaseClient {
   public static void main(String[] args) throws IOException {
     // You need a configuration object to tell the client where to connect.
@@ -94,15 +94,24 @@ public class MyLittleHBaseClient {
     Configuration config = HBaseConfiguration.create();
 
     // Next you need a Connection to the cluster. Create one. When done with it,
-    // close it (Should start a try/finally after this creation so it gets closed
-    // for sure but leaving this out for readibility's sake).
+    // close it. A try/finally is a good way to ensure it gets closed or use
+    // the jdk7 idiom, try-with-resources: see
+    // https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html
+    //
+    // Connections are heavyweight.  Create one once and keep it around. From a Connection
+    // you get a Table instance to access Tables, an Admin instance to administer the cluster,
+    // and RegionLocator to find where regions are out on the cluster. As opposed to Connections,
+    // Table, Admin and RegionLocator instances are lightweight; create as you need them and then
+    // close when done.
+    //
     Connection connection = ConnectionFactory.createConnection(config);
     try {
 
-      // This instantiates a Table object that connects you to
-      // the "myLittleHBaseTable" table (TableName.valueOf turns String into TableName instance).
+      // The below instantiates a Table object that connects you to the "myLittleHBaseTable" table
+      // (TableName.valueOf turns String into a TableName instance).
       // When done with it, close it (Should start a try/finally after this creation so it gets
-      // closed for sure but leaving this out for readibility's sake).
+      // closed for sure the jdk7 idiom, try-with-resources: see
+      // https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html)
       Table table = connection.getTable(TableName.valueOf("myLittleHBaseTable"));
       try {
 
@@ -112,7 +121,7 @@ public class MyLittleHBaseClient {
         // below, we are converting the String "myLittleRow" into a byte array to
         // use as a row key for our update. Once you have a Put instance, you can
         // adorn it by setting the names of columns you want to update on the row,
-        // the timestamp to use in your update, etc.If no timestamp, the server
+        // the timestamp to use in your update, etc. If no timestamp, the server
         // applies current time to the edits.
         Put p = new Put(Bytes.toBytes("myLittleRow"));
 
@@ -138,6 +147,7 @@ public class MyLittleHBaseClient {
         Result r = table.get(g);
         byte [] value = r.getValue(Bytes.toBytes("myLittleFamily"),
           Bytes.toBytes("someQualifier"));
+
         // If we convert the value bytes, we should get back 'Some Value', the
         // value we inserted at this location.
         String valueStr = Bytes.toString(value);

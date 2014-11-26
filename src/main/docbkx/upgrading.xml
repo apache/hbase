@@ -164,7 +164,7 @@
           <note><title>From 0.96.x to 1.0.0</title>
             <para>You cannot do a <xlink href="rolling.upgrade" /> from 0.96.x to 1.0.0 without
               first doing a rolling upgrade to 0.98.x. See comment in
-              <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11164?focusedCommentId=14182330&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-14182330">HBASE-11164 Document and test rolling updates from 0.98 -> 1.0</link> for the why.
+              <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11164?focusedCommentId=14182330&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&#35;comment-14182330">HBASE-11164 Document and test rolling updates from 0.98 -> 1.0</link> for the why.
               Also because hbase-1.0.0 enables hfilev3 by default,
               <link xlink:href="https://issues.apache.org/jira/browse/HBASE-9801">HBASE-9801 Change the default HFile version to V3</link>,
               and support for hfilev3 only arrives in 0.98, this is another reason you cannot rolling upgrade from hbase-0.96.x;
