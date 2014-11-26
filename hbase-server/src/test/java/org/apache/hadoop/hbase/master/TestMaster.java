@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -63,6 +64,8 @@ public class TestMaster {
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
+    // we will retry operations when PleaseHoldException is thrown
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
     admin = TEST_UTIL.getHBaseAdmin();
@@ -174,7 +177,7 @@ public class TestMaster {
       admin.move(tableRegions.get(0).getEncodedNameAsBytes(), null);
       fail("Region should not be moved since master is not initialized");
     } catch (IOException ioe) {
-      assertTrue(ioe instanceof PleaseHoldException);
+      assertTrue(StringUtils.stringifyException(ioe).contains("PleaseHoldException"));
     } finally {
       master.initialized = true;
       TEST_UTIL.deleteTable(tableName);

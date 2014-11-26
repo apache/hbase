@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
 
+package org.apache.hadoop.hbase.client;
+
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 
 /**
- * Thrown when we are asked to operate on a region we know nothing about.
+ * Similar to RegionException, but disables retries.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class UnknownRegionException extends DoNotRetryRegionException {
-  private static final long serialVersionUID = 1968858760475205392L;
+public class DoNotRetryRegionException extends DoNotRetryIOException {
 
-  public UnknownRegionException(String regionName) {
-    super(regionName);
+  private static final long serialVersionUID = 6907047686199321701L;
+
+  public DoNotRetryRegionException() {
+    super();
   }
+
+  public DoNotRetryRegionException(String s) {
+    super(s);
+  }
+
 }

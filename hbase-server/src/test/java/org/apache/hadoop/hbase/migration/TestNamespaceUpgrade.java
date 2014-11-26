@@ -242,12 +242,8 @@ public class TestNamespaceUpgrade {
       TEST_UTIL.waitFor(30000, new Waiter.Predicate<IOException>() {
         @Override
         public boolean evaluate() throws IOException {
-          try {
-            return TEST_UTIL.getHBaseAdmin().getCompactionState(newTableName) ==
-                AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
-          } catch (InterruptedException e) {
-            throw new IOException(e);
-          }
+          return TEST_UTIL.getHBaseAdmin().getCompactionState(newTableName) ==
+              AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
         }
       });
     }

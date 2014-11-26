@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.RegionException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class NoServerForRegionException extends RegionException {
+public class NoServerForRegionException extends DoNotRetryRegionException {
   private static final long serialVersionUID = 1L << 11 - 1L;
 
   /** default constructor */

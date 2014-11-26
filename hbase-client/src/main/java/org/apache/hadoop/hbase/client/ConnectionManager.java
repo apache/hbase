@@ -45,6 +45,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -846,6 +847,7 @@ class ConnectionManager {
      * @throws MasterNotRunningException - if the master is not running
      * @throws ZooKeeperConnectionException
      */
+    @Deprecated
     @Override
     public boolean isMasterRunning()
     throws MasterNotRunningException, ZooKeeperConnectionException {
@@ -1446,18 +1448,14 @@ class ConnectionManager {
        * @return A stub to do <code>intf</code> against the master
        * @throws MasterNotRunningException
        */
-      @edu.umd.cs.findbugs.annotations.SuppressWarnings (value="SWL_SLEEP_WITH_LOCK_HELD")
-      Object makeStub() throws MasterNotRunningException {
+      Object makeStub() throws IOException {
         // The lock must be at the beginning to prevent multiple master creations
         //  (and leaks) in a multithread context
         synchronized (masterAndZKLock) {
           Exception exceptionCaught = null;
-          Object stub = null;
-          int tries = 0;
-          while (!closed && stub == null) {
-            tries++;
+          if (!closed) {
             try {
-              stub = makeStubNoRetries();
+              return makeStubNoRetries();
             } catch (IOException e) {
               exceptionCaught = e;
             } catch (KeeperException e) {
@@ -1466,34 +1464,10 @@ class ConnectionManager {
               exceptionCaught = e;
             }
 
-            if (exceptionCaught != null)
-              // It failed. If it's not the last try, we're going to wait a little
-              if (tries < numTries && !ExceptionUtil.isInterrupt(exceptionCaught)) {
-                // tries at this point is 1 or more; decrement to start from 0.
-                long pauseTime = ConnectionUtils.getPauseTime(pause, tries - 1);
-                LOG.info("getMaster attempt " + tries + " of " + numTries +
-                    " failed; retrying after sleep of " + pauseTime + ", exception=" +
-                  exceptionCaught);
-
-                try {
-                  Thread.sleep(pauseTime);
-                } catch (InterruptedException e) {
-                  throw new MasterNotRunningException(
-                      "Thread was interrupted while trying to connect to master.", e);
-                }
-              } else {
-                // Enough tries, we stop now
-                LOG.info("getMaster attempt " + tries + " of " + numTries +
-                    " failed; no more retrying.", exceptionCaught);
-                throw new MasterNotRunningException(exceptionCaught);
-              }
+            throw new MasterNotRunningException(exceptionCaught);
+          } else {
+            throw new DoNotRetryIOException("Connection was closed while trying to get master");
           }
-
-          if (stub == null) {
-            // implies this.closed true
-            throw new MasterNotRunningException("Connection was closed while trying to get master");
-          }
-          return stub;
         }
       }
     }
@@ -1509,8 +1483,7 @@ class ConnectionManager {
       }
 
       @Override
-      @edu.umd.cs.findbugs.annotations.SuppressWarnings("SWL_SLEEP_WITH_LOCK_HELD")
-      MasterService.BlockingInterface makeStub() throws MasterNotRunningException {
+      MasterService.BlockingInterface makeStub() throws IOException {
         return (MasterService.BlockingInterface)super.makeStub();
       }
 
@@ -1716,7 +1689,14 @@ class ConnectionManager {
       synchronized (masterAndZKLock) {
         if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
           MasterServiceStubMaker stubMaker = new MasterServiceStubMaker();
-          this.masterServiceState.stub = stubMaker.makeStub();
+          try {
+            this.masterServiceState.stub = stubMaker.makeStub();
+          } catch (MasterNotRunningException ex) {
+            throw ex;
+          } catch (IOException e) {
+            // rethrow as MasterNotRunningException so that we can keep the method sig
+            throw new MasterNotRunningException(e);
+          }
         }
         resetMasterServiceState(this.masterServiceState);
       }
@@ -2374,6 +2354,10 @@ class ConnectionManager {
       close();
     }
 
+    /**
+     * @deprecated Use {@link Admin#listTables()} instead
+     */
+    @Deprecated
     @Override
     public HTableDescriptor[] listTables() throws IOException {
       MasterKeepAliveConnection master = getKeepAliveMasterService();
@@ -2388,6 +2372,10 @@ class ConnectionManager {
       }
     }
 
+    /**
+     * @deprecated Use {@link Admin#listTableNames()} instead
+     */
+    @Deprecated
     @Override
     public String[] getTableNames() throws IOException {
       TableName[] tableNames = listTableNames();
@@ -2398,6 +2386,10 @@ class ConnectionManager {
       return result;
     }
 
+    /**
+     * @deprecated Use {@link Admin#listTableNames()} instead
+     */
+    @Deprecated
     @Override
     public TableName[] listTableNames() throws IOException {
       MasterKeepAliveConnection master = getKeepAliveMasterService();
@@ -2412,6 +2404,10 @@ class ConnectionManager {
       }
     }
 
+    /**
+     * @deprecated Use {@link Admin#getTableDescriptorsByTableName(List)} instead
+     */
+    @Deprecated
     @Override
     public HTableDescriptor[] getHTableDescriptorsByTableName(
         List<TableName> tableNames) throws IOException {
@@ -2428,6 +2424,10 @@ class ConnectionManager {
       }
     }
 
+    /**
+     * @deprecated Use {@link Admin#getTableDescriptorsByTableName(List)} instead
+     */
+    @Deprecated
     @Override
     public HTableDescriptor[] getHTableDescriptors(
         List<String> names) throws IOException {
@@ -2449,7 +2449,9 @@ class ConnectionManager {
      * @param tableName table name
      * @throws IOException if the connection to master fails or if the table
      *  is not found.
+     * @deprecated Use {@link Admin#getTableDescriptor(TableName)} instead
      */
+    @Deprecated
     @Override
     public HTableDescriptor getHTableDescriptor(final TableName tableName)
     throws IOException {
@@ -2474,6 +2476,10 @@ class ConnectionManager {
       throw new TableNotFoundException(tableName.getNameAsString());
     }
 
+    /**
+     * @deprecated Use {@link Admin#getTableDescriptor(TableName)} instead
+     */
+    @Deprecated
     @Override
     public HTableDescriptor getHTableDescriptor(final byte[] tableName)
     throws IOException {

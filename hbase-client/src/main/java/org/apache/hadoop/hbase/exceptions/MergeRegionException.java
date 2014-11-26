@@ -21,12 +21,15 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.RegionException;
 
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
+
+
 /**
  * Thrown when something is wrong in trying to merge two regions.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class MergeRegionException extends RegionException {
+public class MergeRegionException extends DoNotRetryRegionException {
 
   private static final long serialVersionUID = 4970899110066124122L;
 

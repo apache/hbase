@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -1268,7 +1267,7 @@ public class TestSplitTransactionOnCluster {
    */
   private int ensureTableRegionNotOnSameServerAsMeta(final Admin admin,
       final HRegionInfo hri)
-  throws HBaseIOException, MasterNotRunningException,
+  throws IOException, MasterNotRunningException,
   ZooKeeperConnectionException, InterruptedException {
     // Now make sure that the table region is not on same server as that hosting
     // hbase:meta  We don't want hbase:meta replay polluting our test when we later crash

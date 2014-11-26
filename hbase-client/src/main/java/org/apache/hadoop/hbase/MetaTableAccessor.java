@@ -400,12 +400,8 @@ public class MetaTableAccessor {
       Connection connection, TableName tableName, final boolean excludeOfflinedSplitParents)
         throws IOException {
     List<Pair<HRegionInfo, ServerName>> result = null;
-    try {
       result = getTableRegionsAndLocations(zkw, connection, tableName,
         excludeOfflinedSplitParents);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-    }
     return getListOfHRegionInfos(result);
   }
 
@@ -468,12 +464,11 @@ public class MetaTableAccessor {
    * @param tableName table we're looking for
    * @return Return list of regioninfos and server.
    * @throws IOException
-   * @throws InterruptedException
    */
   public static List<Pair<HRegionInfo, ServerName>>
   getTableRegionsAndLocations(ZooKeeperWatcher zkw,
                               Connection connection, TableName tableName)
-  throws IOException, InterruptedException {
+  throws IOException {
     return getTableRegionsAndLocations(zkw, connection, tableName, true);
   }
 
@@ -483,11 +478,10 @@ public class MetaTableAccessor {
    * @param tableName table to work with
    * @return Return list of regioninfos and server addresses.
    * @throws IOException
-   * @throws InterruptedException
    */
   public static List<Pair<HRegionInfo, ServerName>> getTableRegionsAndLocations(
       ZooKeeperWatcher zkw, Connection connection, final TableName tableName,
-      final boolean excludeOfflinedSplitParents) throws IOException, InterruptedException {
+      final boolean excludeOfflinedSplitParents) throws IOException {
 
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       // If meta, do a bit of special handling.

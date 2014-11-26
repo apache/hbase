@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -261,8 +263,9 @@ public class TestRegionMergeTransactionOnCluster {
         admin.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
         fail("Offline regions should not be able to merge");
       } catch (IOException ie) {
+        System.out.println(ie);
         assertTrue("Exception should mention regions not online",
-          ie.getMessage().contains("regions not online")
+          StringUtils.stringifyException(ie).contains("regions not online")
             && ie instanceof MergeRegionException);
       }
       try {
@@ -271,7 +274,7 @@ public class TestRegionMergeTransactionOnCluster {
         fail("A region should not be able to merge with itself, even forcifully");
       } catch (IOException ie) {
         assertTrue("Exception should mention regions not online",
-          ie.getMessage().contains("region to itself")
+          StringUtils.stringifyException(ie).contains("region to itself")
             && ie instanceof MergeRegionException);
       }
       try {

@@ -89,7 +89,7 @@ public class HBaseFsckRepair {
    * @throws KeeperException
    */
   public static void fixUnassigned(Admin admin, HRegionInfo region)
-      throws IOException, KeeperException {
+      throws IOException, KeeperException, InterruptedException {
     HRegionInfo actualRegion = new HRegionInfo(region);
 
     // Force ZK node to OFFLINE so master assigns
@@ -109,7 +109,7 @@ public class HBaseFsckRepair {
    * in comparators that is addressed by HBASE-5563.
    */
   private static void forceOfflineInZK(Admin admin, final HRegionInfo region)
-  throws ZooKeeperConnectionException, KeeperException, IOException {
+  throws ZooKeeperConnectionException, KeeperException, IOException, InterruptedException {
     admin.assign(region.getRegionName());
   }
 

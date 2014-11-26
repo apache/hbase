@@ -18,11 +18,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.ServiceException;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -33,10 +37,9 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
@@ -46,12 +49,6 @@ import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Pair;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * The administrative API for HBase. Obtain an instance from an {@link Connection#getAdmin()} and
@@ -81,13 +78,6 @@ public interface Admin extends Abortable, Closeable {
   Connection getConnection();
 
   /**
-   * @return - true if the master server is running. Throws an exception otherwise.
-   * @throws ZooKeeperConnectionException
-   * @throws MasterNotRunningException
-   */
-  boolean isMasterRunning() throws MasterNotRunningException, ZooKeeperConnectionException;
-
-  /**
    * @param tableName Table to check.
    * @return True if table exists already.
    * @throws IOException
@@ -95,9 +85,7 @@ public interface Admin extends Abortable, Closeable {
   boolean tableExists(final TableName tableName) throws IOException;
 
   /**
-   * List all the userspace tables.  In other words, scan the hbase:meta table. If we wanted this to
-   * be really fast, we could implement a special catalog table that just contains table names and
-   * their descriptors. Right now, it only exists as part of the hbase:meta table's region info.
+   * List all the userspace tables.
    *
    * @return - returns an array of HTableDescriptors
    * @throws IOException if a remote or network exception occurs
@@ -496,36 +484,32 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param tableName table to flush
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
-  void flush(final TableName tableName) throws IOException, InterruptedException;
+  void flush(final TableName tableName) throws IOException;
 
   /**
    * Flush an individual region. Synchronous operation.
    *
    * @param regionName region to flush
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
-  void flushRegion(final byte[] regionName) throws IOException, InterruptedException;
+  void flushRegion(final byte[] regionName) throws IOException;
 
   /**
    * Compact a table. Asynchronous operation.
    *
    * @param tableName table to compact
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
-  void compact(final TableName tableName) throws IOException, InterruptedException;
+  void compact(final TableName tableName) throws IOException;
 
   /**
    * Compact an individual region. Asynchronous operation.
    *
    * @param regionName region to compact
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
-  void compactRegion(final byte[] regionName) throws IOException, InterruptedException;
+  void compactRegion(final byte[] regionName) throws IOException;
 
   /**
    * Compact a column family within a table. Asynchronous operation.
@@ -533,10 +517,9 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName table to compact
    * @param columnFamily column family within a table
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
   void compact(final TableName tableName, final byte[] columnFamily)
-    throws IOException, InterruptedException;
+    throws IOException;
 
   /**
    * Compact a column family within a region. Asynchronous operation.
@@ -544,28 +527,25 @@ public interface Admin extends Abortable, Closeable {
    * @param regionName region to compact
    * @param columnFamily column family within a region
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
   void compactRegion(final byte[] regionName, final byte[] columnFamily)
-    throws IOException, InterruptedException;
+    throws IOException;
 
   /**
    * Major compact a table. Asynchronous operation.
    *
    * @param tableName table to major compact
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
-  void majorCompact(TableName tableName) throws IOException, InterruptedException;
+  void majorCompact(TableName tableName) throws IOException;
 
   /**
    * Major compact a table or an individual region. Asynchronous operation.
    *
    * @param regionName region to major compact
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
-  void majorCompactRegion(final byte[] regionName) throws IOException, InterruptedException;
+  void majorCompactRegion(final byte[] regionName) throws IOException;
 
   /**
    * Major compact a column family within a table. Asynchronous operation.
@@ -573,10 +553,9 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName table to major compact
    * @param columnFamily column family within a table
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
   void majorCompact(TableName tableName, final byte[] columnFamily)
-    throws IOException, InterruptedException;
+    throws IOException;
 
   /**
    * Major compact a column family within region. Asynchronous operation.
@@ -584,10 +563,9 @@ public interface Admin extends Abortable, Closeable {
    * @param regionName egion to major compact
    * @param columnFamily column family within a region
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
   void majorCompactRegion(final byte[] regionName, final byte[] columnFamily)
-    throws IOException, InterruptedException;
+    throws IOException;
 
   /**
    * Compact all regions on the region server
@@ -611,20 +589,15 @@ public interface Admin extends Abortable, Closeable {
    * Here is an example: <code> host187.example.com,60020,1289493121758</code>
    * @throws UnknownRegionException Thrown if we can't find a region named
    * <code>encodedRegionName</code>
-   * @throws ZooKeeperConnectionException
-   * @throws MasterNotRunningException
    */
   void move(final byte[] encodedRegionName, final byte[] destServerName)
-      throws HBaseIOException, MasterNotRunningException, ZooKeeperConnectionException;
+      throws IOException;
 
   /**
    * @param regionName Region name to assign.
-   * @throws MasterNotRunningException
-   * @throws ZooKeeperConnectionException
-   * @throws IOException
    */
   void assign(final byte[] regionName)
-      throws MasterNotRunningException, ZooKeeperConnectionException, IOException;
+      throws IOException;
 
   /**
    * Unassign a region from current hosting regionserver.  Region will then be assigned to a
@@ -634,12 +607,9 @@ public interface Admin extends Abortable, Closeable {
    * @param regionName Region to unassign. Will clear any existing RegionPlan if one found.
    * @param force If true, force unassign (Will remove region from regions-in-transition too if
    * present. If results in double assignment use hbck -fix to resolve. To be used by experts).
-   * @throws MasterNotRunningException
-   * @throws ZooKeeperConnectionException
-   * @throws IOException
    */
   void unassign(final byte[] regionName, final boolean force)
-      throws MasterNotRunningException, ZooKeeperConnectionException, IOException;
+      throws IOException;
 
   /**
    * Offline specified region from master's in-memory state. It will not attempt to reassign the
@@ -656,12 +626,11 @@ public interface Admin extends Abortable, Closeable {
   /**
    * Turn the load balancer on or off.
    *
-   * @param on If true, enable balancer. If false, disable balancer.
    * @param synchronous If true, it waits until current balance() call, if outstanding, to return.
    * @return Previous balancer value
    */
   boolean setBalancerRunning(final boolean on, final boolean synchronous)
-      throws MasterNotRunningException, ZooKeeperConnectionException;
+      throws IOException;
 
   /**
    * Invoke the balancer.  Will run the balancer and if regions to move, it will go ahead and do the
@@ -669,35 +638,28 @@ public interface Admin extends Abortable, Closeable {
    *
    * @return True if balancer ran, false otherwise.
    */
-  boolean balancer()
-      throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException;
+  boolean balancer() throws IOException;
 
   /**
    * Enable/Disable the catalog janitor
    *
    * @param enable if true enables the catalog janitor
    * @return the previous state
-   * @throws ServiceException
-   * @throws MasterNotRunningException
    */
-  boolean enableCatalogJanitor(boolean enable) throws ServiceException, MasterNotRunningException;
+  boolean enableCatalogJanitor(boolean enable) throws IOException;
 
   /**
    * Ask for a scan of the catalog table
    *
    * @return the number of entries cleaned
-   * @throws ServiceException
-   * @throws MasterNotRunningException
    */
-  int runCatalogScan() throws ServiceException, MasterNotRunningException;
+  int runCatalogScan() throws IOException;
 
   /**
    * Query on the catalog janitor state (Enabled/Disabled?)
    *
-   * @throws ServiceException
-   * @throws org.apache.hadoop.hbase.MasterNotRunningException
    */
-  boolean isCatalogJanitorEnabled() throws ServiceException, MasterNotRunningException;
+  boolean isCatalogJanitorEnabled() throws IOException;
 
   /**
    * Merge two regions. Asynchronous operation.
@@ -716,18 +678,16 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param tableName table to split
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
-  void split(final TableName tableName) throws IOException, InterruptedException;
+  void split(final TableName tableName) throws IOException;
 
   /**
    * Split an individual region. Asynchronous operation.
    *
    * @param regionName region to split
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
-  void splitRegion(final byte[] regionName) throws IOException, InterruptedException;
+  void splitRegion(final byte[] regionName) throws IOException;
 
   /**
    * Split a table. Asynchronous operation.
@@ -735,10 +695,9 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName table to split
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException interrupt exception occurred
    */
   void split(final TableName tableName, final byte[] splitPoint)
-    throws IOException, InterruptedException;
+    throws IOException;
 
   /**
    * Split an individual region. Asynchronous operation.
@@ -746,10 +705,9 @@ public interface Admin extends Abortable, Closeable {
    * @param regionName region to split
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException interrupt exception occurred
    */
   void splitRegion(final byte[] regionName, final byte[] splitPoint)
-    throws IOException, InterruptedException;
+    throws IOException;
 
   /**
    * Modify an existing table, more IRB friendly version. Asynchronous operation.  This means that
@@ -759,7 +717,8 @@ public interface Admin extends Abortable, Closeable {
    * @param htd modified description of the table
    * @throws IOException if a remote or network exception occurs
    */
-  void modifyTable(final TableName tableName, final HTableDescriptor htd) throws IOException;
+  void modifyTable(final TableName tableName, final HTableDescriptor htd)
+      throws IOException;
 
   /**
    * Shuts down the HBase cluster
@@ -802,7 +761,8 @@ public interface Admin extends Abortable, Closeable {
    * @param descriptor descriptor which describes the new namespace
    * @throws IOException
    */
-  void createNamespace(final NamespaceDescriptor descriptor) throws IOException;
+  void createNamespace(final NamespaceDescriptor descriptor)
+      throws IOException;
 
   /**
    * Modify an existing namespace
@@ -810,7 +770,8 @@ public interface Admin extends Abortable, Closeable {
    * @param descriptor descriptor which describes the new namespace
    * @throws IOException
    */
-  void modifyNamespace(final NamespaceDescriptor descriptor) throws IOException;
+  void modifyNamespace(final NamespaceDescriptor descriptor)
+      throws IOException;
 
   /**
    * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
@@ -827,7 +788,8 @@ public interface Admin extends Abortable, Closeable {
    * @return A descriptor
    * @throws IOException
    */
-  NamespaceDescriptor getNamespaceDescriptor(final String name) throws IOException;
+  NamespaceDescriptor getNamespaceDescriptor(final String name)
+      throws IOException;
 
   /**
    * List available namespace descriptors
@@ -835,7 +797,8 @@ public interface Admin extends Abortable, Closeable {
    * @return List of descriptors
    * @throws IOException
    */
-  NamespaceDescriptor[] listNamespaceDescriptors() throws IOException;
+  NamespaceDescriptor[] listNamespaceDescriptors()
+    throws IOException;
 
   /**
    * Get list of table descriptors by namespace
@@ -844,7 +807,8 @@ public interface Admin extends Abortable, Closeable {
    * @return A descriptor
    * @throws IOException
    */
-  HTableDescriptor[] listTableDescriptorsByNamespace(final String name) throws IOException;
+  HTableDescriptor[] listTableDescriptorsByNamespace(final String name)
+      throws IOException;
 
   /**
    * Get list of table names by namespace
@@ -853,7 +817,8 @@ public interface Admin extends Abortable, Closeable {
    * @return The list of table names in the namespace
    * @throws IOException
    */
-  TableName[] listTableNamesByNamespace(final String name) throws IOException;
+  TableName[] listTableNamesByNamespace(final String name)
+      throws IOException;
 
   /**
    * Get the regions of a given table.
@@ -862,7 +827,8 @@ public interface Admin extends Abortable, Closeable {
    * @return List of {@link HRegionInfo}.
    * @throws IOException
    */
-  List<HRegionInfo> getTableRegions(final TableName tableName) throws IOException;
+  List<HRegionInfo> getTableRegions(final TableName tableName)
+    throws IOException;
 
   @Override
   void close() throws IOException;
@@ -874,7 +840,8 @@ public interface Admin extends Abortable, Closeable {
    * @return HTD[] the tableDescriptor
    * @throws IOException if a remote or network exception occurs
    */
-  HTableDescriptor[] getTableDescriptorsByTableName(List<TableName> tableNames) throws IOException;
+  HTableDescriptor[] getTableDescriptorsByTableName(List<TableName> tableNames)
+    throws IOException;
 
   /**
    * Get tableDescriptors
@@ -883,7 +850,8 @@ public interface Admin extends Abortable, Closeable {
    * @return HTD[] the tableDescriptor
    * @throws IOException if a remote or network exception occurs
    */
-  HTableDescriptor[] getTableDescriptors(List<String> names) throws IOException;
+  HTableDescriptor[] getTableDescriptors(List<String> names)
+    throws IOException;
 
   /**
    * Roll the log writer. That is, start writing log messages to a new file.
@@ -904,7 +872,7 @@ public interface Admin extends Abortable, Closeable {
    * @return an array of master coprocessors
    * @see org.apache.hadoop.hbase.ClusterStatus#getMasterCoprocessors()
    */
-  String[] getMasterCoprocessors();
+  String[] getMasterCoprocessors() throws IOException;
 
   /**
    * Get the current compaction state of a table. It could be in a major compaction, a minor
@@ -913,10 +881,9 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName table to examine
    * @return the current compaction state
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
   AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState(final TableName tableName)
-    throws IOException, InterruptedException;
+    throws IOException;
 
   /**
    * Get the current compaction state of region. It could be in a major compaction, a minor
@@ -925,10 +892,9 @@ public interface Admin extends Abortable, Closeable {
    * @param regionName region to examine
    * @return the current compaction state
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
    */
   AdminProtos.GetRegionInfoResponse.CompactionState getCompactionStateForRegion(
-    final byte[] regionName) throws IOException, InterruptedException;
+    final byte[] regionName) throws IOException;
 
   /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
@@ -1112,7 +1078,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
   void cloneSnapshot(final byte[] snapshotName, final TableName tableName)
-      throws IOException, TableExistsException, RestoreSnapshotException, InterruptedException;
+      throws IOException, TableExistsException, RestoreSnapshotException;
 
   /**
    * Create a new table by cloning the snapshot content.
@@ -1125,7 +1091,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IllegalArgumentException if the specified table has not a valid name
    */
   void cloneSnapshot(final String snapshotName, final TableName tableName)
-      throws IOException, TableExistsException, RestoreSnapshotException, InterruptedException;
+      throws IOException, TableExistsException, RestoreSnapshotException;
 
   /**
    * Execute a distributed procedure on a cluster.

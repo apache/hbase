@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -181,15 +180,6 @@ public class TestReplicasClient {
     TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);
     Configuration c = new Configuration(HTU.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-    Admin ha = new HBaseAdmin(c);
-    for (boolean masterRuns = true; masterRuns; ) {
-      Thread.sleep(100);
-      try {
-        masterRuns = false;
-        masterRuns = ha.isMasterRunning();
-      } catch (MasterNotRunningException ignored) {
-      }
-    }
     LOG.info("Master has stopped");
   }
 

@@ -18,8 +18,11 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -31,10 +34,22 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.mortbay.log.Log;
 
 import com.google.protobuf.RpcController;
@@ -45,10 +60,10 @@ public class TestHBaseAdminNoCluster {
   /**
    * Verify that PleaseHoldException gets retried.
    * HBASE-8764
-   * @throws IOException 
-   * @throws ZooKeeperConnectionException 
-   * @throws MasterNotRunningException 
-   * @throws ServiceException 
+   * @throws IOException
+   * @throws ZooKeeperConnectionException
+   * @throws MasterNotRunningException
+   * @throws ServiceException
    */
   @Test
   public void testMasterMonitorCallableRetries()
@@ -85,6 +100,221 @@ public class TestHBaseAdminNoCluster {
     } finally {
       admin.close();
       if (connection != null) connection.close();
+    }
+  }
+
+  @Test
+  public void testMasterOperationsRetries() throws Exception {
+
+    // Admin.listTables()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.listTables();
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .getTableDescriptors((RpcController)Mockito.any(),
+            (GetTableDescriptorsRequest)Mockito.any());
+      }
+    });
+
+    // Admin.listTableNames()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.listTableNames();
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .getTableNames((RpcController)Mockito.any(),
+            (GetTableNamesRequest)Mockito.any());
+      }
+    });
+
+    // Admin.getTableDescriptor()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.getTableDescriptor(TableName.valueOf("getTableDescriptor"));
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .getTableDescriptors((RpcController)Mockito.any(),
+            (GetTableDescriptorsRequest)Mockito.any());
+      }
+    });
+
+    // Admin.getTableDescriptorsByTableName()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.getTableDescriptorsByTableName(new ArrayList<TableName>());
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .getTableDescriptors((RpcController)Mockito.any(),
+            (GetTableDescriptorsRequest)Mockito.any());
+      }
+    });
+
+    // Admin.move()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.move(new byte[0], null);
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .moveRegion((RpcController)Mockito.any(),
+            (MoveRegionRequest)Mockito.any());
+      }
+    });
+
+    // Admin.offline()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.offline(new byte[0]);
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .offlineRegion((RpcController)Mockito.any(),
+            (OfflineRegionRequest)Mockito.any());
+      }
+    });
+
+    // Admin.setBalancerRunning()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.setBalancerRunning(true, true);
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .setBalancerRunning((RpcController)Mockito.any(),
+            (SetBalancerRunningRequest)Mockito.any());
+      }
+    });
+
+    // Admin.balancer()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.balancer();
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .balance((RpcController)Mockito.any(),
+            (BalanceRequest)Mockito.any());
+      }
+    });
+
+    // Admin.enabledCatalogJanitor()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.enableCatalogJanitor(true);
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .enableCatalogJanitor((RpcController)Mockito.any(),
+            (EnableCatalogJanitorRequest)Mockito.any());
+      }
+    });
+
+    // Admin.runCatalogScan()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.runCatalogScan();
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .runCatalogScan((RpcController)Mockito.any(),
+            (RunCatalogScanRequest)Mockito.any());
+      }
+    });
+
+    // Admin.isCatalogJanitorEnabled()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.isCatalogJanitorEnabled();
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .isCatalogJanitorEnabled((RpcController)Mockito.any(),
+            (IsCatalogJanitorEnabledRequest)Mockito.any());
+      }
+    });
+
+    // Admin.mergeRegions()
+    testMasterOperationIsRetried(new MethodCaller() {
+      @Override
+      public void call(Admin admin) throws Exception {
+        admin.mergeRegions(new byte[0], new byte[0], true);
+      }
+      @Override
+      public void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception {
+        Mockito.verify(masterAdmin, Mockito.atLeast(count))
+          .dispatchMergingRegions((RpcController)Mockito.any(),
+            (DispatchMergingRegionsRequest)Mockito.any());
+      }
+    });
+  }
+
+  private static interface MethodCaller {
+    void call(Admin admin) throws Exception;
+    void verify(MasterKeepAliveConnection masterAdmin, int count) throws Exception;
+  }
+
+  private void testMasterOperationIsRetried(MethodCaller caller) throws Exception {
+    Configuration configuration = HBaseConfiguration.create();
+    // Set the pause and retry count way down.
+    configuration.setLong(HConstants.HBASE_CLIENT_PAUSE, 1);
+    final int count = 10;
+    configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, count);
+
+    ClusterConnection connection = mock(ClusterConnection.class);
+    when(connection.getConfiguration()).thenReturn(configuration);
+    MasterKeepAliveConnection masterAdmin =
+        Mockito.mock(MasterKeepAliveConnection.class, new Answer() {
+          @Override
+          public Object answer(InvocationOnMock invocation) throws Throwable {
+            if (invocation.getMethod().getName().equals("close")) {
+              return null;
+            }
+            throw new MasterNotRunningException(); // all methods will throw an exception
+          }
+        });
+    Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
+
+    Admin admin = null;
+    try {
+      admin = new HBaseAdmin(connection);
+
+      try {
+        caller.call(admin); // invoke the HBaseAdmin method
+        fail();
+      } catch (RetriesExhaustedException e) {
+        Log.info("Expected fail", e);
+      }
+      // Assert we were called 'count' times.
+      caller.verify(masterAdmin, count);
+    } finally {
+      if (admin != null) {admin.close();}
     }
   }
 }

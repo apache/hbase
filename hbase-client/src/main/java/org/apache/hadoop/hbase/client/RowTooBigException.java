@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.RegionException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class RowTooBigException extends RegionException {
+public class RowTooBigException extends DoNotRetryRegionException {
 
   public RowTooBigException(String message) {
     super(message);

@@ -41,6 +41,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -467,7 +471,14 @@ public class ReplicationAdmin implements Closeable {
    */
   public List<HashMap<String, String>> listReplicated() throws IOException {
     List<HashMap<String, String>> replicationColFams = new ArrayList<HashMap<String, String>>();
-    HTableDescriptor[] tables = this.connection.listTables();
+
+    Admin admin = new HBaseAdmin(this.connection.getConfiguration());
+    HTableDescriptor[] tables;
+    try {
+      tables = admin.listTables();
+    } finally {
+      if (admin!= null) admin.close();
+    }
 
     for (HTableDescriptor table : tables) {
       HColumnDescriptor[] columns = table.getColumnFamilies();
