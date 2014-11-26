@@ -126,8 +126,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    // Create the test table (owner added to the _acl_ table)
-    Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);
     hcd.setMaxVersions(4);
@@ -137,7 +135,12 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     hcd.setMaxVersions(4);
     htd.setOwner(USER_OWNER);
     htd.addFamily(hcd);
-    admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
+    // Create the test table (owner added to the _acl_ table)
+    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      try (Admin admin = connection.getAdmin()) {
+        admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
+      }
+    }
     TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
   }
 
