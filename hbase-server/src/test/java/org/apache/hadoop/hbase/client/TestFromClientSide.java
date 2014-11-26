@@ -277,12 +277,8 @@ public class TestFromClientSide {
      TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
        @Override
        public boolean evaluate() throws IOException {
-         try {
-           return TEST_UTIL.getHBaseAdmin().getCompactionState(TABLENAME) ==
-               AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
-         } catch (InterruptedException e) {
-           throw new IOException(e);
-         }
+         return TEST_UTIL.getHBaseAdmin().getCompactionState(TABLENAME) ==
+             AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
        }
      });
 

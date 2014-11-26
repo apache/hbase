@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
@@ -68,6 +69,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -564,8 +567,39 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
-    return new UnmodifyableHTableDescriptor(
-      this.connection.getHTableDescriptor(this.tableName));
+    // TODO: This is the same as HBaseAdmin.getTableDescriptor(). Only keep one.
+    if (tableName == null) return null;
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
+      return HTableDescriptor.META_TABLEDESC;
+    }
+    HTableDescriptor htd = executeMasterCallable(
+      new MasterCallable<HTableDescriptor>(getConnection()) {
+      @Override
+      public HTableDescriptor call(int callTimeout) throws ServiceException {
+        GetTableDescriptorsResponse htds;
+        GetTableDescriptorsRequest req =
+            RequestConverter.buildGetTableDescriptorsRequest(tableName);
+        htds = master.getTableDescriptors(null, req);
+
+        if (!htds.getTableSchemaList().isEmpty()) {
+          return HTableDescriptor.convert(htds.getTableSchemaList().get(0));
+        }
+        return null;
+      }
+    });
+    if (htd != null) {
+      return new UnmodifyableHTableDescriptor(htd);
+    }
+    throw new TableNotFoundException(tableName.getNameAsString());
+  }
+
+  private <V> V executeMasterCallable(MasterCallable<V> callable) throws IOException {
+    RpcRetryingCaller<V> caller = rpcCallerFactory.newCaller();
+    try {
+      return caller.callWithRetries(callable, operationTimeout);
+    } finally {
+      callable.close();
+    }
   }
 
   /**

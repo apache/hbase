@@ -39,8 +39,10 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 // classes and unit tests only.
 public interface ClusterConnection extends HConnection {
 
-  /** @return - true if the master server is running */
+  /** @return - true if the master server is running
+   * @deprecated this has been deprecated without a replacement */
   @Override
+  @Deprecated
   boolean isMasterRunning()
       throws MasterNotRunningException, ZooKeeperConnectionException;
 

@@ -126,20 +126,15 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // Each region server will get its own online regions for the table.
     // We may still miss regions that need to be flushed.
     List<Pair<HRegionInfo, ServerName>> regionsAndLocations;
-    try {
-      if (TableName.META_TABLE_NAME.equals(tableName)) {
-        regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
-          master.getZooKeeper());
-      } else {
-        regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
-          master.getConnection(), tableName, false);
-      }
-    } catch (InterruptedException e1) {
-      String msg = "Failed to get regions for '" + desc.getInstance() + "'";
-      LOG.error(msg);
-      throw new IOException(msg, e1);
 
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
+        master.getZooKeeper());
+    } else {
+      regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
+        master.getConnection(), tableName, false);
     }
+
     Set<String> regionServers = new HashSet<String>(regionsAndLocations.size());
     for (Pair<HRegionInfo, ServerName> region : regionsAndLocations) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {

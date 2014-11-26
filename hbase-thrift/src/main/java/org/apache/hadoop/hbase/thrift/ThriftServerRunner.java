@@ -686,8 +686,6 @@ public class ThriftServerRunner implements Runnable {
     public void compact(ByteBuffer tableNameOrRegionName) throws IOError {
       try{
         getHBaseAdmin().compact(getBytes(tableNameOrRegionName));
-      } catch (InterruptedException e) {
-        throw new IOError(e.getMessage());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -698,9 +696,6 @@ public class ThriftServerRunner implements Runnable {
     public void majorCompact(ByteBuffer tableNameOrRegionName) throws IOError {
       try{
         getHBaseAdmin().majorCompact(getBytes(tableNameOrRegionName));
-      } catch (InterruptedException e) {
-        LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());

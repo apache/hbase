@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -252,13 +251,11 @@ public interface HConnection extends Connection {
   /**
    * List all the userspace tables.  In other words, scan the hbase:meta table.
    *
-   * If we wanted this to be really fast, we could implement a special
-   * catalog table that just contains table names and their descriptors.
-   * Right now, it only exists as part of the hbase:meta table's region info.
-   *
    * @return - returns an array of HTableDescriptors
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link Admin#listTables()} instead.
    */
+  @Deprecated
   HTableDescriptor[] listTables() throws IOException;
 
   /**
@@ -272,9 +269,16 @@ public interface HConnection extends Connection {
   // successor function, returning TableName, listTableNames in later versions
   // because Java polymorphism doesn't consider return value types
 
+  /**
+   * @deprecated Use {@link Admin#listTableNames()} instead.
+   */
   @Deprecated
   String[] getTableNames() throws IOException;
 
+  /**
+   * @deprecated Use {@link Admin#listTables()} instead.
+   */
+  @Deprecated
   TableName[] listTableNames() throws IOException;
 
   /**
@@ -282,6 +286,7 @@ public interface HConnection extends Connection {
    * @return table metadata
    * @throws IOException if a remote or network exception occurs
    */
+  @Deprecated
   HTableDescriptor getHTableDescriptor(TableName tableName)
   throws IOException;
 
@@ -551,7 +556,9 @@ public interface HConnection extends Connection {
    * @param tableNames List of table names
    * @return HTD[] table metadata
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link Admin#getTableDescriptor(TableName)} instead.
    */
+  @Deprecated
   HTableDescriptor[] getHTableDescriptorsByTableName(List<TableName> tableNames) throws IOException;
 
   @Deprecated
