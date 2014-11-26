@@ -163,11 +163,13 @@ public class TestReplicationTrackerZKImpl {
     zkw.getRecoverableZooKeeper().getZooKeeper().getChildren("/hbase/replication/peers/5", true);
     rt.registerListener(new DummyReplicationListener());
     rp.disablePeer("5");
+    int tmp = plChangedCount.get();
+    LOG.info("Peer count=" + tmp);
     ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5/peer-state");
     // wait for event
-    int tmp = plChangedCount.get();
     while (plChangedCount.get() <= tmp) {
-      Thread.sleep(5);
+      Thread.sleep(100);
+      LOG.info("Peer count=" + tmp);
     }
     assertEquals(1, plChangedData.size());
     assertTrue(plChangedData.contains("5"));
@@ -221,8 +223,8 @@ public class TestReplicationTrackerZKImpl {
     public void peerListChanged(List<String> peerIds) {
       plChangedData.clear();
       plChangedData.addAll(peerIds);
-      plChangedCount.getAndIncrement();
-      LOG.debug("Received peerListChanged event");
+      int count = plChangedCount.getAndIncrement();
+      LOG.debug("Received peerListChanged event " + count);
     }
   }
 
