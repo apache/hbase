@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedInputStream;
@@ -44,11 +45,10 @@ public class TestInfoServers {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    // The info servers do not run in tests by default.
-    // Set them to ephemeral ports so they will start
+    // The info servers do not run in tests by default.   
+    // Set them to ephemeral ports so they will start   
     UTIL.getConfiguration().setInt(HConstants.MASTER_INFO_PORT, 0);
-    UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_INFO_PORT, 0);
-
+    
     //We need to make sure that the server can be started as read only.
     UTIL.getConfiguration().setBoolean("hbase.master.ui.readonly", true);
     UTIL.startMiniCluster();
@@ -60,17 +60,36 @@ public class TestInfoServers {
   }
 
   /**
+   * Test for checking master info port of cluster whether same with the port of
+   * TestHBaseTestingUtility's getConfiguration .
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testMasterInfoServerPort() throws Exception {
+    String confPort = UTIL.getConfiguration().get(HConstants.MASTER_INFO_PORT);
+    String masterPort =
+        UTIL.getHBaseCluster().getMaster().getConfiguration().get(HConstants.MASTER_INFO_PORT);
+    String regionPort =
+        UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getConfiguration()
+            .get(HConstants.MASTER_INFO_PORT);
+
+    assertEquals(confPort, masterPort);
+    assertEquals(confPort, regionPort);
+  }
+  
+  /**
    * @throws Exception
    */
   @Test
   public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
     new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
-    int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
+    String port = UTIL.getConfiguration().get(HConstants.MASTER_INFO_PORT);
     assertContainsContent(new URL("http://localhost:" + port +
         "/index.html"), "master-status");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().
-      getInfoServer().getPort();
+        getConfiguration().get(HConstants.REGIONSERVER_INFO_PORT);
     assertContainsContent(new URL("http://localhost:" + port +
         "/index.html"), "rs-status");
   }
@@ -86,11 +105,11 @@ public class TestInfoServers {
   public void testInfoServersStatusPages() throws Exception {
     // give the cluster time to start up
     new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
-    int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
+    String port = UTIL.getConfiguration().get(HConstants.MASTER_INFO_PORT);
     assertContainsContent(new URL("http://localhost:" + port +
         "/master-status"), "meta");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().
-      getInfoServer().getPort();
+        getConfiguration().get(HConstants.REGIONSERVER_INFO_PORT);
     assertContainsContent(new URL("http://localhost:" + port +
         "/rs-status"), "meta");
   }
@@ -101,7 +120,7 @@ public class TestInfoServers {
     byte[] cf = Bytes.toBytes("d");
     UTIL.createTable(tableName, cf);
     new HTable(UTIL.getConfiguration(), tableName).close();
-    int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
+    String port = UTIL.getConfiguration().get(HConstants.MASTER_INFO_PORT);
     assertDoesNotContainContent(
       new URL("http://localhost:" + port + "/table.jsp?name=" + tableName + "&action=split&key="),
       "Table action request accepted");
