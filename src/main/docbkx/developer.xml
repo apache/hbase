@@ -1239,6 +1239,9 @@ ConnectionCount=1 (was 1) </screen>
                     {<code>/usr/bin/ssh some-hostname "su hbase - -c \"ps aux | ... | kill
                     ...\""</code>}. The command is logged in the test logs, so you can verify it is
                 correct for your environment. </para>
+              <para>To disable the running of Integration Tests, pass the following profile on the
+                command line <code>-PskipIntegrationTests</code>. For example,
+                <programlisting>$ mvn clean install test -Dtest=TestZooKeeper  -PskipIntegrationTests</programlisting></para>
 
             <section xml:id="maven.build.commands.integration.tests.mini">
                 <title>Running integration tests against mini cluster</title>
