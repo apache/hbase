@@ -875,7 +875,9 @@ public class TestHCM {
    * Makes sure that there is no leaking of
    * {@link ConnectionManager.HConnectionImplementation} in the {@link HConnectionManager}
    * class.
+   * @deprecated Tests deprecated functionality.  Remove in 1.0.
    */
+  @Deprecated
   @Test
   public void testConnectionUniqueness() throws Exception {
     int zkmaxconnections = TEST_UTIL.getConfiguration().

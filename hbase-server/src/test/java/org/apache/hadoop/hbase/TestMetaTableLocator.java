@@ -29,8 +29,7 @@ import java.net.ConnectException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -102,9 +101,6 @@ public class TestMetaTableLocator {
     } catch (KeeperException e) {
       LOG.warn("Unable to delete hbase:meta location", e);
     }
-
-    // Clear out our doctored connection or could mess up subsequent tests.
-    HConnectionManager.deleteConnection(UTIL.getConfiguration());
 
     this.watcher.close();
   }
@@ -184,7 +180,8 @@ public class TestMetaTableLocator {
     // Mock an ClientProtocol.
     final ClientProtos.ClientService.BlockingInterface implementation =
       Mockito.mock(ClientProtos.ClientService.BlockingInterface.class);
-    HConnection connection = mockConnection(null, implementation);
+ 
+    ClusterConnection connection = mockConnection(null, implementation);
 
     // If a 'get' is called on mocked interface, throw connection refused.
     Mockito.when(implementation.get((RpcController) Mockito.any(), (GetRequest) Mockito.any())).
@@ -244,14 +241,14 @@ public class TestMetaTableLocator {
   @Test
   public void testVerifyMetaRegionLocationFails()
   throws IOException, InterruptedException, KeeperException, ServiceException {
-    HConnection connection = Mockito.mock(HConnection.class);
+    ClusterConnection connection = Mockito.mock(ClusterConnection.class);
     ServiceException connectException =
       new ServiceException(new ConnectException("Connection refused"));
     final AdminProtos.AdminService.BlockingInterface implementation =
       Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
     Mockito.when(implementation.getRegionInfo((RpcController)Mockito.any(),
       (GetRegionInfoRequest)Mockito.any())).thenThrow(connectException);
-    Mockito.when(connection.getAdmin(Mockito.any(ServerName.class), Mockito.anyBoolean())).
+    Mockito.when(connection.getAdmin(Mockito.any(ServerName.class))).
       thenReturn(implementation);
 
     ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());
@@ -303,20 +300,17 @@ public class TestMetaTableLocator {
    * and that returns the passed {@link AdminProtos.AdminService.BlockingInterface} instance when
    * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
    * {@link ClientProtos.ClientService.BlockingInterface} instance when
-   * {@link HConnection#getClient(ServerName)} is called (Be sure to call
-   * {@link HConnectionManager#deleteConnection(org.apache.hadoop.conf.Configuration)}
-   * when done with this mocked Connection.
+   * {@link HConnection#getClient(ServerName)} is called.
    * @throws IOException
    */
-  private HConnection mockConnection(final AdminProtos.AdminService.BlockingInterface admin,
+  private ClusterConnection mockConnection(final AdminProtos.AdminService.BlockingInterface admin,
       final ClientProtos.ClientService.BlockingInterface client)
   throws IOException {
-    HConnection connection =
+    ClusterConnection connection =
       HConnectionTestingUtility.getMockedConnection(UTIL.getConfiguration());
     Mockito.doNothing().when(connection).close();
     // Make it so we return any old location when asked.
-    final HRegionLocation anyLocation =
-      new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, SN);
+    final HRegionLocation anyLocation = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, SN);
     Mockito.when(connection.getRegionLocation((TableName) Mockito.any(),
         (byte[]) Mockito.any(), Mockito.anyBoolean())).
       thenReturn(anyLocation);

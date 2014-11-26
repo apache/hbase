@@ -18,7 +18,6 @@ limitations under the License.
 </%doc>
 <%args>
 HMaster master;
-HBaseAdmin admin;
 Map<String, Integer> frags = null;
 ServerName metaLocation = null;
 List<ServerName> servers = null;
@@ -42,7 +41,7 @@ org.apache.hadoop.hbase.HConstants;
 org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
-org.apache.hadoop.hbase.client.HBaseAdmin;
+org.apache.hadoop.hbase.client.Admin;
 org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
@@ -307,8 +306,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def catalogTables>
 <%java>
- HTableDescriptor[] sysTables = master.isInitialized() ? admin.listTableDescriptorsByNamespace(
-   NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;
+ HTableDescriptor[] sysTables = null;
+ try (Admin admin = master.getConnection().getAdmin()) {
+   sysTables = master.isInitialized() ? admin.listTableDescriptorsByNamespace(
+     NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;
+ }
 </%java>
 <%if (sysTables != null && sysTables.length > 0)%>
 <table class="table table-striped">
@@ -347,7 +349,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def userTables>
 <%java>
-   HTableDescriptor[] tables = master.isInitialized() ? admin.listTables() : null;
+   HTableDescriptor[] tables = null; 
+   try (Admin admin = master.getConnection().getAdmin()) {
+     tables = master.isInitialized() ? admin.listTables() : null;
+   }
 </%java>
 <%if (tables != null && tables.length > 0)%>
 <table class="table table-striped">
@@ -379,7 +384,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def userSnapshots>
 <%java>
-   List<SnapshotDescription> snapshots = master.isInitialized() ? admin.listSnapshots() : null;
+   List<SnapshotDescription> snapshots = null;
+   try (Admin admin = master.getConnection().getAdmin()) {
+     snapshots = master.isInitialized() ? admin.listSnapshots() : null;
+   }
 </%java>
 <%if (snapshots != null && snapshots.size() > 0)%>
 <table class="table table-striped">
@@ -436,7 +444,4 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
 </table>
 </%if>
-<%java>
-   HConnectionManager.deleteConnection(admin.getConfiguration());
-</%java>
 </%def>

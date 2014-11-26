@@ -54,7 +54,7 @@ import com.google.common.collect.Maps;
  */
 @Category({MasterTests.class,MediumTests.class})
 public class TestMasterStatusServlet {
-  
+
   private HMaster master;
   private Configuration conf;
   private HBaseAdmin admin;
@@ -110,7 +110,7 @@ public class TestMasterStatusServlet {
     Mockito.doReturn(rms).when(master).getRegionServerMetrics();
 
     // Mock admin
-    admin = Mockito.mock(HBaseAdmin.class); 
+    admin = Mockito.mock(HBaseAdmin.class);
   }
 
   private void setupMockTables() throws IOException {
@@ -120,27 +120,25 @@ public class TestMasterStatusServlet {
     };
     Mockito.doReturn(tables).when(admin).listTables();
   }
-  
+
   @Test
   public void testStatusTemplateNoTables() throws IOException {
-    new MasterStatusTmpl().render(new StringWriter(),
-        master, admin);
+    new MasterStatusTmpl().render(new StringWriter(), master);
   }
 
   @Test
   public void testStatusTemplateMetaAvailable() throws IOException {
     setupMockTables();
-    
+
     new MasterStatusTmpl()
       .setMetaLocation(ServerName.valueOf("metaserver:123,12345"))
-      .render(new StringWriter(),
-        master, admin);
+      .render(new StringWriter(), master);
   }
 
   @Test
   public void testStatusTemplateWithServers() throws IOException {
     setupMockTables();
-    
+
     List<ServerName> servers = Lists.newArrayList(
         ServerName.valueOf("rootserver:123,12345"),
         ServerName.valueOf("metaserver:123,12345"));
@@ -154,10 +152,9 @@ public class TestMasterStatusServlet {
       .setMetaLocation(ServerName.valueOf("metaserver:123,12345"))
       .setServers(servers)
       .setDeadServers(deadServers)
-      .render(new StringWriter(),
-        master, admin);
+      .render(new StringWriter(), master);
   }
-  
+
   @Test
   public void testAssignmentManagerTruncatedList() throws IOException {
     AssignmentManager am = Mockito.mock(AssignmentManager.class);
@@ -189,7 +186,7 @@ public class TestMasterStatusServlet {
 
     // Should always include META
     assertTrue(result.contains(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()));
-    
+
     // Make sure we only see 50 of them
     Matcher matcher = Pattern.compile("CLOSING").matcher(result);
     int count = 0;

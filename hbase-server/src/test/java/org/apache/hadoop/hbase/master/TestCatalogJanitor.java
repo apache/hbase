@@ -199,9 +199,6 @@ public class TestCatalogJanitor {
 
     @Override
     public void stop(String why) {
-      if (this.connection != null) {
-        HConnectionManager.deleteConnection(this.connection.getConfiguration());
-      }
     }
   }
 

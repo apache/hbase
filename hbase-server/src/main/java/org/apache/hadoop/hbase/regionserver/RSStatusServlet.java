@@ -34,10 +34,8 @@ public class RSStatusServlet extends HttpServlet {
 
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-      throws ServletException, IOException
-    {
-    HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(
-        HRegionServer.REGIONSERVER);
+  throws ServletException, IOException {
+    HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
 
     resp.setContentType("text/html");
