@@ -112,13 +112,13 @@ public class HTable implements HTableInterface, RegionLocator {
   private volatile Configuration configuration;
   protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
   private long writeBufferSize;
-  private boolean clearBufferOnFail;
-  private boolean autoFlush;
-  protected long currentWriteBufferSize;
+  private boolean clearBufferOnFail = true;
+  private boolean autoFlush = true;
+  protected long currentWriteBufferSize = 0 ;
+  private boolean closed = false;
   protected int scannerCaching;
   private int maxKeyValueSize;
   private ExecutorService pool;  // For Multi & Scan
-  private boolean closed;
   private int operationTimeout;
   private int retries;
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
@@ -126,7 +126,6 @@ public class HTable implements HTableInterface, RegionLocator {
   private Consistency defaultConsistency = Consistency.STRONG;
   private int primaryCallTimeoutMicroSecond;
   private int replicaCallTimeoutMicroSecondScan;
-
 
   /** The Async process for puts with autoflush set to false or multiputs */
   protected AsyncProcess ap;
@@ -319,9 +318,10 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * For internal testing.
+   * @throws IOException 
    */
   @VisibleForTesting
-  protected HTable() {
+  protected HTable() throws IOException {
     tableName = null;
     cleanupPoolOnClose = false;
     cleanupConnectionOnClose = false;
@@ -345,9 +345,6 @@ public class HTable implements HTableInterface, RegionLocator {
         HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
     this.writeBufferSize = this.configuration.getLong(
         "hbase.client.write.buffer", 2097152);
-    this.clearBufferOnFail = true;
-    this.autoFlush = true;
-    this.currentWriteBufferSize = 0;
     this.scannerCaching = this.configuration.getInt(
         HConstants.HBASE_CLIENT_SCANNER_CACHING,
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
@@ -365,7 +362,6 @@ public class HTable implements HTableInterface, RegionLocator {
     multiAp = this.connection.getAsyncProcess();
 
     this.maxKeyValueSize = getMaxKeyValueSize(this.configuration);
-    this.closed = false;
   }
 
   /**

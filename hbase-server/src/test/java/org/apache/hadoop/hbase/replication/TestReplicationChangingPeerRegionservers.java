@@ -54,7 +54,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
    */
   @Before
   public void setUp() throws Exception {
-    ((HTable)htable1).setAutoFlush(false, true);
+    htable1.setAutoFlushTo(false);
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
     for (JVMClusterUtil.RegionServerThread r :

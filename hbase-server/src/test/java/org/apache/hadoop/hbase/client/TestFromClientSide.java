@@ -3905,7 +3905,7 @@ public class TestFromClientSide {
     final int NB_BATCH_ROWS = 10;
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPutBufferedOneFlush"),
       new byte [][] {CONTENTS_FAMILY, SMALL_FAMILY});
-    table.setAutoFlush(false, true);
+    table.setAutoFlushTo(false);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);
@@ -3946,7 +3946,7 @@ public class TestFromClientSide {
     final int NB_BATCH_ROWS = 10;
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPutBufferedManyManyFlushes"),
       new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY });
-    table.setAutoFlush(false, true);
+    table.setAutoFlushTo(false);
     table.setWriteBufferSize(10);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
@@ -4275,7 +4275,7 @@ public class TestFromClientSide {
           new byte[][] { HConstants.CATALOG_FAMILY, Bytes.toBytes("info2") }, 1, 1024);
     // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
     // in Store.rowAtOrBeforeFromStoreFile
-    table.setAutoFlush(true);
+    table.setAutoFlushTo(true);
     String regionName = table.getRegionLocations().firstKey().getEncodedName();
     HRegion region =
         TEST_UTIL.getRSForFirstRegionInTable(tableAname).getFromOnlineRegions(regionName);

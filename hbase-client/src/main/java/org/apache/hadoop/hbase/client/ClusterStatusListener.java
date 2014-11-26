@@ -21,7 +21,10 @@ package org.apache.hadoop.hbase.client;
 
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ChannelFactory;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -29,7 +32,9 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.util.internal.StringUtil;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -37,6 +42,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +60,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 
 /**
@@ -205,12 +213,17 @@ class ClusterStatusListener implements Closeable {
         throw new IOException("Can't connect to " + mcAddress, e);
       }
 
+      InternetProtocolFamily family = InternetProtocolFamily.IPv4;
+      if (ina instanceof Inet6Address) {
+        family = InternetProtocolFamily.IPv6;
+      }
+
       try {
         Bootstrap b = new Bootstrap();
         b.group(group)
-            .channel(NioDatagramChannel.class)
-            .option(ChannelOption.SO_REUSEADDR, true)
-            .handler(new ClusterStatusHandler());
+         .channelFactory(new HBaseDatagramChannelFactory<Channel>(NioDatagramChannel.class, family))
+         .option(ChannelOption.SO_REUSEADDR, true)
+         .handler(new ClusterStatusHandler());
 
         channel = (DatagramChannel)b.bind(bindAddress, port).sync().channel();
       } catch (InterruptedException e) {
@@ -221,6 +234,32 @@ class ClusterStatusListener implements Closeable {
       NetworkInterface ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
       channel.joinGroup(ina, ni, null, channel.newPromise());
     }
+
+    private class HBaseDatagramChannelFactory<T extends Channel> implements ChannelFactory<T> {
+      private final Class<? extends T> clazz;
+      private InternetProtocolFamily family;
+
+      HBaseDatagramChannelFactory(Class<? extends T> clazz, InternetProtocolFamily family) {
+          this.clazz = clazz;
+          this.family = family;
+      }
+
+      @Override
+      public T newChannel() {
+          try {
+            return ReflectionUtils.instantiateWithCustomCtor(clazz.getName(),
+              new Class[] { InternetProtocolFamily.class }, new Object[] { family });
+
+          } catch (Throwable t) {
+              throw new ChannelException("Unable to create Channel from class " + clazz, t);
+          }
+      }
+
+      @Override
+      public String toString() {
+          return StringUtil.simpleClassName(clazz) + ".class";
+      }
+  }
 
     @Override
     public void close() {

@@ -263,7 +263,7 @@ public class TestMultiParallel {
     // Load the data
     LOG.info("get new table");
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
-    table.setAutoFlush(false, true);
+    table.setAutoFlushTo(false);
     table.setWriteBufferSize(10 * 1024 * 1024);
 
     LOG.info("constructPutRequests");
