@@ -23,7 +23,7 @@
   import="java.util.Map"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
-  import="org.apache.hadoop.hbase.client.HBaseAdmin"
+  import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.client.HConnectionManager"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.ServerName"
@@ -41,7 +41,6 @@
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
-  HBaseAdmin hbadmin = new HBaseAdmin(conf);
   MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
   HTable table = new HTable(conf, fqtn);
@@ -125,21 +124,23 @@
         </div>
 <p><hr><p>
 <%
-  if (action.equals("split")) {
-    if (key != null && key.length() > 0) {
-      hbadmin.split(key);
-    } else {
-      hbadmin.split(fqtn);
-    }
+  try (Admin admin = master.getConnection().getAdmin()) {
+    if (action.equals("split")) {
+      if (key != null && key.length() > 0) {
+        admin.splitRegion(Bytes.toBytes(key));
+      } else {
+        admin.split(TableName.valueOf(fqtn));
+      }
     
     %> Split request accepted. <%
-  } else if (action.equals("compact")) {
-    if (key != null && key.length() > 0) {
-      hbadmin.compact(key);
-    } else {
-      hbadmin.compact(fqtn);
-    }
+    } else if (action.equals("compact")) {
+      if (key != null && key.length() > 0) {
+        admin.compactRegion(Bytes.toBytes(key));
+      } else {
+        admin.compact(TableName.valueOf(fqtn));
+      }
     %> Compact request accepted. <%
+    }
   }
 %>
 <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
@@ -220,6 +221,7 @@
 <%  } %>
 </table>
 <%} else {
+  Admin admin = master.getConnection().getAdmin();
   try { %>
 <h2>Table Attributes</h2>
 <table class="table table-striped">
@@ -230,7 +232,7 @@
   </tr>
   <tr>
       <td>Enabled</td>
-      <td><%= hbadmin.isTableEnabled(table.getTableName()) %></td>
+      <td><%= admin.isTableEnabled(table.getName()) %></td>
       <td>Is the table enabled</td>
   </tr>
   <tr>
@@ -238,7 +240,7 @@
       <td>
 <%
   try {
-    CompactionState compactionState = hbadmin.getCompactionState(table.getTableName());
+    CompactionState compactionState = admin.getCompactionState(table.getName());
 %>
 <%= compactionState %>
 <%
@@ -332,10 +334,10 @@
 <% }
 } catch(Exception ex) {
   ex.printStackTrace(System.err);
+} finally {
+  admin.close();
 }
 } // end else
-
-HConnectionManager.deleteConnection(hbadmin.getConfiguration());
 %>
 
 

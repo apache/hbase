@@ -292,6 +292,11 @@ public class TestFromClientSide {
      table.close();
    }
 
+   /**
+    * @deprecated Tests deprecated functionality. Remove when we are past 1.0.
+    * @throws Exception
+    */
+   @Deprecated
    @Test
    public void testSharedZooKeeper() throws Exception {
      Configuration newConfig = new Configuration(TEST_UTIL.getConfiguration());

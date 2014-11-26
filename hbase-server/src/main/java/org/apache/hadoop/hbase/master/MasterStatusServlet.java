@@ -53,7 +53,6 @@ public class MasterStatusServlet extends HttpServlet {
     response.setContentType("text/html");
 
     Configuration conf = master.getConfiguration();
-    HBaseAdmin admin = new HBaseAdmin(conf);
 
     Map<String, Integer> frags = getFragmentationInfo(master, conf);
     ServerName metaLocation = null;
@@ -80,8 +79,7 @@ public class MasterStatusServlet extends HttpServlet {
       tmpl.setFilter(request.getParameter("filter"));
     if (request.getParameter("format") != null)
       tmpl.setFormat(request.getParameter("format"));
-    tmpl.render(response.getWriter(),
-          master, admin);
+    tmpl.render(response.getWriter(), master);
   }
 
   private ServerName getMetaLocationOrNull(HMaster master) {

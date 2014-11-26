@@ -30,8 +30,6 @@ import java.util.NavigableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -128,7 +126,7 @@ public class TestMetaTableAccessorNoCluster {
     // This is a servername we use in a few places below.
     ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());
 
-    HConnection connection;
+    ClusterConnection connection = null;
     try {
       // Mock an ClientProtocol. Our mock implementation will fail a few
       // times when we go to open a scanner.
@@ -204,7 +202,7 @@ public class TestMetaTableAccessorNoCluster {
       Mockito.verify(implementation, Mockito.times(6)).
         scan((RpcController)Mockito.any(), (ScanRequest)Mockito.any());
     } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
+      if (connection != null && !connection.isClosed()) connection.close();
       zkw.close();
     }
   }
