@@ -221,7 +221,8 @@ public class TestHCM {
     con1.close();
   }
 
-  @Test(expected = RegionServerStoppedException.class)
+  // Fails too often!  Needs work.  HBASE-12558
+  @Ignore @Test(expected = RegionServerStoppedException.class)
   public void testClusterStatus() throws Exception {
     if (!isJavaOk){
       // This test requires jdk 1.7+
