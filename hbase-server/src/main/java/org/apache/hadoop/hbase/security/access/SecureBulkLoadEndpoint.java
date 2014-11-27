@@ -67,7 +67,9 @@ import java.math.BigInteger;
 import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Coprocessor service for bulk loads in secure mode.
@@ -280,9 +282,6 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
             fs = FileSystem.get(conf);
             for(Pair<byte[], String> el: familyPaths) {
               Path p = new Path(el.getSecond());
-              LOG.trace("Setting permission for: " + p);
-              fs.setPermission(p, PERM_ALL_ACCESS);
-              
               Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
               if(!fs.exists(stageFamily)) {
                 fs.mkdirs(stageFamily);
@@ -364,11 +363,13 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     private Configuration conf;
     // Source filesystem
     private FileSystem srcFs = null;
+    private Map<String, FsPermission> origPermissions = null;
 
     public SecureBulkLoadListener(FileSystem fs, String stagingDir, Configuration conf) {
       this.fs = fs;
       this.stagingDir = stagingDir;
       this.conf = conf;
+      this.origPermissions = new HashMap<String, FsPermission>();
     }
 
     @Override
@@ -388,13 +389,15 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         LOG.debug("Bulk-load file " + srcPath + " is on different filesystem than " +
             "the destination filesystem. Copying file over to destination staging dir.");
         FileUtil.copy(srcFs, p, fs, stageP, false, conf);
-      }
-      else {
+      } else {
         LOG.debug("Moving " + p + " to " + stageP);
+        FileStatus origFileStatus = fs.getFileStatus(p);
+        origPermissions.put(srcPath, origFileStatus.getPermission());
         if(!fs.rename(p, stageP)) {
           throw new IOException("Failed to move HFile: " + p + " to " + stageP);
         }
       }
+      fs.setPermission(stageP, PERM_ALL_ACCESS);
       return stageP.toString();
     }
 
@@ -405,12 +408,23 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
 
     @Override
     public void failedBulkLoad(final byte[] family, final String srcPath) throws IOException {
+      if (!FSHDFSUtils.isSameHdfs(conf, srcFs, fs)) {
+        // files are copied so no need to move them back
+        return;
+      }
       Path p = new Path(srcPath);
       Path stageP = new Path(stagingDir,
           new Path(Bytes.toString(family), p.getName()));
       LOG.debug("Moving " + stageP + " back to " + p);
       if(!fs.rename(stageP, p))
         throw new IOException("Failed to move HFile: " + stageP + " to " + p);
+
+      // restore original permission
+      if (origPermissions.containsKey(srcPath)) {
+        fs.setPermission(p, origPermissions.get(srcPath));
+      } else {
+        LOG.warn("Can't find previous permission for path=" + srcPath);
+      }
     }
 
     /**
