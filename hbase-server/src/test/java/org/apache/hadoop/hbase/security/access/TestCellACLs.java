@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -133,6 +134,8 @@ public class TestCellACLs extends SecureTestUtil {
     htd.addFamily(hcd);
     admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
+    LOG.info("Sleeping a second because of HBASE-12581");
+    Threads.sleep(1000);
   }
 
   @Test
