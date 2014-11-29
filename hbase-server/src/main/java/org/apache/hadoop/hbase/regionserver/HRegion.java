@@ -2684,7 +2684,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           continue;
         }
         doRollBackMemstore = true; // If we have a failure, we need to clean what we wrote
-        addedSize += applyFamilyMapToMemstore(familyMaps[i], mvccNum, memstoreCells);
+        addedSize += applyFamilyMapToMemstore(familyMaps[i], mvccNum, memstoreCells, isInReplay);
       }
 
       // ------------------------------------
@@ -3189,12 +3189,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * @param localizedWriteEntry The WriteEntry of the MVCC for this transaction.
    *        If null, then this method internally creates a mvcc transaction.
    * @param output newly added KVs into memstore
+   * @param isInReplay true when adding replayed KVs into memstore
    * @return the additional memory usage of the memstore caused by the
    * new entries.
    * @throws IOException
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<Cell>> familyMap,
-    long mvccNum, List<Cell> memstoreCells) throws IOException {
+    long mvccNum, List<Cell> memstoreCells, boolean isInReplay) throws IOException {
     long size = 0;
 
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
@@ -3209,6 +3210,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         Pair<Long, Cell> ret = store.add(cell);
         size += ret.getFirst();
         memstoreCells.add(ret.getSecond());
+        if(isInReplay) {
+          // set memstore newly added cells with replay mvcc number
+          CellUtil.setSequenceId(ret.getSecond(), mvccNum);
+        }
       }
     }
 
@@ -3407,7 +3412,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       }
 
       try {
-        // replay the edits. Replay can return -1 if everything is skipped, only update if seqId is greater
+        // replay the edits. Replay can return -1 if everything is skipped, only update
+        // if seqId is greater
         seqid = Math.max(seqid, replayRecoveredEdits(edits, maxSeqIdInStores, reporter));
       } catch (IOException e) {
         boolean skipErrors = conf.getBoolean(
