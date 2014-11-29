@@ -71,7 +71,7 @@ public class ColumnSectionWriter {
   private List<Integer> outputArrayOffsets;
 
 
-	/*********************** construct *********************/
+  /*********************** construct *********************/
 
   public ColumnSectionWriter() {
     this.nonLeaves = Lists.newArrayList();
@@ -100,7 +100,7 @@ public class ColumnSectionWriter {
   }
 
 
-	/****************** methods *******************************/
+  /****************** methods *******************************/
 
   public ColumnSectionWriter compile() {
     if (this.nodeType == ColumnNodeType.FAMILY) {

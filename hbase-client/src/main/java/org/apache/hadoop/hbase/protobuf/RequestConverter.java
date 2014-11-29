@@ -1049,7 +1049,7 @@ public final class RequestConverter {
   public static MoveRegionRequest buildMoveRegionRequest(
       final byte [] encodedRegionName, final byte [] destServerName) throws
       DeserializationException {
-	MoveRegionRequest.Builder builder = MoveRegionRequest.newBuilder();
+    MoveRegionRequest.Builder builder = MoveRegionRequest.newBuilder();
     builder.setRegion(
       buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME,encodedRegionName));
     if (destServerName != null) {

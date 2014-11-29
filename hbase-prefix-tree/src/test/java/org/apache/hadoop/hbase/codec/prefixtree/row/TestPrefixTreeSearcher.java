@@ -48,7 +48,7 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestPrefixTreeSearcher {
 
-	protected static int BLOCK_START = 7;
+  protected static int BLOCK_START = 7;
 
   @Parameters
   public static Collection<Object[]> parameters() {

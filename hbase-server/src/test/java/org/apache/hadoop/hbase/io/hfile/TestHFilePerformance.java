@@ -175,8 +175,8 @@ public class TestHFilePerformance extends AbstractHBaseTool {
 
     if ("HFile".equals(fileType)){
         HFileContextBuilder builder = new HFileContextBuilder()
-	    .withCompression(AbstractHFileWriter.compressionByName(codecName))
-	    .withBlockSize(minBlockSize);
+          .withCompression(AbstractHFileWriter.compressionByName(codecName))
+          .withBlockSize(minBlockSize);
         if (cipherName != "none") {
           byte[] cipherKey = new byte[AES.KEY_LENGTH];
           new SecureRandom().nextBytes(cipherKey);

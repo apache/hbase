@@ -511,7 +511,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    */
   @Test(timeout = 300000)
   public void testVerifyListReplicatedTable() throws Exception {
-	LOG.info("testVerifyListReplicatedTable");
+    LOG.info("testVerifyListReplicatedTable");
 
     final String tName = "VerifyListReplicated_";
     final String colFam = "cf1";

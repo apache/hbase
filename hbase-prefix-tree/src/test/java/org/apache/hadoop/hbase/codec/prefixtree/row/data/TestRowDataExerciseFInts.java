@@ -42,49 +42,49 @@ import com.google.common.collect.Lists;
 public class TestRowDataExerciseFInts extends BaseTestRowData{
 
   static List<ByteRange> rows;
-	static{
-		List<String> rowStrings = new ArrayList<String>();
-        rowStrings.add("com.edsBlog/directoryAa/pageAaa");
-        rowStrings.add("com.edsBlog/directoryAa/pageBbb");
-        rowStrings.add("com.edsBlog/directoryAa/pageCcc");
-        rowStrings.add("com.edsBlog/directoryAa/pageDdd");
-        rowStrings.add("com.edsBlog/directoryBb/pageEee");
-        rowStrings.add("com.edsBlog/directoryBb/pageFff");
-        rowStrings.add("com.edsBlog/directoryBb/pageGgg");
-        rowStrings.add("com.edsBlog/directoryBb/pageHhh");
-        rowStrings.add("com.isabellasBlog/directoryAa/pageAaa");
-        rowStrings.add("com.isabellasBlog/directoryAa/pageBbb");
-        rowStrings.add("com.isabellasBlog/directoryAa/pageCcc");
-        rowStrings.add("com.isabellasBlog/directoryAa/pageDdd");
-        rowStrings.add("com.isabellasBlog/directoryBb/pageEee");
-        rowStrings.add("com.isabellasBlog/directoryBb/pageFff");
-        rowStrings.add("com.isabellasBlog/directoryBb/pageGgg");
-        rowStrings.add("com.isabellasBlog/directoryBb/pageHhh");
-        ByteRangeTreeSet ba = new ByteRangeTreeSet();
-        for(String row : rowStrings){
-        	ba.add(new SimpleMutableByteRange(Bytes.toBytes(row)));
-        }
-        rows = ba.compile().getSortedRanges();
-	}
+  static{
+    List<String> rowStrings = new ArrayList<String>();
+    rowStrings.add("com.edsBlog/directoryAa/pageAaa");
+    rowStrings.add("com.edsBlog/directoryAa/pageBbb");
+    rowStrings.add("com.edsBlog/directoryAa/pageCcc");
+    rowStrings.add("com.edsBlog/directoryAa/pageDdd");
+    rowStrings.add("com.edsBlog/directoryBb/pageEee");
+    rowStrings.add("com.edsBlog/directoryBb/pageFff");
+    rowStrings.add("com.edsBlog/directoryBb/pageGgg");
+    rowStrings.add("com.edsBlog/directoryBb/pageHhh");
+    rowStrings.add("com.isabellasBlog/directoryAa/pageAaa");
+    rowStrings.add("com.isabellasBlog/directoryAa/pageBbb");
+    rowStrings.add("com.isabellasBlog/directoryAa/pageCcc");
+    rowStrings.add("com.isabellasBlog/directoryAa/pageDdd");
+    rowStrings.add("com.isabellasBlog/directoryBb/pageEee");
+    rowStrings.add("com.isabellasBlog/directoryBb/pageFff");
+    rowStrings.add("com.isabellasBlog/directoryBb/pageGgg");
+    rowStrings.add("com.isabellasBlog/directoryBb/pageHhh");
+    ByteRangeTreeSet ba = new ByteRangeTreeSet();
+    for(String row : rowStrings){
+      ba.add(new SimpleMutableByteRange(Bytes.toBytes(row)));
+    }
+    rows = ba.compile().getSortedRanges();
+  }
 
-	static List<String> cols = Lists.newArrayList();
-	static{
-		cols.add("Chrome");
-		cols.add("Chromeb");
-		cols.add("Firefox");
-		cols.add("InternetExplorer");
-		cols.add("Opera");
-		cols.add("Safari");
-		cols.add("Z1stBrowserWithHuuuuuuuuuuuugeQualifier");
-		cols.add("Z2ndBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
-		cols.add("Z3rdBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
-		cols.add("Z4thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
-		cols.add("Z5thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
-		cols.add("Z6thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
-		cols.add("Z7thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
-		cols.add("Z8thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
-		cols.add("Z9thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
-	}
+  static List<String> cols = Lists.newArrayList();
+  static{
+    cols.add("Chrome");
+    cols.add("Chromeb");
+    cols.add("Firefox");
+    cols.add("InternetExplorer");
+    cols.add("Opera");
+    cols.add("Safari");
+    cols.add("Z1stBrowserWithHuuuuuuuuuuuugeQualifier");
+    cols.add("Z2ndBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
+    cols.add("Z3rdBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
+    cols.add("Z4thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
+    cols.add("Z5thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
+    cols.add("Z6thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
+    cols.add("Z7thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
+    cols.add("Z8thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
+    cols.add("Z9thBrowserWithEvenBiggerQualifierMoreMoreMoreMoreMore");
+  }
 
   static long ts = 1234567890;
 

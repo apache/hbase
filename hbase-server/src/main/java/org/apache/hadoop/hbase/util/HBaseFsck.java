@@ -367,8 +367,8 @@ public class HBaseFsck extends Configured {
     if (hbckOutFd == null) {
       setRetCode(-1);
       LOG.error("Another instance of hbck is running, exiting this instance.[If you are sure" +
-		      " no other instance is running, delete the lock file " +
-		      HBCK_LOCK_PATH + " and rerun the tool]");
+          " no other instance is running, delete the lock file " +
+          HBCK_LOCK_PATH + " and rerun the tool]");
       throw new IOException("Duplicate hbck - Abort");
     }
 
@@ -1640,8 +1640,8 @@ public class HBaseFsck extends Configured {
    */
   private void checkAndFixConsistency()
   throws IOException, KeeperException, InterruptedException {
-	  // Divide the checks in two phases. One for default/primary replicas and another
-	  // for the non-primary ones. Keeps code cleaner this way.
+    // Divide the checks in two phases. One for default/primary replicas and another
+    // for the non-primary ones. Keeps code cleaner this way.
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
       if (e.getValue().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
         checkRegionConsistency(e.getKey(), e.getValue());
@@ -1890,8 +1890,8 @@ public class HBaseFsck extends Configured {
   private void checkRegionConsistency(final String key, final HbckInfo hbi)
   throws IOException, KeeperException, InterruptedException {
 
-	if (hbi.isSkipChecks()) return;
-	String descriptiveName = hbi.toString();
+    if (hbi.isSkipChecks()) return;
+    String descriptiveName = hbi.toString();
     boolean inMeta = hbi.metaEntry != null;
     // In case not checking HDFS, assume the region is on HDFS
     boolean inHdfs = !shouldCheckHdfs() || hbi.getHdfsRegionDir() != null;

@@ -183,9 +183,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       // if the directory still has children, we can't delete it, so we are done
       if (!allChildrenDeleted) return false;
     } catch (IOException e) {
-        e = e instanceof RemoteException ?
-                ((RemoteException)e).unwrapRemoteException() : e;
-    	LOG.warn("Error while listing directory: " + dir, e);
+      e = e instanceof RemoteException ?
+              ((RemoteException)e).unwrapRemoteException() : e;
+      LOG.warn("Error while listing directory: " + dir, e);
       // couldn't list directory, so don't try to delete, and don't return success
       return false;
     }

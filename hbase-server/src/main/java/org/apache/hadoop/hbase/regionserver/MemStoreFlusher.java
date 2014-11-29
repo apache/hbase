@@ -390,9 +390,9 @@ class MemStoreFlusher implements FlushRequester {
               this.server.compactSplitThread.requestSystemCompaction(
                   region, Thread.currentThread().getName());
             } catch (IOException e) {
-                e = e instanceof RemoteException ?
-                        ((RemoteException)e).unwrapRemoteException() : e;
-            	LOG.error(
+              e = e instanceof RemoteException ?
+                      ((RemoteException)e).unwrapRemoteException() : e;
+              LOG.error(
                 "Cache flush failed for region " + Bytes.toStringBinary(region.getRegionName()),
                 e);
             }

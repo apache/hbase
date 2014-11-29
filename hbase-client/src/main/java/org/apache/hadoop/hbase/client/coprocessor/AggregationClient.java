@@ -180,12 +180,11 @@ public class AggregationClient implements Closeable {
    */
   private void validateParameters(Scan scan, boolean canFamilyBeAbsent) throws IOException {
     if (scan == null
-        || (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes
-            .equals(scan.getStartRow(), HConstants.EMPTY_START_ROW))
-        || ((Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) > 0) &&
-        	!Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
-      throw new IOException(
-          "Agg client Exception: Startrow should be smaller than Stoprow");
+        || (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes.equals(
+          scan.getStartRow(), HConstants.EMPTY_START_ROW))
+        || ((Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) > 0) && !Bytes.equals(
+          scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
+      throw new IOException("Agg client Exception: Startrow should be smaller than Stoprow");
     } else if (!canFamilyBeAbsent) {
       if (scan.getFamilyMap().size() != 1) {
         throw new IOException("There must be only one family.");

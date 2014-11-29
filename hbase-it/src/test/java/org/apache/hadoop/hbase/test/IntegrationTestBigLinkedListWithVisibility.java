@@ -583,8 +583,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       if (args.length < 5) {
         System.err
             .println("Usage: Loop <num iterations> " +
-            		"<num mappers> <num nodes per mapper> <output dir> " +
-            		"<num reducers> [<width> <wrap multiplier>]");
+                "<num mappers> <num nodes per mapper> <output dir> " +
+                "<num reducers> [<width> <wrap multiplier>]");
         return 1;
       }
       LOG.info("Running Loop with args:" + Arrays.deepToString(args));

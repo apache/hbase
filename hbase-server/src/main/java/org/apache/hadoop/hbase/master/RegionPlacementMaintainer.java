@@ -976,7 +976,7 @@ public class RegionPlacementMaintainer {
     opt.addOption("munkres", false,
         "use munkres to place secondaries and tertiaries");
     opt.addOption("ld", "locality-dispersion", false, "print locality and dispersion " +
-    		"information for current plan");
+        "information for current plan");
     try {
       // Set the log4j
       Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);

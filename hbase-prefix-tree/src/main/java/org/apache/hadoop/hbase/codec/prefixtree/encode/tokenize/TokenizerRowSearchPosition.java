@@ -30,9 +30,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public enum TokenizerRowSearchPosition {
 
-	AFTER,//the key is after this tree node, so keep searching
-	BEFORE,//in a binary search, this tells us to back up
-	MATCH,//the current node is a full match
-	NO_MATCH,//might as well return a value more informative than null
+  AFTER,//the key is after this tree node, so keep searching
+  BEFORE,//in a binary search, this tells us to back up
+  MATCH,//the current node is a full match
+  NO_MATCH,//might as well return a value more informative than null
 
 }

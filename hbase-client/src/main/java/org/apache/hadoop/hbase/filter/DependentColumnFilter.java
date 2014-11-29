@@ -68,8 +68,8 @@ public class DependentColumnFilter extends CompareFilter {
    * @param valueComparator comparator
    */
   public DependentColumnFilter(final byte [] family, final byte[] qualifier,
-		  final boolean dropDependentColumn, final CompareOp valueCompareOp,
-	      final ByteArrayComparable valueComparator) {
+      final boolean dropDependentColumn, final CompareOp valueCompareOp,
+        final ByteArrayComparable valueComparator) {
     // set up the comparator   
     super(valueCompareOp, valueComparator);
     this.columnFamily = family;
@@ -136,19 +136,19 @@ public class DependentColumnFilter extends CompareFilter {
   @Override
   public ReturnCode filterKeyValue(Cell c) {
     // Check if the column and qualifier match
-  	if (!CellUtil.matchingColumn(c, this.columnFamily, this.columnQualifier)) {
+    if (!CellUtil.matchingColumn(c, this.columnFamily, this.columnQualifier)) {
         // include non-matches for the time being, they'll be discarded afterwards
         return ReturnCode.INCLUDE;
-  	}
+    }
     // If it doesn't pass the op, skip it
     if (comparator != null
         && doCompare(compareOp, comparator, c.getValueArray(), c.getValueOffset(),
             c.getValueLength()))
       return ReturnCode.SKIP;
-	
+  
     stampSet.add(c.getTimestamp());
     if(dropDependentColumn) {
-    	return ReturnCode.SKIP;
+      return ReturnCode.SKIP;
     }
     return ReturnCode.INCLUDE;
   }

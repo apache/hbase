@@ -615,7 +615,7 @@ public class TestParseFilter {
 
   @Test
   public void testUnescapedQuote3 () throws IOException {
-    String filterString = "	InclusiveStopFilter ('''')";
+    String filterString = " InclusiveStopFilter ('''')";
     InclusiveStopFilter inclusiveStopFilter =
       doTestFilter(filterString, InclusiveStopFilter.class);
     byte [] stopRowKey = inclusiveStopFilter.getStopRowKey();

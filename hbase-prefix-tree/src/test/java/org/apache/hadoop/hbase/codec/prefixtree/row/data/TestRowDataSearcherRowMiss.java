@@ -55,13 +55,13 @@ public class TestRowDataSearcherRowMiss extends BaseTestRowData{
     d.add(new KeyValue(B, cf, cq, ts, v));
   }
 
-	@Override
-	public List<KeyValue> getInputs() {
-		return d;
-	}
+  @Override
+  public List<KeyValue> getInputs() {
+    return d;
+  }
 
-	@Override
-	public void individualSearcherAssertions(CellSearcher searcher) {
+  @Override
+  public void individualSearcherAssertions(CellSearcher searcher) {
     assertRowOffsetsCorrect();
 
     searcher.resetToBeforeFirstEntry();
@@ -83,13 +83,13 @@ public class TestRowDataSearcherRowMiss extends BaseTestRowData{
     testBetween2and3(searcher);
   }
 
-	/************ private methods, call from above *******************/
+  /************ private methods, call from above *******************/
 
-	private void assertRowOffsetsCorrect(){
-	  Assert.assertEquals(4, getRowStartIndexes().size());
-	}
+  private void assertRowOffsetsCorrect(){
+    Assert.assertEquals(4, getRowStartIndexes().size());
+  }
 
-	private void testBetween1and2(CellSearcher searcher){
+  private void testBetween1and2(CellSearcher searcher){
     CellScannerPosition p;//reuse
     Cell betweenAAndAAA = new KeyValue(AA, cf, cq, ts-2, v);
 
@@ -105,7 +105,7 @@ public class TestRowDataSearcherRowMiss extends BaseTestRowData{
     p = searcher.positionAtOrAfter(betweenAAndAAA);
     Assert.assertEquals(CellScannerPosition.AFTER, p);
     Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(2)));
-	}
+  }
 
   private void testBetween2and3(CellSearcher searcher){
     CellScannerPosition p;//reuse

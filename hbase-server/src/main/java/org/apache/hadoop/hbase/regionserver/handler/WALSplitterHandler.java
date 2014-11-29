@@ -54,7 +54,7 @@ public class WALSplitterHandler extends EventHandler {
   public WALSplitterHandler(final Server server, SplitLogWorkerCoordination coordination,
       SplitLogWorkerCoordination.SplitTaskDetails splitDetails, CancelableProgressable reporter,
       AtomicInteger inProgressTasks, TaskExecutor splitTaskExecutor, RecoveryMode mode) {
-	  super(server, EventType.RS_LOG_REPLAY);
+    super(server, EventType.RS_LOG_REPLAY);
     this.splitTaskDetails = splitDetails;
     this.coordination = coordination;
     this.reporter = reporter;

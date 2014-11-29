@@ -201,7 +201,7 @@ public class TestHBaseConfiguration {
 
       hadoopClassesAvailable = true;
       LOG.info("Credential provider classes have been" +
-      		" loaded and initialized successfully through reflection.");
+          " loaded and initialized successfully through reflection.");
       return true;
 
     }
@@ -280,7 +280,7 @@ public class TestHBaseConfiguration {
       List<Object> providers = getCredentialProviders(conf);
       if (null == providers) {
         throw new IOException("Could not fetch any CredentialProviders, " +
-        		"is the implementation available?");
+            "is the implementation available?");
       }
 
       Object provider = providers.get(0);

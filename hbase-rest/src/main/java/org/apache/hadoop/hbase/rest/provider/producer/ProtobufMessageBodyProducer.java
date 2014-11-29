@@ -50,32 +50,32 @@ public class ProtobufMessageBodyProducer
 
   private ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>();
 
-	@Override
-	public boolean isWriteable(Class<?> type, Type genericType, 
-	  Annotation[] annotations, MediaType mediaType) {
-      return ProtobufMessageHandler.class.isAssignableFrom(type);
+  @Override
+  public boolean isWriteable(Class<?> type, Type genericType, 
+      Annotation[] annotations, MediaType mediaType) {
+    return ProtobufMessageHandler.class.isAssignableFrom(type);
   }
 
-	@Override
-	public long getSize(ProtobufMessageHandler m, Class<?> type, Type genericType,
-	    Annotation[] annotations, MediaType mediaType) {
-	  ByteArrayOutputStream baos = new ByteArrayOutputStream();
-	  try {
-	    baos.write(m.createProtobufOutput());
-	  } catch (IOException e) {
-	    return -1;
-	  }
-	  byte[] bytes = baos.toByteArray();
-	  buffer.set(bytes);
-	  return bytes.length;
-	}
+  @Override
+  public long getSize(ProtobufMessageHandler m, Class<?> type, Type genericType,
+      Annotation[] annotations, MediaType mediaType) {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try {
+      baos.write(m.createProtobufOutput());
+    } catch (IOException e) {
+      return -1;
+    }
+    byte[] bytes = baos.toByteArray();
+    buffer.set(bytes);
+    return bytes.length;
+  }
 
-	public void writeTo(ProtobufMessageHandler m, Class<?> type, Type genericType,
-	    Annotation[] annotations, MediaType mediaType, 
-	    MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) 
-	    throws IOException, WebApplicationException {
+  public void writeTo(ProtobufMessageHandler m, Class<?> type, Type genericType,
+      Annotation[] annotations, MediaType mediaType, 
+      MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) 
+      throws IOException, WebApplicationException {
     byte[] bytes = buffer.get();
-	  entityStream.write(bytes);
+    entityStream.write(bytes);
     buffer.remove();
-	}
+  }
 }

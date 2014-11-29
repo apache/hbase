@@ -973,7 +973,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * This compares the content of the two descriptors and not the reference.
    *
    * @return 0 if the contents of the descriptors are exactly matching,
-   * 		 1 if there is a mismatch in the contents
+   *         1 if there is a mismatch in the contents
    */
   @Override
   public int compareTo(@Nonnull final HTableDescriptor other) {

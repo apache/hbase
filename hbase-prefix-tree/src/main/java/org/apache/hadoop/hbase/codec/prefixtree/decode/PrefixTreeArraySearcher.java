@@ -306,7 +306,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
   }
 
 
-	/****************** complete seek when token mismatch ******************/
+  /****************** complete seek when token mismatch ******************/
 
   /**
    * @param searcherIsAfterInputKey <0: input key is before the searcher's position<br/>

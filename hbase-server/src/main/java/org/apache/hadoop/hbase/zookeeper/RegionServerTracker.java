@@ -50,7 +50,7 @@ import org.apache.zookeeper.KeeperException;
 public class RegionServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(RegionServerTracker.class);
   private NavigableMap<ServerName, RegionServerInfo> regionServers = 
-		  new TreeMap<ServerName, RegionServerInfo>();
+      new TreeMap<ServerName, RegionServerInfo>();
   private ServerManager serverManager;
   private Server server;
 

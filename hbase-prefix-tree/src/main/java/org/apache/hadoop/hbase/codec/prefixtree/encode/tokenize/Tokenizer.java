@@ -179,7 +179,7 @@ public class Tokenizer{
   }
 
 
-	/********************** write ***************************/
+  /********************** write ***************************/
 
   public Tokenizer setNodeFirstInsertionIndexes() {
     root.setInsertionIndexes(0);

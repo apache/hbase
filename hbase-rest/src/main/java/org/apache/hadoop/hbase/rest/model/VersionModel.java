@@ -48,9 +48,9 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 @InterfaceAudience.Private
 public class VersionModel implements Serializable, ProtobufMessageHandler {
 
-	private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-	private String restVersion;
+  private String restVersion;
   private String jvmVersion;
   private String osVersion;
   private String serverVersion;
@@ -65,30 +65,30 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
    * Constructor
    * @param context the servlet context
    */
-	public VersionModel(ServletContext context) {
-	  restVersion = RESTServlet.VERSION_STRING;
-	  jvmVersion = System.getProperty("java.vm.vendor") + ' ' +
+  public VersionModel(ServletContext context) {
+    restVersion = RESTServlet.VERSION_STRING;
+    jvmVersion = System.getProperty("java.vm.vendor") + ' ' +
       System.getProperty("java.version") + '-' +
       System.getProperty("java.vm.version");
-	  osVersion = System.getProperty("os.name") + ' ' +
+    osVersion = System.getProperty("os.name") + ' ' +
       System.getProperty("os.version") + ' ' +
       System.getProperty("os.arch");
-	  serverVersion = context.getServerInfo();
-	  jerseyVersion = ServletContainer.class.getPackage()
+    serverVersion = context.getServerInfo();
+    jerseyVersion = ServletContainer.class.getPackage()
       .getImplementationVersion();
-	}
+  }
 
-	/**
-	 * @return the REST gateway version
-	 */
-	@XmlAttribute(name="REST")
-	public String getRESTVersion() {
+  /**
+   * @return the REST gateway version
+   */
+  @XmlAttribute(name="REST")
+  public String getRESTVersion() {
     return restVersion;
   }
 
-	/**
-	 * @return the JVM vendor and version
-	 */
+  /**
+   * @return the JVM vendor and version
+   */
   @XmlAttribute(name="JVM")
   public String getJVMVersion() {
     return jvmVersion;
@@ -154,34 +154,34 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   }
 
   /* (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-	  StringBuilder sb = new StringBuilder();
-	  sb.append("rest ");
-	  sb.append(restVersion);
-	  sb.append(" [JVM: ");
-	  sb.append(jvmVersion);
-	  sb.append("] [OS: ");
-	  sb.append(osVersion);
-	  sb.append("] [Server: ");
-	  sb.append(serverVersion);
-	  sb.append("] [Jersey: ");
+   * @see java.lang.Object#toString()
+   */
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("rest ");
+    sb.append(restVersion);
+    sb.append(" [JVM: ");
+    sb.append(jvmVersion);
+    sb.append("] [OS: ");
+    sb.append(osVersion);
+    sb.append("] [Server: ");
+    sb.append(serverVersion);
+    sb.append("] [Jersey: ");
     sb.append(jerseyVersion);
-	  sb.append("]\n");
-	  return sb.toString();
-	}
+    sb.append("]\n");
+    return sb.toString();
+  }
 
-	@Override
+  @Override
   public byte[] createProtobufOutput() {
-	  Version.Builder builder = Version.newBuilder();
-	  builder.setRestVersion(restVersion);
-	  builder.setJvmVersion(jvmVersion);
-	  builder.setOsVersion(osVersion);
-	  builder.setServerVersion(serverVersion);
-	  builder.setJerseyVersion(jerseyVersion);
-	  return builder.build().toByteArray();
+    Version.Builder builder = Version.newBuilder();
+    builder.setRestVersion(restVersion);
+    builder.setJvmVersion(jvmVersion);
+    builder.setOsVersion(osVersion);
+    builder.setServerVersion(serverVersion);
+    builder.setJerseyVersion(jerseyVersion);
+    return builder.build().toByteArray();
   }
 
   @Override

@@ -55,12 +55,12 @@ import com.sun.jersey.api.json.JSONJAXBContext;
 @InterfaceAudience.Private
 public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
-	private final JAXBContext context;
+  private final JAXBContext context;
 
-	private final Set<Class<?>> types;
+  private final Set<Class<?>> types;
 
-	private final Class<?>[] cTypes = {
-	  CellModel.class,
+  private final Class<?>[] cTypes = {
+    CellModel.class,
     CellSetModel.class,
     ColumnSchemaModel.class,
     RowModel.class,
@@ -68,22 +68,22 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     StorageClusterStatusModel.class,
     StorageClusterVersionModel.class,
     TableInfoModel.class,
-	  TableListModel.class,
-	  TableModel.class,
-	  TableRegionModel.class,
-	  TableSchemaModel.class,
-	  VersionModel.class
-	};
+    TableListModel.class,
+    TableModel.class,
+    TableRegionModel.class,
+    TableSchemaModel.class,
+    VersionModel.class
+  };
 
-	@SuppressWarnings("unchecked")
+  @SuppressWarnings("unchecked")
   public JAXBContextResolver() throws Exception {
-		this.types = new HashSet(Arrays.asList(cTypes));
-		this.context = new JSONJAXBContext(JSONConfiguration.natural().build(),
-		  cTypes);
-	}
+    this.types = new HashSet(Arrays.asList(cTypes));
+    this.context = new JSONJAXBContext(JSONConfiguration.natural().build(),
+      cTypes);
+  }
 
-	@Override
-	public JAXBContext getContext(Class<?> objectType) {
-		return (types.contains(objectType)) ? context : null;
+  @Override
+  public JAXBContext getContext(Class<?> objectType) {
+    return (types.contains(objectType)) ? context : null;
   }
 }
