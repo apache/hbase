@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.CellOutputStream;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 
 /**
  * Encoder/Decoder for Cell.

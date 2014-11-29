@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.OutputFormat;
 
 /**
  * Convenience class that simply writes all values (which must be

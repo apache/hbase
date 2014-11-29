@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.hbase.quotas;
 
-import java.io.IOException;
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;

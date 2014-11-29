@@ -32,7 +32,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcChannel;
 import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**

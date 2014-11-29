@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
 
 /**
  * This class provides ShutdownHookManager shims for HBase to interact with the Hadoop 1.0.x and the

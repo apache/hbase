@@ -18,8 +18,6 @@
 package org.apache.hadoop.hbase.constraint;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.client.Put;
 
 /**
  * Exception that a user defined constraint throws on failure of a {@link Put}.

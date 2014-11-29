@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import java.io.Closeable;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;

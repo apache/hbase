@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.RpcController;
 
 /**
  * A reversed ScannerCallable which supports backward scanning.
