@@ -186,6 +186,23 @@ public class TestImportTsv implements Configurable {
     doMROnTableTest(util, FAMILY, null, args, 3);
     util.deleteTable(table);
   }
+  
+  @Test
+  public void testBulkOutputWithAnExistingTableNoStrictTrue() throws Exception {
+    String table = "test-" + UUID.randomUUID();
+    // Prepare the arguments required for the test.
+    Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
+    String[] args = new String[] {
+        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
+        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
+        "-D" + ImportTsv.NO_STRICT_COL_FAMILY + "=true",
+        table
+    };
+    util.createTable(TableName.valueOf(table), FAMILY);
+    doMROnTableTest(util, FAMILY, null, args, 3);
+    util.deleteTable(table);
+  }
 
   @Test
   public void testJobConfigurationsWithTsvImporterTextMapper() throws Exception {
