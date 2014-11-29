@@ -76,7 +76,7 @@ public class TestRowEncoder {
     this.rows = testRows;
   }
 
-	@Before
+  @Before
   public void compile() throws IOException {
     // Always run with tags. But should also ensure that KVs without tags work fine
     os = new ByteArrayOutputStream(1 << 20);
@@ -174,7 +174,7 @@ public class TestRowEncoder {
   }
 
 
-	/**************** helper **************************/
+  /**************** helper **************************/
 
   protected void assertKeyAndValueEqual(Cell expected, Cell actual) {
     // assert keys are equal (doesn't compare values)

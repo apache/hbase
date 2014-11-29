@@ -286,11 +286,11 @@ public class TestTags {
         put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
         admin.flush(tableName);
-	// We are lacking an API for confirming flush request compaction.
-	// Just sleep for a short time. We won't be able to confirm flush
-	// completion but the test won't hang now or in the future if
-	// default compaction policy causes compaction between flush and
-	// when we go to confirm it.
+        // We are lacking an API for confirming flush request compaction.
+        // Just sleep for a short time. We won't be able to confirm flush
+        // completion but the test won't hang now or in the future if
+        // default compaction policy causes compaction between flush and
+        // when we go to confirm it.
         Thread.sleep(1000);
 
         put1 = new Put(row2);

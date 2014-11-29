@@ -397,7 +397,7 @@ public class TestMajorCompaction {
   private void createSmallerStoreFile(final HRegion region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
     HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
-    		"bbb").getBytes(), null);
+        "bbb").getBytes(), null);
     loader.flushcache();
   }
 

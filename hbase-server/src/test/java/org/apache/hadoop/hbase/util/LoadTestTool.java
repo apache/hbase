@@ -121,7 +121,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   public static final String OPT_INMEMORY = "in_memory";
   public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
-  		"inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
+      "inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
 
   public static final String OPT_GENERATOR = "generator";
   public static final String OPT_GENERATOR_USAGE = "The class which generates load for the tool."

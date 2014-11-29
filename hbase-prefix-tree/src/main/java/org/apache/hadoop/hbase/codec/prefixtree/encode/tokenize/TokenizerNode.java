@@ -289,7 +289,7 @@ public class TokenizerNode{
   }
 
 
-	/************************ byte[] utils *************************/
+  /************************ byte[] utils *************************/
 
   protected boolean partiallyMatchesToken(ByteRange bytes) {
     return numIdenticalBytes(bytes) > 0;
@@ -304,7 +304,7 @@ public class TokenizerNode{
   }
 
 
-	/***************** moving nodes around ************************/
+  /***************** moving nodes around ************************/
 
   public void appendNodesToExternalList(List<TokenizerNode> appendTo, boolean includeNonLeaves,
       boolean includeLeaves) {
@@ -462,7 +462,7 @@ public class TokenizerNode{
   }
 
 
-	/********************** count different node types ********************/
+  /********************** count different node types ********************/
 
   public int getNumBranchNodesIncludingThisNode() {
     if (isLeaf()) {

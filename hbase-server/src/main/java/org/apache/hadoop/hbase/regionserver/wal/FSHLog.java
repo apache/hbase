@@ -990,7 +990,7 @@ class FSHLog implements HLog, Syncable {
     String prefixPathStr = new Path(fullPathLogDir, logFilePrefix + ".").toString();
     if (!fileName.toString().startsWith(prefixPathStr)) {
       throw new IllegalArgumentException("The log file " + fileName + " doesn't belong to" +
-      		" this regionserver " + prefixPathStr);
+          " this regionserver " + prefixPathStr);
     }
     String chompedPath = fileName.toString().substring(prefixPathStr.length());
     if (forMeta) chompedPath = chompedPath.substring(0, chompedPath.indexOf(META_HLOG_FILE_EXTN));

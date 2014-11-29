@@ -78,13 +78,13 @@ public class UFIntTool {
 
   private static final long[] MASKS = new long[] {
     (long) 255,
-	  (long) 255 << 8,
-	  (long) 255 << 16,
-	  (long) 255 << 24,
-	  (long) 255 << 32,
-	  (long) 255 << 40,
-	  (long) 255 << 48,
-	  (long) 255 << 56
+    (long) 255 << 8,
+    (long) 255 << 16,
+    (long) 255 << 24,
+    (long) 255 << 32,
+    (long) 255 << 40,
+    (long) 255 << 48,
+    (long) 255 << 56
   };
 
   public static void writeBytes(int outputWidth, final long value, OutputStream os) throws IOException {

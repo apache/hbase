@@ -43,7 +43,7 @@ public class CollectionUtils {
     return in;
   }
 
-	/************************ size ************************************/
+  /************************ size ************************************/
 
   public static <T> int nullSafeSize(Collection<T> collection) {
     if (collection == null) {
@@ -56,7 +56,7 @@ public class CollectionUtils {
     return nullSafeSize(a) == nullSafeSize(b);
   }
 
-	/*************************** empty ****************************************/
+  /*************************** empty ****************************************/
 
   public static <T> boolean isEmpty(Collection<T> collection) {
     return collection == null || collection.isEmpty();
@@ -66,7 +66,7 @@ public class CollectionUtils {
     return !isEmpty(collection);
   }
 
-	/************************ first/last **************************/
+  /************************ first/last **************************/
 
   public static <T> T getFirst(Collection<T> collection) {
     if (CollectionUtils.isEmpty(collection)) {

@@ -1034,7 +1034,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   @Deprecated
   @Override
   public void write(DataOutput out) throws IOException {
-	  out.writeInt(TABLE_DESCRIPTOR_VERSION);
+    out.writeInt(TABLE_DESCRIPTOR_VERSION);
     Bytes.writeByteArray(out, name.toBytes());
     out.writeBoolean(isRootRegion());
     out.writeBoolean(isMetaRegion());

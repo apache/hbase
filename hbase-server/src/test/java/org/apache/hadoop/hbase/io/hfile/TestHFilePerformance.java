@@ -175,68 +175,68 @@ public class TestHFilePerformance extends AbstractHBaseTool {
     FSDataOutputStream fout =  createFSOutput(path);
 
     if ("HFile".equals(fileType)){
-        HFileContextBuilder builder = new HFileContextBuilder()
-	    .withCompression(AbstractHFileWriter.compressionByName(codecName))
-	    .withBlockSize(minBlockSize);
-        if (cipherName != "none") {
-          byte[] cipherKey = new byte[AES.KEY_LENGTH];
-          new SecureRandom().nextBytes(cipherKey);
-          builder.withEncryptionContext(
-            Encryption.newContext(conf)
-              .setCipher(Encryption.getCipher(conf, cipherName))
-              .setKey(cipherKey));
-        }
-        HFileContext context = builder.build();
-        System.out.println("HFile write method: ");
-        HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
-            .withOutputStream(fout)
-            .withFileContext(context)
-            .withComparator(new KeyValue.RawBytesComparator())
-            .create();
+      HFileContextBuilder builder = new HFileContextBuilder()
+        .withCompression(AbstractHFileWriter.compressionByName(codecName))
+        .withBlockSize(minBlockSize);
+      if (cipherName != "none") {
+        byte[] cipherKey = new byte[AES.KEY_LENGTH];
+        new SecureRandom().nextBytes(cipherKey);
+        builder.withEncryptionContext(
+          Encryption.newContext(conf)
+            .setCipher(Encryption.getCipher(conf, cipherName))
+            .setKey(cipherKey));
+      }
+      HFileContext context = builder.build();
+      System.out.println("HFile write method: ");
+      HFile.Writer writer = HFile.getWriterFactoryNoCache(conf)
+          .withOutputStream(fout)
+          .withFileContext(context)
+          .withComparator(new KeyValue.RawBytesComparator())
+          .create();
 
-        // Writing value in one shot.
-        for (long l=0; l<rows; l++ ) {
-          generator.getKey(key);
-          generator.getValue(value);
-          writer.append(CellUtil.createCell(key, value));
-          totalBytesWritten += key.length;
-          totalBytesWritten += value.length;
-         }
-        writer.close();
+      // Writing value in one shot.
+      for (long l=0; l<rows; l++ ) {
+        generator.getKey(key);
+        generator.getValue(value);
+        writer.append(CellUtil.createCell(key, value));
+        totalBytesWritten += key.length;
+        totalBytesWritten += value.length;
+      }
+      writer.close();
     } else if ("SequenceFile".equals(fileType)){
-        CompressionCodec codec = null;
-        if ("gz".equals(codecName))
-          codec = new GzipCodec();
-        else if (!"none".equals(codecName))
-          throw new IOException("Codec not supported.");
+      CompressionCodec codec = null;
+      if ("gz".equals(codecName))
+        codec = new GzipCodec();
+      else if (!"none".equals(codecName))
+        throw new IOException("Codec not supported.");
 
-        SequenceFile.Writer writer;
+      SequenceFile.Writer writer;
 
-        //TODO
-        //JobConf conf = new JobConf();
+      //TODO
+      //JobConf conf = new JobConf();
 
-        if (!"none".equals(codecName))
-          writer = SequenceFile.createWriter(conf, fout, BytesWritable.class,
-            BytesWritable.class, SequenceFile.CompressionType.BLOCK, codec);
-        else
-          writer = SequenceFile.createWriter(conf, fout, BytesWritable.class,
-            BytesWritable.class, SequenceFile.CompressionType.NONE, null);
+      if (!"none".equals(codecName))
+        writer = SequenceFile.createWriter(conf, fout, BytesWritable.class,
+          BytesWritable.class, SequenceFile.CompressionType.BLOCK, codec);
+      else
+        writer = SequenceFile.createWriter(conf, fout, BytesWritable.class,
+          BytesWritable.class, SequenceFile.CompressionType.NONE, null);
 
-        BytesWritable keyBsw;
-        BytesWritable valBsw;
-        for (long l=0; l<rows; l++ ) {
+      BytesWritable keyBsw;
+      BytesWritable valBsw;
+      for (long l=0; l<rows; l++ ) {
 
-           generator.getKey(key);
-           keyBsw = new BytesWritable(key);
-           totalBytesWritten += keyBsw.getSize();
+        generator.getKey(key);
+        keyBsw = new BytesWritable(key);
+        totalBytesWritten += keyBsw.getSize();
 
-           generator.getValue(value);
-           valBsw = new BytesWritable(value);
-           writer.append(keyBsw, valBsw);
-           totalBytesWritten += valBsw.getSize();
-        }
+        generator.getValue(value);
+        valBsw = new BytesWritable(value);
+        writer.append(keyBsw, valBsw);
+        totalBytesWritten += valBsw.getSize();
+      }
 
-        writer.close();
+      writer.close();
     } else
        throw new IOException("File Type is not supported");
 

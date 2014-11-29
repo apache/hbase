@@ -112,7 +112,7 @@ public class SplitLogWorker implements Runnable {
                   || cause instanceof ConnectException
                   || cause instanceof SocketTimeoutException)) {
             LOG.warn("log replaying of " + filename + " can't connect to the target regionserver, "
-            		+ "resigning", e);
+                + "resigning", e);
             return Status.RESIGNED;
           } else if (cause instanceof InterruptedException) {
             LOG.warn("log splitting of " + filename + " interrupted, resigning", e);

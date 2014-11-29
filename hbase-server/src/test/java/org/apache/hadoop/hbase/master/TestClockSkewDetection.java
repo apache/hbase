@@ -103,7 +103,7 @@ public class TestClockSkewDetection {
     long warningSkew = c.getLong("hbase.master.warningclockskew", 1000);
 
     try {
-    	//Master Time > Region Server Time
+      //Master Time > Region Server Time
       LOG.debug("Test: Master Time > Region Server Time");
       LOG.debug("regionServerStartup 2");
       InetAddress ia2 = InetAddress.getLocalHost();

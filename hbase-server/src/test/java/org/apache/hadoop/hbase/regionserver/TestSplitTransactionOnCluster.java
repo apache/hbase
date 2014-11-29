@@ -1226,7 +1226,7 @@ public class TestSplitTransactionOnCluster {
     cluster.abortMaster(0);
     cluster.waitOnMaster(0);
     cluster.getConfiguration().setClass(HConstants.MASTER_IMPL,
-    		MockMasterWithoutCatalogJanitor.class, HMaster.class);
+        MockMasterWithoutCatalogJanitor.class, HMaster.class);
     MockMasterWithoutCatalogJanitor master = null;
     master = (MockMasterWithoutCatalogJanitor) cluster.startMaster().getMaster();
     cluster.waitForActiveAndReadyMaster();

@@ -181,7 +181,7 @@ public class HBaseConfiguration extends Configuration {
       char[] p = (char[]) m.invoke(conf, alias);
       if (p != null) {
         LOG.debug(String.format("Config option \"%s\" was found through" +
-        		" the Configuration getPassword method.", alias));
+            " the Configuration getPassword method.", alias));
         passwd = new String(p);
       }
       else {

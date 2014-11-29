@@ -164,7 +164,7 @@ public class JenkinsHash extends Hash {
     //-------------------------------- last block: affect all 32 bits of (c)
     switch (length) {                   // all the case statements fall through
     case 12:
-    	c += ((key[offset + 11] & BYTE_MASK) << 24);
+      c += ((key[offset + 11] & BYTE_MASK) << 24);
     case 11:
       c += ((key[offset + 10] & BYTE_MASK) << 16);
     case 10:

@@ -41,44 +41,44 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class TableModel implements Serializable {
 
-	private static final long serialVersionUID = 1L;
-	
-	private String name;
-	
-	/**
-	 * Default constructor
-	 */
-	public TableModel() {}
+  private static final long serialVersionUID = 1L;
+  
+  private String name;
+  
+  /**
+   * Default constructor
+   */
+  public TableModel() {}
 
-	/**
-	 * Constructor
-	 * @param name
-	 */
-	public TableModel(String name) {
-		super();
-		this.name = name;
-	}
+  /**
+   * Constructor
+   * @param name
+   */
+  public TableModel(String name) {
+    super();
+    this.name = name;
+  }
 
-	/**
-	 * @return the name
-	 */
-	@XmlAttribute
-	public String getName() {
-		return name;
-	}
+  /**
+   * @return the name
+   */
+  @XmlAttribute
+  public String getName() {
+    return name;
+  }
 
-	/**
-	 * @param name the name to set
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
+  /**
+   * @param name the name to set
+   */
+  public void setName(String name) {
+    this.name = name;
+  }
 
-	/* (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-		return this.name;
-	}
+  /* (non-Javadoc)
+   * @see java.lang.Object#toString()
+   */
+  @Override
+  public String toString() {
+    return this.name;
+  }
 }

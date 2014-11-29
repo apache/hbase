@@ -75,7 +75,7 @@ public class LongEncoder {
   }
 
 
-	/************* methods ***************************/
+  /************* methods ***************************/
 
   public void add(long timestamp) {
     uniqueValues.add(timestamp);
@@ -158,7 +158,7 @@ public class LongEncoder {
   }
 
 
-	/******************** get/set **************************/
+  /******************** get/set **************************/
 
   public long getMin() {
     return min;

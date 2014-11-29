@@ -29,12 +29,12 @@ import com.google.common.collect.Lists;
 
 public class TestRowDataSingleQualifier extends BaseTestRowData{
 
-	static byte[]
-        rowA = Bytes.toBytes("rowA"),
-        rowB = Bytes.toBytes("rowB"),
-        cf = PrefixTreeTestConstants.TEST_CF,
-        cq0 = Bytes.toBytes("cq0"),
-        v0 = Bytes.toBytes("v0");
+  static byte[]
+    rowA = Bytes.toBytes("rowA"),
+    rowB = Bytes.toBytes("rowB"),
+    cf = PrefixTreeTestConstants.TEST_CF,
+    cq0 = Bytes.toBytes("cq0"),
+    v0 = Bytes.toBytes("v0");
 
   static long ts = 55L;
 

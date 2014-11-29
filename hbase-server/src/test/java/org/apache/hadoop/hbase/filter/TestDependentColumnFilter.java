@@ -48,18 +48,18 @@ import org.junit.experimental.categories.Category;
 public class TestDependentColumnFilter {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private static final byte[][] ROWS = {
-	  Bytes.toBytes("test1"),Bytes.toBytes("test2")
+    Bytes.toBytes("test1"),Bytes.toBytes("test2")
   };
   private static final byte[][] FAMILIES = {
-	  Bytes.toBytes("familyOne"),Bytes.toBytes("familyTwo")
+    Bytes.toBytes("familyOne"),Bytes.toBytes("familyTwo")
   };
   private static final long STAMP_BASE = System.currentTimeMillis();
   private static final long[] STAMPS = {
-	  STAMP_BASE-100, STAMP_BASE-200, STAMP_BASE-300
+    STAMP_BASE-100, STAMP_BASE-200, STAMP_BASE-300
   };
   private static final byte[] QUALIFIER = Bytes.toBytes("qualifier");
   private static final byte[][] BAD_VALS = {
-	  Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3")
+    Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3")
   };
   private static final byte[] MATCH_VAL = Bytes.toBytes("match");
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -117,14 +117,14 @@ public class TestDependentColumnFilter {
   }
 
   private List<KeyValue> makeTestVals() {
-	List<KeyValue> testVals = new ArrayList<KeyValue>();
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]));
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[1], BAD_VALS[1]));
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[1], BAD_VALS[2]));
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[0], MATCH_VAL));
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]));
+    List<KeyValue> testVals = new ArrayList<KeyValue>();
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]));
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[1], BAD_VALS[1]));
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[1], BAD_VALS[2]));
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[0], MATCH_VAL));
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]));
 
-	return testVals;
+    return testVals;
   }
 
   /**

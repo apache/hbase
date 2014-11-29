@@ -29,31 +29,31 @@ import com.google.common.collect.Lists;
 
 public class TestRowDataNub extends BaseTestRowData{
 
-	static byte[]
-        rowA = Bytes.toBytes("rowA"),
-        rowB = Bytes.toBytes("rowB"),//nub
-        rowBB = Bytes.toBytes("rowBB"),
-        cf = PrefixTreeTestConstants.TEST_CF,
-        cq0 = Bytes.toBytes("cq0"),
-        cq1 = Bytes.toBytes("cq1"),
-        v0 = Bytes.toBytes("v0");
+  static byte[]
+    rowA = Bytes.toBytes("rowA"),
+    rowB = Bytes.toBytes("rowB"),//nub
+    rowBB = Bytes.toBytes("rowBB"),
+    cf = PrefixTreeTestConstants.TEST_CF,
+    cq0 = Bytes.toBytes("cq0"),
+    cq1 = Bytes.toBytes("cq1"),
+    v0 = Bytes.toBytes("v0");
 
-	static long
-		ts = 55L;
+  static long
+    ts = 55L;
 
-	static List<KeyValue> d = Lists.newArrayList();
-	static{
-		d.add(new KeyValue(rowA, cf, cq0, ts, v0));
-		d.add(new KeyValue(rowA, cf, cq1, ts, v0));
-		d.add(new KeyValue(rowB, cf, cq0, ts, v0));
-		d.add(new KeyValue(rowB, cf, cq1, ts, v0));
-		d.add(new KeyValue(rowBB, cf, cq0, ts, v0));
-		d.add(new KeyValue(rowBB, cf, cq1, ts, v0));
-	}
+  static List<KeyValue> d = Lists.newArrayList();
+  static{
+    d.add(new KeyValue(rowA, cf, cq0, ts, v0));
+    d.add(new KeyValue(rowA, cf, cq1, ts, v0));
+    d.add(new KeyValue(rowB, cf, cq0, ts, v0));
+    d.add(new KeyValue(rowB, cf, cq1, ts, v0));
+    d.add(new KeyValue(rowBB, cf, cq0, ts, v0));
+    d.add(new KeyValue(rowBB, cf, cq1, ts, v0));
+  }
 
-	@Override
-	public List<KeyValue> getInputs() {
-		return d;
-	}
+  @Override
+  public List<KeyValue> getInputs() {
+    return d;
+  }
 
 }

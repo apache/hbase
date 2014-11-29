@@ -54,21 +54,21 @@ public class PlainTextMessageBodyProducer
     return true;
   }
 
-	@Override
-	public long getSize(Object object, Class<?> type, Type genericType,
-			Annotation[] annotations, MediaType mediaType) {
+  @Override
+  public long getSize(Object object, Class<?> type, Type genericType,
+      Annotation[] annotations, MediaType mediaType) {
     byte[] bytes = object.toString().getBytes(); 
-	  buffer.set(bytes);
+    buffer.set(bytes);
     return bytes.length;
-	}
+  }
 
-	@Override
-	public void writeTo(Object object, Class<?> type, Type genericType,
-			Annotation[] annotations, MediaType mediaType,
-			MultivaluedMap<String, Object> httpHeaders, OutputStream outStream)
-			throws IOException, WebApplicationException {
+  @Override
+  public void writeTo(Object object, Class<?> type, Type genericType,
+      Annotation[] annotations, MediaType mediaType,
+      MultivaluedMap<String, Object> httpHeaders, OutputStream outStream)
+      throws IOException, WebApplicationException {
     byte[] bytes = buffer.get();
-		outStream.write(bytes);
+    outStream.write(bytes);
     buffer.remove();
-	}	
+  }	
 }

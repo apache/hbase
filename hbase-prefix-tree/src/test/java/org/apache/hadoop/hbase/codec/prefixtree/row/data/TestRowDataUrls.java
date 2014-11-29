@@ -40,7 +40,7 @@ import com.google.common.collect.Lists;
 public class TestRowDataUrls extends BaseTestRowData{
 
   static List<ByteRange> rows;
-	static{
+  static{
     List<String> rowStrings = new ArrayList<String>();
     rowStrings.add("com.edsBlog/directoryAa/pageAaa");
     rowStrings.add("com.edsBlog/directoryAa/pageBbb");

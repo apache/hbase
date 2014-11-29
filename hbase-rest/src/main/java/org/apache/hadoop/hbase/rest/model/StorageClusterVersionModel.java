@@ -40,33 +40,33 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @XmlRootElement(name="ClusterVersion")
 @InterfaceAudience.Private
 public class StorageClusterVersionModel implements Serializable {
-	private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-	private String version;
+  private String version;
 
-	/**
-	 * @return the storage cluster version
-	 */
-	@XmlValue
-	public String getVersion() {
-	  return version;
-	}
+  /**
+   * @return the storage cluster version
+   */
+  @XmlValue
+  public String getVersion() {
+    return version;
+  }
 
-	/**
-	 * @param version the storage cluster version
-	 */
-	public void setVersion(String version) {
-	  this.version = version;
-	}
+  /**
+   * @param version the storage cluster version
+   */
+  public void setVersion(String version) {
+    this.version = version;
+  }
 
-	/* (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
+  /* (non-Javadoc)
+   * @see java.lang.Object#toString()
+   */
   @JsonValue
-	@Override
-	public String toString() {
-	  return version;
-	}
+  @Override
+  public String toString() {
+    return version;
+  }
 
     //needed for jackson deserialization
     private static StorageClusterVersionModel valueOf(String value) {

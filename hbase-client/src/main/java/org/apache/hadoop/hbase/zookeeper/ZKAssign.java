@@ -441,8 +441,8 @@ public class ZKAssign {
       EventType expectedState, ServerName serverName, int expectedVersion)
   throws KeeperException, KeeperException.NoNodeException {
     if (LOG.isTraceEnabled()) {
-    	LOG.trace(zkw.prefix("Deleting existing unassigned " +
-      "node " + encodedRegionName + " in expected state " + expectedState));
+      LOG.trace(zkw.prefix("Deleting existing unassigned " +
+        "node " + encodedRegionName + " in expected state " + expectedState));
     }
     String node = getNodeName(zkw, encodedRegionName);
     zkw.sync(node);

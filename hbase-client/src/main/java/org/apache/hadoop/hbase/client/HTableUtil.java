@@ -111,7 +111,7 @@ public class HTableUtil {
       List<Put> recs = putMap.get( hostname);
       if (recs == null) {
         recs = new ArrayList<Put>(INITIAL_LIST_SIZE);
-    		putMap.put( hostname, recs);
+        putMap.put( hostname, recs);
       }
       recs.add(put);
     }

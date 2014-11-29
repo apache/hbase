@@ -1022,8 +1022,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public Path getDefaultRootDirPath() throws IOException {
-	FileSystem fs = FileSystem.get(this.conf);
-	return new Path(fs.makeQualified(fs.getHomeDirectory()),"hbase");
+    FileSystem fs = FileSystem.get(this.conf);
+    return new Path(fs.makeQualified(fs.getHomeDirectory()),"hbase");
   }
 
   /**

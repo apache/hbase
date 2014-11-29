@@ -366,8 +366,8 @@ public class HBaseFsck extends Configured {
     if (hbckOutFd == null) {
       setRetCode(-1);
       LOG.error("Another instance of hbck is running, exiting this instance.[If you are sure" +
-		      " no other instance is running, delete the lock file " +
-		      HBCK_LOCK_PATH + " and rerun the tool]");
+          " no other instance is running, delete the lock file " +
+          HBCK_LOCK_PATH + " and rerun the tool]");
       throw new IOException("Duplicate hbck - Abort");
     }
 

@@ -38,67 +38,67 @@ import org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableLis
 @InterfaceAudience.Private
 public class TableListModel implements Serializable, ProtobufMessageHandler {
 
-	private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-	private List<TableModel> tables = new ArrayList<TableModel>();
+  private List<TableModel> tables = new ArrayList<TableModel>();
 
-	/**
-	 * Default constructor
-	 */
-	public TableListModel() {}
+  /**
+   * Default constructor
+   */
+  public TableListModel() {}
 
-	/**
-	 * Add the table name model to the list
-	 * @param table the table model
-	 */
-	public void add(TableModel table) {
-		tables.add(table);
-	}
-	
-	/**
-	 * @param index the index
-	 * @return the table model
-	 */
-	public TableModel get(int index) {
-		return tables.get(index);
-	}
+  /**
+   * Add the table name model to the list
+   * @param table the table model
+   */
+  public void add(TableModel table) {
+    tables.add(table);
+  }
+  
+  /**
+   * @param index the index
+   * @return the table model
+   */
+  public TableModel get(int index) {
+    return tables.get(index);
+  }
 
-	/**
-	 * @return the tables
-	 */
-	@XmlElementRef(name="table")
-	public List<TableModel> getTables() {
-		return tables;
-	}
+  /**
+   * @return the tables
+   */
+  @XmlElementRef(name="table")
+  public List<TableModel> getTables() {
+    return tables;
+  }
 
-	/**
-	 * @param tables the tables to set
-	 */
-	public void setTables(List<TableModel> tables) {
-		this.tables = tables;
-	}
+  /**
+   * @param tables the tables to set
+   */
+  public void setTables(List<TableModel> tables) {
+    this.tables = tables;
+  }
 
-	/* (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		for(TableModel aTable : tables) {
-			sb.append(aTable.toString());
-			sb.append('\n');
-		}
-		return sb.toString();
-	}
+  /* (non-Javadoc)
+   * @see java.lang.Object#toString()
+   */
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    for(TableModel aTable : tables) {
+      sb.append(aTable.toString());
+      sb.append('\n');
+    }
+    return sb.toString();
+  }
 
-	@Override
-	public byte[] createProtobufOutput() {
-		TableList.Builder builder = TableList.newBuilder();
-		for (TableModel aTable : tables) {
-			builder.addName(aTable.getName());
-		}
-		return builder.build().toByteArray();
-	}
+  @Override
+  public byte[] createProtobufOutput() {
+    TableList.Builder builder = TableList.newBuilder();
+    for (TableModel aTable : tables) {
+      builder.addName(aTable.getName());
+    }
+    return builder.build().toByteArray();
+  }
 
   @Override
   public ProtobufMessageHandler getObjectFromMessage(byte[] message)

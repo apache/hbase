@@ -28,15 +28,15 @@ import com.google.common.collect.Lists;
 
 public class TestRowDataQualifierByteOrdering extends BaseTestRowData{
 
-	static byte[]
-        Arow = Bytes.toBytes("Arow"),
-        Brow = Bytes.toBytes("Brow"),
-        Brow2 = Bytes.toBytes("Brow2"),
-        fam = Bytes.toBytes("HappyFam"),
-        cq0 = Bytes.toBytes("cq0"),
-        cq1 = Bytes.toBytes("cq1tail"),//make sure tail does not come back as liat
-        cq2 = Bytes.toBytes("cq2"),
-        v0 = Bytes.toBytes("v0");
+  static byte[]
+    Arow = Bytes.toBytes("Arow"),
+    Brow = Bytes.toBytes("Brow"),
+    Brow2 = Bytes.toBytes("Brow2"),
+    fam = Bytes.toBytes("HappyFam"),
+    cq0 = Bytes.toBytes("cq0"),
+    cq1 = Bytes.toBytes("cq1tail"),//make sure tail does not come back as liat
+    cq2 = Bytes.toBytes("cq2"),
+    v0 = Bytes.toBytes("v0");
 
   static long ts = 55L;
 

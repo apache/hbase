@@ -379,9 +379,9 @@ public class MultiThreadedReader extends MultiThreadedAction
           numKeysVerified.incrementAndGet();
         }
       } else {
-		HRegionLocation hloc = connection.getRegionLocation(tableName,
-		    get.getRow(), false);
-         String rowKey = Bytes.toString(get.getRow());
+        HRegionLocation hloc = connection.getRegionLocation(tableName,
+          get.getRow(), false);
+        String rowKey = Bytes.toString(get.getRow());
         LOG.info("Key = " + rowKey + ", Region location: " + hloc);
         if(isNullExpected) {
           nullResult.incrementAndGet();

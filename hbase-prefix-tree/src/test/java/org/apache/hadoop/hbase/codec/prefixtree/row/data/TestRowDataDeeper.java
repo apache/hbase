@@ -36,36 +36,36 @@ import com.google.common.collect.Lists;
  */
 public class TestRowDataDeeper extends BaseTestRowData{
 
-	static byte[]
-        cdc = Bytes.toBytes("cdc"),
-        cf6 = Bytes.toBytes("cf6"),
-        cfc = Bytes.toBytes("cfc"),
-        f = Bytes.toBytes("f"),
-        q = Bytes.toBytes("q"),
-        v = Bytes.toBytes("v");
+  static byte[]
+    cdc = Bytes.toBytes("cdc"),
+    cf6 = Bytes.toBytes("cf6"),
+    cfc = Bytes.toBytes("cfc"),
+    f = Bytes.toBytes("f"),
+    q = Bytes.toBytes("q"),
+    v = Bytes.toBytes("v");
 
-	static long
-		ts = 55L;
+  static long
+    ts = 55L;
 
-	static List<KeyValue> d = Lists.newArrayList();
-	static{
-		d.add(new KeyValue(cdc, f, q, ts, v));
+  static List<KeyValue> d = Lists.newArrayList();
+  static{
+    d.add(new KeyValue(cdc, f, q, ts, v));
     d.add(new KeyValue(cf6, f, q, ts, v));
     d.add(new KeyValue(cfc, f, q, ts, v));
-	}
+  }
 
-	@Override
-	public List<KeyValue> getInputs() {
-		return d;
-	}
+  @Override
+  public List<KeyValue> getInputs() {
+    return d;
+  }
 
-	@Override
-	public void individualBlockMetaAssertions(PrefixTreeBlockMeta blockMeta) {
-	  //0: token:c; fan:d,f
-	  //1: token:f; fan:6,c
-	  //2: leaves
-		Assert.assertEquals(3, blockMeta.getRowTreeDepth());
-	}
+  @Override
+  public void individualBlockMetaAssertions(PrefixTreeBlockMeta blockMeta) {
+    //0: token:c; fan:d,f
+    //1: token:f; fan:6,c
+    //2: leaves
+    Assert.assertEquals(3, blockMeta.getRowTreeDepth());
+  }
 
   @Override
   public void individualSearcherAssertions(CellSearcher searcher) {

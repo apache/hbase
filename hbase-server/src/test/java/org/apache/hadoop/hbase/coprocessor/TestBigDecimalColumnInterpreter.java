@@ -133,7 +133,7 @@ public class TestBigDecimalColumnInterpreter {
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal median = aClient.median(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("8.00"), median);
   }
@@ -152,7 +152,7 @@ public class TestBigDecimalColumnInterpreter {
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal maximum = aClient.max(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("19.00"), maximum);
   }
@@ -201,7 +201,7 @@ public class TestBigDecimalColumnInterpreter {
   public void testMaxWithValidRangeWithNullCF() {
     AggregationClient aClient = new AggregationClient(conf);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     Scan scan = new Scan();
     BigDecimal max = null;
     try {
@@ -217,7 +217,7 @@ public class TestBigDecimalColumnInterpreter {
   public void testMaxWithInvalidRange() {
     AggregationClient aClient = new AggregationClient(conf);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     Scan scan = new Scan();
     scan.setStartRow(ROWS[4]);
     scan.setStopRow(ROWS[2]);
@@ -242,7 +242,7 @@ public class TestBigDecimalColumnInterpreter {
     try {
       AggregationClient aClient = new AggregationClient(conf);
       final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	      new BigDecimalColumnInterpreter();
+        new BigDecimalColumnInterpreter();
       max = aClient.max(TEST_TABLE, ci, scan);
     } catch (Exception e) {
       max = BigDecimal.ZERO;
@@ -259,7 +259,7 @@ public class TestBigDecimalColumnInterpreter {
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     scan.setFilter(f);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     max = aClient.max(TEST_TABLE, ci, scan);
     assertEquals(null, max);
   }
@@ -279,7 +279,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(HConstants.EMPTY_START_ROW);
     scan.setStopRow(HConstants.EMPTY_END_ROW);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal min = aClient.min(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("0.00"), min);
   }
@@ -295,7 +295,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal min = aClient.min(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("5.00"), min);
   }
@@ -308,7 +308,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(HConstants.EMPTY_START_ROW);
     scan.setStopRow(HConstants.EMPTY_END_ROW);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal min = aClient.min(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("0.00"), min);
   }
@@ -321,7 +321,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal min = aClient.min(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("0.60"), min);
   }
@@ -333,7 +333,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal min = null;
     try {
       min = aClient.min(TEST_TABLE, ci, scan);
@@ -352,7 +352,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[4]);
     scan.setStopRow(ROWS[2]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     try {
       min = aClient.min(TEST_TABLE, ci, scan);
     } catch (Throwable e) {
@@ -368,7 +368,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[6]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal min = null;
     try {
       min = aClient.min(TEST_TABLE, ci, scan);
@@ -385,7 +385,7 @@ public class TestBigDecimalColumnInterpreter {
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     scan.setFilter(f);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal min = null;
     min = aClient.min(TEST_TABLE, ci, scan);
     assertEquals(null, min);
@@ -403,7 +403,7 @@ public class TestBigDecimalColumnInterpreter {
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal sum = aClient.sum(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("190.00"), sum);
   }
@@ -419,7 +419,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal sum = aClient.sum(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("95.00"), sum);
   }
@@ -430,7 +430,7 @@ public class TestBigDecimalColumnInterpreter {
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal sum = aClient.sum(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("209.00"), sum); // 190 + 19
   }
@@ -443,7 +443,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal sum = aClient.sum(TEST_TABLE, ci, scan);
     assertEquals(new BigDecimal("6.60"), sum); // 6 + 60
   }
@@ -455,7 +455,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal sum = null;
     try {
       sum = aClient.sum(TEST_TABLE, ci, scan);
@@ -473,7 +473,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[2]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal sum = null;
     try {
       sum = aClient.sum(TEST_TABLE, ci, scan);
@@ -490,7 +490,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.addFamily(TEST_FAMILY);
     scan.setFilter(f);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     BigDecimal sum = null;
     sum = aClient.sum(TEST_TABLE, ci, scan);
     assertEquals(null, sum);
@@ -508,7 +508,7 @@ public class TestBigDecimalColumnInterpreter {
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     double avg = aClient.avg(TEST_TABLE, ci, scan);
     assertEquals(9.5, avg, 0);
   }
@@ -524,7 +524,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     double avg = aClient.avg(TEST_TABLE, ci, scan);
     assertEquals(9.5, avg, 0);
   }
@@ -535,7 +535,7 @@ public class TestBigDecimalColumnInterpreter {
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     double avg = aClient.avg(TEST_TABLE, ci, scan);
     assertEquals(10.45, avg, 0.01);
   }
@@ -548,7 +548,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     double avg = aClient.avg(TEST_TABLE, ci, scan);
     assertEquals(6 + 0.60, avg, 0);
   }
@@ -558,7 +558,7 @@ public class TestBigDecimalColumnInterpreter {
     AggregationClient aClient = new AggregationClient(conf);
     Scan scan = new Scan();
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     Double avg = null;
     try {
       avg = aClient.avg(TEST_TABLE, ci, scan);
@@ -576,7 +576,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[1]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     Double avg = null;
     try {
       avg = aClient.avg(TEST_TABLE, ci, scan);
@@ -593,7 +593,7 @@ public class TestBigDecimalColumnInterpreter {
     Filter f = new PrefixFilter(Bytes.toBytes("foo:bar"));
     scan.setFilter(f);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     Double avg = null;
     avg = aClient.avg(TEST_TABLE, ci, scan);
     assertEquals(Double.NaN, avg, 0);
@@ -611,7 +611,7 @@ public class TestBigDecimalColumnInterpreter {
     Scan scan = new Scan();
     scan.addColumn(TEST_FAMILY, TEST_QUALIFIER);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     double std = aClient.std(TEST_TABLE, ci, scan);
     assertEquals(5.766, std, 0.05d);
   }
@@ -628,7 +628,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[5]);
     scan.setStopRow(ROWS[15]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     double std = aClient.std(TEST_TABLE, ci, scan);
     assertEquals(2.87, std, 0.05d);
   }
@@ -643,7 +643,7 @@ public class TestBigDecimalColumnInterpreter {
     Scan scan = new Scan();
     scan.addFamily(TEST_FAMILY);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     double std = aClient.std(TEST_TABLE, ci, scan);
     assertEquals(6.342, std, 0.05d);
   }
@@ -656,7 +656,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[7]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     double std = aClient.std(TEST_TABLE, ci, scan);
     System.out.println("std is:" + std);
     assertEquals(0, std, 0.05d);
@@ -669,7 +669,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[17]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     Double std = null;
     try {
       std = aClient.std(TEST_TABLE, ci, scan);
@@ -687,7 +687,7 @@ public class TestBigDecimalColumnInterpreter {
     scan.setStartRow(ROWS[6]);
     scan.setStopRow(ROWS[1]);
     final ColumnInterpreter<BigDecimal, BigDecimal, EmptyMsg, BigDecimalMsg, BigDecimalMsg> ci =
-	    new BigDecimalColumnInterpreter();
+      new BigDecimalColumnInterpreter();
     Double std = null;
     try {
       std = aClient.std(TEST_TABLE, ci, scan);

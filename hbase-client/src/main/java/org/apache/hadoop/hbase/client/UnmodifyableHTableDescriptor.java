@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   /** Default constructor */
   public UnmodifyableHTableDescriptor() {
-	  super();
+    super();
   }
 
   /*
