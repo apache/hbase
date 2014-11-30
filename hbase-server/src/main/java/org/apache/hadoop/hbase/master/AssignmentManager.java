@@ -768,7 +768,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (regionInfo.isMetaRegion()) {
         // If it's meta region, reset the meta location.
         // So that master knows the right meta region server.
-        MetaRegionTracker.setMetaLocation(watcher, sn);
+        MetaRegionTracker.setMetaLocation(watcher, sn, State.OPEN);
       } else {
         // No matter the previous server is online or offline,
         // we need to reset the last region server of the region.
@@ -2962,31 +2962,35 @@ public class AssignmentManager extends ZooKeeperListener {
         processRegionInTransition(encodedRegionName, null);
       }
     } else if (!useZKForAssignment) {
-      // We need to send RPC call again for PENDING_OPEN/PENDING_CLOSE regions
-      // in case the RPC call is not sent out yet before the master was shut down
-      // since we update the state before we send the RPC call. We can't update
-      // the state after the RPC call. Otherwise, we don't know what's happened
-      // to the region if the master dies right after the RPC call is out.
-      Map<String, RegionState> rits = regionStates.getRegionsInTransition();
-      for (RegionState regionState: rits.values()) {
-        if (!serverManager.isServerOnline(regionState.getServerName())) {
-          continue; // SSH will handle it
-        }
-        State state = regionState.getState();
-        LOG.info("Processing " + regionState);
-        switch (state) {
-        case CLOSED:
-          invokeAssign(regionState.getRegion());
-          break;
-        case PENDING_OPEN:
-          retrySendRegionOpen(regionState);
-          break;
-        case PENDING_CLOSE:
-          retrySendRegionClose(regionState);
-          break;
-        default:
-          // No process for other states
-        }
+       processRegionInTransitionZkLess();
+    }
+  }
+  
+  void processRegionInTransitionZkLess() {
+    // We need to send RPC call again for PENDING_OPEN/PENDING_CLOSE regions
+    // in case the RPC call is not sent out yet before the master was shut down
+    // since we update the state before we send the RPC call. We can't update
+    // the state after the RPC call. Otherwise, we don't know what's happened
+    // to the region if the master dies right after the RPC call is out.
+    Map<String, RegionState> rits = regionStates.getRegionsInTransition();
+    for (RegionState regionState : rits.values()) {
+      if (!serverManager.isServerOnline(regionState.getServerName())) {
+        continue; // SSH will handle it
+      }
+      State state = regionState.getState();
+      LOG.info("Processing " + regionState);
+      switch (state) {
+      case CLOSED:
+        invokeAssign(regionState.getRegion());
+        break;
+      case PENDING_OPEN:
+        retrySendRegionOpen(regionState);
+        break;
+      case PENDING_CLOSE:
+        retrySendRegionClose(regionState);
+        break;
+      default:
+        // No process for other states
       }
     }
   }
