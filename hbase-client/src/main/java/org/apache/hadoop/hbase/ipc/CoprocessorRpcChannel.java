@@ -36,8 +36,8 @@ import com.google.protobuf.ServiceException;
 
 /**
  * Base class which provides clients with an RPC connection to
- * call coprocessor endpoint {@link Service}s.  Note that clients should not use this class
- * directly, except through
+ * call coprocessor endpoint {@link com.google.protobuf.Service}s.  
+ * Note that clients should not use this class directly, except through
  * {@link org.apache.hadoop.hbase.client.HTableInterface#coprocessorService(byte[])}.
  */
 @InterfaceAudience.Public

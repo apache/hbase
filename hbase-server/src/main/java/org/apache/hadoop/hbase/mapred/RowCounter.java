@@ -38,7 +38,7 @@ import org.apache.hadoop.util.ToolRunner;
 /**
  * A job with a map to count rows.
  * Map outputs table rows IF the input row has columns that have content.
- * Uses an {@link IdentityReducer}
+ * Uses a org.apache.hadoop.mapred.lib.IdentityReducer
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

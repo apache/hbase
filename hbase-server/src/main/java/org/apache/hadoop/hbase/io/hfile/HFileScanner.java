@@ -131,7 +131,7 @@ public interface HFileScanner {
    */
   ByteBuffer getValue();
   /**
-   * @return Instance of {@link KeyValue}.
+   * @return Instance of {@link org.apache.hadoop.hbase.KeyValue}.
    */
   Cell getKeyValue();
   /**

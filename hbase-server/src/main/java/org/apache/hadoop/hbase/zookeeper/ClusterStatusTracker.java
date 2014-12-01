@@ -28,9 +28,9 @@ import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracker on cluster settings up in zookeeper.
- * This is not related to {@link ClusterStatus}.  That class is a data structure
- * that holds snapshot of current view on cluster.  This class is about tracking
- * cluster attributes up in zookeeper.
+ * This is not related to {@link org.apache.hadoop.hbase.ClusterStatus}. That class 
+ * is a data structure that holds snapshot of current view on cluster. This class 
+ * is about tracking cluster attributes up in zookeeper.
  *
  */
 @InterfaceAudience.Private

@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 
 /**
  * Handles Bloom filter initialization based on configuration and serialized
- * metadata in the reader and writer of {@link StoreFile}.
+ * metadata in the reader and writer of {@link org.apache.hadoop.hbase.regionserver.StoreFile}.
  */
 @InterfaceAudience.Private
 public final class BloomFilterFactory {

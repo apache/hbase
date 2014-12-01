@@ -29,11 +29,11 @@ import com.google.protobuf.RpcController;
 /**
  * Used for server-side protobuf RPC service invocations.  This handler allows
  * invocation exceptions to easily be passed through to the RPC server from coprocessor
- * {@link Service} implementations.
+ * {@link com.google.protobuf.Service} implementations.
  *
  * <p>
- * When implementing {@link Service} defined methods, coprocessor endpoints can use the following
- * pattern to pass exceptions back to the RPC client:
+ * When implementing {@link com.google.protobuf.Service} defined methods, 
+ * coprocessor endpoints can use the following pattern to pass exceptions back to the RPC client:
  * <code>
  * public void myMethod(RpcController controller, MyRequest request, RpcCallback<MyResponse> done) {
  *   MyResponse response = null;
@@ -53,7 +53,8 @@ import com.google.protobuf.RpcController;
 public class ServerRpcController implements RpcController {
   /**
    * The exception thrown within
-   * {@link Service#callMethod(Descriptors.MethodDescriptor, RpcController, Message, RpcCallback)},
+   * {@link com.google.protobuf.Service#callMethod(
+   *   Descriptors.MethodDescriptor, RpcController, Message, RpcCallback)},
    * if any.
    */
   // TODO: it would be good widen this to just Throwable, but IOException is what we allow now
@@ -97,7 +98,7 @@ public class ServerRpcController implements RpcController {
   }
 
   /**
-   * Sets an exception to be communicated back to the {@link Service} client.
+   * Sets an exception to be communicated back to the {@link com.google.protobuf.Service} client.
    * @param ioe the exception encountered during execution of the service method
    */
   public void setFailedOn(IOException ioe) {

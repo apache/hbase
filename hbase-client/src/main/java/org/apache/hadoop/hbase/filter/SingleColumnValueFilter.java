@@ -52,7 +52,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * long value), then you can pass in your own comparator instead.
  * <p>
  * You must also specify a family and qualifier.  Only the value of this column
- * will be tested. When using this filter on a {@link Scan} with specified
+ * will be tested. When using this filter on a 
+ * {@link org.apache.hadoop.hbase.CellScanner} with specified
  * inputs, the column to be tested should also be added as input (otherwise
  * the filter will regard the column as missing).
  * <p>

@@ -35,7 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
 public abstract class AbstractPositionedByteRange extends AbstractByteRange implements
     PositionedByteRange {
   /**
-   * The current index into the range. Like {@link ByteBuffer} position, it
+   * The current index into the range. Like {@link java.nio.ByteBuffer} position, it
    * points to the next value that will be read/written in the array. It
    * provides the appearance of being 0-indexed, even though its value is
    * calculated according to offset.
@@ -182,7 +182,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
   @Override
   public abstract int putVLong(long val);
   /**
-   * Similar to {@link ByteBuffer#flip()}. Sets length to position, position to
+   * Similar to {@link java.nio.ByteBuffer#flip()}. Sets length to position, position to
    * offset.
    */
   @VisibleForTesting
@@ -194,7 +194,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
   }
 
   /**
-   * Similar to {@link ByteBuffer#clear()}. Sets position to 0, length to
+   * Similar to {@link java.nio.ByteBuffer#clear()}. Sets position to 0, length to
    * capacity.
    */
   @VisibleForTesting

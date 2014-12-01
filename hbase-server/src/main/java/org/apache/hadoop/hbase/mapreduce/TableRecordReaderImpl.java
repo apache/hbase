@@ -119,7 +119,7 @@ public class TableRecordReaderImpl {
   /**
    * Sets the HBase table.
    *
-   * @param htable  The {@link HTable} to scan.
+   * @param htable  The {@link org.apache.hadoop.hbase.HTableDescriptor} to scan.
    */
   public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();

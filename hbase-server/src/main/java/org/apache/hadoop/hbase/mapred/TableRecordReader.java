@@ -59,7 +59,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
   }
 
   /**
-   * @param htable the {@link HTable} to scan.
+   * @param htable the {@link org.apache.hadoop.hbase.HTableDescriptor} to scan.
    */
   public void setHTable(Table htable) {
     this.recordReaderImpl.setHTable(htable);

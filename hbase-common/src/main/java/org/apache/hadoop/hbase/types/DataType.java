@@ -32,7 +32,8 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * qualifiers.
  * </p>
  * <p>
- * {@code DataType}s are different from Hadoop {@link Writable}s in two
+ * {@code DataType}s are different from Hadoop 
+ * {@link org.apache.hadoop.hbase.io.ImmutableBytesWritable}s in two
  * significant ways. First, {@code DataType} describes how to serialize a
  * value, it does not encapsulate a serialized value. Second, {@code DataType}
  * implementations provide hints to consumers about relationships between the

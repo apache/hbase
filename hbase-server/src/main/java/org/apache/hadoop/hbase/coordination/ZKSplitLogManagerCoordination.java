@@ -67,7 +67,8 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
 /**
- * ZooKeeper based implementation of {@link SplitLogManagerCoordination}
+ * ZooKeeper based implementation of
+ *  {@link org.apache.hadoop.hbase.master.SplitLogManagerCoordination}
  */
 @InterfaceAudience.Private
 public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
@@ -682,7 +683,8 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   /**
    * ZooKeeper implementation of
-   * {@link SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
+   * {@link org.apache.hadoop.hbase.master.
+   * SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
    */
   @Override
   public void removeStaleRecoveringRegions(final Set<String> knownFailedServers)
@@ -904,9 +906,10 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
 
   /**
-   * {@link SplitLogManager} can use objects implementing this interface to finish off a partially
-   * done task by {@link SplitLogWorker}. This provides a serialization point at the end of the task
-   * processing. Must be restartable and idempotent.
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} can use objects implementing this 
+   * interface to finish off a partially done task by 
+   * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}. This provides a 
+   * serialization point at the end of the task processing. Must be restartable and idempotent.
    */
   public interface TaskFinisher {
     /**
@@ -1067,7 +1070,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
    * Asynchronous handler for zk create RESCAN-node results. Retries on failures.
    * <p>
    * A RESCAN node is created using PERSISTENT_SEQUENTIAL flag. It is a signal for all the
-   * {@link SplitLogWorker}s to rescan for new tasks.
+   * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}s to rescan for new tasks.
    */
   public class CreateRescanAsyncCallback implements AsyncCallback.StringCallback {
     private final Log LOG = LogFactory.getLog(CreateRescanAsyncCallback.class);

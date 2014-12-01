@@ -79,8 +79,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.protobuf.ServiceException;
 
 /**
- * A {@link ReplicationEndpoint} endpoint which receives the WAL edits from the
- * WAL, and sends the edits to replicas of regions.
+ * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} endpoint 
+ * which receives the WAL edits from the WAL, and sends the edits to replicas 
+ * of regions.
  */
 @InterfaceAudience.Private
 public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {

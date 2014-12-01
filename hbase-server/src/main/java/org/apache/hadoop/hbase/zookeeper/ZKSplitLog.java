@@ -35,7 +35,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSeq
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Common methods and attributes used by {@link SplitLogManager} and {@link SplitLogWorker}
+ * Common methods and attributes used by {@link org.apache.hadoop.hbase.master.SplitLogManager} 
+ * and {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}
  * running distributed splitting of WAL logs.
  */
 @InterfaceAudience.Private

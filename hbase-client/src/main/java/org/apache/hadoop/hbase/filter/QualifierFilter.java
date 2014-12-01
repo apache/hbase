@@ -41,7 +41,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  * <p>
- * If an already known column qualifier is looked for, use {@link Get#addColumn}
+ * If an already known column qualifier is looked for, 
+ * use {@link org.apache.hadoop.hbase.client.Get#addColumn}
  * directly rather than a filter.
  */
 @InterfaceAudience.Public

@@ -54,7 +54,8 @@ public interface RegionScanner extends InternalScanner {
   boolean reseek(byte[] row) throws IOException;
 
   /**
-   * @return The preferred max buffersize. See {@link Scan#setMaxResultSize(long)}
+   * @return The preferred max buffersize. See 
+   * {@link org.apache.hadoop.hbase.client.Scan#setMaxResultSize(long)}
    */
   long getMaxResultSize();
 

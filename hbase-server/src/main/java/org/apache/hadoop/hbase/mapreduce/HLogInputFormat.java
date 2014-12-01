@@ -32,7 +32,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
- * Simple {@link InputFormat} for {@link WAL} files.
+ * Simple {@link InputFormat} for {@link org.apache.hadoop.hbase.wal.WAL} 
+ * files.
  * @deprecated use {@link WALInputFormat}
  */
 @Deprecated

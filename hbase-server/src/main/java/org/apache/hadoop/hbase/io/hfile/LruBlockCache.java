@@ -57,16 +57,16 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * {@link ConcurrentHashMap} and with a non-blocking eviction thread giving
  * constant-time {@link #cacheBlock} and {@link #getBlock} operations.<p>
  *
- * Contains three levels of block priority to allow for
- * scan-resistance and in-memory families {@link HColumnDescriptor#setInMemory(boolean)} (An
- * in-memory column family is a column family that should be served from memory if possible):
+ * Contains three levels of block priority to allow for scan-resistance and in-memory families 
+ * {@link org.apache.hadoop.hbase.HColumnDescriptor#setInMemory(boolean)} (An in-memory column 
+ * family is a column family that should be served from memory if possible):
  * single-access, multiple-accesses, and in-memory priority.
  * A block is added with an in-memory priority flag if
- * {@link HColumnDescriptor#isInMemory()}, otherwise a block becomes a single access
- * priority the first time it is read into this block cache.  If a block is accessed again while
- * in cache, it is marked as a multiple access priority block.  This delineation of blocks is used
- * to prevent scans from thrashing the cache adding a least-frequently-used
- * element to the eviction algorithm.<p>
+ * {@link org.apache.hadoop.hbase.HColumnDescriptor#isInMemory()}, otherwise a block becomes a
+ *  single access priority the first time it is read into this block cache.  If a block is
+ *  accessed again while in cache, it is marked as a multiple access priority block.  This
+ *  delineation of blocks is used to prevent scans from thrashing the cache adding a 
+ *  least-frequently-used element to the eviction algorithm.<p>
  *
  * Each priority is given its own chunk of the total cache to ensure
  * fairness during eviction.  Each priority will retain close to its maximum

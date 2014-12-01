@@ -339,9 +339,9 @@ public class HFileBlock implements Cacheable {
   /**
    * Returns the buffer this block stores internally. The clients must not
    * modify the buffer object. This method has to be public because it is
-   * used in {@link CompoundBloomFilter} to avoid object creation on every
-   * Bloom filter lookup, but has to be used with caution. Checksum data
-   * is not included in the returned buffer but header data is.
+   * used in {@link org.apache.hadoop.hbase.util.CompoundBloomFilter} to avoid object
+   *  creation on every Bloom filter lookup, but has to be used with caution.
+   *   Checksum data is not included in the returned buffer but header data is.
    *
    * @return the buffer of this block for read-only operations
    */
@@ -354,7 +354,7 @@ public class HFileBlock implements Cacheable {
   /**
    * Returns the buffer of this block, including header data. The clients must
    * not modify the buffer object. This method has to be public because it is
-   * used in {@link BucketCache} to avoid buffer copy.
+   * used in {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache} to avoid buffer copy.
    *
    * @return the buffer with header and checksum included for read-only operations
    */

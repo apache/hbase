@@ -30,8 +30,9 @@ import com.google.protobuf.Message;
  * Defines how value for specific column is interpreted and provides utility
  * methods like compare, add, multiply etc for them. Takes column family, column
  * qualifier and return the cell value. Its concrete implementation should
- * handle null case gracefully. Refer to {@link LongColumnInterpreter} for an
- * example.
+ * handle null case gracefully. 
+ * Refer to {@link org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter} 
+ * for an example.
  * <p>
  * Takes two generic parameters and three Message parameters. 
  * The cell value type of the interpreter is <T>.
@@ -127,7 +128,8 @@ Q extends Message, R extends Message> {
    * server side to construct the ColumnInterpreter. The server
    * will pass this to the {@link #initialize}
    * method. If there is no ColumnInterpreter specific data (for e.g.,
-   * {@link LongColumnInterpreter}) then null should be returned.
+   * {@link org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter})
+   *  then null should be returned.
    * @return the PB message
    */
   public abstract P getRequestData();

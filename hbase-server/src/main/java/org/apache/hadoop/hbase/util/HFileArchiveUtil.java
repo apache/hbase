@@ -134,7 +134,8 @@ public class HFileArchiveUtil {
   }
 
   /**
-   * Get the full path to the archive directory on the configured {@link FileSystem}
+   * Get the full path to the archive directory on the configured 
+   * {@link org.apache.hadoop.hbase.master.MasterFileSystem}
    * @param conf to look for archive directory name and root directory. Cannot be null. Notes for
    *          testing: requires a FileSystem root directory to be specified.
    * @return the full {@link Path} to the archive directory, as defined by the configuration
@@ -145,7 +146,8 @@ public class HFileArchiveUtil {
   }
 
   /**
-   * Get the full path to the archive directory on the configured {@link FileSystem}
+   * Get the full path to the archive directory on the configured 
+   * {@link org.apache.hadoop.hbase.master.MasterFileSystem}
    * @param rootdir {@link Path} to the root directory where hbase files are stored (for building
    *          the archive path)
    * @return the full {@link Path} to the archive directory, as defined by the configuration

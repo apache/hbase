@@ -212,8 +212,9 @@ public interface RegionObserver extends Coprocessor {
    * options:
    * <ul>
    * <li>Wrap the provided {@link InternalScanner} with a custom implementation that is returned
-   * from this method. The custom scanner can then inspect {@link KeyValue}s from the wrapped
-   * scanner, applying its own policy to what gets written.</li>
+   * from this method. The custom scanner can then inspect
+   *  {@link org.apache.hadoop.hbase.KeyValue}s from the wrapped scanner, applying its own
+   *   policy to what gets written.</li>
    * <li>Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} and provide a
    * custom implementation for writing of new {@link StoreFile}s. <strong>Note: any implementations
    * bypassing core compaction using this approach must write out new store files themselves or the
@@ -238,8 +239,9 @@ public interface RegionObserver extends Coprocessor {
    * options:
    * <ul>
    * <li>Wrap the provided {@link InternalScanner} with a custom implementation that is returned
-   * from this method. The custom scanner can then inspect {@link KeyValue}s from the wrapped
-   * scanner, applying its own policy to what gets written.</li>
+   * from this method. The custom scanner can then inspect
+   *  {@link org.apache.hadoop.hbase.KeyValue}s from the wrapped scanner, applying its own
+   *   policy to what gets written.</li>
    * <li>Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} and provide a
    * custom implementation for writing of new {@link StoreFile}s. <strong>Note: any implementations
    * bypassing core compaction using this approach must write out new store files themselves or the
@@ -269,7 +271,8 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being compacted
-   * @param scanners the list {@link StoreFileScanner}s to be read from
+   * @param scanners the list {@link org.apache.hadoop.hbase.regionserver.StoreFileScanner}s
+   *  to be read from
    * @param scanType the {@link ScanType} indicating whether this is a major or minor compaction
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files
@@ -293,7 +296,8 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being compacted
-   * @param scanners the list {@link StoreFileScanner}s to be read from
+   * @param scanners the list {@link org.apache.hadoop.hbase.regionserver.StoreFileScanner}s
+   *  to be read from
    * @param scanType the {@link ScanType} indicating whether this is a major or minor compaction
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files

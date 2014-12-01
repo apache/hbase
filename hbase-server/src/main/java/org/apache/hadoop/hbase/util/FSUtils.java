@@ -1706,7 +1706,7 @@ public abstract class FSUtils {
    * This function is to scan the root path of the file system to get the
    * degree of locality for each region on each of the servers having at least
    * one block of that region.
-   * This is used by the tool {@link RegionPlacementMaintainer}
+   * This is used by the tool {@link org.apache.hadoop.hbase.master.RegionPlacementMaintainer}
    *
    * @param conf
    *          the configuration to use

@@ -23,8 +23,10 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 /**
  * Wraps together the mutations which are applied as a batch to the region and their operation
  * status and WALEdits. 
- * @see RegionObserver#preBatchMutate(ObserverContext, MiniBatchOperationInProgress)
- * @see RegionObserver#postBatchMutate(ObserverContext, MiniBatchOperationInProgress)
+ * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#preBatchMutate(
+ * ObserverContext, MiniBatchOperationInProgress)
+ * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#postBatchMutate(
+ * ObserverContext, MiniBatchOperationInProgress)
  * @param <T> Pair<Mutation, Integer> pair of Mutations and associated rowlock ids .
  */
 @InterfaceAudience.Private
@@ -61,7 +63,8 @@ public class MiniBatchOperationInProgress<T> {
 
   /**
    * Sets the status code for the operation(Mutation) at the specified position.
-   * By setting this status, {@link RegionObserver} can make HRegion to skip Mutations.
+   * By setting this status, {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} 
+   * can make HRegion to skip Mutations.
    * @param index
    * @param opStatus
    */

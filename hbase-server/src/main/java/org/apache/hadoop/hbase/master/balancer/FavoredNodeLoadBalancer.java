@@ -41,16 +41,17 @@ import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
- * An implementation of the {@link LoadBalancer} that assigns favored nodes for
- * each region. There is a Primary RegionServer that hosts the region, and then
- * there is Secondary and Tertiary RegionServers. Currently, the favored nodes
- * information is used in creating HDFS files - the Primary RegionServer passes
- * the primary, secondary, tertiary node addresses as hints to the DistributedFileSystem
- * API for creating files on the filesystem. These nodes are treated as hints by
- * the HDFS to place the blocks of the file. This alleviates the problem to do with
- * reading from remote nodes (since we can make the Secondary RegionServer as the new
- * Primary RegionServer) after a region is recovered. This should help provide consistent
- * read latencies for the regions even when their primary region servers die.
+ * An implementation of the {@link org.apache.hadoop.hbase.master.LoadBalancer} that 
+ * assigns favored nodes for each region. There is a Primary RegionServer that hosts 
+ * the region, and then there is Secondary and Tertiary RegionServers. Currently, the 
+ * favored nodes information is used in creating HDFS files - the Primary RegionServer 
+ * passes the primary, secondary, tertiary node addresses as hints to the 
+ * DistributedFileSystem API for creating files on the filesystem. These nodes are 
+ * treated as hints by the HDFS to place the blocks of the file. This alleviates the 
+ * problem to do with reading from remote nodes (since we can make the Secondary 
+ * RegionServer as the new Primary RegionServer) after a region is recovered. This 
+ * should help provide consistent read latencies for the regions even when their 
+ * primary region servers die.
  *
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)

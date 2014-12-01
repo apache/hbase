@@ -150,7 +150,7 @@ import com.google.protobuf.Service;
  *
  * <p>You can also shutdown just this master.  Call {@link #stopMaster()}.
  *
- * @see Watcher
+ * @see org.apache.zookeeper.Watcher
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")

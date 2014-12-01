@@ -27,8 +27,8 @@ import org.apache.zookeeper.KeeperException;
 
 /**
  * Provides the globally barriered procedure framework and environment for
- * master oriented operations. {@link HMaster} interacts with the loaded
- * procedure manager through this class.
+ * master oriented operations. {@link org.apache.hadoop.hbase.master.HMaster} 
+ * interacts with the loaded procedure manager through this class.
  */
 public class MasterProcedureManagerHost extends
     ProcedureManagerHost<MasterProcedureManager> {

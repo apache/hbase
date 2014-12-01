@@ -40,7 +40,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  * <p>
- * If an already known row range needs to be scanned, use {@link Scan} start
+ * If an already known row range needs to be scanned, 
+ * use {@link org.apache.hadoop.hbase.CellScanner} start
  * and stop rows directly rather than a filter.
  */
 @InterfaceAudience.Public

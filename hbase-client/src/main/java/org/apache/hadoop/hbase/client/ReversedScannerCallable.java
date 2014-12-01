@@ -54,7 +54,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param scan
    * @param scanMetrics
    * @param locateStartRow The start row for locating regions
-   * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
+   * @param rpcFactory to create an {@link com.google.protobuf.RpcController} 
+   * to talk to the regionserver
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory) {
@@ -68,7 +69,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param scan
    * @param scanMetrics
    * @param locateStartRow The start row for locating regions
-   * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
+   * @param rpcFactory to create an {@link com.google.protobuf.RpcController} 
+   *        to talk to the regionserver
    * @param replicaId the replica id
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
@@ -79,7 +81,8 @@ public class ReversedScannerCallable extends ScannerCallable {
 
   /**
    * @deprecated use
-   *             {@link #ReversedScannerCallable(ClusterConnection, TableName, Scan, ScanMetrics, byte[], RpcControllerFactory )}
+   *  {@link #ReversedScannerCallable(ClusterConnection, TableName, Scan, 
+   *     ScanMetrics, byte[], RpcControllerFactory )}
    */
   @Deprecated
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName,
