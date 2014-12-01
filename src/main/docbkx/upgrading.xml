@@ -158,6 +158,16 @@
               be sure to follow the recommendations therein.
             </para>
           </section>
+          <section xml:id="dlr"><title>Distributed Log Replay</title>
+            <para>
+              <xref linkend="distributed.log.replay" /> is off by default in hbase-1.0.
+                Enabling it can make a big difference improving HBase MTTR. Enable this
+                feature if you are doing a clean stop/start when you are upgrading.
+                You cannot rolling upgrade on to this feature (caveat if you are running
+                on a version of hbase in excess of hbase-0.98.4 -- see
+                <link xlink:href="https://issues.apache.org/jira/browse/HBASE-12577">HBASE-12577 Disable distributed log replay by default</link> for more).
+            </para>
+          </section>
         </section>
         <section xml:id="upgrade1.0.rolling.upgrade">
           <title>Rolling upgrade from 0.98.x to HBase 1.0.0</title>
