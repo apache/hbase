@@ -1445,8 +1445,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         entries.get(0).getKey().getEncodedRegionName().toStringUtf8());
       RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
       List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
-      // when tag is enabled, we need tag replay edits with log sequence number
-      boolean needAddReplayTag = (HFile.getFormatVersion(regionServer.conf) >= 3);
       for (WALEntry entry : entries) {
         if (regionServer.nonceManager != null) {
           long nonceGroup = entry.getKey().hasNonceGroup()
@@ -1457,7 +1455,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         Pair<HLogKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
           new Pair<HLogKey, WALEdit>();
         List<HLogSplitter.MutationReplay> edits = HLogSplitter.getMutationsFromWALEntry(entry,
-          cells, walEntry, needAddReplayTag);
+          cells, walEntry);
         if (coprocessorHost != null) {
           // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
           // KeyValue.

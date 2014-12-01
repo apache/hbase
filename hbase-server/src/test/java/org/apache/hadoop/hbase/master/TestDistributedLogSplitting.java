@@ -1186,7 +1186,6 @@ public class TestDistributedLogSplitting {
     LOG.info("testSameVersionUpdatesRecovery");
     conf.setLong("hbase.regionserver.hlog.blocksize", 15 * 1024);
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    conf.setInt("hfile.format.version", 3);
     startCluster(NUM_RS);
     final AtomicLong sequenceId = new AtomicLong(100);
     final int NUM_REGIONS_TO_CREATE = 40;
@@ -1278,11 +1277,10 @@ public class TestDistributedLogSplitting {
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 30 * 1024);
     conf.setInt("hbase.hstore.compactionThreshold", 3);
-    conf.setInt("hfile.format.version", 3);
     startCluster(NUM_RS);
     final AtomicLong sequenceId = new AtomicLong(100);
     final int NUM_REGIONS_TO_CREATE = 40;
-    final int NUM_LOG_LINES = 1000;
+    final int NUM_LOG_LINES = 2000;
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
     master.balanceSwitch(false);

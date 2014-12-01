@@ -1906,34 +1906,6 @@ public class HLogSplitter {
     public final long nonce;
   }
 
- /**
-  * Tag original sequence number for each edit to be replayed
-  * @param seqId
-  * @param cell
-  */
-  private static Cell tagReplayLogSequenceNumber(long seqId, Cell cell) {
-    // Tag puts with original sequence number if there is no LOG_REPLAY_TAG yet
-    boolean needAddRecoveryTag = true;
-    if (cell.getTagsLength() > 0) {
-      Tag tmpTag = Tag.getTag(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength(),
-        TagType.LOG_REPLAY_TAG_TYPE);
-      if (tmpTag != null) {
-        // found an existing log replay tag so reuse it
-        needAddRecoveryTag = false;
-      }
-    }
-    if (needAddRecoveryTag) {
-      List<Tag> newTags = new ArrayList<Tag>();
-      Tag replayTag = new Tag(TagType.LOG_REPLAY_TAG_TYPE, Bytes.toBytes(seqId));
-      newTags.add(replayTag);
-      if (cell.getTagsLength() > 0) {
-        newTags.addAll(Tag.asList(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength()));
-      }
-      return new TagRewriteCell(cell, Tag.fromList(newTags));
-    }
-    return cell;
-  }
-
   /**
    * This function is used to construct mutations from a WALEntry. It also reconstructs HLogKey &
    * WALEdit from the passed in WALEntry
@@ -1941,12 +1913,11 @@ public class HLogSplitter {
    * @param cells
    * @param logEntry pair of HLogKey and WALEdit instance stores HLogKey and WALEdit instances
    *          extracted from the passed in WALEntry.
-   * @param addLogReplayTag
    * @return list of Pair<MutationType, Mutation> to be replayed
    * @throws IOException
    */
   public static List<MutationReplay> getMutationsFromWALEntry(WALEntry entry, CellScanner cells,
-      Pair<HLogKey, WALEdit> logEntry, boolean addLogReplayTag) throws IOException {
+      Pair<HLogKey, WALEdit> logEntry) throws IOException {
 
     if (entry == null) {
       // return an empty array
@@ -1993,11 +1964,7 @@ public class HLogSplitter {
       if (CellUtil.isDelete(cell)) {
         ((Delete) m).addDeleteMarker(cell);
       } else {
-        Cell tmpNewCell = cell;
-        if (addLogReplayTag) {
-          tmpNewCell = tagReplayLogSequenceNumber(replaySeqId, cell);
-        }
-        ((Put) m).add(tmpNewCell);
+        ((Put) m).add(cell);
       }
       previousCell = cell;
     }
