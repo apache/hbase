@@ -125,8 +125,14 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   private RegionReplicaRackCostFunction regionReplicaRackCostFunction;
 
   @Override
-  public void setConf(Configuration conf) {
+  public void onConfigurationChange(Configuration conf) {
+    setConf(conf);
+  }
+
+  @Override
+  public synchronized void setConf(Configuration conf) {
     super.setConf(conf);
+    LOG.info("loading config");
 
     maxSteps = conf.getInt(MAX_STEPS_KEY, maxSteps);
 
@@ -135,15 +141,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
 
-    localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
+    if (localityCandidateGenerator == null) {
+      localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
+    }
     localityCost = new LocalityCostFunction(conf, services);
 
-    candidateGenerators = new CandidateGenerator[] {
-      new RandomCandidateGenerator(),
-      new LoadCandidateGenerator(),
-      localityCandidateGenerator,
-      new RegionReplicaRackCandidateGenerator(),
-    };
+    if (candidateGenerators == null) {
+      candidateGenerators = new CandidateGenerator[] {
+          new RandomCandidateGenerator(),
+          new LoadCandidateGenerator(),
+          localityCandidateGenerator,
+          new RegionReplicaRackCandidateGenerator(),
+      };
+    }
 
     regionLoadFunctions = new CostFromRegionLoadFunction[] {
       new ReadRequestCostFunction(conf),

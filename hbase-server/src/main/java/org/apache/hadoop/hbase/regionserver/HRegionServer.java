@@ -442,7 +442,7 @@ public class HRegionServer extends HasThread implements
    * Configuration manager is used to register/deregister and notify the configuration observers
    * when the regionserver is notified that there was a change in the on disk configs.
    */
-  private final ConfigurationManager configurationManager;
+  protected final ConfigurationManager configurationManager;
 
   /**
    * Starts a HRegionServer at the default location.

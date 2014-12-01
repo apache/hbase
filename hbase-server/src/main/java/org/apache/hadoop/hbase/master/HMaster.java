@@ -660,6 +660,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
+    configurationManager.registerObserver(this.balancer);
     initialized = true;
     // clear the dead servers with same host name and port of online server because we are not
     // removing dead server with same hostname and port of rs which is trying to check in before
