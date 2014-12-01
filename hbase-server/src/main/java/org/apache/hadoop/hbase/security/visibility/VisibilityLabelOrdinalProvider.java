@@ -28,4 +28,11 @@ public interface VisibilityLabelOrdinalProvider {
    *         existing label.
    */
   public int getLabelOrdinal(String label);
+
+  /**
+   * Returns the string associated with the ordinal. Not be used in MR.
+   * @param ordinal representing the visibility label's ordinal
+   * @return label associated with the string, null if not found
+   */
+  public String getLabel(int ordinal);
 }

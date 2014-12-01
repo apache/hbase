@@ -29,8 +29,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
@@ -174,6 +174,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
    * @return The label having the given ordinal. Returns <code>null</code> when no label exist in
    *         the system with given ordinal
    */
+  @Override
   public String getLabel(int ordinal) {
     this.lock.readLock().lock();
     try {

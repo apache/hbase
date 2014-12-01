@@ -39,12 +39,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -597,5 +598,70 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       }
     }
     return matchFound;
+  }
+
+  @Override
+  public byte[] encodeVisibilityForReplication(final List<Tag> tags, final Byte serializationFormat)
+      throws IOException {
+    if (tags.size() > 0
+        && (serializationFormat == null ||
+        serializationFormat == SORTED_ORDINAL_SERIALIZATION_FORMAT)) {
+      return createModifiedVisExpression(tags);
+    }
+    return null;
+  }
+
+  /**
+   * @param tags
+   *          - all the visibility tags associated with the current Cell
+   * @return - the modified visibility expression as byte[]
+   */
+  private byte[] createModifiedVisExpression(final List<Tag> tags)
+      throws IOException {
+    StringBuilder visibilityString = new StringBuilder();
+    for (Tag tag : tags) {
+      if (tag.getType() == TagType.VISIBILITY_TAG_TYPE) {
+        if (visibilityString.length() != 0) {
+          visibilityString.append(VisibilityConstants.CLOSED_PARAN).append(
+              VisibilityConstants.OR_OPERATOR);
+        }
+        int offset = tag.getTagOffset();
+        int endOffset = offset + tag.getTagLength();
+        boolean expressionStart = true;
+        while (offset < endOffset) {
+          Pair<Integer, Integer> result = StreamUtils.readRawVarint32(tag.getBuffer(), offset);
+          int currLabelOrdinal = result.getFirst();
+          if (currLabelOrdinal < 0) {
+            int temp = -currLabelOrdinal;
+            String label = this.labelsCache.getLabel(temp);
+            if (expressionStart) {
+              // Quote every label in case of unicode characters if present
+              visibilityString.append(VisibilityConstants.OPEN_PARAN)
+                  .append(VisibilityConstants.NOT_OPERATOR).append(CellVisibility.quote(label));
+            } else {
+              visibilityString.append(VisibilityConstants.AND_OPERATOR)
+                  .append(VisibilityConstants.NOT_OPERATOR).append(CellVisibility.quote(label));
+            }
+          } else {
+            String label = this.labelsCache.getLabel(currLabelOrdinal);
+            if (expressionStart) {
+              visibilityString.append(VisibilityConstants.OPEN_PARAN).append(
+                  CellVisibility.quote(label));
+            } else {
+              visibilityString.append(VisibilityConstants.AND_OPERATOR).append(
+                  CellVisibility.quote(label));
+            }
+          }
+          expressionStart = false;
+          offset += result.getSecond();
+        }
+      }
+    }
+    if (visibilityString.length() != 0) {
+      visibilityString.append(VisibilityConstants.CLOSED_PARAN);
+      // Return the string formed as byte[]
+      return Bytes.toBytes(visibilityString.toString());
+    }
+    return null;
   }
 }

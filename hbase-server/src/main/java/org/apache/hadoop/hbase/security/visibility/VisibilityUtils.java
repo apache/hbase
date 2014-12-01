@@ -28,19 +28,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -220,6 +220,39 @@ public class VisibilityUtils {
           serializationFormat = tag.getBuffer()[tag.getTagOffset()];
         } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
           tags.add(tag);
+        }
+      }
+    }
+    return serializationFormat;
+  }
+
+  /**
+   * Extracts and partitions the visibility tags and nonVisibility Tags
+   *
+   * @param cell - the cell for which we would extract and partition the
+   * visibility and non visibility tags
+   * @param visTags
+   *          - all the visibilty tags of type TagType.VISIBILITY_TAG_TYPE would
+   *          be added to this list
+   * @param nonVisTags - all the non visibility tags would be added to this list
+   * @return - the serailization format of the tag. Can be null if no tags are found or
+   * if there is no visibility tag found
+   */
+  public static Byte extractAndPartitionTags(Cell cell, List<Tag> visTags,
+      List<Tag> nonVisTags) {
+    Byte serializationFormat = null;
+    if (cell.getTagsLength() > 0) {
+      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+      while (tagsIterator.hasNext()) {
+        Tag tag = tagsIterator.next();
+        if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
+          serializationFormat = tag.getBuffer()[tag.getTagOffset()];
+        } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
+          visTags.add(tag);
+        } else {
+          // ignore string encoded visibility expressions, will be added in replication handling
+          nonVisTags.add(tag);
         }
       }
     }

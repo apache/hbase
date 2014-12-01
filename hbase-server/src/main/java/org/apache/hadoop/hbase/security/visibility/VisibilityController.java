@@ -32,14 +32,13 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterAndRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionServerObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
@@ -91,12 +91,15 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
@@ -133,6 +136,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   static {
     RESERVED_VIS_TAG_TYPES.add(TagType.VISIBILITY_TAG_TYPE);
     RESERVED_VIS_TAG_TYPES.add(TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE);
+    RESERVED_VIS_TAG_TYPES.add(TagType.STRING_VIS_TAG_TYPE);
   }
 
   @Override
@@ -143,14 +147,13 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         + " is required to persist visibility labels. Consider setting " + HFile.FORMAT_VERSION_KEY
         + " accordingly.");
     }
-    if (env instanceof RegionServerCoprocessorEnvironment) {
-      throw new RuntimeException(
-          "Visibility controller should not be configured as " +
-          "'hbase.coprocessor.regionserver.classes'.");
-    }
 
-    if (env instanceof RegionCoprocessorEnvironment) {
-      // VisibilityLabelService to be instantiated only with Region Observer.
+    if (env instanceof RegionServerCoprocessorEnvironment) {
+      throw new RuntimeException("Visibility controller should not be configured as "
+          + "'hbase.coprocessor.regionserver.classes'.");
+    }
+    // Do not create for master CPs
+    if (!(env instanceof MasterCoprocessorEnvironment)) {
       visibilityLabelService = VisibilityLabelServiceManager.getInstance()
           .getVisibilityLabelService(this.conf);
     }
@@ -281,12 +284,24 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         continue;
       }
       boolean sanityFailure = false;
+      boolean modifiedTagFound = false;
+      Pair<Boolean, Tag> pair = new Pair<Boolean, Tag>(false, null);
       for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-        if (!checkForReservedVisibilityTagPresence(cellScanner.current())) {
+        pair = checkForReservedVisibilityTagPresence(cellScanner.current(), pair);
+        if (!pair.getFirst()) {
           miniBatchOp.setOperationStatus(i, new OperationStatus(SANITY_CHECK_FAILURE,
               "Mutation contains cell with reserved type tag"));
           sanityFailure = true;
           break;
+        } else {
+          // Indicates that the cell has a the tag which was modified in the src replication cluster
+          Tag tag = pair.getSecond();
+          if (cellVisibility == null && tag != null) {
+            // May need to store only the first one
+            cellVisibility = new CellVisibility(Bytes.toString(tag.getBuffer(), tag.getTagOffset(),
+                tag.getTagLength()));
+            modifiedTagFound = true;
+          }
         }
       }
       if (!sanityFailure) {
@@ -313,6 +328,10 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
               Cell cell = cellScanner.current();
               List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
                   cell.getTagsLength());
+              if (modifiedTagFound) {
+                // Rewrite the tags by removing the modified tags.
+                removeReplicationVisibilityTag(tags);
+              }
               tags.addAll(visibilityTags);
               Cell updatedCell = new TagRewriteCell(cell, Tag.fromList(tags));
               updatedCells.add(updatedCell);
@@ -380,12 +399,80 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     ctx.bypass();
   }
 
-  // Checks whether cell contains any tag with type as VISIBILITY_TAG_TYPE.
-  // This tag type is reserved and should not be explicitly set by user.
-  private boolean checkForReservedVisibilityTagPresence(Cell cell) throws IOException {
+  /**
+   * Checks whether cell contains any tag with type as VISIBILITY_TAG_TYPE. This
+   * tag type is reserved and should not be explicitly set by user.
+   *
+   * @param cell
+   *          - the cell under consideration
+   * @param pair - an optional pair of type <Boolean, Tag> which would be reused
+   *               if already set and new one will be created if null is passed
+   * @return a pair<Boolean, Tag> - if the boolean is false then it indicates
+   *         that the cell has a RESERVERD_VIS_TAG and with boolean as true, not
+   *         null tag indicates that a string modified tag was found.
+   */
+  private Pair<Boolean, Tag> checkForReservedVisibilityTagPresence(Cell cell,
+      Pair<Boolean, Tag> pair) throws IOException {
+    if (pair == null) {
+      pair = new Pair<Boolean, Tag>(false, null);
+    } else {
+      pair.setFirst(false);
+      pair.setSecond(null);
+    }
     // Bypass this check when the operation is done by a system/super user.
     // This is done because, while Replication, the Cells coming to the peer cluster with reserved
     // typed tags and this is fine and should get added to the peer cluster table
+    if (isSystemOrSuperUser()) {
+      // Does the cell contain special tag which indicates that the replicated
+      // cell visiblilty tags
+      // have been modified
+      Tag modifiedTag = null;
+      if (cell.getTagsLength() > 0) {
+        Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(),
+            cell.getTagsOffset(), cell.getTagsLength());
+        while (tagsIterator.hasNext()) {
+          Tag tag = tagsIterator.next();
+          if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
+            modifiedTag = tag;
+            break;
+          }
+        }
+      }
+      pair.setFirst(true);
+      pair.setSecond(modifiedTag);
+      return pair;
+    }
+    if (cell.getTagsLength() > 0) {
+      Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+      while (tagsItr.hasNext()) {
+        if (RESERVED_VIS_TAG_TYPES.contains(tagsItr.next().getType())) {
+          return pair;
+        }
+      }
+    }
+    pair.setFirst(true);
+    return pair;
+  }
+
+  /**
+   * Checks whether cell contains any tag with type as VISIBILITY_TAG_TYPE. This
+   * tag type is reserved and should not be explicitly set by user. There are
+   * two versions of this method one that accepts pair and other without pair.
+   * In case of preAppend and preIncrement the additional operations are not
+   * needed like checking for STRING_VIS_TAG_TYPE and hence the API without pair
+   * could be used.
+   *
+   * @param cell
+   * @return
+   * @throws IOException
+   */
+  private boolean checkForReservedVisibilityTagPresence(Cell cell) throws IOException {
+    // Bypass this check when the operation is done by a system/super user.
+    // This is done because, while Replication, the Cells coming to the peer
+    // cluster with reserved
+    // typed tags and this is fine and should get added to the peer cluster
+    // table
     if (isSystemOrSuperUser()) {
       return true;
     }
@@ -399,6 +486,16 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       }
     }
     return true;
+  }
+
+  private void removeReplicationVisibilityTag(List<Tag> tags) throws IOException {
+    Iterator<Tag> iterator = tags.iterator();
+    while (iterator.hasNext()) {
+      Tag tag = iterator.next();
+      if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
+        iterator.remove();
+      }
+    }
   }
 
   @Override
@@ -822,6 +919,35 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     @Override
     public Cell transformCell(Cell v) {
       return v;
+    }
+  }
+
+  /**
+   * A RegionServerObserver impl that provides the custom
+   * VisibilityReplicationEndpoint. This class should be configured as the
+   * 'hbase.coprocessor.regionserver.classes' for the visibility tags to be
+   * replicated as string.  The value for the configuration should be
+   * 'org.apache.hadoop.hbase.security.visibility.VisibilityController$VisibilityReplication'.
+   */
+  public static class VisibilityReplication extends BaseRegionServerObserver {
+    private Configuration conf;
+    private VisibilityLabelService visibilityLabelService;
+
+    @Override
+    public void start(CoprocessorEnvironment env) throws IOException {
+      this.conf = env.getConfiguration();
+      visibilityLabelService = VisibilityLabelServiceManager.getInstance()
+          .getVisibilityLabelService(this.conf);
+    }
+
+    @Override
+    public void stop(CoprocessorEnvironment env) throws IOException {
+    }
+
+    @Override
+    public ReplicationEndpoint postCreateReplicationEndPoint(
+        ObserverContext<RegionServerCoprocessorEnvironment> ctx, ReplicationEndpoint endpoint) {
+      return new VisibilityReplicationEndpoint(endpoint, visibilityLabelService);
     }
   }
 }
