@@ -20,10 +20,11 @@ package org.apache.hadoop.hbase.security.visibility;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 
@@ -139,4 +140,24 @@ public interface VisibilityLabelService extends Configurable {
    */
   boolean matchVisibility(List<Tag> putVisTags, Byte putVisTagFormat, List<Tag> deleteVisTags,
       Byte deleteVisTagFormat) throws IOException;
+
+  /**
+   * Provides a way to modify the visibility tags of type {@link TagType}
+   * .VISIBILITY_TAG_TYPE, that are part of the cell created from the WALEdits
+   * that are prepared for replication while calling
+   * {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint}
+   * .replicate().
+   * {@link org.apache.hadoop.hbase.security.visibility.VisibilityReplicationEndpoint}
+   * calls this API to provide an opportunity to modify the visibility tags
+   * before replicating.
+   *
+   * @param visTags
+   *          the visibility tags associated with the cell
+   * @param serializationFormat
+   *          the serialization format associated with the tag
+   * @return the modified visibility expression in the form of byte[]
+   * @throws IOException
+   */
+  byte[] encodeVisibilityForReplication(final List<Tag> visTags,
+      final Byte serializationFormat) throws IOException;
 }
