@@ -773,8 +773,8 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   public void setRecoveryMode(boolean isForInitialization) throws IOException {
     synchronized(this) {
       if (this.isDrainingDone) {
-        // when there is no outstanding splitlogtask after master start up, we already have up to 
-        // date recovery mode
+        // when there is no outstanding splitlogtask after master start up, we already have up to date
+        // recovery mode
         return;
       }
     }
@@ -866,10 +866,12 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     boolean dlr =
         conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
           HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    int version = conf.getInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed log replay=" + dlr);
+      LOG.debug("Distributed log replay=" + dlr + ", " + HFile.FORMAT_VERSION_KEY + "=" + version);
     }
-    return dlr;
+    // For distributed log replay, hfile version must be 3 at least; we need tag support.
+    return dlr && (version >= 3);
   }
 
   private boolean resubmit(ServerName serverName, String path, int version) {

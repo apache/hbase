@@ -746,7 +746,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
         c.getQualifierArray(), c.getQualifierOffset(), (int) c.getQualifierLength(), 
         c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(), c.getValueOffset(), 
         c.getValueLength(), c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
-    this.seqId = c.getSequenceId();
   }
 
   /**
@@ -962,8 +961,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     checkForTagsLength(tagsLength);
     // Allocate right-sized byte array.
     int keyLength = (int) getKeyDataStructureSize(rlength, flength, qlength);
-    byte[] bytes = new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength,
-      tagsLength)];
+    byte [] bytes =
+        new byte[(int) getKeyValueDataStructureSize(rlength, flength, qlength, vlength, tagsLength)];
     // Write key, value and key row length.
     int pos = 0;
     pos = Bytes.putInt(bytes, pos, keyLength);
@@ -2493,8 +2492,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * Compare two keys assuming that the first n bytes are the same.
      * @param commonPrefix How many bytes are the same.
      */
-    int compareIgnoringPrefix(int commonPrefix, byte[] left, int loffset, int llength,
-        byte[] right, int roffset, int rlength
+    int compareIgnoringPrefix(
+      int commonPrefix, byte[] left, int loffset, int llength, byte[] right, int roffset, int rlength
     );
   }
 

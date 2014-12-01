@@ -92,9 +92,8 @@ public class DefaultCompactor extends Compactor {
           smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
           cleanSeqId = true;
         }
-        
         writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
-            true, fd.maxTagsLength > 0);
+            fd.maxMVCCReadpoint >= smallestReadPoint, fd.maxTagsLength > 0);
         boolean finished = performCompaction(scanner, writer, smallestReadPoint, cleanSeqId);
         if (!finished) {
           writer.close();
