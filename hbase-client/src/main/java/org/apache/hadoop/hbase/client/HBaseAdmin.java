@@ -128,7 +128,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -3718,16 +3717,6 @@ public class HBaseAdmin implements Admin {
   @Override
   public CoprocessorRpcChannel coprocessorService(ServerName sn) {
     return new RegionServerCoprocessorRpcChannel(connection, sn);
-  }
-
-  @Override
-  public void updateMasterConfiguration() throws IOException {
-    try {
-      this.connection.getMaster().updateMasterConfiguration(null,
-        UpdateMasterConfigurationRequest.getDefaultInstance());
-    } catch (ServiceException e) {
-      throw ProtobufUtil.getRemoteException(e);
-    }
   }
 
   @Override

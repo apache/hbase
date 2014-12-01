@@ -135,19 +135,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     numRegionLoadsToRemember = conf.getInt(KEEP_REGION_LOADS, numRegionLoadsToRemember);
 
-    if (localityCandidateGenerator == null) {
-      localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
-    }
+    localityCandidateGenerator = new LocalityBasedCandidateGenerator(services);
     localityCost = new LocalityCostFunction(conf, services);
 
-    if (candidateGenerators == null) {
-      candidateGenerators = new CandidateGenerator[] {
-          new RandomCandidateGenerator(),
-          new LoadCandidateGenerator(),
-          localityCandidateGenerator,
-          new RegionReplicaRackCandidateGenerator(),
-      };
-    }
+    candidateGenerators = new CandidateGenerator[] {
+      new RandomCandidateGenerator(),
+      new LoadCandidateGenerator(),
+      localityCandidateGenerator,
+      new RegionReplicaRackCandidateGenerator(),
+    };
 
     regionLoadFunctions = new CostFromRegionLoadFunction[] {
       new ReadRequestCostFunction(conf),

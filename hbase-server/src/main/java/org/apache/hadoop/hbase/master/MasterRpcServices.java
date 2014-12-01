@@ -144,7 +144,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -264,14 +263,6 @@ public class MasterRpcServices extends RSRpcServices
       RegionServerStatusService.BlockingInterface.class));
     bssi.addAll(super.getServices());
     return bssi;
-  }
-  
-  @Override
-  public UpdateMasterConfigurationResponse updateMasterConfiguration(RpcController controller,
-      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest
-      request) throws ServiceException {
-    master.updateConfiguration();
-    return UpdateMasterConfigurationResponse.getDefaultInstance();
   }
 
   @Override
