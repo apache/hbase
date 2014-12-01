@@ -5,13 +5,21 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Parser {
   private Configuration conf;
@@ -65,8 +73,7 @@ public class Parser {
 
   public HColumnDescriptor parseFamily(String name, JSONObject family)
           throws JSONException {
-    HColumnDescriptor columnDesc = new HColumnDescriptor();
-    columnDesc.setName(Bytes.toBytes(name));
+    HColumnDescriptor columnDesc = new HColumnDescriptor(name);
     Iterator<String> keys = family.keys();
     while (keys.hasNext()) {
       String key = keys.next();
@@ -81,17 +88,17 @@ public class Parser {
     long id = region.getLong("id");
     byte[] startKey = Bytes.toBytes(region.getString("start_key"));
     byte[] endKey = Bytes.toBytes(region.getString("end_key"));
-    Map<String, Map<HServerAddress, Integer>> peers = parsePeers(region
+    Map<String, Map<ServerName, Integer>> peers = parsePeers(region
             .getJSONObject("peers"));
     Map<String, InetSocketAddress[]> favoredNodesMap = parseFavoredNodesMap(region
             .getJSONObject("favored_nodes"));
-    return new HRegionInfo(table, startKey, endKey, false, id, peers,
+    return new HRegionInfo(table.getTableName(), startKey, endKey, false, id, peers,
             favoredNodesMap);
   }
 
-  public Map<String, Map<HServerAddress, Integer>> parsePeers(JSONObject peersJson)
+  public Map<String, Map<ServerName, Integer>> parsePeers(JSONObject peersJson)
           throws JSONException {
-    Map<String, Map<HServerAddress, Integer>> peers = new LinkedHashMap<>();
+    Map<String, Map<ServerName, Integer>> peers = new LinkedHashMap<>();
     Iterator<String> keys = peersJson.keys();
     while (keys.hasNext()) {
       String cellName = keys.next();
@@ -101,13 +108,13 @@ public class Parser {
     return peers;
   }
 
-  public Map<HServerAddress, Integer> parsePeersWithRank(JSONArray peersJson)
+  public Map<ServerName, Integer> parsePeersWithRank(JSONArray peersJson)
           throws JSONException {
-    Map<HServerAddress, Integer> peers = new LinkedHashMap<HServerAddress, Integer>();
+    Map<ServerName, Integer> peers = new LinkedHashMap<>();
     for (int i = 0; i < peersJson.length(); ++i) {
       String peer = peersJson.getString(i);
       int colonIndex = peer.lastIndexOf(':');
-      peers.put(new HServerAddress(peer.substring(0, colonIndex)),
+      peers.put(ServerName.valueOf(peer.substring(0, colonIndex)),
               Integer.valueOf(peer.substring(colonIndex + 1)));
     }
     return peers;

@@ -12,7 +12,6 @@ import org.junit.runner.RunWith;
  import org.slf4j.Logger;
  import org.slf4j.LoggerFactory;
  import org.apache.hadoop.hbase.HConstants;
- import org.apache.hadoop.hbase.HRegionInfo;
  import org.apache.hadoop.hbase.consensus.client.QuorumClient;
  import org.junit.After;
  import org.junit.Before;
@@ -29,7 +28,7 @@ import java.util.concurrent.ThreadPoolExecutor;
      TestBasicPeerFailure.class);
    private static int QUORUM_SIZE = 5;
    private static int QUORUM_MAJORITY = 3;
-   private static HRegionInfo regionInfo;
+   private static QuorumInfo quorumInfo;
    private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
    private static QuorumClient client;
    private static volatile int transactionNums = 0;
@@ -46,12 +45,12 @@ import java.util.concurrent.ThreadPoolExecutor;
      RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
      RAFT_TEST_UTIL.setUsePeristentLog(true);
      RAFT_TEST_UTIL.assertAllServersRunning();
-     regionInfo = RAFT_TEST_UTIL.initializePeers();
-     RAFT_TEST_UTIL.addQuorum(regionInfo, null);
-     RAFT_TEST_UTIL.startQuorum(regionInfo);
-     client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+     quorumInfo = RAFT_TEST_UTIL.initializePeers();
+     RAFT_TEST_UTIL.addQuorum(quorumInfo, null);
+     RAFT_TEST_UTIL.startQuorum(quorumInfo);
+     client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
 
-     loader = new ReplicationLoadForUnitTest(regionInfo, client, RAFT_TEST_UTIL,
+     loader = new ReplicationLoadForUnitTest(quorumInfo, client, RAFT_TEST_UTIL,
        QUORUM_SIZE, QUORUM_MAJORITY);
 
      transactionNums = 0;
@@ -104,7 +103,7 @@ import java.util.concurrent.ThreadPoolExecutor;
      // Get the new config
      QuorumInfo newConfig = this.createNewQuorumInfo(newPorts);
 
-     LOG.debug("Old Config " + regionInfo.getPeersWithRank());
+     LOG.debug("Old Config " + quorumInfo.getPeersWithRank());
 
      LOG.debug("New Config " + newConfig.getPeersWithRank());
 
@@ -116,7 +115,7 @@ import java.util.concurrent.ThreadPoolExecutor;
      // same time.
      if (numPeersToChange >= this.QUORUM_MAJORITY) {
       Assert.assertFalse(client.changeQuorum(newConfig));
-      newConfig = regionInfo.getQuorumInfo();
+      newConfig = quorumInfo;
      } else {
        Assert.assertTrue(client.changeQuorum(newConfig));
        // Tell the quorum client about the new config
@@ -157,7 +156,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
        // Start the raft protocol on the server
        server.getHandler().getRaftQuorumContext(
-         regionInfo.getQuorumInfo().getQuorumName()).initializeAll(
+         quorumInfo.getQuorumName()).initializeAll(
          HConstants.UNDEFINED_TERM_INDEX);
      }
    }
@@ -167,14 +166,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 
      // Make a copy
 
-     QuorumInfo info = new QuorumInfo(regionInfo.getQuorumInfo());
+     QuorumInfo info = new QuorumInfo(quorumInfo);
      boolean leaderReplaced = false;
      List<HServerAddress> peerToReplaceAddr;
      peerToReplaceAddr = new ArrayList<>();
      List<Pair<HServerAddress, Integer>> newServers = new ArrayList<>();
 
      Map<HServerAddress, Integer> currentPeers =
-       info.getPeers().get(HRegionInfo.LOCAL_DC_KEY);
+       info.getPeers().get(QuorumInfo.LOCAL_DC_KEY);
 
      HServerAddress oldPeer, newPeer;
      for (int newServerPort : ports) {
@@ -202,12 +201,12 @@ import java.util.concurrent.ThreadPoolExecutor;
      }
 
      // Make sure we actually removed the required number of peers
-     Assert.assertTrue(info.getPeers().get(HRegionInfo.LOCAL_DC_KEY).size() ==
+     Assert.assertTrue(info.getPeers().get(QuorumInfo.LOCAL_DC_KEY).size() ==
        QUORUM_SIZE - ports.length);
 
      for (Pair<HServerAddress, Integer> server : newServers) {
        // Update the config
-       info.getPeers().get(HRegionInfo.LOCAL_DC_KEY).put(server.getFirst(),
+       info.getPeers().get(QuorumInfo.LOCAL_DC_KEY).put(server.getFirst(),
                server.getSecond());
      }
      info.refresh();

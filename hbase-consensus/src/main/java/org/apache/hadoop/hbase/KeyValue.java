@@ -42,8 +42,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
-import com.google.common.primitives.Longs;
-
 /**
  * An HBase Key/Value.
  *
@@ -82,6 +80,7 @@ public final class KeyValue implements Writable, HeapSize, Cloneable {
    * Colon character in UTF-8
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
+  public static final int DELIMITER = ',';
 
   public static final byte[] COLUMN_FAMILY_DELIM_ARRAY =
     new byte[]{COLUMN_FAMILY_DELIMITER};
@@ -1931,11 +1930,11 @@ public final class KeyValue implements Writable, HeapSize, Cloneable {
       int lmetaOffsetPlusDelimiter = loffset + metalength;
       int leftFarDelimiter = getDelimiterInReverse(left,
           lmetaOffsetPlusDelimiter,
-          llength - metalength, HRegionInfo.DELIMITER);
+          llength - metalength, DELIMITER);
       int rmetaOffsetPlusDelimiter = roffset + metalength;
       int rightFarDelimiter = getDelimiterInReverse(right,
           rmetaOffsetPlusDelimiter, rlength - metalength,
-          HRegionInfo.DELIMITER);
+          DELIMITER);
       if (leftFarDelimiter < 0 && rightFarDelimiter >= 0) {
         // Nothing between .META. and regionid.  Its first key.
         return -1;
@@ -1986,9 +1985,9 @@ public final class KeyValue implements Writable, HeapSize, Cloneable {
       //        LOG.info("META " + Bytes.toString(left, loffset, llength) +
       //          "---" + Bytes.toString(right, roffset, rlength));
       int leftDelimiter = getDelimiter(left, loffset, llength,
-          HRegionInfo.DELIMITER);
+          DELIMITER);
       int rightDelimiter = getDelimiter(right, roffset, rlength,
-          HRegionInfo.DELIMITER);
+          DELIMITER);
       if (leftDelimiter < 0 && rightDelimiter >= 0) {
         // Nothing between .META. and regionid.  Its first key.
         return -1;
@@ -2008,10 +2007,10 @@ public final class KeyValue implements Writable, HeapSize, Cloneable {
       leftDelimiter++;
       rightDelimiter++;
       int leftFarDelimiter = getRequiredDelimiterInReverse(left, leftDelimiter,
-          llength - (leftDelimiter - loffset), HRegionInfo.DELIMITER);
+          llength - (leftDelimiter - loffset), DELIMITER);
       int rightFarDelimiter = getRequiredDelimiterInReverse(right,
           rightDelimiter, rlength - (rightDelimiter - roffset),
-          HRegionInfo.DELIMITER);
+          DELIMITER);
       // Now compare middlesection of row.
       result = super.compareRows(left, leftDelimiter,
           leftFarDelimiter - leftDelimiter, right, rightDelimiter,

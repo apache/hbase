@@ -9,10 +9,10 @@ import com.facebook.swift.service.ThriftClientManager;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.consensus.quorum.AggregateTimer;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RepeatingTimer;
 import org.apache.hadoop.hbase.consensus.quorum.TimeoutEventHandler;
 import org.apache.hadoop.hbase.consensus.quorum.Timer;
@@ -51,19 +51,15 @@ public class RaftUtil {
     }
   }
 
-  public static HRegionInfo createDummyRegionInfo(String region) {
-    return createDummyRegionInfo(region, null);
+  public static QuorumInfo createDummyQuorumInfo(String region) {
+    return createDummyQuorumInfo(region, null);
   }
 
-  public static HRegionInfo createDummyRegionInfo(String region, Map<HServerAddress,
+  public static QuorumInfo createDummyQuorumInfo(String region, Map<HServerAddress,
     Integer> peers) {
-    HRegionInfo regionInfo = new HRegionInfo(new HTableDescriptor(region),
-        Bytes.toBytes("00000000"), Bytes.toBytes("ffffffff"), false, 1000,
-        null, null);
     Map<String, Map<HServerAddress, Integer>> peerMap = new HashMap<>();
-    peerMap.put(HRegionInfo.LOCAL_DC_KEY, peers);
-    regionInfo.setPeers(peerMap);
-    return regionInfo;
+    peerMap.put(QuorumInfo.LOCAL_DC_KEY, peers);
+    return new QuorumInfo(peerMap, region);
   }
 
   public static <T> String listToString(List<T> list) {

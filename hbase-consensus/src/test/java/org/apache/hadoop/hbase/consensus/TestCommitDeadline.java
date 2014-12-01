@@ -2,9 +2,9 @@ package org.apache.hadoop.hbase.consensus;
 
 import com.google.common.base.Stopwatch;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
 import org.apache.hadoop.hbase.consensus.client.QuorumThriftClientAgent;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,7 +19,7 @@ public class TestCommitDeadline {
   private static int NUM_REPLICAS = 3;
   private static int QUORUM_SIZE = 2;
 
-  private HRegionInfo regionInfo;
+  private QuorumInfo quorumInfo;
   private QuorumClient client;
   private QuorumThriftClientAgent leader;
 
@@ -34,14 +34,14 @@ public class TestCommitDeadline {
 
     // A successful commit should complete within the set deadline.
     Stopwatch stopwatch = new Stopwatch(); //Stopwatch.createStarted();
-    assertTrue(leader.replicateCommit(regionInfo.getEncodedName(),
+    assertTrue(leader.replicateCommit(quorumInfo.getQuorumName(),
             RAFT_TEST_UTIL.generateTransaction(1024)) > 0);
     assertTrue("The commit should complete within the deadline",
             stopwatch.elapsedTime(TimeUnit.MILLISECONDS) < deadline);
 
     // Stop the majority of the replicas. The leader should remain leader.
     for (int i = 0; i < QUORUM_SIZE; i++) {
-      RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, i + 1);
+      RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, i + 1);
     }
     leader = client.getLeader();
     assertNotNull(leader);
@@ -50,7 +50,7 @@ public class TestCommitDeadline {
     stopwatch.reset().start();
     Exception expectedException = null;
     try {
-      leader.replicateCommit(regionInfo.getEncodedName(),
+      leader.replicateCommit(quorumInfo.getQuorumName(),
               RAFT_TEST_UTIL.generateTransaction(1024));
     } catch (Exception e) {
       expectedException = e;
@@ -69,13 +69,13 @@ public class TestCommitDeadline {
     RAFT_TEST_UTIL.assertAllServersRunning();
     RAFT_TEST_UTIL.setUsePeristentLog(true);
 
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
 
-    RAFT_TEST_UTIL.addQuorum(regionInfo,
-            RAFT_TEST_UTIL.getScratchSetup(NUM_REPLICAS));
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
+    RAFT_TEST_UTIL.addQuorum(quorumInfo,
+      RAFT_TEST_UTIL.getScratchSetup(NUM_REPLICAS));
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
 
-    client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+    client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
   }
 
   @After

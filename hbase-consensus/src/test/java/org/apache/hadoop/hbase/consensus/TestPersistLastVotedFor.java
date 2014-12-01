@@ -1,8 +1,8 @@
 package org.apache.hadoop.hbase.consensus;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
 import org.apache.hadoop.hbase.consensus.protocol.ConsensusHost;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.server.LocalConsensusServer;
 import org.junit.After;
@@ -17,7 +17,7 @@ import java.io.IOException;
 public class TestPersistLastVotedFor {
   private static int QUORUM_SIZE = 3;
   private static int QUORUM_MAJORITY = 2;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private static QuorumClient client;
   private static volatile int transactionNum = 0;
@@ -29,13 +29,13 @@ public class TestPersistLastVotedFor {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.setUsePeristentLog(true);
     RAFT_TEST_UTIL.assertAllServersRunning();
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
 
-    client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+    client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
     transactionNum = 0;
-    loader = new ReplicationLoadForUnitTest(regionInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
+    loader = new ReplicationLoadForUnitTest(quorumInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
       QUORUM_MAJORITY);
   }
 
@@ -52,7 +52,7 @@ public class TestPersistLastVotedFor {
     loader.stopReplicationLoad();
 
     RaftQuorumContext leader =
-      RAFT_TEST_UTIL.getLeaderQuorumContext(regionInfo);
+      RAFT_TEST_UTIL.getLeaderQuorumContext(quorumInfo);
     // What is the current lastVotedFor
     ConsensusHost initialLastVotedFor = leader.getLastVotedFor();
 
@@ -61,7 +61,7 @@ public class TestPersistLastVotedFor {
       RAFT_TEST_UTIL.stopLocalConsensusServer(leader.getMyAddress());
 
     RaftQuorumContext newQuorumContext =
-      RAFT_TEST_UTIL.restartLocalConsensusServer(consensusServer, regionInfo,
+      RAFT_TEST_UTIL.restartLocalConsensusServer(consensusServer, quorumInfo,
       leader.getMyAddress());
     ConsensusHost lastVotedForAsReadFromDisk =
       newQuorumContext.getLastVotedFor();
@@ -73,7 +73,7 @@ public class TestPersistLastVotedFor {
     consensusServer =
       RAFT_TEST_UTIL.stopLocalConsensusServer(newQuorumContext.getMyAddress());
     RaftQuorumContext newQuorumContextAfterSecondRestart =
-      RAFT_TEST_UTIL.restartLocalConsensusServer(consensusServer, regionInfo,
+      RAFT_TEST_UTIL.restartLocalConsensusServer(consensusServer, quorumInfo,
         newQuorumContext.getMyAddress());
 
     ConsensusHost emptyLastVotedFor =

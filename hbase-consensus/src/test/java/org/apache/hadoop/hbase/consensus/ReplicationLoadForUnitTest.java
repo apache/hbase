@@ -1,7 +1,7 @@
 package org.apache.hadoop.hbase.consensus;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -14,16 +14,16 @@ public class ReplicationLoadForUnitTest {
   private volatile boolean stop = false;
 
   private RaftTestUtil util;
-  private HRegionInfo regionInfo;
+  private QuorumInfo quorumInfo;
   private QuorumClient client;
   private int quorumSize = 5;
   private int majoritySize = 3;
 
   private volatile long sleepTime = 50;
 
-  public ReplicationLoadForUnitTest(HRegionInfo regionInfo, QuorumClient client,
+  public ReplicationLoadForUnitTest(QuorumInfo quorumInfo, QuorumClient client,
                                     RaftTestUtil util, int quorumSize, int majoritySize) {
-    this.regionInfo = regionInfo;
+    this.quorumInfo = quorumInfo;
     this.client = client;
     this.util = util;
     this.quorumSize = quorumSize;
@@ -34,11 +34,11 @@ public class ReplicationLoadForUnitTest {
   public int makeProgress(long sleepTime, int prevLoad) throws InterruptedException {
     System.out.println("Let the client load fly for " + sleepTime + " ms");
     Thread.sleep(sleepTime);
-    util.printStatusOfQuorum(regionInfo);
+    util.printStatusOfQuorum(quorumInfo);
 
     while (transactionNums <= prevLoad) {
       System.out.println("No Progress ! prev " + prevLoad + " current " + transactionNums);
-      util.printStatusOfQuorum(regionInfo);
+      util.printStatusOfQuorum(quorumInfo);
       Thread.sleep(sleepTime);
     }
 
@@ -59,7 +59,7 @@ public class ReplicationLoadForUnitTest {
               client.replicateCommits(RaftTestUtil.generateTransaction(1 * 1024));
               if ((++transactionNums) % progressInterval == 0) {
                 System.out.println("Sent " + transactionNums + " transactions to the quorum");
-                util.printStatusOfQuorum(regionInfo);
+                util.printStatusOfQuorum(quorumInfo);
               }
 
             } catch (Exception e) {

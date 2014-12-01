@@ -3,16 +3,14 @@ package org.apache.hadoop.hbase.consensus.fsm;
 import com.google.common.util.concurrent.SettableFuture;
 import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.consensus.RaftTestUtil;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.raft.states.RaftStateType;
 import org.apache.hadoop.hbase.consensus.server.LocalConsensusServer;
-import org.apache.hadoop.hbase.consensus.server.peer.AbstractPeer;
 import org.apache.hadoop.hbase.consensus.server.peer.PeerServer;
-import org.apache.hadoop.hbase.consensus.server.peer.states.PeerServerStateType;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -40,7 +38,7 @@ public class TestAsyncStatesInRaftStateMachine {
 
   private static final int QUORUM_SIZE = 5;
   private static final int QUORUM_MAJORITY = 3;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private Configuration conf;
   private QuorumClient client;
@@ -100,10 +98,10 @@ public class TestAsyncStatesInRaftStateMachine {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.assertAllServersRunning();
     RAFT_TEST_UTIL.setUsePeristentLog(true);
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, null);
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
-    client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, null);
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
+    client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
   }
 
   @After
@@ -129,7 +127,7 @@ public class TestAsyncStatesInRaftStateMachine {
       // the peer with the lowest timeout will try to write the
       // votedFor and should get stuck.
       RaftQuorumContext r = RAFT_TEST_UTIL.getRaftQuorumContextByRank(
-        regionInfo, 5);
+        quorumInfo, 5);
       assertEquals(RaftStateType.SEND_VOTE_REQUEST,
         r.getCurrentRaftState().getStateType());
       throw e;
@@ -143,26 +141,26 @@ public class TestAsyncStatesInRaftStateMachine {
     testReplicatingCommits(1);
 
     RaftQuorumContext leader =
-      RAFT_TEST_UTIL.getLeaderQuorumContext(regionInfo);
+      RAFT_TEST_UTIL.getLeaderQuorumContext(quorumInfo);
 
     // Stop the peer with rank = 1.
     RaftQuorumContext peer =
-      RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 1);
+      RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 1);
 
     PeerServer peerServer = leader.getPeerServers().get(peer.getMyAddress());
     LocalConsensusServer peerConsensusServer =
-      RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, 1);
+      RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, 1);
 
     // Replicate some other commits, the dead server will miss out.
     testReplicatingCommits(10);
 
     // Restart that dead server.
     RAFT_TEST_UTIL.restartLocalConsensusServer(peerConsensusServer,
-      regionInfo, peer.getMyAddress());
+      quorumInfo, peer.getMyAddress());
 
     // Wait for dead server to come back
     long start = System.currentTimeMillis();
-    while (!RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_SIZE, true) &&
+    while (!RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_SIZE, true) &&
       !blockOnHandleAppendResponse) {
       Thread.sleep(1000);
       // stop if we waited for more than 10 seconds
@@ -218,17 +216,17 @@ public class TestAsyncStatesInRaftStateMachine {
 
   private void testReplicatingCommits(int numCommits) {
     try {
-      RAFT_TEST_UTIL.waitForLeader(regionInfo);
+      RAFT_TEST_UTIL.waitForLeader(quorumInfo);
       RaftQuorumContext leader =
-        RAFT_TEST_UTIL.getLeaderQuorumContext(regionInfo);
+        RAFT_TEST_UTIL.getLeaderQuorumContext(quorumInfo);
       Assert.assertNotNull(leader);
 
-      RAFT_TEST_UTIL.dumpStates(regionInfo);
+      RAFT_TEST_UTIL.dumpStates(quorumInfo);
       for (int i = 0; i < numCommits; i++) {
         client.replicateCommits(Arrays.asList(generateTestingWALEdit()));
 
       }
-      RAFT_TEST_UTIL.dumpStates(regionInfo);
+      RAFT_TEST_UTIL.dumpStates(quorumInfo);
     } catch (Exception e) {
       LOG.error("Errors: ", e);
       fail("Unexpected exception: " + e);

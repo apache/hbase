@@ -1,7 +1,7 @@
 package org.apache.hadoop.hbase.consensus;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.server.LocalConsensusServer;
 import org.junit.After;
@@ -19,7 +19,7 @@ import static junit.framework.Assert.assertEquals;
 public class TestBasicLeaderElection {
 
   private static int QUORUM_SIZE = 5;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private final List<int[]> mockLogs;
 
@@ -28,9 +28,9 @@ public class TestBasicLeaderElection {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.setUsePeristentLog(true);
     RAFT_TEST_UTIL.assertAllServersRunning();
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, mockLogs);
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, mockLogs);
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
   }
 
   @After
@@ -62,13 +62,14 @@ public class TestBasicLeaderElection {
       } catch (InterruptedException e) {}
 
       for (LocalConsensusServer server : RAFT_TEST_UTIL.getServers().values()) {
-        RaftQuorumContext c = server.getHandler().getRaftQuorumContext(regionInfo.getEncodedName());
+        RaftQuorumContext c = server.getHandler().getRaftQuorumContext(
+          quorumInfo.getQuorumName());
         if (c.isLeader()) {
           leaderCnt++;
         }
       }
     }
-    while(!RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_SIZE) && leaderCnt != 1);
+    while(!RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_SIZE) && leaderCnt != 1);
     assertEquals("There should be only one leader", 1, leaderCnt);
   }
 }

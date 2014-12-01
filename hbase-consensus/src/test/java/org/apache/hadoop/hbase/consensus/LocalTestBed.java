@@ -2,12 +2,12 @@ package org.apache.hadoop.hbase.consensus;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.consensus.exceptions.LeaderNotReadyException;
 import org.apache.hadoop.hbase.consensus.exceptions.NewLeaderException;
 import org.apache.hadoop.hbase.consensus.quorum.QuorumAgent;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.server.InstrumentedConsensusServiceImpl;
 import org.apache.hadoop.hbase.consensus.server.LocalConsensusServer;
@@ -37,7 +37,7 @@ public class LocalTestBed {
   private static int nextPortNumber;
 
   private Configuration conf;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private final List<int[]> mockLogs;
   private boolean checkLeaderCount = false;
@@ -53,14 +53,14 @@ public class LocalTestBed {
   public final long BigBang = System.currentTimeMillis();
 
   public static class HealthChecker extends Thread {
-    private HRegionInfo   regionInfo;
+    private QuorumInfo   quorumInfo;
     private RaftTestUtil  testUtil;
     private boolean       autoRestartThriftServer;
     private long          checkInterval;
     private AtomicBoolean time2die = new AtomicBoolean(false);
 
-    public HealthChecker(HRegionInfo regionInfo, RaftTestUtil testUtil, boolean autoRestartThriftServer, long checkInterval) {
-      this.regionInfo = regionInfo;
+    public HealthChecker(QuorumInfo quorumInfo, RaftTestUtil testUtil, boolean autoRestartThriftServer, long checkInterval) {
+      this.quorumInfo = quorumInfo;
       this.testUtil = testUtil;
       this.autoRestartThriftServer = autoRestartThriftServer;
       this.checkInterval = checkInterval;
@@ -74,7 +74,7 @@ public class LocalTestBed {
           long now = System.currentTimeMillis();
           if (now >= previousCheckTime + checkInterval) {
             LOG.info("checking the health of all quorum members ......");
-            testUtil.checkHealth(regionInfo, autoRestartThriftServer);
+            testUtil.checkHealth(quorumInfo, autoRestartThriftServer);
             previousCheckTime = now = System.currentTimeMillis();
           }
           long sleepTime = previousCheckTime + checkInterval - now;
@@ -219,9 +219,9 @@ public class LocalTestBed {
       Set<LinkState> currentHiccups = new HashSet<LinkState>();
       Set<LinkState> allHiccups = new HashSet<LinkState>(); // include future hiccups
       Set<LinkState> nohiccups = new HashSet<LinkState>();
-      for (HServerAddress dst : regionInfo.getPeersWithRank().keySet()) {
+      for (HServerAddress dst : quorumInfo.getPeersWithRank().keySet()) {
         dst = RaftUtil.getLocalConsensusAddress(dst);
-        for (HServerAddress src : regionInfo.getPeersWithRank().keySet()) {
+        for (HServerAddress src : quorumInfo.getPeersWithRank().keySet()) {
           src = RaftUtil.getLocalConsensusAddress(src);
           if (src.equals(dst)) {
             continue;
@@ -273,11 +273,11 @@ public class LocalTestBed {
         }
       }
 
-      for (HServerAddress dst : regionInfo.getPeersWithRank().keySet()) {
+      for (HServerAddress dst : quorumInfo.getPeersWithRank().keySet()) {
         dst = RaftUtil.getLocalConsensusAddress(dst);
         InstrumentedConsensusServiceImpl service = (InstrumentedConsensusServiceImpl)
           (servers.get(dst.getHostAddressWithPort()).getHandler());
-        for (HServerAddress src : regionInfo.getPeersWithRank().keySet()) {
+        for (HServerAddress src : quorumInfo.getPeersWithRank().keySet()) {
           src = RaftUtil.getLocalConsensusAddress(src);
           if (!src.equals(dst) && !clear) {
             long delay = (long)(prng.nextDouble()*(maxRandomDelay-minRandomDelay) + minRandomDelay);
@@ -698,7 +698,7 @@ public class LocalTestBed {
       LOG.info("Clearing network states ......");
       adversary.getChaos().updateNetworkStates(System.currentTimeMillis(), true);
       LOG.info("-------- Verifying log consistency amongst all quorum members");
-      while (!RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_SIZE, true)) {
+      while (!RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_SIZE, true)) {
         testbed.dumpStates();
         if (testbed.checkLeaderCount()) {
           Assert.assertTrue(testbed.getLeaderCount() < 2);
@@ -732,10 +732,10 @@ public class LocalTestBed {
     RAFT_TEST_UTIL.setUsePeristentLog(usePersistentLog);
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.assertAllServersRunning();
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, mockLogs);
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
-    checker = new HealthChecker(regionInfo, RAFT_TEST_UTIL, autoRestartThriftServer, 30000L);
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, mockLogs);
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
+    checker = new HealthChecker(quorumInfo, RAFT_TEST_UTIL, autoRestartThriftServer, 30000L);
     checker.start();
   }
 
@@ -766,7 +766,7 @@ public class LocalTestBed {
   }
 
   public void dumpStates() {
-    RAFT_TEST_UTIL.dumpStates(regionInfo);
+    RAFT_TEST_UTIL.dumpStates(quorumInfo);
     LOG.info("Total Commit = " + commitSuccessCount.get()+ " successes and " + commitFailureCount.get() + " failures "
         + " with " + getPacketDropCount()  + "(" + getHiccupPacketDropCount() + ") total-dropped (hiccup) packets "
         + " and " + RAFT_TEST_UTIL.getServerRestartCount() + " server restarts "
@@ -801,11 +801,11 @@ public class LocalTestBed {
         }
         agent.syncAppend(edit);
         // Verify all the logs across the majority are the same
-        RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_MAJORITY, false);
+        RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_MAJORITY, false);
         return true;
       } catch (NewLeaderException e) {
         LOG.warn("Got a new leader in the quorum: " + e.getNewLeaderAddress());
-        RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_MAJORITY, false);
+        RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_MAJORITY, false);
       } catch (Exception e) {
         Throwable cause = e;
         while (cause != null) {
@@ -838,7 +838,7 @@ public class LocalTestBed {
     do {
       int leaderCnt = 0;
       for (LocalConsensusServer server : RAFT_TEST_UTIL.getServers().values()) {
-        RaftQuorumContext c = server.getHandler().getRaftQuorumContext(regionInfo.getEncodedName());
+        RaftQuorumContext c = server.getHandler().getRaftQuorumContext(quorumInfo.getQuorumName());
         if (c != null && c.isLeader()) {
           leaderQuorum = c;
           leaderCnt++;
@@ -854,15 +854,13 @@ public class LocalTestBed {
   public int getLeaderCount() {
     int leaderCnt = 0;
     for (LocalConsensusServer server : RAFT_TEST_UTIL.getServers().values()) {
-      RaftQuorumContext c = server.getHandler().getRaftQuorumContext(regionInfo.getEncodedName());
+      RaftQuorumContext c = server.getHandler().getRaftQuorumContext(quorumInfo.getQuorumName());
       if (c != null && c.isLeader()) {
         leaderCnt++;
       }
     }
     return leaderCnt;
   }
-
-
 
   public static void noThrowSleep(long ms) {
     try {
@@ -916,11 +914,11 @@ public class LocalTestBed {
   }
 
   public long getPacketDropCount() {
-    return RAFT_TEST_UTIL.getPacketDropCount(regionInfo);
+    return RAFT_TEST_UTIL.getPacketDropCount(quorumInfo);
   }
 
   public long getHiccupPacketDropCount() {
-    return RAFT_TEST_UTIL.getHiccupPacketDropCount(regionInfo);
+    return RAFT_TEST_UTIL.getHiccupPacketDropCount(quorumInfo);
   }
 
   // shoplifted from http://preshing.com/20111007/how-to-generate-random-timings-for-a-poisson-process/

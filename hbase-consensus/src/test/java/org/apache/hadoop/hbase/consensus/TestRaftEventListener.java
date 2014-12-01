@@ -1,9 +1,8 @@
 package org.apache.hadoop.hbase.consensus;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
-import org.apache.hadoop.hbase.consensus.protocol.EditId;
 import org.apache.hadoop.hbase.consensus.protocol.Payload;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.server.LocalConsensusServer;
 import org.apache.hadoop.hbase.consensus.server.peer.PeerServer;
@@ -12,8 +11,6 @@ import org.apache.hadoop.hbase.regionserver.RaftEventListener;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -26,7 +23,7 @@ public class TestRaftEventListener {
 
   private static int QUORUM_SIZE = 5;
   private static int QUORUM_MAJORITY = 3;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private static QuorumClient client;
   private int transactionNum = 0;
@@ -79,18 +76,18 @@ public class TestRaftEventListener {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.setUsePeristentLog(true);
     RAFT_TEST_UTIL.assertAllServersRunning();
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
-    client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
+    client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
 
     // Register the listener for the highest rank, which is equal to QUORUM_SIZE;
     for (Map.Entry<String, PeerServer> entry :
-        RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, QUORUM_SIZE).getPeerServers().entrySet()) {
+        RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, QUORUM_SIZE).getPeerServers().entrySet()) {
       entry.getValue().registerDataStoreEventListener(listener);
     }
 
-    loader = new ReplicationLoadForUnitTest(regionInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
+    loader = new ReplicationLoadForUnitTest(quorumInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
       QUORUM_MAJORITY);
   }
 
@@ -109,16 +106,16 @@ public class TestRaftEventListener {
     transactionNum = loader.makeProgress(1000, transactionNum);
 
     // Stop the replica whose rank is 4
-    RaftQuorumContext c4 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 4);
+    RaftQuorumContext c4 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 4);
     System.out.println("Stopping one quorum member: " + c4);
-    LocalConsensusServer s4 = RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, 4);
+    LocalConsensusServer s4 = RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, 4);
 
     // Sleep for 1 sec
     transactionNum = loader.makeProgress(2000, transactionNum);
     assertEquals(1, unavailablePeerSet.size());
 
     // Start the replica whose rank is 4
-    RAFT_TEST_UTIL.restartLocalConsensusServer(s4, regionInfo, c4.getMyAddress());
+    RAFT_TEST_UTIL.restartLocalConsensusServer(s4, quorumInfo, c4.getMyAddress());
     System.out.println("Restarted one quorum member: " + c4);
 
     // Sleep for 5 sec

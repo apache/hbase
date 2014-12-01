@@ -1,8 +1,8 @@
 package org.apache.hadoop.hbase.consensus;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.server.LocalConsensusServer;
 import org.junit.After;
@@ -19,7 +19,7 @@ public class TestBasicPeerFailure {
           TestBasicPeerFailure.class);
   private static int QUORUM_SIZE = 5;
   private static int QUORUM_MAJORITY = 3;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private static QuorumClient client;
   private static volatile int transactionNum = 0;
@@ -31,12 +31,12 @@ public class TestBasicPeerFailure {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.setUsePeristentLog(true);
     RAFT_TEST_UTIL.assertAllServersRunning();
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
-    client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
+    client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
     transactionNum = 0;
-    loader = new ReplicationLoadForUnitTest(regionInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
+    loader = new ReplicationLoadForUnitTest(quorumInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
       QUORUM_MAJORITY);
   }
 
@@ -61,7 +61,7 @@ public class TestBasicPeerFailure {
   public void testStepDownOnNoProgress() throws InterruptedException {
     final long sleepTime =
             2 * HConstants.PROGRESS_TIMEOUT_INTERVAL_IN_MILLISECONDS;
-    RaftQuorumContext c5 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 5);
+    RaftQuorumContext c5 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 5);
 
     // Start the client load
     loader.startReplicationLoad(100);
@@ -73,7 +73,7 @@ public class TestBasicPeerFailure {
     // Stop the majority of replicas
     for (int i = 0; i < QUORUM_MAJORITY; i++) {
       System.out.println("Stopping replica with rank " + (i + 1));
-      RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, i + 1);
+      RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, i + 1);
     }
 
     Thread.sleep(2 * HConstants.PROGRESS_TIMEOUT_INTERVAL_IN_MILLISECONDS);
@@ -99,13 +99,13 @@ public class TestBasicPeerFailure {
     transactionNum = loader.makeProgress(sleepTime, transactionNum);
 
     // Get all the quorum contexts from rank 5 to rank 3
-    RaftQuorumContext c5 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 5);
-    RaftQuorumContext c4 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 4);
-    RaftQuorumContext c3 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 3);
+    RaftQuorumContext c5 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 5);
+    RaftQuorumContext c4 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 4);
+    RaftQuorumContext c3 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 3);
 
     // Shutdown 1st quorum member whose rank is 5.
     System.out.println("Stopping one quorum member: " + c5);
-    LocalConsensusServer s5 = RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, 5);
+    LocalConsensusServer s5 = RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, 5);
 
     // Let the traffic fly for a while
     if ((++failureCnt % failureInterval) == 0) {
@@ -115,7 +115,7 @@ public class TestBasicPeerFailure {
 
     // Shutdown 2nd quorum member whose rank 4
     System.out.println("Stopping another quorum member: " + c4);
-    LocalConsensusServer s4 = RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, 4);
+    LocalConsensusServer s4 = RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, 4);
 
     // Let the traffic fly for a while
     if ((++failureCnt % failureInterval) == 0) {
@@ -124,7 +124,7 @@ public class TestBasicPeerFailure {
     }
 
     // Restart the quorum member whose rank is 4
-    c4 = RAFT_TEST_UTIL.restartLocalConsensusServer(s4, regionInfo, c4.getMyAddress());
+    c4 = RAFT_TEST_UTIL.restartLocalConsensusServer(s4, quorumInfo, c4.getMyAddress());
     System.out.println("Restarted one quorum member: " + c4);
 
     // Let the traffic fly for a while
@@ -139,7 +139,7 @@ public class TestBasicPeerFailure {
       transactionNum = loader.makeProgress(sleepTime, transactionNum);
     }
     // Restart the quorum member whose rank is 5
-    c5 = RAFT_TEST_UTIL.restartLocalConsensusServer(s5, regionInfo, c5.getMyAddress());
+    c5 = RAFT_TEST_UTIL.restartLocalConsensusServer(s5, quorumInfo, c5.getMyAddress());
     System.out.println("Restarted another quorum member: " + c5);
 
     // Let the traffic fly for a while
@@ -156,7 +156,7 @@ public class TestBasicPeerFailure {
     loader.slowDownReplicationLoad();
 
     // Verify logs are identical across all the quorum members
-    while (!RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_SIZE)) {
+    while (!RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_SIZE)) {
       Thread.sleep(10 * 1000);
       System.out.println("Verifying logs ....");
       Assert.assertTrue("Rank 5 shall be the leader of the quorum", c5.isLeader());

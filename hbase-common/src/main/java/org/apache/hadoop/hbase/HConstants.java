@@ -1097,7 +1097,12 @@ public final class HConstants {
       600000;
 
   public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
-      "hbase.client.fast.fail.interceptor.impl"; 
+      "hbase.client.fast.fail.interceptor.impl";
+
+  public static final String RMAP_SUBSCRIPTION = "hbase.rmap.subscriptions";
+
+  public static final String HYDRABASE_DCNAMES = "hbase.hydrabase.dcnames";
+  public static final String HYDRABASE_DCNAME = "hbase.hydrabase.dcname";
 
   private HConstants() {
     // Can't be instantiated with this ctor.

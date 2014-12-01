@@ -14,6 +14,9 @@ public class QuorumInfo {
           + Bytes.SIZEOF_BYTE   // Payload type
           + Bytes.SIZEOF_BYTE;  // Payload version
 
+  // For compatability with non-hydrabase mode
+  public static String LOCAL_DC_KEY = "LOCAL_DC_KEY_FOR_NON_HYDRABASE_MODE";
+
   private Map<String, Map<HServerAddress, Integer>> peers = null;
   private Map<HServerAddress, Integer> peersWithRank = null;
   private Set<String> peersAsString = null;

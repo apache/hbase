@@ -19,7 +19,6 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
 import org.apache.hadoop.hbase.consensus.quorum.AggregateTimer;
@@ -321,12 +320,12 @@ public class LocalConsensusServer {
     }
 
     // Set the region with the peers
-    HRegionInfo regionInfo = RaftUtil.createDummyRegionInfo(regionId, peers);
+    QuorumInfo quorumInfo = RaftUtil.createDummyQuorumInfo(regionId, peers);
 
     // Create the RaftQuorumContext
-    RaftQuorumContext context = new RaftQuorumContext(regionInfo.getQuorumInfo(),
+    RaftQuorumContext context = new RaftQuorumContext(quorumInfo,
       configuration, localHost,
-      (regionInfo.getTableDesc().getNameAsString() + "."),
+      (regionId + "."),
       consensusServer.aggregateTimer,
       consensusServer.serialExecutorService,
       consensusServer.execServiceForThriftClients

@@ -1,27 +1,17 @@
 package org.apache.hadoop.hbase.consensus;
 
-import static junit.framework.Assert.fail;
-
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.consensus.client.QuorumClient;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.server.LocalConsensusServer;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +21,7 @@ public class TestBasicSeedCommitIndex {
 
   private static final int QUORUM_SIZE = 5;
   private static final int QUORUM_MAJORITY = 3;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private final long seedIndex = 100;
 
@@ -42,10 +32,10 @@ public class TestBasicSeedCommitIndex {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.assertAllServersRunning();
     RAFT_TEST_UTIL.setUsePeristentLog(true);
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, null);
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, null);
     RAFT_TEST_UTIL.setSeedIndex(seedIndex);
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
 
   }
 
@@ -59,14 +49,14 @@ public class TestBasicSeedCommitIndex {
 
     // Wait for leader
 
-    RaftQuorumContext c5 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 5);
+    RaftQuorumContext c5 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 5);
     while (!c5.isLeader()) {
       Threads.sleep(1000);
     }
 
     // Wait till we purge the seed log file
     int count = 0;
-    List<RaftQuorumContext> peers = RAFT_TEST_UTIL.getQuorumContexts(regionInfo);
+    List<RaftQuorumContext> peers = RAFT_TEST_UTIL.getQuorumContexts(quorumInfo);
 
     while (count != QUORUM_SIZE) {
       Threads.sleep(1000);
@@ -76,7 +66,7 @@ public class TestBasicSeedCommitIndex {
           ++count;
         }
       }
-      RAFT_TEST_UTIL.dumpStates(regionInfo);
+      RAFT_TEST_UTIL.dumpStates(quorumInfo);
     }
 
     // At this point the state should
@@ -87,16 +77,16 @@ public class TestBasicSeedCommitIndex {
     // [rank: 1] ; FOLLOWER ; { Uncommitted [101, 101] }
 
     // Let's stop the leader
-    LocalConsensusServer s5 = RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo,
+    LocalConsensusServer s5 = RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo,
       5);
 
-    RaftQuorumContext c4 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 4);
+    RaftQuorumContext c4 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 4);
 
     while (!c4.isLeader()) {
       Threads.sleep(1000);
     }
 
-    c5 = RAFT_TEST_UTIL.restartLocalConsensusServer(s5, regionInfo,
+    c5 = RAFT_TEST_UTIL.restartLocalConsensusServer(s5, quorumInfo,
       c5.getMyAddress());
 
     while (!c5.isLeader()) {
@@ -105,7 +95,7 @@ public class TestBasicSeedCommitIndex {
 
     // Wait for logs to be verified
     // Verify logs are identical across all the quorum members
-    while (!RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_SIZE)) {
+    while (!RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_SIZE)) {
       Threads.sleep(1000);
       System.out.println("Verifying logs ....");
       Assert

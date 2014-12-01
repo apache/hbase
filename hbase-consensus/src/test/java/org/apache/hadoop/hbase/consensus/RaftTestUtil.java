@@ -7,7 +7,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -181,9 +180,10 @@ public class RaftTestUtil {
 
   /**
    * Creates a new quorum from the given quorum info object.
-   * @param regionInfo
+   * @param quorumInfo The quorum info.
+   * @param mockLogs Mock logs for the quorum members.
    */
-  public void addQuorum(final HRegionInfo regionInfo, List<int[]> mockLogs)
+  public void addQuorum(final QuorumInfo quorumInfo, List<int[]> mockLogs)
           throws IOException {
     int i = 0;
     int[] mockLog;
@@ -192,7 +192,7 @@ public class RaftTestUtil {
       if (mockLogs != null) {
         mockLog = mockLogs.get(i++);
       }
-      addQuorumForServer(server, regionInfo.getQuorumInfo(), mockLog);
+      addQuorumForServer(server, quorumInfo, mockLog);
     }
   }
 
@@ -236,12 +236,12 @@ public class RaftTestUtil {
     return serverRestartCount.get();
   }
 
-  public void checkHealth(HRegionInfo regionInfo, boolean reset) {
+  public void checkHealth(QuorumInfo quorumInfo, boolean reset) {
     for (LocalConsensusServer server : servers.values()) {
       boolean healthy = false;
       LOG.info("Checking the health of ThriftServer for " + server + " ......");
       try {
-        healthy = checkHealth(regionInfo, server);
+        healthy = checkHealth(quorumInfo, server);
       } catch (Exception ex) {
         LOG.error("Failed to check the status for " + server, ex);
       }
@@ -258,7 +258,7 @@ public class RaftTestUtil {
     }
   }
 
-  public boolean checkHealth(HRegionInfo regionInfo, LocalConsensusServer server) throws Exception {
+  public boolean checkHealth(QuorumInfo quorumInfo, LocalConsensusServer server) throws Exception {
     HServerAddress consensusServerAddress = new HServerAddress(LOCAL_HOST,
       server.getThriftServer().getPort());
     int timeout = 5000;
@@ -266,13 +266,13 @@ public class RaftTestUtil {
     QuorumThriftClientAgent agent = new QuorumThriftClientAgent(
         consensusServerAddress.toString(), timeout, timeout, timeout, 3);
     LOG.info("QuorumThriftClientAgent for " + consensusServerAddress + " = " + agent);
-    PeerStatus status = agent.getPeerStatus(regionInfo.getEncodedName());
+    PeerStatus status = agent.getPeerStatus(quorumInfo.getQuorumName());
     LOG.info("PeerStatus for " + consensusServerAddress + ": " + status);
     return status != null;
   }
 
   public RaftQuorumContext restartLocalConsensusServer(LocalConsensusServer server,
-                                                       final HRegionInfo regionInfo,
+                                                       final QuorumInfo quorumInfo,
                                                        final String contextAddress)
 
     throws IOException {
@@ -291,8 +291,8 @@ public class RaftTestUtil {
     conf.setInt(
       HConstants.RAFT_LOG_DELETION_INTERVAL_KEY,
       100);
-    RaftQuorumContext context = createRaftQuorumContext(
-            regionInfo.getQuorumInfo(), conf, consensusServerAddress, server);
+    RaftQuorumContext context = createRaftQuorumContext(quorumInfo, conf,
+      consensusServerAddress, server);
     context.initializeLog();
     context.reseedStartIndex(seedIndex);
     context.startStateMachines();
@@ -300,11 +300,11 @@ public class RaftTestUtil {
     return context;
   }
 
-  public void startQuorum(final HRegionInfo regionInfo)
+  public void startQuorum(final QuorumInfo quorumInfo)
     throws IOException {
     for (LocalConsensusServer server : servers.values()) {
       RaftQuorumContext context =
-        server.getHandler().getRaftQuorumContext(regionInfo.getEncodedName());
+        server.getHandler().getRaftQuorumContext(quorumInfo.getQuorumName());
       context.initializeLog();
       context.reseedStartIndex(seedIndex);
       context.startStateMachines();
@@ -436,13 +436,13 @@ public class RaftTestUtil {
     }
   }
 
-  public void dumpStates(final HRegionInfo info) {
+  public void dumpStates(final QuorumInfo info) {
     LOG.info("---- logs for region " + info + ":");
     List<String> logs = new ArrayList<String>();
     List<Integer> ports = new ArrayList<Integer>();
     for (LocalConsensusServer server : servers.values()) {
       final CommitLogManagerInterface log =
-        server.getHandler().getRaftQuorumContext(info.getEncodedName()).getLogManager();
+        server.getHandler().getRaftQuorumContext(info.getQuorumName()).getLogManager();
       logs.add(log.dumpLogs(-1));
       ports.add(server.getThriftServer().getPort());
     }
@@ -530,7 +530,7 @@ public class RaftTestUtil {
     }
   }
 
-  public HRegionInfo initializePeers() {
+  public QuorumInfo initializePeers() {
     Map<HServerAddress, Integer> peers = new HashMap<>();
     int rank = servers.size();
     for (LocalConsensusServer server : servers.values()) {
@@ -545,19 +545,17 @@ public class RaftTestUtil {
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY).setMaxVersions(Integer.MAX_VALUE);
     table.addFamily(hcd);
 
-    HRegionInfo regionInfo = new HRegionInfo(table, Bytes.toBytes("00000000"),
-      Bytes.toBytes("ffffffff"));
     Map<String, Map<HServerAddress, Integer>> peerMap = new HashMap<>();
-    peerMap.put(HRegionInfo.LOCAL_DC_KEY, peers);
-    regionInfo.setPeers(peerMap);
+    peerMap.put(QuorumInfo.LOCAL_DC_KEY, peers);
 
-    return regionInfo;
+    String quorumName = "dummyTable,123,deadbeef.";
+    return new QuorumInfo(peerMap, quorumName);
   }
 
-  public HRegionInfo resetPeers(HRegionInfo regionInfo, List<int[]> logs) throws Exception {
+  public QuorumInfo resetPeers(QuorumInfo quorumInfo, List<int[]> logs) throws Exception {
 
-    addQuorum(regionInfo, logs);
-    return regionInfo;
+    addQuorum(quorumInfo, logs);
+    return quorumInfo;
   }
 
   public void setSeedIndex(long seedIndex) {
@@ -623,12 +621,12 @@ public class RaftTestUtil {
     return 1;
   }
 
-  public boolean simulatePacketDropForServer(final HRegionInfo regionInfo, int rank,
+  public boolean simulatePacketDropForServer(final QuorumInfo quorumInfo, int rank,
                                              final InstrumentedConsensusServiceImpl.PacketDropStyle style) {
     HServerAddress server = null;
 
-    for (HServerAddress s : regionInfo.getPeersWithRank().keySet()) {
-      if (regionInfo.getPeersWithRank().get(s) == rank) {
+    for (HServerAddress s : quorumInfo.getPeersWithRank().keySet()) {
+      if (quorumInfo.getPeersWithRank().get(s) == rank) {
         server = s;
         break;
       }
@@ -645,9 +643,9 @@ public class RaftTestUtil {
     return true;
   }
 
-  public long getHiccupPacketDropCount(final HRegionInfo regionInfo) {
+  public long getHiccupPacketDropCount(final QuorumInfo quorumInfo) {
     long count = 0;
-    for (HServerAddress server : regionInfo.getPeersWithRank().keySet()) {
+    for (HServerAddress server : quorumInfo.getPeersWithRank().keySet()) {
       InstrumentedConsensusServiceImpl service = (InstrumentedConsensusServiceImpl)
               (servers.get(RaftUtil.getLocalConsensusAddress(server).getHostAddressWithPort()).getHandler());
       count += service.getHiccupPacketDropCount();
@@ -655,9 +653,9 @@ public class RaftTestUtil {
     return count;
   }
 
-  public long getPacketDropCount(final HRegionInfo regionInfo) {
+  public long getPacketDropCount(final QuorumInfo quorumInfo) {
     long count = 0;
-    for (HServerAddress server : regionInfo.getPeersWithRank().keySet()) {
+    for (HServerAddress server : quorumInfo.getPeersWithRank().keySet()) {
       InstrumentedConsensusServiceImpl service = (InstrumentedConsensusServiceImpl)
               (servers.get(RaftUtil.getLocalConsensusAddress(server).getHostAddressWithPort()).getHandler());
       count += service.getPacketDropCount();
@@ -669,28 +667,28 @@ public class RaftTestUtil {
     this.usePersistentLog = usePersistentLog;
   }
 
-  public RaftQuorumContext getRaftQuorumContextByAddress(HRegionInfo regionInfo,
+  public RaftQuorumContext getRaftQuorumContextByAddress(QuorumInfo quorumInfo,
     String address) {
     return getServers().get(address).getHandler()
-      .getRaftQuorumContext(regionInfo.getEncodedName());
+      .getRaftQuorumContext(quorumInfo.getQuorumName());
   }
 
-  public RaftQuorumContext getRaftQuorumContextByRank(HRegionInfo regionInfo, int rank) {
+  public RaftQuorumContext getRaftQuorumContextByRank(QuorumInfo quorumInfo, int rank) {
     String peerAddress = null;
-    for (HServerAddress addr : regionInfo.getPeersWithRank().keySet()) {
-      if (regionInfo.getPeersWithRank().get(addr) == rank) {
+    for (HServerAddress addr : quorumInfo.getPeersWithRank().keySet()) {
+      if (quorumInfo.getPeersWithRank().get(addr) == rank) {
         peerAddress = RaftUtil.getLocalConsensusAddress(addr).getHostAddressWithPort();
       }
     }
 
     return getServers().get(peerAddress).getHandler().
-      getRaftQuorumContext(regionInfo.getEncodedName());
+      getRaftQuorumContext(quorumInfo.getQuorumName());
   }
 
-  public LocalConsensusServer stopLocalConsensusServer(HRegionInfo regionInfo, int rank) {
+  public LocalConsensusServer stopLocalConsensusServer(QuorumInfo quorumInfo, int rank) {
     String peerAddress = null;
-    for (HServerAddress addr : regionInfo.getPeersWithRank().keySet()) {
-      if (regionInfo.getPeersWithRank().get(addr) == rank) {
+    for (HServerAddress addr : quorumInfo.getPeersWithRank().keySet()) {
+      if (quorumInfo.getPeersWithRank().get(addr) == rank) {
         peerAddress = RaftUtil.getLocalConsensusAddress(addr).getHostAddressWithPort();
       }
     }
@@ -705,19 +703,19 @@ public class RaftTestUtil {
     return server;
   }
 
-  public void printStatusOfQuorum(HRegionInfo regionInfo) {
+  public void printStatusOfQuorum(QuorumInfo quorumInfo) {
     System.out.println(" ======= Status Update =========");
     for (LocalConsensusServer server : getServers().values()) {
       RaftQuorumContext context =
-        server.getHandler().getRaftQuorumContext(regionInfo.getEncodedName());
+        server.getHandler().getRaftQuorumContext(quorumInfo.getQuorumName());
       System.out.println(context + " ; " + context.getPaxosState() + " ; " + context.getLogState());
     }
     System.out.println(" ================");
   }
 
   public List<RaftQuorumContext> getQuorumContexts(
-    final HRegionInfo regionInfo) {
-      Set<HServerAddress> replias = regionInfo.getPeersWithRank().keySet();
+    final QuorumInfo quorumInfo) {
+      Set<HServerAddress> replias = quorumInfo.getPeersWithRank().keySet();
       List<RaftQuorumContext> contexts = new ArrayList<>(replias.size());
 
       for (HServerAddress address : replias) {
@@ -725,16 +723,16 @@ public class RaftTestUtil {
                 RaftUtil.getLocalConsensusAddress(address).
                         getHostAddressWithPort();
         if (getServers().containsKey(consensusServerAddress)) {
-          contexts.add(getRaftQuorumContextByAddress(regionInfo,
+          contexts.add(getRaftQuorumContextByAddress(quorumInfo,
                   consensusServerAddress));
         }
       }
       return contexts;
     }
 
-  public RaftQuorumContext getLeaderQuorumContext(HRegionInfo regionInfo) {
+  public RaftQuorumContext getLeaderQuorumContext(QuorumInfo quorumInfo) {
     RaftQuorumContext leader = null;
-    for (RaftQuorumContext context : getQuorumContexts(regionInfo)) {
+    for (RaftQuorumContext context : getQuorumContexts(quorumInfo)) {
       if (context.isLeader()) {
         leader = context;
       }
@@ -742,9 +740,9 @@ public class RaftTestUtil {
     return leader;
   }
 
-  public void waitForLeader(final HRegionInfo regionInfo)
+  public void waitForLeader(final QuorumInfo quorumInfo)
           throws InterruptedException {
-    while (getLeaderQuorumContext(regionInfo) == null) {
+    while (getLeaderQuorumContext(quorumInfo) == null) {
       Thread.sleep(500);
     }
   }

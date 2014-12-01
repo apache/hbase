@@ -118,6 +118,13 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol</artifactId>
     </dependency>
+    <!-- TODO enable when hbase-consensus is independent of hbase-client
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-consensus</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    -->
     <!-- General dependencies -->
     <dependency>
       <groupId>commons-codec</groupId>

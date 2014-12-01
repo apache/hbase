@@ -1,6 +1,5 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Histogram;
@@ -30,10 +29,11 @@ public abstract class AbstractWAL {
     PercentileMetric.HISTOGRAM_MINVALUE_DEFAULT,
     PercentileMetric.HISTOGRAM_MAXVALUE_DEFAULT);
 
+  /*
   public abstract long append(HRegionInfo info, byte [] tableName, WALEdit edits,
                      final long now)
     throws IOException, ExecutionException, InterruptedException;
-
+  */
   public abstract long startMemStoreFlush(final byte[] regionName);
   public abstract void completeMemStoreFlush(final byte[] regionName, final byte[] tableName,
                                     final long logSeqId, final boolean isMetaRegion);

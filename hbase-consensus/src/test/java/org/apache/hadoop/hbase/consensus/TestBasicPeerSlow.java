@@ -1,8 +1,8 @@
 package org.apache.hadoop.hbase.consensus;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.server.InstrumentedConsensusServiceImpl;
 import org.junit.After;
@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class TestBasicPeerSlow {
   private static int QUORUM_SIZE = 5;
   private static int QUORUM_MAJORITY = 3;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private static QuorumClient client;
   private static volatile int transactionNums = 0;
@@ -38,10 +38,10 @@ public class TestBasicPeerSlow {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.setUsePeristentLog(true);
     RAFT_TEST_UTIL.assertAllServersRunning();
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, RaftTestUtil.getScratchSetup(QUORUM_SIZE));
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
-    client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, RaftTestUtil.getScratchSetup(QUORUM_SIZE));
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
+    client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
 
     transactionNums = 0;
     stop = false;
@@ -122,8 +122,8 @@ public class TestBasicPeerSlow {
       InstrumentedConsensusServiceImpl.PacketDropStyle style =
         InstrumentedConsensusServiceImpl.PacketDropStyle.values()[event[1]];
 
-      RaftQuorumContext context = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, rank);
-      RAFT_TEST_UTIL.simulatePacketDropForServer(regionInfo, rank, style);
+      RaftQuorumContext context = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, rank);
+      RAFT_TEST_UTIL.simulatePacketDropForServer(quorumInfo, rank, style);
 
       System.out.println("Set package drop for the quorum: " + context + " as " + style);
     }
@@ -148,8 +148,8 @@ public class TestBasicPeerSlow {
       InstrumentedConsensusServiceImpl.PacketDropStyle nodrop =
         InstrumentedConsensusServiceImpl.PacketDropStyle.NONE;
 
-      RaftQuorumContext context = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, rank);
-      RAFT_TEST_UTIL.simulatePacketDropForServer(regionInfo, rank, nodrop);
+      RaftQuorumContext context = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, rank);
+      RAFT_TEST_UTIL.simulatePacketDropForServer(quorumInfo, rank, nodrop);
 
       System.out.println("Reset package drop for the quorum: " + context + " as " + nodrop);
     }
@@ -161,7 +161,7 @@ public class TestBasicPeerSlow {
     makeProgress(sleepTime, transactionNums, true);
 
     // Verify logs are identical across all the quorum members
-    while (!RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_SIZE)) {
+    while (!RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_SIZE)) {
       Thread.sleep(5 * 1000);
       clientTrafficFrequency = clientTrafficFrequency * 10;
       System.out.println("Verifying logs ....");
@@ -177,13 +177,13 @@ public class TestBasicPeerSlow {
     throws InterruptedException {
     System.out.println("Let the client load fly for " + sleepTime + " ms");
     Thread.sleep(sleepTime);
-    RAFT_TEST_UTIL.printStatusOfQuorum(regionInfo);
+    RAFT_TEST_UTIL.printStatusOfQuorum(quorumInfo);
 
     int i = 0;
     while ((waitForProgress && transactionNums <= prevLoad) ||
       (!waitForProgress && (++i <= 1))) {
       System.out.println("No Progress ! prev " + prevLoad + " current " + transactionNums);
-      RAFT_TEST_UTIL.printStatusOfQuorum(regionInfo);
+      RAFT_TEST_UTIL.printStatusOfQuorum(quorumInfo);
       Thread.sleep(sleepTime);
     }
 
@@ -206,7 +206,7 @@ public class TestBasicPeerSlow {
               if ((++transactionNums) % progressInterval == 0) {
                 System.out.println("Sent " + transactionNums +
                   "transactions to the quorum");
-                RAFT_TEST_UTIL.printStatusOfQuorum(regionInfo);
+                RAFT_TEST_UTIL.printStatusOfQuorum(quorumInfo);
               }
             } catch (Exception e) {
               System.out.print(String.format("Cannot replicate transaction" + e));

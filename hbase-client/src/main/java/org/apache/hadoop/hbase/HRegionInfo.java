@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -118,6 +120,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   private static final int MAX_REPLICA_ID = 0xFFFF;
   public static final int DEFAULT_REPLICA_ID = 0;
+
+  // Peers of the Consensus Quorum
+  // private QuorumInfo quorumInfo;
   /**
    * Does region name contain its encoded name?
    * @param regionName region name
@@ -284,6 +289,16 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
                      final byte[] endKey, final boolean split, final long regionid)
   throws IllegalArgumentException {
     this(tableName, startKey, endKey, split, regionid, DEFAULT_REPLICA_ID);
+  }
+
+  public HRegionInfo(final TableName tableName, final byte[] startKey,
+                     final byte[] endKey, final boolean split, final long regionid,
+                     final Map<String, Map<ServerName, Integer>> peers,
+                     final Map<String, InetSocketAddress[]> favoredNodesMap)
+    throws IllegalArgumentException {
+    this(tableName, startKey, endKey, split, regionid);
+    // TODO @gauravm
+    // Set QuorumInfo
   }
 
   /**

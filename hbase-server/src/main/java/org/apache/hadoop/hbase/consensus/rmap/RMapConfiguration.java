@@ -2,14 +2,12 @@ package org.apache.hadoop.hbase.consensus.rmap;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +16,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -217,62 +213,6 @@ public class RMapConfiguration {
       this.uri = uri;
       this.regions = regions;
       this.signature = signature;
-    }
-
-    /**
-     * Return the quorum size in the RMap.
-     * @return
-     */
-    public int getQuorumSize() {
-      if (regions.size() == 0) {
-        return 0;
-      }
-      return regions.get(0).getQuorumInfo().getQuorumSize();
-    }
-
-    /**
-     * Return the list of regions that are served by the specified server.
-     * @param hServerAddress
-     * @return
-     */
-    public List<HRegionInfo> getRegionsForServer(HServerAddress hServerAddress) {
-      List<HRegionInfo> ret = new ArrayList<HRegionInfo>();
-      for (HRegionInfo region: regions) {
-        if (region.getPeersWithRank().containsKey(hServerAddress)) {
-          ret.add(region);
-        }
-      }
-      return ret;
-    }
-
-    /**
-     * Returns the set of servers that are hosting any of the regions in the RMap.
-     * @return
-     */
-    public Set<HServerAddress> getAllServers() {
-      Set<HServerAddress> ret = new HashSet<>();
-      for (HRegionInfo region: regions) {
-        ret.addAll(region.getPeersWithRank().keySet());
-      }
-      return ret;
-    }
-
-    /**
-     * Create a customized RMap for test use only!
-     *
-     * @param uri
-     * @param regions
-     * @param signature
-     * @return
-     */
-    public RMap createCustomizedRMap(URI uri,
-                                     List<HRegionInfo> regions,
-                                     String signature) {
-      return new RMapConfiguration.RMap(
-          uri == null ? this.uri : uri,
-          regions == null ? this.regions : regions,
-          signature == null ? this.signature : signature
-      );
     }
 
     @Override

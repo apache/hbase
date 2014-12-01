@@ -1,23 +1,21 @@
 package org.apache.hadoop.hbase.consensus;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.consensus.server.LocalConsensusServer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class TestBasicCommit {
   private static int QUORUM_SIZE = 3;
   private static int QUORUM_MAJORITY = 2;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private static QuorumClient client;
   private static volatile int transactionNum = 0;
@@ -31,12 +29,12 @@ public class TestBasicCommit {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.setUsePeristentLog(true);
     RAFT_TEST_UTIL.assertAllServersRunning();
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
-    client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
+    client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
     transactionNum = 0;
-    loader = new ReplicationLoadForUnitTest(regionInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
+    loader = new ReplicationLoadForUnitTest(quorumInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
       QUORUM_MAJORITY);
   }
 
@@ -59,17 +57,17 @@ public class TestBasicCommit {
     transactionNum = loader.makeProgress(sleepTime, transactionNum);
 
     // Get all the quorum contexts from rank 3 to rank 1
-    RaftQuorumContext c3 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 3);
-    RaftQuorumContext c2 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 2);
-    RaftQuorumContext c1 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 1);
+    RaftQuorumContext c3 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 3);
+    RaftQuorumContext c2 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 2);
+    RaftQuorumContext c1 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 1);
 
     // Shutdown 1st quorum member whose rank is 1.
     System.out.println("Stopping one quorum member: " + c1);
-    LocalConsensusServer s1 = RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, 1);
+    LocalConsensusServer s1 = RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, 1);
 
     // Shutdown 2nd quorum member whose rank 2
     System.out.println("Stopping another quorum member: " + c2);
-    LocalConsensusServer s2 = RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, 2);
+    LocalConsensusServer s2 = RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, 2);
 
     // Sleep for some time to make sure the leader is stuck in retry
 
@@ -77,18 +75,18 @@ public class TestBasicCommit {
 
     // Shutdown 3rd quorum member whose rank 3
     System.out.println("Stopping another quorum member: " + c3);
-    LocalConsensusServer s3 = RAFT_TEST_UTIL.stopLocalConsensusServer(regionInfo, 3);
+    LocalConsensusServer s3 = RAFT_TEST_UTIL.stopLocalConsensusServer(quorumInfo, 3);
 
     // Restart 3
-    c3 = RAFT_TEST_UTIL.restartLocalConsensusServer(s3, regionInfo, c3.getMyAddress());
+    c3 = RAFT_TEST_UTIL.restartLocalConsensusServer(s3, quorumInfo, c3.getMyAddress());
     System.out.println("Restarted one quorum member: " + c3);
 
     // Restart 2
-    c2 = RAFT_TEST_UTIL.restartLocalConsensusServer(s2, regionInfo, c2.getMyAddress());
+    c2 = RAFT_TEST_UTIL.restartLocalConsensusServer(s2, quorumInfo, c2.getMyAddress());
     System.out.println("Restarted one quorum member: " + c2);
 
     // Restart 1
-    c1 = RAFT_TEST_UTIL.restartLocalConsensusServer(s1, regionInfo, c1.getMyAddress());
+    c1 = RAFT_TEST_UTIL.restartLocalConsensusServer(s1, quorumInfo, c1.getMyAddress());
     System.out.println("Restarted one quorum member: " + c1);
 
     // Let the traffic fly for a while
@@ -106,7 +104,7 @@ public class TestBasicCommit {
     loader.slowDownReplicationLoad();
 
     // Verify logs are identical across all the quorum members
-    while (!RAFT_TEST_UTIL.verifyLogs(regionInfo.getQuorumInfo(), QUORUM_SIZE)) {
+    while (!RAFT_TEST_UTIL.verifyLogs(quorumInfo, QUORUM_SIZE)) {
       Thread.sleep(10 * 1000);
       System.out.println("Verifying logs ....");
       Assert.assertTrue("Rank 3 shall be the leader of the quorum", c3.isLeader());

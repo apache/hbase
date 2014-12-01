@@ -69,7 +69,7 @@ public class QuorumClient {
 
   protected QuorumClient(String regionId, final Configuration conf,
                          ExecutorService pool) throws IOException {
-    this(RaftUtil.createDummyRegionInfo(regionId).getQuorumInfo(), conf, pool);
+    this(RaftUtil.createDummyQuorumInfo(regionId), conf, pool);
   }
 
   public synchronized long replicateCommits(List<WALEdit> txns)

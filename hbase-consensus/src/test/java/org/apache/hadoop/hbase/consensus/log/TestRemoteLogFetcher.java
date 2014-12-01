@@ -1,10 +1,10 @@
 package org.apache.hadoop.hbase.consensus.log;
 
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.consensus.RaftTestUtil;
 import org.apache.hadoop.hbase.consensus.ReplicationLoadForUnitTest;
 import org.apache.hadoop.hbase.consensus.client.FetchTask;
 import org.apache.hadoop.hbase.consensus.client.QuorumClient;
+import org.apache.hadoop.hbase.consensus.quorum.QuorumInfo;
 import org.apache.hadoop.hbase.consensus.quorum.RaftQuorumContext;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -27,7 +27,7 @@ public class TestRemoteLogFetcher {
   private static final Logger LOG = LoggerFactory.getLogger(TestRemoteLogFetcher.class);
   private static int QUORUM_SIZE = 3;
   private static int QUORUM_MAJORITY = 2;
-  private static HRegionInfo regionInfo;
+  private static QuorumInfo quorumInfo;
   private static RaftTestUtil RAFT_TEST_UTIL = new RaftTestUtil();
   private static QuorumClient client;
   private static volatile int transactionNum = 0;
@@ -39,12 +39,12 @@ public class TestRemoteLogFetcher {
     RAFT_TEST_UTIL.createRaftCluster(QUORUM_SIZE);
     RAFT_TEST_UTIL.setUsePeristentLog(true);
     RAFT_TEST_UTIL.assertAllServersRunning();
-    regionInfo = RAFT_TEST_UTIL.initializePeers();
-    RAFT_TEST_UTIL.addQuorum(regionInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
-    RAFT_TEST_UTIL.startQuorum(regionInfo);
-    client = RAFT_TEST_UTIL.getQuorumClient(regionInfo.getQuorumInfo());
+    quorumInfo = RAFT_TEST_UTIL.initializePeers();
+    RAFT_TEST_UTIL.addQuorum(quorumInfo, RAFT_TEST_UTIL.getScratchSetup(QUORUM_SIZE));
+    RAFT_TEST_UTIL.startQuorum(quorumInfo);
+    client = RAFT_TEST_UTIL.getQuorumClient(quorumInfo);
     transactionNum = 0;
-    loader = new ReplicationLoadForUnitTest(regionInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
+    loader = new ReplicationLoadForUnitTest(quorumInfo, client, RAFT_TEST_UTIL, QUORUM_SIZE,
         QUORUM_MAJORITY);
   }
 
@@ -55,9 +55,9 @@ public class TestRemoteLogFetcher {
 
   @Test(timeout=60000)
   public void testLogFileStatusRetrieval() throws Exception {
-    RaftQuorumContext c3 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 3);
-    RaftQuorumContext c2 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 2);
-    RaftQuorumContext c1 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(regionInfo, 1);
+    RaftQuorumContext c3 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 3);
+    RaftQuorumContext c2 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 2);
+    RaftQuorumContext c1 = RAFT_TEST_UTIL.getRaftQuorumContextByRank(quorumInfo, 1);
 
     TransactionLogManager l3 = (TransactionLogManager)c3.getLogManager();
     // Around 60 indices per log file on peer 3
