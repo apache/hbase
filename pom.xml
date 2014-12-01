@@ -154,6 +154,14 @@
       <organizationUrl>http://www.intel.com</organizationUrl>
     </developer>
     <developer>
+      <id>busbey</id>
+      <name>Sean Busbey</name>
+      <email>busbey@apache.org</email>
+      <timezone>-6</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
+    </developer>
+    <developer>
       <id>ddas</id>
       <name>Devaraj Das</name>
       <email>ddas@apache.org</email>
