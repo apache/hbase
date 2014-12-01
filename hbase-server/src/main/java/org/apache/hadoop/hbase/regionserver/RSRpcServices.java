@@ -1430,8 +1430,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             ? region.getCoprocessorHost()
             : null; // do not invoke coprocessors if this is a secondary region replica
       List<Pair<WALKey, WALEdit>> walEntries = new ArrayList<Pair<WALKey, WALEdit>>();
-      // when tag is enabled, we need tag replay edits with log sequence number
-      boolean needAddReplayTag = (HFile.getFormatVersion(regionServer.conf) >= 3);
 
       // Skip adding the edits to WAL if this is a secondary region replica
       boolean isPrimary = RegionReplicaUtil.isDefaultReplica(region.getRegionInfo());
@@ -1452,7 +1450,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
           new Pair<WALKey, WALEdit>();
         List<WALSplitter.MutationReplay> edits = WALSplitter.getMutationsFromWALEntry(entry,
-          cells, walEntry, needAddReplayTag, durability);
+          cells, walEntry, durability);
         if (coprocessorHost != null) {
           // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
           // KeyValue.
