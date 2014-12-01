@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -208,7 +209,7 @@ public class TestAssignmentManagerOnCluster {
     TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 20);
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
     TEST_UTIL.getMiniHBaseCluster().startMaster(); //restart the master so that conf take into affect
-
+   
     ServerName deadServer = null;
     HMaster master = null;
     try {
@@ -263,6 +264,11 @@ public class TestAssignmentManagerOnCluster {
       ServerName masterServerName = TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName();
       TEST_UTIL.getMiniHBaseCluster().stopMaster(masterServerName);
       TEST_UTIL.getMiniHBaseCluster().startMaster();
+      // Wait till master is active and is initialized
+      while (TEST_UTIL.getMiniHBaseCluster().getMaster() == null
+          || !TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
+        Threads.sleep(1);
+      }
     }
   }
 
@@ -626,6 +632,19 @@ public class TestAssignmentManagerOnCluster {
           break;
         }
       }
+      ServerName metaServerName = am.getRegionStates().getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO);
+      // We don't want to process shutdown of meta, so move meta if required
+      if (ServerName.isSameHostnameAndPort(destServerName, metaServerName)) {
+        int i = TEST_UTIL.getHBaseCluster().getServerWithMeta();
+        HRegionServer rs = TEST_UTIL.getHBaseCluster().getRegionServer(i == 0 ? 1 : 0);
+        TEST_UTIL
+            .getHBaseCluster()
+            .getMaster()
+            .move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+              Bytes.toBytes(rs.getServerName().getServerName()));
+        am.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
+      }
+      
       am.regionOffline(hri);
       ZooKeeperWatcher zkw = TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper();
       am.getRegionStates().updateRegionState(hri, State.PENDING_OPEN, destServerName);
