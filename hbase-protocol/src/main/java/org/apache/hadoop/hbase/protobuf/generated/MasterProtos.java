@@ -43699,6 +43699,682 @@ public final class MasterProtos {
     // @@protoc_insertion_point(class_scope:SetQuotaResponse)
   }
 
+  public interface UpdateMasterConfigurationRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code UpdateMasterConfigurationRequest}
+   */
+  public static final class UpdateMasterConfigurationRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements UpdateMasterConfigurationRequestOrBuilder {
+    // Use UpdateMasterConfigurationRequest.newBuilder() to construct.
+    private UpdateMasterConfigurationRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private UpdateMasterConfigurationRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final UpdateMasterConfigurationRequest defaultInstance;
+    public static UpdateMasterConfigurationRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public UpdateMasterConfigurationRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private UpdateMasterConfigurationRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<UpdateMasterConfigurationRequest> PARSER =
+        new com.google.protobuf.AbstractParser<UpdateMasterConfigurationRequest>() {
+      public UpdateMasterConfigurationRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new UpdateMasterConfigurationRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<UpdateMasterConfigurationRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code UpdateMasterConfigurationRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:UpdateMasterConfigurationRequest)
+    }
+
+    static {
+      defaultInstance = new UpdateMasterConfigurationRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:UpdateMasterConfigurationRequest)
+  }
+
+  public interface UpdateMasterConfigurationResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code UpdateMasterConfigurationResponse}
+   */
+  public static final class UpdateMasterConfigurationResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements UpdateMasterConfigurationResponseOrBuilder {
+    // Use UpdateMasterConfigurationResponse.newBuilder() to construct.
+    private UpdateMasterConfigurationResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private UpdateMasterConfigurationResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final UpdateMasterConfigurationResponse defaultInstance;
+    public static UpdateMasterConfigurationResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public UpdateMasterConfigurationResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private UpdateMasterConfigurationResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<UpdateMasterConfigurationResponse> PARSER =
+        new com.google.protobuf.AbstractParser<UpdateMasterConfigurationResponse>() {
+      public UpdateMasterConfigurationResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new UpdateMasterConfigurationResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<UpdateMasterConfigurationResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code UpdateMasterConfigurationResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_UpdateMasterConfigurationResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:UpdateMasterConfigurationResponse)
+    }
+
+    static {
+      defaultInstance = new UpdateMasterConfigurationResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:UpdateMasterConfigurationResponse)
+  }
+
   /**
    * Protobuf service {@code MasterService}
    */
@@ -44273,6 +44949,14 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse> done);
 
+      /**
+       * <code>rpc UpdateMasterConfiguration(.UpdateMasterConfigurationRequest) returns (.UpdateMasterConfigurationResponse);</code>
+       */
+      public abstract void updateMasterConfiguration(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -44638,6 +45322,14 @@ public final class MasterProtos {
           impl.setQuota(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void updateMasterConfiguration(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse> done) {
+          impl.updateMasterConfiguration(controller, request, done);
+        }
+
       };
     }
 
@@ -44750,6 +45442,8 @@ public final class MasterProtos {
               return impl.getTableState(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest)request);
             case 44:
               return impl.setQuota(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest)request);
+            case 45:
+              return impl.updateMasterConfiguration(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -44854,6 +45548,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance();
             case 44:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest.getDefaultInstance();
+            case 45:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -44958,6 +45654,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance();
             case 44:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance();
+            case 45:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -45532,6 +46230,14 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse> done);
 
+    /**
+     * <code>rpc UpdateMasterConfiguration(.UpdateMasterConfigurationRequest) returns (.UpdateMasterConfigurationResponse);</code>
+     */
+    public abstract void updateMasterConfiguration(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse> done);
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -45779,6 +46485,11 @@ public final class MasterProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse>specializeCallback(
               done));
           return;
+        case 45:
+          this.updateMasterConfiguration(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -45883,6 +46594,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest.getDefaultInstance();
         case 44:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest.getDefaultInstance();
+        case 45:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -45987,6 +46700,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse.getDefaultInstance();
         case 44:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance();
+        case 45:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -46682,6 +47397,21 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance()));
       }
+
+      public  void updateMasterConfiguration(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(45),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -46913,6 +47643,11 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse setQuota(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse updateMasterConfiguration(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -47462,6 +48197,18 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance());
       }
 
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse updateMasterConfiguration(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(45),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse.getDefaultInstance());
+      }
+
     }
 
     // @@protoc_insertion_point(class_scope:MasterService)
@@ -47897,6 +48644,16 @@ public final class MasterProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_SetQuotaResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_UpdateMasterConfigurationRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_UpdateMasterConfigurationRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_UpdateMasterConfigurationResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_UpdateMasterConfigurationResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -48023,88 +48780,93 @@ public final class MasterProtos {
       "amespace\030\003 \001(\t\022\036\n\ntable_name\030\004 \001(\0132\n.Tab" +
       "leName\022\022\n\nremove_all\030\005 \001(\010\022\026\n\016bypass_glo" +
       "bals\030\006 \001(\010\022\"\n\010throttle\030\007 \001(\0132\020.ThrottleR" +
-      "equest\"\022\n\020SetQuotaResponse2\346\030\n\rMasterSer" +
-      "vice\022S\n\024GetSchemaAlterStatus\022\034.GetSchema" +
-      "AlterStatusRequest\032\035.GetSchemaAlterStatu",
-      "sResponse\022P\n\023GetTableDescriptors\022\033.GetTa" +
-      "bleDescriptorsRequest\032\034.GetTableDescript" +
-      "orsResponse\022>\n\rGetTableNames\022\025.GetTableN" +
-      "amesRequest\032\026.GetTableNamesResponse\022G\n\020G" +
-      "etClusterStatus\022\030.GetClusterStatusReques" +
-      "t\032\031.GetClusterStatusResponse\022D\n\017IsMaster" +
-      "Running\022\027.IsMasterRunningRequest\032\030.IsMas" +
-      "terRunningResponse\0222\n\tAddColumn\022\021.AddCol" +
-      "umnRequest\032\022.AddColumnResponse\022;\n\014Delete" +
-      "Column\022\024.DeleteColumnRequest\032\025.DeleteCol",
-      "umnResponse\022;\n\014ModifyColumn\022\024.ModifyColu" +
-      "mnRequest\032\025.ModifyColumnResponse\0225\n\nMove" +
-      "Region\022\022.MoveRegionRequest\032\023.MoveRegionR" +
-      "esponse\022Y\n\026DispatchMergingRegions\022\036.Disp" +
-      "atchMergingRegionsRequest\032\037.DispatchMerg" +
-      "ingRegionsResponse\022;\n\014AssignRegion\022\024.Ass" +
-      "ignRegionRequest\032\025.AssignRegionResponse\022" +
-      "A\n\016UnassignRegion\022\026.UnassignRegionReques" +
-      "t\032\027.UnassignRegionResponse\022>\n\rOfflineReg" +
-      "ion\022\025.OfflineRegionRequest\032\026.OfflineRegi",
-      "onResponse\0228\n\013DeleteTable\022\023.DeleteTableR" +
-      "equest\032\024.DeleteTableResponse\022>\n\rtruncate" +
-      "Table\022\025.TruncateTableRequest\032\026.TruncateT" +
-      "ableResponse\0228\n\013EnableTable\022\023.EnableTabl" +
-      "eRequest\032\024.EnableTableResponse\022;\n\014Disabl" +
-      "eTable\022\024.DisableTableRequest\032\025.DisableTa" +
-      "bleResponse\0228\n\013ModifyTable\022\023.ModifyTable" +
-      "Request\032\024.ModifyTableResponse\0228\n\013CreateT" +
-      "able\022\023.CreateTableRequest\032\024.CreateTableR" +
-      "esponse\022/\n\010Shutdown\022\020.ShutdownRequest\032\021.",
-      "ShutdownResponse\0225\n\nStopMaster\022\022.StopMas" +
-      "terRequest\032\023.StopMasterResponse\022,\n\007Balan" +
-      "ce\022\017.BalanceRequest\032\020.BalanceResponse\022M\n" +
-      "\022SetBalancerRunning\022\032.SetBalancerRunning" +
-      "Request\032\033.SetBalancerRunningResponse\022A\n\016" +
-      "RunCatalogScan\022\026.RunCatalogScanRequest\032\027" +
-      ".RunCatalogScanResponse\022S\n\024EnableCatalog" +
-      "Janitor\022\034.EnableCatalogJanitorRequest\032\035." +
-      "EnableCatalogJanitorResponse\022\\\n\027IsCatalo" +
-      "gJanitorEnabled\022\037.IsCatalogJanitorEnable",
-      "dRequest\032 .IsCatalogJanitorEnabledRespon" +
-      "se\022L\n\021ExecMasterService\022\032.CoprocessorSer" +
-      "viceRequest\032\033.CoprocessorServiceResponse" +
-      "\022/\n\010Snapshot\022\020.SnapshotRequest\032\021.Snapsho" +
-      "tResponse\022V\n\025GetCompletedSnapshots\022\035.Get" +
-      "CompletedSnapshotsRequest\032\036.GetCompleted" +
-      "SnapshotsResponse\022A\n\016DeleteSnapshot\022\026.De" +
-      "leteSnapshotRequest\032\027.DeleteSnapshotResp" +
-      "onse\022A\n\016IsSnapshotDone\022\026.IsSnapshotDoneR" +
-      "equest\032\027.IsSnapshotDoneResponse\022D\n\017Resto",
-      "reSnapshot\022\027.RestoreSnapshotRequest\032\030.Re" +
-      "storeSnapshotResponse\022V\n\025IsRestoreSnapsh" +
-      "otDone\022\035.IsRestoreSnapshotDoneRequest\032\036." +
-      "IsRestoreSnapshotDoneResponse\022>\n\rExecPro" +
-      "cedure\022\025.ExecProcedureRequest\032\026.ExecProc" +
-      "edureResponse\022E\n\024ExecProcedureWithRet\022\025." +
-      "ExecProcedureRequest\032\026.ExecProcedureResp" +
-      "onse\022D\n\017IsProcedureDone\022\027.IsProcedureDon" +
-      "eRequest\032\030.IsProcedureDoneResponse\022D\n\017Mo" +
-      "difyNamespace\022\027.ModifyNamespaceRequest\032\030",
-      ".ModifyNamespaceResponse\022D\n\017CreateNamesp" +
-      "ace\022\027.CreateNamespaceRequest\032\030.CreateNam" +
-      "espaceResponse\022D\n\017DeleteNamespace\022\027.Dele" +
-      "teNamespaceRequest\032\030.DeleteNamespaceResp" +
-      "onse\022Y\n\026GetNamespaceDescriptor\022\036.GetName" +
-      "spaceDescriptorRequest\032\037.GetNamespaceDes" +
-      "criptorResponse\022_\n\030ListNamespaceDescript" +
-      "ors\022 .ListNamespaceDescriptorsRequest\032!." +
-      "ListNamespaceDescriptorsResponse\022t\n\037List" +
-      "TableDescriptorsByNamespace\022\'.ListTableD",
-      "escriptorsByNamespaceRequest\032(.ListTable" +
-      "DescriptorsByNamespaceResponse\022b\n\031ListTa" +
-      "bleNamesByNamespace\022!.ListTableNamesByNa" +
-      "mespaceRequest\032\".ListTableNamesByNamespa" +
-      "ceResponse\022>\n\rGetTableState\022\025.GetTableSt" +
-      "ateRequest\032\026.GetTableStateResponse\022/\n\010Se" +
-      "tQuota\022\020.SetQuotaRequest\032\021.SetQuotaRespo" +
-      "nseBB\n*org.apache.hadoop.hbase.protobuf." +
-      "generatedB\014MasterProtosH\001\210\001\001\240\001\001"
+      "equest\"\022\n\020SetQuotaResponse\"\"\n UpdateMast" +
+      "erConfigurationRequest\"#\n!UpdateMasterCo" +
+      "nfigurationResponse2\312\031\n\rMasterService\022S\n",
+      "\024GetSchemaAlterStatus\022\034.GetSchemaAlterSt" +
+      "atusRequest\032\035.GetSchemaAlterStatusRespon" +
+      "se\022P\n\023GetTableDescriptors\022\033.GetTableDesc" +
+      "riptorsRequest\032\034.GetTableDescriptorsResp" +
+      "onse\022>\n\rGetTableNames\022\025.GetTableNamesReq" +
+      "uest\032\026.GetTableNamesResponse\022G\n\020GetClust" +
+      "erStatus\022\030.GetClusterStatusRequest\032\031.Get" +
+      "ClusterStatusResponse\022D\n\017IsMasterRunning" +
+      "\022\027.IsMasterRunningRequest\032\030.IsMasterRunn" +
+      "ingResponse\0222\n\tAddColumn\022\021.AddColumnRequ",
+      "est\032\022.AddColumnResponse\022;\n\014DeleteColumn\022" +
+      "\024.DeleteColumnRequest\032\025.DeleteColumnResp" +
+      "onse\022;\n\014ModifyColumn\022\024.ModifyColumnReque" +
+      "st\032\025.ModifyColumnResponse\0225\n\nMoveRegion\022" +
+      "\022.MoveRegionRequest\032\023.MoveRegionResponse" +
+      "\022Y\n\026DispatchMergingRegions\022\036.DispatchMer" +
+      "gingRegionsRequest\032\037.DispatchMergingRegi" +
+      "onsResponse\022;\n\014AssignRegion\022\024.AssignRegi" +
+      "onRequest\032\025.AssignRegionResponse\022A\n\016Unas" +
+      "signRegion\022\026.UnassignRegionRequest\032\027.Una",
+      "ssignRegionResponse\022>\n\rOfflineRegion\022\025.O" +
+      "fflineRegionRequest\032\026.OfflineRegionRespo" +
+      "nse\0228\n\013DeleteTable\022\023.DeleteTableRequest\032" +
+      "\024.DeleteTableResponse\022>\n\rtruncateTable\022\025" +
+      ".TruncateTableRequest\032\026.TruncateTableRes" +
+      "ponse\0228\n\013EnableTable\022\023.EnableTableReques" +
+      "t\032\024.EnableTableResponse\022;\n\014DisableTable\022" +
+      "\024.DisableTableRequest\032\025.DisableTableResp" +
+      "onse\0228\n\013ModifyTable\022\023.ModifyTableRequest" +
+      "\032\024.ModifyTableResponse\0228\n\013CreateTable\022\023.",
+      "CreateTableRequest\032\024.CreateTableResponse" +
+      "\022/\n\010Shutdown\022\020.ShutdownRequest\032\021.Shutdow" +
+      "nResponse\0225\n\nStopMaster\022\022.StopMasterRequ" +
+      "est\032\023.StopMasterResponse\022,\n\007Balance\022\017.Ba" +
+      "lanceRequest\032\020.BalanceResponse\022M\n\022SetBal" +
+      "ancerRunning\022\032.SetBalancerRunningRequest" +
+      "\032\033.SetBalancerRunningResponse\022A\n\016RunCata" +
+      "logScan\022\026.RunCatalogScanRequest\032\027.RunCat" +
+      "alogScanResponse\022S\n\024EnableCatalogJanitor" +
+      "\022\034.EnableCatalogJanitorRequest\032\035.EnableC",
+      "atalogJanitorResponse\022\\\n\027IsCatalogJanito" +
+      "rEnabled\022\037.IsCatalogJanitorEnabledReques" +
+      "t\032 .IsCatalogJanitorEnabledResponse\022L\n\021E" +
+      "xecMasterService\022\032.CoprocessorServiceReq" +
+      "uest\032\033.CoprocessorServiceResponse\022/\n\010Sna" +
+      "pshot\022\020.SnapshotRequest\032\021.SnapshotRespon" +
+      "se\022V\n\025GetCompletedSnapshots\022\035.GetComplet" +
+      "edSnapshotsRequest\032\036.GetCompletedSnapsho" +
+      "tsResponse\022A\n\016DeleteSnapshot\022\026.DeleteSna" +
+      "pshotRequest\032\027.DeleteSnapshotResponse\022A\n",
+      "\016IsSnapshotDone\022\026.IsSnapshotDoneRequest\032" +
+      "\027.IsSnapshotDoneResponse\022D\n\017RestoreSnaps" +
+      "hot\022\027.RestoreSnapshotRequest\032\030.RestoreSn" +
+      "apshotResponse\022V\n\025IsRestoreSnapshotDone\022" +
+      "\035.IsRestoreSnapshotDoneRequest\032\036.IsResto" +
+      "reSnapshotDoneResponse\022>\n\rExecProcedure\022" +
+      "\025.ExecProcedureRequest\032\026.ExecProcedureRe" +
+      "sponse\022E\n\024ExecProcedureWithRet\022\025.ExecPro" +
+      "cedureRequest\032\026.ExecProcedureResponse\022D\n" +
+      "\017IsProcedureDone\022\027.IsProcedureDoneReques",
+      "t\032\030.IsProcedureDoneResponse\022D\n\017ModifyNam" +
+      "espace\022\027.ModifyNamespaceRequest\032\030.Modify" +
+      "NamespaceResponse\022D\n\017CreateNamespace\022\027.C" +
+      "reateNamespaceRequest\032\030.CreateNamespaceR" +
+      "esponse\022D\n\017DeleteNamespace\022\027.DeleteNames" +
+      "paceRequest\032\030.DeleteNamespaceResponse\022Y\n" +
+      "\026GetNamespaceDescriptor\022\036.GetNamespaceDe" +
+      "scriptorRequest\032\037.GetNamespaceDescriptor" +
+      "Response\022_\n\030ListNamespaceDescriptors\022 .L" +
+      "istNamespaceDescriptorsRequest\032!.ListNam",
+      "espaceDescriptorsResponse\022t\n\037ListTableDe" +
+      "scriptorsByNamespace\022\'.ListTableDescript" +
+      "orsByNamespaceRequest\032(.ListTableDescrip" +
+      "torsByNamespaceResponse\022b\n\031ListTableName" +
+      "sByNamespace\022!.ListTableNamesByNamespace" +
+      "Request\032\".ListTableNamesByNamespaceRespo" +
+      "nse\022>\n\rGetTableState\022\025.GetTableStateRequ" +
+      "est\032\026.GetTableStateResponse\022/\n\010SetQuota\022" +
+      "\020.SetQuotaRequest\032\021.SetQuotaResponse\022b\n\031" +
+      "UpdateMasterConfiguration\022!.UpdateMaster",
+      "ConfigurationRequest\032\".UpdateMasterConfi" +
+      "gurationResponseBB\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\014MasterProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -48626,6 +49388,18 @@ public final class MasterProtos {
           internal_static_SetQuotaResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SetQuotaResponse_descriptor,
+              new java.lang.String[] { });
+          internal_static_UpdateMasterConfigurationRequest_descriptor =
+            getDescriptor().getMessageTypes().get(86);
+          internal_static_UpdateMasterConfigurationRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_UpdateMasterConfigurationRequest_descriptor,
+              new java.lang.String[] { });
+          internal_static_UpdateMasterConfigurationResponse_descriptor =
+            getDescriptor().getMessageTypes().get(87);
+          internal_static_UpdateMasterConfigurationResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_UpdateMasterConfigurationResponse_descriptor,
               new java.lang.String[] { });
           return null;
         }

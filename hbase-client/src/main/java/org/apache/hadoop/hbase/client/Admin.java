@@ -1253,6 +1253,12 @@ public interface Admin extends Abortable, Closeable {
    */
   CoprocessorRpcChannel coprocessorService(ServerName sn);
 
+  /**
+   * Update the configuration and trigger an online config change
+   * on the master
+   * @throws IOException
+   */
+  void updateMasterConfiguration() throws IOException;
 
   /**
    * Update the configuration and trigger an online config change

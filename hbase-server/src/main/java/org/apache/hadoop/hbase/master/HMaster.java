@@ -1955,4 +1955,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     return tableNames;
   }
+
+  /**
+   * Reload the configuration from disk.
+   */
+  public void updateConfiguration() {
+    LOG.info("Reloading the configuration from disk.");
+    // Reload the configuration from disk.
+    conf.reloadConfiguration();
+    synchronized (this.balancer) {
+      balancer.setConf(conf);
+    }
+  }
 }

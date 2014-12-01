@@ -162,6 +162,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UpdateMasterConfigurationResponse;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -1712,6 +1714,12 @@ class ConnectionManager {
         public AddColumnResponse addColumn(RpcController controller, AddColumnRequest request)
         throws ServiceException {
           return stub.addColumn(controller, request);
+        }
+
+        @Override
+        public UpdateMasterConfigurationResponse updateMasterConfiguration(RpcController controller,
+            UpdateMasterConfigurationRequest request) throws ServiceException {
+          return stub.updateMasterConfiguration(controller, request);
         }
 
         @Override

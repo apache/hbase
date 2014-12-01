@@ -382,6 +382,12 @@ message SetQuotaRequest {
 message SetQuotaResponse {
 }
 
+message UpdateMasterConfigurationRequest {
+}
+
+message UpdateMasterConfigurationResponse {
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -596,4 +602,7 @@ service MasterService {
 
   /** Apply the new quota settings */
   rpc SetQuota(SetQuotaRequest) returns(SetQuotaResponse);
+
+  rpc UpdateMasterConfiguration(UpdateMasterConfigurationRequest)
+    returns(UpdateMasterConfigurationResponse);
 }
