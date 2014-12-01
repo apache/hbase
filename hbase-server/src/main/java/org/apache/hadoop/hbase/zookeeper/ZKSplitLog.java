@@ -31,13 +31,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
-import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Common methods and attributes used by {@link SplitLogManager} and {@link SplitLogWorker}
+ * Common methods and attributes used by 
+ * {@link org.apache.hadoop.hbase.master.SplitLogManager} and 
+ * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}
  * running distributed splitting of WAL logs.
  */
 @InterfaceAudience.Private

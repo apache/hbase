@@ -65,14 +65,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.RegionPlacementMaintainer;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1705,7 +1703,7 @@ public abstract class FSUtils {
    * This function is to scan the root path of the file system to get the
    * degree of locality for each region on each of the servers having at least
    * one block of that region.
-   * This is used by the tool {@link RegionPlacementMaintainer}
+   * This is used by the tool {@link org.apache.hadoop.hbase.master.RegionPlacementMaintainer}
    *
    * @param conf
    *          the configuration to use

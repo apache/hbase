@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;

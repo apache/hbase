@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -41,7 +40,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  * <p>
- * If an already known row range needs to be scanned, use {@link Scan} start
+ * If an already known row range needs to be scanned, use 
+ * {@link org.apache.hadoop.hbase.CellScanner} start
  * and stop rows directly rather than a filter.
  */
 @InterfaceAudience.Public

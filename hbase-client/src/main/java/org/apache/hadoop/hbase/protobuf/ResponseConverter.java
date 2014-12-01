@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRes
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.security.access.UserPermission;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.protobuf.ByteString;

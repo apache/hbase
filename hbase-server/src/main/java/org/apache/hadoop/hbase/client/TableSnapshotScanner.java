@@ -34,10 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -51,9 +49,10 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * <p>
  * This also allows one to run the scan from an
  * online or offline hbase cluster. The snapshot files can be exported by using the
- * {@link ExportSnapshot} tool, to a pure-hdfs cluster, and this scanner can be used to
- * run the scan directly over the snapshot files. The snapshot should not be deleted while there
- * are open scanners reading from snapshot files.
+ * {@link org.apache.hadoop.hbase.snapshot.ExportSnapshot} tool, to a pure-hdfs cluster, 
+ * and this scanner can be used to run the scan directly over the snapshot files. 
+ * The snapshot should not be deleted while there are open scanners reading from snapshot 
+ * files.
  *
  * <p>
  * An internal RegionScanner is used to execute the {@link Scan} obtained
@@ -67,7 +66,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * snapshot files, the job has to be run as the HBase user or the user must have group or other
  * priviledges in the filesystem (See HBASE-8369). Note that, given other users access to read from
  * snapshot/data files will completely circumvent the access control enforced by HBase.
- * @see TableSnapshotInputFormat
+ * @see org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

@@ -23,13 +23,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.coordination.SplitTransactionCoordination;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.SplitTransaction;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -211,7 +209,8 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
    * @param std split transaction details
    * @param parent
    * @throws IOException If thrown, transaction failed. Call
-   *           {@link SplitTransaction#rollback(Server, RegionServerServices)}
+   *  {@link org.apache.hadoop.hbase.regionserver.SplitTransaction#rollback(
+   *  Server, RegionServerServices)}
    */
   @Override
   public void completeSplitTransaction(final RegionServerServices services, HRegion a, HRegion b,

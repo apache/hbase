@@ -464,7 +464,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
    * could be used.
    *
    * @param cell
-   * @return
+   * @return true or false
    * @throws IOException
    */
   private boolean checkForReservedVisibilityTagPresence(Cell cell) throws IOException {

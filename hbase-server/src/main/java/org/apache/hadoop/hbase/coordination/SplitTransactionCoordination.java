@@ -23,11 +23,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.SplitTransaction;
 
 /**
  * Coordination operations for split transaction. The split operation should be coordinated at the
@@ -82,7 +80,8 @@ public interface SplitTransactionCoordination {
    * @param std split transaction details
    * @param parent
    * @throws IOException If thrown, transaction failed. Call
-   *           {@link SplitTransaction#rollback(Server, RegionServerServices)}
+   *  {@link org.apache.hadoop.hbase.regionserver.
+   *  SplitTransaction#rollback(Server, RegionServerServices)}
    */
   void completeSplitTransaction(RegionServerServices services, HRegion first,
       HRegion second, SplitTransactionDetails std, HRegion parent) throws IOException;

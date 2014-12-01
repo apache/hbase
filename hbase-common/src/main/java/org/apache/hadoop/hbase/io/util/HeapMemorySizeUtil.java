@@ -73,7 +73,7 @@ public class HeapMemorySizeUtil {
 
   /**
    * Retrieve global memstore configured size as percentage of total heap.
-   * @param conf
+   * @param c
    * @param logInvalid
    */
   public static float getGlobalMemStorePercent(final Configuration c, final boolean logInvalid) {
@@ -91,7 +91,7 @@ public class HeapMemorySizeUtil {
 
   /**
    * Retrieve configured size for global memstore lower water mark as percentage of total heap.
-   * @param conf
+   * @param c
    * @param globalMemStorePercent
    */
   public static float getGlobalMemStoreLowerMark(final Configuration c, float globalMemStorePercent) {

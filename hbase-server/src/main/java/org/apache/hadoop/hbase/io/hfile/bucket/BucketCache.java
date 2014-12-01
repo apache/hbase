@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -83,8 +82,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache}
  *
  * <p>BucketCache can be used as mainly a block cache (see
- * {@link CombinedBlockCache}), combined with LruBlockCache to decrease CMS GC and
- * heap fragmentation.
+ * {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}),
+ * combined with LruBlockCache to decrease CMS GC and heap fragmentation.
  *
  * <p>It also can be used as a secondary cache (e.g. using a file on ssd/fusionio to store
  * blocks) to enlarge cache space via

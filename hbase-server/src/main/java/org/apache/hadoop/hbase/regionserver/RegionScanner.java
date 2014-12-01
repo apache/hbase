@@ -24,7 +24,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * RegionScanner describes iterators over rows in an HRegion.
@@ -55,7 +54,8 @@ public interface RegionScanner extends InternalScanner {
   boolean reseek(byte[] row) throws IOException;
 
   /**
-   * @return The preferred max buffersize. See {@link Scan#setMaxResultSize(long)}
+   * @return The preferred max buffersize. See 
+   * {@link org.apache.hadoop.hbase.client.Scan#setMaxResultSize(long)}
    */
   long getMaxResultSize();
 
@@ -68,8 +68,8 @@ public interface RegionScanner extends InternalScanner {
    * Grab the next row's worth of values with the default limit on the number of values
    * to return.
    * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
-   * Caller must set the thread's readpoint, start and close a region operation, an synchronize on the scanner object.
-   * Caller should maintain and update metrics.
+   * Caller must set the thread's readpoint, start and close a region operation, an 
+   * synchronize on the scanner object. Caller should maintain and update metrics.
    * See {@link #nextRaw(List, int)}
    * @param result return output array
    * @return true if more rows exist after this one, false if scanner is done

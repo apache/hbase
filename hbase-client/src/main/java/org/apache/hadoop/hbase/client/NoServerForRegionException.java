@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.RegionException;
 
 /**
  * Thrown when no region server can be found for a region

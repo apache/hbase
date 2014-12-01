@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -52,7 +51,8 @@ import com.google.common.collect.MinMaxPriorityQueue;
  * <p>On cluster startup, bulk assignment can be used to determine
  * locations for all Regions in a cluster.
  *
- * <p>This classes produces plans for the {@link AssignmentManager} to execute.
+ * <p>This classes produces plans for the 
+ * {@link org.apache.hadoop.hbase.master.AssignmentManager} to execute.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SimpleLoadBalancer extends BaseLoadBalancer {

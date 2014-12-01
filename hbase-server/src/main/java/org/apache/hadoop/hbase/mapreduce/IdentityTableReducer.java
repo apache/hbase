@@ -26,12 +26,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.OutputFormat;
 
 /**
  * Convenience class that simply writes all values (which must be
- * {@link org.apache.hadoop.hbase.client.Put Put} or
- * {@link org.apache.hadoop.hbase.client.Delete Delete} instances)
+ * {@link org.apache.hadoop.hbase.client.Put} or
+ * {@link org.apache.hadoop.hbase.client.Delete} instances)
  * passed to it out to the configured HBase table. This works in combination
  * with {@link TableOutputFormat} which actually does the writing to HBase.<p>
  *
@@ -46,8 +45,8 @@ import org.apache.hadoop.mapreduce.OutputFormat;
  * </code></blockquote>
  * This will also set the proper {@link TableOutputFormat} which is given the
  * <code>table</code> parameter. The
- * {@link org.apache.hadoop.hbase.client.Put Put} or
- * {@link org.apache.hadoop.hbase.client.Delete Delete} define the
+ * {@link org.apache.hadoop.hbase.client.Put} or
+ * {@link org.apache.hadoop.hbase.client.Delete} define the
  * row and columns implicitly.
  */
 @InterfaceAudience.Public
@@ -60,13 +59,14 @@ extends TableReducer<Writable, Mutation, Writable> {
 
   /**
    * Writes each given record, consisting of the row key and the given values,
-   * to the configured {@link OutputFormat}. It is emitting the row key and each
+   * to the configured {@link org.apache.hadoop.mapreduce.OutputFormat}. 
+   * It is emitting the row key and each
    * {@link org.apache.hadoop.hbase.client.Put Put} or
-   * {@link org.apache.hadoop.hbase.client.Delete Delete} as separate pairs.
+   * {@link org.apache.hadoop.hbase.client.Delete} as separate pairs.
    *
    * @param key  The current row key.
    * @param values  The {@link org.apache.hadoop.hbase.client.Put Put} or
-   *   {@link org.apache.hadoop.hbase.client.Delete Delete} list for the given
+   *   {@link org.apache.hadoop.hbase.client.Delete} list for the given
    *   row.
    * @param context  The context of the reduce.
    * @throws IOException When writing the record fails.

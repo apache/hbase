@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 
-import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
 
@@ -95,9 +94,10 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    * @param connection which connection
    * @param tableName table callable is on
    * @param scan the scan to execute
-   * @param scanMetrics the ScanMetrics to used, if it is null, ScannerCallable won't collect
-   *          metrics
-   * @param rpcControllerFactory factory to use when creating {@link RpcController}
+   * @param scanMetrics the ScanMetrics to used, if it is null, 
+   *        ScannerCallable won't collect metrics
+   * @param rpcControllerFactory factory to use when creating 
+   *        {@link com.google.protobuf.RpcController}
    */
   public ScannerCallable (ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory) {

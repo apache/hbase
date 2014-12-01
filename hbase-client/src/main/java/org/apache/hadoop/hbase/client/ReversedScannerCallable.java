@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.RpcController;
 
 /**
  * A reversed ScannerCallable which supports backward scanning.
@@ -55,7 +54,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param scan
    * @param scanMetrics
    * @param locateStartRow The start row for locating regions
-   * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
+   * @param rpcFactory to create an 
+   * {@link com.google.protobuf.RpcController} to talk to the regionserver
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory) {
@@ -69,7 +69,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param scan
    * @param scanMetrics
    * @param locateStartRow The start row for locating regions
-   * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
+   * @param rpcFactory to create an 
+   * {@link com.google.protobuf.RpcController} to talk to the regionserver
    * @param replicaId the replica id
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,

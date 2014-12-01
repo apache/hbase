@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -584,7 +583,8 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * Next part is related to HLogSplitterHandler
    */
   /**
-   * endTask() can fail and the only way to recover out of it is for the {@link SplitLogManager} to
+   * endTask() can fail and the only way to recover out of it is for the 
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} to
    * timeout the task node.
    * @param slt
    * @param ctr

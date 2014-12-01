@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
-import org.apache.zookeeper.KeeperException.NoNodeException;
-import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
 
 // We should not be importing this Type here, nor a RegionTransition, etc.  This class should be
@@ -123,7 +121,8 @@ public class ZKAssign {
    * Creates a new unassigned node in the OFFLINE state for the specified region.
    *
    * <p>Does not transition nodes from other states.  If a node already exists
-   * for this region, a {@link NodeExistsException} will be thrown.
+   * for this region, a {@link org.apache.zookeeper.KeeperException.NodeExistsException} 
+   * will be thrown.
    *
    * <p>Sets a watcher on the unassigned region node if the method is successful.
    *
@@ -247,7 +246,7 @@ public class ZKAssign {
    * specified region.
    *
    * <p>If a node does not already exist for this region, a
-   * {@link NoNodeException} will be thrown.
+   * {@link org.apache.zookeeper.KeeperException.NoNodeException} will be thrown.
    *
    * <p>No watcher is set whether this succeeds or not.
    *
@@ -275,7 +274,7 @@ public class ZKAssign {
    * specified region.
    *
    * <p>If a node does not already exist for this region, a
-   * {@link NoNodeException} will be thrown.
+   * {@link org.apache.zookeeper.KeeperException.NoNodeException} will be thrown.
    *
    * <p>No watcher is set whether this succeeds or not.
    *
@@ -302,7 +301,7 @@ public class ZKAssign {
    * specified region.
    *
    * <p>If a node does not already exist for this region, a
-   * {@link NoNodeException} will be thrown.
+   * {@link org.apache.zookeeper.KeeperException.NoNodeException} will be thrown.
    *
    * <p>No watcher is set whether this succeeds or not.
    *
@@ -330,7 +329,7 @@ public class ZKAssign {
    * specified region.
    *
    * <p>If a node does not already exist for this region, a
-   * {@link NoNodeException} will be thrown.
+   * {@link org.apache.zookeeper.KeeperException.NoNodeException} will be thrown.
    *
    * <p>No watcher is set whether this succeeds or not.
    *
@@ -359,7 +358,7 @@ public class ZKAssign {
    * specified region.
    *
    * <p>If a node does not already exist for this region, a
-   * {@link NoNodeException} will be thrown.
+   * {@link org.apache.zookeeper.KeeperException.NoNodeException} will be thrown.
    *
    * <p>No watcher is set whether this succeeds or not.
    *
@@ -387,7 +386,7 @@ public class ZKAssign {
    * specified region.
    *
    * <p>If a node does not already exist for this region, a
-   * {@link NoNodeException} will be thrown.
+   * {@link org.apache.zookeeper.KeeperException.NoNodeException} will be thrown.
    *
    * <p>No watcher is set whether this succeeds or not.
    *
@@ -417,7 +416,7 @@ public class ZKAssign {
    * specified region.
    *
    * <p>If a node does not already exist for this region, a
-   * {@link NoNodeException} will be thrown.
+   * {@link org.apache.zookeeper.KeeperException.NoNodeException} will be thrown.
    *
    * <p>No watcher is set whether this succeeds or not.
    *
@@ -504,7 +503,8 @@ public class ZKAssign {
    * region.
    *
    * <p>Does not transition nodes from any states.  If a node already exists
-   * for this region, a {@link NodeExistsException} will be thrown.
+   * for this region, a {@link org.apache.zookeeper.KeeperException.NodeExistsException} 
+   * will be thrown.
    *
    * <p>If creation is successful, returns the version number of the CLOSING
    * node created.

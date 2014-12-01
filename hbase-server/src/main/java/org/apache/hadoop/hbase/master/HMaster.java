@@ -127,7 +127,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
@@ -151,7 +150,7 @@ import com.google.protobuf.Service;
  *
  * <p>You can also shutdown just this master.  Call {@link #stopMaster()}.
  *
- * @see Watcher
+ * @see org.apache.zookeeper.Watcher
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")

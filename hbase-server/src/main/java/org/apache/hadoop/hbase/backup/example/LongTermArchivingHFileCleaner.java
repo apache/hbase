@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
-import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
 
@@ -36,9 +35,10 @@ import org.apache.zookeeper.KeeperException;
  * {@link BaseHFileCleanerDelegate} that only cleans HFiles that don't belong to a table that is
  * currently being archived.
  * <p>
- * This only works properly if the {@link TimeToLiveHFileCleaner} is also enabled (it always should
- * be), since it may take a little time for the ZK notification to propagate, in which case we may
- * accidentally delete some files.
+ * This only works properly if the 
+ * {@link org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner} is also enabled 
+ * (it always should be), since it may take a little time for the ZK notification to 
+ * propagate, in which case we may accidentally delete some files.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {

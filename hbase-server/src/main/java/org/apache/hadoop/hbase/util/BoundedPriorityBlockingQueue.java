@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.BlockingQueue;
@@ -26,14 +25,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 import java.util.AbstractQueue;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * A generic bounded blocking Priority-Queue.

@@ -31,11 +31,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.TableSnapshotScanner;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -52,9 +49,9 @@ import com.google.common.annotations.VisibleForTesting;
  * hlogs, etc) directly to provide maximum performance. The snapshot is not required to be
  * restored to the live cluster or cloned. This also allows to run the mapreduce job from an
  * online or offline hbase cluster. The snapshot files can be exported by using the
- * {@link ExportSnapshot} tool, to a pure-hdfs cluster, and this InputFormat can be used to
- * run the mapreduce job directly over the snapshot files. The snapshot should not be deleted
- * while there are jobs reading from snapshot files.
+ * {@link org.apache.hadoop.hbase.snapshot.ExportSnapshot} tool, to a pure-hdfs cluster, 
+ * and this InputFormat can be used to run the mapreduce job directly over the snapshot files. 
+ * The snapshot should not be deleted while there are jobs reading from snapshot files.
  * <p>
  * Usage is similar to TableInputFormat, and
  * {@link TableMapReduceUtil#initTableSnapshotMapperJob(String, Scan, Class, Class, Class, Job,
@@ -71,8 +68,8 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>
  * Internally, this input format restores the snapshot into the given tmp directory. Similar to
  * {@link TableInputFormat} an InputSplit is created per region. The region is opened for reading
- * from each RecordReader. An internal RegionScanner is used to execute the {@link Scan} obtained
- * from the user.
+ * from each RecordReader. An internal RegionScanner is used to execute the 
+ * {@link org.apache.hadoop.hbase.CellScanner} obtained from the user.
  * <p>
  * HBase owns all the data and snapshot files on the filesystem. Only the 'hbase' user can read from
  * snapshot files and data files.
@@ -82,7 +79,7 @@ import com.google.common.annotations.VisibleForTesting;
  * user or the user must have group or other privileges in the filesystem (See HBASE-8369).
  * Note that, given other users access to read from snapshot/data files will completely circumvent
  * the access control enforced by HBase.
- * @see TableSnapshotScanner
+ * @see org.apache.hadoop.hbase.client.TableSnapshotScanner
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

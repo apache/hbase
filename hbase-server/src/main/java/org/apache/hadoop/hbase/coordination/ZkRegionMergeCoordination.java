@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
 
 public class ZkRegionMergeCoordination implements RegionMergeCoordination {
@@ -161,7 +160,7 @@ public class ZkRegionMergeCoordination implements RegionMergeCoordination {
    *
    * <p>
    * Does not transition nodes from other states. If a node already exists for
-   * this region, a {@link NodeExistsException} will be thrown.
+   * this region, a {@link org.apache.zookeeper.KeeperException.NodeExistsException} will be thrown.
    *
    * @param region region to be created as offline
    * @param serverName server event originates from

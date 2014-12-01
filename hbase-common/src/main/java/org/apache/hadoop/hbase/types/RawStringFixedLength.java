@@ -19,15 +19,15 @@ package org.apache.hadoop.hbase.types;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 
 /**
  * An {@code DataType} that encodes fixed-length values encoded using
- * {@link Bytes#toBytes(String)}. Intended to make it easier to transition
- * away from direct use of {@link Bytes}.
- * @see Bytes#toBytes(String)
- * @see Bytes#toString(byte[], int, int)
+ * {@link org.apache.hadoop.hbase.util.Bytes#toBytes(String)}. 
+ * Intended to make it easier to transition away from direct use of 
+ * {@link org.apache.hadoop.hbase.util.Bytes}.
+ * @see org.apache.hadoop.hbase.util.Bytes#toBytes(String)
+ * @see org.apache.hadoop.hbase.util.Bytes#toString(byte[], int, int)
  * @see RawString
  */
 @InterfaceAudience.Public

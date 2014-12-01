@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLog
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -74,8 +73,9 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>SplitLogManager monitors the tasks that it creates using the
  * timeoutMonitor thread. If a task's progress is slow then
  * {@link SplitLogManagerCoordination#checkTasks} will take away the
- * task from the owner {@link SplitLogWorker} and the task will be up for grabs again. When the
- * task is done then it is deleted by SplitLogManager.
+ * task from the owner {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker} 
+ * and the task will be up for grabs again. When the task is done then it is deleted 
+ * by SplitLogManager.
  *
  * <p>Clients call {@link #splitLogDistributed(Path)} to split a region server's
  * log files. The caller thread waits in this method until all the log files

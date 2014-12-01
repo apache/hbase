@@ -29,12 +29,12 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSeq
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
-import org.apache.hadoop.hbase.regionserver.handler.HLogSplitterHandler;
 
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Coordinated operations for {@link SplitLogWorker} and {@link HLogSplitterHandler} Important
+ * Coordinated operations for {@link SplitLogWorker} and 
+ * {@link org.apache.hadoop.hbase.regionserver.handler.HLogSplitterHandler} Important
  * methods for SplitLogWorker: <BR>
  * {@link #isReady()} called from {@link SplitLogWorker#run()} to check whether the coordination is
  * ready to supply the tasks <BR>

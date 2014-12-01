@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -32,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration.

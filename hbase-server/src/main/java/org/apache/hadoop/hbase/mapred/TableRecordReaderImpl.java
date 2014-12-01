@@ -25,7 +25,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -114,7 +113,7 @@ public class TableRecordReaderImpl {
     return this.startRow;
   }
   /**
-   * @param htable the {@link HTable} to scan.
+   * @param htable the {@link org.apache.hadoop.hbase.HTableDescriptor} to scan.
    */
   public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();

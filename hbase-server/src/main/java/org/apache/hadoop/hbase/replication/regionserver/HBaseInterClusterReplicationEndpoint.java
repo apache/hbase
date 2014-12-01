@@ -36,13 +36,13 @@ import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
- * A {@link ReplicationEndpoint} implementation for replicating to another HBase cluster.
+ * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} 
+ * implementation for replicating to another HBase cluster.
  * For the slave cluster it selects a random number of peers
  * using a replication ratio. For example, if replication ration = 0.1
  * and slave cluster has 100 region servers, 10 will be selected.

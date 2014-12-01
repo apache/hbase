@@ -24,10 +24,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.zookeeper.KeeperException;
 
@@ -38,20 +34,23 @@ import org.apache.zookeeper.KeeperException;
 *
 * To implement a custom globally barriered procedure, user needs to extend two classes:
 * {@link MasterProcedureManager} and {@link RegionServerProcedureManager}. Implementation of
-* {@link MasterProcedureManager} is loaded into {@link HMaster} process via configuration
-* parameter 'hbase.procedure.master.classes', while implementation of
-* {@link RegionServerProcedureManager} is loaded into {@link HRegionServer} process via
+* {@link MasterProcedureManager} is loaded into {@link org.apache.hadoop.hbase.master.HMaster} 
+* process via configuration parameter 'hbase.procedure.master.classes', while implementation of
+* {@link RegionServerProcedureManager} is loaded into 
+* {@link org.apache.hadoop.hbase.regionserver.HRegionServer} process via
 * configuration parameter 'hbase.procedure.regionserver.classes'.
 *
-* An example of globally barriered procedure implementation is {@link SnapshotManager} and
-* {@link RegionServerSnapshotManager}.
+* An example of globally barriered procedure implementation is 
+* {@link org.apache.hadoop.hbase.master.snapshot.SnapshotManager} and
+* {@link org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager}.
 *
 * A globally barriered procedure is identified by its signature (usually it is the name of the
 * procedure znode). During the initialization phase, the initialize methods are called by both
-* {@link HMaster} and {@link HRegionServer} witch create the procedure znode and register the
-* listeners. A procedure can be triggered by its signature and an instant name (encapsulated in
-* a {@link ProcedureDescription} object). When the servers are shutdown, the stop methods on both
-* classes are called to clean up the data associated with the procedure.
+* {@link org.apache.hadoop.hbase.master.HMaster} and 
+* {@link org.apache.hadoop.hbase.regionserver.HRegionServer} witch create the procedure znode 
+* and register the listeners. A procedure can be triggered by its signature and an instant name 
+* (encapsulated in a {@link ProcedureDescription} object). When the servers are shutdown, 
+* the stop methods on both classes are called to clean up the data associated with the procedure.
 */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

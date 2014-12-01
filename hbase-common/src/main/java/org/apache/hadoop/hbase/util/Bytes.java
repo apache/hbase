@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -1510,7 +1509,7 @@ public class Bytes {
    * @param b bytes to hash
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
    * passed in array.  This method is what {@link org.apache.hadoop.io.Text} and
-   * {@link ImmutableBytesWritable} use calculating hash code.
+   * {@link org.apache.hadoop.hbase.io.ImmutableBytesWritable} use calculating hash code.
    */
   public static int hashCode(final byte [] b) {
     return hashCode(b, b.length);
@@ -1521,7 +1520,7 @@ public class Bytes {
    * @param length length of the value
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
    * passed in array.  This method is what {@link org.apache.hadoop.io.Text} and
-   * {@link ImmutableBytesWritable} use calculating hash code.
+   * {@link org.apache.hadoop.hbase.io.ImmutableBytesWritable} use calculating hash code.
    */
   public static int hashCode(final byte [] b, final int length) {
     return WritableComparator.hashBytes(b, length);

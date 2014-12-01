@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
@@ -59,8 +58,9 @@ import com.google.common.collect.Sets;
 
 /**
  * The base class for load balancers. It provides the the functions used to by
- * {@link AssignmentManager} to assign regions in the edge cases. It doesn't
- * provide an implementation of the actual balancing algorithm.
+ * {@link org.apache.hadoop.hbase.master.AssignmentManager} to assign regions 
+ * in the edge cases. It doesn't provide an implementation of the actual 
+ * balancing algorithm.
  *
  */
 public abstract class BaseLoadBalancer implements LoadBalancer {

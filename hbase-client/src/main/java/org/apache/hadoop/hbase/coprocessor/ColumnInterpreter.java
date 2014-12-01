@@ -23,9 +23,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
 
 import com.google.protobuf.Message;
 
@@ -33,7 +30,8 @@ import com.google.protobuf.Message;
  * Defines how value for specific column is interpreted and provides utility
  * methods like compare, add, multiply etc for them. Takes column family, column
  * qualifier and return the cell value. Its concrete implementation should
- * handle null case gracefully. Refer to {@link LongColumnInterpreter} for an
+ * handle null case gracefully. Refer to 
+ * {@link org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter} for an
  * example.
  * <p>
  * Takes two generic parameters and three Message parameters. 
@@ -130,7 +128,8 @@ Q extends Message, R extends Message> {
    * server side to construct the ColumnInterpreter. The server
    * will pass this to the {@link #initialize}
    * method. If there is no ColumnInterpreter specific data (for e.g.,
-   * {@link LongColumnInterpreter}) then null should be returned.
+   * {@link org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter}) 
+   * then null should be returned.
    * @return the PB message
    */
   public abstract P getRequestData();

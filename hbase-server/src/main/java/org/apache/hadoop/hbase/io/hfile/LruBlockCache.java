@@ -39,7 +39,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -59,11 +58,13 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * constant-time {@link #cacheBlock} and {@link #getBlock} operations.<p>
  *
  * Contains three levels of block priority to allow for
- * scan-resistance and in-memory families {@link HColumnDescriptor#setInMemory(boolean)} (An
+ * scan-resistance and in-memory families 
+ * {@link org.apache.hadoop.hbase.HColumnDescriptor#setInMemory(boolean)} (An
  * in-memory column family is a column family that should be served from memory if possible):
  * single-access, multiple-accesses, and in-memory priority.
  * A block is added with an in-memory priority flag if
- * {@link HColumnDescriptor#isInMemory()}, otherwise a block becomes a single access
+ * {@link org.apache.hadoop.hbase.HColumnDescriptor#isInMemory()}, 
+ * otherwise a block becomes a single access
  * priority the first time it is read into this block cache.  If a block is accessed again while
  * in cache, it is marked as a multiple access priority block.  This delineation of blocks is used
  * to prevent scans from thrashing the cache adding a least-frequently-used

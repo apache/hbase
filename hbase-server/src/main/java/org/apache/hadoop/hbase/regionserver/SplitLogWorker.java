@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -45,9 +44,9 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This worker is spawned in every regionserver, including master. The Worker waits for log
- * splitting tasks to be put up by the {@link SplitLogManager} running in the master and races with
- * other workers in other serves to acquire those tasks. The coordination is done via coordination
- * engine.
+ * splitting tasks to be put up by the {@link org.apache.hadoop.hbase.master.SplitLogManager} 
+ * running in the master and races with other workers in other serves to acquire those tasks. 
+ * The coordination is done via coordination engine.
  * <p>
  * If a worker has successfully moved the task from state UNASSIGNED to OWNED then it owns the task.
  * It keeps heart beating the manager by periodically moving the task from UNASSIGNED to OWNED
@@ -183,7 +182,8 @@ public class SplitLogWorker implements Runnable {
    * acquired by a {@link SplitLogWorker}. Since there isn't a water-tight
    * guarantee that two workers will not be executing the same task therefore it
    * is better to have workers prepare the task and then have the
-   * {@link SplitLogManager} commit the work in SplitLogManager.TaskFinisher
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} commit the work in 
+   * SplitLogManager.TaskFinisher
    */
   public interface TaskExecutor {
     enum Status {

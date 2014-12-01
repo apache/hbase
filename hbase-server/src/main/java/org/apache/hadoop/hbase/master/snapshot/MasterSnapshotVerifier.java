@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -99,7 +98,8 @@ public final class MasterSnapshotVerifier {
   /**
    * Verify that the snapshot in the directory is a valid snapshot
    * @param snapshotDir snapshot directory to check
-   * @param snapshotServers {@link ServerName} of the servers that are involved in the snapshot
+   * @param snapshotServers {@link org.apache.hadoop.hbase.ServerName} 
+   * of the servers that are involved in the snapshot
    * @throws CorruptedSnapshotException if the snapshot is invalid
    * @throws IOException if there is an unexpected connection issue to the filesystem
    */

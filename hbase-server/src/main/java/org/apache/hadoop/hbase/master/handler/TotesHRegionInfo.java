@@ -18,14 +18,13 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
-import java.beans.EventHandler;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * Implementors tote an HRegionInfo instance.
- * This is a marker interface that can be put on {@link EventHandler}s that
+ * This is a marker interface that can be put on {@link java.beans.EventHandler}s that
  * have an {@link HRegionInfo}.
  */
 @InterfaceAudience.Private

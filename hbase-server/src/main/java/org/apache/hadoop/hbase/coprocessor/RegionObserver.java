@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -48,12 +47,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
-import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -209,7 +206,8 @@ public interface RegionObserver extends Coprocessor {
    * options:
    * <ul>
    * <li>Wrap the provided {@link InternalScanner} with a custom implementation that is returned
-   * from this method. The custom scanner can then inspect {@link KeyValue}s from the wrapped
+   * from this method. The custom scanner can then inspect 
+   * {@link org.apache.hadoop.hbase.KeyValue}s from the wrapped
    * scanner, applying its own policy to what gets written.</li>
    * <li>Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} and provide a
    * custom implementation for writing of new {@link StoreFile}s. <strong>Note: any implementations
@@ -235,7 +233,8 @@ public interface RegionObserver extends Coprocessor {
    * options:
    * <ul>
    * <li>Wrap the provided {@link InternalScanner} with a custom implementation that is returned
-   * from this method. The custom scanner can then inspect {@link KeyValue}s from the wrapped
+   * from this method. The custom scanner can then inspect 
+   * {@link org.apache.hadoop.hbase.KeyValue}s from the wrapped
    * scanner, applying its own policy to what gets written.</li>
    * <li>Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} and provide a
    * custom implementation for writing of new {@link StoreFile}s. <strong>Note: any implementations
@@ -266,7 +265,8 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being compacted
-   * @param scanners the list {@link StoreFileScanner}s to be read from
+   * @param scanners the list {@link org.apache.hadoop.hbase.regionserver.StoreFileScanner}s 
+   *        to be read from
    * @param scanType the {@link ScanType} indicating whether this is a major or minor compaction
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files
@@ -290,7 +290,8 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being compacted
-   * @param scanners the list {@link StoreFileScanner}s to be read from
+   * @param scanners the list {@link org.apache.hadoop.hbase.regionserver.StoreFileScanner}s 
+   *        to be read from
    * @param scanType the {@link ScanType} indicating whether this is a major or minor compaction
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files

@@ -43,17 +43,14 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination.TaskFinisher.Status;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -70,7 +67,8 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
 /**
- * ZooKeeper based implementation of {@link SplitLogManagerCoordination}
+ * ZooKeeper based implementation of 
+ * {@link org.apache.hadoop.hbase.master.SplitLogManagerCoordination}
  */
 @InterfaceAudience.Private
 public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
@@ -685,7 +683,8 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   /**
    * ZooKeeper implementation of
-   * {@link SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
+   * {@link org.apache.hadoop.hbase.master.
+   * SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
    */
   @Override
   public void removeStaleRecoveringRegions(final Set<String> knownFailedServers)
@@ -905,8 +904,10 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
 
   /**
-   * {@link SplitLogManager} can use objects implementing this interface to finish off a partially
-   * done task by {@link SplitLogWorker}. This provides a serialization point at the end of the task
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} can use 
+   * objects implementing this interface to finish off a partially
+   * done task by {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}. 
+   * This provides a serialization point at the end of the task
    * processing. Must be restartable and idempotent.
    */
   public interface TaskFinisher {
@@ -1068,7 +1069,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
    * Asynchronous handler for zk create RESCAN-node results. Retries on failures.
    * <p>
    * A RESCAN node is created using PERSISTENT_SEQUENTIAL flag. It is a signal for all the
-   * {@link SplitLogWorker}s to rescan for new tasks.
+   * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}s to rescan for new tasks.
    */
   public class CreateRescanAsyncCallback implements AsyncCallback.StringCallback {
     private final Log LOG = LogFactory.getLog(CreateRescanAsyncCallback.class);

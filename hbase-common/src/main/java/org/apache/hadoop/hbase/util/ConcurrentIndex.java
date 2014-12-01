@@ -21,10 +21,8 @@ package org.apache.hadoop.hbase.util;
 
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Multiset;
 
 import java.util.Comparator;
-import java.util.ConcurrentModificationException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -35,7 +33,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A simple concurrent map of sets. This is similar in concept to
- * {@link Multiset}, with the following exceptions:
+ * {@link com.google.common.collect.Multiset}, with the following exceptions:
  * <ul>
  *   <li>The set is thread-safe and concurrent: no external locking or
  *   synchronization is required. This is important for the use case where
@@ -111,7 +109,7 @@ public class ConcurrentIndex<K, V> {
    * associated. <b>Note:</b> if the caller wishes to add or removes values
    * to under the specified as they're iterating through the returned value,
    * they should make a defensive copy; otherwise, a
-   * {@link ConcurrentModificationException} may be thrown.
+   * {@link java.util.ConcurrentModificationException} may be thrown.
    * @param key The key
    * @return All values associated with the specified key or null if no values
    *         are associated with the key.

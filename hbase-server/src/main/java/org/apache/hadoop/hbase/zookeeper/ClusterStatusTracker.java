@@ -22,16 +22,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracker on cluster settings up in zookeeper.
- * This is not related to {@link ClusterStatus}.  That class is a data structure
- * that holds snapshot of current view on cluster.  This class is about tracking
- * cluster attributes up in zookeeper.
+ * This is not related to {@link org.apache.hadoop.hbase.ClusterStatus}.
+ * That class is a data structure that holds snapshot of current view on cluster. 
+ * This class is about tracking cluster attributes up in zookeeper.
  *
  */
 @InterfaceAudience.Private

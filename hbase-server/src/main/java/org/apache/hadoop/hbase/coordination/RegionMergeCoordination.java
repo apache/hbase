@@ -15,10 +15,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
@@ -91,7 +89,8 @@ public interface RegionMergeCoordination {
    * @param rmd region merge details
    * @param mergedRegion
    * @throws IOException If thrown, transaction failed. Call
-   *           {@link RegionMergeTransaction#rollback(Server, RegionServerServices)}
+   *  {@link org.apache.hadoop.hbase.regionserver.RegionMergeTransaction#rollback(
+   *  Server, RegionServerServices)}
    */
   void completeRegionMergeTransaction(RegionServerServices services, HRegionInfo merged,
       HRegion region_a, HRegion region_b, RegionMergeDetails rmd, HRegion mergedRegion)
