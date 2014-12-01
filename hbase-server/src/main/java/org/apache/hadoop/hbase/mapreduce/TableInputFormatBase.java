@@ -286,6 +286,27 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   }
 
   /**
+   * Allows subclasses to get the {@link RegionLocator}.
+   */
+  protected RegionLocator getRegionLocator() {
+    return regionLocator;
+  }
+  
+  /**
+   * Allows subclasses to get the {@link Table}.
+   */
+  protected Table getTable() {
+    return table;
+  }
+
+  /**
+   * Allows subclasses to get the {@link Admin}.
+   */
+  protected Admin getAdmin() {
+    return admin;
+  }
+
+  /**
    * Allows subclasses to set the {@link HTable}.
    *
    * @param table  The table to get the data from.
