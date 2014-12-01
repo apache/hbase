@@ -106,7 +106,7 @@ public abstract class RegionSplitPolicy extends Configured {
     return policy;
   }
 
-  static Class<? extends RegionSplitPolicy> getSplitPolicyClass(
+  public static Class<? extends RegionSplitPolicy> getSplitPolicyClass(
       HTableDescriptor htd, Configuration conf) throws IOException {
     String className = htd.getRegionSplitPolicyClassName();
     if (className == null) {

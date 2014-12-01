@@ -137,6 +137,7 @@ public class TestFromClientSide {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         MultiRowMutationEndpoint.class.getName());
+    conf.setBoolean("hbase.table.sanity.checks", true); // enable for below tests
     // We need more than one region server in this test
     TEST_UTIL.startMiniCluster(SLAVES);
   }
@@ -4358,7 +4359,7 @@ public class TestFromClientSide {
 
     HTable table =
         TEST_UTIL.createTable(tableAname,
-          new byte[][] { HConstants.CATALOG_FAMILY, Bytes.toBytes("info2") }, 1, 64);
+          new byte[][] { HConstants.CATALOG_FAMILY, Bytes.toBytes("info2") }, 1, 1024);
     // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
     // in Store.rowAtOrBeforeFromStoreFile
     table.setAutoFlush(true);
@@ -5359,6 +5360,91 @@ public class TestFromClientSide {
     }
 
     table.close();
+  }
+
+  @Test
+  public void testIllegalTableDescriptor() throws Exception {
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testIllegalTableDescriptor"));
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+
+    // create table with 0 families
+    checkTableIsIllegal(htd);
+    htd.addFamily(hcd);
+    checkTableIsLegal(htd);
+
+    htd.setMaxFileSize(1024); // 1K
+    checkTableIsIllegal(htd);
+    htd.setMaxFileSize(0);
+    checkTableIsIllegal(htd);
+    htd.setMaxFileSize(1024 * 1024 * 1024); // 1G
+    checkTableIsLegal(htd);
+
+    htd.setMemStoreFlushSize(1024);
+    checkTableIsIllegal(htd);
+    htd.setMemStoreFlushSize(0);
+    checkTableIsIllegal(htd);
+    htd.setMemStoreFlushSize(128 * 1024 * 1024); // 128M
+    checkTableIsLegal(htd);
+
+    htd.setRegionSplitPolicyClassName("nonexisting.foo.class");
+    checkTableIsIllegal(htd);
+    htd.setRegionSplitPolicyClassName(null);
+    checkTableIsLegal(htd);
+
+    hcd.setBlocksize(0);
+    checkTableIsIllegal(htd);
+    hcd.setBlocksize(1024 * 1024 * 128); // 128M
+    checkTableIsIllegal(htd);
+    hcd.setBlocksize(1024);
+    checkTableIsLegal(htd);
+
+    hcd.setTimeToLive(0);
+    checkTableIsIllegal(htd);
+    hcd.setTimeToLive(-1);
+    checkTableIsIllegal(htd);
+    hcd.setTimeToLive(1);
+    checkTableIsLegal(htd);
+
+    hcd.setMinVersions(-1);
+    checkTableIsIllegal(htd);
+    hcd.setMinVersions(3);
+    try {
+      hcd.setMaxVersions(2);
+      fail();
+    } catch (IllegalArgumentException ex) {
+      // expected
+      hcd.setMaxVersions(10);
+    }
+    checkTableIsLegal(htd);
+
+    hcd.setScope(-1);
+    checkTableIsIllegal(htd);
+    hcd.setScope(0);
+    checkTableIsLegal(htd);
+
+    // check the conf settings to disable sanity checks
+    htd.setMemStoreFlushSize(0);
+    htd.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
+    checkTableIsLegal(htd);
+  }
+
+  private void checkTableIsLegal(HTableDescriptor htd) throws IOException {
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    admin.createTable(htd);
+    assertTrue(admin.tableExists(htd.getTableName()));
+    admin.disableTable(htd.getTableName());
+    admin.deleteTable(htd.getTableName());
+  }
+
+  private void checkTableIsIllegal(HTableDescriptor htd) throws IOException {
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    try {
+      admin.createTable(htd);
+      fail();
+    } catch(Exception ex) {
+      // should throw ex
+    }
+    assertFalse(admin.tableExists(htd.getTableName()));
   }
 
   @Test

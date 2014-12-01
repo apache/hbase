@@ -141,4 +141,10 @@
     version is X.X.X-SNAPSHOT"
     </description>
   </property>
+  <property>
+    <name>hbase.table.sanity.checks</name>
+    <value>false</value>
+    <description>Skip sanity checks in tests
+    </description>
+  </property>
 </configuration>

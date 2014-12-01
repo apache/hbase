@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -686,7 +687,17 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * This get the class associated with the region split policy which
+   * This sets the class associated with the region split policy which
+   * determines when a region split should occur.  The class used by
+   * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
+   * @param clazz the class name
+   */
+  public void setRegionSplitPolicyClassName(String clazz) {
+    setValue(SPLIT_POLICY, clazz);
+  }
+
+  /**
+   * This gets the class associated with the region split policy which
    * determines when a region split should occur.  The class used by
    * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
    *

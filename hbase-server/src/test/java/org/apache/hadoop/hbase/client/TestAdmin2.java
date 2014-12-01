@@ -171,8 +171,12 @@ public class TestAdmin2 {
   @Test (timeout=300000)
   public void testTableNameClash() throws Exception {
     String name = "testTableNameClash";
-    admin.createTable(new HTableDescriptor(TableName.valueOf(name + "SOMEUPPERCASE")));
-    admin.createTable(new HTableDescriptor(TableName.valueOf(name)));
+    HTableDescriptor htd1 = new HTableDescriptor(TableName.valueOf(name + "SOMEUPPERCASE"));
+    HTableDescriptor htd2 = new HTableDescriptor(TableName.valueOf(name));
+    htd1.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    htd2.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+    admin.createTable(htd1);
+    admin.createTable(htd2);
     // Before fix, below would fail throwing a NoServerForRegionException.
     new HTable(TEST_UTIL.getConfiguration(), name).close();
   }
@@ -196,8 +200,9 @@ public class TestAdmin2 {
       byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
       byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
       HBaseAdmin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-      hbaseadmin.createTable(new HTableDescriptor(TableName.valueOf(name)), startKey, endKey,
-        expectedRegions);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
+      htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+      hbaseadmin.createTable(htd, startKey, endKey, expectedRegions);
       hbaseadmin.close();
     } finally {
       TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, oldTimeout);

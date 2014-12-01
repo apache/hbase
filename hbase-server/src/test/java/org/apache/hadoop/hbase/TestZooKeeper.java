@@ -495,7 +495,9 @@ public class TestZooKeeper {
         Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
         Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
       String tableName = "testRegionAssignmentAfterMasterRecoveryDueToZKExpiry";
-      admin.createTable(new HTableDescriptor(TableName.valueOf(tableName)), SPLIT_KEYS);
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+      htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
+      admin.createTable(htd, SPLIT_KEYS);
       ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
       ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
       m.getZooKeeperWatcher().close();
