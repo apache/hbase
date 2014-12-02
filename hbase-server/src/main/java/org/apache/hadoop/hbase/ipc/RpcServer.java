@@ -1690,7 +1690,8 @@ public class RpcServer implements RpcServerInterface {
             responder, totalRequestSize, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, callTooBig, new CallQueueTooBigException(),
-          "Call queue is full, is ipc.server.max.callqueue.size too small?");
+          "Call queue is full on " + getListenerAddress() +
+          ", is hbase.ipc.server.max.callqueue.size too small?");
         responder.doRespond(callTooBig);
         return;
       }
@@ -1716,7 +1717,8 @@ public class RpcServer implements RpcServerInterface {
             buf, offset, buf.length);
         }
       } catch (Throwable t) {
-        String msg = "Unable to read call parameter from client " + getHostAddress();
+        String msg = getListenerAddress() + " is unable to read call parameter from client " +
+            getHostAddress();
         LOG.warn(msg, t);
 
         // probably the hbase hadoop version does not match the running hadoop version
