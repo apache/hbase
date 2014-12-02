@@ -171,14 +171,14 @@ public class DefaultMobCompactor extends DefaultCompactor {
                   KeyValue mobKv = KeyValueUtil.ensureKeyValue(cell);
                   mobKv.setSequenceId(kv.getSequenceId());
                   writer.append(mobKv);
+                  mobCompactedFromMobCellsCount++;
+                  mobCompactedFromMobCellsSize += cell.getValueLength();
                 } else {
                   // If the value of a file is empty, there might be issues when retrieving,
                   // directly write the cell to the store file, and leave it to be handled by the
                   // next compaction.
                   writer.append(kv);
                 }
-                mobCompactedFromMobCellsCount++;
-                mobCompactedFromMobCellsSize += cell.getValueLength();
               }
             } else {
               LOG.warn("The value format of the KeyValue " + kv
