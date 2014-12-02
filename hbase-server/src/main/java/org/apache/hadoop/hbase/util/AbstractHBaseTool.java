@@ -136,14 +136,14 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   protected void printUsage() {
-    HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.setWidth(80);
-    String usageHeader = "Options:";
-    String usageFooter = "";
-    String usageStr = "bin/hbase " + getClass().getName() + " <options>";
+    printUsage("bin/hbase " + getClass().getName() + " <options>", "Options:", "");
+  }
 
-    helpFormatter.printHelp(usageStr, usageHeader, options,
-        usageFooter);
+  protected void printUsage(final String usageStr, final String usageHeader,
+      final String usageFooter) {
+    HelpFormatter helpFormatter = new HelpFormatter();
+    helpFormatter.setWidth(120);
+    helpFormatter.printHelp(usageStr, usageHeader, options, usageFooter);
   }
 
   protected void addRequiredOptWithArg(String opt, String description) {

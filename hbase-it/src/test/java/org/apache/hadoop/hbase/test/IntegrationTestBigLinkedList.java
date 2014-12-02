@@ -1124,25 +1124,21 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
   private void usage() {
     System.err.println("Usage: " + this.getClass().getSimpleName() + " COMMAND [COMMAND options]");
-    System.err.println("  where COMMAND is one of:");
-    System.err.println("");
-    System.err.println("  Generator                  A map only job that generates data.");
-    System.err.println("  Verify                     A map reduce job that looks for holes");
-    System.err.println("                             Look at the counts after running");
-    System.err.println("                             REFERENCED and UNREFERENCED are ok");
-    System.err.println("                             any UNDEFINED counts are bad. Do not");
-    System.err.println("                             run at the same time as the Generator.");
-    System.err.println("  Walker                     A standalong program that starts ");
-    System.err.println("                             following a linked list and emits");
-    System.err.println("                             timing info.");
-    System.err.println("  Print                      A standalone program that prints nodes");
-    System.err.println("                             in the linked list.");
-    System.err.println("  Delete                     A standalone program that deletes a·");
-    System.err.println("                             single node.");
-    System.err.println("  Loop                       A program to Loop through Generator and");
-    System.err.println("                             Verify steps");
-    System.err.println("  Clean                      A program to clean all left over detritus.");
-    System.err.println("\t  ");
+    printCommands();
+  }
+
+  private void printCommands() {
+    System.err.println("Commands:");
+    System.err.println(" Generator  Map only job that generates data.");
+    System.err.println(" Verify     A map reduce job that looks for holes. Look at the counts ");
+    System.err.println("            after running. See REFERENCED and UNREFERENCED are ok. Any ");
+    System.err.println("            UNDEFINED counts are bad. Do not run with the Generator.");
+    System.err.println(" Walker     " +
+      "Standalong program that starts following a linked list & emits timing info.");
+    System.err.println(" Print      Standalone program that prints nodes in the linked list.");
+    System.err.println(" Delete     Standalone program that deletes a·single node.");
+    System.err.println(" Loop       Program to Loop through Generator and Verify steps");
+    System.err.println(" Clean      Program to clean all left over detritus.");
     System.err.flush();
   }
 
@@ -1152,7 +1148,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     String[] args = cmd.getArgs();
     //get the class, run with the conf
     if (args.length < 1) {
-      printUsage();
+      printUsage(this.getClass().getSimpleName() +
+        " <general options> COMMAND [<COMMAND options>]", "General options:", "");
+      printCommands();
       throw new RuntimeException("Incorrect Number of args.");
     }
     toRun = args[0];
@@ -1165,19 +1163,19 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     Tool tool = null;
     if (toRun.equals("Generator")) {
       tool = new Generator();
-    } else if (toRun.equals("Verify")) {
+    } else if (toRun.equalsIgnoreCase("Verify")) {
       tool = new Verify();
-    } else if (toRun.equals("Loop")) {
+    } else if (toRun.equalsIgnoreCase("Loop")) {
       Loop loop = new Loop();
       loop.it = this;
       tool = loop;
-    } else if (toRun.equals("Walker")) {
+    } else if (toRun.equalsIgnoreCase("Walker")) {
       tool = new Walker();
-    } else if (toRun.equals("Print")) {
+    } else if (toRun.equalsIgnoreCase("Print")) {
       tool = new Print();
-    } else if (toRun.equals("Delete")) {
+    } else if (toRun.equalsIgnoreCase("Delete")) {
       tool = new Delete();
-    } else if (toRun.equals("Clean")) {
+    } else if (toRun.equalsIgnoreCase("Clean")) {
       tool = new Clean();
     } else {
       usage();
