@@ -428,7 +428,7 @@ public class TestLogRolling  {
       desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
       admin.createTable(desc);
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
+      Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
 
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
       final WAL log = server.getWAL(null);
@@ -455,7 +455,7 @@ public class TestLogRolling  {
 
       writeData(table, 1002);
 
-      table.setAutoFlush(true, true);
+      table.setAutoFlushTo(true);
 
       long curTime = System.currentTimeMillis();
       LOG.info("log.getCurrentFileName()): " + DefaultWALProvider.getCurrentFileName(log));

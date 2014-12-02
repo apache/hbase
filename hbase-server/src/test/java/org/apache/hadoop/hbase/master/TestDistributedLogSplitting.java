@@ -883,7 +883,7 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
     final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
 
     Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
@@ -923,7 +923,7 @@ public class TestDistributedLogSplitting {
       if (key == null || key.length == 0) {
         key = new byte[] { 0, 0, 0, 0, 1 };
       }
-      ht.setAutoFlush(true, true);
+      ht.setAutoFlushTo(true);
       Put put = new Put(key);
       put.add(Bytes.toBytes("family"), Bytes.toBytes("c1"), new byte[]{'b'});
       ht.put(put);
@@ -1595,7 +1595,7 @@ public class TestDistributedLogSplitting {
    * Load table with puts and deletes with expected values so that we can verify later
    */
   private void prepareData(final HTable t, final byte[] f, final byte[] column) throws IOException {
-    t.setAutoFlush(false, true);
+    t.setAutoFlushTo(false);
     byte[] k = new byte[3];
 
     // add puts

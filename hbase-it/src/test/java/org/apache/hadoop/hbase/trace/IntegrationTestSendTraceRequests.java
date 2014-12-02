@@ -234,12 +234,12 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
   private LinkedBlockingQueue<Long> insertData() throws IOException, InterruptedException {
     LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<Long>(25000);
-    HTable ht = new HTable(util.getConfiguration(), this.tableName);
+    Table ht = new HTable(util.getConfiguration(), this.tableName);
     byte[] value = new byte[300];
     for (int x = 0; x < 5000; x++) {
       TraceScope traceScope = Trace.startSpan("insertData", Sampler.ALWAYS);
       try {
-        ht.setAutoFlush(false, true);
+        ht.setAutoFlushTo(false);
         for (int i = 0; i < 5; i++) {
           long rk = random.nextLong();
           rowKeys.add(rk);

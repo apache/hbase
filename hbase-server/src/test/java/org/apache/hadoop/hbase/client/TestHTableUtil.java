@@ -69,7 +69,7 @@ public class TestHTableUtil {
   public void testBucketPut() throws Exception {
     byte [] TABLE = Bytes.toBytes("testBucketPut");
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
-    ht.setAutoFlush(false, true);
+    ht.setAutoFlushTo(false);
 
     List<Put> puts = new ArrayList<Put>();
     puts.add( createPut("row1") );

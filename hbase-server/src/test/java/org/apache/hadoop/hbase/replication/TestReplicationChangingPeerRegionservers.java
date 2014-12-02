@@ -22,8 +22,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.LargeTests;
@@ -36,10 +34,11 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import java.io.IOException;
 
 /**
  * Test handling of changes to the number of a peer's regionservers.
@@ -54,7 +53,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
    */
   @Before
   public void setUp() throws Exception {
-    ((HTable)htable1).setAutoFlush(false, true);
+    htable1.setAutoFlushTo(false);
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
     for (JVMClusterUtil.RegionServerThread r :

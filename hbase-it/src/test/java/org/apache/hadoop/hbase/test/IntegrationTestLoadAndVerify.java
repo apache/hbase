@@ -20,12 +20,7 @@ package org.apache.hadoop.hbase.test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import com.google.common.collect.Sets;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
@@ -49,6 +44,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.NMapInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
@@ -68,7 +64,12 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Sets;
+import java.io.IOException;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A large test which loads a lot of data that has internal references, and
@@ -164,7 +165,7 @@ public void cleanUpCluster() throws Exception {
       extends Mapper<NullWritable, NullWritable, NullWritable, NullWritable>
   {
     protected long recordsToWrite;
-    protected HTable table;
+    protected Table table;
     protected Configuration conf;
     protected int numBackReferencesPerRow;
     protected String shortTaskId;
@@ -181,7 +182,7 @@ public void cleanUpCluster() throws Exception {
       numBackReferencesPerRow = conf.getInt(NUM_BACKREFS_KEY, NUM_BACKREFS_DEFAULT);
       table = new HTable(conf, TableName.valueOf(tableName));
       table.setWriteBufferSize(4*1024*1024);
-      table.setAutoFlush(false, true);
+      table.setAutoFlushTo(false);
 
       String taskId = conf.get("mapreduce.task.attempt.id");
       Matcher matcher = Pattern.compile(".+_m_(\\d+_\\d+)").matcher(taskId);

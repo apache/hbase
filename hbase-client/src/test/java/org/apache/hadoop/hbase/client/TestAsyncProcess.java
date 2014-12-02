@@ -662,7 +662,7 @@ public class TestAsyncProcess {
     HTable ht = new HTable();
     MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), conf, true);
     ht.ap = ap;
-    ht.setAutoFlush(true, true);
+    ht.setAutoFlushTo(true);
     if (bufferOn) {
       ht.setWriteBufferSize(1024L * 1024L);
     } else {
@@ -710,7 +710,7 @@ public class TestAsyncProcess {
     HTable ht = new HTable();
     MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), conf, true);
     ht.ap = ap;
-    ht.setAutoFlush(false, true);
+    ht.setAutoFlushTo(false);
     ht.setWriteBufferSize(0);
 
     Put p = createPut(1, false);
@@ -738,7 +738,7 @@ public class TestAsyncProcess {
   public void testWithNoClearOnFail() throws IOException {
     HTable ht = new HTable();
     ht.ap = new MyAsyncProcess(createHConnection(), conf, true);
-    ht.setAutoFlush(false, false);
+    ht.setAutoFlush(false);
 
     Put p = createPut(1, false);
     ht.put(p);
@@ -805,7 +805,7 @@ public class TestAsyncProcess {
     ht.ap.serverTrackerTimeout = 1;
 
     Put p = createPut(1, false);
-    ht.setAutoFlush(false, false);
+    ht.setAutoFlush(false);
     ht.put(p);
 
     try {
@@ -827,7 +827,7 @@ public class TestAsyncProcess {
     Assert.assertNotNull(ht.ap.createServerErrorTracker());
 
     Put p = createPut(1, true);
-    ht.setAutoFlush(false, false);
+    ht.setAutoFlush(false);
     ht.put(p);
 
     try {
