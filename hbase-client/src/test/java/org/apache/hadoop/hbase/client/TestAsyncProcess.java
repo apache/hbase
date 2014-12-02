@@ -710,7 +710,9 @@ public class TestAsyncProcess {
     HTable ht = new HTable();
     MyAsyncProcess ap = new MyAsyncProcess(createHConnection(), conf, true);
     ht.ap = ap;
-    ht.setAutoFlushTo(false);
+    // This is deprecated method. Using it here only because the new HTable above is a bit of a
+    // perversion skirting a bunch of setup.  Fix the HTable test-only constructor to do more.
+    ht.setAutoFlush(false, true);
     ht.setWriteBufferSize(0);
 
     Put p = createPut(1, false);
