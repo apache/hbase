@@ -178,7 +178,7 @@ public class TestHTableWrapper {
     boolean initialAutoFlush = hTableInterface.isAutoFlush();
     hTableInterface.setAutoFlushTo(false);
     assertFalse(hTableInterface.isAutoFlush());
-    hTableInterface.setAutoFlush(true, true);
+    hTableInterface.setAutoFlushTo(true);
     assertTrue(hTableInterface.isAutoFlush());
     hTableInterface.setAutoFlushTo(initialAutoFlush);
   }

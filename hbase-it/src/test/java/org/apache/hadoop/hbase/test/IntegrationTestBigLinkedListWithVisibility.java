@@ -185,7 +185,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       protected void instantiateHTable(Configuration conf) throws IOException {
         for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
           HTable table = new HTable(conf, getTableName(i));
-          table.setAutoFlush(true, true);
+          table.setAutoFlushTo(true);
           //table.setWriteBufferSize(4 * 1024 * 1024);
           this.tables[i] = table;
         }

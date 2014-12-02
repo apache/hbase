@@ -194,7 +194,7 @@ implements Configurable {
       }
       this.connection = ConnectionFactory.createConnection(this.conf);
       this.table = connection.getTable(TableName.valueOf(tableName));
-      ((HTable) this.table).setAutoFlush(false, true);
+      this.table.setAutoFlushTo(false);
       LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {
       LOG.error(e);

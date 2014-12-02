@@ -116,17 +116,16 @@ public class HTable implements HTableInterface, RegionLocator {
   private TableConfiguration tableConfiguration;
   protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
   private long writeBufferSize;
-  private boolean clearBufferOnFail;
-  private boolean autoFlush;
-  protected long currentWriteBufferSize;
+  private boolean clearBufferOnFail = true;
+  private boolean autoFlush = true;
+  protected long currentWriteBufferSize = 0 ;
+  private boolean closed = false;
   protected int scannerCaching;
   private ExecutorService pool;  // For Multi & Scan
-  private boolean closed;
   private int operationTimeout;
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
   private Consistency defaultConsistency = Consistency.STRONG;
-
 
   /** The Async process for puts with autoflush set to false or multiputs */
   protected AsyncProcess ap;
@@ -326,9 +325,10 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * For internal testing.
+   * @throws IOException
    */
   @VisibleForTesting
-  protected HTable() {
+  protected HTable() throws IOException {
     tableName = null;
     tableConfiguration = new TableConfiguration();
     cleanupPoolOnClose = false;
@@ -353,9 +353,6 @@ public class HTable implements HTableInterface, RegionLocator {
     this.operationTimeout = tableName.isSystemTable() ?
         tableConfiguration.getMetaOperationTimeout() : tableConfiguration.getOperationTimeout();
     this.writeBufferSize = tableConfiguration.getWriteBufferSize();
-    this.clearBufferOnFail = true;
-    this.autoFlush = true;
-    this.currentWriteBufferSize = 0;
     this.scannerCaching = tableConfiguration.getScannerCaching();
 
     if (this.rpcCallerFactory == null) {
@@ -368,8 +365,6 @@ public class HTable implements HTableInterface, RegionLocator {
     // puts need to track errors globally due to how the APIs currently work.
     ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true, rpcControllerFactory);
     multiAp = this.connection.getAsyncProcess();
-
-    this.closed = false;
   }
 
   /**
