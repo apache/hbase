@@ -239,7 +239,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
     for (int x = 0; x < 5000; x++) {
       TraceScope traceScope = Trace.startSpan("insertData", Sampler.ALWAYS);
       try {
-        ht.setAutoFlushTo(false);
+        ht.setAutoFlush(false, true);
         for (int i = 0; i < 5; i++) {
           long rk = random.nextLong();
           rowKeys.add(rk);

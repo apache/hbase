@@ -363,7 +363,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       protected void instantiateHTable(Configuration conf) throws IOException {
         table = new HTable(conf, getTableName(conf));
-        table.setAutoFlushTo(false);
+        table.setAutoFlush(false, true);
         table.setWriteBufferSize(4 * 1024 * 1024);
       }
 

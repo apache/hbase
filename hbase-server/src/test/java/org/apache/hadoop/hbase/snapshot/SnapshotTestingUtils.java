@@ -678,7 +678,7 @@ public class SnapshotTestingUtils {
 
   public static void loadData(final HBaseTestingUtility util, final HTable table, int rows,
       byte[]... families) throws IOException, InterruptedException {
-    table.setAutoFlushTo(false);
+    table.setAutoFlush(false, true);
 
     // Ensure one row per region
     assertTrue(rows >= KEYS.length);

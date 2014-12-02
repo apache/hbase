@@ -909,7 +909,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     void testSetup() throws IOException {
       this.table = connection.getTable(tableName);
-      this.table.setAutoFlushTo(false);
+      this.table.setAutoFlush(false, true);
     }
 
     void testTakedown()  throws IOException {

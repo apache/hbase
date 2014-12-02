@@ -116,16 +116,17 @@ public class HTable implements HTableInterface, RegionLocator {
   private TableConfiguration tableConfiguration;
   protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
   private long writeBufferSize;
-  private boolean clearBufferOnFail = true;
-  private boolean autoFlush = true;
-  protected long currentWriteBufferSize = 0 ;
-  private boolean closed = false;
+  private boolean clearBufferOnFail;
+  private boolean autoFlush;
+  protected long currentWriteBufferSize;
   protected int scannerCaching;
   private ExecutorService pool;  // For Multi & Scan
+  private boolean closed;
   private int operationTimeout;
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
   private Consistency defaultConsistency = Consistency.STRONG;
+
 
   /** The Async process for puts with autoflush set to false or multiputs */
   protected AsyncProcess ap;
@@ -325,10 +326,9 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * For internal testing.
-   * @throws IOException 
    */
   @VisibleForTesting
-  protected HTable() throws IOException {
+  protected HTable() {
     tableName = null;
     tableConfiguration = new TableConfiguration();
     cleanupPoolOnClose = false;

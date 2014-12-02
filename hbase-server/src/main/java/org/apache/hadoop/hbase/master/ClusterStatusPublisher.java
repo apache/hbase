@@ -37,8 +37,6 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import io.netty.util.internal.StringUtil;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -83,7 +81,6 @@ public class ClusterStatusPublisher extends Chore {
    * Use org.apache.hadoop.hbase.master.ClusterStatusPublisher.MulticastPublisher to multicast the
    * status.
    */
-  private static final Log LOG = LogFactory.getLog(ClusterStatusPublisher.class);
   public static final String STATUS_PUBLISHER_CLASS = "hbase.status.publisher.class";
   public static final Class<? extends ClusterStatusPublisher.Publisher>
       DEFAULT_STATUS_PUBLISHER_CLASS =
@@ -173,6 +170,7 @@ public class ClusterStatusPublisher extends Chore {
         null,
         null);
 
+
     publisher.publish(cs);
   }
 
@@ -216,7 +214,6 @@ public class ClusterStatusPublisher extends Chore {
       }
 
       res.add(toSend.getKey());
-      LOG.debug("###add dead server " + toSend.getKey());
     }
 
     return res;

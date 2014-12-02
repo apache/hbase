@@ -181,7 +181,7 @@ public void cleanUpCluster() throws Exception {
       numBackReferencesPerRow = conf.getInt(NUM_BACKREFS_KEY, NUM_BACKREFS_DEFAULT);
       table = new HTable(conf, TableName.valueOf(tableName));
       table.setWriteBufferSize(4*1024*1024);
-      table.setAutoFlushTo(false);
+      table.setAutoFlush(false, true);
 
       String taskId = conf.get("mapreduce.task.attempt.id");
       Matcher matcher = Pattern.compile(".+_m_(\\d+_\\d+)").matcher(taskId);

@@ -456,7 +456,7 @@ public class TestLogRolling  {
 
       writeData(table, 1002);
 
-      table.setAutoFlushTo(true);
+      table.setAutoFlush(true, true);
 
       long curTime = System.currentTimeMillis();
       LOG.info("log.getCurrentFileName()): " + DefaultWALProvider.getCurrentFileName(log));
