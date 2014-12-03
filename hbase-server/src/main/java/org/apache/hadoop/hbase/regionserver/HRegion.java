@@ -3356,6 +3356,11 @@ public class HRegion implements HeapSize { // , Writable{
             }
           }
 
+          if (firstSeqIdInLog == -1) {
+            firstSeqIdInLog = key.getLogSeqNum();
+          }
+          currentEditSeqId = key.getLogSeqNum();
+
           // Start coprocessor replay here. The coprocessor is for each WALEdit
           // instead of a KeyValue.
           if (coprocessorHost != null) {
@@ -3366,10 +3371,6 @@ public class HRegion implements HeapSize { // , Writable{
             }
           }
 
-          if (firstSeqIdInLog == -1) {
-            firstSeqIdInLog = key.getLogSeqNum();
-          }
-          currentEditSeqId = key.getLogSeqNum();
           boolean flush = false;
           for (KeyValue kv: val.getKeyValues()) {
             // Check this edit is for me. Also, guard against writing the special
@@ -3407,10 +3408,14 @@ public class HRegion implements HeapSize { // , Writable{
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
-            flush = restoreEdit(store, kv);
+            if (!flush) {
+              flush = restoreEdit(store, kv);
+            }
             editsCount++;
           }
-          if (flush) internalFlushcache(null, currentEditSeqId, status);
+          if (flush) {
+            internalFlushcache(null, currentEditSeqId, status);
+          }
 
           if (coprocessorHost != null) {
             coprocessorHost.postWALRestore(this.getRegionInfo(), key, val);
