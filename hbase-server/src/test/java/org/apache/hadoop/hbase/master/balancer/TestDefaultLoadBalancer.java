@@ -109,7 +109,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=60000)
   public void testBalanceCluster() throws Exception {
 
     for (int[] mockCluster : clusterStateMocks) {
