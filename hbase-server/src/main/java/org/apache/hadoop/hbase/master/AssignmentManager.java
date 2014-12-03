@@ -1073,7 +1073,8 @@ public class AssignmentManager extends ZooKeeperListener {
             return;
           }
           // Handle OPENED by removing from transition and deleted zk node
-          regionState = regionStates.updateRegionState(rt, State.OPEN);
+          regionState = 
+              regionStates.transitionOpenFromPendingOpenOrOpeningOnServer(rt,regionState, sn);
           if (regionState != null) {
             failedOpenTracker.remove(encodedName); // reset the count, if any
             new OpenedRegionHandler(

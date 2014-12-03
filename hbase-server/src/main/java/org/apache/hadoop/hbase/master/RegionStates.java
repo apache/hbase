@@ -385,6 +385,17 @@ public class RegionStates {
     return updateRegionState(regionInfo, state,
       transition.getServerName());
   }
+  
+  /**
+   * Transition a region state to OPEN from OPENING/PENDING_OPEN
+   */
+  public synchronized RegionState transitionOpenFromPendingOpenOrOpeningOnServer(
+      final RegionTransition transition, final RegionState fromState, final ServerName sn) {
+    if(fromState.isPendingOpenOrOpeningOnServer(sn)){
+      return updateRegionState(transition, State.OPEN);
+    }
+    return null;
+  }
 
   /**
    * Update a region state. It will be put in transition if not already there.
