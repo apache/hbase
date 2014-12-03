@@ -37,7 +37,7 @@ EOF
         #format_simple_command do
         #admin.user_permission(table_regex)
         now = Time.now
-        formatter.header(["User", "Table,Family,Qualifier:Permission"])
+        formatter.header(["User", "Namespace,Table,Family,Qualifier:Permission"])
 
         count = security_admin.user_permission(table_regex) do |user, permission|
           formatter.row([ user, permission])
