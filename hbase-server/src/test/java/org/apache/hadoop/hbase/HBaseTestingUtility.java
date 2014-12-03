@@ -2582,9 +2582,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public Connection getConnection() throws IOException {
     if (this.connection == null) {
-      if (getMiniHBaseCluster() == null) {
-        throw new IllegalStateException("You cannot have a Connection if cluster is not up");
-      }
       this.connection = ConnectionFactory.createConnection(this.conf);
     }
     return this.connection;
