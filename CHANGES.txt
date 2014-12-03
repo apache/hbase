@@ -1,5 +1,227 @@
 HBase Change Log
 
+Release Notes - HBase - Version 0.99.2 12/07/2014
+
+** Sub-task
+    * [HBASE-10671] - Add missing InterfaceAudience annotations for classes in hbase-common and hbase-client modules
+    * [HBASE-11164] - Document and test rolling updates from 0.98 -> 1.0
+    * [HBASE-11915] - Document and test 0.94 -> 1.0.0 update
+    * [HBASE-11964] - Improve spreading replication load from failed regionservers
+    * [HBASE-12075] - Preemptive Fast Fail
+    * [HBASE-12128] - Cache configuration and RpcController selection for Table in Connection
+    * [HBASE-12147] - Porting Online Config Change from 89-fb
+    * [HBASE-12202] - Support DirectByteBuffer usage in HFileBlock
+    * [HBASE-12214] - Visibility Controller in the peer cluster should be able to extract visibility tags from the replicated cells
+    * [HBASE-12288] - Support DirectByteBuffer usage in DataBlock Encoding area
+    * [HBASE-12297] - Support DBB usage in Bloom and HFileIndex area
+    * [HBASE-12313] - Redo the hfile index length optimization so cell-based rather than serialized KV key
+    * [HBASE-12353] - Turn down logging on some spewing unit tests
+    * [HBASE-12354] - Update dependencies in time for 1.0 release
+    * [HBASE-12355] - Update maven plugins
+    * [HBASE-12363] - Improve how KEEP_DELETED_CELLS works with MIN_VERSIONS
+    * [HBASE-12379] - Try surefire 2.18-SNAPSHOT
+    * [HBASE-12400] - Fix refguide so it does connection#getTable rather than new HTable everywhere: first cut!
+    * [HBASE-12404] - Task 5 from parent: Replace internal HTable constructor use with HConnection#getTable (0.98, 0.99)
+    * [HBASE-12471] - Task 4. replace internal ConnectionManager#{delete,get}Connection use with #close, #createConnection (0.98, 0.99) under src/main/java
+    * [HBASE-12517] - Several HConstant members are assignable
+    * [HBASE-12518] - Task 4 polish. Remove CM#{get,delete}Connection
+    * [HBASE-12519] - Remove tabs used as whitespace
+    * [HBASE-12526] - Remove unused imports
+    * [HBASE-12577] - Disable distributed log replay by default
+
+
+
+** Bug
+    * [HBASE-7211] - Improve hbase ref guide for the testing part.
+    * [HBASE-9003] - TableMapReduceUtil should not rely on org.apache.hadoop.util.JarFinder#getJar
+    * [HBASE-9117] - Remove HTablePool and all HConnection pooling related APIs
+    * [HBASE-9157] - ZKUtil.blockUntilAvailable loops forever with non-recoverable errors
+    * [HBASE-9527] - Review all old api that takes a table name as a byte array and ensure none can pass ns + tablename
+    * [HBASE-10536] - ImportTsv should fail fast if any of the column family passed to the job is not present in the table
+    * [HBASE-10780] - HFilePrettyPrinter#processFile should return immediately if file does not exist
+    * [HBASE-11099] - Two situations where we could open a region with smaller sequence number
+    * [HBASE-11562] - CopyTable should provide an option to shuffle the mapper tasks
+    * [HBASE-11835] - Wrong managenement of non expected calls in the client
+    * [HBASE-12017] - Use Connection.createTable() instead of HTable constructors.
+    * [HBASE-12029] - Use Table and RegionLocator in HTable.getRegionLocations() 
+    * [HBASE-12053] - SecurityBulkLoadEndPoint set 777 permission on input data files 
+    * [HBASE-12072] - Standardize retry handling for master operations
+    * [HBASE-12083] - Deprecate new HBaseAdmin() in favor of Connection.getAdmin()
+    * [HBASE-12142] - Truncate command does not preserve ACLs table
+    * [HBASE-12194] - Make TestEncodedSeekers faster
+    * [HBASE-12219] - Cache more efficiently getAll() and get() in FSTableDescriptors
+    * [HBASE-12226] - TestAccessController#testPermissionList failing on master
+    * [HBASE-12229] - NullPointerException in SnapshotTestingUtils
+    * [HBASE-12234] - Make TestMultithreadedTableMapper a little more stable.
+    * [HBASE-12237] - HBaseZeroCopyByteString#wrap() should not be called in hbase-client code
+    * [HBASE-12238] - A few ugly exceptions on startup
+    * [HBASE-12240] - hbase-daemon.sh should remove pid file if process not found running
+    * [HBASE-12241] - The crash of regionServer when taking deadserver's replication queue breaks replication
+    * [HBASE-12242] - Fix new javadoc warnings in Admin, etc.
+    * [HBASE-12246] - Compilation with hadoop-2.3.x and 2.2.x is broken
+    * [HBASE-12247] - Replace setHTable() with initializeTable() in TableInputFormat.
+    * [HBASE-12248] - broken link in hbase shell help
+    * [HBASE-12252] - IntegrationTestBulkLoad fails with illegal partition error
+    * [HBASE-12257] - TestAssignmentManager unsynchronized access to regionPlans
+    * [HBASE-12258] - Make TestHBaseFsck less flaky
+    * [HBASE-12261] - Add checkstyle to HBase build process
+    * [HBASE-12263] - RegionServer listens on localhost in distributed cluster when DNS is unavailable
+    * [HBASE-12265] - HBase shell 'show_filters' points to internal Facebook URL
+    * [HBASE-12274] - Race between RegionScannerImpl#nextInternal() and RegionScannerImpl#close() may produce null pointer exception
+    * [HBASE-12277] - Refactor bulkLoad methods in AccessController to its own interface
+    * [HBASE-12278] - Race condition in TestSecureLoadIncrementalHFilesSplitRecovery
+    * [HBASE-12279] - Generated thrift files were generated with the wrong parameters
+    * [HBASE-12281] - ClonedPrefixTreeCell should implement HeapSize
+    * [HBASE-12285] - Builds are failing, possibly because of SUREFIRE-1091
+    * [HBASE-12294] - Can't build the docs after the hbase-checkstyle module was added
+    * [HBASE-12301] - user_permission command does not show global permissions
+    * [HBASE-12302] - VisibilityClient getAuths does not propagate remote service exception correctly
+    * [HBASE-12304] - CellCounter will throw AIOBE when output directory is not specified
+    * [HBASE-12306] - CellCounter output's wrong value for Total Families Across all Rows in output file
+    * [HBASE-12308] - Fix typo in hbase-rest profile name
+    * [HBASE-12312] - Another couple of createTable race conditions
+    * [HBASE-12314] - Add chaos monkey policy to execute two actions concurrently
+    * [HBASE-12315] - Fix 0.98 Tests after checkstyle got parented
+    * [HBASE-12316] - test-patch.sh (Hadoop-QA) outputs the wrong release audit warnings URL
+    * [HBASE-12318] - Add license header to checkstyle xml files
+    * [HBASE-12319] - Inconsistencies during region recovery due to close/open of a region during recovery
+    * [HBASE-12322] - Add clean up command to ITBLL
+    * [HBASE-12327] - MetricsHBaseServerSourceFactory#createContextName has wrong conditions
+    * [HBASE-12329] - Table create with duplicate column family names quietly succeeds
+    * [HBASE-12334] - Handling of DeserializationException causes needless retry on failure
+    * [HBASE-12336] - RegionServer failed to shutdown for NodeFailoverWorker thread
+    * [HBASE-12337] - Import tool fails with NullPointerException if clusterIds is not initialized
+    * [HBASE-12346] - Scan's default auths behavior under Visibility labels
+    * [HBASE-12352] - Add hbase-annotation-tests to runtime classpath so can run hbase it tests.
+    * [HBASE-12356] - Rpc with region replica does not propagate tracing spans
+    * [HBASE-12359] - MulticastPublisher should specify IPv4/v6 protocol family when creating multicast channel
+    * [HBASE-12366] - Add login code to HBase Canary tool.
+    * [HBASE-12372] - [WINDOWS] Enable log4j configuration in hbase.cmd 
+    * [HBASE-12375] - LoadIncrementalHFiles fails to load data in table when CF name starts with '_'
+    * [HBASE-12377] - HBaseAdmin#deleteTable fails when META region is moved around the same timeframe
+    * [HBASE-12384] - TestTags can hang on fast test hosts
+    * [HBASE-12386] - Replication gets stuck following a transient zookeeper error to remote peer cluster
+    * [HBASE-12398] - Region isn't assigned in an extreme race condition
+    * [HBASE-12399] - Master startup race between metrics and RpcServer
+    * [HBASE-12402] - ZKPermissionWatcher race condition in refreshing the cache leaving stale ACLs and causing AccessDenied
+    * [HBASE-12407] - HConnectionKey doesn't contain CUSTOM_CONTROLLER_CONF_KEY in CONNECTION_PROPERTIES 
+    * [HBASE-12414] - Move HFileLink.exists() to base class
+    * [HBASE-12417] - Scan copy constructor does not retain small attribute
+    * [HBASE-12419] - "Partial cell read caused by EOF" ERRORs on replication source during replication
+    * [HBASE-12420] - BucketCache logged startup message is egregiously large
+    * [HBASE-12423] - Use a non-managed Table in TableOutputFormat
+    * [HBASE-12428] - region_mover.rb script is broken if port is not specified
+    * [HBASE-12440] - Region may remain offline on clean startup under certain race condition
+    * [HBASE-12445] - hbase is removing all remaining cells immediately after the cell marked with marker = KeyValue.Type.DeleteColumn via PUT
+    * [HBASE-12448] - Fix rate reporting in compaction progress DEBUG logging
+    * [HBASE-12449] - Use the max timestamp of current or old cell's timestamp in HRegion.append()
+    * [HBASE-12450] - Unbalance chaos monkey might kill all region servers without starting them back
+    * [HBASE-12459] - Use a non-managed Table in mapred.TableOutputFormat
+    * [HBASE-12460] - Moving Chore to hbase-common module.
+    * [HBASE-12461] - FSVisitor logging is excessive
+    * [HBASE-12464] - meta table region assignment stuck in the FAILED_OPEN state due to region server not fully ready to serve
+    * [HBASE-12478] - HBASE-10141 and MIN_VERSIONS are not compatible
+    * [HBASE-12479] - Backport HBASE-11689 (Track meta in transition) to 0.98 and branch-1
+    * [HBASE-12490] - Replace uses of setAutoFlush(boolean, boolean)
+    * [HBASE-12491] - TableMapReduceUtil.findContainingJar() NPE
+    * [HBASE-12495] - Use interfaces in the shell scripts
+    * [HBASE-12513] - Graceful stop script does not restore the balancer state
+    * [HBASE-12514] - Cleanup HFileOutputFormat legacy code
+    * [HBASE-12520] - Add protected getters on TableInputFormatBase
+    * [HBASE-12533] - staging directories are not deleted after secure bulk load
+    * [HBASE-12536] - Reduce the effective scope of GLOBAL CREATE and ADMIN permission
+    * [HBASE-12537] - HBase should log the remote host on replication error
+    * [HBASE-12539] - HFileLinkCleaner logs are uselessly noisy
+    * [HBASE-12541] - Add misc debug logging to hanging tests in TestHCM and TestBaseLoadBalancer
+    * [HBASE-12544] - ops_mgt.xml missing in branch-1
+    * [HBASE-12550] - Check all storefiles are referenced before splitting
+    * [HBASE-12560] - [WINDOWS] Append the classpath from Hadoop to HBase classpath in bin/hbase.cmd
+    * [HBASE-12576] - Add metrics for rolling the HLog if there are too few DN's in the write pipeline
+    * [HBASE-12580] - Zookeeper instantiated even though we might not need it in the shell
+    * [HBASE-12581] - TestCellACLWithMultipleVersions failing since task 5 HBASE-12404 (HBASE-12404 addendum)
+    * [HBASE-12584] - Fix branch-1 failing since task 5 HBASE-12404 (HBASE-12404 addendum)
+    * [HBASE-12595] - Use Connection.getTable() in table.rb
+    * [HBASE-12600] - Remove REPLAY tag dependency in Distributed Replay Mode
+    * [HBASE-12610] - Close connection in TableInputFormatBase
+    * [HBASE-12611] - Create autoCommit() method and remove clearBufferOnFail
+    * [HBASE-12614] - Potentially unclosed StoreFile(s) in DefaultCompactor#compact()
+    * [HBASE-12616] - We lost the IntegrationTestBigLinkedList COMMANDS in recent usage refactoring
+
+
+
+
+** Improvement
+    * [HBASE-2609] - Harmonize the Get and Delete operations
+    * [HBASE-4955] - Use the official versions of surefire & junit
+    * [HBASE-8361] - Bulk load and other utilities should not create tables for user
+    * [HBASE-8572] - Enhance delete_snapshot.rb to call snapshot deletion API with regex
+    * [HBASE-10082] - Describe 'table' output is all on one line, could use better formatting
+    * [HBASE-10483] - Provide API for retrieving info port when hbase.master.info.port is set to 0
+    * [HBASE-11639] - [Visibility controller] Replicate the visibility of Cells as strings
+    * [HBASE-11870] - Optimization : Avoid copy of key and value for tags addition in AC and VC
+    * [HBASE-12161] - Add support for grant/revoke on namespaces in AccessControlClient
+    * [HBASE-12243] - HBaseFsck should auto set ignorePreCheckPermission to true if no fix option is set.
+    * [HBASE-12249] - Script to help you adhere to the patch-naming guidelines
+    * [HBASE-12264] - ImportTsv should fail fast if output is not specified and table does not exist
+    * [HBASE-12271] - Add counters for files skipped during snapshot export
+    * [HBASE-12272] - Generate Thrift code through maven
+    * [HBASE-12328] - Need to separate JvmMetrics for Master and RegionServer
+    * [HBASE-12389] - Reduce the number of versions configured for the ACL table
+    * [HBASE-12390] - Change revision style from svn to git
+    * [HBASE-12411] - Optionally enable p-reads and private readers for compactions
+    * [HBASE-12416] - RegionServerCallable should report what host it was communicating with
+    * [HBASE-12424] - Finer grained logging and metrics for split transactions
+    * [HBASE-12432] - RpcRetryingCaller should log after fixed number of retries like AsyncProcess
+    * [HBASE-12434] - Add a command to compact all the regions in a regionserver
+    * [HBASE-12447] - Add support for setTimeRange for RowCounter and CellCounter
+    * [HBASE-12455] - Add 'description' to bean and attribute output when you do /jmx?description=true
+    * [HBASE-12529] - Use ThreadLocalRandom for RandomQueueBalancer
+    * [HBASE-12569] - Control MaxDirectMemorySize in the same manner as heap size
+
+** New Feature
+    * [HBASE-8707] - Add LongComparator for filter
+    * [HBASE-12286] - [shell] Add server/cluster online load of configuration changes
+    * [HBASE-12361] - Show data locality of region in table page
+    * [HBASE-12496] - A blockedRequestsCount metric
+
+
+
+
+
+
+
+
+** Task
+    * [HBASE-10200] - Better error message when HttpServer fails to start due to java.net.BindException
+    * [HBASE-10870] - Deprecate and replace HCD methods that have a 'should' prefix with a 'get' instead
+    * [HBASE-12250] - Adding an endpoint for updating the regionserver config
+    * [HBASE-12344] - Split up TestAdmin
+    * [HBASE-12381] - Add maven enforcer rules for build assumptions
+    * [HBASE-12388] - Document that WALObservers don't get empty edits.
+    * [HBASE-12427] - Change branch-1 version from 0.99.2-SNAPSHOT to 0.99.3-SNAPSHOT
+    * [HBASE-12442] - Bring KeyValue#createFirstOnRow() back to branch-1 as deprecated methods
+    * [HBASE-12456] - Update surefire from 2.18-SNAPSHOT to 2.18
+    * [HBASE-12516] - Clean up master so QA Bot is in known good state
+    * [HBASE-12522] - Backport WAL refactoring to branch-1
+
+
+** Test
+    * [HBASE-12317] - Run IntegrationTestRegionReplicaPerf w.o mapred
+    * [HBASE-12335] - IntegrationTestRegionReplicaPerf is flaky
+    * [HBASE-12367] - Integration tests should not restore the cluster if the CM is not destructive
+    * [HBASE-12378] - Add a test to verify that the read-replica is able to read after a compaction
+    * [HBASE-12401] - Add some timestamp signposts in IntegrationTestMTTR
+    * [HBASE-12403] - IntegrationTestMTTR flaky due to aggressive RS restart timeout
+    * [HBASE-12472] - Improve debuggability of IntegrationTestBulkLoad
+    * [HBASE-12549] - Fix TestAssignmentManagerOnCluster#testAssignRacingWithSSH() flaky test
+    * [HBASE-12554] - TestBaseLoadBalancer may timeout due to lengthy rack lookup
+
+** Umbrella
+    * [HBASE-10602] - Cleanup HTable public interface
+    * [HBASE-10856] - Prep for 1.0
+
+
+
 Release Notes - HBase - Version 0.99.1 10/15/2014
 
 ** Sub-task
