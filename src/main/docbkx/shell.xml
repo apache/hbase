@@ -47,13 +47,162 @@
 
     <section
         xml:id="scripting">
-        <title>Scripting</title>
+        <title>Scripting with Ruby</title>
         <para>For examples scripting Apache HBase, look in the HBase <filename>bin</filename>
             directory. Look at the files that end in <filename>*.rb</filename>. To run one of these
             files, do as follows:</para>
         <programlisting>$ ./bin/hbase org.jruby.Main PATH_TO_SCRIPT</programlisting>
     </section>
 
+    <section>
+        <title>Running the Shell in Non-Interactive Mode</title>
+        <para>A new non-interactive mode has been added to the HBase Shell (<link
+                xlink:href="https://issues.apache.org/jira/browse/HBASE-11658">HBASE-11658)</link>.
+            Non-interactive mode captures the exit status (success or failure) of HBase Shell
+            commands and passes that status back to the command interpreter. If you use the normal
+            interactive mode, the HBase Shell will only ever return its own exit status, which will
+            nearly always be <literal>0</literal> for success.</para>
+        <para>To invoke non-interactive mode, pass the <option>-n</option> or
+                <option>--non-interactive</option> option to HBase Shell.</para>
+    </section>
+    
+    <section xml:id="hbase.shell.noninteractive">
+        <title>HBase Shell in OS Scripts</title>
+        <para>You can use the HBase shell from within operating system script interpreters like the
+            Bash shell which is the default command interpreter for most Linux and UNIX
+            distributions. The following guidelines use Bash syntax, but could be adjusted to work
+            with C-style shells such as csh or tcsh, and could probably be modified to work with the
+            Microsoft Windows script interpreter as well. Submissions are welcome.</para>
+        <note>
+            <para>Spawning HBase Shell commands in this way is slow, so keep that in mind when you
+                are deciding when combining HBase operations with the operating system command line
+                is appropriate.</para>
+        </note>
+        <example>
+            <title>Passing Commands to the HBase Shell</title>
+            <para>You can pass commands to the HBase Shell in non-interactive mode (see <xref
+                    linkend="hbasee.shell.noninteractive"/>) using the <command>echo</command>
+                command and the <literal>|</literal> (pipe) operator. Be sure to escape characters
+                in the HBase commands which would otherwise be interpreted by the shell. Some
+                debug-level output has been truncated from the example below.</para>
+            <screen>$ <userinput>echo "describe 'test1'" | ./hbase shell -n</userinput>
+                <computeroutput>
+Version 0.98.3-hadoop2, rd5e65a9144e315bb0a964e7730871af32f5018d5, Sat May 31 19:56:09 PDT 2014
+
+describe 'test1'
+
+DESCRIPTION                                          ENABLED
+ 'test1', {NAME => 'cf', DATA_BLOCK_ENCODING => 'NON true
+ E', BLOOMFILTER => 'ROW', REPLICATION_SCOPE => '0',
+  VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIO
+ NS => '0', TTL => 'FOREVER', KEEP_DELETED_CELLS =>
+ 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false'
+ , BLOCKCACHE => 'true'}
+1 row(s) in 3.2410 seconds    
+                </computeroutput>            
+            </screen>
+            <para>To suppress all output, echo it to <filename>/dev/null:</filename></para>
+            <screen>$ <userinput>echo "describe 'test'" | ./hbase shell -n > /dev/null 2>&amp;1</userinput></screen>
+        </example>
+        <example>
+            <title>Checking the Result of a Scripted Command</title>
+            <para>Since scripts are not designed to be run interactively, you need a way to check
+                whether your command failed or succeeded. The HBase shell uses the standard
+                convention of returning a value of <literal>0</literal> for successful commands, and
+                some non-zero value for failed commands. Bash stores a command's return value in a
+                special environment variable called <varname>$?</varname>. Because that variable is
+                overwritten each time the shell runs any command, you should store the result in a
+                different, script-defined variable.</para>
+            <para>This is a naive script that shows one way to store the return value and make a
+                decision based upon it.</para>
+            <programlisting language="bourne">
+#!/bin/bash
+
+echo "describe 'test'" | ./hbase shell -n > /dev/null 2>&amp;1
+status=$?
+echo "The status was " $status  
+if ($status == 0); then
+    echo "The command succeeded"
+else
+    echo "The command may have failed."
+fi
+return $status
+            </programlisting>
+        </example>
+        <section>
+            <title>Checking for Success or Failure In Scripts</title>
+            <para>Getting an exit code of 0 means that the command you scripted definitely
+                succeeded. However, getting a non-zero exit code does not necessarily mean the
+                command failed. The command could have succeeded, but the client lost connectivity,
+                or some other event obscured its success. This is because RPC commands are
+                stateless. The only way to be sure of the status of an operation is to check. For
+                instance, if your script creates a table, but returns a non-zero exit value, you
+                should check whether the table was actually created before trying again to create
+                it.</para>
+        </section>
+    </section>
+    
+    <section>
+        <title>Read HBase Shell Commands from a Command File</title>
+        <para>You can enter HBase Shell commands into a text file, one command per line, and pass
+            that file to the HBase Shell.</para>
+        <example>
+            <title>Example Command File</title>
+            <screen>
+create 'test', 'cf'
+list 'test'
+put 'test', 'row1', 'cf:a', 'value1'
+put 'test', 'row2', 'cf:b', 'value2'
+put 'test', 'row3', 'cf:c', 'value3'
+put 'test', 'row4', 'cf:d', 'value4'
+scan 'test'
+get 'test', 'row1'
+disable 'test'
+enable 'test'
+            </screen>
+        </example>
+        <example>
+            <title>Directing HBase Shell to Execute the Commands</title>
+            <para>Pass the path to the command file as the only argument to the <command>hbase
+                    shell</command> command. Each command is executed and its output is shown. If
+                you do not include the <command>exit</command> command in your script, you are
+                returned to the HBase shell prompt. There is no way to programmatically check each
+                individual command for success or failure. Also, though you see the output for each
+                command, the commands themselves are not echoed to the screen so it can be difficult
+                to line up the command with its output.</para>
+            <screen>
+$ <userinput>./hbase shell ./sample_commands.txt</userinput>
+<computeroutput>0 row(s) in 3.4170 seconds
+
+TABLE
+test
+1 row(s) in 0.0590 seconds
+
+0 row(s) in 0.1540 seconds
+
+0 row(s) in 0.0080 seconds
+
+0 row(s) in 0.0060 seconds
+
+0 row(s) in 0.0060 seconds
+
+ROW                   COLUMN+CELL
+ row1                 column=cf:a, timestamp=1407130286968, value=value1
+ row2                 column=cf:b, timestamp=1407130286997, value=value2
+ row3                 column=cf:c, timestamp=1407130287007, value=value3
+ row4                 column=cf:d, timestamp=1407130287015, value=value4
+4 row(s) in 0.0420 seconds
+
+COLUMN                CELL
+ cf:a                 timestamp=1407130286968, value=value1
+1 row(s) in 0.0110 seconds
+
+0 row(s) in 1.5630 seconds
+
+0 row(s) in 0.4360 seconds</computeroutput>                
+            </screen>
+        </example>
+    </section>
     <section>
         <title>Passing VM Options to the Shell</title>
         <para>You can pass VM options to the HBase Shell using the <code>HBASE_SHELL_OPTS</code>

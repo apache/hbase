@@ -39,15 +39,29 @@
             xlink:href="http://wiki.apache.org/hadoop/Hbase">wiki</link> where the pertinent
         information can be found.</para>
 
-    <para>This reference guide is a work in progress. The source for this guide can be found at
-            <filename>src/main/docbkx</filename> in a checkout of the hbase project. This reference
-        guide is marked up using <link
-            xlink:href="http://www.docbook.com/">DocBook</link> from which the the finished guide is
-        generated as part of the 'site' build target. Run <programlisting>mvn site</programlisting>
-        to generate this documentation. Amendments and improvements to the documentation are
-        welcomed. Add a patch to an issue up in the HBase <link
-            xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
-
+    <formalpara>
+        <title>About This Guide</title>
+        <para>This reference guide is a work in progress. The source for this guide can be found in
+            the <filename>src/main/docbkx</filename> directory of the HBase source. This reference
+            guide is marked up using <link xlink:href="http://www.docbook.org/">DocBook</link> from
+            which the the finished guide is generated as part of the 'site' build target. Run
+            <programlisting language="bourne">mvn site</programlisting> to generate this documentation. Amendments and
+            improvements to the documentation are welcomed. Click <link
+                xlink:href="https://issues.apache.org/jira/secure/CreateIssueDetails!init.jspa?pid=12310753&amp;issuetype=1&amp;components=12312132&amp;summary=SHORT+DESCRIPTION"
+                >this link</link> to file a new documentation bug against Apache HBase with some
+            values pre-selected.</para>
+    </formalpara>
+    <formalpara>
+        <title>Contributing to the Documentation</title>
+        <para>For an overview of Docbook and suggestions to get started contributing to the documentation, see <xref linkend="appendix_contributing_to_documentation" />.</para>
+    </formalpara>
+    <formalpara>
+        <title>Providing Feedback</title>
+        <para>This guide allows you to leave comments or questions on any page, using Disqus. Look
+            for the Comments area at the bottom of the page. Answering these questions is a
+            volunteer effort, and may be delayed.</para>
+    </formalpara>
+    
     <note
         xml:id="headsup">
         <title>Heads-up if this is your first foray into the world of distributed

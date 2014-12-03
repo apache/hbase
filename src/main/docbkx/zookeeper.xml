@@ -90,7 +90,7 @@
     has ZooKeeper persist data under <filename>/tmp</filename> which is often cleared on system
     restart. In the example below we have ZooKeeper persist to
       <filename>/user/local/zookeeper</filename>.</para>
-  <programlisting><![CDATA[
+  <programlisting language="java"><![CDATA[
   <configuration>
     ...
     <property>
@@ -144,7 +144,7 @@
     <para>To point HBase at an existing ZooKeeper cluster, one that is not managed by HBase, set
         <varname>HBASE_MANAGES_ZK</varname> in <filename>conf/hbase-env.sh</filename> to
       false</para>
-    <screen>
+    <screen language="bourne">
   ...
   # Tell HBase whether it should manage its own instance of Zookeeper or not.
   export HBASE_MANAGES_ZK=false</screen>
@@ -158,7 +158,7 @@
       regular start/stop scripts. If you would like to run ZooKeeper yourself, independent of HBase
       start/stop, you would do the following</para>
 
-    <screen>
+    <screen language="bourne">
 ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 </screen>
 
@@ -223,7 +223,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
       <para>On each host that will run an HBase client (e.g. <code>hbase shell</code>), add the
         following file to the HBase home directory's <filename>conf</filename> directory:</para>
 
-      <programlisting>
+      <programlisting language="java">
 Client {
   com.sun.security.auth.module.Krb5LoginModule required
   useKeyTab=false
@@ -242,7 +242,7 @@ Client {
         configuration file in the conf directory of the node's <filename>HBASE_HOME</filename>
         directory that looks like the following:</para>
 
-      <programlisting>
+      <programlisting language="java">
 Server {
   com.sun.security.auth.module.Krb5LoginModule required
   useKeyTab=true
@@ -274,7 +274,7 @@ Client {
 
       <para>Modify your <filename>hbase-env.sh</filename> to include the following:</para>
 
-      <programlisting>
+      <programlisting language="bourne">
 export HBASE_OPTS="-Djava.security.auth.login.config=$CLIENT_CONF"
 export HBASE_MANAGES_ZK=true
 export HBASE_ZOOKEEPER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
@@ -288,7 +288,7 @@ export HBASE_REGIONSERVER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_
       <para>Modify your <filename>hbase-site.xml</filename> on each node that will run zookeeper,
         master or regionserver to contain:</para>
 
-      <programlisting><![CDATA[
+      <programlisting language="java"><![CDATA[
 <configuration>
   <property>
     <name>hbase.zookeeper.quorum</name>
@@ -330,7 +330,7 @@ bin/hbase regionserver start
     <section>
       <title>External Zookeeper Configuration</title>
       <para>Add a JAAS configuration file that looks like:</para>
-      <programlisting>
+      <programlisting language="java">
 Client {
   com.sun.security.auth.module.Krb5LoginModule required
   useKeyTab=true
@@ -346,7 +346,7 @@ Client {
 
       <para>Modify your hbase-env.sh to include the following:</para>
 
-      <programlisting>
+      <programlisting language="bourne">
 export HBASE_OPTS="-Djava.security.auth.login.config=$CLIENT_CONF"
 export HBASE_MANAGES_ZK=false
 export HBASE_MASTER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
@@ -357,7 +357,7 @@ export HBASE_REGIONSERVER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_
       <para>Modify your <filename>hbase-site.xml</filename> on each node that will run a master or
         regionserver to contain:</para>
 
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <configuration>
   <property>
     <name>hbase.zookeeper.quorum</name>
@@ -375,13 +375,13 @@ export HBASE_REGIONSERVER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_
         Quorum hosts.</para>
 
       <para> Add a <filename>zoo.cfg</filename> for each Zookeeper Quorum host containing:</para>
-      <programlisting>
+      <programlisting language="java">
 authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
 kerberos.removeHostFromPrincipal=true
 kerberos.removeRealmFromPrincipal=true
                   </programlisting>
       <para>Also on each of these hosts, create a JAAS configuration file containing:</para>
-      <programlisting>
+      <programlisting language="java">
 Server {
   com.sun.security.auth.module.Krb5LoginModule required
   useKeyTab=true
@@ -395,7 +395,7 @@ Server {
         pathname of this file as <filename>$ZK_SERVER_CONF</filename> below. </para>
 
       <para> Start your Zookeepers on each Zookeeper Quorum host with:</para>
-      <programlisting>
+      <programlisting language="bourne">
 SERVER_JVMFLAGS="-Djava.security.auth.login.config=$ZK_SERVER_CONF" bin/zkServer start
                   </programlisting>
 
@@ -480,7 +480,7 @@ bin/hbase regionserver &amp;
         <para> You must override the standard hadoop-core jar file from the
             <code>target/cached_classpath.txt</code> file with the version containing the
           HADOOP-7070 fix. You can use the following script to do this:</para>
-        <screen>
+        <screen language="bourne">
 echo `find ~/.m2 -name "*hadoop-core*7070*SNAPSHOT.jar"` ':' `cat target/cached_classpath.txt` | sed 's/ //g' > target/tmp.txt
 mv target/tmp.txt target/cached_classpath.txt
                 </screen>

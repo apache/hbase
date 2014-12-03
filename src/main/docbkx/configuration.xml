@@ -62,6 +62,11 @@
         <para>Script for Windows and Linux / Unix environments to set up the working environment for
         HBase, including the location of Java, Java options, and other environment variables. The
         file contains many commented-out examples to provide guidance.</para>
+        <note>
+          <para>In HBase 0.98.5 and newer, you must set <envar>JAVA_HOME</envar> on each node of
+            your cluster. <filename>hbase-env.sh</filename> provides a handy mechanism to do
+            this.</para>
+        </note>
       </listitem>
     </varlistentry>
     <varlistentry>
@@ -177,6 +182,12 @@
       </tgroup>
     </table>
 
+    <note>
+      <para>In HBase 0.98.5 and newer, you must set <envar>JAVA_HOME</envar> on each node of
+        your cluster. <filename>hbase-env.sh</filename> provides a handy mechanism to do
+        this.</para>
+    </note>
+    
     <variablelist
       xml:id="os">
       <title>Operating System Utilities</title>
@@ -357,7 +368,7 @@ hadoop  -       nproc   32000
         <title>Hadoop 2.x is recommended.</title>
         <para>Hadoop 2.x is faster and includes features, such as short-circuit reads, which will
           help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes
-          that will improve your overall HBase experience. HBase 0.98 deprecates use of Hadoop 1.x,
+          that will improve your overall HBase experience. HBase 0.98 drops support for Hadoop 1.0, deprecates use of Hadoop 1.1+,
           and HBase 1.0 will not support Hadoop 1.x.</para>
       </tip>
       <para>Use the following legend to interpret this table:</para>
@@ -400,7 +411,7 @@ hadoop  -       nproc   32000
               <entry>HBase-0.92.x</entry>
               <entry>HBase-0.94.x</entry>
               <entry>HBase-0.96.x</entry>
-              <entry><para>HBase-0.98.x (Support for Hadoop 1.x is deprecated.)</para></entry>
+              <entry><para>HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.)</para></entry>
               <entry><para>HBase-1.0.x (Hadoop 1.x is NOT supported)</para></entry>
             </row>
           </thead>
@@ -422,20 +433,10 @@ hadoop  -       nproc   32000
               <entry>X</entry>
             </row>
             <row>
-              <entry><para>Hadoop-1.0.0-1.0.2 (HBase requires hadoop 1.0.3 at a minimum; there is an
-                  issue where we cannot find KerberosUtil compiling against earlier versions of
-                  Hadoop.)</para></entry>
+              <entry>Hadoop-1.0.x</entry>
               <entry>X</entry>
               <entry>X</entry>
               <entry>X</entry>
-              <entry>X</entry>
-              <entry>X</entry>
-            </row>
-            <row>
-              <entry>Hadoop-1.0.3+</entry>
-              <entry>S</entry>
-              <entry>S</entry>
-              <entry>S</entry>
               <entry>X</entry>
               <entry>X</entry>
             </row>
@@ -444,7 +445,7 @@ hadoop  -       nproc   32000
               <entry>NT</entry>
               <entry>S</entry>
               <entry>S</entry>
-              <entry>X</entry>
+              <entry>NT</entry>
               <entry>X</entry>
             </row>
             <row>
@@ -474,53 +475,7 @@ hadoop  -       nproc   32000
             <row>
               <entry>Hadoop-2.2.0 </entry>
               <entry>X</entry>
-              <entry><para>NT - To get 0.94.x to run on hadoop 2.2.0, you need to change the hadoop
-                  2 and protobuf versions in the <filename>pom.xml</filename>: Here is a diff with
-                  pom.xml changes: </para>
-                  <programlisting><![CDATA[$ svn diff pom.xml
-Index: pom.xml
-===================================================================
---- pom.xml     (revision 1545157)
-+++ pom.xml     (working copy)
-@@ -1034,7 +1034,7 @@
-     <slf4j.version>1.4.3</slf4j.version>
-     <log4j.version>1.2.16</log4j.version>
-     <mockito-all.version>1.8.5</mockito-all.version>
--    <protobuf.version>2.4.0a</protobuf.version>
-+    <protobuf.version>2.5.0</protobuf.version>
-     <stax-api.version>1.0.1</stax-api.version>
-     <thrift.version>0.8.0</thrift.version>
-     <zookeeper.version>3.4.5</zookeeper.version>
-@@ -2241,7 +2241,7 @@
-         </property>
-       </activation>
-       <properties>
--        <hadoop.version>2.0.0-alpha</hadoop.version>
-+        <hadoop.version>2.2.0</hadoop.version>
-         <slf4j.version>1.6.1</slf4j.version>
-       </properties>
-       <dependencies>]]>
-                   </programlisting>
-                  <para>The next step is to regenerate Protobuf files and assuming that the Protobuf
-                    has been installed:</para>
-                  <itemizedlist>
-                    <listitem>
-                      <para>Go to the hbase root folder, using the command line;</para>
-                    </listitem>
-                    <listitem>
-                      <para>Type the following commands:</para>
-                      <para>
-                        <programlisting><![CDATA[$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/hbase.proto]]></programlisting>
-                      </para>
-                      <para>
-                        <programlisting><![CDATA[$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/ErrorHandling.proto]]></programlisting>
-                      </para>
-                    </listitem>
-                  </itemizedlist>
-                  <para> Building against the hadoop 2 profile by running something like the
-                    following command: </para>
-                  <screen>$  mvn clean install assembly:single -Dhadoop.profile=2.0 -DskipTests</screen>
-                </entry>
+              <entry><link linkend="hadoop2.hbase-0.94">NT</link></entry>
               <entry>S</entry>
               <entry>S</entry>
               <entry>NT</entry>
@@ -567,6 +522,56 @@ Index: pom.xml
         </para>
       </note>
       <section
+        xml:id="hadoop2.hbase-0.94">
+        <title>Apache HBase 0.94 with Hadoop 2</title>
+        <para>To get 0.94.x to run on hadoop 2.2.0, you need to change the hadoop
+        2 and protobuf versions in the <filename>pom.xml</filename>: Here is a diff with
+        pom.xml changes: </para>
+        <programlisting><![CDATA[$ svn diff pom.xml
+Index: pom.xml
+===================================================================
+--- pom.xml     (revision 1545157)
++++ pom.xml     (working copy)
+@@ -1034,7 +1034,7 @@
+     <slf4j.version>1.4.3</slf4j.version>
+     <log4j.version>1.2.16</log4j.version>
+     <mockito-all.version>1.8.5</mockito-all.version>
+-    <protobuf.version>2.4.0a</protobuf.version>
++    <protobuf.version>2.5.0</protobuf.version>
+     <stax-api.version>1.0.1</stax-api.version>
+     <thrift.version>0.8.0</thrift.version>
+     <zookeeper.version>3.4.5</zookeeper.version>
+@@ -2241,7 +2241,7 @@
+         </property>
+       </activation>
+       <properties>
+-        <hadoop.version>2.0.0-alpha</hadoop.version>
++        <hadoop.version>2.2.0</hadoop.version>
+         <slf4j.version>1.6.1</slf4j.version>
+       </properties>
+       <dependencies>]]>
+                   </programlisting>
+                  <para>The next step is to regenerate Protobuf files and assuming that the Protobuf
+                    has been installed:</para>
+                  <itemizedlist>
+                    <listitem>
+                      <para>Go to the hbase root folder, using the command line;</para>
+                    </listitem>
+                    <listitem>
+                      <para>Type the following commands:</para>
+                      <para>
+                        <programlisting language="bourne"><![CDATA[$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/hbase.proto]]></programlisting>
+                      </para>
+                      <para>
+                        <programlisting language="bourne"><![CDATA[$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/ErrorHandling.proto]]></programlisting>
+                      </para>
+                    </listitem>
+                  </itemizedlist>
+                  <para> Building against the hadoop 2 profile by running something like the
+                    following command: </para>
+                  <screen language="bourne">$  mvn clean install assembly:single -Dhadoop.profile=2.0 -DskipTests</screen>
+      </section>
+      <section
         xml:id="hadoop.hbase-0.94">
         <title>Apache HBase 0.92 and 0.94</title>
         <para>HBase 0.92 and 0.94 versions can work with Hadoop versions, 0.20.205, 0.22.x, 1.0.x,
@@ -602,7 +607,7 @@ Index: pom.xml
             <filename>hbase-site.xml</filename> -- and on the serverside in
             <filename>hdfs-site.xml</filename> (The sync facility HBase needs is a subset of the
           append code path).</para>
-        <programlisting><![CDATA[  
+        <programlisting language="xml"><![CDATA[  
 <property>
   <name>dfs.support.append</name>
   <value>true</value>
@@ -631,7 +636,7 @@ Index: pom.xml
           Hadoop's <filename>conf/hdfs-site.xml</filename>, setting the
           <varname>dfs.datanode.max.transfer.threads</varname> value to at least the following:
         </para>
-        <programlisting><![CDATA[
+        <programlisting language="xml"><![CDATA[
 <property>
   <name>dfs.datanode.max.transfer.threads</name>
   <value>4096</value>
@@ -656,6 +661,14 @@ Index: pom.xml
       </section>
     </section>
     <!--  hadoop -->
+    <section xml:id="zookeeper.requirements">
+      <title>ZooKeeper Requirements</title>
+      <para>ZooKeeper 3.4.x is required as of HBase 1.0.0. HBase makes use of the
+        <methodname>multi</methodname> functionality that is only available since 3.4.0
+        (The <property>useMulti</property> is defaulted true in HBase 1.0.0).
+        See <link href="https://issues.apache.org/jira/browse/HBASE-12241">HBASE-12241 The crash of regionServer when taking deadserver's replication queue breaks replication</link>
+        and <link href="https://issues.apache.org/jira/browse/HBASE-6775">Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix</link> for background.</para>
+    </section>
   </section>
 
   <section
@@ -764,7 +777,7 @@ Index: pom.xml
           configuration parameters. Most HBase configuration directives have default values, which
           are used unless the value is overridden in the <filename>hbase-site.xml</filename>. See <xref
             linkend="config.files" /> for more information.</para>
-        <programlisting><![CDATA[
+        <programlisting language="xml"><![CDATA[
 <configuration>
   <property>
     <name>hbase.rootdir</name>
@@ -876,7 +889,7 @@ node-c.example.com
         finally disable and drop your tables.</para>
 
       <para>To stop HBase after exiting the HBase shell enter</para>
-      <screen>$ ./bin/stop-hbase.sh
+      <screen language="bourne">$ ./bin/stop-hbase.sh
 stopping hbase...............</screen>
       <para>Shutdown can take a moment to complete. It can take longer if your cluster is comprised
         of many machines. If you are running a distributed operation, be sure to wait until HBase
@@ -1048,7 +1061,7 @@ slf4j-log4j (slf4j-log4j12-1.5.8.jar)
 zookeeper (zookeeper-3.4.2.jar)</programlisting>
       </para>
       <para> An example basic <filename>hbase-site.xml</filename> for client only might look as
-        follows: <programlisting><![CDATA[
+        follows: <programlisting language="xml"><![CDATA[
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
@@ -1075,7 +1088,7 @@ zookeeper (zookeeper-3.4.2.jar)</programlisting>
             <filename>hbase.X.X.X.jar</filename>). It is also possible to specify configuration
           directly without having to read from a <filename>hbase-site.xml</filename>. For example,
           to set the ZooKeeper ensemble for the cluster programmatically do as follows:
-          <programlisting>Configuration config = HBaseConfiguration.create();
+          <programlisting language="java">Configuration config = HBaseConfiguration.create();
 config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zookeeper locally</programlisting>
           If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be specified in
           a comma-separated list (just as in the <filename>hbase-site.xml</filename> file). This
@@ -1111,7 +1124,7 @@ config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zooke
         xml:id="hbase_site">
         <title><filename>hbase-site.xml</filename></title>
 
-        <programlisting>
+        <programlisting language="bourne">
 <![CDATA[
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -1125,7 +1138,7 @@ config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zooke
   <property>
     <name>hbase.zookeeper.property.dataDir</name>
     <value>/export/zookeeper</value>
-    <description>Property from ZooKeeper's config zoo.cfg.
+    <description>Property from ZooKeeper config zoo.cfg.
     The directory where the snapshot is stored.
     </description>
   </property>
@@ -1172,27 +1185,17 @@ example9
         xml:id="hbase_env">
         <title><filename>hbase-env.sh</filename></title>
 
-        <para>Below we use a <command>diff</command> to show the differences from default in the
-            <filename>hbase-env.sh</filename> file. Here we are setting the HBase heap to be 4G
-          instead of the default 1G.</para>
+        <para>The following lines in the <filename>hbase-env.sh</filename> file show how to set the
+            <envar>JAVA_HOME</envar> environment variable (required for HBase 0.98.5 and newer) and
+          set the heap to 4 GB (rather than the default value of 1 GB). If you copy and paste this
+          example, be sure to adjust the <envar>JAVA_HOME</envar> to suit your environment.</para>
 
-        <screen>
+        <screen language="bourne">
+# The java implementation to use.
+export JAVA_HOME=/usr/java/jdk1.7.0/          
 
-$ git diff hbase-env.sh
-diff --git a/conf/hbase-env.sh b/conf/hbase-env.sh
-index e70ebc6..96f8c27 100644
---- a/conf/hbase-env.sh
-+++ b/conf/hbase-env.sh
-@@ -31,7 +31,7 @@ export JAVA_HOME=/usr/lib//jvm/java-6-sun/
- # export HBASE_CLASSPATH=
-
- # The maximum amount of heap to use, in MB. Default is 1000.
--# export HBASE_HEAPSIZE=1000
-+export HBASE_HEAPSIZE=4096
-
- # Extra Java runtime options.
- # Below are what we set by default.  May only work with SUN JVM.
-
+# The maximum amount of heap to use, in MB. Default is 1000.
+export HBASE_HEAPSIZE=4096
         </screen>
 
         <para>Use <command>rsync</command> to copy the content of the <filename>conf</filename>
@@ -1463,7 +1466,7 @@ index e70ebc6..96f8c27 100644
           running on a late-version HDFS so you have the fixes he refers too and himself adds to HDFS that help HBase MTTR
           (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 -- hadoop 2 for sure has them and late hadoop 1 has some).
           Set the following in the RegionServer.</para>
-      <programlisting>
+      <programlisting language="xml">
 <![CDATA[<property>
 <property>
     <name>hbase.lease.recovery.dfs.timeout</name>
@@ -1480,7 +1483,7 @@ index e70ebc6..96f8c27 100644
 
         <para>And on the namenode/datanode side, set the following to enable 'staleness' introduced
           in HDFS-3703, HDFS-3912. </para>
-        <programlisting><![CDATA[
+        <programlisting language="xml"><![CDATA[
 <property>
     <name>dfs.client.socket-timeout</name>
     <value>10000</value>
@@ -1537,7 +1540,7 @@ index e70ebc6..96f8c27 100644
         <para>As an alternative, You can use the coprocessor-based JMX implementation provided
           by HBase. To enable it in 0.99 or above, add below property in
           <filename>hbase-site.xml</filename>:
-        <programlisting><![CDATA[
+        <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.coprocessor.regionserver.classes</name>
     <value>org.apache.hadoop.hbase.JMXListener</value>
@@ -1553,7 +1556,7 @@ index e70ebc6..96f8c27 100644
           By default, the JMX listens on TCP port 10102, you can further configure the port
           using below properties:
 
-        <programlisting><![CDATA[
+        <programlisting language="xml"><![CDATA[
 <property>
     <name>regionserver.rmi.registry.port</name>
     <value>61130</value>
@@ -1571,7 +1574,7 @@ index e70ebc6..96f8c27 100644
         <para>By default the password authentication and SSL communication is disabled.
           To enable password authentication, you need to update <filename>hbase-env.sh</filename>
           like below:
-      <screen>
+      <screen language="bourne">
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.authenticate=true                  \
                        -Dcom.sun.management.jmxremote.password.file=your_password_file   \
                        -Dcom.sun.management.jmxremote.access.file=your_access_file"
@@ -1583,7 +1586,7 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE "
         </para>
 
         <para>To enable SSL communication with password authentication, follow below steps:
-      <screen>
+      <screen language="bourne">
 #1. generate a key pair, stored in myKeyStore
 keytool -genkey -alias jconsole -keystore myKeyStore
 
@@ -1594,10 +1597,10 @@ keytool -export -alias jconsole -keystore myKeyStore -file jconsole.cert
 keytool -import -alias jconsole -keystore jconsoleKeyStore -file jconsole.cert
       </screen>
           And then update <filename>hbase-env.sh</filename> like below:
-      <screen>
+      <screen language="bourne">
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.ssl=true                         \
                        -Djavax.net.ssl.keyStore=/home/tianq/myKeyStore                 \
-                       -Djavax.net.ssl.keyStorePassword=your_password_in_step_#1       \
+                       -Djavax.net.ssl.keyStorePassword=your_password_in_step_1       \
                        -Dcom.sun.management.jmxremote.authenticate=true                \
                        -Dcom.sun.management.jmxremote.password.file=your_password file \
                        -Dcom.sun.management.jmxremote.access.file=your_access_file"
@@ -1607,13 +1610,13 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE "
       </screen>
 
           Finally start jconsole on client using the key store:
-      <screen>
+      <screen language="bourne">
 jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
       </screen>
         </para>
         <para>NOTE: for HBase 0.98, To enable the HBase JMX implementation on Master, you also
           need to add below property in <filename>hbase-site.xml</filename>:
-        <programlisting><![CDATA[
+        <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.coprocessor.master.classes</name>
     <value>org.apache.hadoop.hbase.JMXListener</value>

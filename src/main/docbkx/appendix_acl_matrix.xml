@@ -1,0 +1,662 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<appendix version="5.0" xml:id="appendix_acl_matrix"
+    xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:xi="http://www.w3.org/2001/XInclude" xmlns:svg="http://www.w3.org/2000/svg"
+    xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:html="http://www.w3.org/1999/xhtml"
+    xmlns:db="http://docbook.org/ns/docbook">
+    <!--
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+    <title>Access Control Matrix</title>
+      <para>The following matrix shows the minimum permission set required to perform operations in
+        HBase. Before using the table, read through the information about how to interpret it.</para>
+      <variablelist>
+        <title>Interpreting the ACL Matrix Table</title>
+        <para>The following conventions are used in the ACL Matrix table:</para>
+        <varlistentry>
+          <term>Scopes</term>
+          <listitem>
+            <para>Permissions are evaluated starting at the widest scope and working to the
+              narrowest scope. A scope corresponds to a level of the data model. From broadest to
+              narrowest, the scopes are as follows::</para>
+            <itemizedlist>
+              <listitem><para>Global</para></listitem>
+              <listitem><para>Namespace (NS)</para></listitem>
+              <listitem><para>Table</para></listitem>
+              <listitem><para>Column Family (CF)</para></listitem>
+              <listitem><para>Column Qualifier (CQ)</para></listitem>
+              <listitem><para>Cell</para></listitem>
+            </itemizedlist>
+                <para>For instance, a permission granted at table level dominates any grants done at
+                    the Column Family, Column Qualifier, or cell level. The user can do what that
+                    grant implies at any location in the table. A permission granted at global scope
+                    dominates all: the user is always allowed to take that action everywhere.</para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term>Permissions</term>
+          <listitem>
+            <para>Possible permissions include the following:</para>
+            <itemizedlist>
+              <listitem><para>Superuser - a special user that belongs to group "supergroup" and has
+                unlimited access</para></listitem>
+              <listitem><para>Admin (A)</para></listitem>
+              <listitem><para>Create (C)</para></listitem>
+              <listitem><para>Write (W)</para></listitem>
+              <listitem><para>Read (R)</para></listitem>
+              <listitem><para>Execute (X)</para></listitem>
+            </itemizedlist>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+
+      <para>For the most part, permissions work in an expected way, with the following caveats:</para>
+      <itemizedlist>
+        <listitem>
+          <para>Having Write permission does not imply Read permission. It is possible and sometimes
+          desirable for a user to be able to write data that same user cannot read. One such example
+          is a log-writing process.</para>
+        </listitem>
+        <listitem>
+          <para>The <systemitem>hbase:meta</systemitem> table is readable by every user, regardless
+            of the user's other grants or restrictions. This is a requirement for HBase to
+            function correctly.</para>
+        </listitem>
+        <listitem>
+            <para><code>CheckAndPut</code> and <code>CheckAndDelete</code> operations will fail if
+                the user does not have both Write and Read permission.</para>
+        </listitem>
+        <listitem>
+            <para><code>Increment</code> and <code>Append</code> operations do not require Read
+                access.</para>
+        </listitem>
+      </itemizedlist>
+
+    <para>The following table is sorted by the interface that provides each operation. In case the
+        table goes out of date, the unit tests which check for accuracy of permissions can be found
+        in
+            <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java</filename>,
+        and the access controls themselves can be examined in
+            <filename>hbase-server/src/main/java/org/apache/hadoop/hbase/security/access/AccessController.java</filename>.</para>
+
+    <table frame="all">
+        <title>ACL Matrix</title>
+        <tgroup cols="4">
+            <thead>
+                <row>
+                    <entry>Interface</entry>
+                    <entry>Operation</entry>
+                    <entry>Minimum Scope</entry>
+                    <entry>Minimum Permission</entry>
+                </row>
+            </thead>
+            <tbody>
+                <row>
+                    <entry morerows="27">
+                        <!-- incrememt this if you add another "master" operation -->
+                        <para>Master</para>
+                    </entry>
+                    <entry>
+                        <para>createTable</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>modifyTable</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>deleteTable</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>truncateTable</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>addColumn</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>modifyColumn</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>deleteColumn</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>disableTable</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>disableAclTable</para>
+                    </entry>
+                    <entry>
+                        <para>None</para>
+                    </entry>
+                    <entry>
+                        <para>Not allowed</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>enableTable</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>move</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>assign</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>unassign</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>regionOffline</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>balance</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>balanceSwitch</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>shutdown</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>stopMaster</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>snapshot</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>clone</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>restore</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>deleteSnapshot</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>createNamespace</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>deleteNamespace</para>
+                    </entry>
+                    <entry>
+                        <para>Namespace</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>modifyNamespace</para>
+                    </entry>
+                    <entry>
+                        <para>Namespace</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>flushTable</para>
+                    </entry>
+                    <entry>
+                        <para>Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>getTableDescriptors</para>
+                    </entry>
+                    <entry>
+                        <para>Global|Table</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>mergeRegions</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry morerows="24">Region</entry>
+                    <!-- Incrememt this if you add any more Region
+                operations -->
+                    <entry>open</entry>
+                    <entry>Global</entry>
+                    <entry>A</entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>openRegion</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>close</entry>
+                    <entry>Global</entry>
+                    <entry>A</entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>closeRegion</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>stopRegionServer</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                  <entry>
+                    <para>rollHLog</para>
+                  </entry>
+                  <entry>
+                    <para>Global</para>
+                  </entry>
+                  <entry>
+                    <para>A</para>
+                  </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>mergeRegions</para>
+                    </entry>
+                    <entry>
+                        <para>Global</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>append</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>W</entry>
+                </row>
+                <row>
+                    <entry>delete</entry>
+                    <entry>Table|CF|CQ|Cell (if the user has write permission for all cells)</entry>
+                    <entry>W</entry>
+                </row>
+                <row>
+                    <entry>exists</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>R</entry>
+                </row>
+                <row>
+                    <entry>get</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>R</entry>
+                </row>
+                <row>
+                    <entry>getClosestRowBefore</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>R</entry>
+                </row>
+                <row>
+                    <entry>increment</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>W</entry>
+                </row>
+                <row>
+                    <entry>put</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>W</entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>flush</para>
+                    </entry>
+                    <entry>
+                        <para>Global|Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>split</para>
+                    </entry>
+                    <entry>
+                        <para>Global|Table</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>compact</para>
+                    </entry>
+                    <entry>
+                        <para>Global|Table</para>
+                    </entry>
+                    <entry>
+                        <para>A|C</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>bulkLoadHFile</entry>
+                    <entry>Table</entry>
+                    <entry>W</entry>
+                </row>
+                <row>
+                    <entry>prepareBulkLoad</entry>
+                    <entry>Table</entry>
+                    <entry>C</entry>
+                </row>
+                <row>
+                    <entry>cleanupBulkLoad</entry>
+                    <entry>Table</entry>
+                    <entry>W</entry>
+                </row>
+                <row>
+                    <entry>checkAndDelete</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>RW</entry>
+                </row>
+                <row>
+                    <entry>checkAndPut</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>RW</entry>
+                </row>
+                <row>
+                    <entry>incrementColumnValue</entry>
+                    <entry>Table|CF|CQ</entry>
+                    <entry>RW</entry>
+                </row>
+                <row>
+                    <entry>scannerClose</entry>
+                    <entry>Table</entry>
+                    <entry>R</entry>
+                </row>
+                <row>
+                    <entry>scannerNext</entry>
+                    <entry>Table</entry>
+                    <entry>R</entry>
+                </row>
+                <row>
+                    <entry>scannerOpen</entry>
+                    <entry>Table|CQ|CF</entry>
+                    <entry>R</entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>Endpoint</para>
+                    </entry>
+                    <entry>
+                        <para>invoke</para>
+                    </entry>
+                    <entry>Endpoint</entry>
+                    <entry>
+                        <para>X</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry morerows="3">
+                        <para>AccessController</para>
+                    </entry>
+                    <entry>
+                        <para>grant</para>
+                    </entry>
+                    <entry>Global|Table|NS</entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>revoke</para>
+                    </entry>
+                    <entry>Global|Table|NS</entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>getUserPermissions</para>
+                    </entry>
+                    <entry>
+                        <para>Global|Table|NS</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+                <row>
+                    <entry>
+                        <para>checkPermissions</para>
+                    </entry>
+                    <entry>
+                        <para>Global|Table|NS</para>
+                    </entry>
+                    <entry>
+                        <para>A</para>
+                    </entry>
+                </row>
+            </tbody>
+        </tgroup>
+    </table>
+</appendix>    

@@ -263,7 +263,7 @@
       <example>
         <title>Example RegionObserver Configuration</title>
         <para>In this example, one RegionObserver is configured for all the HBase tables.</para>
-        <screen><![CDATA[
+        <screen language="xml"><![CDATA[
 <property>
     <name>hbase.coprocessor.region.classes</name>
     <value>org.apache.hadoop.hbase.coprocessor.AggregateImplementation</value>
@@ -398,6 +398,30 @@ totalStaticBloomSizeKB=0, totalCompactingKVs=0, currentCompactedKVs=0, compactio
 coprocessors=[AggregateImplementation]
 0 dead servers      </computeroutput>
     </screen>
+  </section>
+  <section>
+    <title>Monitor Time Spent in Coprocessors</title>
+    <para>HBase 0.98.5 introduced the ability to monitor some statistics relating to the amount of
+      time spent executing a given coprocessor. You can see these statistics via the HBase Metrics
+      framework (see <xref linkend="hbase_metrics"/> or the Web UI for a given Region Server, via
+      the <guilabel>Coprocessor Metrics</guilabel> tab. These statistics are valuable for debugging
+      and benchmarking the performance impact of a given coprocessor on your cluster. Tracked
+      statistics include min, max, average, and 90th, 95th, and 99th percentile. All times are shown
+      in milliseconds. The statistics are calculated over coprocessor
+      execution samples recorded during the reporting interval, which is 10 seconds by default. The
+      metrics sampling rate as described in <xref linkend="hbase_metrics" />.</para>
+    <figure>
+      <title>Coprocessor Metrics UI</title>
+      <mediaobject>
+        <imageobject>
+          <imagedata fileref="coprocessor_stats.png" width="100%"/>
+        </imageobject>
+        <caption>
+          <para>The Coprocessor Metrics UI shows statistics about time spent executing a given
+            coprocessor, including min, max, average, and 90th, 95th, and 99th percentile.</para>
+        </caption>
+      </mediaobject>
+    </figure>
   </section>
   <section>
     <title>Status of Coprocessors in HBase</title>

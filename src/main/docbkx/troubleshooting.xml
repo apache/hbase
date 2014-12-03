@@ -128,7 +128,7 @@
         this or confirm this is happening GC logging can be turned on in the Java virtual machine. </para>
       <para> To enable, in <filename>hbase-env.sh</filename>, uncomment one of the below lines
         :</para>
-      <programlisting>
+      <programlisting language="bourne">
 # This enables basic gc logging to the .out file.
 # export SERVER_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
 
@@ -194,13 +194,13 @@
         collections take but if its too small, objects are promoted to old gen too quickly). In the
         below we constrain new gen size to 64m. </para>
       <para> Add the below line in <filename>hbase-env.sh</filename>:
-        <programlisting>
+        <programlisting language="bourne">
 export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
             </programlisting>
       </para>
       <para> Similarly, to enable GC logging for client processes, uncomment one of the below lines
         in <filename>hbase-env.sh</filename>:</para>
-      <programlisting>
+      <programlisting language="bourne">
 # This enables basic gc logging to the .out file.
 # export CLIENT_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps"
 
@@ -290,7 +290,7 @@ export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
         <title>zkcli</title>
         <para><code>zkcli</code> is a very useful tool for investigating ZooKeeper-related issues.
           To invoke:
-          <programlisting>
+          <programlisting language="bourne">
 ./hbase zkcli -server host:port &lt;cmd&gt; &lt;args&gt;
 </programlisting>
           The commands (and arguments) are:</para>
@@ -374,7 +374,7 @@ Swap: 16008732k total,	14348k used, 15994384k free, 11106908k cached
         <para>
           <code>jps</code> is shipped with every JDK and gives the java process ids for the current
           user (if root, then it gives the ids for all users). Example:</para>
-        <programlisting>
+        <programlisting language="bourne">
 hadoop@sv4borg12:~$ jps
 1322 TaskTracker
 17789 HRegionServer
@@ -418,7 +418,7 @@ hadoop@sv4borg12:~$ jps
         </itemizedlist>
         <para> You can then do stuff like checking out the full command line that started the
           process:</para>
-        <programlisting>
+        <programlisting language="bourne">
 hadoop@sv4borg12:~$ ps aux | grep HRegionServer
 hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/jdk1.6.0_14/bin/java -Xmx8000m -XX:+DoEscapeAnalysis -XX:+AggressiveOpts -XX:+UseConcMarkSweepGC -XX:NewSize=64m -XX:MaxNewSize=64m -XX:CMSInitiatingOccupancyFraction=88 -verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/export1/hadoop/logs/gc-hbase.log -Dcom.sun.management.jmxremote.port=10102 -Dcom.sun.management.jmxremote.authenticate=true -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.password.file=/home/hadoop/hbase/conf/jmxremote.password -Dcom.sun.management.jmxremote -Dhbase.log.dir=/export1/hadoop/logs -Dhbase.log.file=hbase-hadoop-regionserver-sv4borg12.log -Dhbase.home.dir=/home/hadoop/hbase -Dhbase.id.str=hadoop -Dhbase.root.logger=INFO,DRFA -Djava.library.path=/home/hadoop/hbase/lib/native/Linux-amd64-64 -classpath /home/hadoop/hbase/bin/../conf:[many jars]:/home/hadoop/hadoop/conf org.apache.hadoop.hbase.regionserver.HRegionServer start
         </programlisting>
@@ -606,6 +606,20 @@ java.lang.Thread.State: WAITING (on object monitor)
         inefficient processing on numbers of rows. </para>
       <para>See <xref
           linkend="perf.hbase.client.caching" />. </para>
+    </section>
+    <section>
+      <title>Performance Differences in Thrift and Java APIs</title>
+      <para>Poor performance, or even <code>ScannerTimeoutExceptions</code>, can occur if
+          <code>Scan.setCaching</code> is too high, as discussed in <xref
+          linkend="trouble.client.scantimeout"/>. If the Thrift client uses the wrong caching
+        settings for a given workload, performance can suffer compared to the Java API. To set
+        caching for a given scan in the Thrift client, use the <code>scannerGetList(scannerId,
+          numRows)</code> method, where <code>numRows</code> is an integer representing the number
+        of rows to cache. In one case, it was found that reducing the cache for Thrift scans from
+        1000 to 100 increased performance to near parity with the Java API given the same
+        queries.</para>
+      <para>See also Jesse Andersen's <link xlink:href="http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/">blog post</link> 
+        about using Scans with Thrift.</para>
     </section>
     <section
       xml:id="trouble.client.lease.exception">
@@ -807,13 +821,19 @@ at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
           <code>HADOOP_CLASSPATH</code> set to include the HBase dependencies. The "hbase classpath"
         utility can be used to do this easily. For example (substitute VERSION with your HBase
         version):</para>
-      <programlisting>
-          HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-VERSION.jar rowcounter usertable
+      <programlisting language="bourne">
+          HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-server-VERSION.jar rowcounter usertable
       </programlisting>
       <para>See <link
           xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath">
           http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath</link>
         for more information on HBase MapReduce jobs and classpaths. </para>
+    </section>
+    <section xml:id="trouble.hbasezerocopybytestring">
+      <title>Launching a job, you get java.lang.IllegalAccessError: com/google/protobuf/HBaseZeroCopyByteString or class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString</title>
+      <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-10304">HBASE-10304 Running an hbase job jar: IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString</link> and <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11118">HBASE-11118 non environment variable solution for "IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString"</link>.  The issue can also show up
+          when trying to run spark jobs.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-10877">HBASE-10877 HBase non-retriable exception list should be expanded</link>.
+      </para>
     </section>
   </section>
 
@@ -827,11 +847,11 @@ at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
       <title>HDFS Utilization of Tables and Regions</title>
       <para>To determine how much space HBase is using on HDFS use the <code>hadoop</code> shell
         commands from the NameNode. For example... </para>
-      <para><programlisting>hadoop fs -dus /hbase/</programlisting> ...returns the summarized disk
+      <para><programlisting language="bourne">hadoop fs -dus /hbase/</programlisting> ...returns the summarized disk
         utilization for all HBase objects. </para>
-      <para><programlisting>hadoop fs -dus /hbase/myTable</programlisting> ...returns the summarized
+      <para><programlisting language="bourne">hadoop fs -dus /hbase/myTable</programlisting> ...returns the summarized
         disk utilization for the HBase table 'myTable'. </para>
-      <para><programlisting>hadoop fs -du /hbase/myTable</programlisting> ...returns a list of the
+      <para><programlisting language="bourne">hadoop fs -du /hbase/myTable</programlisting> ...returns a list of the
         regions under the HBase table 'myTable' and their disk utilization. </para>
       <para>For more information on HDFS shell commands, see the <link
           xlink:href="http://hadoop.apache.org/common/docs/current/file_system_shell.html">HDFS
@@ -1071,7 +1091,7 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
         <para>If you wish to increase the session timeout, add the following to your
             <filename>hbase-site.xml</filename> to increase the timeout from the default of 60
           seconds to 120 seconds. </para>
-        <programlisting>
+        <programlisting language="xml">
 <![CDATA[<property>
     <name>zookeeper.session.timeout</name>
     <value>1200000</value>
@@ -1127,6 +1147,23 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
         </section>
 
       </section>
+    <section>
+      <title>Snapshot Errors Due to Reverse DNS</title>
+      <para>Several operations within HBase, including snapshots, rely on properly configured
+        reverse DNS. Some environments, such as Amazon EC2, have trouble with reverse DNS. If you
+        see errors like the following on your RegionServers, check your reverse DNS configuration:</para>
+      <screen>
+2013-05-01 00:04:56,356 DEBUG org.apache.hadoop.hbase.procedure.Subprocedure: Subprocedure 'backup1' 
+coordinator notified of 'acquire', waiting on 'reached' or 'abort' from coordinator.        
+      </screen>
+      <para>In general, the hostname reported by the RegionServer needs to be the same as the
+        hostname the Master is trying to reach. You can see a hostname mismatch by looking for the
+        following type of message in the RegionServer's logs at start-up.</para>
+      <screen>
+2013-05-01 00:03:00,614 INFO org.apache.hadoop.hbase.regionserver.HRegionServer: Master passed us hostname 
+to use. Was=myhost-1234, Now=ip-10-55-88-99.ec2.internal        
+      </screen>
+    </section>
       <section xml:id="trouble.rs.shutdown">
         <title>Shutdown Errors</title>
   <para />
@@ -1631,14 +1668,33 @@ security.provider.1=sun.security.pkcs11.SunPKCS11 ${java.home}/lib/security/nss.
       detail at <link
         xlink:href="http://www.centos.org/docs/5/html/5.1/Deployment_Guide/s3-proc-sys-vm.html" />. </para>
       <para>To find the current value on your system, run the following command:</para>
-      <screen>[user@host]# <userinput>cat /proc/sys/vm/min_free_kbytes</userinput></screen>
+      <screen language="bourne">[user@host]# <userinput>cat /proc/sys/vm/min_free_kbytes</userinput></screen>
       <para>Next, raise the value. Try doubling, then quadrupling the value. Note that setting the
         value too low or too high could have detrimental effects on your system. Consult your
         operating system vendor for specific recommendations.</para>
       <para>Use the following command to modify the value of <code>min_free_kbytes</code>,
         substituting <replaceable>&lt;value&gt;</replaceable> with your intended value:</para>
-      <screen>[user@host]# <userinput>echo &lt;value&gt; > /proc/sys/vm/min_free_kbytes</userinput></screen>
+      <screen language="bourne">[user@host]# <userinput>echo &lt;value&gt; > /proc/sys/vm/min_free_kbytes</userinput></screen>
     </section>
+  </section>
+  <section>
+    <title>JDK Issues</title>
+  <section>
+    <title>NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.keySet</title>
+<para>
+If you see this in your logs:
+    <programlisting>Caused by: java.lang.NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.keySet()Ljava/util/concurrent/ConcurrentHashMap$KeySetView;
+  at org.apache.hadoop.hbase.master.ServerManager.findServerWithSameHostnamePortWithLock(ServerManager.java:393)
+  at org.apache.hadoop.hbase.master.ServerManager.checkAndRecordNewServer(ServerManager.java:307)
+  at org.apache.hadoop.hbase.master.ServerManager.regionServerStartup(ServerManager.java:244)
+  at org.apache.hadoop.hbase.master.MasterRpcServices.regionServerStartup(MasterRpcServices.java:304)
+  at org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos$RegionServerStatusService$2.callBlockingMethod(RegionServerStatusProtos.java:7910)
+  at org.apache.hadoop.hbase.ipc.RpcServer.call(RpcServer.java:2020)
+  ... 4 more</programlisting>
+then check if you compiled with jdk8 and tried to run it on jdk7.  If so, this won't work.
+Run on jdk8 or recompile with jdk7.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-10607">HBASE-10607 [JDK8] NoSuchMethodError involving ConcurrentHashMap.keySet if running on JRE 7</link>.
+</para>
+  </section>
   </section>
 
 </chapter>

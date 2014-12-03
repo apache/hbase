@@ -33,9 +33,9 @@
   <section>
     <title>Introduction</title>
 
-    <para><xref
-        linkend="quickstart" /> will get you up and running on a single-node, standalone instance of
-      HBase. </para>
+    <para><xref linkend="quickstart"/> will get you up and running on a single-node, standalone
+      instance of HBase, followed by a pseudo-distributed single-machine instance, and finally a
+      fully-distributed cluster. </para>
   </section>
 
   <section
@@ -111,10 +111,30 @@
         </step>
         <step>
           <para>Extract the downloaded file, and change to the newly-created directory.</para>
-          <screen>
+          <screen language="bourne">
 $ tar xzvf hbase-<![CDATA[<?eval ${project.version}?>]]>-hadoop2-bin.tar.gz  
 $ cd hbase-<![CDATA[<?eval ${project.version}?>]]>-hadoop2/
           </screen>
+        </step>
+        <step>
+          <para>For HBase 0.98.5 and later, you are required to set the <envar>JAVA_HOME</envar>
+            environment variable before starting HBase. Prior to 0.98.5, HBase attempted to detect
+            the location of Java if the variables was not set. You can set the variable via your
+            operating system's usual mechanism, but HBase provides a central mechanism,
+              <filename>conf/hbase-env.sh</filename>. Edit this file, uncomment the line starting
+            with <literal>JAVA_HOME</literal>, and set it to the appropriate location for your
+            operating system. The <envar>JAVA_HOME</envar> variable should be set to a directory
+            which contains the executable file <filename>bin/java</filename>. Most modern Linux
+            operating systems provide a mechanism, such as /usr/bin/alternatives on RHEL or CentOS,
+            for transparently switching between versions of executables such as Java. In this case,
+            you can set <envar>JAVA_HOME</envar> to the directory containing the symbolic link to
+              <filename>bin/java</filename>, which is usually <filename>/usr</filename>.</para>
+          <screen>JAVA_HOME=/usr</screen>
+          <note>
+            <para>These instructions assume that each node of your cluster uses the same
+              configuration. If this is not the case, you may need to set <envar>JAVA_HOME</envar>
+              separately for each node.</para>
+          </note>
         </step>
         <step>
           <para>Edit <filename>conf/hbase-site.xml</filename>, which is the main HBase configuration
@@ -127,7 +147,7 @@ $ cd hbase-<![CDATA[<?eval ${project.version}?>]]>-hadoop2/
             <markup>&lt;configuration&gt;</markup> tags, which should be empty in a new HBase install.</para>
           <example>
             <title>Example <filename>hbase-site.xml</filename> for Standalone HBase</title>
-            <programlisting><![CDATA[
+            <programlisting language="xml"><![CDATA[
 <configuration>
   <property>
     <name>hbase.rootdir</name>
@@ -149,8 +169,9 @@ $ cd hbase-<![CDATA[<?eval ${project.version}?>]]>-hadoop2/
           <para>The <filename>bin/start-hbase.sh</filename> script is provided as a convenient way
             to start HBase. Issue the command, and if all goes well, a message is logged to standard
             output showing that HBase started successfully. You can use the <command>jps</command>
-            command to verify that you have one running process called <literal>HMaster</literal>
-            and at least one called <literal>HRegionServer</literal>.</para>
+            command to verify that you have one running process called <literal>HMaster</literal>.
+            In standalone mode HBase runs all daemons within this single JVM, i.e. the HMaster, a
+            single HRegionServer, and the ZooKeeper daemon.</para>
           <note><para>Java needs to be installed and available. If you get an error indicating that
             Java is not installed, but it is on your system, perhaps in a non-standard location,
             edit the <filename>conf/hbase-env.sh</filename> file and modify the
@@ -168,7 +189,7 @@ $ cd hbase-<![CDATA[<?eval ${project.version}?>]]>-hadoop2/
             install. In this example, some usage and version information that is printed when you
             start HBase Shell has been omitted. The HBase Shell prompt ends with a
             <literal>&gt;</literal> character.</para>
-          <screen>
+          <screen language="bourne">
 $ <userinput>./bin/hbase shell</userinput>
 hbase(main):001:0&gt; 
           </screen>
@@ -283,7 +304,7 @@ hbase&gt; drop 'test'
           <para>In the same way that the <filename>bin/start-hbase.sh</filename> script is provided
             to conveniently start all HBase daemons, the <filename>bin/stop-hbase.sh</filename>
             script stops them.</para>
-          <screen>
+          <screen language="bourne">
 $ ./bin/stop-hbase.sh
 stopping hbase....................
 $
@@ -327,10 +348,10 @@ $
           <title>Configure HBase.</title>
           <para>
             Edit the <filename>hbase-site.xml</filename> configuration. First, add the following
-            property, which directs HBase to run in distributed mode, with one JVM instance per
+            property. which directs HBase to run in distributed mode, with one JVM instance per
             daemon.
           </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.cluster.distributed</name>
   <value>true</value>
@@ -339,7 +360,7 @@ $
           <para>Next, change the <code>hbase.rootdir</code> from the local filesystem to the address
             of your HDFS instance, using the <code>hdfs:////</code> URI syntax. In this example,
             HDFS is running on the localhost at port 8020.</para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rootdir</name>
   <value>hdfs://localhost:8020/hbase</value>
@@ -362,7 +383,7 @@ $
             configuration above, it is stored in <filename>/hbase/</filename> on HDFS. You can use
             the <command>hadoop fs</command> command in Hadoop's <filename>bin/</filename> directory
             to list this directory.</para>
-          <screen>
+          <screen  language="bourne">
 $ <userinput>./bin/hadoop fs -ls /hbase</userinput>
 Found 7 items
 drwxr-xr-x   - hbase users          0 2014-06-25 18:58 /hbase/.tmp
@@ -395,7 +416,7 @@ drwxr-xr-x   - hbase users          0 2014-06-25 21:49 /hbase/oldWALs
             using an offset of 2, the backup HMaster would use ports 16012, 16022, and 16032. The
             following command starts 3 backup servers using ports 16012/16022/16032, 16013/16023/16033,
             and 16015/16025/16035.</para>
-            <screen>
+            <screen language="bourne">
 $ ./bin/local-master-backup.sh 2 3 5             
             </screen>
           <para>To kill a backup master without killing the entire cluster, you need to find its
@@ -404,7 +425,7 @@ $ ./bin/local-master-backup.sh 2 3 5
           The only contents of the file are the PID. You can use the <command>kill -9</command>
             command to kill that PID. The following command will kill the master with port offset 1,
           but leave the cluster running:</para>
-          <screen>
+          <screen language="bourne">
 $ cat /tmp/hbase-testuser-1-master.pid |xargs kill -9            
           </screen>
         </step>
@@ -423,13 +444,13 @@ $ cat /tmp/hbase-testuser-1-master.pid |xargs kill -9
             You can run 99 additional RegionServers that are not a HMaster or backup HMaster,
             on a server. The following command starts four additional RegionServers, running on
             sequential ports starting at 16202/16302 (base ports 16200/16300 plus 2).</para>
-          <screen>
+          <screen language="bourne">
 $ .bin/local-regionservers.sh start 2 3 4 5            
           </screen>
           <para>To stop a RegionServer manually, use the <command>local-regionservers.sh</command>
             command with the <literal>stop</literal> parameter and the offset of the server to
             stop.</para>
-          <screen>$ .bin/local-regionservers.sh stop 3</screen>
+          <screen language="bourne">$ .bin/local-regionservers.sh stop 3</screen>
         </step>
         <step>
           <title>Stop HBase.</title>
@@ -501,7 +522,7 @@ $ .bin/local-regionservers.sh start 2 3 4 5
           <para>While logged in as the user who will run HBase, generate a SSH key pair, using the
             following command:
           </para>
-          <screen>$ ssh-keygen -t rsa</screen>
+          <screen language="bourne">$ ssh-keygen -t rsa</screen>
           <para>If the command succeeds, the location of the key pair is printed to standard output.
           The default name of the public key is <filename>id_rsa.pub</filename>.</para>
         </step>
@@ -519,7 +540,7 @@ $ .bin/local-regionservers.sh start 2 3 4 5
               not already exist</emphasis>, and append the contents of the
             <filename>id_rsa.pub</filename> file to the end of it. Note that you also need to do
             this for <code>node-a</code> itself.</para>
-          <screen>$ cat id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys</screen>
+          <screen language="bourne">$ cat id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys</screen>
         </step>
         <step>
           <title>Test password-less login.</title>
@@ -565,7 +586,7 @@ $ .bin/local-regionservers.sh start 2 3 4 5
             ZooKeeper instance on each node of the cluster.</para>
           <para>On <code>node-a</code>, edit <filename>conf/hbase-site.xml</filename> and add the
             following properties.</para>
-          <programlisting><![CDATA[
+          <programlisting language="bourne"><![CDATA[
 <property>
   <name>hbase.zookeeper.quorum</name>
   <value>node-a.example.com,node-b.example.com,node-c.example.com</value>
@@ -614,7 +635,7 @@ $ .bin/local-regionservers.sh start 2 3 4 5
           <title>Start the cluster.</title>
           <para>On <code>node-a</code>, issue the <command>start-hbase.sh</command> command. Your
             output will be similar to that below.</para>
-          <screen>
+          <screen language="bourne">
 $ <userinput>bin/start-hbase.sh</userinput>
 node-c.example.com: starting zookeeper, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-zookeeper-node-c.example.com.out
 node-a.example.com: starting zookeeper, logging to /home/hbuser/hbase-0.98.3-hadoop2/bin/../logs/hbase-hbuser-zookeeper-node-a.example.com.out
@@ -634,7 +655,7 @@ node-b.example.com: starting master, logging to /home/hbuser/hbase-0.98.3-hadoop
             running on your servers as well, if they are used for other purposes.</para>
           <example>
             <title><code>node-a</code> <command>jps</command> Output</title>
-            <screen>
+            <screen language="bourne">
 $ <userinput>jps</userinput>
 20355 Jps
 20071 HQuorumPeer
@@ -643,7 +664,7 @@ $ <userinput>jps</userinput>
           </example>
           <example>
             <title><code>node-b</code> <command>jps</command> Output</title>
-            <screen>
+            <screen language="bourne">
 $ <userinput>jps</userinput>
 15930 HRegionServer
 16194 Jps
@@ -653,7 +674,7 @@ $ <userinput>jps</userinput>
           </example>
           <example>
             <title><code>node-c</code> <command>jps</command> Output</title>
-            <screen>
+            <screen language="bourne">
 $ <userinput>jps</userinput>    
 13901 Jps
 13639 HQuorumPeer

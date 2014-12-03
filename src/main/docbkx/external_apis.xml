@@ -49,11 +49,19 @@
         by Jesse Anderson.
     </para>
     <para>
-    To run your REST server under SSL, enable the following configs when you launch the REST server:
-<programlisting>hbase.rest.ssl.enabled
+    To run your REST server under SSL, set hbase.rest.ssl.enabled to true and also set the
+    following configs when you launch the REST server:(See example commands in
+    <xref linkend="JMX_config" />)
+<programlisting>
 hbase.rest.ssl.keystore.store
 hbase.rest.ssl.keystore.password
 hbase.rest.ssl.keystore.keypassword</programlisting>
+    </para>
+    <para>
+    HBase ships a simple REST client, see <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/rest/client/package-summary.html">REST client</link> package for details.
+    To enable SSL support for it, please also import your certificate into local java
+    cacerts keystore:
+    <screen language="bourne">keytool -import -trustcacerts -file /home/user/restserver.cert -keystore $JAVA_HOME/jre/lib/security/cacerts</screen>
     </para>
   </section>   <!-- rest -->
 

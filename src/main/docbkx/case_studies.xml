@@ -145,7 +145,7 @@
             some unusual anomalies, namely interface errors, overruns, framing errors. While not
             unheard of, these kinds of errors are exceedingly rare on modern hardware which is
             operating as it should: </para>
-          <screen>		
+          <screen language="bourne">		
 $ /sbin/ifconfig bond0
 bond0  Link encap:Ethernet  HWaddr 00:00:00:00:00:00  
 inet addr:10.x.x.x  Bcast:10.x.x.255  Mask:255.255.255.0
@@ -160,7 +160,7 @@ RX bytes:2416328868676 (2.4 TB)  TX bytes:3464991094001 (3.4 TB)
             running an ICMP ping from an external host and observing round-trip-time in excess of
             700ms, and by running <code>ethtool(8)</code> on the members of the bond interface and
             discovering that the active interface was operating at 100Mbs/, full duplex. </para>
-          <screen>		
+          <screen language="bourne">		
 $ sudo ethtool eth0
 Settings for eth0:
 Supported ports: [ TP ]

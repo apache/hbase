@@ -71,7 +71,7 @@
               operation that must be added to the <code>hbase-site.xml</code> file on every server
               machine in the cluster. Required for even the most basic interactions with a secure
               Hadoop configuration, independent of HBase security. </para>
-            <programlisting><![CDATA[
+            <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.regionserver.kerberos.principal</name>
   <value>hbase/_HOST@YOUR-REALM.COM</value>
@@ -115,7 +115,7 @@
         underlying HDFS configuration is secure.</para>
       <para> Add the following to the <code>hbase-site.xml</code> file on every server machine in
         the cluster: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.security.authentication</name>
   <value>kerberos</value>
@@ -138,7 +138,7 @@
       <para>First, refer to <xref linkend="security.prerequisites" /> and ensure that your
         underlying HDFS configuration is secure.</para>
       <para> Add the following to the <code>hbase-site.xml</code> file on every client: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.security.authentication</name>
   <value>kerberos</value>
@@ -152,7 +152,7 @@
       <para> Once HBase is configured for secure RPC it is possible to optionally configure
         encrypted communication. To do so, add the following to the <code>hbase-site.xml</code> file
         on every client: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rpc.protection</name>
   <value>privacy</value>
@@ -160,7 +160,7 @@
     ]]></programlisting>
       <para> This configuration property can also be set on a per connection basis. Set it in the
           <code>Configuration</code> supplied to <code>HTable</code>: </para>
-      <programlisting>
+      <programlisting language="java">
 Configuration conf = HBaseConfiguration.create();
 conf.set("hbase.rpc.protection", "privacy");
 HTable table = new HTable(conf, tablename);
@@ -171,7 +171,7 @@ HTable table = new HTable(conf, tablename);
 
     <section xml:id="security.client.thrift">
       <title>Client-side Configuration for Secure Operation - Thrift Gateway</title>
-      <para> Add the following to the <code>hbase-site.xml</code> file for every Thrift gateway: <programlisting><![CDATA[
+      <para> Add the following to the <code>hbase-site.xml</code> file for every Thrift gateway: <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.thrift.keytab.file</name>
   <value>/etc/hbase/conf/hbase.keytab</value>
@@ -191,7 +191,7 @@ HTable table = new HTable(conf, tablename);
         add the <code>hbase.thrift.kerberos.principal</code> to the <code>_acl_</code> table. For
         example, to give the Thrift API principal, <code>thrift_server</code>, administrative
         access, a command such as this one will suffice: </para>
-      <programlisting><![CDATA[
+      <programlisting language="sql"><![CDATA[
 grant 'thrift_server', 'RWCA'
     ]]></programlisting>
       <para>For more information about ACLs, please see the <link
@@ -255,7 +255,7 @@ grant 'thrift_server', 'RWCA'
     <section>
       <title>Client-side Configuration for Secure Operation - REST Gateway</title>
       <para> Add the following to the <code>hbase-site.xml</code> file for every REST gateway: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rest.keytab.file</name>
   <value>$KEYTAB</value>
@@ -274,7 +274,7 @@ grant 'thrift_server', 'RWCA'
         add the <code>hbase.rest.kerberos.principal</code> to the <code>_acl_</code> table. For
         example, to give the REST API principal, <code>rest_server</code>, administrative access, a
         command such as this one will suffice: </para>
-      <programlisting><![CDATA[
+      <programlisting language="sql"><![CDATA[
 grant 'rest_server', 'RWCA'
     ]]></programlisting>
       <para>For more information about ACLs, please see the <link
@@ -296,7 +296,7 @@ grant 'rest_server', 'RWCA'
         region servers) to allow proxy users; configure REST gateway to enable impersonation. </para>
       <para> To allow proxy users, add the following to the <code>hbase-site.xml</code> file for
         every HBase server: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hadoop.security.authorization</name>
   <value>true</value>
@@ -314,7 +314,7 @@ grant 'rest_server', 'RWCA'
         $GROUPS. </para>
       <para> To enable REST gateway impersonation, add the following to the
           <code>hbase-site.xml</code> file for every REST gateway. </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rest.authentication.type</name>
   <value>kerberos</value>
@@ -363,7 +363,7 @@ grant 'rest_server', 'RWCA'
           <title>Server-side Configuration for Simple User Access Operation</title>
           <para> Add the following to the <code>hbase-site.xml</code> file on every server machine
             in the cluster: </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.security.authentication</name>
   <value>simple</value>
@@ -387,7 +387,7 @@ grant 'rest_server', 'RWCA'
     ]]></programlisting>
           <para> For 0.94, add the following to the <code>hbase-site.xml</code> file on every server
             machine in the cluster: </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rpc.engine</name>
   <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
@@ -408,7 +408,7 @@ grant 'rest_server', 'RWCA'
         <section>
           <title>Client-side Configuration for Simple User Access Operation</title>
           <para> Add the following to the <code>hbase-site.xml</code> file on every client: </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.security.authentication</name>
   <value>simple</value>
@@ -416,7 +416,7 @@ grant 'rest_server', 'RWCA'
     ]]></programlisting>
           <para> For 0.94, add the following to the <code>hbase-site.xml</code> file on every server
             machine in the cluster: </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rpc.engine</name>
   <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
@@ -432,7 +432,7 @@ grant 'rest_server', 'RWCA'
           <para>The Thrift gateway user will need access. For example, to give the Thrift API user,
               <code>thrift_server</code>, administrative access, a command such as this one will
             suffice: </para>
-          <programlisting><![CDATA[
+          <programlisting language="sql"><![CDATA[
 grant 'thrift_server', 'RWCA'
     ]]></programlisting>
           <para>For more information about ACLs, please see the <link
@@ -452,7 +452,7 @@ grant 'thrift_server', 'RWCA'
           <para>The REST gateway user will need access. For example, to give the REST API user,
               <code>rest_server</code>, administrative access, a command such as this one will
             suffice: </para>
-          <programlisting><![CDATA[
+          <programlisting language="sql"><![CDATA[
 grant 'rest_server', 'RWCA'
     ]]></programlisting>
           <para>For more information about ACLs, please see the <link
@@ -467,1277 +467,1078 @@ grant 'rest_server', 'RWCA'
   </section>
   <!-- Simple User Access to Apache HBase -->
 
-  <section
-    xml:id="hbase.tags">
-    <title>Tags</title>
-    <para> Every cell can have metadata associated with it. Adding metadata in the data part of
-      every cell would make things difficult. </para>
-    <para> The 0.98 version of HBase solves this problem by providing Tags along with the cell
-      format. Some of the usecases that uses the tags are Visibility labels, Cell level ACLs, etc. </para>
-    <para> HFile V3 version from 0.98 onwards supports tags and this feature can be turned on using
-      the following configuration </para>
-    <programlisting><![CDATA[
+  <section>
+    <title>Securing Access To Your Data</title>
+    <para>After you have configured secure authentication between HBase client and server processes
+      and gateways, you need to consider the security of your data itself. HBase provides several
+      strategies for securing your data:</para>
+    <itemizedlist>
+      <listitem>
+        <para>Role-based Access Control (RBAC) controls which users or groups can read and write to
+          a given HBase resource or execute a coprocessor endpoint, using the familiar paradigm of
+          roles.</para>
+      </listitem>
+      <listitem>
+        <para>Visibility Labels which allow you to label cells and control access to labelled cells,
+          to further restrict who can read or write to certain subsets of your data. Visibility
+          labels are stored as tags. See <xref linkend="hbase.tags"/> for more information.</para>
+      </listitem>
+      <listitem>
+        <para>Transparent encryption of data at rest on the underlying filesystem, both in HFiles
+          and in the WAL. This protects your data at rest from an attacker who has access to the
+          underlying filesystem, without the need to change the implementation of the client. It can
+          also protect against data leakage from improperly disposed disks, which can be important
+          for legal and regulatory compliance.</para>
+      </listitem>
+    </itemizedlist>
+    <para>Server-side configuration, administration, and implementation details of each of these
+      features are discussed below, along with any performance trade-offs. An example security
+      configuration is given at the end, to show these features all used together, as they might be
+      in a real-world scenario.</para>
+    <caution>
+      <para>All aspects of security in HBase are in active development and evolving rapidly. Any
+        strategy you employ for security of your data should be thoroughly tested. In addition, some
+        of these features are still in the experimental stage of development. To take advantage of
+        many of these features, you must be running HBase 0.98+ and using the HFile v3 file
+        format.</para>
+    </caution>
+
+    <warning>
+      <title>Protecting Sensitive Files</title>
+      <para>Several procedures in this section require you to copy files between cluster nodes. When
+        copying keys, configuration files, or other files containing sensitive strings, use a secure
+        method, such as <code>ssh</code>, to avoid leaking sensitive data.</para>
+    </warning>
+
+    <procedure xml:id="security.data.basic.server.side">
+      <title>Basic Server-Side Configuration</title>
+      <step>
+        <para>Enable HFile v3, by setting <option>hfile.format.version </option>to 3 in
+            <filename>hbase-site.xml</filename>. This is the default for HBase 1.0 and
+          newer.</para>
+        <programlisting language="xml"><![CDATA[
 <property>
   <name>hfile.format.version</name>
   <value>3</value>
 </property>
-    ]]></programlisting>
-    <para> Every cell can have zero or more tags. Every tag has a type and the actual tag byte
-      array. The types <command>0-31</command> are reserved for System tags. For example ‘1’ is
-      reserved for ACL and ‘2’ is reserved for Visibility tags. </para>
-    <para> The way rowkeys, column families, qualifiers and values are encoded using different
-      Encoding Algos, similarly the tags can also be encoded. Tag encoding can be turned on per CF.
-      Default is always turn ON. To turn on the tag encoding on the HFiles use </para>
-    <programlisting><![CDATA[
-HColumnDescriptor#setCompressTags(boolean compressTags)
-    ]]></programlisting>
-    <para> Note that encoding of tags takes place only if the DataBlockEncoder is enabled for the
-      CF. </para>
-    <para> As we compress the WAL entries using Dictionary the tags present in the WAL can also be
-      compressed using Dictionary. Every tag is compressed individually using WAL Dictionary. To
-      turn ON tag compression in WAL dictionary enable the property </para>
-    <programlisting><![CDATA[
+          ]]></programlisting>
+      </step>
+      <step>
+        <para>Enable SASL and Kerberos authentication for RPC and ZooKeeper, as described in <xref
+            linkend="security.prerequisites"/> and <xref linkend="zk.sasl.auth"/>.</para>
+      </step>
+    </procedure>
+
+    <section xml:id="hbase.tags">
+      <title>Tags</title>
+      <para><firstterm>Tags</firstterm> are a feature of HFile v3. A tag is a piece of metadata
+        which is part of a cell, separate from the key, value, and version. Tags are an
+        implementation detail which provides a foundation for other security-related features such
+        as cell-level ACLs and visibility labels. Tags are stored in the HFiles themselves. It is
+        possible that in the future, tags will be used to implement other HBase features. You don't
+        need to know a lot about tags in order to use the security features they enable.</para>
+      <section>
+        <title>Implementation Details</title>
+        <para> Every cell can have zero or more tags. Every tag has a type and the actual tag byte
+          array.</para>
+        <para> Just as row keys, column families, qualifiers and values can be encoded (see <xref
+            linkend="data.block.encoding.types"/>), tags can also be encoded as well. You can enable
+          or disable tag encoding at the level of the column family, and it is enabled by default.
+          Use the <code>HColumnDescriptor#setCompressionTags(boolean compressTags)</code> method to
+          manage encoding settings on a column family. You also need to enable the DataBlockEncoder
+          for the column family, for encoding of tags to take effect.</para>
+        <para>You can enable compression of each tag in the WAL, if WAL compression is also enabled,
+          by setting the value of <option>hbase.regionserver.wal.tags.enablecompression</option> to
+            <literal>true</literal> in <filename>hbase-site.xml</filename>. Tag compression uses
+          dictionary encoding.</para>
+        <para>Tag compression is not supported when using WAL encryption.</para>
+      </section>
+    </section>
+
+    <section xml:id="hbase.accesscontrol.configuration">
+      <title>Access Control Labels (ACLs)</title>
+      <section>
+        <title>How It Works</title>
+        <para>ACLs in HBase are based upon a user's membership in or exclusion from groups, and a
+          given group's permissions to access a given resource. ACLs are implemented as a
+          coprocessor called AccessController.</para>
+        <para>HBase does not maintain a private group mapping, but relies on a <firstterm>Hadoop
+            group mapper</firstterm>, which maps between entities in a directory such as LDAP or
+          Active Directory, and HBase users. Any supported Hadoop group mapper will work. Users are
+          then granted specific permissions (Read, Write, Execute, Create, Admin) against resources
+          (global, namespaces, tables, cells, or endpoints).</para>
+        <note>
+          <para> With Kerberos and Access Control enabled, client access to HBase is authenticated
+            and user data is private unless access has been explicitly granted.</para>
+        </note>
+        <para>HBase has a simpler security model than relational databases, especially in terms of
+          client operations. No distinction is made between an insert (new record) and update (of
+          existing record), for example, as both collapse down into a Put.</para>
+        <section>
+          <title>Understanding Access Levels</title>
+          <para>HBase access levels are granted independently of each other and allow for different
+            types of operations at a given scope.</para>
+          <itemizedlist>
+            <listitem>
+              <para>Read (R) - can read data at the given scope</para>
+            </listitem>
+            <listitem>
+              <para><command>Write (W)</command> - can write data at the given scope</para>
+            </listitem>
+            <listitem>
+              <para><command>Execute (X)</command> - can execute coprocessor endpoints at the given
+                scope</para>
+            </listitem>
+            <listitem>
+              <para><command>Create (C)</command> - can create tables or drop tables (even those
+                they did not create) at the given scope</para>
+            </listitem>
+            <listitem>
+              <para><command>Admin (A)</command> - can perform cluster operations such as balancing
+                the cluster or assigning regions at the given scope</para>
+            </listitem>
+          </itemizedlist>
+          <para>The possible scopes are:</para>
+          <itemizedlist>
+            <listitem>
+              <para><command>Superuser</command> - superusers can perform any operation available in
+                HBase, to any resource. The user who runs HBase on your cluster is a superuser, as
+                are any principals assigned to the configuration property
+                  <code>hbase.superuser</code> in <filename>hbase-site.xml</filename> on the
+                HMaster.</para>
+            </listitem>
+            <listitem>
+              <para><command>Global</command> - permissions granted at <filename>global</filename>
+                scope allow the admin to operate on all tables of the cluster.</para>
+            </listitem>
+            <listitem>
+              <para><command>Namespace</command> - permissions granted at
+                  <filename>namespace</filename> scope apply to all tables within a given
+                namespace.</para>
+            </listitem>
+            <listitem>
+              <para><command>Table</command> - permissions granted at <filename>table</filename>
+                scope apply to data or metadata within a given table.</para>
+            </listitem>
+            <listitem>
+              <para><command>ColumnFamily</command> - permissions granted at
+                  <filename>ColumnFamily</filename> scope apply to cells within that
+                ColumnFamily.</para>
+            </listitem>
+            <listitem>
+              <para><command>Cell</command> - permissions granted at <filename>cell</filename> scope
+                apply to that exact cell coordinate (key, value, timestamp). This allows for policy
+                evolution along with data.</para>
+              <para>To change an ACL on a specific cell, write an updated cell with new ACL to the
+                precise coordinates of the original.</para>
+              <para>If you have a multi-versioned schema and want to update ACLs on all visible
+                versions, you need to write new cells for all visible versions. The application
+                has complete control over policy evolution.</para>
+              <para>The exception to the above rule is <code>append</code> and
+                  <code>increment</code> processing. Appends and increments can carry an ACL in the
+                operation. If one is included in the operation, then it will be applied to the
+                result of the <code>append</code> or <code>increment</code>. Otherwise, the ACL of
+                the existing cell you are appending to or incrementing is preserved.</para>
+            </listitem>
+          </itemizedlist>
+          <para>The combination of access levels and scopes creates a matrix of possible access
+            levels that can be granted to a user. In a production environment, it is useful to think
+            of access levels in terms of what is needed to do a specific job. The following list
+            describes appropriate access levels for some common types of HBase users. It is
+            important not to grant more access than is required for a given user to perform their
+            required tasks.</para>
+          <itemizedlist>
+            <listitem>
+              <para>Superusers - In a production system, only the HBase user should have superuser
+                access. In a development environment, an administrator may need superuser access in
+                order to quickly control and manage the cluster. However, this type of administrator
+                should usually be a Global Admin rather than a superuser.</para>
+            </listitem>
+            <listitem>
+              <para>Global Admins - A global admin can perform tasks and access every table in
+                HBase. In a typical production environment, an admin should not have Read or Write
+                permissions to data within tables.</para>
+              <itemizedlist>
+                <listitem>
+                  <para>A global admin with Admin permissions can perform cluster-wide operations on
+                    the cluster, such as balancing, assigning or unassigning regions, or calling an
+                    explicit major compaction. This is an operations role.</para>
+                </listitem>
+                <listitem>
+                  <para>A global admin with Create permissions can create or drop any table within
+                    HBase. This is more of a DBA-type role.</para>
+                </listitem>
+              </itemizedlist>
+              <para>In a production environment, it is likely that different users will have only
+                one of Admin and Create permissions.</para>
+              <warning>
+                <para>In the current implementation, a Global Admin with <code>Admin</code>
+                  permission can grant himself <code>Read</code> and <code>Write</code> permissions
+                  on a table and gain access to that table's data. For this reason, only grant
+                    <code>Global Admin</code> permissions to trusted user who actually need
+                  them.</para>
+                <para>Also be aware that a <code>Global Admin</code> with <code>Create</code>
+                  permission can perform a <code>Put</code> operation on the ACL table, simulating a
+                    <code>grant</code> or <code>revoke</code> and circumventing the authorization
+                  check for <code>Global Admin</code> permissions.</para>
+                <para>Due to these issues, be cautious with granting <code>Global Admin</code>
+                  privileges.</para>
+              </warning>
+            </listitem>
+            <listitem>
+              <para><command>Namespace Admins</command> - a namespace admin with <code>Create</code>
+                permissions can create or drop tables within that namespace, and take and restore
+                snapshots. A namespace admin with <code>Admin</code> permissions can perform
+                operations such as splits or major compactions on tables within that
+                namespace.</para>
+            </listitem>
+            <listitem>
+              <para><command>Table Admins</command> - A table admin can perform administrative
+                operations only on that table. A table admin with <code>Create</code> permissions
+                can create snapshots from that table or restore that table from a snapshot. A table
+                admin with <code>Admin</code> permissions can perform operations such as splits or
+                major compactions on that table.</para>
+            </listitem>
+            <listitem>
+              <para><command>Users</command> - Users can read or write data, or both. Users can also
+                execute coprocessor endpoints, if given <code>Executable</code> permissions.</para>
+            </listitem>
+          </itemizedlist>
+          <table>
+            <title>Real-World Example of Access Levels</title>
+            <tgroup cols="4">
+              <thead>
+                <row>
+                  <entry>Job Title</entry>
+                  <entry>Scope</entry>
+                  <entry>Permissions</entry>
+                  <entry>Description</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry><para>Senior Administrator</para></entry>
+                  <entry><para>Global</para></entry>
+                  <entry><para>Access, Create</para></entry>
+                  <entry><para>Manages the cluster and gives access to Junior
+                    Administrators.</para></entry>
+                </row>
+                <row>
+                  <entry><para>Junior Administrator</para></entry>
+                  <entry><para>Global</para></entry>
+                  <entry><para>Create</para></entry>
+                  <entry><para>Creates tables and gives access to Table
+                    Administrators.</para></entry>
+                </row>
+                <row>
+                  <entry><para>Table Administrator</para></entry>
+                  <entry><para>Table</para></entry>
+                  <entry><para>Access</para></entry>
+                  <entry><para>Maintains a table from an operations point of view.</para></entry>
+                </row>
+                <row>
+                  <entry><para>Data Analyst</para></entry>
+                  <entry><para>Table</para></entry>
+                  <entry><para>Read</para></entry>
+                  <entry><para>Creates reports from HBase data.</para></entry>
+                </row>
+                <row>
+                  <entry><para>Web Application</para></entry>
+                  <entry><para>Table</para></entry>
+                  <entry><para>Read, Write</para></entry>
+                  <entry><para>Puts data into HBase and uses HBase data to perform
+                      operations.</para></entry>
+                </row>
+              </tbody>
+            </tgroup>
+            <caption><para>This table shows how real-world titles might map to HBase permissions in
+                a hypothetical company.</para></caption>
+
+          </table>
+          <formalpara>
+            <title>ACL Matrix</title>
+            <para>For more details on how ACLs map to specific HBase operations and tasks, see <xref
+                linkend="appendix_acl_matrix"/>.</para>
+          </formalpara>
+        </section>
+        <section>
+          <title>Implementation Details</title>
+          <para>Cell-level ACLs are implemented using tags (see <xref linkend="hbase.tags"/>). In
+            order to use cell-level ACLs, you must be using HFile v3 and HBase 0.98 or newer.</para>
+          <orderedlist>
+            <title>ACL Implementation Caveats</title>
+            <listitem>
+              <para>Files created by HBase are owned by the operating system user running the HBase
+                process. To interact with HBase files, you should use the API or bulk load
+                facility.</para>
+            </listitem>
+            <listitem>
+              <para>HBase does not model "roles" internally in HBase. Instead, group names can be
+                granted permissions. This allows external modeling of roles via group membership.
+                Groups are created and manipulated externally to HBase, via the Hadoop group mapping
+                service.</para>
+            </listitem>
+          </orderedlist>
+        </section>
+        <section>
+          <title>Server-Side Configuration</title>
+          <procedure>
+            <step>
+              <para>As a prerequisite, perform the steps in <xref
+                  linkend="security.data.basic.server.side"/>.</para>
+            </step>
+            <step>
+              <para>Install and configure the AccessController coprocessor, by setting the following
+                properties in <filename>hbase-site.xml</filename>. These properties take a list of
+                classes. </para>
+              <note>
+                <para>If you use the AccessController along with the VisibilityController, the
+                  AccessController must come first in the list, because with both components active,
+                  the VisibilityController will delegate access control on its system tables to the
+                  AccessController. For an example of using both together, see <xref
+                    linkend="security.example.config"/>.</para>
+              </note>
+              <programlisting language="xml"><![CDATA[
 <property>
-  <name>hbase.regionserver.wal.tags.enablecompression</name>
-  <value>true</value>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController, org.apache.hadoop.hbase.security.token.TokenProvider</value>
 </property>
-    ]]></programlisting>
-    <para> To add tags to every cell during Puts, the following apis are provided </para>
-    <programlisting><![CDATA[
-Put#add(byte[] family, byte [] qualifier, byte [] value, Tag[] tag)
-Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
-    ]]></programlisting>
-
-    <para> Some of the feature developed using tags are Cell level ACLs and Visibility labels. These
-      are some features that use tags framework and allows users to gain better security features on
-      cell level. </para>
-    <para> For details, see:</para>
-    <para>
-      <link
-        linkend="hbase.accesscontrol.configuration">Access Control</link>
-      <link
-        linkend="hbase.visibility.labels">Visibility labels</link>
-    </para>
-  </section>
-
-  <section
-    xml:id="hbase.accesscontrol.configuration">
-    <title>Access Control</title>
-    <para> Newer releases of Apache HBase (&gt;= 0.92) support optional access control list (ACL-)
-      based protection of resources on a column family and/or table basis. </para>
-    <para> This describes how to set up Secure HBase for access control, with an example of granting
-      and revoking user permission on table resources provided. </para>
-
-    <section>
-      <title>Prerequisites</title>
-      <para> You must configure HBase for secure or simple user access operation. Refer to the <link
-          linkend="hbase.accesscontrol.configuration">Secure Client Access to HBase</link> or <link
-          linkend="hbase.secure.simpleconfiguration">Simple User Access to HBase</link> sections and
-        complete all of the steps described there. </para>
-      <para> For secure access, you must also configure ZooKeeper for secure operation. Changes to
-        ACLs are synchronized throughout the cluster using ZooKeeper. Secure authentication to
-        ZooKeeper must be enabled or otherwise it will be possible to subvert HBase access control
-        via direct client access to ZooKeeper. Refer to the section on secure ZooKeeper
-        configuration and complete all of the steps described there. </para>
-    </section>
-
-    <section>
-      <title>Overview</title>
-      <para> With Secure RPC and Access Control enabled, client access to HBase is authenticated and
-        user data is private unless access has been explicitly granted. Access to data can be
-        granted at a table or per column family basis. </para>
-      <para> However, the following items have been left out of the initial implementation for
-        simplicity: </para>
-      <orderedlist>
-        <listitem>
-          <para>Row-level or per value (cell): Using Tags in HFile V3</para>
-        </listitem>
-        <listitem>
-          <para>Push down of file ownership to HDFS: HBase is not designed for the case where files
-            may have different permissions than the HBase system principal. Pushing file ownership
-            down into HDFS would necessitate changes to core code. Also, while HDFS file ownership
-            would make applying quotas easy, and possibly make bulk imports more straightforward, it
-            is not clear that it would offer a more secure setup.</para>
-        </listitem>
-        <listitem>
-          <para>HBase managed "roles" as collections of permissions: We will not model "roles"
-            internally in HBase to begin with. We instead allow group names to be granted
-            permissions, which allows external modeling of roles via group membership. Groups are
-            created and manipulated externally to HBase, via the Hadoop group mapping
-            service.</para>
-        </listitem>
-      </orderedlist>
-      <para> Access control mechanisms are mature and fairly standardized in the relational database
-        world. The HBase implementation approximates current convention, but HBase has a simpler
-        feature set than relational databases, especially in terms of client operations. We don't
-        distinguish between an insert (new record) and update (of existing record), for example, as
-        both collapse down into a Put. Accordingly, the important operations condense to four
-        permissions: READ, WRITE, CREATE, and ADMIN. </para>
-      <table>
-        <title>Operation To Permission Mapping</title>
-        <tgroup
-          cols="2"
-          align="left"
-          colsep="1"
-          rowsep="1">
-          <colspec
-            colname="c1"
-            align="center" />
-          <colspec
-            colname="c2"
-            align="left" />
-          <thead>
-            <row>
-              <entry>Permission</entry>
-              <entry>Operation</entry>
-            </row>
-          </thead>
-          <tbody>
-            <!-- READ -->
-            <row>
-              <entry>Read</entry>
-              <entry>Get</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Exists</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Scan</entry>
-            </row>
-            <!-- WRITE -->
-            <row>
-              <entry>Write</entry>
-              <entry>Put</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Delete</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Lock/UnlockRow</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>IncrementColumnValue</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>CheckAndDelete/Put</entry>
-            </row>
-            <!-- CREATE -->
-            <row>
-              <entry>Create</entry>
-              <entry>Create</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Alter</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Drop</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Bulk Load</entry>
-            </row>
-            <!-- ADMIN -->
-            <row>
-              <entry>Admin</entry>
-              <entry>Enable/Disable</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Snapshot/Restore/Clone</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Split</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Flush</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Compact</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Major Compact</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Roll HLog</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Grant</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Revoke</entry>
-            </row>
-            <row>
-              <entry />
-              <entry>Shutdown</entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-      <para> Permissions can be granted in any of the following scopes, though CREATE and ADMIN
-        permissions are effective only at table scope. </para>
-
-      <itemizedlist>
-        <listitem>
-          <para>Table</para>
-          <para>
-            <itemizedlist>
-              <listitem>
-                <para>Read: User can read from any column family in table</para>
-              </listitem>
-              <listitem>
-                <para>Write: User can write to any column family in table</para>
-              </listitem>
-              <listitem>
-                <para>Create: User can alter table attributes; add, alter, or drop column families;
-                  and drop the table.</para>
-              </listitem>
-              <listitem>
-                <para>Admin: User can alter table attributes; add, alter, or drop column families;
-                  and enable, disable, or drop the table. User can also trigger region
-                  (re)assignments or relocation.</para>
-              </listitem>
-            </itemizedlist>
-          </para>
-        </listitem>
-        <listitem>
-          <para>Column Family</para>
-          <para>
-            <itemizedlist>
-              <listitem>
-                <para>Read: User can read from the column family</para>
-              </listitem>
-              <listitem>
-                <para>Write: User can write to the column family</para>
-              </listitem>
-            </itemizedlist>
-          </para>
-        </listitem>
-      </itemizedlist>
-
-      <para> There is also an implicit global scope for the superuser. </para>
-      <para> The superuser is a principal, specified in the HBase site configuration file, that has
-        equivalent access to HBase as the 'root' user would on a UNIX derived system. Normally this
-        is the principal that the HBase processes themselves authenticate as. Although future
-        versions of HBase Access Control may support multiple superusers, the superuser privilege
-        will always include the principal used to run the HMaster process. Only the superuser is
-        allowed to create tables, switch the balancer on or off, or take other actions with global
-        consequence. Furthermore, the superuser has an implicit grant of all permissions to all
-        resources. </para>
-      <para> Tables have a new metadata attribute: OWNER, the user principal who owns the table. By
-        default this will be set to the user principal who creates the table, though it may be
-        changed at table creation time or during an alter operation by setting or changing the OWNER
-        table attribute. Only a single user principal can own a table at a given time. A table owner
-        will have all permissions over a given table. </para>
-    </section>
-    <section>
-      <title>Access Control Matrix</title>
-      <para>The following matrix shows the minimum permission set required to perform operations in
-        HBase. Before using the table, read through the information about how to interpret it.</para>
-      <variablelist>
-        <title>Interpreting the ACL Matrix Table</title>
-        <para>The following conventions are used in the ACL Matrix table:</para>
-        <varlistentry>
-          <term>Scopes</term>
-          <listitem>
-            <para>Permissions are evaluated starting at the widest scope and working to the
-              narrowest scope. A scope corresponds to a level of the data model. From broadest to
-              narrowest, the scopes are as follows::</para>
-            <itemizedlist>
-              <listitem><para>Global</para></listitem>
-              <listitem><para>Namespace (NS)</para></listitem>
-              <listitem><para>Table</para></listitem>
-              <listitem><para>Column Qualifier (CF)</para></listitem>
-              <listitem><para>Column Family (CQ)</para></listitem>
-              <listitem><para>Cell</para></listitem>
-            </itemizedlist>
-            <para>For instance, a permission granted at table level dominates any grants done at the
-              ColumnFamily, ColumnQualifier, or cell level. The user can do what that grant implies
-              at any location in the table. A permission granted at global scope dominates all: the
-              user is always allowed to take that action everywhere.</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>Permissions</term>
-          <listitem>
-            <para>Possible permissions include the following:</para>
-            <itemizedlist>
-              <listitem><para>Superuser - a special user that belongs to group "supergroup" and has
-                unlimited access</para></listitem>
-              <listitem><para>Admin (A)</para></listitem>
-              <listitem><para>Create (C)</para></listitem>
-              <listitem><para>Write (W)</para></listitem>
-              <listitem><para>Read (R)</para></listitem>
-              <listitem><para>Execute (X)</para></listitem>
-            </itemizedlist>
-          </listitem>
-        </varlistentry>
-      </variablelist>
-
-      <para>For the most part, permissions work in an expected way, with the following caveats:</para>
-      <itemizedlist>
-        <listitem>
-          <para>Having Write permission does not imply Read permission. It is possible and sometimes
-          desirable for a user to be able to write data that same user cannot read. One such example
-          is a log-writing process.</para>
-        </listitem>
-        <listitem>
-          <para>Admin is a superset of Create, so a user with Admin permissions does not also need
-            Create permissions to perform an action such as creating a table.</para>
-        </listitem>
-        <listitem>
-          <para>The <systemitem>hbase:meta</systemitem> table is readable by every user, regardless
-            of the user's other grants or restrictions. This is a requirement for HBase to
-            function correctly.</para>
-        </listitem>
-        <listitem>
-          <para>Users with Create or Admin permissions are granted Write permission on meta regions,
-            so the table operations they are allowed to perform can complete, even if technically
-            the bits can be granted separately in any possible combination.</para>
-        </listitem>
-        <listitem>
-          <para><code>CheckAndPut</code> and <code>CheckAndDelete</code> operations will fail if the user does not have both
-            Write and Read permission.</para>
-        </listitem>
-        <listitem>
-          <para><code>Increment</code> and <code>Append</code> operations do not require Read access.</para>
-        </listitem>
-      </itemizedlist>
-
-      <para>The following table is sorted by the interface that provides each operation. In case the
-        table goes out of date, the unit tests which check for accuracy of permissions can be found
-        in
-          <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java</filename>,
-      and the access controls themselves can be examined in
-        <filename>hbase-server/src/main/java/org/apache/hadoop/hbase/security/access/AccessController.java</filename>.</para>
-    
-      <table
-        frame="all">
-        <title>ACL Matrix</title>
-        <tgroup
-          cols="4">
-          <thead>
-            <row>
-              <entry>Interface</entry>
-              <entry>Operation</entry>
-              <entry>Minimum Scope</entry>
-              <entry>Minimum Permission</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry
-                morerows="27">
-                <!-- incrememt this if you add another "master" operation -->
-                <para>Master</para>
-              </entry>
-              <entry>
-                <para>createTable</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>modifyTable</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>deleteTable</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>truncateTable</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>addColumn</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>modifyColumn</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>deleteColumn</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>disableTable</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>disableAclTable</para>
-              </entry>
-              <entry>
-                <para>None</para>
-              </entry>
-              <entry>
-                <para>Not allowed</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>enableTable</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>move</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>assign</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>unassign</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>regionOffline</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>balance</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>balanceSwitch</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>shutdown</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>stopMaster</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>snapshot</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>clone</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>restore</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>deleteSnapshot</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>createNamespace</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>deleteNamespace</para>
-              </entry>
-              <entry>
-                <para>Namespace</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>modifyNamespace</para>
-              </entry>
-              <entry>
-                <para>Namespace</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>flushTable</para>
-              </entry>
-              <entry>
-                <para>Table</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>getTableDescriptors</para>
-              </entry>
-              <entry>
-                <para>Global|Table</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>mergeRegions</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry
-                morerows="25">Region</entry>
-              <!-- Incrememt this if you add any more Region
-                operations -->
-              <entry>preOpen</entry>
-              <entry>Global</entry>
-              <entry>A</entry>
-            </row>
-            <row>
-              <entry>
-                <para>openRegion</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>preClose</entry>
-              <entry>Global</entry>
-              <entry>A</entry>
-            </row>
-            <row>
-              <entry>
-                <para>closeRegion</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>preStopRegionServer</entry>
-              <entry>Global</entry>
-              <entry>A</entry>
-            </row>
-            <row>
-              <entry>
-                <para>stopRegionServer</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>rollHLog</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>mergeRegions</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>append</entry>
-              <entry>Table</entry>
-              <entry>W</entry>
-            </row>
-            <row>
-              <entry>delete</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>W</entry>
-            </row>
-            <row>
-              <entry>exists</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>R</entry>
-            </row>
-            <row>
-              <entry>get</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>R</entry>
-            </row>
-            <row>
-              <entry>getClosestRowBefore</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>R</entry>
-            </row>
-            <row>
-              <entry>increment</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>W</entry>
-            </row>
-            <row>
-              <entry>put</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>W</entry>
-            </row>
-            <row>
-              <entry>
-                <para>flush</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>split</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>compact</para>
-              </entry>
-              <entry>
-                <para>Global</para>
-              </entry>
-              <entry>
-                <para>A|CW</para>
-              </entry>
-            </row>
-            <row>
-              <entry>bulkLoadHFile</entry>
-              <entry>Table</entry>
-              <entry>W</entry>
-            </row>
-            <row>
-              <entry>prepareBulkLoad</entry>
-              <entry>Table</entry>
-              <entry>CW</entry>
-            </row>
-            <row>
-              <entry>cleanupBulkLoad</entry>
-              <entry>Table</entry>
-              <entry>W</entry>
-            </row>
-            <row>
-              <entry>checkAndDelete</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>RW</entry>
-            </row>
-            <row>
-              <entry>checkAndPut</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>RW</entry>
-            </row>
-            <row>
-              <entry>incrementColumnValue</entry>
-              <entry>Table|CF|CQ</entry>
-              <entry>RW</entry>
-            </row>
-            <row>
-              <entry>ScannerClose</entry>
-              <entry>Table</entry>
-              <entry>R</entry>
-            </row>
-            <row>
-              <entry>ScannerNext</entry>
-              <entry>Table</entry>
-              <entry>R</entry>
-            </row>
-            <row>
-              <entry>ScannerOpen</entry>
-              <entry>Table|CQ|CF</entry>
-              <entry>R</entry>
-            </row>
-            <row>
-              <entry>
-                <para>Endpoint</para>
-              </entry>
-              <entry>
-                <para>invoke</para>
-              </entry>
-              <entry>Endpoint</entry>
-              <entry>
-                <para>X</para>
-              </entry>
-            </row>
-            <row>
-              <entry
-                morerows="3">
-                <para>AccessController</para>
-              </entry>
-              <entry>
-                <para>grant</para>
-              </entry>
-              <entry>Global|Table|NS</entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>revoke</para>
-              </entry>
-              <entry>Global|Table|NS</entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>userPermissions</para>
-              </entry>
-              <entry>
-                <para>Global|Table|NS</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-            <row>
-              <entry>
-                <para>checkPermissions</para>
-              </entry>
-              <entry>
-                <para>Global|Table|NS</para>
-              </entry>
-              <entry>
-                <para>A</para>
-              </entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </section>
-
-    <section>
-      <title>Server-side Configuration for Access Control</title>
-      <para> Enable the AccessController coprocessor in the cluster configuration and restart HBase.
-        The restart can be a rolling one. Complete the restart of all Master and RegionServer
-        processes before setting up ACLs. </para>
-      <para> To enable the AccessController, modify the <code>hbase-site.xml</code> file on every
-        server machine in the cluster to look like: </para>
-      <programlisting><![CDATA[
 <property>
   <name>hbase.coprocessor.master.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController</value>
 </property>
 <property>
-  <name>hbase.coprocessor.region.classes</name>
-  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
-  org.apache.hadoop.hbase.security.access.AccessController</value>
+  <name>hbase.coprocessor.regionserver.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
 </property>
 <property>
-  <name>hbase.coprocessor.regionserver.classes</name>
-  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
-  org.apache.hadoop.hbase.security.access.AccessController</value>
+  <name>hbase.security.exec.permission.checks</name>
+  <value>true</value>
 </property>
-    ]]></programlisting>
-    </section>
+          ]]></programlisting>
+              <para>Optionally, you can enable transport security, by setting
+                  <option>hbase.rpc.protection</option> to <literal>auth-conf</literal>. This
+                requires HBase 0.98.4 or newer.</para>
+            </step>
+            <step>
+              <para>Set up the Hadoop group mapper in the Hadoop namenode's
+                  <filename>core-site.xml</filename>. This is a Hadoop file, not an HBase file.
+                Customize it to your site's needs. Following is an example.</para>
+              <programlisting language="xml"><![CDATA[
+<property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.LdapGroupsMapping</value>
+</property>
 
-    <section>
-      <title>Cell level Access Control using Tags</title>
-      <para> Prior to HBase 0.98 access control was restricted to table and column family level.
-        Thanks to tags feature in 0.98 that allows Access control on a cell level. The existing
-        Access Controller coprocessor helps in achieving cell level access control also. For details
-        on configuring it refer to <link
-          linkend="hbase.accesscontrol.configuration">Access Control</link> section. </para>
-      <para> The ACLs can be specified for every mutation using the APIs </para>
-      <programlisting><![CDATA[
+<property>
+  <name>hadoop.security.group.mapping.ldap.url</name>
+  <value>ldap://server</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.user</name>
+  <value>Administrator@example-ad.local</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password</name>
+  <value>****</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.base</name>
+  <value>dc=example-ad,dc=local</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
+  <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.group</name>
+  <value>(objectClass=group)</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.member</name>
+  <value>member</value>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.group.name</name>
+  <value>cn</value>
+</property>]]>
+            </programlisting>
+            </step>
+            <step>
+              <para>Optionally, enable the early-out evaluation strategy. Prior to HBase 0.98.0, if
+                a user was not granted access to a column family, or at least a column qualifier, an
+                AccessDeniedException would be thrown. HBase 0.98.0 removed this exception in order
+                to allow cell-level exceptional grants. To restore the old behavior in HBase
+                0.98.0-0.98.6, set <option>hbase.security.access.early_out</option> to
+                  <literal>true</literal> in <filename>hbase-site.xml</filename>. In HBase 0.98.6,
+                the default has been returned to <literal>true</literal>.</para>
+            </step>
+            <step>
+              <para>Distribute your configuration and restart your cluster for changes to take
+                effect.</para>
+            </step>
+            <step>
+              <para>To test your configuration, log into HBase Shell as a given user and use the
+                  <command>whoami</command> command to report the groups your user is part of. In
+                this example, the user is reported as being a member of the <code>services</code>
+                group.</para>
+              <screen>
+hbase> <userinput>whoami</userinput>
+<computeroutput>service (auth:KERBEROS)
+    groups: services</computeroutput>
+            </screen>
+            </step>
+          </procedure>
+        </section>
+        <section>
+          <title>Administration</title>
+          <para>Administration tasks can be performed from HBase Shell or via an API.</para>
+          <caution>
+            <title>API Examples</title>
+            <para>Many of the API examples below are taken from source files
+                <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java</filename>
+              and
+                <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/SecureTestUtil.java</filename>.</para>
+            <para>Neither the examples, nor the source files they are taken from, are part of the
+              public HBase API, and are provided for illustration only. Refer to the official API
+              for usage instructions.</para>
+          </caution>
+          <procedure>
+            <step>
+              <title>User and Group Administration</title>
+              <para>Users and groups are maintained external to HBase, in your directory.</para>
+            </step>
+            <step>
+              <title>Granting Access To A Namespace, Table, Column Family, or Cell</title>
+              <para>There are a few different types of syntax for grant statements. The first, and
+                most familiar, is as follows, with the table and column family being
+                optional:</para>
+              <screen>grant 'user', 'RWXCA', 'TABLE', 'CF', 'CQ'</screen>
+              <para>Groups and users are granted access in the same way, but groups are prefixed
+                with an <literal>@</literal> symbol. In the same way, tables and namespaces are
+                specified in the same way, but namespaces are prefixed with an <literal>@</literal>
+                symbol.</para>
+              <para>It is also possible to grant multiple permissions against the same resource in a
+                single statement, as in this example. The first sub-clause maps users to ACLs and
+                the second sub-clause specifies the resource.</para>
+              <note>
+                <para>HBase Shell support for granting and revoking access at the cell level is for
+                  testing and verification support, and should not be employed for production use
+                  because it won't apply the permissions to cells that don't exist yet. The correct
+                  way to apply cell level permissions is to do so in the application code when
+                  storing the values.</para>
+              </note>
+              <formalpara>
+                <title>ACL Granularity and Evaluation Order</title>
+                <para>ACLs are evaluated from least granular to most granular, and when an ACL is
+                  reached that grants permission, evaluation stops. This means that cell ACLs do not
+                  override ACLs at less granularity.</para>
+              </formalpara>
+              <example>
+                <title>HBase Shell</title>
+                <itemizedlist>
+                  <listitem>
+                    <para>Global:</para>
+                    <screen>hbase> <userinput>grant '@admins', 'RWXCA'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Namespace:</para>
+                    <screen>hbase> <userinput>grant 'service', 'RWXCA', '@test-NS'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Table:</para>
+                    <screen>hbase> <userinput>grant 'service', 'RWXCA', 'user'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Column Family:</para>
+                    <screen>hbase> <userinput>grant '@developers', 'RW', 'user', 'i'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Column Qualifier:</para>
+                    <screen>hbase> <userinput>grant 'service, 'RW', 'user', 'i', 'foo'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Cell:</para>
+                    <para>The syntax for granting cell ACLs uses the following syntax:</para>
+                    <screen>grant <replaceable>&lt;table&gt;</replaceable>, \
+  { '<replaceable>&lt;user-or-group&gt;</replaceable>' => \
+    '<replaceable>&lt;permissions&gt;</replaceable>', ... }, \
+  { <replaceable>&lt;scanner-specification&gt;</replaceable> }</screen>
+                    <itemizedlist>
+                      <listitem>
+                        <para><replaceable>&lt;user-or-group&gt;</replaceable> is the user or group
+                          name, prefixed with <literal>@</literal> in the case of a group.</para>
+                      </listitem>
+                      <listitem>
+                        <para><replaceable>&lt;permissions&gt;</replaceable> is a string containing
+                          any or all of "RWXCA", though only R and W are meaningful at cell
+                          scope.</para>
+                      </listitem>
+                      <listitem>
+                        <para><replaceable>&lt;scanner-specification&gt;</replaceable> is the
+                          scanner specification syntax and conventions used by the 'scan' shell
+                          command. For some examples of scanner specifications, issue the following
+                          HBase Shell command.</para>
+                        <screen>hbase> help "scan"</screen>
+                      </listitem>
+                    </itemizedlist>
+                    <para>This example grants read access to the 'testuser' user and read/write
+                      access to the 'developers' group, on cells in the 'pii' column which match the
+                      filter.</para>
+                    <screen>hbase> grant 'user', \
+  { '@developers' => 'RW', 'testuser' => 'R' }, \
+  { COLUMNS => 'pii', FILTER => "(PrefixFilter ('test'))" }</screen>
+                    <para>The shell will run a scanner with the given criteria, rewrite the found
+                      cells with new ACLs, and store them back to their exact coordinates.</para>
+                  </listitem>
+                </itemizedlist>
+              </example>
+              <example>
+                <title>API</title>
+                <para>The following example shows how to grant access at the table level.</para>
+                <programlisting language="java"><![CDATA[
+public static void grantOnTable(final HBaseTestingUtility util, final String user,
+    final TableName table, final byte[] family, final byte[] qualifier,
+    final Permission.Action... actions) throws Exception {
+  SecureTestUtil.updateACLs(util, new Callable<Void>() {
+    @Override
+    public Void call() throws Exception {
+      HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+      try {
+        BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+        AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+        ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
+      } finally {
+        acl.close();
+      }
+      return null;
+    }
+  });
+}               ]]>
+              </programlisting>
+                <para>To grant permissions at the cell level, you can use the
+                    <code>Mutation.setACL</code> method:</para>
+                <programlisting language="java"><![CDATA[
 Mutation.setACL(String user, Permission perms)
 Mutation.setACL(Map<String, Permission> perms)
-    ]]></programlisting>
-      <para> For example, to provide read permission to an user ‘user1’ then </para>
-      <programlisting><![CDATA[
+    ]]>
+              </programlisting>
+                <para>Specifically, this example provides read permission to a user called
+                    <literal>user1</literal> on any cells contained in a particular Put
+                  operation:</para>
+                <programlisting language="java"><![CDATA[
 put.setACL(“user1”, new Permission(Permission.Action.READ))
     ]]></programlisting>
-      <para> Generally the ACL applied on the table and CF takes precedence over Cell level ACL. In
-        order to make the cell level ACL to take precedence use the following API, </para>
-      <programlisting><![CDATA[
-Mutation.setACLStrategy(boolean cellFirstStrategy)
-    ]]></programlisting>
-      <para> Please note that inorder to use this feature, HFile V3 version should be turned on. </para>
-      <programlisting><![CDATA[
-<property>
-  <name>hfile.format.version</name>
-  <value>3</value>
-</property>
-     ]]></programlisting>
-      <para> Note that deletes with ACLs do not have any effect. To keep things simple the ACLs
-        applied on the current Put does not change the ACL of any previous Put in the sense that the
-        ACL on the current put does not affect older versions of Put for the same row. </para>
+              </example>
+            </step>
+            <step>
+              <title>Revoking Access Control From a Namespace, Table, Column Family, or Cell</title>
+              <para>The <command>revoke</command> command and API are twins of the grant command and
+                API, and the syntax is exactly the same. The only exception is that you cannot
+                revoke permissions at the cell level. You can only revoke access that has previously
+                been granted, and a <command>revoke</command> statement is not the same thing as
+                explicit denial to a resource.</para>
+              <note>
+                <para>HBase Shell support for granting and revoking access is for testing and
+                  verification support, and should not be employed for production use because it
+                  won't apply the permissions to cells that don't exist yet. The correct way to
+                  apply cell-level permissions is to do so in the application code when storing the
+                  values.</para>
+              </note>
+              <example>
+                <title>Revoking Access To a Table</title>
+                <programlisting language="java">
+<![CDATA[public static void revokeFromTable(final HBaseTestingUtility util, final String user,
+    final TableName table, final byte[] family, final byte[] qualifier,
+    final Permission.Action... actions) throws Exception {
+  SecureTestUtil.updateACLs(util, new Callable<Void>() {
+    @Override
+    public Void call() throws Exception {
+      HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+      try {
+        BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+        AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+        ProtobufUtil.revoke(protocol, user, table, family, qualifier, actions);
+      } finally {
+        acl.close();
+      }
+      return null;
+    }
+  });
+} ]]>
+              </programlisting>
+              </example>
+            </step>
+            <step>
+              <title>Showing a User's Effective Permissions</title>
+              <example>
+                <title>HBase Shell</title>
+                <screen>hbase> user_permission 'user'</screen>
+                <screen>hbase> user_permission '.*'</screen>
+                <screen>hbase> user_permission <replaceable>JAVA_REGEX</replaceable></screen>
+              </example>
+              <example>
+                <title>API</title>
+                <programlisting language="java"><![CDATA[
+public static void verifyAllowed(User user, AccessTestAction action, int count) throws Exception {
+  try {
+    Object obj = user.runAs(action);
+    if (obj != null && obj instanceof List<?>) {
+      List<?> results = (List<?>) obj;
+      if (results != null && results.isEmpty()) {
+        fail("Empty non null results from action for user '" + user.getShortName() + "'");
+      }
+      assertEquals(count, results.size());
+    }
+  } catch (AccessDeniedException ade) {
+    fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
+  }
+}]]>
+              </programlisting>
+              </example>
+            </step>
+          </procedure>
+        </section>
+      </section>
     </section>
+
     <section>
-      <title>Shell Enhancements for Access Control</title>
-      <para> The HBase shell has been extended to provide simple commands for editing and updating
-        user permissions. The following commands have been added for access control list management: </para>
+      <title>Visibility Labels</title>
+      <para>Visibility labels control can be used to only permit users or principals associated with
+        a given label to read or access cells with that label. For instance, you might label a cell
+          <literal>top-secret</literal>, and only grant access to that label to the
+          <literal>managers</literal> group. Visibility labels are implemented using Tags, which are
+        a feature of HFile v3, and allow you to store metadata on a per-cell basis. A label is a
+        string, and labels can be combined into expressions by using logical operators (&amp;, |, or
+        !), and using parentheses for grouping. HBase does not do any kind of validation of
+        expressions beyond basic well-formedness. Visibility labels have no meaning on their own,
+        and may be used to denote sensitivity level, privilege level, or any other arbitrary
+        semantic meaning.</para>
+      <para>If a user's labels do not match a cell's label or expression, the user is
+        denied access to the cell.</para>
+      <para>In HBase 0.98.6 and newer, UTF-8 encoding is supported for visibility labels and
+        expressions. When creating labels using the <code>addLabels(conf, labels)</code> method
+        provided by the <code>org.apache.hadoop.hbase.security.visibility.VisibilityClient</code>
+        class and passing labels in Authorizations via Scan or Get, labels can contain UTF-8
+        characters, as well as the logical operators normally used in visibility labels, with normal
+        Java notations, without needing any escaping method. However, when you pass a CellVisibility
+        expression via a Mutation, you must enclose the expression with the
+          <code>CellVisibility.quote()</code> method if you use UTF-8 characters or logical
+        operators. See <code>TestExpressionParser</code> and the source file
+          <filename>hbase-client/src/test/java/org/apache/hadoop/hbase/client/TestScan.java</filename>.
+      </para>
+      <para>A user adds visibility expressions to a cell during a Put operation. In the default
+        configuration, the user does not need to access to a label in order to label cells with it.
+        This behavior is controlled by the configuration option
+          <option>hbase.security.visibility.mutations.checkauths</option>. If you set this option to
+          <literal>true</literal>, the labels the user is modifying as part of the mutation must be
+        associated with the user, or the mutation will fail. Whether a user is authorized to read a
+        labelled cell is determined during a Get or Scan, and results which the user is not allowed
+        to read are filtered out. This incurs the same I/O penalty as if the results were returned,
+        but reduces load on the network.</para>
+      <para>Visibility labels can also be specified during Delete operations. For details about
+        visibility labels and Deletes, see <link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-10885">HBASE-10885</link>. </para>
+      <para>The user's effective label set is built in the RPC context when a request is first
+        received by the RegionServer. The way that users are associated with labels is pluggable.
+        The default plugin passes through labels specified in Authorizations added to the Get or
+        Scan and checks those against the calling user's authenticated labels list. When the client
+        passes labels for which the user is not authenticated, the default plugin drops them. You
+        can pass a subset of user authenticated labels via the
+          <code>Get#setAuthorizations(Authorizations(String,...))</code> and
+          <code>Scan#setAuthorizations(Authorizations(String,...));</code> methods. </para>
+      <para>Visibility label access checking is performed by the VisibilityController coprocessor.
+        You can use interface <code>VisibilityLabelService</code> to provide a custom implementation
+        and/or control the way that visibility labels are stored with cells. See the source file
+          <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/visibility/TestVisibilityLabelsWithCustomVisLabService.java</filename>
+        for one example.</para>
 
-
-      <example>
-        <title>Grant</title>
-        <programlisting><![CDATA[
-grant <user|@group> <permissions> [ <table> [ <column family> [ <column qualifier> ] ] ]
-        ]]></programlisting>
-      </example>
-
-      <para>
-        <code>&lt;user|@group&gt;</code> is user or group (start with character '@'), Groups are
-        created and manipulated via the Hadoop group mapping service. </para>
-      <para>
-        <code>&lt;permissions&gt;</code> is zero or more letters from the set "RWCA": READ('R'),
-        WRITE('W'), CREATE('C'), ADMIN('A'). </para>
-      <para> Note: Grants and revocations of individual permissions on a resource are both
-        accomplished using the <code>grant</code> command. A separate <code>revoke</code> command is
-        also provided by the shell, but this is for fast revocation of all of a user's access rights
-        to a given resource only. </para>
-      <example>
-        <title>Revoke</title>
-
-        <programlisting><![CDATA[
-revoke <user|@group> [ <table> [ <column family> [ <column qualifier> ] ] ]
-    ]]></programlisting>
-      </example>
-      <example>
-        <title>Alter</title>
-
-        <para> The <code>alter</code> command has been extended to allow ownership
-          assignment:</para>
-        <programlisting><![CDATA[
-alter 'tablename', {OWNER => 'username|@group'}
-]]></programlisting>
-      </example>
-
-      <example>
-        <title>User Permission</title>
-
-        <para> The <code>user_permission</code> command shows all access permissions for the current
-          user for a given table:</para>
-        <programlisting><![CDATA[
-user_permission <table>
-    ]]></programlisting>
-      </example>
-    </section>
-
-  </section>
-  <!-- Access Control -->
-
-  <section
-    xml:id="hbase.secure.bulkload">
-    <title>Secure Bulk Load</title>
-    <para> Bulk loading in secure mode is a bit more involved than normal setup, since the client
-      has to transfer the ownership of the files generated from the mapreduce job to HBase. Secure
-      bulk loading is implemented by a coprocessor, named <link
-        xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html">SecureBulkLoadEndpoint</link>.
-      SecureBulkLoadEndpoint uses a staging directory <code>"hbase.bulkload.staging.dir"</code>,
-      which defaults to <code>/tmp/hbase-staging/</code>. The algorithm is as follows. </para>
-    <itemizedlist>
-      <listitem>
-        <para>Create an hbase owned staging directory which is world traversable (<code>-rwx--x--x,
-            711</code>) <code>/tmp/hbase-staging</code>. </para>
-      </listitem>
-      <listitem>
-        <para>A user writes out data to his secure output directory: /user/foo/data </para>
-      </listitem>
-      <listitem>
-        <para>A call is made to hbase to create a secret staging directory which is globally
-          readable/writable (<code>-rwxrwxrwx, 777</code>):
-          /tmp/hbase-staging/averylongandrandomdirectoryname</para>
-      </listitem>
-      <listitem>
-        <para>The user makes the data world readable and writable, then moves it into the random
-          staging directory, then calls bulkLoadHFiles()</para>
-      </listitem>
-    </itemizedlist>
-    <para> Like delegation tokens the strength of the security lies in the length and randomness of
-      the secret directory. </para>
-
-    <para> You have to enable the secure bulk load to work properly. You can modify the
-        <code>hbase-site.xml</code> file on every server machine in the cluster and add the
-      SecureBulkLoadEndpoint class to the list of regionserver coprocessors: </para>
-    <programlisting><![CDATA[
-<property>
-  <name>hbase.bulkload.staging.dir</name>
-  <value>/tmp/hbase-staging</value>
-</property>
+      <para>Visibility labels can be used in conjunction with ACLs.</para>
+      <table>
+        <title>Examples of Visibility Expressions</title>
+        <tgroup cols="2">
+          <thead>
+            <row>
+              <entry>Expression</entry>
+              <entry>Interpretation</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry><screen>fulltime</screen></entry>
+              <entry><para>Allow accesss to users associated with the
+                <code>fulltime</code> label.</para></entry>
+            </row>
+            <row>
+              <entry><screen>!public</screen></entry>
+              <entry><para>Allow access to users not associated with the
+                <code>public</code> label.</para></entry>
+            </row>
+            <row>
+              <entry><screen>( secret | topsecret ) &amp; !probationary</screen></entry>
+              <entry><para>Allow access to users associated with either the 
+                <code>secret</code> or <code>topsecret</code> label and not 
+                associated with the <code>probationary</code> label.</para></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <section>
+        <title>Server-Side Configuration</title>
+        <procedure>
+          <step>
+            <para>As a prerequisite, perform the steps in <xref
+              linkend="security.data.basic.server.side"/>.</para></step>
+          <step>
+            <para>Install and configure the VisibilityController coprocessor by setting the
+              following properties in <filename>hbase-site.xml</filename>. These properties take a
+              list of class names.</para>
+            <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.coprocessor.region.classes</name>
-  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
-  org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
+  <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
 </property>
-    ]]></programlisting>
-  </section>
-  <!-- Secure Bulk Load -->
-
-  <section
-    xml:id="hbase.visibility.labels">
-    <title>Visibility Labels</title>
-    <para> This feature provides cell level security with labeled visibility for the cells. Cells
-      can be associated with a visibility expression. The visibility expression can contain labels
-      joined with logical expressions &#39;&amp;&#39;, &#39;|&#39; and &#39;!&#39;. Also using
-      &#39;(&#39;, &#39;)&#39; one can specify the precedence order. For example, consider the label
-      set { confidential, secret, topsecret, probationary }, where the first three are sensitivity
-      classifications and the last describes if an employee is probationary or not. If a cell is
-      stored with this visibility expression: ( secret | topsecret ) &amp; !probationary </para>
-    <para> Then any user associated with the secret or topsecret label will be able to view the
-      cell, as long as the user is not also associated with the probationary label. Furthermore, any
-      user only associated with the confidential label, whether probationary or not, will not see
-      the cell or even know of its existence. </para>
-    <para> Visibility expressions like the above can be added when storing or mutating a cell using
-      the API, </para>
-    <programlisting>Mutation#setCellVisibility(new CellVisibility(String labelExpession));</programlisting>
-    <para> Where the labelExpression could be &#39;( secret | topsecret ) &amp; !probationary&#39; </para>
-    <para> We build the user&#39;s label set in the RPC context when a request is first received by
-      the HBase RegionServer. How users are associated with labels is pluggable. The default plugin
-      passes through labels specified in Authorizations added to the Get or Scan and checks those
-      against the calling user&#39;s authenticated labels list. When client passes some labels for
-      which the user is not authenticated, this default algorithm will drop those. One can pass a
-      subset of user authenticated labels via the Scan/Get authorizations. </para>
-    <para><code>Get#setAuthorizations(new Authorizations(String,...));</code></para>
-    <para><code>Scan#setAuthorizations(new Authorizations(String,...));</code></para>
-
-    <section
-      xml:id="hbase.visibility.label.administration">
-      <title>Visibility Label Administration</title>
-      <para> There are new client side Java APIs and shell commands for performing visibility labels
-        administrative actions. Only the HBase super user is authorized to perform these operations. </para>
-
-      <section
-        xml:id="hbase.visibility.label.administration.add.label">
-        <title>Adding Labels</title>
-        <para>A set of labels can be added to the system either by using the Java API</para>
-        <para><code>VisibilityClient#addLabels(Configuration conf, final String[]
-          labels)</code></para>
-        <para>Or by using the shell command</para>
-        <para><code>add_labels [label1, label2]</code></para>
-        <para> Valid label can include alphanumeric characters and characters &#39;-&#39;,
-          &#39;_&#39;, &#39;:&#39;, &#39;.&#39; and &#39;/&#39; </para>
-      </section>
-
-      <section
-        xml:id="hbase.visibility.label.administration.add.label2">
-        <title>User Label Association</title>
-        <para>A set of labels can be associated with a user by using the API</para>
-        <para><code>VisibilityClient#setAuths(Configuration conf, final String[] auths, final String
-            user)</code></para>
-        <para>Or by using the shell command</para>
-        <para><code>set_auths user,[label1, label2].</code></para>
-        <para>Labels can be disassociated from a user using API</para>
-        <para><code>VisibilityClient#clearAuths(Configuration conf, final String[] auths, final
-            String user)</code></para>
-        <para>Or by using shell command</para>
-        <para><code>clear_auths user,[label1, label2]</code></para>
-        <para> One can use the API <code>VisibilityClient#getAuths(Configuration conf, final String
-            user)</code> or <code>get_auths</code> shell command to get the list of labels
-          associated for a given user. The labels and user auths information will be stored in the
-          system table &#34;labels&#34;. </para>
-      </section>
-    </section>
-
-    <section
-      xml:id="hbase.visibility.label.configuration">
-      <title>Server Side Configuration</title>
-      <para> HBase stores cell level labels as cell tags. HFile version 3 adds the cell tags
-        support. Be sure to use HFile version 3 by setting this property in every server site
-        configuration file: </para>
-      <programlisting><![CDATA[
-		  <property>
-		    <name>hfile.format.version</name>
-			<value>3</value>
-		  </property>
-		]]></programlisting>
-      <para> You will also need to make sure the VisibilityController coprocessor is active on every
-        table to protect by adding it to the list of system coprocessors in the server site
-        configuration files: </para>
-      <programlisting><![CDATA[
 <property>
   <name>hbase.coprocessor.master.classes</name>
-<value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+  <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
 </property>
-<property>
-  <name>hbase.coprocessor.region.classes</name>
-<value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
-</property>
-		]]></programlisting>
-      <para> As said above, finding out labels authenticated for a given get/scan request is a
-        pluggable algorithm. A custom implementation can be plugged in using the property
-          <code>hbase.regionserver.scan.visibility.label.generator.class</code>. The default
-        implementation class is
-          <code>org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator</code>. One
-        can configure a set of ScanLabelGenerators to be used by the system. For this, a comma
-        separated set of implementation class names to be configured. </para>
+          ]]></programlisting>
+            <note>
+              <para>If you use the AccessController and VisibilityController coprocessors together,
+                the AccessController must come first in the list, because with both components
+                active, the VisibilityController will delegate access control on its system tables
+                to the AccessController.</para>
+            </note>
+          </step>
+          <step>
+            <title>Adjust Configuration</title>
+            <para>By default, users can label cells with any label, including labels they are not
+              associated with, which means that a user can Put data that he cannot read. For
+              example, a user could label a cell with the (hypothetical) 'topsecret' label even if
+              the user is not associated with that label. If you only want users to be able to label
+              cells with labels they are associated with, set
+                <property>hbase.security.visibility.mutations.checkauths</property> to
+                <literal>true</literal>. In that case, the mutation will fail if it makes use of
+              labels the user is not associated with.</para>
+          </step>
+          <step>
+            <para>Distribute your configuration and restart your cluster for changes to take
+              effect.</para>
+          </step>
+        </procedure>
+      </section>
+      <section>
+        <title>Administration</title>
+        <para>Administration tasks can be performed using the HBase Shell or the Java API. For
+          defining the list of visibility labels and associating labels with users, the
+          HBase Shell is probably simpler.</para>
+        <caution>
+          <title>API Examples</title>
+          <para>Many of the Java API examples in this section are taken from the source file 
+            <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/visibility/TestVisibilityLabels.java</filename>.
+            Refer to that file or the API documentation for more context.</para>
+          <para>Neither these examples, nor the source file they were taken from, are part of the
+            public HBase API, and are provided for illustration only. Refer to the official API
+            for usage instructions.</para>
+        </caution>
+        <procedure>
+          <step>
+            <title>Define the List of Visibility Labels</title>
+            <example>
+              <title>HBase Shell</title>
+              <screen>hbase&lt; <userinput>add_labels [ 'admin', 'service', 'developer', 'test' ]</userinput></screen>
+            </example>
+            <example>
+              <title>Java API</title>
+              <programlisting language="java"><![CDATA[
+public static void addLabels() throws Exception {
+  PrivilegedExceptionAction<VisibilityLabelsResponse> action =
+      new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+    public VisibilityLabelsResponse run() throws Exception {
+      String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
+          UNICODE_VIS_TAG, UC1, UC2 };
+      try {
+        VisibilityClient.addLabels(conf, labels);
+      } catch (Throwable t) {
+        throw new IOException(t);
+      }
+      return null;
+    }
+  };
+  SUPERUSER.runAs(action);
+}
+                ]]></programlisting>
+            </example>
+          </step>
+          <step>
+            <title>Associate Labels with Users</title>
+            <example>
+              <title>HBase Shell</title>
+              <screen>hbase&lt; <userinput>set_auths 'service', [ 'service' ]</userinput></screen>
+              <screen>hbase&lt; <userinput>set_auths 'testuser', [ 'test' ]</userinput></screen>
+              <screen>hbase&lt; <userinput>set_auths 'qa', [ 'test', 'developer' ]</userinput></screen>
+            </example>
+            <example>
+              <title>Java API</title>
+              <programlisting language="java"><![CDATA[
+public void testSetAndGetUserAuths() throws Throwable {
+  final String user = "user1";
+  PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
+    public Void run() throws Exception {
+      String[] auths = { SECRET, CONFIDENTIAL };
+      try {
+        VisibilityClient.setAuths(conf, auths, user);
+      } catch (Throwable e) {
+      }
+      return null;
+    }
+    ...
+                ]]></programlisting>
+            </example>
+          </step>
+          <step>
+            <title>Clear Labels From Users</title>
+            <example>
+              <title>HBase Shell</title>
+              <screen>hbase&lt; <userinput>clear_auths 'service', [ 'service' ]</userinput></screen>
+              <screen>hbase&lt; <userinput>clear_auths 'testuser', [ 'test' ]</userinput></screen>
+              <screen>hbase&lt; <userinput>clear_auths 'qa', [ 'test', 'developer' ]</userinput></screen>
+            </example>
+            <example>
+              <title>Java API</title>
+              <programlisting language="java"><![CDATA[
+...
+auths = new String[] { SECRET, PUBLIC, CONFIDENTIAL };
+VisibilityLabelsResponse response = null;
+try {
+  response = VisibilityClient.clearAuths(conf, auths, user);
+} catch (Throwable e) {
+  fail("Should not have failed");
+...
+                ]]></programlisting>
+            </example>
+          </step>
+          <step>
+            <title>Apply a Label or Expression to a Cell</title>
+            <para>The label is only applied when data is written. The label is associated with a
+              given version of the cell.</para>
+            <example>
+              <title>HBase Shell</title>
+              <screen>hbase&lt; <userinput>set_visibility 'user', 'admin|service|developer', \
+  { COLUMNS => 'i' }</userinput></screen>
+              <screen>hbase&lt; <userinput>set_visibility 'user', 'admin|service', \
+  { COLUMNS => ' pii' }</userinput></screen>
+              <screen>hbase&lt; <userinput>COLUMNS => [ 'i', 'pii' ], \
+    FILTER => "(PrefixFilter ('test'))" }</userinput></screen>
+            </example>
+            <note>
+              <para>HBase Shell support for applying labels or permissions to cells is for testing
+                and verification support, and should not be employed for production use because it
+                won't apply the labels to cells that don't exist yet. The correct way to apply cell
+                level labels is to do so in the application code when storing the values.</para>
+            </note>
+            <example>
+              <title>Java API</title>
+              <programlisting language="java"><![CDATA[
+static HTable createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
+    throws Exception {
+  HTable table = null;
+  try {
+    table = TEST_UTIL.createTable(tableName, fam);
+    int i = 1;
+    List<Put> puts = new ArrayList<Put>();
+    for (String labelExp : labelExps) {
+      Put put = new Put(Bytes.toBytes("row" + i));
+      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+      put.setCellVisibility(new CellVisibility(labelExp));
+      puts.add(put);
+      i++;
+    }
+    table.put(puts);
+  } finally {
+    if (table != null) {
+      table.flushCommits();
+    }
+  }
+                ]]></programlisting>
+            </example>
+          </step>
+        </procedure>
+      </section>
+      <section>
+        <title>Implementing Your Own Visibility Label Algorithm</title>
+        <para>Interpreting the labels authenticated for a given get/scan request is a pluggable
+          algorithm. You can specify a custom plugin by using the property
+            <code>hbase.regionserver.scan.visibility.label.generator.class</code>. The default
+          implementation class is
+            <code>org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator</code>. You
+          can also configure a set of <code>ScanLabelGenerators</code> to be used by the system, as
+          a comma-separated list.</para>
+      </section>
     </section>
-  </section>
 
-  <section
-    xml:id="hbase.encryption.server">
-    <title>Transparent Server Side Encryption</title>
-    <para> This feature provides transparent encryption for protecting HFile and WAL data at rest,
-      using a two-tier key architecture for flexible and non-intrusive key rotation. </para>
-    <para> First, the administrator provisions a cluster master key, stored into a key provider
-      accessable to every trusted HBase process: the Master, the RegionServers, and clients (e.g.
-      the shell) on administrative workstations. The default key provider integrates with the Java
-      KeyStore API and any key management system with support for it. How HBase retrieves key
-      material is configurable via the site file. The master key may be stored on the cluster
-      servers, protected by a secure KeyStore file, or on an external keyserver, or in a hardware
-      security module. This master key is resolved as needed by HBase processes through the
-      configured key provider. </para>
-    <para> Then, encryption keys can be specified in schema on a per column family basis, by
-      creating or modifying a column descriptor to include two additional attributes: the name of
-      the encryption algorithm to use (currently only "AES" is supported), and, optionally, a data
-      key wrapped (encrypted) with the cluster master key. Per CF keys facilitates low impact
-      incremental key rotation and reduces the scope of any external leak of key material. The
-      wrapped data key is stored in the CF schema metadata, and in each HFile for the CF, encrypted
-      with the cluster master key. Once the CF is configured for encryption, any new HFiles will be
-      written encrypted. To insure encryption of all HFiles, trigger a major compaction after first
-      enabling this feature. The key for decryption, encrypted with the cluster master key, is
-      stored in the HFiles in a new meta block. At file open time the data key will be extracted
-      from the HFile, decrypted with the cluster master key, and used for decryption of the
-      remainder of the HFile. The HFile will be unreadable if the master key is not available.
-      Should remote users somehow acquire access to the HFile data because of some lapse in HDFS
-      permissions or from inappropriately discarded media, there will be no means to decrypt either
-      the data key or the file data. </para>
-    <para> Specifying a data key in the CF schema is optional. If one is not present, a random data
-      key will be created for each HFile. </para>
-    <para> A new configuration option for encrypting the WAL is also introduced. Even though WALs
-      are transient, it is necessary to encrypt the WALEdits to avoid circumventing HFile
-      protections for encrypted column families. </para>
-    <section
-      xml:id="hbase.encryption.server.configuration">
-      <title>Configuration</title>
-      <para> Create a secret key of appropriate length for AES. </para>
-      <screen><![CDATA[
-$ keytool -keystore /path/to/hbase/conf/hbase.jks \
-  -storetype jceks -storepass <password> \
+    <section xml:id="hbase.encryption.server">
+      <title>Transparent Encryption of Data At Rest</title>
+      <para>HBase provides a mechanism for protecting your data at rest, in HFiles and the WAL, which
+        reside within HDFS or another distributed filesystem. A two-tier architecture is used for
+        flexible and non-intrusive key rotation. "Transparent" means that no implementation changes
+        are needed on the client side. When data is written, it is encrypted. When it is read, it is
+        decrypted on demand.</para>
+      <section>
+        <title>How It Works</title>
+        <para>The administrator provisions a master key for the cluster, which is stored in a key
+          provider accessible to every trusted HBase process, including the HMaster, RegionServers,
+          and clients (such as HBase Shell) on administrative workstations. The default key provider
+          is integrated with the Java KeyStore API and any key management systems with support for
+          it. Other custom key provider implementations are possible. The key retrieval mechanism is
+          configured in the <filename>hbase-site.xml</filename> configuration file. The master key
+          may be stored on the cluster servers, protected by a secure KeyStore file, or on an
+          external keyserver, or in a hardware security module. This master key is resolved as
+          needed by HBase processes through the configured key provider.</para>
+        <para>Next, encryption use can be specified in the schema, per column family, by creating
+          or modifying a column descriptor to include two additional attributes: the name of the
+          encryption algorithm to use (currently only "AES" is supported), and optionally, a data
+          key wrapped (encrypted) with the cluster master key. If a data key is not explictly
+          configured for a ColumnFamily, HBase will create a random data key per HFile. This
+          provides an incremental improvement in security over the alternative. Unless you need to
+          supply an explicit data key, such as in a case where you are generating encrypted HFiles
+          for bulk import with a given data key, only specify the encryption algorithm in the
+          ColumnFamily schema metadata and let HBase create data keys on demand. Per Column Family
+          keys facilitate low impact incremental key rotation and reduce the scope of any external
+          leak of key material. The wrapped data key is stored in the ColumnFamily schema metadata,
+          and in each HFile for the Column Family, encrypted with the cluster master key. After the
+          Column Family is configured for encryption, any new HFiles will be written encrypted. To
+          ensure encryption of all HFiles, trigger a major compaction after enabling this
+          feature.</para>
+        <para>When the HFile is opened, the data key is extracted from the HFile, decrypted with the
+          cluster master key, and used for decryption of the remainder of the HFile. The HFile will
+          be unreadable if the master key is not available. If a remote user somehow acquires access
+          to the HFile data because of some lapse in HDFS permissions, or from inappropriately
+          discarded media, it will not be possible to decrypt either the data key or the file
+          data.</para>
+        <para>It is also possible to encrypt the WAL. Even though WALs are transient, it is
+          necessary to encrypt the WALEdits to avoid circumventing HFile protections for encrypted
+          column families, in the event that the underlying filesystem is compromised. When WAL
+          encryption is enabled, all WALs are encrypted, regardless of whether the relevant HFiles
+          are encrypted.</para>
+      </section>
+      <section>
+        <title>Server-Side Configuration</title>
+        <para>This procedure assumes you are using the default Java keystore implementation. If you
+          are using a custom implementation, check its documentation and adjust accordingly.</para>
+        <procedure>
+          <step>
+            <title>Create a secret key of appropriate length for AES encryption, using the
+                <code>keytool</code> utility.</title>
+            <screen>$ <userinput>keytool -keystore /path/to/hbase/conf/hbase.jks \
+  -storetype jceks -storepass **** \
   -genseckey -keyalg AES -keysize 128 \
-  -alias <alias>
-	]]></screen>
-      <para> where &lt;password&gt; is the password for the KeyStore file and &lt;alias&gt;is the
-        user name of the HBase service account, typically "hbase". Simply press RETURN to store the
-        key with the same password as the store. The resulting file should be distributed to all
-        nodes running HBase daemons, with file ownership and permissions set to be readable only by
-        the HBase service account. </para>
-      <para> Configure HBase daemons to use a key provider backed by the KeyStore files for
-        retrieving the cluster master key as needed. </para>
-      <programlisting><![CDATA[
+  -alias &lt;alias&gt;</userinput></screen>
+            <para>Replace <replaceable>****</replaceable> with the password for the keystore file
+              and &lt;alias&gt; with the username of the HBase service account, or an arbitrary
+              string. If you use an arbitrary string, you will need to configure HBase to use it,
+              and that is covered below. Specify a keysize that is appropriate. Do not specify a
+              separate password for the key, but press <keycap>Return</keycap> when prompted.</para>
+          </step>
+          <step>
+            <title>Set appropriate permissions on the keyfile and distribute it to all the HBase
+              servers.</title>
+            <para>The previous command created a file called <filename>hbase.jks</filename> in the
+              HBase <filename>conf/</filename> directory. Set the permissions and ownership on this
+              file such that only the HBase service account user can read the file, and securely
+              distribute the key to all HBase servers.</para>
+          </step>
+          <step>
+            <title>Configure the HBase daemons.</title>
+            <para>Set the following properties in <filename>hbase-site.xml</filename> on the region
+              servers, to configure HBase daemons to use a key provider backed by the KeyStore file
+              or retrieving the cluster master key. In the example below, replace
+                <replaceable>****</replaceable> with the password.</para>
+            <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.crypto.keyprovider</name>
     <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
 </property>
 <property>
     <name>hbase.crypto.keyprovider.parameters</name>
-    <value>jceks:///path/to/hbase/conf/hbase.jks?password=<password></value>
+    <value>jceks:///path/to/hbase/conf/hbase.jks?password=****</value>
 </property>
-        ]]></programlisting>
-      <para> By default the HBase service account name will be used to resolve the cluster master
-        key, but you can store it with any arbitrary alias and configure HBase appropriately: </para>
-      <programlisting><![CDATA[
+            ]]></programlisting>
+            <para>By default, the HBase service account name will be used to resolve the cluster
+              master key. However, you can store it with an arbitrary alias (in the
+                <command>keytool</command> command). In that case, set the following property to the
+              alias you used.</para>
+            <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.crypto.master.key.name</name>
-    <value>hbase</value>
-</property>
-        ]]></programlisting>
-      <para> Because the password to the key store is sensitive information, the HBase site XML file
-        should also have its permissions set to be readable only by the HBase service account. </para>
-      <para> Transparent encryption is a feature of HFile version 3. Be sure to use HFile version 3
-        by setting this property in every server site configuration file: </para>
-      <programlisting><![CDATA[
+    <value>my-alias</value>
+</property>]]>
+            </programlisting>
+            <para>You also need to be sure your HFiles use HFile v3, in order to use transparent
+              encryption. This is the default configuration for HBase 1.0 onward. For previous
+              versions, set the following property in your <filename>hbase-site.xml</filename>
+              file.</para>
+            <programlisting language="xml"><![CDATA[
 <property>
     <name>hfile.format.version</name>
     <value>3</value>
-</property>
-        ]]></programlisting>
-      <para> Finally, configure the secure WAL in every server site configuration file: </para>
-      <programlisting><![CDATA[
+</property>]]>
+            </programlisting>
+            <para>Optionally, you can use a different cipher provider, either a Java Cryptography
+              Encryption (JCE) algorithm provider or a custom HBase cipher implementation. </para>
+            <substeps>
+              <step>
+                <title>JCE: </title>
+                <itemizedlist>
+                  <listitem>
+                    <para>Install a signed JCE provider (supporting “AES/CTR/NoPadding” mode with
+                      128 bit keys) </para>
+                  </listitem>
+                  <listitem>
+                    <para>Add it with highest preference to the JCE site configuration file
+                        <filename>$JAVA_HOME/lib/security/java.security</filename>.</para>
+                  </listitem>
+                  <listitem>
+                    <para>Update <option>hbase.crypto.algorithm.aes.provider</option> and
+                        <option>hbase.crypto.algorithm.rng.provider</option> options in
+                        <filename>hbase-site.xml</filename>. </para>
+                  </listitem>
+                </itemizedlist>
+              </step>
+              <step>
+                <title>Custom HBase Cipher: </title>
+                <itemizedlist>
+                  <listitem>
+                    <para>Implement
+                      <code>org.apache.hadoop.hbase.io.crypto.CipherProvider</code>.</para>
+                  </listitem>
+                  <listitem>
+                    <para>Add the implementation to the server classpath.</para>
+                  </listitem>
+                  <listitem>
+                    <para>Update <option>hbase.crypto.cipherprovider</option> in
+                        <filename>hbase-site.xml</filename>.</para>
+                  </listitem>
+                </itemizedlist>
+              </step>
+            </substeps>
+          </step>
+          <step>
+            <title>Configure WAL encryption.</title>
+            <para>Configure WAL encryption in every RegionServer's
+                <filename>hbase-site.xml</filename>, by setting the following properties. You can
+              include these in the HMaster's <filename>hbase-site.xml</filename> as well, but the
+              HMaster does not have a WAL and will not use them.</para>
+            <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.regionserver.hlog.reader.impl</name>
     <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
@@ -1750,53 +1551,345 @@ $ keytool -keystore /path/to/hbase/conf/hbase.jks \
     <name>hbase.regionserver.wal.encryption</name>
     <value>true</value>
 </property>
-        ]]></programlisting>
-    </section>
-    <section
-      xml:id="hbase.encryption.server.schema">
-      <title>Setting Encryption on a CF</title>
-      <para> To enable encryption on a CF, use <code>HBaseAdmin#modifyColumn</code> or the HBase
-        shell to modify the column descriptor. The attribute 'ENCRYPTION' specifies the encryption
-        algorithm to use. Currently only "AES" is supported. If creating a new table, simply set
-        this attribute; no subsequent table modification will be necessary. </para>
-      <para> If setting a specific data key, the attribute 'ENCRYPTION_KEY' should contain the data
-        key wrapped by the cluster master key. The static methods <code>wrapKey</code> and
-          <code>unwrapKey</code> in <code>org.apache.hadoop.hbase.security.EncryptionUtil</code> can
-        be used in conjunction with <code>HColumnDescriptor#setEncryptionKey</code> for this
-        purpose. Because this must be done programatically, setting a data key with the shell is not
-        supported. </para>
-      <para> To disable encryption on a CF, simply remove the 'ENCRYPTION' (and 'ENCRYPTION_KEY', if
-        it was set) attributes from the column schema, using <code>HBaseAdmin#modifyColumn</code> or
-        the HBase shell. All new HFiles for the CF will be written without encryption. Trigger a
-        major compaction to rewrite all files. </para>
-    </section>
-    <section
-      xml:id="hbase.encryption.server.data_key_rotation">
-      <title>Data Key Rotation</title>
-      <para> Data key rotation is made simple by this design. First, change the CF key in the column
-        descriptor. Then, trigger major compaction. Once compaction has completed, all files will be
-        (re)encrypted with the new key material. While this process is ongoing, HFiles encrypted
-        with old key material will still be readable. </para>
-    </section>
-    <section
-      xml:id="hbase.encryption.server.master_key_rotation">
-      <title>Master Key Rotation</title>
-      <para> Master key rotation can be achieved by updating the KeyStore to contain a new master
-        key, as described above, with also the old master key added to the KeyStore under a
-        different alias. Then, configure fallback to the old master key in the HBase site file: </para>
-      <programlisting><![CDATA[
+              ]]></programlisting>
+          </step>
+          <step>
+            <title>Configure permissions on the <filename>hbase-site.xml</filename> file.</title>
+            <para>Because the keystore password is stored in the hbase-site.xml, you need to ensure
+              that only the HBase user can read the <filename>hbase-site.xml</filename> file, using
+              file ownership and permissions.</para>
+          </step>
+          <step>
+            <title>Restart your cluster.</title>
+            <para>Distribute the new configuration file to all nodes and restart your
+              cluster.</para>
+          </step>
+        </procedure>
+      </section>
+      <section>
+        <title>Administration</title>
+        <para>Administrative tasks can be performed in HBase Shell or the Java API.</para>
+        <caution>
+          <title>Java API</title>
+          <para>Java API examples in this section are taken from the source file
+              <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/util/TestHBaseFsckEncryption.java</filename>.
+            .</para>
+          <para>Neither these examples, nor the source files they are taken from, are part of the
+            public HBase API, and are provided for illustration only. Refer to the official API
+            for usage instructions.</para>
+        </caution>
+        <variablelist>
+          <varlistentry>
+            <term>Enable Encryption on a Column Family</term>
+            <listitem>
+              <para>To enable encryption on a column family, you can either use HBase Shell or the
+                Java API. After enabling encryption, trigger a major compaction. When the major
+                compaction completes, the HFiles will be encrypted.</para>
+              <example>
+                <title>HBase Shell</title>
+                <screen>
+hbase> disable 'mytable'
+hbase> alter 'mytable', 'mycf', {ENCRYPTION => AES}
+hbase> enable 'mytable'
+                </screen>
+              </example>
+              <example>
+                <title>Java API</title>
+                <para>You can use the <code>HBaseAdmin#modifyColumn</code> API to modify the
+                    <property>ENCRYPTION</property> attribute on a Column Family. Additionally, you
+                  can specify the specific key to use as the wrapper, by setting the
+                    <property>ENCRYPTION_KEY</property> attribute. This is only possible via the
+                  Java API, and not the HBase Shell. The default behavior if you do not specify an
+                    <property>ENCRYPTION_KEY</property> for a column family is for a random key to
+                  be generated for each encrypted column family (per HFile). This provides
+                  additional defense in the (unlikely, but theoretically possible) occurrence of
+                  storing the same data in multiple HFiles with exactly the same block layout, the
+                  same data key, and the same randomly-generated initialization vector.</para>
+                <para>This example shows how to programmatically set the transparent encryption both
+                  in the server configuration and at the column family, as part of a test which uses
+                  the Minicluster configuration.</para>
+                <programlisting language="java">
+@Before
+public void setUp() throws Exception {
+  conf = TEST_UTIL.getConfiguration();
+  conf.setInt("hfile.format.version", 3);
+  conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+  conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
+
+  // Create the test encryption key
+  SecureRandom rng = new SecureRandom();
+  byte[] keyBytes = new byte[AES.KEY_LENGTH];
+  rng.nextBytes(keyBytes);
+  cfKey = new SecretKeySpec(keyBytes, "AES");
+
+  // Start the minicluster
+  TEST_UTIL.startMiniCluster(3);
+
+  // Create the table
+  htd = new HTableDescriptor(TableName.valueOf("default", "TestHBaseFsckEncryption"));
+  HColumnDescriptor hcd = new HColumnDescriptor("cf");
+  hcd.setEncryptionType("AES");
+  hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf,
+    conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
+    cfKey));
+  htd.addFamily(hcd);
+  TEST_UTIL.getHBaseAdmin().createTable(htd);
+  TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
+}
+                </programlisting>
+              </example>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>Rotate the Data Key</term>
+            <listitem>
+              <para>To rotate the data key, first change the ColumnFamily key in the column
+                descriptor, then trigger a major compaction. When compaction is complete, all HFiles
+                will be re-encrypted using the new data key. Until the compaction completes, the
+                old HFiles will still be readable using the old key.</para>
+              <para>If you rely on HBase's default behavior of generating a random key for each
+                HFile, there is no need to rotate data keys. A major compaction will re-encrypt the
+                HFile with a new key.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>Switching Between Using a Random Data Key and Specifying A Key</term>
+            <listitem>
+              <para>If you configured a column family to use a specific key and you want to return
+                to the default behavior of using a randomly-generated key for that column family,
+                use the Java API to alter the <code>HColumnDescriptor</code> so that no value is
+                sent with the key <literal>ENCRYPTION_KEY</literal>.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>Rotate the Master Key</term>
+            <listitem>
+              <para>To rotate the master key, first generate and distribute the new key. Then update
+                the KeyStore to contain a new master key, and keep the old master key in the
+                KeyStore using a different alias. Next, configure fallback to the old master key in
+                the <filename>hbase-site.xml</filename> file.</para>
+              <programlisting language="xml"><![CDATA[
 <property>
-    <name>hbase.crypto.master.alternate.key.name</name>
-    <value>hbase.old</value>
+  <name>hbase.crypto.master.alternate.key.name</name>
+  <value>hbase.old</value>
 </property>
-        ]]></programlisting>
-      <para> This will require a rolling restart of the HBase daemons to take effect. As with data
-        key rotation, trigger a major compaction and wait for it to complete. Once compaction has
-        completed, all files will be (re)encrypted with data keys wrapped by the new cluster master
-        key. The old master key, and its associated site file configuration, can then be removed,
-        and all trace of the old master key will be gone after the next rolling restart. A second
-        rolling restart is not immediately necessary. </para>
+                ]]></programlisting>
+              <para>Rolling restart your cluster for this change to take effect. Trigger a major
+                compaction on each table. At the end of the major compaction, all HFiles will be
+                re-encrypted with data keys wrapped by the new cluster key. At this point, you can
+                remove the old master key from the KeyStore, remove the configuration for the
+                fallback master key from the <filename>hbase-site.xml</filename>, and perform a
+                second rolling restart at some point. This second rolling restart is not
+                time-sensitive.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term></term>
+            <listitem>
+              <para></para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+      </section>
     </section>
+
+    <section
+      xml:id="hbase.secure.bulkload">
+      <title>Secure Bulk Load</title>
+      <para> Bulk loading in secure mode is a bit more involved than normal setup, since the client
+        has to transfer the ownership of the files generated from the mapreduce job to HBase. Secure
+        bulk loading is implemented by a coprocessor, named <link
+          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html"
+          >SecureBulkLoadEndpoint</link>, which uses a staging directory configured by the
+        configuration property <option>hbase.bulkload.staging.dir</option>, which defaults to
+          <filename>/tmp/hbase-staging/</filename>.</para>
+      <itemizedlist>
+        <title>Secure Bulk Load Algorithm</title>
+        <listitem>
+          <para>One time only, create a staging directory which is world-traversable and owned by
+            the user which runs HBase (mode 711, or <literal>rwx--x--x</literal>). A listing of this
+            directory will look similar to the following: </para>
+          <screen>$ <userinput>ls -ld /tmp/hbase-staging</userinput>
+drwx--x--x  2 hbase  hbase  68  3 Sep 14:54 /tmp/hbase-staging
+          </screen>
+        </listitem>
+        <listitem>
+          <para>A user writes out data to a secure output directory owned by that user. For example,
+              <filename>/user/foo/data</filename>.</para>
+        </listitem>
+        <listitem>
+          <para>Internally, HBase creates a secret staging directory which is globally
+            readable/writable (<code>-rwxrwxrwx, 777</code>). For example,
+              <filename>/tmp/hbase-staging/averylongandrandomdirectoryname</filename>. The name and
+            location of this directory is not exposed to the user. HBase manages creation and
+            deletion of this directory.</para>
+        </listitem>
+        <listitem>
+          <para>The user makes the data world-readable and world-writable, moves it into the random
+            staging directory, then calls the <code>SecureBulkLoadClient#bulkLoadHFiles</code>
+            method.</para>
+        </listitem>
+      </itemizedlist>
+
+      <para>The strength of the security lies in the length and randomness of the secret
+        directory.</para>
+      <para>To enable secure bulk load, add the following properties to
+          <filename>hbase-site.xml</filename>.</para>
+
+      <programlisting language="xml"><![CDATA[
+<property>
+  <name>hbase.bulkload.staging.dir</name>
+  <value>/tmp/hbase-staging</value>
+</property>
+<property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
+  org.apache.hadoop.hbase.security.access.AccessController</value>
+</property>
+<property>
+  <name>hbase.coprocessor.regionserver.classes</name>
+  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
+  org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
+</property>
+    ]]></programlisting>
+    </section>
+    <!-- Secure Bulk Load -->
   </section>
 
+  <section xml:id="security.example.config">
+    <title>Security Configuration Example</title>
+    <para>This configuration example includes support for HFile v3, ACLs, Visibility Labels, and
+      transparent encryption of data at rest and the WAL. All options have been discussed separately
+      in the sections above.</para>
+    <example>
+      <title>Example Security Settings in <filename>hbase-site.xml</filename></title>
+      <programlisting language="xml"><![CDATA[
+<!-- HFile v3 Support -->
+<property>
+  <name>hfile.format.version</name>
+  <value>3</value>
+</property>
+<!-- HBase Superuser -->
+<property>
+  <name>hbase.superuser</name>
+  <value>hbase, admin</value>
+</property>
+<!-- Coprocessors for ACLs and Visibility Tags -->
+<property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController,
+  org.apache.hadoop.hbase.security.visibility.VisibilityController,
+  org.apache.hadoop.hbase.security.token.TokenProvider</value>
+</property>
+<property>
+  <name>hbase.coprocessor.master.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController,
+  org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
+</property>
+<property>
+  <name>hbase.coprocessor.regionserver.classes</name>
+  <value>org.apache.hadoop/hbase.security.access.AccessController,
+  org.apache.hadoop.hbase.security.access.VisibilityController</value>
+</property>
+<!-- Executable ACL for Coprocessor Endpoints -->
+<property>
+  <name>hbase.security.exec.permission.checks</name>
+  <value>true</value>
+</property>
+<!-- Whether a user needs authorization for a visibility tag to set it on a cell -->
+<property>
+  <name>hbase.security.visibility.mutations.checkauth</name>
+  <value>false</value>
+</property>
+<!-- Secure RPC Transport -->
+<property>
+  <name>hbase.rpc.protection</name>
+  <value>auth-conf</value>
+ </property>
+ <!-- Transparent Encryption -->
+<property>
+    <name>hbase.crypto.keyprovider</name>
+    <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
+</property>
+<property>
+    <name>hbase.crypto.keyprovider.parameters</name>
+    <value>jceks:///path/to/hbase/conf/hbase.jks?password=***</value>
+</property>
+<property>
+    <name>hbase.crypto.master.key.name</name>
+    <value>hbase</value>
+</property>
+<!-- WAL Encryption -->
+<property>
+    <name>hbase.regionserver.hlog.reader.impl</name>
+    <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
+</property>
+<property>
+    <name>hbase.regionserver.hlog.writer.impl</name>
+    <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
+</property>
+<property>
+    <name>hbase.regionserver.wal.encryption</name>
+    <value>true</value>
+</property>
+<!-- For key rotation -->
+<property>
+  <name>hbase.crypto.master.alternate.key.name</name>
+  <value>hbase.old</value>
+</property>
+<!-- Secure Bulk Load -->
+<property>
+  <name>hbase.bulkload.staging.dir</name>
+  <value>/tmp/hbase-staging</value>
+</property>
+<property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
+  org.apache.hadoop.hbase.security.access.AccessController,org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint</value>
+</property>
+        ]]></programlisting>
+    </example>
+    <example>
+      <title>Example Group Mapper in Hadoop <filename>core-site.xml</filename></title>
+      <para>Adjust these settings to suit your environment.</para>
+      <programlisting language="xml"><![CDATA[
+<property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.LdapGroupsMapping</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.url</name>
+  <value>ldap://server</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.user</name>
+  <value>Administrator@example-ad.local</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password</name>
+  <value>****</value> <!-- Replace with the actual password -->
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.base</name>
+  <value>dc=example-ad,dc=local</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
+  <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.group</name>
+  <value>(objectClass=group)</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.member</name>
+  <value>member</value>
+</property>
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.group.name</name>
+  <value>cn</value>
+</property>
+        ]]></programlisting>
+    </example>
+  </section>
 </chapter>

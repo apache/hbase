@@ -44,7 +44,7 @@
         xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
       in the Java API. </para>
     <para>Tables must be disabled when making ColumnFamily modifications, for example:</para>
-    <programlisting>
+    <programlisting language="java">
 Configuration config = HBaseConfiguration.create();
 HBaseAdmin admin = new HBaseAdmin(conf);
 String table = "myTable";
@@ -280,7 +280,7 @@ d-foo0002
           in those eight bytes. If you stored this number as a String -- presuming a byte per
           character -- you need nearly 3x the bytes. </para>
         <para>Not convinced? Below is some sample code that you can run on your own.</para>
-        <programlisting>
+        <programlisting language="java">
 // long
 //
 long l = 1234567890L;
@@ -403,7 +403,7 @@ COLUMN                                        CELL
         are accessible in the keyspace. </para>
       <para>To conclude this example, the following is an example of how appropriate splits can be
         pre-created for hex-keys:. </para>
-      <programlisting><![CDATA[public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
+      <programlisting language="java"><![CDATA[public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
 throws IOException {
   try {
     admin.createTable( table, splits );
@@ -439,18 +439,15 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       xml:id="schema.versions.max">
       <title>Maximum Number of Versions</title>
       <para>The maximum number of row versions to store is configured per column family via <link
-          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html"
-          >HColumnDescriptor</link>. The default for max versions is 3 prior to HBase 0.96.x, and 1
-        in newer versions. This is an important parameter because as described in <xref
-          linkend="datamodel"/> section HBase does <emphasis>not</emphasis> overwrite row values,
+          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
+        The default for max versions is 1. This is an important parameter because as described in <xref
+          linkend="datamodel" /> section HBase does <emphasis>not</emphasis> overwrite row values,
         but rather stores different values per row by time (and qualifier). Excess versions are
         removed during major compactions. The number of max versions may need to be increased or
         decreased depending on application needs. </para>
       <para>It is not recommended setting the number of max versions to an exceedingly high level
         (e.g., hundreds or more) unless those old values are very dear to you because this will
         greatly increase StoreFile size. </para>
-      <para>See <xref linkend="specify.number.of.versions"/> for examples for setting the maximum
-        number of versions on a given column or globally.</para>
     </section>
     <section
       xml:id="schema.minversions">
@@ -465,8 +462,6 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
           around</emphasis>" (where M is the value for minimum number of row versions, M&lt;N). This
         parameter should only be set when time-to-live is enabled for a column family and must be
         less than the number of row versions. </para>
-      <para>See <xref linkend="specify.number.of.versions"/> for examples for setting the minimum
-        number of versions on a given column.</para>
     </section>
   </section>
   <section
@@ -700,7 +695,7 @@ HColumnDescriptor.setKeepDeletedCells(true);
           timestamps, by performing a mod operation on the timestamp. If time-oriented scans are
           important, this could be a useful approach. Attention must be paid to the number of
           buckets, because this will require the same number of scans to return results.</para>
-        <programlisting>
+        <programlisting language="java">
 long bucket = timestamp % numBuckets;
         </programlisting>
         <para>… to construct:</para>
@@ -1161,13 +1156,13 @@ long bucket = timestamp % numBuckets;
 ]]></programlisting>
 
       <para>The other option we had was to do this entirely using:</para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <FixedWidthUserName><FixedWidthPageNum0>:<FixedWidthLength><FixedIdNextPageNum><ValueId1><ValueId2><ValueId3>...
 <FixedWidthUserName><FixedWidthPageNum1>:<FixedWidthLength><FixedIdNextPageNum><ValueId1><ValueId2><ValueId3>...
     		]]></programlisting>
       <para> where each row would contain multiple values. So in one case reading the first thirty
         values would be: </para>
-      <programlisting><![CDATA[
+      <programlisting language="java"><![CDATA[
 scan { STARTROW => 'FixedWidthUsername' LIMIT => 30}
     		]]></programlisting>
       <para>And in the second case it would be </para>

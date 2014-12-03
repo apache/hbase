@@ -81,7 +81,7 @@ public void receiveSpan(Span span);
       change your config to use zipkin receiver, distribute the new configuration and then (rolling)
       restart. </para>
     <para> Here is the example of manual setup procedure. </para>
-    <screen><![CDATA[
+    <screen language="bourne"><![CDATA[
 $ git clone https://github.com/cloudera/htrace
 $ cd htrace/htrace-zipkin
 $ mvn compile assembly:single
@@ -92,7 +92,7 @@ $ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HBASE_HOME/lib/
       for a <varname>hbase.zipkin.collector-hostname</varname> and
         <varname>hbase.zipkin.collector-port</varname> property with a value describing the Zipkin
       collector server to which span information are sent. </para>
-    <programlisting><![CDATA[
+    <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.trace.spanreceiver.classes</name>
   <value>org.htrace.impl.ZipkinSpanReceiver</value>
@@ -118,7 +118,7 @@ $ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HBASE_HOME/lib/
     <title>Client Modifications</title>
     <para> In order to turn on tracing in your client code, you must initialize the module sending
       spans to receiver once per client process. </para>
-    <programlisting><![CDATA[
+    <programlisting language="java"><![CDATA[
 private SpanReceiverHost spanReceiverHost;
 
 ...
@@ -129,13 +129,13 @@ private SpanReceiverHost spanReceiverHost;
     <para>Then you simply start tracing span before requests you think are interesting, and close it
       when the request is done. For example, if you wanted to trace all of your get operations, you
       change this: </para>
-    <programlisting><![CDATA[
+    <programlisting language="java"><![CDATA[
 HTable table = new HTable(conf, "t1");
 Get get = new Get(Bytes.toBytes("r1"));
 Result res = table.get(get);
 ]]></programlisting>
     <para>into: </para>
-    <programlisting><![CDATA[
+    <programlisting language="java"><![CDATA[
 TraceScope ts = Trace.startSpan("Gets", Sampler.ALWAYS);
 try {
   HTable table = new HTable(conf, "t1");
@@ -146,7 +146,7 @@ try {
 }
 ]]></programlisting>
     <para>If you wanted to trace half of your 'get' operations, you would pass in: </para>
-    <programlisting><![CDATA[
+    <programlisting language="java"><![CDATA[
 new ProbabilitySampler(0.5)
 ]]></programlisting>
     <para>in lieu of <varname>Sampler.ALWAYS</varname> to <classname>Trace.startSpan()</classname>.

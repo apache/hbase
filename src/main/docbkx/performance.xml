@@ -182,6 +182,8 @@
           save a bit of YGC churn and allocate in the old gen directly. </para>
         <para>For more information about GC logs, see <xref
             linkend="trouble.log.gc" />. </para>
+    <para>Consider also enabling the offheap Block Cache.  This has been shown to mitigate
+        GC pause times.  See <xref linkend="block.cache" /></para>
       </section>
     </section>
   </section>
@@ -627,7 +629,7 @@ hbase> <userinput>create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROWCOL'}<
       <title>Constants</title>
       <para>When people get started with HBase they have a tendency to write code that looks like
         this:</para>
-      <programlisting>
+      <programlisting language="java">
 Get get = new Get(rowkey);
 Result r = htable.get(get);
 byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
@@ -635,7 +637,7 @@ byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns c
       <para>But especially when inside loops (and MapReduce jobs), converting the columnFamily and
         column-names to byte-arrays repeatedly is surprisingly expensive. It's better to use
         constants for the byte-arrays, like this:</para>
-      <programlisting>
+      <programlisting language="java">
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -669,14 +671,14 @@ byte[] b = r.getValue(CF, ATTR);  // returns current version of value
       <para>There are two different approaches to pre-creating splits. The first approach is to rely
         on the default <code>HBaseAdmin</code> strategy (which is implemented in
           <code>Bytes.split</code>)... </para>
-      <programlisting>
-byte[] startKey = ...;   	// your lowest keuy
+      <programlisting language="java">
+byte[] startKey = ...;   	// your lowest key
 byte[] endKey = ...;   		// your highest key
 int numberOfRegions = ...;	// # of regions to create
 admin.createTable(table, startKey, endKey, numberOfRegions);
       </programlisting>
       <para>And the other approach is to define the splits yourself... </para>
-      <programlisting>
+      <programlisting language="java">
 byte[][] splits = ...;   // create your own splits
 admin.createTable(table, splits);
 </programlisting>
@@ -829,7 +831,7 @@ admin.createTable(table, splits);
           <code>Scan.HINT_LOOKAHEAD</code> can be set the on Scan object. The following code
         instructs the RegionServer to attempt two iterations of next before a seek is
         scheduled:</para>
-      <programlisting>
+      <programlisting language="java">
 Scan scan = new Scan();
 scan.addColumn(...);
 scan.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
@@ -854,7 +856,7 @@ table.getScanner(scan);
           xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ResultScanner.html">ResultScanners</link>
         you can cause problems on the RegionServers. Always have ResultScanner processing enclosed
         in try/catch blocks...</para>
-      <programlisting>
+      <programlisting language="java">
 Scan scan = new Scan();
 // set attrs...
 ResultScanner rs = htable.getScanner(scan);
@@ -878,6 +880,8 @@ htable.close();
           <methodname>setCacheBlocks</methodname> method. For input Scans to MapReduce jobs, this
         should be <varname>false</varname>. For frequently accessed rows, it is advisable to use the
         block cache.</para>
+
+    <para>Cache more data by moving your Block Cache offheap.  See <xref linkend="offheap.blockcache" /></para>
     </section>
     <section
       xml:id="perf.hbase.client.rowkeyonly">
@@ -984,6 +988,58 @@ htable.close();
       </section>
     </section>
     <!--  bloom  -->
+    <section>
+      <title>Hedged Reads</title>
+      <para>Hedged reads are a feature of HDFS, introduced in <link
+          xlink:href="https://issues.apache.org/jira/browse/HDFS-5776">HDFS-5776</link>. Normally, a
+        single thread is spawned for each read request. However, if hedged reads are enabled, the
+        client waits some configurable amount of time, and if the read does not return, the client
+        spawns a second read request, against a different block replica of the same data. Whichever
+        read returns first is used, and the other read request is discarded. Hedged reads can be
+        helpful for times where a rare slow read is caused by a transient error such as a failing
+        disk or flaky network connection.</para>
+      <para> Because a HBase RegionServer is a HDFS client, you can enable hedged reads in HBase, by
+        adding the following properties to the RegionServer's hbase-site.xml and tuning the values
+        to suit your environment.</para>
+      <itemizedlist>
+        <title>Configuration for Hedged Reads</title>
+        <listitem>
+          <para><code>dfs.client.hedged.read.threadpool.size</code> - the number of threads
+            dedicated to servicing hedged reads. If this is set to 0 (the default), hedged reads are
+            disabled.</para>
+        </listitem>
+        <listitem>
+          <para><code>dfs.client.hedged.read.threshold.millis</code> - the number of milliseconds to
+            wait before spawning a second read thread.</para>
+        </listitem>
+      </itemizedlist>
+      <example>
+        <title>Hedged Reads Configuration Example</title>
+        <screen><![CDATA[<property>
+  <name>dfs.client.hedged.read.threadpool.size</name>
+  <value>20</value>  <!-- 20 threads -->
+</property>
+<property>
+  <name>dfs.client.hedged.read.threshold.millis</name>
+  <value>10</value>  <!-- 10 milliseconds -->
+</property>]]></screen>
+      </example>
+      <para>Use the following metrics to tune the settings for hedged reads on
+        your cluster. See <xref linkend="hbase_metrics"/>  for more information.</para>
+      <itemizedlist>
+        <title>Metrics for Hedged Reads</title>
+        <listitem>
+          <para>hedgedReadOps - the number of times hedged read threads have been triggered. This
+            could indicate that read requests are often slow, or that hedged reads are triggered too
+            quickly.</para>
+        </listitem>
+        <listitem>
+          <para>hedgeReadOpsWin - the number of times the hedged read thread was faster than the
+            original thread. This could indicate that a given RegionServer is having trouble
+            servicing requests.</para>
+        </listitem>
+      </itemizedlist>
+    </section>
 
   </section>
   <!--  reading -->
@@ -1052,7 +1108,7 @@ htable.close();
           shortcircuit reads configuration page</link> for how to enable the latter, better version
         of shortcircuit. For example, here is a minimal config. enabling short-circuit reads added
         to <filename>hbase-site.xml</filename>: </para>
-      <programlisting><![CDATA[<property>
+      <programlisting language="xml"><![CDATA[<property>
   <name>dfs.client.read.shortcircuit</name>
   <value>true</value>
   <description>
