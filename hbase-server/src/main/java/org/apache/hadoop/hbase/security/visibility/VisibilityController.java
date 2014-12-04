@@ -494,6 +494,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       Tag tag = iterator.next();
       if (tag.getType() == TagType.STRING_VIS_TAG_TYPE) {
         iterator.remove();
+        break;
       }
     }
   }
