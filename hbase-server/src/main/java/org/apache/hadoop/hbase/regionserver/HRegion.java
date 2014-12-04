@@ -778,13 +778,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     this.lastFlushTime = EnvironmentEdgeManager.currentTime();
     // Use maximum of wal sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
-    long nextSeqid = maxSeqId + 1;
-    if (this.isRecovering) {
-      // In distributedLogReplay mode, we don't know the last change sequence number because region
-      // is opened before recovery completes. So we add a safety bumper to avoid new sequence number
-      // overlaps used sequence numbers
-      nextSeqid = WALSplitter.writeRegionOpenSequenceIdFile(this.fs.getFileSystem(),
-            this.fs.getRegionDir(), nextSeqid, (this.flushPerChanges + 10000000));
+    long nextSeqid = maxSeqId;
+
+    // In distributedLogReplay mode, we don't know the last change sequence number because region
+    // is opened before recovery completes. So we add a safety bumper to avoid new sequence number
+    // overlaps used sequence numbers
+    if (this.writestate.writesEnabled) {
+      nextSeqid = WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(), this.fs
+          .getRegionDir(), nextSeqid, (this.isRecovering ? (this.flushPerChanges + 10000000) : 1));
+    } else {
+      nextSeqid++;
     }
 
     LOG.info("Onlined " + this.getRegionInfo().getShortNameToLog() +
@@ -912,6 +915,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       getRegionServerServices().getServerName(), storeFiles);
     WALUtil.writeRegionEventMarker(wal, getTableDesc(), getRegionInfo(), regionEventDesc,
       getSequenceId());
+
+    // Store SeqId in HDFS when a region closes
+    // checking region folder exists is due to many tests which delete the table folder while a
+    // table is still online
+    if (this.fs.getFileSystem().exists(this.fs.getRegionDir())) {
+      WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(), this.fs.getRegionDir(),
+        getSequenceId().get(), 0);
+    }
   }
 
   /**
@@ -1293,7 +1304,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       }
 
       status.setStatus("Writing region close event to WAL");
-      if (!abort  && wal != null && getRegionServerServices() != null) {
+      if (!abort && wal != null && getRegionServerServices() != null && !writestate.readOnly) {
         writeRegionCloseMarker(wal);
       }
 
@@ -3593,7 +3604,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           if (firstSeqIdInLog == -1) {
             firstSeqIdInLog = key.getLogSeqNum();
           }
-          currentEditSeqId = key.getLogSeqNum();
+          if (currentEditSeqId > key.getLogSeqNum()) {
+            // when this condition is true, it means we have a serious defect because we need to
+            // maintain increasing SeqId for WAL edits per region
+            LOG.error("Found decreasing SeqId. PreId=" + currentEditSeqId + " key=" + key
+                + "; edit=" + val);
+          } else {
+            currentEditSeqId = key.getLogSeqNum();
+          }
           currentReplaySeqId = (key.getOrigLogSeqNum() > 0) ?
             key.getOrigLogSeqNum() : currentEditSeqId;
 
