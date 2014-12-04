@@ -496,7 +496,8 @@ public class AccessController extends BaseMasterAndRegionObserver
   private void requireGlobalPermission(String request, Action perm,
                                        String namespace) throws IOException {
     User user = getActiveUser();
-    if (authManager.authorize(user, perm)) {
+    if (authManager.authorize(user, perm)
+        || (namespace != null && authManager.authorize(user, namespace, perm))) {
       logResult(AuthResult.allow(request, "Global check allowed", user, perm, namespace));
     } else {
       logResult(AuthResult.deny(request, "Global check failed", user, perm, namespace));
@@ -1148,7 +1149,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor ns) throws IOException {
-    requireGlobalPermission("createNamespace", Action.ADMIN, ns.getName());
+    requirePermission("createNamespace", Action.ADMIN);
   }
 
   @Override
