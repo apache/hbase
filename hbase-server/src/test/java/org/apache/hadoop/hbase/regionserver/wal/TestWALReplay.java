@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -899,8 +900,16 @@ public class TestWALReplay {
     WALSplitter.splitLogFile(hbaseRootDir, listStatus[0],
         this.fs, this.conf, null, null, null, mode, wals);
     FileStatus[] listStatus1 = this.fs.listStatus(
-        new Path(FSUtils.getTableDir(hbaseRootDir, tableName),
-            new Path(hri.getEncodedName(), "recovered.edits")));
+      new Path(FSUtils.getTableDir(hbaseRootDir, tableName), new Path(hri.getEncodedName(),
+          "recovered.edits")), new PathFilter() {
+        @Override
+        public boolean accept(Path p) {
+          if (WALSplitter.isSequenceIdFile(p)) {
+            return false;
+          }
+          return true;
+        }
+      });
     int editCount = 0;
     for (FileStatus fileStatus : listStatus1) {
       editCount = Integer.parseInt(fileStatus.getPath().getName());

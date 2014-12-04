@@ -57,6 +57,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -130,6 +131,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALEditsReplaySink;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 
 /**
  * This class is responsible for splitting up a bunch of regionserver commit log
@@ -623,6 +625,10 @@ public class WALSplitter {
           if (p.getName().endsWith(RECOVERED_LOG_TMPFILE_SUFFIX)) {
             result = false;
           }
+          // Skip SeqId Files
+          if (isSequenceIdFile(p)) {
+            result = false;
+          }
         } catch (IOException e) {
           LOG.warn("Failed isFile check on " + p);
         }
@@ -657,19 +663,21 @@ public class WALSplitter {
     return moveAsideName;
   }
 
-  private static final String SEQUENCE_ID_FILE_SUFFIX = "_seqid";
+  private static final String SEQUENCE_ID_FILE_SUFFIX = ".seqid";
+  private static final String OLD_SEQUENCE_ID_FILE_SUFFIX = "_seqid";
+  private static final int SEQUENCE_ID_FILE_SUFFIX_LENGTH = SEQUENCE_ID_FILE_SUFFIX.length();
 
   /**
    * Is the given file a region open sequence id file.
    */
   @VisibleForTesting
   public static boolean isSequenceIdFile(final Path file) {
-    return file.getName().endsWith(SEQUENCE_ID_FILE_SUFFIX);
+    return file.getName().endsWith(SEQUENCE_ID_FILE_SUFFIX)
+        || file.getName().endsWith(OLD_SEQUENCE_ID_FILE_SUFFIX);
   }
 
   /**
    * Create a file with name as region open sequence id
-   * 
    * @param fs
    * @param regiondir
    * @param newSeqId
@@ -677,10 +685,10 @@ public class WALSplitter {
    * @return long new sequence Id value
    * @throws IOException
    */
-  public static long writeRegionOpenSequenceIdFile(final FileSystem fs, final Path regiondir,
+  public static long writeRegionSequenceIdFile(final FileSystem fs, final Path regiondir,
       long newSeqId, long saftyBumper) throws IOException {
 
-    Path editsdir = getRegionDirRecoveredEditsDir(regiondir);
+    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
     long maxSeqId = 0;
     FileStatus[] files = null;
     if (fs.exists(editsdir)) {
@@ -695,7 +703,7 @@ public class WALSplitter {
           String fileName = status.getPath().getName();
           try {
             Long tmpSeqId = Long.parseLong(fileName.substring(0, fileName.length()
-                    - SEQUENCE_ID_FILE_SUFFIX.length()));
+                - SEQUENCE_ID_FILE_SUFFIX_LENGTH));
             maxSeqId = Math.max(tmpSeqId, maxSeqId);
           } catch (NumberFormatException ex) {
             LOG.warn("Invalid SeqId File Name=" + fileName);
@@ -707,15 +715,28 @@ public class WALSplitter {
       newSeqId = maxSeqId;
     }
     newSeqId += saftyBumper; // bump up SeqId
-    
+
     // write a new seqId file
     Path newSeqIdFile = new Path(editsdir, newSeqId + SEQUENCE_ID_FILE_SUFFIX);
-    if (!fs.createNewFile(newSeqIdFile)) {
-      throw new IOException("Failed to create SeqId file:" + newSeqIdFile);
+    if (newSeqId != maxSeqId) {
+      try {
+        if (!fs.createNewFile(newSeqIdFile) && !fs.exists(newSeqIdFile)) {
+          throw new IOException("Failed to create SeqId file:" + newSeqIdFile);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Written region seqId to file:" + newSeqIdFile + " ,newSeqId=" + newSeqId
+              + " ,maxSeqId=" + maxSeqId);
+        }
+      } catch (FileAlreadyExistsException ignored) {
+        // latest hdfs throws this exception. it's all right if newSeqIdFile already exists
+      }
     }
     // remove old ones
-    if(files != null) {
+    if (files != null) {
       for (FileStatus status : files) {
+        if (newSeqIdFile.equals(status.getPath())) {
+          continue;
+        }
         fs.delete(status.getPath(), false);
       }
     }

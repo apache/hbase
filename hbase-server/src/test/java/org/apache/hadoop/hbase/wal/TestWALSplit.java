@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -1157,7 +1158,15 @@ public class TestWALSplit {
     @SuppressWarnings("deprecation")
     Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
       Bytes.toString(region.getBytes())));
-    FileStatus [] files = this.fs.listStatus(editsdir);
+    FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
+      @Override
+      public boolean accept(Path p) {
+        if (WALSplitter.isSequenceIdFile(p)) {
+          return false;
+        }
+        return true;
+      }
+    });
     Path[] paths = new Path[files.length];
     for (int i = 0; i < files.length; i++) {
       paths[i] = files[i].getPath();

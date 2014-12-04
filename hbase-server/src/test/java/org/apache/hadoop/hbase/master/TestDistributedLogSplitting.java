@@ -260,7 +260,15 @@ public class TestDistributedLogSplitting {
       Path editsdir =
         WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
-      FileStatus[] files = fs.listStatus(editsdir);
+      FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
+        @Override
+        public boolean accept(Path p) {
+          if (WALSplitter.isSequenceIdFile(p)) {
+            return false;
+          }
+          return true;
+        }
+      });
       assertTrue("edits dir should have more than a single file in it. instead has " + files.length,
           files.length > 1);
       for (int i = 0; i < files.length; i++) {
@@ -841,7 +849,15 @@ public class TestDistributedLogSplitting {
         WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
       if(!fs.exists(editsdir)) continue;
-      FileStatus[] files = fs.listStatus(editsdir);
+      FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
+        @Override
+        public boolean accept(Path p) {
+          if (WALSplitter.isSequenceIdFile(p)) {
+            return false;
+          }
+          return true;
+        }
+      });
       if(files != null) {
         for(FileStatus file : files) {
           int c = countWAL(file.getPath(), fs, conf);
@@ -1385,11 +1401,10 @@ public class TestDistributedLogSplitting {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf("table"));
     List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
-    WALSplitter.writeRegionOpenSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);
-    // current SeqId file has seqid=1001
-    WALSplitter.writeRegionOpenSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);
-    // current SeqId file has seqid=2001
-    assertEquals(3001, WALSplitter.writeRegionOpenSequenceIdFile(fs, regionDirs.get(0), 3L, 1000L));
+    long newSeqId = WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 1L, 1000L);
+    WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);
+    assertEquals(newSeqId + 2000,
+      WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 3L, 1000L));
     
     Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regionDirs.get(0));
     FileStatus[] files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
