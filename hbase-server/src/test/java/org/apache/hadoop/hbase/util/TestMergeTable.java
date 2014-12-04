@@ -96,7 +96,7 @@ public class TestMergeTable {
 
     // Create regions and populate them at same time.  Create the tabledir
     // for them first.
-    new FSTableDescriptors(fs, rootdir).createTableDescriptor(desc);
+    new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir).createTableDescriptor(desc);
     HRegion [] regions = {
       createRegion(desc, null, row_70001, 1, 70000, rootdir),
       createRegion(desc, row_70001, row_80001, 70001, 10000, rootdir),
@@ -161,7 +161,7 @@ public class TestMergeTable {
   throws IOException {
     HRegion meta =
       HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, rootdir,
-      UTIL.getConfiguration(), HTableDescriptor.META_TABLEDESC);
+      UTIL.getConfiguration(), UTIL.getMetaTableDescriptor());
     for (HRegion r: regions) {
       HRegion.addRegionToMETA(meta, r);
     }

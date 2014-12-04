@@ -111,7 +111,7 @@ public class TestAdmin2 {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      this.admin.createTable(HTableDescriptor.META_TABLEDESC);
+      this.admin.createTable(new HTableDescriptor(TableName.META_TABLE_NAME));
     } catch(TableExistsException e) {
       msg = e.toString();
     }

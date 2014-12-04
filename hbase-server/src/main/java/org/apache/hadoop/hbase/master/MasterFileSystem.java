@@ -459,7 +459,12 @@ public class MasterFileSystem {
     }
 
     // Create tableinfo-s for hbase:meta if not already there.
-    new FSTableDescriptors(fs, rd).createTableDescriptor(HTableDescriptor.META_TABLEDESC);
+
+    // meta table is a system table, so descriptors are predefined,
+    // we should get them from registry.
+    FSTableDescriptors fsd = new FSTableDescriptors(c, fs, rd);
+    fsd.createTableDescriptor(
+      new HTableDescriptor(fsd.get(TableName.META_TABLE_NAME)));
 
     return rd;
   }
@@ -499,10 +504,10 @@ public class MasterFileSystem {
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
-      setInfoFamilyCachingForMeta(false);
-      HRegion meta = HRegion.createHRegion(metaHRI, rd, c,
-          HTableDescriptor.META_TABLEDESC, null, true, true);
-      setInfoFamilyCachingForMeta(true);
+      HTableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
+      setInfoFamilyCachingForMeta(metaDescriptor, false);
+      HRegion meta = HRegion.createHRegion(metaHRI, rd, c, metaDescriptor);
+      setInfoFamilyCachingForMeta(metaDescriptor, true);
       HRegion.closeHRegion(meta);
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
@@ -514,16 +519,15 @@ public class MasterFileSystem {
   /**
    * Enable in memory caching for hbase:meta
    */
-  public static void setInfoFamilyCachingForMeta(final boolean b) {
-    for (HColumnDescriptor hcd:
-        HTableDescriptor.META_TABLEDESC.getColumnFamilies()) {
+  public static void setInfoFamilyCachingForMeta(final HTableDescriptor metaDescriptor,
+      final boolean b) {
+    for (HColumnDescriptor hcd: metaDescriptor.getColumnFamilies()) {
       if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
         hcd.setBlockCacheEnabled(b);
         hcd.setInMemory(b);
       }
     }
   }
-
 
   public void deleteRegion(HRegionInfo region) throws IOException {
     HFileArchiver.archiveRegion(conf, fs, region);

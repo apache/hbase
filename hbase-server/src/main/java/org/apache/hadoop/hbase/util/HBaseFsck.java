@@ -1181,10 +1181,10 @@ public class HBaseFsck extends Configured {
       Path rootdir = FSUtils.getRootDir(getConf());
     Configuration c = getConf();
     HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
-    MasterFileSystem.setInfoFamilyCachingForMeta(false);
-    HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c,
-        HTableDescriptor.META_TABLEDESC);
-    MasterFileSystem.setInfoFamilyCachingForMeta(true);
+    HTableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
+    MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, false);
+    HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor);
+    MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, true);
     return meta;
   }
 

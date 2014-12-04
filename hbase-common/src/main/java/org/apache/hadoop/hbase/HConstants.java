@@ -684,6 +684,26 @@ public final class HConstants {
   public static final int DEFAULT_HBASE_CLIENT_SCANNER_CACHING = 100;
 
   /**
+   * Parameter name for number of versions, kept by meta table.
+   */
+  public static String HBASE_META_VERSIONS = "hbase.meta.versions";
+
+  /**
+   * Default value of {@link #HBASE_META_VERSIONS}.
+   */
+  public static int DEFAULT_HBASE_META_VERSIONS = 10;
+
+  /**
+   * Parameter name for number of versions, kept by meta table.
+   */
+  public static String HBASE_META_BLOCK_SIZE = "hbase.meta.blocksize";
+
+  /**
+   * Default value of {@link #HBASE_META_BLOCK_SIZE}.
+   */
+  public static int DEFAULT_HBASE_META_BLOCK_SIZE = 8 * 1024;
+
+  /**
    * Parameter name for number of rows that will be fetched when calling next on
    * a scanner if it is not served from memory. Higher caching values will
    * enable faster scanners but will eat up more memory and some calls of next

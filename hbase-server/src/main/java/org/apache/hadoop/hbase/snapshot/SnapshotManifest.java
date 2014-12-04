@@ -352,7 +352,7 @@ public class SnapshotManifest {
       Path rootDir = FSUtils.getRootDir(conf);
       LOG.info("Using old Snapshot Format");
       // write a copy of descriptor to the snapshot directory
-      new FSTableDescriptors(fs, rootDir)
+      new FSTableDescriptors(conf, fs, rootDir)
         .createTableDescriptorForTableDirectory(workingDir, htd, false);
     } else {
       LOG.debug("Convert to Single Snapshot Manifest");

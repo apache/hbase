@@ -92,30 +92,36 @@ public class FSTableDescriptors implements TableDescriptors {
     new ConcurrentHashMap<TableName, HTableDescriptor>();
 
   /**
+   * Table descriptor for <code>hbase:meta</code> catalog table
+   */
+   private final HTableDescriptor metaTableDescriptor;
+
+   /**
    * Construct a FSTableDescriptors instance using the hbase root dir of the given
    * conf and the filesystem where that root dir lives.
    * This instance can do write operations (is not read only).
    */
   public FSTableDescriptors(final Configuration conf) throws IOException {
-    this(FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
+    this(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
   }
 
-  public FSTableDescriptors(final FileSystem fs, final Path rootdir)
-  throws IOException {
-    this(fs, rootdir, false, true);
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs, final Path rootdir)
+      throws IOException {
+    this(conf, fs, rootdir, false, true);
   }
 
   /**
    * @param fsreadonly True if we are read-only when it comes to filesystem
    * operations; i.e. on remove, we do not do delete in fs.
    */
-  public FSTableDescriptors(final FileSystem fs,
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs,
     final Path rootdir, final boolean fsreadonly, final boolean usecache) throws IOException {
     super();
     this.fs = fs;
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
     this.usecache = usecache;
+    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(conf);
   }
 
   public void setCacheOn() throws IOException {
@@ -145,7 +151,7 @@ public class FSTableDescriptors implements TableDescriptors {
     invocations++;
     if (TableName.META_TABLE_NAME.equals(tablename)) {
       cachehits++;
-      return HTableDescriptor.META_TABLEDESC;
+      return metaTableDescriptor;
     }
     // hbase:meta is already handled. If some one tries to get the descriptor for
     // .logs, .oldlogs or .corrupt throw an exception.

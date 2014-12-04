@@ -515,7 +515,7 @@ public class HRegionServer extends HasThread implements
     this.fs = new HFileSystem(this.conf, useHBaseChecksum);
     this.rootDir = FSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(
-      this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
+      this.conf, this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
 
     service = new ExecutorService(getServerName().toShortString());
     spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());

@@ -146,6 +146,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -5956,12 +5957,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       final boolean majorCompact)
   throws IOException {
     HRegion region;
+    FSTableDescriptors fst = new FSTableDescriptors(c);
     // Currently expects tables have one region only.
     if (FSUtils.getTableName(p).equals(TableName.META_TABLE_NAME)) {
       final WAL wal = walFactory.getMetaWAL(
           HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
       region = HRegion.newHRegion(p, wal, fs, c,
-        HRegionInfo.FIRST_META_REGIONINFO, HTableDescriptor.META_TABLEDESC, null);
+        HRegionInfo.FIRST_META_REGIONINFO, fst.get(TableName.META_TABLE_NAME), null);
     } else {
       throw new IOException("Not a known catalog table: " + p.toString());
     }

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -58,15 +59,16 @@ public class TestHRegionInfo {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
     Path basedir = htu.getDataTestDir();
+    FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(htu.getConfiguration());
     // Create a region.  That'll write the .regioninfo file.
     HRegion r = HRegion.createHRegion(hri, basedir, htu.getConfiguration(),
-      HTableDescriptor.META_TABLEDESC);
+      fsTableDescriptors.get(TableName.META_TABLE_NAME));
     // Get modtime on the file.
     long modtime = getModTime(r);
     HRegion.closeHRegion(r);
     Thread.sleep(1001);
-    r = HRegion.openHRegion(basedir, hri, HTableDescriptor.META_TABLEDESC,
-        null, htu.getConfiguration());
+    r = HRegion.openHRegion(basedir, hri, fsTableDescriptors.get(TableName.META_TABLE_NAME),
+      null, htu.getConfiguration());
     // Ensure the file is not written for a second time.
     long modtime2 = getModTime(r);
     assertEquals(modtime, modtime2);

@@ -206,7 +206,7 @@ public class TestMasterFailover {
 
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = FSUtils.getRootDir(conf);
-    FSTableDescriptors fstd = new FSTableDescriptors(filesystem, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(conf, filesystem, rootdir);
     // Write the .tableinfo
     fstd.createTableDescriptor(htdEnabled);
 
@@ -553,7 +553,7 @@ public class TestMasterFailover {
     htdEnabled.addFamily(new HColumnDescriptor(FAMILY));
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = FSUtils.getRootDir(conf);
-    FSTableDescriptors fstd = new FSTableDescriptors(filesystem, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(conf, filesystem, rootdir);
     // Write the .tableinfo
     fstd.createTableDescriptor(htdEnabled);
     HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getTableName(),
@@ -1214,7 +1214,7 @@ public class TestMasterFailover {
 
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = FSUtils.getRootDir(conf);
-    FSTableDescriptors fstd = new FSTableDescriptors(filesystem, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(conf, filesystem, rootdir);
     fstd.createTableDescriptor(offlineTable);
 
     HRegionInfo hriOffline = new HRegionInfo(offlineTable.getTableName(), null, null);

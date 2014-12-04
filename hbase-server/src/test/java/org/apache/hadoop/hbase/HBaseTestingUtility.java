@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
@@ -373,6 +374,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   private Path getBaseTestDirOnTestFS() throws IOException {
     FileSystem fs = getTestFileSystem();
     return new Path(fs.getWorkingDirectory(), "test-data");
+  }
+
+  /**
+   * @return META table descriptor
+   */
+  public HTableDescriptor getMetaTableDescriptor() {
+    try {
+      return new FSTableDescriptors(conf).get(TableName.META_TABLE_NAME);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to create META table descriptor", e);
+    }
   }
 
   /**

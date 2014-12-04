@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -1376,15 +1377,20 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               new Path(name.getNamespaceAsString(), new Path(name.getQualifierAsString()))));
   }
 
-  /** Table descriptor for <code>hbase:meta</code> catalog table */
+  /**
+   * Table descriptor for <code>hbase:meta</code> catalog table
+   * @deprecated Use TableDescriptors#get(TableName.META_TABLE_NAME) or
+   * HBaseAdmin#getTableDescriptor(TableName.META_TABLE_NAME) instead.
+   */
+  @Deprecated
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       TableName.META_TABLE_NAME,
       new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.CATALOG_FAMILY)
               // Ten is arbitrary number.  Keep versions to help debugging.
-              .setMaxVersions(10)
+              .setMaxVersions(HConstants.DEFAULT_HBASE_META_VERSIONS)
               .setInMemory(true)
-              .setBlocksize(8 * 1024)
+              .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
               // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
               .setBloomFilterType(BloomType.NONE)
@@ -1563,4 +1569,26 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public void removeConfiguration(final String key) {
     configuration.remove(key);
   }
+
+  public static HTableDescriptor metaTableDescriptor(final Configuration conf)
+      throws IOException {
+    HTableDescriptor metaDescriptor = new HTableDescriptor(
+      TableName.META_TABLE_NAME,
+      new HColumnDescriptor[] {
+        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+          .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+            HConstants.DEFAULT_HBASE_META_VERSIONS))
+          .setInMemory(true)
+          .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+            HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+          .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+          // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+          .setBloomFilterType(BloomType.NONE)
+         });
+    metaDescriptor.addCoprocessor(
+      "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
+      null, Coprocessor.PRIORITY_SYSTEM, null);
+    return metaDescriptor;
+  }
+
 }

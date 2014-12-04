@@ -49,8 +49,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.client.Append;
@@ -2241,14 +2239,9 @@ public class AccessController extends BaseMasterAndRegionObserver
     else {
       MasterServices masterServices = ctx.getEnvironment().getMasterServices();
       for (TableName tableName: tableNamesList) {
-        // Do not deny if the table does not exist
-        try {
-          masterServices.checkTableModifiable(tableName);
-        } catch (TableNotFoundException ex) {
-          // Skip checks for a table that does not exist
+        // Skip checks for a table that does not exist
+        if (masterServices.getTableDescriptors().get(tableName) == null) {
           continue;
-        } catch (TableNotDisabledException ex) {
-          // We don't care about this
         }
         requirePermission("getTableDescriptors", tableName, null, null,
           Action.ADMIN, Action.CREATE);
