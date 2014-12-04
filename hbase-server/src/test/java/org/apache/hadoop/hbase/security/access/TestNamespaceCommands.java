@@ -22,9 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
-import com.google.common.collect.ListMultimap;
-import com.google.protobuf.BlockingRpcChannel;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -50,15 +47,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.google.common.collect.ListMultimap;
+import com.google.protobuf.BlockingRpcChannel;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestNamespaceCommands extends SecureTestUtil {
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static String TestNamespace = "ns1";
+  private static String TestNamespace2 = "ns2";
   private static Configuration conf;
   private static MasterCoprocessorEnvironment CP_ENV;
   private static AccessController ACCESS_CONTROLLER;
@@ -71,6 +67,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
   private static User USER_CREATE;
   // user with permission on namespace for testing all operations.
   private static User USER_NSP_WRITE;
+  // user with admin permission on namespace.
+  private static User USER_NSP_ADMIN;
 
   private static String TEST_TABLE = TestNamespace + ":testtable";
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
@@ -84,6 +82,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     USER_RW = User.createUserForTesting(conf, "rw_user", new String[0]);
     USER_CREATE = User.createUserForTesting(conf, "create_user", new String[0]);
     USER_NSP_WRITE = User.createUserForTesting(conf, "namespace_write", new String[0]);
+    USER_NSP_ADMIN = User.createUserForTesting(conf, "namespace_admin", new String[0]);
 
     UTIL.startMiniCluster();
     // Wait for the ACL table to become available
@@ -94,14 +93,19 @@ public class TestNamespaceCommands extends SecureTestUtil {
         .findCoprocessor(AccessController.class.getName());
 
     UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace).build());
+    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace2).build());
 
     grantOnNamespace(UTIL, USER_NSP_WRITE.getShortName(),
       TestNamespace, Permission.Action.WRITE, Permission.Action.CREATE);
+
+    grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TestNamespace, Permission.Action.ADMIN);
+    grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TestNamespace2, Permission.Action.ADMIN);
   }
   
   @AfterClass
   public static void afterClass() throws Exception {
     UTIL.getHBaseAdmin().deleteNamespace(TestNamespace);
+    UTIL.getHBaseAdmin().deleteNamespace(TestNamespace2);
     UTIL.shutdownMiniCluster();
   }
 
@@ -118,7 +122,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
       assertTrue(result != null);
       ListMultimap<String, TablePermission> perms =
           AccessControlLists.getNamespacePermissions(conf, TestNamespace);
-      assertEquals(2, perms.size());
+      assertEquals(3, perms.size());
       List<TablePermission> namespacePerms = perms.get(userTestNamespace);
       assertTrue(perms.containsKey(userTestNamespace));
       assertEquals(1, namespacePerms.size());
@@ -134,7 +138,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
         Permission.Action.WRITE);
 
       perms = AccessControlLists.getNamespacePermissions(conf, TestNamespace);
-      assertEquals(1, perms.size());
+      assertEquals(2, perms.size());
     } finally {
       acl.close();
     }
@@ -150,11 +154,39 @@ public class TestNamespaceCommands extends SecureTestUtil {
       }
     };
     // verify that superuser or hbase admin can modify namespaces.
-    verifyAllowed(modifyNamespace, SUPERUSER);
+    verifyAllowed(modifyNamespace, SUPERUSER, USER_NSP_ADMIN);
     // all others should be denied
     verifyDenied(modifyNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW);
   }
   
+  @Test
+  public void testCreateAndDeleteNamespace() throws Exception {
+    AccessTestAction createNamespace = new AccessTestAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preCreateNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
+          NamespaceDescriptor.create(TestNamespace2).build());
+        return null;
+      }
+    };
+
+    AccessTestAction deleteNamespace = new AccessTestAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preDeleteNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
+          TestNamespace2);
+        return null;
+      }
+    };
+
+    // verify that only superuser can create namespaces.
+    verifyAllowed(createNamespace, SUPERUSER);
+ // verify that superuser or hbase admin can delete namespaces.
+    verifyAllowed(deleteNamespace, SUPERUSER, USER_NSP_ADMIN);
+
+    // all others should be denied
+    verifyDenied(createNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_NSP_ADMIN);
+    verifyDenied(deleteNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW);
+  }
+
   @Test
   public void testGrantRevoke() throws Exception{
     final String testUser = "testUser";
@@ -195,10 +227,10 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     // Only HBase super user should be able to grant and revoke permissions to
     // namespaces
-    verifyAllowed(grantAction, SUPERUSER);
+    verifyAllowed(grantAction, SUPERUSER, USER_NSP_ADMIN);
     verifyDenied(grantAction, USER_CREATE, USER_RW);
-    verifyAllowed(revokeAction, SUPERUSER);
-    verifyDenied(revokeAction, USER_CREATE, USER_RW);    
+    verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN);
+    verifyDenied(revokeAction, USER_CREATE, USER_RW);
   }
 
   @Test
