@@ -871,7 +871,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
                 struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map37.size);
                 for (int _i38 = 0; _i38 < _map37.size; ++_i38)
                 {
-                  ByteBuffer _key39; // required
+                  ByteBuffer _key39; // optional
                   ByteBuffer _val40; // required
                   _key39 = iprot.readBinary();
                   _val40 = iprot.readBinary();
@@ -1055,7 +1055,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
           struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map48.size);
           for (int _i49 = 0; _i49 < _map48.size; ++_i49)
           {
-            ByteBuffer _key50; // required
+            ByteBuffer _key50; // optional
             ByteBuffer _val51; // required
             _key50 = iprot.readBinary();
             _val51 = iprot.readBinary();

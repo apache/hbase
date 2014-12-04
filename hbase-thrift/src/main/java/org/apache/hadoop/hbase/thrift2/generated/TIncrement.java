@@ -777,7 +777,7 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
                 struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map73.size);
                 for (int _i74 = 0; _i74 < _map73.size; ++_i74)
                 {
-                  ByteBuffer _key75; // required
+                  ByteBuffer _key75; // optional
                   ByteBuffer _val76; // required
                   _key75 = iprot.readBinary();
                   _val76 = iprot.readBinary();
@@ -946,7 +946,7 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
           struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map84.size);
           for (int _i85 = 0; _i85 < _map84.size; ++_i85)
           {
-            ByteBuffer _key86; // required
+            ByteBuffer _key86; // optional
             ByteBuffer _val87; // required
             _key86 = iprot.readBinary();
             _val87 = iprot.readBinary();

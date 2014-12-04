@@ -562,7 +562,7 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
                 struct.columns = new HashMap<ByteBuffer,TCell>(2*_map8.size);
                 for (int _i9 = 0; _i9 < _map8.size; ++_i9)
                 {
-                  ByteBuffer _key10; // required
+                  ByteBuffer _key10; // optional
                   TCell _val11; // required
                   _key10 = iprot.readBinary();
                   _val11 = new TCell();
@@ -710,7 +710,7 @@ public class TRowResult implements org.apache.thrift.TBase<TRowResult, TRowResul
           struct.columns = new HashMap<ByteBuffer,TCell>(2*_map19.size);
           for (int _i20 = 0; _i20 < _map19.size; ++_i20)
           {
-            ByteBuffer _key21; // required
+            ByteBuffer _key21; // optional
             TCell _val22; // required
             _key21 = iprot.readBinary();
             _val22 = new TCell();

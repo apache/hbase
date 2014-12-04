@@ -906,7 +906,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
                 struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map55.size);
                 for (int _i56 = 0; _i56 < _map55.size; ++_i56)
                 {
-                  ByteBuffer _key57; // required
+                  ByteBuffer _key57; // optional
                   ByteBuffer _val58; // required
                   _key57 = iprot.readBinary();
                   _val58 = iprot.readBinary();
@@ -1094,7 +1094,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map66.size);
           for (int _i67 = 0; _i67 < _map66.size; ++_i67)
           {
-            ByteBuffer _key68; // required
+            ByteBuffer _key68; // optional
             ByteBuffer _val69; // required
             _key68 = iprot.readBinary();
             _val69 = iprot.readBinary();

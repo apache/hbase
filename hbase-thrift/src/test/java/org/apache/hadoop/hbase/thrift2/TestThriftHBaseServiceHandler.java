@@ -583,6 +583,55 @@ public class TestThriftHBaseServiceHandler {
   }
 
   @Test
+  public void testReverseScan() throws Exception {
+    ThriftHBaseServiceHandler handler = createHandler();
+    ByteBuffer table = wrap(tableAname);
+
+    // insert data
+    TColumnValue columnValue = new TColumnValue(wrap(familyAname), wrap(qualifierAname),
+      wrap(valueAname));
+    List<TColumnValue> columnValues = new ArrayList<TColumnValue>();
+    columnValues.add(columnValue);
+    for (int i = 0; i < 10; i++) {
+      TPut put = new TPut(wrap(("testReverseScan" + i).getBytes()), columnValues);
+      handler.put(table, put);
+    }
+
+    // create reverse scan instance
+    TScan scan = new TScan();
+    scan.setReversed(true);
+    List<TColumn> columns = new ArrayList<TColumn>();
+    TColumn column = new TColumn();
+    column.setFamily(familyAname);
+    column.setQualifier(qualifierAname);
+    columns.add(column);
+    scan.setColumns(columns);
+    scan.setStartRow("testReverseScan\uffff".getBytes());
+    scan.setStopRow("testReverseScan".getBytes());
+
+    // get scanner and rows
+    int scanId = handler.openScanner(table, scan);
+    List<TResult> results = handler.getScannerRows(scanId, 10);
+    assertEquals(10, results.size());
+    for (int i = 0; i < 10; i++) {
+      // check if the rows are returned and in order
+      assertArrayEquals(("testReverseScan" + (9 - i)).getBytes(), results.get(i).getRow());
+    }
+
+    // check that we are at the end of the scan
+    results = handler.getScannerRows(scanId, 10);
+    assertEquals(0, results.size());
+
+    // close scanner and check that it was indeed closed
+    handler.closeScanner(scanId);
+    try {
+      handler.getScannerRows(scanId, 10);
+      fail("Scanner id should be invalid");
+    } catch (TIllegalArgument e) {
+    }
+  }
+
+  @Test
   public void testScanWithFilter() throws Exception {
     ThriftHBaseServiceHandler handler = createHandler();
     ByteBuffer table = wrap(tableAname);
@@ -759,6 +808,20 @@ public class TestThriftHBaseServiceHandler {
     for (int i = 0; i < 20; i++) {
       // check if the rows are returned and in order
       assertArrayEquals(("testGetScannerResults" + pad(i, (byte) 2)).getBytes(), results.get(i)
+          .getRow());
+    }
+
+    // reverse scan
+    scan = new TScan();
+    scan.setColumns(columns);
+    scan.setReversed(true);
+    scan.setStartRow("testGetScannerResults20".getBytes());
+    scan.setStopRow("testGetScannerResults".getBytes());
+    results = handler.getScannerResults(table, scan, 20);
+    assertEquals(20, results.size());
+    for (int i = 0; i < 20; i++) {
+      // check if the rows are returned and in order
+      assertArrayEquals(("testGetScannerResults" + pad(19 - i, (byte) 2)).getBytes(), results.get(i)
           .getRow());
     }
  }

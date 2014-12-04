@@ -556,6 +556,17 @@ public class TestThriftServer {
       smallerColumn = currentColumn;
     }
 
+    TScan reversedScan = new TScan();
+    reversedScan.setReversed(true);
+    reversedScan.setStartRow(rowBname);
+    reversedScan.setStopRow(rowAname);
+
+    int scanner8 = handler.scannerOpenWithScan(tableAname , reversedScan, null);
+    List<TRowResult> results = handler.scannerGet(scanner8);
+    handler.scannerClose(scanner8);
+    assertEquals(results.size(), 1);
+    assertEquals(ByteBuffer.wrap(results.get(0).getRow()), rowBname);
+
     // Teardown
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);

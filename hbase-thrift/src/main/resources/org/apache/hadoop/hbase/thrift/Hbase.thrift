@@ -149,7 +149,8 @@ struct TScan {
   5:optional i32 caching,
   6:optional Text filterString,
   7:optional i32 batchSize,
-  8:optional bool sortColumns
+  8:optional bool sortColumns,
+  9:optional bool reversed 
 }
 
 //

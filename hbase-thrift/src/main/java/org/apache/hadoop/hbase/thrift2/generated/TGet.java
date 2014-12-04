@@ -1051,7 +1051,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
                 struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map19.size);
                 for (int _i20 = 0; _i20 < _map19.size; ++_i20)
                 {
-                  ByteBuffer _key21; // required
+                  ByteBuffer _key21; // optional
                   ByteBuffer _val22; // required
                   _key21 = iprot.readBinary();
                   _val22 = iprot.readBinary();
@@ -1273,7 +1273,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
           struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map30.size);
           for (int _i31 = 0; _i31 < _map30.size; ++_i31)
           {
-            ByteBuffer _key32; // required
+            ByteBuffer _key32; // optional
             ByteBuffer _val33; // required
             _key32 = iprot.readBinary();
             _val33 = iprot.readBinary();

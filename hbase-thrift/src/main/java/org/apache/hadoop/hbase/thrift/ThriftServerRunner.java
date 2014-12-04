@@ -1347,6 +1347,9 @@ public class ThriftServerRunner implements Runnable {
           scan.setFilter(
               parseFilter.parseFilterString(tScan.getFilterString()));
         }
+        if (tScan.isSetReversed()) {
+          scan.setReversed(tScan.isReversed());
+        }
         return addScanner(table.getScanner(scan), tScan.sortColumns);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
