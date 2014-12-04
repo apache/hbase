@@ -32,31 +32,13 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class MetricsSource {
 
-  public static final String SOURCE_SIZE_OF_LOG_QUEUE = "source.sizeOfLogQueue";
-  public static final String SOURCE_AGE_OF_LAST_SHIPPED_OP = "source.ageOfLastShippedOp";
-  public static final String SOURCE_LOG_EDITS_READ = "source.logEditsRead";
-  public static final String SOURCE_LOG_EDITS_FILTERED = "source.logEditsFiltered";
-  public static final String SOURCE_SHIPPED_BATCHES = "source.shippedBatches";
-  public static final String SOURCE_SHIPPED_KBS = "source.shippedKBs";
-  public static final String SOURCE_SHIPPED_OPS = "source.shippedOps";
-  public static final String SOURCE_LOG_READ_IN_BYTES = "source.logReadInBytes";
-
   public static final Log LOG = LogFactory.getLog(MetricsSource.class);
-  private String id;
 
   private long lastTimestamp = 0;
   private int lastQueueSize = 0;
 
-  private String sizeOfLogQueKey;
-  private String ageOfLastShippedOpKey;
-  private String logEditsReadKey;
-  private String logEditsFilteredKey;
-  private final String shippedBatchesKey;
-  private final String shippedOpsKey;
-  private final String shippedKBsKey;
-  private final String logReadInBytesKey;
-
-  private MetricsReplicationSource rms;
+  private final MetricsReplicationSourceSource singleSourceSource;
+  private final MetricsReplicationSourceSource globalSourceSource;
 
   /**
    * Constructor used to register the metrics
@@ -64,17 +46,10 @@ public class MetricsSource {
    * @param id Name of the source this class is monitoring
    */
   public MetricsSource(String id) {
-    this.id = id;
-
-    sizeOfLogQueKey = "source." + id + ".sizeOfLogQueue";
-    ageOfLastShippedOpKey = "source." + id + ".ageOfLastShippedOp";
-    logEditsReadKey = "source." + id + ".logEditsRead";
-    logEditsFilteredKey = "source." + id + ".logEditsFiltered";
-    shippedBatchesKey = "source." + this.id + ".shippedBatches";
-    shippedOpsKey = "source." + this.id + ".shippedOps";
-    shippedKBsKey = "source." + this.id + ".shippedKBs";
-    logReadInBytesKey = "source." + this.id + ".logReadInBytes";
-    rms = CompatibilitySingletonFactory.getInstance(MetricsReplicationSource.class);
+    singleSourceSource =
+        CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
+            .getSource(id);
+    globalSourceSource = CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
   }
 
   /**
@@ -84,8 +59,8 @@ public class MetricsSource {
    */
   public void setAgeOfLastShippedOp(long timestamp) {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
-    rms.setGauge(ageOfLastShippedOpKey, age);
-    rms.setGauge(SOURCE_AGE_OF_LAST_SHIPPED_OP, age);
+    singleSourceSource.setLastShippedAge(age);
+    globalSourceSource.setLastShippedAge(age);
     this.lastTimestamp = timestamp;
   }
 
@@ -105,8 +80,8 @@ public class MetricsSource {
    * @param size the size.
    */
   public void setSizeOfLogQueue(int size) {
-    rms.setGauge(sizeOfLogQueKey, size);
-    rms.incGauge(SOURCE_SIZE_OF_LOG_QUEUE, size - lastQueueSize);
+    singleSourceSource.setSizeOfLogQueue(size);
+    globalSourceSource.incrSizeOfLogQueue(size - lastQueueSize);
     lastQueueSize = size;
   }
 
@@ -116,8 +91,8 @@ public class MetricsSource {
    * @param delta the number of log edits read.
    */
   private void incrLogEditsRead(long delta) {
-    rms.incCounters(logEditsReadKey, delta);
-    rms.incCounters(SOURCE_LOG_EDITS_READ, delta);
+    singleSourceSource.incrLogReadInEdits(delta);
+    globalSourceSource.incrLogReadInEdits(delta);
   }
 
   /** Increment the number of log edits read by one. */
@@ -131,8 +106,8 @@ public class MetricsSource {
    * @param delta the number filtered.
    */
   private void incrLogEditsFiltered(long delta) {
-    rms.incCounters(logEditsFilteredKey, delta);
-    rms.incCounters(SOURCE_LOG_EDITS_FILTERED, delta);
+    singleSourceSource.incrLogEditsFiltered(delta);
+    globalSourceSource.incrLogEditsFiltered(delta);
   }
 
   /** The number of log edits filtered out. */
@@ -146,29 +121,26 @@ public class MetricsSource {
    * @param batchSize the size of the batch that was shipped to sinks.
    */
   public void shipBatch(long batchSize, int sizeInKB) {
-    rms.incCounters(shippedBatchesKey, 1);
-    rms.incCounters(SOURCE_SHIPPED_BATCHES, 1);
-    rms.incCounters(shippedOpsKey, batchSize);
-    rms.incCounters(SOURCE_SHIPPED_OPS, batchSize);
-    rms.incCounters(shippedKBsKey, sizeInKB);
-    rms.incCounters(SOURCE_SHIPPED_KBS, sizeInKB);
+    singleSourceSource.incrBatchesShipped(1);
+    globalSourceSource.incrBatchesShipped(1);
+
+    singleSourceSource.incrOpsShipped(batchSize);
+    globalSourceSource.incrOpsShipped(batchSize);
+
+    singleSourceSource.incrShippedKBs(sizeInKB);
+    globalSourceSource.incrShippedKBs(sizeInKB);
   }
 
   /** increase the byte number read by source from log file */
   public void incrLogReadInBytes(long readInBytes) {
-    rms.incCounters(logReadInBytesKey, readInBytes);
-    rms.incCounters(SOURCE_LOG_READ_IN_BYTES, readInBytes);
+    singleSourceSource.incrLogReadInBytes(readInBytes);
+    globalSourceSource.incrLogReadInBytes(readInBytes);
   }
 
   /** Removes all metrics about this Source. */
   public void clear() {
-    rms.removeMetric(sizeOfLogQueKey);
-    rms.decGauge(SOURCE_SIZE_OF_LOG_QUEUE, lastQueueSize);
+    singleSourceSource.clear();
+    globalSourceSource.decrSizeOfLogQueue(lastQueueSize);
     lastQueueSize = 0;
-    rms.removeMetric(ageOfLastShippedOpKey);
-
-    rms.removeMetric(logEditsFilteredKey);
-    rms.removeMetric(logEditsReadKey);
-
   }
 }
