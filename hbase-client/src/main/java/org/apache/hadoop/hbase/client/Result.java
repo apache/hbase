@@ -84,8 +84,7 @@ public class Result implements CellScannable, CellScanner {
   // Ditto for familyMap.  It can be composed on fly from passed in kvs.
   private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
 
-  // never use directly
-  private static byte [] buffer = null;
+  private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<byte[]>();
   private static final int PAD_WIDTH = 128;
   public static final Result EMPTY_RESULT = new Result();
 
@@ -334,9 +333,11 @@ public class Result implements CellScannable, CellScanner {
     double keyValueSize = (double)
         KeyValue.getKeyValueDataStructureSize(kvs[0].getRowLength(), flength, qlength, 0);
 
+    byte[] buffer = localBuffer.get();
     if (buffer == null || keyValueSize > buffer.length) {
       // pad to the smallest multiple of the pad width
       buffer = new byte[(int) Math.ceil(keyValueSize / PAD_WIDTH) * PAD_WIDTH];
+      localBuffer.set(buffer);
     }
 
     Cell searchTerm = KeyValueUtil.createFirstOnRow(buffer, 0,
