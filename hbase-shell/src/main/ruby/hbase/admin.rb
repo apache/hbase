@@ -772,12 +772,6 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Rename specified snapshot
-    def rename_snapshot(old_snapshot_name, new_snapshot_name)
-      @admin.renameSnapshot(old_snapshot_name.to_java_bytes, new_snapshot_name.to_java_bytes)
-    end
-
-    #----------------------------------------------------------------------------------------------
     # Delete specified snapshot
     def delete_snapshot(snapshot_name)
       @admin.deleteSnapshot(snapshot_name.to_java_bytes)
