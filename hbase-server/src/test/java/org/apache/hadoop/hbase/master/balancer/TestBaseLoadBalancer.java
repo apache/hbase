@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.MoveRegi
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.apache.hadoop.net.ScriptBasedMapping;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -77,18 +76,26 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
       new int[] { 2, 10 }, new int[] { 2, 100 }, new int[] { 12, 10 }, new int[] { 12, 100 }, };
 
   // This class is introduced because IP to rack resolution can be lengthy.
-  public static class MockMapping extends ScriptBasedMapping {
+  public static class MockMapping implements DNSToSwitchMapping {
     public MockMapping(Configuration conf) {
     }
 
     private static String RACK = "rack";
-    @Override
+
     public List<String> resolve(List<String> names) {
       List<String> ret = new ArrayList<String>(names.size());
       for (String name : names) {
         ret.add(RACK);
       }
       return ret;
+    }
+
+    // do not add @Override annotations here. It mighty break compilation with earlier Hadoops
+    public void reloadCachedMappings() {
+    }
+
+    // do not add @Override annotations here. It mighty break compilation with earlier Hadoops
+    public void reloadCachedMappings(List<String> arg0) {
     }
   }
 
