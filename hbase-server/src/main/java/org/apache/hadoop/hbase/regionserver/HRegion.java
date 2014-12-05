@@ -85,6 +85,8 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Append;
@@ -2644,6 +2646,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           prepareDeleteTimestamps(mutation, familyMaps[i], byteNow);
           noOfDeletes++;
         }
+        rewriteCellTags(familyMaps[i], mutation);
       }
 
       lock(this.updatesLock.readLock(), numReadyToWrite);
@@ -3114,6 +3117,59 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       int listSize = cells.size();
       for (int i = 0; i < listSize; i++) {
         CellUtil.updateLatestStamp(cells.get(i), now, 0);
+      }
+    }
+  }
+
+  /**
+   * Possibly rewrite incoming cell tags.
+   */
+  void rewriteCellTags(Map<byte[], List<Cell>> familyMap, final Mutation m) {
+    // Check if we have any work to do and early out otherwise
+    // Update these checks as more logic is added here
+
+    if (m.getTTL() == Long.MAX_VALUE) {
+      return;
+    }
+
+    // From this point we know we have some work to do
+
+    for (Map.Entry<byte[], List<Cell>> e: familyMap.entrySet()) {
+      List<Cell> cells = e.getValue();
+      assert cells instanceof RandomAccess;
+      int listSize = cells.size();
+      for (int i = 0; i < listSize; i++) {
+        Cell cell = cells.get(i);
+        List<Tag> newTags = new ArrayList<Tag>();
+        Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell.getTagsArray(),
+          cell.getTagsOffset(), cell.getTagsLength());
+
+        // Carry forward existing tags
+
+        while (tagIterator.hasNext()) {
+
+          // Add any filters or tag specific rewrites here
+
+          newTags.add(tagIterator.next());
+        }
+
+        // Cell TTL handling
+
+        // Check again if we need to add a cell TTL because early out logic
+        // above may change when there are more tag based features in core.
+        if (m.getTTL() != Long.MAX_VALUE) {
+          // Add a cell TTL tag
+          newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(m.getTTL())));
+        }
+
+        // Rewrite the cell with the updated set of tags
+
+        cells.set(i, new KeyValue(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+          cell.getTimestamp(), KeyValue.Type.codeToType(cell.getTypeByte()),
+          cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
+          newTags));
       }
     }
   }
@@ -5215,6 +5271,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           processor.preBatchMutate(this, walEdit);
           // 7. Apply to memstore
           for (Mutation m : mutations) {
+            // Handle any tag based cell features
+            rewriteCellTags(m.getFamilyCellMap(), m);
+
             for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
               Cell cell = cellScanner.current();
               CellUtil.setSequenceId(cell, mvccNum);
@@ -5353,8 +5412,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     return append(append, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
-  // TODO: There's a lot of boiler plate code identical
-  // to increment... See how to better unify that.
+  // TODO: There's a lot of boiler plate code identical to increment.
+  // We should refactor append and increment as local get-mutate-put
+  // transactions, so all stores only go through one code path for puts.
   /**
    * Perform one or more append operations on a row.
    *
@@ -5425,8 +5485,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
             // Iterate the input columns and update existing values if they were
             // found, otherwise add new column initialized to the append value
 
-            // Avoid as much copying as possible. Every byte is copied at most
-            // once.
+            // Avoid as much copying as possible. We may need to rewrite and
+            // consolidate tags. Bytes are only copied once.
             // Would be nice if KeyValue had scatter/gather logic
             int idx = 0;
             for (Cell cell : family.getValue()) {
@@ -5436,40 +5496,87 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
                   && CellUtil.matchingQualifier(results.get(idx), cell)) {
                 oldCell = results.get(idx);
                 long ts = Math.max(now, oldCell.getTimestamp());
-                // allocate an empty kv once
+
+                // Process cell tags
+                List<Tag> newTags = new ArrayList<Tag>();
+
+                // Make a union of the set of tags in the old and new KVs
+
+                if (oldCell.getTagsLength() > 0) {
+                  Iterator<Tag> i = CellUtil.tagsIterator(oldCell.getTagsArray(),
+                    oldCell.getTagsOffset(), oldCell.getTagsLength());
+                  while (i.hasNext()) {
+                    newTags.add(i.next());
+                  }
+                }
+                if (cell.getTagsLength() > 0) {
+                  Iterator<Tag> i  = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+                    cell.getTagsLength());
+                  while (i.hasNext()) {
+                    newTags.add(i.next());
+                  }
+                }
+
+                // Cell TTL handling
+
+                if (append.getTTL() != Long.MAX_VALUE) {
+                  // Add the new TTL tag
+                  newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(append.getTTL())));
+                }
+
+                // Rebuild tags
+                byte[] tagBytes = Tag.fromList(newTags);
+
+                // allocate an empty cell once
                 newCell = new KeyValue(row.length, cell.getFamilyLength(),
                     cell.getQualifierLength(), ts, KeyValue.Type.Put,
                     oldCell.getValueLength() + cell.getValueLength(),
-                    oldCell.getTagsLength() + cell.getTagsLength());
-                // copy in the value
-                System.arraycopy(oldCell.getValueArray(), oldCell.getValueOffset(),
-                    newCell.getValueArray(), newCell.getValueOffset(),
-                    oldCell.getValueLength());
-                System.arraycopy(cell.getValueArray(), cell.getValueOffset(),
-                    newCell.getValueArray(),
-                    newCell.getValueOffset() + oldCell.getValueLength(),
-                    cell.getValueLength());
-                // copy in the tags
-                System.arraycopy(oldCell.getTagsArray(), oldCell.getTagsOffset(),
-                    newCell.getTagsArray(), newCell.getTagsOffset(), oldCell.getTagsLength());
-                System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), newCell.getTagsArray(),
-                    newCell.getTagsOffset() + oldCell.getTagsLength(), cell.getTagsLength());
+                    tagBytes.length);
                 // copy in row, family, and qualifier
                 System.arraycopy(cell.getRowArray(), cell.getRowOffset(),
-                    newCell.getRowArray(), newCell.getRowOffset(), cell.getRowLength());
+                  newCell.getRowArray(), newCell.getRowOffset(), cell.getRowLength());
                 System.arraycopy(cell.getFamilyArray(), cell.getFamilyOffset(),
-                    newCell.getFamilyArray(), newCell.getFamilyOffset(),
-                    cell.getFamilyLength());
+                  newCell.getFamilyArray(), newCell.getFamilyOffset(),
+                  cell.getFamilyLength());
                 System.arraycopy(cell.getQualifierArray(), cell.getQualifierOffset(),
-                    newCell.getQualifierArray(), newCell.getQualifierOffset(),
-                    cell.getQualifierLength());
+                  newCell.getQualifierArray(), newCell.getQualifierOffset(),
+                  cell.getQualifierLength());
+                // copy in the value
+                System.arraycopy(oldCell.getValueArray(), oldCell.getValueOffset(),
+                  newCell.getValueArray(), newCell.getValueOffset(),
+                  oldCell.getValueLength());
+                System.arraycopy(cell.getValueArray(), cell.getValueOffset(),
+                  newCell.getValueArray(),
+                  newCell.getValueOffset() + oldCell.getValueLength(),
+                  cell.getValueLength());
+                // Copy in tag data
+                System.arraycopy(tagBytes, 0, newCell.getTagsArray(), newCell.getTagsOffset(),
+                  tagBytes.length);
                 idx++;
               } else {
-                // Append's KeyValue.Type==Put and ts==HConstants.LATEST_TIMESTAMP,
-                // so only need to update the timestamp to 'now'
+                // Append's KeyValue.Type==Put and ts==HConstants.LATEST_TIMESTAMP
                 CellUtil.updateLatestStamp(cell, now);
-                newCell = cell;
-             }
+
+                // Cell TTL handling
+
+                if (append.getTTL() != Long.MAX_VALUE) {
+                  List<Tag> newTags = new ArrayList<Tag>(1);
+                  newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(append.getTTL())));
+                  // Add the new TTL tag
+                  newCell = new KeyValue(cell.getRowArray(), cell.getRowOffset(),
+                      cell.getRowLength(),
+                    cell.getFamilyArray(), cell.getFamilyOffset(),
+                      cell.getFamilyLength(),
+                    cell.getQualifierArray(), cell.getQualifierOffset(),
+                      cell.getQualifierLength(),
+                    cell.getTimestamp(), KeyValue.Type.codeToType(cell.getTypeByte()),
+                    cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
+                    newTags);
+                } else {
+                  newCell = cell;
+                }
+              }
+
               CellUtil.setSequenceId(newCell, mvccNum);
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
@@ -5573,6 +5680,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     return increment(increment, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
+  // TODO: There's a lot of boiler plate code identical to append.
+  // We should refactor append and increment as local get-mutate-put
+  // transactions, so all stores only go through one code path for puts.
   /**
    * Perform one or more increment operations on a row.
    * @return new keyvalues after increment
@@ -5645,13 +5755,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
             // Iterate the input columns and update existing values if they were
             // found, otherwise add new column initialized to the increment amount
             int idx = 0;
-            for (Cell kv: family.getValue()) {
-              long amount = Bytes.toLong(CellUtil.cloneValue(kv));
+            for (Cell cell: family.getValue()) {
+              long amount = Bytes.toLong(CellUtil.cloneValue(cell));
               boolean noWriteBack = (amount == 0);
+              List<Tag> newTags = new ArrayList<Tag>();
+
+              // Carry forward any tags that might have been added by a coprocessor
+              if (cell.getTagsLength() > 0) {
+                Iterator<Tag> i = CellUtil.tagsIterator(cell.getTagsArray(),
+                  cell.getTagsOffset(), cell.getTagsLength());
+                while (i.hasNext()) {
+                  newTags.add(i.next());
+                }
+              }
 
               Cell c = null;
               long ts = now;
-              if (idx < results.size() && CellUtil.matchingQualifier(results.get(idx), kv)) {
+              if (idx < results.size() && CellUtil.matchingQualifier(results.get(idx), cell)) {
                 c = results.get(idx);
                 ts = Math.max(now, c.getTimestamp());
                 if(c.getValueLength() == Bytes.SIZEOF_LONG) {
@@ -5661,32 +5781,36 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
                   throw new org.apache.hadoop.hbase.DoNotRetryIOException(
                       "Attempted to increment field that isn't 64 bits wide");
                 }
+                // Carry tags forward from previous version
+                if (c.getTagsLength() > 0) {
+                  Iterator<Tag> i = CellUtil.tagsIterator(c.getTagsArray(),
+                    c.getTagsOffset(), c.getTagsLength());
+                  while (i.hasNext()) {
+                    newTags.add(i.next());
+                  }
+                }
                 idx++;
               }
 
               // Append new incremented KeyValue to list
-              byte[] q = CellUtil.cloneQualifier(kv);
+              byte[] q = CellUtil.cloneQualifier(cell);
               byte[] val = Bytes.toBytes(amount);
-              int oldCellTagsLen = (c == null) ? 0 : c.getTagsLength();
-              int incCellTagsLen = kv.getTagsLength();
-              Cell newKV = new KeyValue(row.length, family.getKey().length, q.length, ts,
-                  KeyValue.Type.Put, val.length, oldCellTagsLen + incCellTagsLen);
-              System.arraycopy(row, 0, newKV.getRowArray(), newKV.getRowOffset(), row.length);
-              System.arraycopy(family.getKey(), 0, newKV.getFamilyArray(), newKV.getFamilyOffset(),
-                  family.getKey().length);
-              System.arraycopy(q, 0, newKV.getQualifierArray(), newKV.getQualifierOffset(), q.length);
-              // copy in the value
-              System.arraycopy(val, 0, newKV.getValueArray(), newKV.getValueOffset(), val.length);
-              // copy tags
-              if (oldCellTagsLen > 0) {
-                System.arraycopy(c.getTagsArray(), c.getTagsOffset(), newKV.getTagsArray(),
-                    newKV.getTagsOffset(), oldCellTagsLen);
+
+              // Add the TTL tag if the mutation carried one
+              if (increment.getTTL() != Long.MAX_VALUE) {
+                newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(increment.getTTL())));
               }
-              if (incCellTagsLen > 0) {
-                System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
-                    newKV.getTagsOffset() + oldCellTagsLen, incCellTagsLen);
-              }
+
+              Cell newKV = new KeyValue(row, 0, row.length,
+                family.getKey(), 0, family.getKey().length,
+                q, 0, q.length,
+                ts,
+                KeyValue.Type.Put,
+                val, 0, val.length,
+                newTags);
+
               CellUtil.setSequenceId(newKV, mvccNum);
+
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
                 newKV = coprocessorHost.postMutationBeforeWAL(

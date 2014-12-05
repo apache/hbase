@@ -183,4 +183,9 @@ public class Append extends Mutation {
   public Append setACL(Map<String, Permission> perms) {
     return (Append) super.setACL(perms);
   }
+
+  @Override
+  public Append setTTL(long ttl) {
+    return (Append) super.setTTL(ttl);
+  }
 }

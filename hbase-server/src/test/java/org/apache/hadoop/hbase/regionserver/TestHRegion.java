@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -91,6 +92,7 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -112,6 +114,7 @@ import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -139,6 +142,7 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
@@ -5763,6 +5767,133 @@ public class TestHRegion {
       HRegion.closeHRegion(region);
       region = null;
       CONF.setLong("hbase.busy.wait.duration", defaultBusyWaitDuration);
+    }
+  }
+
+  @Test
+  public void testCellTTLs() throws IOException {
+    IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+
+    final byte[] row = Bytes.toBytes("testRow");
+    final byte[] q1 = Bytes.toBytes("q1");
+    final byte[] q2 = Bytes.toBytes("q2");
+    final byte[] q3 = Bytes.toBytes("q3");
+    final byte[] q4 = Bytes.toBytes("q4");
+
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testCellTTLs"));
+    HColumnDescriptor hcd = new HColumnDescriptor(fam1);
+    hcd.setTimeToLive(10); // 10 seconds
+    htd.addFamily(hcd);
+
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
+
+    HRegion region = HRegion.createHRegion(new HRegionInfo(htd.getTableName(),
+        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
+      TEST_UTIL.getDataTestDir(), conf, htd);
+    assertNotNull(region);
+    try {
+      long now = EnvironmentEdgeManager.currentTime();
+      // Add a cell that will expire in 5 seconds via cell TTL
+      region.put(new Put(row).add(new KeyValue(row, fam1, q1, now,
+        HConstants.EMPTY_BYTE_ARRAY, new Tag[] {
+          // TTL tags specify ts in milliseconds
+          new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) } )));
+      // Add a cell that will expire after 10 seconds via family setting
+      region.put(new Put(row).add(fam1, q2, now, HConstants.EMPTY_BYTE_ARRAY));
+      // Add a cell that will expire in 15 seconds via cell TTL
+      region.put(new Put(row).add(new KeyValue(row, fam1, q3, now + 10000 - 1,
+        HConstants.EMPTY_BYTE_ARRAY, new Tag[] {
+          // TTL tags specify ts in milliseconds
+          new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) } )));
+      // Add a cell that will expire in 20 seconds via family setting
+      region.put(new Put(row).add(fam1, q4, now + 10000 - 1, HConstants.EMPTY_BYTE_ARRAY));
+
+      // Flush so we are sure store scanning gets this right
+      region.flushcache();
+
+      // A query at time T+0 should return all cells
+      Result r = region.get(new Get(row));
+      assertNotNull(r.getValue(fam1, q1));
+      assertNotNull(r.getValue(fam1, q2));
+      assertNotNull(r.getValue(fam1, q3));
+      assertNotNull(r.getValue(fam1, q4));
+
+      // Increment time to T+5 seconds
+      edge.incrementTime(5000);
+
+      r = region.get(new Get(row));
+      assertNull(r.getValue(fam1, q1));
+      assertNotNull(r.getValue(fam1, q2));
+      assertNotNull(r.getValue(fam1, q3));
+      assertNotNull(r.getValue(fam1, q4));
+
+      // Increment time to T+10 seconds
+      edge.incrementTime(5000);
+
+      r = region.get(new Get(row));
+      assertNull(r.getValue(fam1, q1));
+      assertNull(r.getValue(fam1, q2));
+      assertNotNull(r.getValue(fam1, q3));
+      assertNotNull(r.getValue(fam1, q4));
+
+      // Increment time to T+15 seconds
+      edge.incrementTime(5000);
+
+      r = region.get(new Get(row));
+      assertNull(r.getValue(fam1, q1));
+      assertNull(r.getValue(fam1, q2));
+      assertNull(r.getValue(fam1, q3));
+      assertNotNull(r.getValue(fam1, q4));
+
+      // Increment time to T+20 seconds
+      edge.incrementTime(10000);
+
+      r = region.get(new Get(row));
+      assertNull(r.getValue(fam1, q1));
+      assertNull(r.getValue(fam1, q2));
+      assertNull(r.getValue(fam1, q3));
+      assertNull(r.getValue(fam1, q4));
+
+      // Fun with disappearing increments
+
+      // Start at 1
+      region.put(new Put(row).add(fam1, q1, Bytes.toBytes(1L)));
+      r = region.get(new Get(row));
+      byte[] val = r.getValue(fam1, q1);
+      assertNotNull(val);
+      assertEquals(Bytes.toLong(val), 1L);
+
+      // Increment with a TTL of 5 seconds
+      Increment incr = new Increment(row).addColumn(fam1, q1, 1L);
+      incr.setTTL(5000);
+      region.increment(incr); // 2
+
+      // New value should be 2
+      r = region.get(new Get(row));
+      val = r.getValue(fam1, q1);
+      assertNotNull(val);
+      assertEquals(Bytes.toLong(val), 2L);
+
+      // Increment time to T+25 seconds
+      edge.incrementTime(5000);
+
+      // Value should be back to 1
+      r = region.get(new Get(row));
+      val = r.getValue(fam1, q1);
+      assertNotNull(val);
+      assertEquals(Bytes.toLong(val), 1L);
+
+      // Increment time to T+30 seconds
+      edge.incrementTime(5000);
+
+      // Original value written at T+20 should be gone now via family TTL
+      r = region.get(new Get(row));
+      assertNull(r.getValue(fam1, q1));
+
+    } finally {
+      HRegion.closeHRegion(region);
     }
   }
 

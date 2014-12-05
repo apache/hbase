@@ -329,4 +329,9 @@ public class Increment extends Mutation implements Comparable<Row> {
   public Increment setACL(Map<String, Permission> perms) {
     return (Increment) super.setACL(perms);
   }
+
+  @Override
+  public Increment setTTL(long ttl) {
+    return (Increment) super.setTTL(ttl);
+  }
 }

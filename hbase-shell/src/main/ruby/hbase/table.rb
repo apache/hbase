@@ -141,17 +141,19 @@ EOF
          set_attributes(p, attributes) if attributes
          visibility = args[VISIBILITY]
          set_cell_visibility(p, visibility) if visibility
+         ttl = args[TTL]
+         set_op_ttl(p, ttl) if ttl
       end
       #Case where attributes are specified without timestamp
       if timestamp.kind_of?(Hash)
       	timestamp.each do |k, v|
-      	  if v.kind_of?(Hash)
-      	  	set_attributes(p, v) if v
-      	  end
-      	  if v.kind_of?(String)
-      	  	set_cell_visibility(p, v) if v
-      	  end
-      	  
+          if k == 'ATTRIBUTES'
+            set_attributes(p, v)
+          elsif k == 'VISIBILITY'
+            set_cell_visibility(p, v)
+          elsif k == "TTL"
+            set_op_ttl(p, v)
+          end
         end
         timestamp = nil
       end  
@@ -219,6 +221,8 @@ EOF
       	visibility = args[VISIBILITY]
         set_attributes(incr, attributes) if attributes
         set_cell_visibility(incr, visibility) if visibility
+        ttl = args[TTL]
+        set_op_ttl(incr, ttl) if ttl
       end
       incr.addColumn(family, qualifier, value)
       @table.increment(incr)
@@ -237,6 +241,8 @@ EOF
       	visibility = args[VISIBILITY]
         set_attributes(append, attributes) if attributes
         set_cell_visibility(append, visibility) if visibility
+        ttl = args[TTL]
+        set_op_ttl(append, ttl) if ttl
       end
       append.add(family, qualifier, value.to_s.to_java_bytes)
       @table.append(append)
@@ -543,6 +549,10 @@ EOF
       oprattr.setAuthorizations(
         org.apache.hadoop.hbase.security.visibility.Authorizations.new(
           auths.to_java(:string)))
+    end
+
+    def set_op_ttl(op, ttl)
+      op.setTTL(ttl.to_java(:long))
     end
 
     #----------------------------

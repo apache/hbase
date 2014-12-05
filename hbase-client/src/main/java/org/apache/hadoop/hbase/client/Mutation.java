@@ -78,6 +78,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    */
   private static final String CONSUMED_CLUSTER_IDS = "_cs.id";
 
+  /**
+   * The attribute for storing TTL for the result of the mutation.
+   */
+  private static final String OP_ATTRIBUTE_TTL = "_ttl";
+
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected Durability durability = Durability.USE_DEFAULT;
@@ -200,6 +205,12 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     // add the id if set
     if (getId() != null) {
       map.put("id", getId());
+    }
+    // Add the TTL if set
+    // Long.MAX_VALUE is the default, and is interpreted to mean this attribute
+    // has not been set.
+    if (getTTL() != Long.MAX_VALUE) {
+      map.put("ttl", getTTL());
     }
     return map;
   }
@@ -470,6 +481,29 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     }
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+    return this;
+  }
+
+  /**
+   * Return the TTL requested for the result of the mutation, in milliseconds.
+   * @return the TTL requested for the result of the mutation, in milliseconds,
+   * or Long.MAX_VALUE if unset
+   */
+  public long getTTL() {
+    byte[] ttlBytes = getAttribute(OP_ATTRIBUTE_TTL);
+    if (ttlBytes != null) {
+      return Bytes.toLong(ttlBytes);
+    }
+    return Long.MAX_VALUE;
+  }
+
+  /**
+   * Set the TTL desired for the result of the mutation, in milliseconds.
+   * @param ttl the TTL desired for the result of the mutation, in milliseconds
+   * @return this
+   */
+  public Mutation setTTL(long ttl) {
+    setAttribute(OP_ATTRIBUTE_TTL, Bytes.toBytes(ttl));
     return this;
   }
 

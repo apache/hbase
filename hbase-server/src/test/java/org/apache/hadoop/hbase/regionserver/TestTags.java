@@ -418,8 +418,13 @@ public class TestTags {
       tags = TestCoprocessorForTags.tags;
       assertEquals(5L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       assertEquals(2, tags.size());
-      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
-      assertEquals("tag2", Bytes.toString(tags.get(1).getValue()));
+      // We cannot assume the ordering of tags
+      List<String> tagValues = new ArrayList<String>();
+      for (Tag tag: tags) {
+        tagValues.add(Bytes.toString(tag.getValue()));
+      }
+      assertTrue(tagValues.contains("tag1"));
+      assertTrue(tagValues.contains("tag2"));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -475,8 +480,13 @@ public class TestTags {
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
       assertEquals(2, tags.size());
-      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
-      assertEquals("tag2", Bytes.toString(tags.get(1).getValue()));
+      // We cannot assume the ordering of tags
+      tagValues.clear();
+      for (Tag tag: tags) {
+        tagValues.add(Bytes.toString(tag.getValue()));
+      }
+      assertTrue(tagValues.contains("tag1"));
+      assertTrue(tagValues.contains("tag2"));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
