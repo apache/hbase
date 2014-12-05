@@ -53,12 +53,12 @@ import com.google.protobuf.BlockingRpcChannel;
 @Category({SecurityTests.class, MediumTests.class})
 public class TestNamespaceCommands extends SecureTestUtil {
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static String TestNamespace = "ns1";
-  private static String TestNamespace2 = "ns2";
+  private static String TEST_NAMESPACE = "ns1";
+  private static String TEST_NAMESPACE2 = "ns2";
   private static Configuration conf;
   private static MasterCoprocessorEnvironment CP_ENV;
   private static AccessController ACCESS_CONTROLLER;
-  
+
   // user with all permissions
   private static User SUPERUSER;
   // user with rw permissions
@@ -70,9 +70,9 @@ public class TestNamespaceCommands extends SecureTestUtil {
   // user with admin permission on namespace.
   private static User USER_NSP_ADMIN;
 
-  private static String TEST_TABLE = TestNamespace + ":testtable";
+  private static String TEST_TABLE = TEST_NAMESPACE + ":testtable";
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
-  
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     conf = UTIL.getConfiguration();
@@ -92,20 +92,20 @@ public class TestNamespaceCommands extends SecureTestUtil {
       .getRegionServerCoprocessorHost()
         .findCoprocessor(AccessController.class.getName());
 
-    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace).build());
-    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace2).build());
+    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE).build());
+    UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TEST_NAMESPACE2).build());
 
     grantOnNamespace(UTIL, USER_NSP_WRITE.getShortName(),
-      TestNamespace, Permission.Action.WRITE, Permission.Action.CREATE);
+      TEST_NAMESPACE, Permission.Action.WRITE, Permission.Action.CREATE);
 
-    grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TestNamespace, Permission.Action.ADMIN);
-    grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TestNamespace2, Permission.Action.ADMIN);
+    grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TEST_NAMESPACE, Permission.Action.ADMIN);
+    grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TEST_NAMESPACE2, Permission.Action.ADMIN);
   }
-  
+
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.getHBaseAdmin().deleteNamespace(TestNamespace);
-    UTIL.getHBaseAdmin().deleteNamespace(TestNamespace2);
+    UTIL.getHBaseAdmin().deleteNamespace(TEST_NAMESPACE);
+    UTIL.getHBaseAdmin().deleteNamespace(TEST_NAMESPACE2);
     UTIL.shutdownMiniCluster();
   }
 
@@ -115,18 +115,18 @@ public class TestNamespaceCommands extends SecureTestUtil {
     Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       // Grant and check state in ACL table
-      grantOnNamespace(UTIL, userTestNamespace, TestNamespace,
+      grantOnNamespace(UTIL, userTestNamespace, TEST_NAMESPACE,
         Permission.Action.WRITE);
 
       Result result = acl.get(new Get(Bytes.toBytes(userTestNamespace)));
       assertTrue(result != null);
       ListMultimap<String, TablePermission> perms =
-          AccessControlLists.getNamespacePermissions(conf, TestNamespace);
+          AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
       assertEquals(3, perms.size());
       List<TablePermission> namespacePerms = perms.get(userTestNamespace);
       assertTrue(perms.containsKey(userTestNamespace));
       assertEquals(1, namespacePerms.size());
-      assertEquals(TestNamespace,
+      assertEquals(TEST_NAMESPACE,
         namespacePerms.get(0).getNamespace());
       assertEquals(null, namespacePerms.get(0).getFamily());
       assertEquals(null, namespacePerms.get(0).getQualifier());
@@ -134,22 +134,22 @@ public class TestNamespaceCommands extends SecureTestUtil {
       assertEquals(Permission.Action.WRITE, namespacePerms.get(0).getActions()[0]);
 
       // Revoke and check state in ACL table
-      revokeFromNamespace(UTIL, userTestNamespace, TestNamespace,
+      revokeFromNamespace(UTIL, userTestNamespace, TEST_NAMESPACE,
         Permission.Action.WRITE);
 
-      perms = AccessControlLists.getNamespacePermissions(conf, TestNamespace);
+      perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
       assertEquals(2, perms.size());
     } finally {
       acl.close();
     }
   }
-  
+
   @Test
   public void testModifyNamespace() throws Exception {
     AccessTestAction modifyNamespace = new AccessTestAction() {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preModifyNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
-          NamespaceDescriptor.create(TestNamespace).addConfiguration("abc", "156").build());
+          NamespaceDescriptor.create(TEST_NAMESPACE).addConfiguration("abc", "156").build());
         return null;
       }
     };
@@ -158,13 +158,13 @@ public class TestNamespaceCommands extends SecureTestUtil {
     // all others should be denied
     verifyDenied(modifyNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW);
   }
-  
+
   @Test
   public void testCreateAndDeleteNamespace() throws Exception {
     AccessTestAction createNamespace = new AccessTestAction() {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCreateNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
-          NamespaceDescriptor.create(TestNamespace2).build());
+          NamespaceDescriptor.create(TEST_NAMESPACE2).build());
         return null;
       }
     };
@@ -172,7 +172,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction deleteNamespace = new AccessTestAction() {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDeleteNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
-          TestNamespace2);
+          TEST_NAMESPACE2);
         return null;
       }
     };
@@ -201,7 +201,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, testUser, TestNamespace, Action.WRITE);
+          ProtobufUtil.grant(protocol, testUser, TEST_NAMESPACE, Action.WRITE);
         } finally {
           acl.close();
         }
@@ -217,7 +217,23 @@ public class TestNamespaceCommands extends SecureTestUtil {
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, testUser, TestNamespace, Action.WRITE);
+          ProtobufUtil.revoke(protocol, testUser, TEST_NAMESPACE, Action.WRITE);
+        } finally {
+          acl.close();
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction getPermissionsAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        try {
+          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+          AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+          ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(TEST_NAMESPACE));
         } finally {
           acl.close();
         }
@@ -231,6 +247,10 @@ public class TestNamespaceCommands extends SecureTestUtil {
     verifyDenied(grantAction, USER_CREATE, USER_RW);
     verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN);
     verifyDenied(revokeAction, USER_CREATE, USER_RW);
+
+    // Only an admin should be able to get the user permission
+    verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN);
+    verifyDeniedWithException(revokeAction, USER_CREATE, USER_RW);
   }
 
   @Test

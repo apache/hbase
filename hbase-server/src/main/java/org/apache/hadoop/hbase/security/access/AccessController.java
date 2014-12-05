@@ -2110,6 +2110,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           });
         } else if (request.getType() == AccessControlProtos.Permission.Type.Namespace) {
           final String namespace = request.getNamespaceName().toStringUtf8();
+          requireGlobalPermission("userPermissions", Action.ADMIN, namespace);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
@@ -2118,6 +2119,7 @@ public class AccessController extends BaseMasterAndRegionObserver
             }
           });
         } else {
+          requirePermission("userPermissions", Action.ADMIN);
           perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
             @Override
             public List<UserPermission> run() throws Exception {
