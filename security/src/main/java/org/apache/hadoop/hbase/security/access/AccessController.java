@@ -656,6 +656,7 @@ public class AccessController extends BaseRegionObserver
         return null;
       }
     });
+    this.authManager.getZKPermissionWatcher().deleteTableACLNode(tableName);
   }
 
   @Override
