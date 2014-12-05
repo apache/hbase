@@ -226,6 +226,39 @@ public class VisibilityUtils {
     return serializationFormat;
   }
 
+  /**
+   * Extracts and partitions the visibility tags and nonVisibility Tags
+   *
+   * @param cell - the cell for which we would extract and partition the
+   * visibility and non visibility tags
+   * @param visTags
+   *          - all the visibilty tags of type TagType.VISIBILITY_TAG_TYPE would
+   *          be added to this list
+   * @param nonVisTags - all the non visibility tags would be added to this list
+   * @return - the serailization format of the tag. Can be null if no tags are found or
+   * if there is no visibility tag found
+   */
+  public static Byte extractAndPartitionTags(Cell cell, List<Tag> visTags,
+      List<Tag> nonVisTags) {
+    Byte serializationFormat = null;
+    if (cell.getTagsLength() > 0) {
+      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+      while (tagsIterator.hasNext()) {
+        Tag tag = tagsIterator.next();
+        if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
+          serializationFormat = tag.getBuffer()[tag.getTagOffset()];
+        } else if (tag.getType() == VISIBILITY_TAG_TYPE) {
+          visTags.add(tag);
+        } else {
+          // ignore string encoded visibility expressions, will be added in replication handling
+          nonVisTags.add(tag);
+        }
+      }
+    }
+    return serializationFormat;
+  }
+
   public static boolean isVisibilityTagsPresent(Cell cell) {
     if (cell.getTagsLengthUnsigned() == 0) {
       return false;

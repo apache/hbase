@@ -32,13 +32,13 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -58,9 +58,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.google.common.collect.Lists;
 
 /**
- * This is a VisibilityLabelService where labels in Mutation's visibility expression will be
- * persisted as Strings itself rather than ordinals in 'labels' table. Also there is no need to add
- * labels to the system, prior to using them in Mutations/Authorizations.
+ * This is a VisibilityLabelService where labels in Mutation's visibility
+ * expression will be persisted as Strings itself rather than ordinals in
+ * 'labels' table. Also there is no need to add labels to the system, prior to
+ * using them in Mutations/Authorizations.
  */
 @InterfaceAudience.Private
 public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelService {
@@ -71,7 +72,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   private static final byte STRING_SERIALIZATION_FORMAT = 2;
   private static final Tag STRING_SERIALIZATION_FORMAT_TAG = new Tag(
       TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE,
-      new byte[]{STRING_SERIALIZATION_FORMAT});
+      new byte[] { STRING_SERIALIZATION_FORMAT });
   private final ExpressionParser expressionParser = new ExpressionParser();
   private final ExpressionExpander expressionExpander = new ExpressionExpander();
   private Configuration conf;
@@ -80,7 +81,8 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
 
   @Override
   public OperationStatus[] addLabels(List<byte[]> labels) throws IOException {
-    // Not doing specific label add. We will just add labels in Mutation visibility expression as it
+    // Not doing specific label add. We will just add labels in Mutation
+    // visibility expression as it
     // is along with every cell.
     OperationStatus[] status = new OperationStatus[labels.size()];
     for (int i = 0; i < labels.size(); i++) {
@@ -251,7 +253,8 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
                 offset += len;
               }
               if (includeKV) {
-                // We got one visibility expression getting evaluated to true. Good to include this
+                // We got one visibility expression getting evaluated to true.
+                // Good to include this
                 // KV in the result then.
                 return true;
               }
@@ -277,7 +280,8 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     Collections.sort(labels);
     Collections.sort(notLabels);
     // We will write the NOT labels 1st followed by normal labels
-    // Each of the label we will write with label length (as short 1st) followed by the label bytes.
+    // Each of the label we will write with label length (as short 1st) followed
+    // by the label bytes.
     // For a NOT node we will write the label length as -ve.
     for (String label : notLabels) {
       byte[] bLabel = Bytes.toBytes(label);
@@ -376,7 +380,8 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   private static boolean checkForMatchingVisibilityTagsWithSortedOrder(List<Tag> putVisTags,
       List<Tag> deleteVisTags) {
     boolean matchFound = false;
-    // If the size does not match. Definitely we are not comparing the equal tags.
+    // If the size does not match. Definitely we are not comparing the equal
+    // tags.
     if ((deleteVisTags.size()) == putVisTags.size()) {
       for (Tag tag : deleteVisTags) {
         matchFound = false;
@@ -387,9 +392,71 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
             break;
           }
         }
-        if (!matchFound) break;
+        if (!matchFound)
+          break;
       }
     }
     return matchFound;
+  }
+
+  @Override
+  public byte[] encodeVisibilityForReplication(final List<Tag> tags, final Byte serializationFormat)
+      throws IOException {
+    if (tags.size() > 0 && (serializationFormat == null
+        || serializationFormat == STRING_SERIALIZATION_FORMAT)) {
+      return createModifiedVisExpression(tags);
+    }
+    return null;
+  }
+
+  /**
+   * @param tags - all the tags associated with the current Cell
+   * @return - the modified visibility expression as byte[]
+   */
+  private byte[] createModifiedVisExpression(final List<Tag> tags)
+      throws IOException {
+    StringBuilder visibilityString = new StringBuilder();
+    for (Tag tag : tags) {
+      if (tag.getType() == TagType.VISIBILITY_TAG_TYPE) {
+        if (visibilityString.length() != 0) {
+          visibilityString.append(VisibilityConstants.CLOSED_PARAN
+              + VisibilityConstants.OR_OPERATOR);
+        }
+        int offset = tag.getTagOffset();
+        int endOffset = offset + tag.getTagLength();
+        boolean expressionStart = true;
+        while (offset < endOffset) {
+          short len = Bytes.toShort(tag.getBuffer(), offset);
+          offset += 2;
+          if (len < 0) {
+            len = (short) (-1 * len);
+            String label = Bytes.toString(tag.getBuffer(), offset, len);
+            if (expressionStart) {
+              visibilityString.append(VisibilityConstants.OPEN_PARAN
+                  + VisibilityConstants.NOT_OPERATOR + CellVisibility.quote(label));
+            } else {
+              visibilityString.append(VisibilityConstants.AND_OPERATOR
+                  + VisibilityConstants.NOT_OPERATOR + CellVisibility.quote(label));
+            }
+          } else {
+            String label = Bytes.toString(tag.getBuffer(), offset, len);
+            if (expressionStart) {
+              visibilityString.append(VisibilityConstants.OPEN_PARAN + CellVisibility.quote(label));
+            } else {
+              visibilityString.append(VisibilityConstants.AND_OPERATOR
+                  + CellVisibility.quote(label));
+            }
+          }
+          expressionStart = false;
+          offset += len;
+        }
+      }
+    }
+    if (visibilityString.length() != 0) {
+      visibilityString.append(VisibilityConstants.CLOSED_PARAN);
+      // Return the string formed as byte[]
+      return Bytes.toBytes(visibilityString.toString());
+    }
+    return null;
   }
 }

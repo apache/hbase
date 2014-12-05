@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 public interface RegionServerObserver extends Coprocessor {
 
@@ -120,5 +121,16 @@ public interface RegionServerObserver extends Coprocessor {
    */
   void postRollWALWriterRequest(final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
       throws IOException;
+
+  /**
+   * This will be called after the replication endpoint is instantiated.
+   *
+   * @param ctx
+   * @param endpoint
+   *          - the base endpoint for replication
+   * @return the endpoint to use during replication.
+   */
+  ReplicationEndpoint postCreateReplicationEndPoint(
+      ObserverContext<RegionServerCoprocessorEnvironment> ctx, ReplicationEndpoint endpoint);
 
 }

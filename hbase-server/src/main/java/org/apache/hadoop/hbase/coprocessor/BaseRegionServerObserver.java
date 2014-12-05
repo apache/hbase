@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 /**
  * An abstract class that implements RegionServerObserver.
@@ -75,5 +76,11 @@ public class BaseRegionServerObserver implements RegionServerObserver {
   @Override
   public void postRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
       throws IOException { }
+
+  @Override
+  public ReplicationEndpoint postCreateReplicationEndPoint(
+      ObserverContext<RegionServerCoprocessorEnvironment> ctx, ReplicationEndpoint endpoint) {
+    return endpoint;
+  }
 
 }

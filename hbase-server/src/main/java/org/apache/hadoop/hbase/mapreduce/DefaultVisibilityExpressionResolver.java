@@ -113,6 +113,13 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
       public int getLabelOrdinal(String label) {
         return labels.get(label);
       }
+
+      @Override
+      public String getLabel(int ordinal) {
+        // Unused
+        throw new UnsupportedOperationException(
+            "getLabel should not be used in VisibilityExpressionResolver");
+      }
     };
     return VisibilityUtils.createVisibilityExpTags(visExpression, true, false, null, provider);
   }

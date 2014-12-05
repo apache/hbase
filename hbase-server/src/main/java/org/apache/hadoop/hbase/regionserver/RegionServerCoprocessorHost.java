@@ -22,20 +22,20 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.coprocessor.SingletonCoprocessorService;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -158,8 +158,49 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
-  private static abstract class CoprocessorOperation
-      extends ObserverContext<RegionServerCoprocessorEnvironment> {
+  public ReplicationEndpoint postCreateReplicationEndPoint(final ReplicationEndpoint endpoint)
+      throws IOException {
+    return execOperationWithResult(endpoint, coprocessors.isEmpty() ? null
+        : new CoprocessOperationWithResult<ReplicationEndpoint>() {
+          @Override
+          public void call(RegionServerObserver oserver,
+              ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
+            try {
+              oserver.getClass().getDeclaredMethod("postCreateReplicationEndPoint",
+                  ObserverContext.class, ReplicationEndpoint.class);
+            } catch (NoSuchMethodException e) {
+              LOG.warn("The RegionServer Observer class "
+                  + oserver.getClass().getName()
+                  + " does not have the"
+                  + "method postCreateReplicationEndPoint(). Consider upgrading inorder to replicate visibility"
+                  + " labels as strings");
+              setResult(endpoint);
+              return;
+            } catch (SecurityException e) {
+              LOG.warn("The RegionServer Observer class "
+                  + oserver.getClass().getName()
+                  + " does not have the"
+                  + "method postCreateReplicationEndPoint(). Consider upgrading inorder to replicate visibility"
+                  + " labels as strings");
+              setResult(endpoint);
+              return;
+            }
+            setResult(oserver.postCreateReplicationEndPoint(ctx, getResult()));
+          }
+        });
+  }
+
+  private <T> T execOperationWithResult(final T defaultValue,
+      final CoprocessOperationWithResult<T> ctx) throws IOException {
+    if (ctx == null)
+      return defaultValue;
+    ctx.setResult(defaultValue);
+    execOperation(ctx);
+    return ctx.getResult();
+  }
+
+  private static abstract class CoprocessorOperation extends
+      ObserverContext<RegionServerCoprocessorEnvironment> {
     public CoprocessorOperation() {
     }
 
@@ -167,6 +208,18 @@ public class RegionServerCoprocessorHost extends
         ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException;
 
     public void postEnvCall(RegionServerEnvironment env) {
+    }
+  }
+
+  private static abstract class CoprocessOperationWithResult<T> extends CoprocessorOperation {
+    private T result = null;
+
+    public void setResult(final T result) {
+      this.result = result;
+    }
+
+    public T getResult() {
+      return this.result;
     }
   }
 
