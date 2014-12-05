@@ -874,12 +874,13 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
     </programlisting>
     <para>
       Alternatively, you may limit the shell tests that run using the system variable
-      <classname>shell.test</classname>. This value may specify a particular test case by name. For
-      example, the tests that cover the shell commands for altering tables are contained in the test
-      case <classname>AdminAlterTableTest</classname> and you can run them with:
+      <classname>shell.test</classname>. This value should specify the ruby literal equivalent of a
+        particular test case by name. For example, the tests that cover the shell commands for
+        altering tables are contained in the test case <classname>AdminAlterTableTest</classname>
+        and you can run them with:
     </para>
     <programlisting language="bourne">
-      mvn clean test -Dtest=TestShell -Dshell.test=AdminAlterTableTest
+      mvn clean test -Dtest=TestShell -Dshell.test=/AdminAlterTableTest/
     </programlisting>
     <para>
       You may also use a <link xlink:href=
