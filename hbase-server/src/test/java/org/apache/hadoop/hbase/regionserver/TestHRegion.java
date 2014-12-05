@@ -1005,12 +1005,11 @@ public class TestHRegion {
   }
 
   @Test
-  public void testBatchPut() throws Exception {
-    byte[] b = Bytes.toBytes(getName());
+  public void testBatchPut_whileNoRowLocksHeld() throws IOException {
     byte[] cf = Bytes.toBytes(COLUMN_FAMILY);
     byte[] qual = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("val");
-    this.region = initHRegion(b, getName(), CONF, cf);
+    this.region = initHRegion(Bytes.toBytes(getName()), getName(), CONF, cf);
     MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
     try {
       long syncs = metricsAssertHelper.getCounter("syncTimeNumOps", source);
@@ -1040,9 +1039,34 @@ public class TestHRegion {
       }
 
       metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 2, source);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
 
-      LOG.info("Next a batch put that has to break into two batches to avoid a lock");
-      RowLock rowLock = region.getRowLock(Bytes.toBytes("row_2"));
+  @Test
+  public void testBatchPut_whileMultipleRowLocksHeld() throws Exception {
+    byte[] cf = Bytes.toBytes(COLUMN_FAMILY);
+    byte[] qual = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("val");
+    this.region = initHRegion(Bytes.toBytes(getName()), getName(), CONF, cf);
+    MetricsWALSource source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+    try {
+      long syncs = metricsAssertHelper.getCounter("syncTimeNumOps", source);
+      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
+
+      final Put[] puts = new Put[10];
+      for (int i = 0; i < 10; i++) {
+        puts[i] = new Put(Bytes.toBytes("row_" + i));
+        puts[i].add(cf, qual, val);
+      }
+      puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
+
+      LOG.info("batchPut will have to break into four batches to avoid row locks");
+      RowLock rowLock1 = region.getRowLock(Bytes.toBytes("row_2"));
+      RowLock rowLock2 = region.getRowLock(Bytes.toBytes("row_4"));
+      RowLock rowLock3 = region.getRowLock(Bytes.toBytes("row_6"));
 
       MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(CONF);
       final AtomicReference<OperationStatus[]> retFromThread = new AtomicReference<OperationStatus[]>();
@@ -1052,35 +1076,76 @@ public class TestHRegion {
           retFromThread.set(region.batchMutate(puts));
         }
       };
-      LOG.info("...starting put thread while holding lock");
+      LOG.info("...starting put thread while holding locks");
       ctx.addThread(putter);
       ctx.startThreads();
 
-      LOG.info("...waiting for put thread to sync first time");
-      long startWait = System.currentTimeMillis();
-      while (metricsAssertHelper.getCounter("syncTimeNumOps", source) == syncs + 2) {
-        Thread.sleep(100);
-        if (System.currentTimeMillis() - startWait > 10000) {
-          fail("Timed out waiting for thread to sync first minibatch");
+      LOG.info("...waiting for put thread to sync 1st time");
+      waitForCounter(source, "syncTimeNumOps", syncs + 1);
+
+      // Now attempt to close the region from another thread.  Prior to HBASE-12565
+      // this would cause the in-progress batchMutate operation to to fail with
+      // exception because it use to release and re-acquire the close-guard lock
+      // between batches.  Caller then didn't get status indicating which writes succeeded.
+      // We now expect this thread to block until the batchMutate call finishes.
+      Thread regionCloseThread = new Thread() {
+        @Override
+        public void run() {
+          try {
+            HRegion.closeHRegion(region);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
         }
-      }
-      LOG.info("...releasing row lock, which should let put thread continue");
-      rowLock.release();
-      LOG.info("...joining on thread");
+      };
+      regionCloseThread.start();
+
+      LOG.info("...releasing row lock 1, which should let put thread continue");
+      rowLock1.release();
+
+      LOG.info("...waiting for put thread to sync 2nd time");
+      waitForCounter(source, "syncTimeNumOps", syncs + 2);
+
+      LOG.info("...releasing row lock 2, which should let put thread continue");
+      rowLock2.release();
+
+      LOG.info("...waiting for put thread to sync 3rd time");
+      waitForCounter(source, "syncTimeNumOps", syncs + 3);
+
+      LOG.info("...releasing row lock 3, which should let put thread continue");
+      rowLock3.release();
+
+      LOG.info("...waiting for put thread to sync 4th time");
+      waitForCounter(source, "syncTimeNumOps", syncs + 4);
+
+      LOG.info("...joining on put thread");
       ctx.stop();
-      LOG.info("...checking that next batch was synced");
-      metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 4, source);
-      codes = retFromThread.get();
-      for (int i = 0; i < 10; i++) {
+      regionCloseThread.join();
+
+      OperationStatus[] codes = retFromThread.get();
+      for (int i = 0; i < codes.length; i++) {
         assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY : OperationStatusCode.SUCCESS,
             codes[i].getOperationStatusCode());
       }
-
     } finally {
       HRegion.closeHRegion(this.region);
       this.region = null;
     }
   }
+
+  private void waitForCounter(MetricsWALSource source, String metricName, long expectedCount)
+      throws InterruptedException {
+    long startWait = System.currentTimeMillis();
+    long currentCount;
+    while ((currentCount = metricsAssertHelper.getCounter(metricName, source)) < expectedCount) {
+      Thread.sleep(100);
+      if (System.currentTimeMillis() - startWait > 10000) {
+        fail(String.format("Timed out waiting for '%s' >= '%s', currentCount=%s", metricName,
+          expectedCount, currentCount));
+      }
+    }
+  }
+
 
   @Test
   public void testBatchPutWithTsSlop() throws Exception {
