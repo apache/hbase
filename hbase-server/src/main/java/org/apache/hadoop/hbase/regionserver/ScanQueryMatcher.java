@@ -102,6 +102,10 @@ public class ScanQueryMatcher {
   private final long earliestPutTs;
   private final long ttl;
 
+  /** The oldest timestamp we are interested in, based on TTL */
+  private final long oldestUnexpiredTS;
+  private final long now;
+
   /** readPoint over which the KVs are unconditionally included */
   protected long maxReadPointToTrackVersions;
 
@@ -154,7 +158,7 @@ public class ScanQueryMatcher {
    */
   public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
       ScanType scanType, long readPointToUse, long earliestPutTs, long oldestUnexpiredTS,
-      RegionCoprocessorHost regionCoprocessorHost) throws IOException {
+      long now, RegionCoprocessorHost regionCoprocessorHost) throws IOException {
     this.tr = scan.getTimeRange();
     this.rowComparator = scanInfo.getComparator();
     this.regionCoprocessorHost = regionCoprocessorHost;
@@ -164,6 +168,9 @@ public class ScanQueryMatcher {
         scanInfo.getFamily());
     this.filter = scan.getFilter();
     this.earliestPutTs = earliestPutTs;
+    this.oldestUnexpiredTS = oldestUnexpiredTS;
+    this.now = now;
+
     this.maxReadPointToTrackVersions = readPointToUse;
     this.timeToPurgeDeletes = scanInfo.getTimeToPurgeDeletes();
     this.ttl = oldestUnexpiredTS;
@@ -218,18 +225,18 @@ public class ScanQueryMatcher {
    * @param scanInfo The store's immutable scan info
    * @param columns
    * @param earliestPutTs Earliest put seen in any of the store files.
-   * @param oldestUnexpiredTS the oldest timestamp we are interested in,
-   *  based on TTL
+   * @param oldestUnexpiredTS the oldest timestamp we are interested in, based on TTL
+   * @param now the current server time
    * @param dropDeletesFromRow The inclusive left bound of the range; can be EMPTY_START_ROW.
    * @param dropDeletesToRow The exclusive right bound of the range; can be EMPTY_END_ROW.
    * @param regionCoprocessorHost 
    * @throws IOException 
    */
   public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
-      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, byte[] dropDeletesFromRow,
+      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now, byte[] dropDeletesFromRow,
       byte[] dropDeletesToRow, RegionCoprocessorHost regionCoprocessorHost) throws IOException {
     this(scan, scanInfo, columns, ScanType.COMPACT_RETAIN_DELETES, readPointToUse, earliestPutTs,
-        oldestUnexpiredTS, regionCoprocessorHost);
+        oldestUnexpiredTS, now, regionCoprocessorHost);
     Preconditions.checkArgument((dropDeletesFromRow != null) && (dropDeletesToRow != null));
     this.dropDeletesFromRow = dropDeletesFromRow;
     this.dropDeletesToRow = dropDeletesToRow;
@@ -239,10 +246,10 @@ public class ScanQueryMatcher {
    * Constructor for tests
    */
   ScanQueryMatcher(Scan scan, ScanInfo scanInfo,
-      NavigableSet<byte[]> columns, long oldestUnexpiredTS) throws IOException {
+      NavigableSet<byte[]> columns, long oldestUnexpiredTS, long now) throws IOException {
     this(scan, scanInfo, columns, ScanType.USER_SCAN,
           Long.MAX_VALUE, /* max Readpoint to track versions */
-        HConstants.LATEST_TIMESTAMP, oldestUnexpiredTS, null);
+        HConstants.LATEST_TIMESTAMP, oldestUnexpiredTS, now, null);
   }
 
   /**
@@ -300,12 +307,17 @@ public class ScanQueryMatcher {
 
     int qualifierOffset = cell.getQualifierOffset();
     int qualifierLength = cell.getQualifierLength();
+
     long timestamp = cell.getTimestamp();
     // check for early out based on timestamp alone
     if (columns.isDone(timestamp)) {
       return columns.getNextRowOrNextColumn(cell.getQualifierArray(), qualifierOffset,
           qualifierLength);
     }
+    // check if the cell is expired by cell TTL
+    if (HStore.isCellTTLExpired(cell, this.oldestUnexpiredTS, this.now)) {
+      return MatchCode.SKIP;
+    }    
 
     /*
      * The delete logic is pretty complicated now.

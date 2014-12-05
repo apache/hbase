@@ -460,4 +460,9 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   public Put setACL(Map<String, Permission> perms) {
     return (Put) super.setACL(perms);
   }
+
+  @Override
+  public Put setTTL(long ttl) {
+    return (Put) super.setTTL(ttl);
+  }
 }

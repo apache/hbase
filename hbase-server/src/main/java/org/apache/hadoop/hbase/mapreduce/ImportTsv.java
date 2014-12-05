@@ -125,13 +125,20 @@ public class ImportTsv extends Configured implements Tool {
 
     public static final String CELL_VISIBILITY_COLUMN_SPEC = "HBASE_CELL_VISIBILITY";
 
+    public static final String CELL_TTL_COLUMN_SPEC = "HBASE_CELL_TTL";
+
     private int attrKeyColumnIndex = DEFAULT_ATTRIBUTES_COLUMN_INDEX;
 
     public static final int DEFAULT_ATTRIBUTES_COLUMN_INDEX = -1;
 
     public static final int DEFAULT_CELL_VISIBILITY_COLUMN_INDEX = -1;
 
+    public static final int DEFAULT_CELL_TTL_COLUMN_INDEX = -1;
+
     private int cellVisibilityColumnIndex = DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
+
+    private int cellTTLColumnIndex = DEFAULT_CELL_TTL_COLUMN_INDEX;
+
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.
      * The row key should be the special token TsvParser.ROWKEY_COLUMN_SPEC
@@ -162,12 +169,16 @@ public class ImportTsv extends Configured implements Tool {
           timestampKeyColumnIndex = i;
           continue;
         }
-        if(ATTRIBUTES_COLUMN_SPEC.equals(str)) {
+        if (ATTRIBUTES_COLUMN_SPEC.equals(str)) {
           attrKeyColumnIndex = i;
           continue;
         }
-        if(CELL_VISIBILITY_COLUMN_SPEC.equals(str)) {
+        if (CELL_VISIBILITY_COLUMN_SPEC.equals(str)) {
           cellVisibilityColumnIndex = i;
+          continue;
+        }
+        if (CELL_TTL_COLUMN_SPEC.equals(str)) {
+          cellTTLColumnIndex = i;
           continue;
         }
         String[] parts = str.split(":", 2);
@@ -197,6 +208,10 @@ public class ImportTsv extends Configured implements Tool {
       return cellVisibilityColumnIndex != DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
     }
 
+    public boolean hasCellTTL() {
+      return cellTTLColumnIndex != DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
+    }
+
     public int getAttributesKeyColumnIndex() {
       return attrKeyColumnIndex;
     }
@@ -204,9 +219,15 @@ public class ImportTsv extends Configured implements Tool {
     public int getCellVisibilityColumnIndex() {
       return cellVisibilityColumnIndex;
     }
+
+    public int getCellTTLColumnIndex() {
+      return cellTTLColumnIndex;
+    }
+
     public int getRowKeyColumnIndex() {
       return rowKeyColumnIndex;
     }
+
     public byte[] getFamily(int idx) {
       return families[idx];
     }
@@ -238,8 +259,10 @@ public class ImportTsv extends Configured implements Tool {
         throw new BadTsvLineException("No timestamp");
       } else if (hasAttributes() && tabOffsets.size() <= getAttributesKeyColumnIndex()) {
         throw new BadTsvLineException("No attributes specified");
-      } else if(hasCellVisibility() && tabOffsets.size() <= getCellVisibilityColumnIndex()) {
+      } else if (hasCellVisibility() && tabOffsets.size() <= getCellVisibilityColumnIndex()) {
         throw new BadTsvLineException("No cell visibility specified");
+      } else if (hasCellTTL() && tabOffsets.size() <= getCellTTLColumnIndex()) {
+        throw new BadTsvLineException("No cell TTL specified");
       }
       return new ParsedLine(tabOffsets, lineBytes);
     }
@@ -333,6 +356,31 @@ public class ImportTsv extends Configured implements Tool {
         } else {
           return Bytes.toString(lineBytes, getColumnOffset(cellVisibilityColumnIndex),
               getColumnLength(cellVisibilityColumnIndex));
+        }
+      }
+
+      public int getCellTTLColumnOffset() {
+        if (hasCellTTL()) {
+          return getColumnOffset(cellTTLColumnIndex);
+        } else {
+          return DEFAULT_CELL_TTL_COLUMN_INDEX;
+        }
+      }
+
+      public int getCellTTLColumnLength() {
+        if (hasCellTTL()) {
+          return getColumnLength(cellTTLColumnIndex);
+        } else {
+          return DEFAULT_CELL_TTL_COLUMN_INDEX;
+        }
+      }
+
+      public long getCellTTL() {
+        if (!hasCellTTL()) {
+          return 0;
+        } else {
+          return Bytes.toLong(lineBytes, getColumnOffset(cellTTLColumnIndex),
+              getColumnLength(cellTTLColumnIndex));
         }
       }
 
@@ -535,6 +583,7 @@ public class ImportTsv extends Configured implements Tool {
       if (TsvParser.ROWKEY_COLUMN_SPEC.equals(aColumn)
           || TsvParser.TIMESTAMPKEY_COLUMN_SPEC.equals(aColumn)
           || TsvParser.CELL_VISIBILITY_COLUMN_SPEC.equals(aColumn)
+          || TsvParser.CELL_TTL_COLUMN_SPEC.equals(aColumn)
           || TsvParser.ATTRIBUTES_COLUMN_SPEC.equals(aColumn))
         continue;
       // we are only concerned with the first one (in case this is a cf:cq)

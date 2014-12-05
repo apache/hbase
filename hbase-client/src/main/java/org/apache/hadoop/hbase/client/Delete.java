@@ -461,4 +461,9 @@ public class Delete extends Mutation implements Comparable<Row> {
   public Delete setACL(Map<String, Permission> perms) {
     return (Delete) super.setACL(perms);
   }
+
+  @Override
+  public Delete setTTL(long ttl) {
+    throw new UnsupportedOperationException("Setting TTLs on Deletes is not supported");
+  }
 }

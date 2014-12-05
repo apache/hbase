@@ -530,5 +530,18 @@ module Hbase
       end
     end
 
+    define_test "mutation with TTL should expire" do
+      @test_table.put('ttlTest', 'x:a', 'foo', { TTL => 1000 } )
+      begin
+        res = @test_table._get_internal('ttlTest', 'x:a')
+        assert_not_nil(res)
+        sleep 2
+        res = @test_table._get_internal('ttlTest', 'x:a')
+        assert_nil(res)
+      ensure
+        @test_table.delete('ttlTest', 'x:a')
+      end
+    end
+
   end
 end
