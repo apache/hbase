@@ -55,7 +55,12 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
  * Configure which provider gets used with the configuration setting "hbase.wal.provider". Available
  * implementations:
  * <ul>
- *   <li><em>defaultProvider</em> : whatever provider is standard for the hbase version.</li>
+ *   <li><em>defaultProvider</em> : whatever provider is standard for the hbase version. Currently
+ *                                  "filesystem"</li>
+ *   <li><em>filesystem</em> : a provider that will run on top of an implementation of the Hadoop
+ *                             FileSystem interface, normally HDFS.</li>
+ *   <li><em>multiwal</em> : a provider that will use multiple "filesystem" wal instances per region
+ *                           server.</li>
  * </ul>
  *
  * Alternatively, you may provide a custome implementation of {@link WALProvider} by class name.
@@ -69,7 +74,9 @@ public class WALFactory {
    * Maps between configuration names for providers and implementation classes.
    */
   static enum Providers {
-    defaultProvider(DefaultWALProvider.class);
+    defaultProvider(DefaultWALProvider.class),
+    filesystem(DefaultWALProvider.class),
+    multiwal(BoundedRegionGroupingProvider.class);
 
     Class<? extends WALProvider> clazz;
     Providers(Class<? extends WALProvider> clazz) {
@@ -134,6 +141,7 @@ public class WALFactory {
       // when there is a config value present.
       clazz = conf.getClass(key, DefaultWALProvider.class, WALProvider.class);
     }
+    LOG.info("Instantiating WALProvider of type " + clazz);
     try {
       final WALProvider result = clazz.newInstance();
       result.init(this, conf, listeners, providerId);
