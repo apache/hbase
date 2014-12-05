@@ -76,6 +76,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final Scan scan;
   protected final NavigableSet<byte[]> columns;
   protected final long oldestUnexpiredTS;
+  protected final long now;
   protected final int minVersions;
 
   /**
@@ -121,7 +122,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     explicitColumnQuery = numCol > 0;
     this.scan = scan;
     this.columns = columns;
-    oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
+    this.now = EnvironmentEdgeManager.currentTimeMillis();
+    this.oldestUnexpiredTS = now - ttl;
     this.minVersions = minVersions;
 
     if (store != null && ((HStore)store).getHRegion() != null
@@ -171,7 +173,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
     matcher = new ScanQueryMatcher(scan, scanInfo, columns,
         ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP,
-        oldestUnexpiredTS, store.getCoprocessorHost());
+        oldestUnexpiredTS, now, store.getCoprocessorHost());
 
     this.store.addChangedReaderObserver(this);
 
@@ -236,10 +238,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
     if (dropDeletesFromRow == null) {
       matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType, smallestReadPoint,
-          earliestPutTs, oldestUnexpiredTS, store.getCoprocessorHost());
+          earliestPutTs, oldestUnexpiredTS, now, store.getCoprocessorHost());
     } else {
       matcher = new ScanQueryMatcher(scan, scanInfo, null, smallestReadPoint, earliestPutTs,
-          oldestUnexpiredTS, dropDeletesFromRow, dropDeletesToRow, store.getCoprocessorHost());
+          oldestUnexpiredTS, now, dropDeletesFromRow, dropDeletesToRow, store.getCoprocessorHost());
     }
 
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
@@ -279,7 +281,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this(null, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
         scanInfo.getMinVersions(), readPt);
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
-        Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS, null);
+        Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS, now, null);
 
     // In unit tests, the store could be null
     if (this.store != null) {

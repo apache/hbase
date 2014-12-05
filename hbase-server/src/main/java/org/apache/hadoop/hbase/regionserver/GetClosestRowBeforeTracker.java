@@ -24,6 +24,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -31,7 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * State and utility processing {@link HRegion#getClosestRowBefore(byte[], byte[])}.
- * Like {@link ScanDeleteTracker} and {@link ScanDeleteTracker} but does not
+ * Like {@link ScanQueryMatcher} and {@link ScanDeleteTracker} but does not
  * implement the {@link DeleteTracker} interface since state spans rows (There
  * is no update nor reset method).
  */
@@ -39,7 +40,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 class GetClosestRowBeforeTracker {
   private final KeyValue targetkey;
   // Any cell w/ a ts older than this is expired.
-  private final long oldestts;
+  private final long now;
+  private final long oldestUnexpiredTs;
   private KeyValue candidate = null;
   private final KVComparator kvcomparator;
   // Flag for whether we're doing getclosest on a metaregion.
@@ -72,18 +74,11 @@ class GetClosestRowBeforeTracker {
         HConstants.DELIMITER) - this.rowoffset;
     }
     this.tablenamePlusDelimiterLength = metaregion? l + 1: -1;
-    this.oldestts = System.currentTimeMillis() - ttl;
+    this.now = System.currentTimeMillis();
+    this.oldestUnexpiredTs = now - ttl;
     this.kvcomparator = c;
     KeyValue.RowOnlyComparator rc = new KeyValue.RowOnlyComparator(this.kvcomparator);
     this.deletes = new TreeMap<KeyValue, NavigableSet<KeyValue>>(rc);
-  }
-
-  /**
-   * @param kv
-   * @return True if this <code>kv</code> is expired.
-   */
-  boolean isExpired(final KeyValue kv) {
-    return HStore.isExpired(kv, this.oldestts);
   }
 
   /*
@@ -168,6 +163,15 @@ class GetClosestRowBeforeTracker {
       }
     }
     return false;
+  }
+
+  /**
+   * @param cell
+   * @return true if the cell is expired
+   */
+  public boolean isExpired(final Cell cell) {
+    return cell.getTimestamp() < this.oldestUnexpiredTs ||
+      HStore.isCellTTLExpired(cell, this.oldestUnexpiredTs, this.now);
   }
 
   /*

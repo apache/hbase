@@ -323,4 +323,9 @@ public class Delete extends Mutation implements Comparable<Row> {
     map.put("ts", this.ts);
     return map;
   }
+
+  @Override
+  public Delete setTTL(long ttl) {
+    throw new UnsupportedOperationException("Setting TTLs on Deletes is not supported");
+  }
 }

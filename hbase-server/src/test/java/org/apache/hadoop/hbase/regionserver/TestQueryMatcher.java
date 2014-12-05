@@ -91,11 +91,12 @@ public class TestQueryMatcher extends HBaseTestCase {
 
   }
 
-    private void _testMatch_ExplicitColumns(Scan scan, List<MatchCode> expected) throws IOException {
-    // 2,4,5    
+  private void _testMatch_ExplicitColumns(Scan scan, List<MatchCode> expected) throws IOException {
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    // 2,4,5
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, ttl, KeepDeletedCells.FALSE, 0, rowComparator), get.getFamilyMap().get(fam2),
-        EnvironmentEdgeManager.currentTimeMillis() - ttl);
+        now - ttl, now);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -175,9 +176,10 @@ public class TestQueryMatcher extends HBaseTestCase {
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, ttl, KeepDeletedCells.FALSE, 0, rowComparator), null,
-        EnvironmentEdgeManager.currentTimeMillis() - ttl);
+        now - ttl, now);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -231,7 +233,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, testTTL, KeepDeletedCells.FALSE, 0, rowComparator), get.getFamilyMap().get(fam2),
-        now - testTTL);
+        now - testTTL, now);
 
     KeyValue [] kvs = new KeyValue[] {
         new KeyValue(row1, fam2, col1, now-100, data),
@@ -285,7 +287,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, testTTL, KeepDeletedCells.FALSE, 0, rowComparator), null,
-        now - testTTL);
+        now - testTTL, now);
 
     KeyValue [] kvs = new KeyValue[] {
         new KeyValue(row1, fam2, col1, now-100, data),
@@ -343,7 +345,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     NavigableSet<byte[]> cols = get.getFamilyMap().get(fam2);
 
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, scanInfo, cols, Long.MAX_VALUE,
-        HConstants.OLDEST_TIMESTAMP, HConstants.OLDEST_TIMESTAMP, from, to, null);
+        HConstants.OLDEST_TIMESTAMP, HConstants.OLDEST_TIMESTAMP, now, from, to, null);
     List<ScanQueryMatcher.MatchCode> actual =
         new ArrayList<ScanQueryMatcher.MatchCode>(rows.length);
     byte[] prevRow = null;
