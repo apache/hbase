@@ -23,15 +23,18 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
  * Wrapper to abstract out usage of user and group information in HBase.
@@ -44,7 +47,8 @@ import org.apache.hadoop.security.token.Token;
  * HBase, but can be extended as needs change.
  * </p>
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class User {
   public static final String HBASE_SECURITY_CONF_KEY =
       "hbase.security.authentication";
@@ -58,6 +62,7 @@ public abstract class User {
   /**
    * Returns the full user name.  For Kerberos principals this will include
    * the host and realm portions of the principal name.
+   *
    * @return User full name.
    */
   public String getName() {
@@ -76,6 +81,7 @@ public abstract class User {
   /**
    * Returns the shortened version of the user name -- the portion that maps
    * to an operating system user name.
+   *
    * @return Short name
    */
   public abstract String getShortName();
@@ -96,7 +102,10 @@ public abstract class User {
    * user's credentials.
    *
    * @throws IOException
+   * @deprecated Use {@code TokenUtil.obtainAuthTokenForJob(Connection,User,Job)}
+   *     instead.
    */
+  @Deprecated
   public abstract void obtainAuthTokenForJob(Configuration conf, Job job)
       throws IOException, InterruptedException;
 
@@ -105,7 +114,10 @@ public abstract class User {
    * user's credentials.
    *
    * @throws IOException
+   * @deprecated Use {@code TokenUtil.obtainAuthTokenForJob(Connection,JobConf,User)}
+   *     instead.
    */
+  @Deprecated
   public abstract void obtainAuthTokenForJob(JobConf job)
       throws IOException, InterruptedException;
 
@@ -118,14 +130,29 @@ public abstract class User {
    * @return the token of the specified kind.
    */
   public Token<?> getToken(String kind, String service) throws IOException {
-    for (Token<?> token: ugi.getTokens()) {
+    for (Token<?> token : ugi.getTokens()) {
       if (token.getKind().toString().equals(kind) &&
-          (service != null && token.getService().toString().equals(service)))
-      {
+          (service != null && token.getService().toString().equals(service))) {
         return token;
       }
     }
     return null;
+  }
+
+  /**
+   * Returns all the tokens stored in the user's credentials.
+   */
+  public Collection<Token<? extends TokenIdentifier>> getTokens() {
+    return ugi.getTokens();
+  }
+
+  /**
+   * Adds the given Token to the user's credentials.
+   *
+   * @param token the token to add
+   */
+  public void addToken(Token<? extends TokenIdentifier> token) {
+    ugi.addToken(token);
   }
 
   @Override

@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.security.token;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -41,6 +43,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
@@ -402,11 +406,11 @@ public class TestTokenAuthentication {
                 System.currentTimeMillis());
         try {
           BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn,
-            User.getCurrent(), HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+              User.getCurrent(), HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
           AuthenticationProtos.AuthenticationService.BlockingInterface stub =
-            AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
+              AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
           AuthenticationProtos.WhoAmIResponse response =
-            stub.whoAmI(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
+              stub.whoAmI(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
           String myname = response.getUsername();
           assertEquals("testuser", myname);
           String authMethod = response.getAuthMethod();
@@ -417,5 +421,32 @@ public class TestTokenAuthentication {
         return null;
       }
     });
+  }
+
+  @Test
+  public void testUseExistingToken() throws Exception {
+    User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "testuser2",
+        new String[]{"testgroup"});
+    Token<AuthenticationTokenIdentifier> token =
+        secretManager.generateToken(user.getName());
+    assertNotNull(token);
+    user.addToken(token);
+
+    // make sure we got a token
+    Token<AuthenticationTokenIdentifier> firstToken =
+        new AuthenticationTokenSelector().selectToken(token.getService(), user.getTokens());
+    assertNotNull(firstToken);
+    assertEquals(token, firstToken);
+
+    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    try {
+      assertFalse(TokenUtil.addTokenIfMissing(conn, user));
+      // make sure we still have the same token
+      Token<AuthenticationTokenIdentifier> secondToken =
+          new AuthenticationTokenSelector().selectToken(token.getService(), user.getTokens());
+      assertEquals(firstToken, secondToken);
+    } finally {
+      conn.close();
+    }
   }
 }
