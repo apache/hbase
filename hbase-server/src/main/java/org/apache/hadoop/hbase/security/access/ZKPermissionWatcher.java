@@ -193,4 +193,22 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
       watcher.abort("Failed writing node "+zkNode+" to zookeeper", e);
     }
   }
+
+  /***
+   * Delete the acl notify node of table
+   * @param tableName
+   */
+  public void deleteTableACLNode(final TableName tableName) {
+    String zkNode = ZKUtil.joinZNode(watcher.baseZNode, ACL_NODE);
+    zkNode = ZKUtil.joinZNode(zkNode, tableName.getNameAsString());
+
+    try {
+      ZKUtil.deleteNode(watcher, zkNode);
+    } catch (KeeperException.NoNodeException e) {
+      LOG.warn("No acl notify node of table '" + tableName + "'");
+    } catch (KeeperException e) {
+      LOG.error("Failed deleting acl node of table '" + tableName + "'", e);
+      watcher.abort("Failed deleting node " + zkNode, e);
+    }
+  }
 }
