@@ -992,7 +992,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    AccessTestAction getPermissionsAction = new AccessTestAction() {
+    AccessTestAction getTablePermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
@@ -1008,14 +1008,34 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
+    AccessTestAction getGlobalPermissionsAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        try {
+          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+          AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(service);
+          ProtobufUtil.getUserPermissions(protocol);
+        } finally {
+          acl.close();
+        }
+        return null;
+      }
+    };
+
     verifyAllowed(grantAction, SUPERUSER, USER_ADMIN, USER_OWNER);
     verifyDenied(grantAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
 
     verifyAllowed(revokeAction, SUPERUSER, USER_ADMIN, USER_OWNER);
     verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
 
-    verifyAllowed(getPermissionsAction, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(getPermissionsAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(getTablePermissionsAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(getTablePermissionsAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    verifyAllowed(getGlobalPermissionsAction, SUPERUSER, USER_ADMIN);
+    verifyDeniedWithException(getGlobalPermissionsAction, USER_CREATE,
+        USER_OWNER, USER_RW, USER_RO, USER_NONE);
   }
 
   @Test
