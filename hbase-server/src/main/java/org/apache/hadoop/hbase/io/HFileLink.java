@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -89,6 +90,7 @@ public class HFileLink extends FileLink {
 
   private final Path archivePath;
   private final Path originPath;
+  private final Path mobPath;
   private final Path tempPath;
 
   /**
@@ -103,14 +105,26 @@ public class HFileLink extends FileLink {
   /**
    * @param rootDir Path to the root directory where hbase files are stored
    * @param archiveDir Path to the hbase archive directory
+   * @param mobDir path to the hbase mob directory
+   * @param path The path of the HFile Link.
+   */
+    public HFileLink(final Path rootDir, final Path archiveDir, final Path mobDir, final Path path) {
+        Path hfilePath = getRelativeTablePath(path);
+        this.tempPath = new Path(new Path(rootDir, HConstants.HBASE_TEMP_DIRECTORY), hfilePath);
+        this.originPath = new Path(rootDir, hfilePath);
+        this.mobPath = new Path(mobDir, hfilePath);
+        this.archivePath = new Path(archiveDir, hfilePath);
+        setLocations(originPath, mobPath, tempPath, archivePath);
+    }
+
+
+    /**
+   * @param rootDir Path to the root directory where hbase files are stored
+   * @param archiveDir Path to the hbase archive directory
    * @param path The path of the HFile Link.
    */
   public HFileLink(final Path rootDir, final Path archiveDir, final Path path) {
-    Path hfilePath = getRelativeTablePath(path);
-    this.tempPath = new Path(new Path(rootDir, HConstants.HBASE_TEMP_DIRECTORY), hfilePath);
-    this.originPath = new Path(rootDir, hfilePath);
-    this.archivePath = new Path(archiveDir, hfilePath);
-    setLocations(originPath, tempPath, archivePath);
+    this(rootDir, archiveDir, new Path(rootDir, MobConstants.MOB_DIR_NAME), path);
   }
 
   /**
@@ -159,6 +173,11 @@ public class HFileLink extends FileLink {
   }
 
   /**
+   * @return the path of the mob hfiles.
+   */
+  public Path getMobPath() { return this.mobPath; }
+
+    /**
    * @param path Path to check.
    * @return True if the path is a HFileLink.
    */
