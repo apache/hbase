@@ -125,8 +125,7 @@ public class TokenUtil {
    * user's credentials.
    * @param conf The configuration for connecting to the cluster
    * @param user The user for whom to obtain the token
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    * @deprecated Replaced by {@link #obtainAndCacheToken(Connection,User)}
    */
@@ -148,8 +147,7 @@ public class TokenUtil {
    * user's credentials.
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    */
   public static void obtainAndCacheToken(final Connection conn,
@@ -184,8 +182,7 @@ public class TokenUtil {
    * @param conf The configuration for connecting to the cluster
    * @param user The user for whom to obtain the token
    * @param job The job instance in which the token should be stored
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    * @deprecated Replaced by {@link #obtainTokenForJob(Connection,User,Job)}
    */
@@ -208,8 +205,7 @@ public class TokenUtil {
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @param job The job instance in which the token should be stored
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    */
   public static void obtainTokenForJob(final Connection conn,
@@ -244,8 +240,7 @@ public class TokenUtil {
    * the credentials for the given map reduce job.
    * @param user The user for whom to obtain the token
    * @param job The job configuration in which the token should be stored
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    * @deprecated Replaced by {@link #obtainTokenForJob(Connection,JobConf,User)}
    */
@@ -268,8 +263,7 @@ public class TokenUtil {
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @param job The job configuration in which the token should be stored
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    */
   public static void obtainTokenForJob(final Connection conn, final JobConf job, User user)
@@ -305,8 +299,7 @@ public class TokenUtil {
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @param job The job configuration in which the token should be stored
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    */
   public static void addTokenForJob(final Connection conn, final JobConf job, User user)
@@ -326,8 +319,7 @@ public class TokenUtil {
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
    * @param job The job instance in which the token should be stored
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    */
   public static void addTokenForJob(final Connection conn, User user, Job job)
@@ -345,8 +337,7 @@ public class TokenUtil {
    *
    * @param conn The HBase cluster connection
    * @param user The user for whom to obtain the token
-   * @throws IOException If making a remote call to the
-   *     {@link AuthenticationProtos.AuthenticationService} fails
+   * @throws IOException If making a remote call to the authentication service fails
    * @throws InterruptedException If executing as the given user is interrupted
    * @return true if the token was added, false if it already existed
    */
