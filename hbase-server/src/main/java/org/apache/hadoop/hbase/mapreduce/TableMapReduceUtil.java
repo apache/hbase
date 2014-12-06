@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
+import org.apache.hadoop.hbase.security.token.TokenUtil;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -452,10 +455,20 @@ public class TableMapReduceUtil {
         if (quorumAddress != null) {
           Configuration peerConf = HBaseConfiguration.create(job.getConfiguration());
           ZKUtil.applyClusterKeyToConf(peerConf, quorumAddress);
-          obtainAuthTokenForJob(job, peerConf, user);
+          Connection peerConn = ConnectionFactory.createConnection(peerConf);
+          try {
+            TokenUtil.addTokenForJob(peerConn, user, job);
+          } finally {
+            peerConn.close();
+          }
         }
 
-        obtainAuthTokenForJob(job, job.getConfiguration(), user);
+        Connection conn = ConnectionFactory.createConnection(job.getConfiguration());
+        try {
+          TokenUtil.addTokenForJob(conn, user, job);
+        } finally {
+          conn.close();
+        }
       } catch (InterruptedException ie) {
         LOG.info("Interrupted obtaining user authentication token");
         Thread.currentThread().interrupt();
@@ -481,38 +494,16 @@ public class TableMapReduceUtil {
       try {
         Configuration peerConf = HBaseConfiguration.create(job.getConfiguration());
         ZKUtil.applyClusterKeyToConf(peerConf, quorumAddress);
-        obtainAuthTokenForJob(job, peerConf, userProvider.getCurrent());
+        Connection peerConn = ConnectionFactory.createConnection(peerConf);
+        try {
+          TokenUtil.addTokenForJob(peerConn, userProvider.getCurrent(), job);
+        } finally {
+          peerConn.close();
+        }
       } catch (InterruptedException e) {
         LOG.info("Interrupted obtaining user authentication token");
         Thread.interrupted();
       }
-    }
-  }
-
-  private static void obtainAuthTokenForJob(Job job, Configuration conf, User user)
-      throws IOException, InterruptedException {
-    Token<AuthenticationTokenIdentifier> authToken = getAuthToken(conf, user);
-    if (authToken == null) {
-      user.obtainAuthTokenForJob(conf, job);
-    } else {
-      job.getCredentials().addToken(authToken.getService(), authToken);
-    }
-  }
-
-  /**
-   * Get the authentication token of the user for the cluster specified in the configuration
-   * @return null if the user does not have the token, otherwise the auth token for the cluster.
-   */
-  private static Token<AuthenticationTokenIdentifier> getAuthToken(Configuration conf, User user)
-      throws IOException, InterruptedException {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "mr-init-credentials", null);
-    try {
-      String clusterId = ZKClusterId.readClusterIdZNode(zkw);
-      return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getUGI().getTokens());
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    } finally {
-      zkw.close();
     }
   }
 
