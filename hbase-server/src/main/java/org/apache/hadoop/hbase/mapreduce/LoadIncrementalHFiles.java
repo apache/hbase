@@ -301,8 +301,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
         int maxRetries = getConf().getInt("hbase.bulkload.retries.number", 0);
         if (maxRetries != 0 && count >= maxRetries) {
-          LOG.error("Retry attempted " + count +  " times without completing, bailing out");
-          return;
+          throw new IOException("Retry attempted " + count +
+            " times without completing, bailing out");
         }
         count++;
 
