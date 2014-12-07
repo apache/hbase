@@ -112,6 +112,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -222,6 +223,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   //should we check the compression codec type at master side, default true, HBASE-6370
   private final boolean masterCheckCompression;
 
+  //should we check encryption settings at master side, default true
+  private final boolean masterCheckEncryption;
+
   Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   // monitor for snapshot of hbase tables
@@ -287,8 +291,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       this.conf.set("mapreduce.task.attempt.id", "hb_m_" + this.serverName.toString());
     }
 
-    //should we check the compression codec type at master side, default true, HBASE-6370
+    // should we check the compression codec type at master side, default true, HBASE-6370
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
+
+    // should we check encryption settings at master side, default true
+    this.masterCheckEncryption = conf.getBoolean("hbase.master.check.encryption", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
 
@@ -1225,7 +1232,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
 
     // check compression can be loaded
-    checkCompression(htd);
+    try {
+      checkCompression(htd);
+    } catch (IOException e) {
+      throw new DoNotRetryIOException(e.getMessage(), e);
+    }
+
+    // check encryption can be loaded
+    try {
+      checkEncryption(conf, htd);
+    } catch (IOException e) {
+      throw new DoNotRetryIOException(e.getMessage(), e);
+    }
 
     // check that we have at least 1 CF
     if (htd.getColumnFamilies().length == 0) {
@@ -1347,6 +1365,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     CompressionTest.testCompression(hcd.getCompactionCompression());
   }
 
+  private void checkEncryption(final Configuration conf, final HTableDescriptor htd)
+  throws IOException {
+    if (!this.masterCheckEncryption) return;
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      checkEncryption(conf, hcd);
+    }
+  }
+
+  private void checkEncryption(final Configuration conf, final HColumnDescriptor hcd)
+  throws IOException {
+    if (!this.masterCheckEncryption) return;
+    EncryptionTest.testEncryption(conf, hcd.getEncryptionType(), hcd.getEncryptionKey());
+  }
+
   private HRegionInfo[] getHRegionInfos(HTableDescriptor hTableDescriptor,
     byte[][] splitKeys) {
     long regionId = System.currentTimeMillis();
@@ -1407,6 +1439,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throws IOException {
     checkInitialized();
     checkCompression(columnDescriptor);
+    checkEncryption(conf, columnDescriptor);
     if (cpHost != null) {
       if (cpHost.preAddColumn(tableName, columnDescriptor)) {
         return;
@@ -1424,6 +1457,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throws IOException {
     checkInitialized();
     checkCompression(descriptor);
+    checkEncryption(conf, descriptor);
     if (cpHost != null) {
       if (cpHost.preModifyColumn(tableName, descriptor)) {
         return;
