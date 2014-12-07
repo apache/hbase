@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -260,7 +261,6 @@ public class TestHBaseAdminNoCluster {
             (IsCatalogJanitorEnabledRequest)Mockito.any());
       }
     });
-
     // Admin.mergeRegions()
     testMasterOperationIsRetried(new MethodCaller() {
       @Override
@@ -304,8 +304,10 @@ public class TestHBaseAdminNoCluster {
 
     Admin admin = null;
     try {
-      admin = new HBaseAdmin(connection);
-
+      admin = Mockito.spy(new HBaseAdmin(connection));
+      // mock the call to getRegion since in the absence of a cluster (which means the meta
+      // is not assigned), getRegion can't function
+      Mockito.doReturn(null).when(((HBaseAdmin)admin)).getRegion(Matchers.<byte[]>any());
       try {
         caller.call(admin); // invoke the HBaseAdmin method
         fail();

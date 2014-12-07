@@ -148,6 +148,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
@@ -2019,7 +2020,12 @@ public class HBaseAdmin implements Admin {
   public void mergeRegions(final byte[] encodedNameOfRegionA,
       final byte[] encodedNameOfRegionB, final boolean forcible)
       throws IOException {
-
+    Pair<HRegionInfo, ServerName> pair = getRegion(encodedNameOfRegionA);
+    if (pair != null && pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)
+      throw new IllegalArgumentException("Can't invoke merge on non-default regions directly");
+    pair = getRegion(encodedNameOfRegionB);
+    if (pair != null && pair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID)
+      throw new IllegalArgumentException("Can't invoke merge on non-default regions directly");
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
@@ -2098,7 +2104,8 @@ public class HBaseAdmin implements Admin {
         // check for parents
         if (r.isSplitParent()) continue;
         // if a split point given, only split that particular region
-        if (splitPoint != null && !r.containsRow(splitPoint)) continue;
+        if (r.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
+           (splitPoint != null && !r.containsRow(splitPoint))) continue;
         // call out to region server to do split now
         split(pair.getSecond(), pair.getFirst(), splitPoint);
       }
@@ -2118,6 +2125,11 @@ public class HBaseAdmin implements Admin {
     Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
     if (regionServerPair == null) {
       throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
+    }
+    if (regionServerPair.getFirst() != null &&
+        regionServerPair.getFirst().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+      throw new IllegalArgumentException("Can't split replicas directly. "
+          + "Replicas are auto-split when their primary is split.");
     }
     if (regionServerPair.getSecond() == null) {
       throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
@@ -2150,7 +2162,8 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  private void split(final ServerName sn, final HRegionInfo hri,
+  @VisibleForTesting
+  public void split(final ServerName sn, final HRegionInfo hri,
       byte[] splitPoint) throws IOException {
     if (hri.getStartKey() != null && splitPoint != null &&
          Bytes.compareTo(hri.getStartKey(), splitPoint) == 0) {
@@ -2225,8 +2238,17 @@ public class HBaseAdmin implements Admin {
             LOG.warn("No serialized HRegionInfo in " + data);
             return true;
           }
-          if (!encodedName.equals(info.getEncodedName())) return true;
-          ServerName sn = HRegionInfo.getServerName(data);
+          RegionLocations rl = MetaTableAccessor.getRegionLocations(data);
+          boolean matched = false;
+          ServerName sn = null;
+          for (HRegionLocation h : rl.getRegionLocations()) {
+            if (h != null && encodedName.equals(h.getRegionInfo().getEncodedName())) {
+              sn = h.getServerName();
+              info = h.getRegionInfo();
+              matched = true;
+            }
+          }
+          if (!matched) return true;
           result.set(new Pair<HRegionInfo, ServerName>(info, sn));
           return false; // found the region, stop
         }

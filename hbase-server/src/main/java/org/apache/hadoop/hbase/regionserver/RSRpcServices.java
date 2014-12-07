@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
+import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -1212,6 +1213,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       boolean forcible = request.getForcible();
       regionA.startRegionOperation(Operation.MERGE_REGION);
       regionB.startRegionOperation(Operation.MERGE_REGION);
+      if (regionA.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
+          regionB.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        throw new ServiceException(new MergeRegionException("Can't merge non-default replicas"));
+      }
       LOG.info("Receiving merging request for  " + regionA + ", " + regionB
           + ",forcible=" + forcible);
       long startTime = EnvironmentEdgeManager.currentTime();
@@ -1556,6 +1561,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       requestCount.increment();
       HRegion region = getRegion(request.getRegion());
       region.startRegionOperation(Operation.SPLIT_REGION);
+      if (region.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        throw new IOException("Can't split replicas directly. "
+            + "Replicas are auto-split when their primary is split.");
+      }
       LOG.info("Splitting " + region.getRegionNameAsString());
       long startTime = EnvironmentEdgeManager.currentTime();
       HRegion.FlushResult flushResult = region.flushcache();
