@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.util.test;
 
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -31,6 +33,9 @@ import org.apache.hadoop.hbase.util.MD5Hash;
  */
 @InterfaceAudience.Private
 public class LoadTestKVGenerator {
+
+  private static final Log LOG = LogFactory.getLog(LoadTestKVGenerator.class);
+  private static int logLimit = 10;
 
   /** A random number generator for determining value size */
   private Random randomForValueSize = new Random();
@@ -56,7 +61,13 @@ public class LoadTestKVGenerator {
    */
   public static boolean verify(byte[] value, byte[]... seedStrings) {
     byte[] expectedData = getValueForRowColumn(value.length, seedStrings);
-    return Bytes.equals(expectedData, value);
+    boolean equals = Bytes.equals(expectedData, value);
+    if (!equals && LOG.isDebugEnabled() && logLimit > 0) {
+      LOG.debug("verify failed, expected value: " + Bytes.toStringBinary(expectedData)
+        + " actual value: "+ Bytes.toStringBinary(value));
+      logLimit--; // this is not thread safe, but at worst we will have more logging
+    }
+    return equals;
   }
 
   /**

@@ -397,4 +397,38 @@ public class TestCellUtil {
     assertEquals(kv.toString(), cellToString);
     
   }
+
+  @Test
+  public void testToString1() {
+    String row = "test.row";
+    String family = "test.family";
+    String qualifier = "test.qualifier";
+    long timestamp = 42;
+    Type type = Type.Put;
+    String value = "test.value";
+    long seqId = 1042;
+
+    Cell cell = CellUtil.createCell(Bytes.toBytes(row), Bytes.toBytes(family),
+      Bytes.toBytes(qualifier), timestamp, type.getCode(), Bytes.toBytes(value), seqId);
+
+    String nonVerbose = CellUtil.toString(cell, false);
+    String verbose = CellUtil.toString(cell, true);
+
+    System.out.println("nonVerbose=" + nonVerbose);
+    System.out.println("verbose=" + verbose);
+
+    Assert.assertEquals(
+        String.format("%s/%s:%s/%d/%s/vlen=%s/seqid=%s",
+          row, family, qualifier, timestamp, type.toString(),
+          Bytes.toBytes(value).length, seqId),
+        nonVerbose);
+
+    Assert.assertEquals(
+      String.format("%s/%s:%s/%d/%s/vlen=%s/seqid=%s/%s",
+        row, family, qualifier, timestamp, type.toString(), Bytes.toBytes(value).length,
+        seqId, value),
+      verbose);
+
+    // TODO: test with tags
+  }
 }

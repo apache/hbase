@@ -854,4 +854,33 @@ public final class CellUtil {
     }
     return commonPrefix;
   }
+
+  /** Returns a string representation of the cell */
+  public static String toString(Cell cell, boolean verbose) {
+    if (cell == null) {
+      return "";
+    }
+    StringBuilder builder = new StringBuilder();
+    String keyStr = getCellKeyAsString(cell);
+
+    String tag = null;
+    String value = null;
+    if (verbose) {
+      // TODO: pretty print tags as well
+      tag = Bytes.toStringBinary(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+      value = Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength());
+    }
+
+    builder
+      .append(keyStr);
+    if (tag != null && !tag.isEmpty()) {
+      builder.append("/").append(tag);
+    }
+    if (value != null) {
+      builder.append("/").append(value);
+    }
+
+    return builder.toString();
+  }
 }

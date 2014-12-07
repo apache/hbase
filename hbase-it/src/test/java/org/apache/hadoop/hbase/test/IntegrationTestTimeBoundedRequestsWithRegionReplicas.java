@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.test;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -31,12 +33,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.IntegrationTestIngest;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -163,7 +168,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     long refreshTime = conf.getLong(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 0);
     if (refreshTime > 0 && refreshTime <= 10000) {
       LOG.info("Sleeping " + refreshTime + "ms to ensure that the data is replicated");
-      Threads.sleep(refreshTime);
+      Threads.sleep(refreshTime*3);
     } else {
       LOG.info("Reopening the table");
       admin.disableTable(getTablename());
@@ -337,6 +342,15 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
         if (elapsedNano > timeoutNano) {
           timedOutReads.incrementAndGet();
           numReadFailures.addAndGet(1); // fail the test
+          for (Result r : results) {
+            LOG.error("FAILED FOR " + r);
+            RegionLocations rl = ((ClusterConnection)connection).
+                locateRegion(tableName, r.getRow(), true, true);
+            HRegionLocation locations[] = rl.getRegionLocations();
+            for (HRegionLocation h : locations) {
+              LOG.error("LOCATION " + h);
+            }
+          }
         }
       }
     }
