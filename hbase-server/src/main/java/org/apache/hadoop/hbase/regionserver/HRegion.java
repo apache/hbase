@@ -138,6 +138,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -4680,7 +4681,7 @@ public class HRegion implements HeapSize { // , Writable{
   protected HRegion openHRegion(final CancelableProgressable reporter)
   throws IOException {
     checkCompressionCodecs();
-
+    checkEncryption();
     this.openSeqNum = initialize(reporter);
     this.setSequenceId(openSeqNum);
     return this;
@@ -4690,6 +4691,12 @@ public class HRegion implements HeapSize { // , Writable{
     for (HColumnDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
       CompressionTest.testCompression(fam.getCompression());
       CompressionTest.testCompression(fam.getCompactionCompression());
+    }
+  }
+
+  private void checkEncryption() throws IOException {
+    for (HColumnDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
+      EncryptionTest.testEncryption(conf, fam.getEncryptionType(), fam.getEncryptionKey());
     }
   }
 

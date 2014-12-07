@@ -229,6 +229,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -389,8 +390,11 @@ MasterServices, Server {
    */
   private ObjectName mxBean = null;
 
-  //should we check the compression codec type at master side, default true, HBASE-6370
+  // should we check the compression codec type at master side, default true, HBASE-6370
   private final boolean masterCheckCompression;
+
+  // should we check encryption settings at master side, default true
+  private final boolean masterCheckEncryption;
 
   private SpanReceiverHost spanReceiverHost;
 
@@ -493,8 +497,11 @@ MasterServices, Server {
     // metrics interval: using the same property as region server.
     this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
 
-    //should we check the compression codec type at master side, default true, HBASE-6370
+    // should we check the compression codec type at master side, default true, HBASE-6370
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
+
+    // should we check encryption settings at master side, default true
+    this.masterCheckEncryption = conf.getBoolean("hbase.master.check.encryption", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
 
@@ -1847,7 +1854,18 @@ MasterServices, Server {
     }
 
     // check compression can be loaded
-    checkCompression(htd);
+    try {
+      checkCompression(htd);
+    } catch (IOException e) {
+      throw new DoNotRetryIOException(e.getMessage(), e);
+    }
+
+    // check encryption can be loaded
+    try {
+      checkEncryption(conf, htd);
+    } catch (IOException e) {
+      throw new DoNotRetryIOException(e.getMessage(), e);
+    }
 
     // check that we have at least 1 CF
     if (htd.getColumnFamilies().length == 0) {
@@ -1901,6 +1919,20 @@ MasterServices, Server {
     if (!this.masterCheckCompression) return;
     CompressionTest.testCompression(hcd.getCompression());
     CompressionTest.testCompression(hcd.getCompactionCompression());
+  }
+
+  private void checkEncryption(final Configuration conf, final HTableDescriptor htd)
+  throws IOException {
+    if (!this.masterCheckEncryption) return;
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      checkEncryption(conf, hcd);
+    }
+  }
+
+  private void checkEncryption(final Configuration conf, final HColumnDescriptor hcd)
+  throws IOException {
+    if (!this.masterCheckEncryption) return;
+    EncryptionTest.testEncryption(conf, hcd.getEncryptionType(), hcd.getEncryptionKey());
   }
 
   @Override
@@ -1998,6 +2030,7 @@ MasterServices, Server {
       throws IOException {
     checkInitialized();
     checkCompression(columnDescriptor);
+    checkEncryption(conf, columnDescriptor);
     if (cpHost != null) {
       if (cpHost.preAddColumn(tableName, columnDescriptor)) {
         return;
@@ -2027,6 +2060,7 @@ MasterServices, Server {
       throws IOException {
     checkInitialized();
     checkCompression(descriptor);
+    checkEncryption(conf, descriptor);
     if (cpHost != null) {
       if (cpHost.preModifyColumn(tableName, descriptor)) {
         return;

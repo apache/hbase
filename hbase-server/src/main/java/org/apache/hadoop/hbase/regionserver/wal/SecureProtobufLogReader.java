@@ -34,9 +34,9 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
-import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WALHdrResult;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.EncryptionTest;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecureProtobufLogReader extends ProtobufLogReader {
@@ -66,6 +66,9 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
     if (result == WALHdrResult.SUCCESS && builder.hasEncryptionKey()) {
       // Serialized header data has been merged into the builder from the
       // stream.
+
+      EncryptionTest.testKeyProvider(conf);
+      EncryptionTest.testCipherProvider(conf);
 
       // Retrieve a usable key
 
