@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.types;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
 import org.junit.Test;

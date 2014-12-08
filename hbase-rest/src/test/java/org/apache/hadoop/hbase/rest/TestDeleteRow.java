@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import javax.xml.bind.JAXBException;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

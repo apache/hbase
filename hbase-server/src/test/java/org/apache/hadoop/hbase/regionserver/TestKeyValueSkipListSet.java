@@ -22,7 +22,7 @@ import java.util.Iterator;
 import java.util.SortedSet;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;

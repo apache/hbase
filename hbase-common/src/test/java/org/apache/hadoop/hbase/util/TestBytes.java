@@ -29,7 +29,7 @@ import java.util.Random;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 

@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.slab;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.junit.After;
 import org.junit.Before;

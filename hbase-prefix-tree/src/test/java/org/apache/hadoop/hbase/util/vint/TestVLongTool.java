@@ -22,9 +22,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.number.RandomNumberUtils;
-import org.apache.hadoop.hbase.util.vint.UVLongTool;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

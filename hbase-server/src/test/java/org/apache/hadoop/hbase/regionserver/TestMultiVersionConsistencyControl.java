@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
 import java.util.Random;

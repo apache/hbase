@@ -25,8 +25,8 @@ import static org.mockito.Mockito.verify;
 
 import java.util.Random;
 
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.junit.Assert;
 import org.junit.Test;

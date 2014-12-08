@@ -22,9 +22,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 
 /**
  * Checks tests are categorized.
