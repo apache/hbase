@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
@@ -298,8 +298,8 @@ public class QuotaTableUtil {
    *  Quotas protobuf helpers
    */
   protected static Quotas quotasFromData(final byte[] data) throws IOException {
-    int magicLen = ProtobufUtil.lengthOfPBMagic();
-    if (!ProtobufUtil.isPBMagicPrefix(data, 0, magicLen)) {
+    int magicLen = ProtobufMagic.lengthOfPBMagic();
+    if (!ProtobufMagic.isPBMagicPrefix(data, 0, magicLen)) {
       throw new IOException("Missing pb magic prefix");
     }
     return Quotas.parseFrom(new ByteArrayInputStream(data, magicLen, data.length - magicLen));
@@ -307,7 +307,7 @@ public class QuotaTableUtil {
 
   protected static byte[] quotasToData(final Quotas data) throws IOException {
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    stream.write(ProtobufUtil.PB_MAGIC);
+    stream.write(ProtobufMagic.PB_MAGIC);
     data.writeTo(stream);
     return stream.toByteArray();
   }

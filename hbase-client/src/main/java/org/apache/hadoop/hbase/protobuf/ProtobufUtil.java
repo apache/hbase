@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -172,7 +173,6 @@ public final class ProtobufUtil {
   private final static Map<String, Class<?>>
     PRIMITIVES = new HashMap<String, Class<?>>();
 
-
   /**
    * Many results are simple: no cell, exists true or false. To save on object creations,
    *  we reuse them across calls.
@@ -241,27 +241,20 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Magic we put ahead of a serialized protobuf message.
-   * For example, all znode content is protobuf messages with the below magic
-   * for preamble.
-   */
-  public static final byte [] PB_MAGIC = new byte [] {'P', 'B', 'U', 'F'};
-  private static final String PB_MAGIC_STR = Bytes.toString(PB_MAGIC);
-
-  /**
-   * Prepend the passed bytes with four bytes of magic, {@link #PB_MAGIC}, to flag what
-   * follows as a protobuf in hbase.  Prepend these bytes to all content written to znodes, etc.
+   * Prepend the passed bytes with four bytes of magic, {@link ProtobufMagic#PB_MAGIC},
+   * to flag what follows as a protobuf in hbase.  Prepend these bytes to all content written to
+   * znodes, etc.
    * @param bytes Bytes to decorate
    * @return The passed <code>bytes</codes> with magic prepended (Creates a new
-   * byte array that is <code>bytes.length</code> plus {@link #PB_MAGIC}.length.
+   * byte array that is <code>bytes.length</code> plus {@link ProtobufMagic#PB_MAGIC}.length.
    */
   public static byte [] prependPBMagic(final byte [] bytes) {
-    return Bytes.add(PB_MAGIC, bytes);
+    return Bytes.add(ProtobufMagic.PB_MAGIC, bytes);
   }
 
   /**
    * @param bytes Bytes to check.
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
+   * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes) {
     if (bytes == null) return false;
@@ -270,11 +263,12 @@ public final class ProtobufUtil {
 
   /**
    * @param bytes Bytes to check.
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
+   * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
-    if (bytes == null || len < PB_MAGIC.length) return false;
-    return Bytes.compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, offset, PB_MAGIC.length) == 0;
+    if (bytes == null || len < ProtobufMagic.PB_MAGIC.length) return false;
+    return Bytes.compareTo(ProtobufMagic.PB_MAGIC, 0, ProtobufMagic.PB_MAGIC.length,
+      bytes, offset, ProtobufMagic.PB_MAGIC.length) == 0;
   }
 
   /**
@@ -283,15 +277,16 @@ public final class ProtobufUtil {
    */
   public static void expectPBMagicPrefix(final byte [] bytes) throws DeserializationException {
     if (!isPBMagicPrefix(bytes)) {
-      throw new DeserializationException("Missing pb magic " + PB_MAGIC_STR + " prefix");
+      throw new DeserializationException("Missing pb magic " +
+          Bytes.toString(ProtobufMagic.PB_MAGIC) + " prefix");
     }
   }
 
   /**
-   * @return Length of {@link #PB_MAGIC}
+   * @return Length of {@link ProtobufMagic#PB_MAGIC}
    */
   public static int lengthOfPBMagic() {
-    return PB_MAGIC.length;
+    return ProtobufMagic.PB_MAGIC.length;
   }
 
   /**
@@ -1883,7 +1878,7 @@ public final class ProtobufUtil {
   public static byte [] toDelimitedByteArray(final Message m) throws IOException {
     // Allocate arbitrary big size so we avoid resizing.
     ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);
-    baos.write(PB_MAGIC);
+    baos.write(ProtobufMagic.PB_MAGIC);
     m.writeDelimitedTo(baos);
     return baos.toByteArray();
   }
