@@ -1775,7 +1775,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public int loadTable(final HTable t, final byte[][] f, byte[] value, boolean writeToWAL) throws IOException {
-    t.setAutoFlush(false);
+    t.setAutoFlushTo(false);
     int rowCount = 0;
     for (byte[] row : HBaseTestingUtility.ROWS) {
       Put put = new Put(row);

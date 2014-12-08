@@ -118,12 +118,11 @@ public class HTable implements HTableInterface, RegionLocator {
   private TableConfiguration tableConfiguration;
   protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
   private long writeBufferSize;
-  private boolean clearBufferOnFail;
-  private boolean autoFlush;
-  protected long currentWriteBufferSize;
+  private boolean autoFlush = true;
+  protected long currentWriteBufferSize = 0 ;
+  private boolean closed = false;
   protected int scannerCaching;
   private ExecutorService pool;  // For Multi & Scan
-  private boolean closed;
   private int operationTimeout;
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
@@ -354,7 +353,6 @@ public class HTable implements HTableInterface, RegionLocator {
     this.operationTimeout = tableName.isSystemTable() ?
         tableConfiguration.getMetaOperationTimeout() : tableConfiguration.getOperationTimeout();
     this.writeBufferSize = tableConfiguration.getWriteBufferSize();
-    this.clearBufferOnFail = true;
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = tableConfiguration.getScannerCaching();
@@ -1098,8 +1096,7 @@ public class HTable implements HTableInterface, RegionLocator {
         while (!writeAsyncBuffer.isEmpty()) {
           ap.submit(tableName, writeAsyncBuffer, true, null, false);
         }
-        List<Row> failedRows = clearBufferOnFail ? null : writeAsyncBuffer;
-        RetriesExhaustedWithDetailsException error = ap.waitForAllPreviousOpsAndReset(failedRows);
+        RetriesExhaustedWithDetailsException error = ap.waitForAllPreviousOpsAndReset(null);
         if (error != null) {
           throw error;
         }
@@ -1574,7 +1571,7 @@ public class HTable implements HTableInterface, RegionLocator {
   @Deprecated
   @Override
   public void setAutoFlush(boolean autoFlush) {
-    setAutoFlush(autoFlush, autoFlush);
+    this.autoFlush = autoFlush;
   }
 
   /**
@@ -1582,7 +1579,7 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @Override
   public void setAutoFlushTo(boolean autoFlush) {
-    setAutoFlush(autoFlush, clearBufferOnFail);
+    this.autoFlush = autoFlush;
   }
 
   /**
@@ -1591,7 +1588,6 @@ public class HTable implements HTableInterface, RegionLocator {
   @Override
   public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
     this.autoFlush = autoFlush;
-    this.clearBufferOnFail = autoFlush || clearBufferOnFail;
   }
 
   /**
