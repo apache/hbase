@@ -21,9 +21,11 @@ package org.apache.hadoop.hbase.wal;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -460,43 +462,48 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     System.exit(1);
   }
 
+  private final Set<WAL> walsListenedTo = new HashSet<WAL>();
+
   private HRegion openRegion(final FileSystem fs, final Path dir, final HTableDescriptor htd,
       final WALFactory wals, final long whenToRoll) throws IOException {
     // Initialize HRegion
     HRegionInfo regionInfo = new HRegionInfo(htd.getTableName());
     // Initialize WAL
     final WAL wal = wals.getWAL(regionInfo.getEncodedNameAsBytes());
-    wal.registerWALActionsListener(new WALActionsListener.Base() {
-      private int appends = 0;
+    // If we haven't already, attach a listener to this wal to handle rolls and metrics.
+    if (walsListenedTo.add(wal)) {
+      wal.registerWALActionsListener(new WALActionsListener.Base() {
+        private int appends = 0;
 
-      @Override
-      public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey,
-          WALEdit logEdit) {
-        this.appends++;
-        if (this.appends % whenToRoll == 0) {
-          LOG.info("Rolling after " + appends + " edits");
-          // We used to do explicit call to rollWriter but changed it to a request
-          // to avoid dead lock (there are less threads going on in this class than
-          // in the regionserver -- regionserver does not have the issue).
-          // TODO I think this means no rolling actually happens; the request relies on there
-          // being a LogRoller.
-          DefaultWALProvider.requestLogRoll(wal);
+        @Override
+        public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey,
+            WALEdit logEdit) {
+          this.appends++;
+          if (this.appends % whenToRoll == 0) {
+            LOG.info("Rolling after " + appends + " edits");
+            // We used to do explicit call to rollWriter but changed it to a request
+            // to avoid dead lock (there are less threads going on in this class than
+            // in the regionserver -- regionserver does not have the issue).
+            // TODO I think this means no rolling actually happens; the request relies on there
+            // being a LogRoller.
+            DefaultWALProvider.requestLogRoll(wal);
+          }
         }
-      }
 
-      @Override
-      public void postSync(final long timeInNanos, final int handlerSyncs) {
-        syncMeter.mark();
-        syncHistogram.update(timeInNanos);
-        syncCountHistogram.update(handlerSyncs);
-      }
+        @Override
+        public void postSync(final long timeInNanos, final int handlerSyncs) {
+          syncMeter.mark();
+          syncHistogram.update(timeInNanos);
+          syncCountHistogram.update(handlerSyncs);
+        }
 
-      @Override
-      public void postAppend(final long size, final long elapsedTime) {
-        appendMeter.mark(size);
-      }
-    });
-    wal.rollWriter();
+        @Override
+        public void postAppend(final long size, final long elapsedTime) {
+          appendMeter.mark(size);
+        }
+      });
+      wal.rollWriter();
+    }
      
     return HRegion.createHRegion(regionInfo, dir, getConf(), htd, wal);
   }
