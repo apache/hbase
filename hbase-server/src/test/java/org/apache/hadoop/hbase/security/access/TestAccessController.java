@@ -155,6 +155,10 @@ public class TestAccessController extends SecureTestUtil {
   // user with no permissions
   private static User USER_NONE;
 
+  // TODO: convert this test to cover the full matrix in
+  // https://hbase.apache.org/book/appendix_acl_matrix.html
+  // creating all Scope x Permission combinations
+
   private static TableName TEST_TABLE2 = TableName.valueOf("testtable2");
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
   private static byte[] TEST_QUALIFIER = Bytes.toBytes("q1");
@@ -340,8 +344,8 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(truncateTable, SUPERUSER, USER_ADMIN);
-    verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE,USER_CREATE, USER_OWNER);
+    verifyAllowed(truncateTable, SUPERUSER, USER_ADMIN, USER_CREATE);
+    verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE, USER_OWNER);
   }
 
   @Test
