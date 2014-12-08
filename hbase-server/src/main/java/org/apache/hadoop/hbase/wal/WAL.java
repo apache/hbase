@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 /**
  * A Write Ahead Log (WAL) provides service for reading, writing waledits. This interface provides
  * APIs for WAL users (such as RegionServer) to use the WAL (do append, sync, etc).
+ *
+ * Note that some internals, such as log rolling and performance evaluation tools, will use
+ * WAL.equals to determine if they have already seen a given WAL.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

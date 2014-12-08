@@ -19,9 +19,14 @@
 package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -329,5 +334,27 @@ public class TestDefaultWALProvider {
       innerMain(new Configuration(TEST_UTIL.getConfiguration()),
         new String [] {"-threads", "3", "-verify", "-noclosefs", "-iterations", "3000"});
     assertEquals(0, errCode);
+  }
+
+  /**
+   * Ensure that we can use Set.add to deduplicate WALs
+   */
+  @Test
+  public void setMembershipDedups() throws IOException {
+    final Configuration localConf = new Configuration(conf);
+    localConf.set(WALFactory.WAL_PROVIDER, DefaultWALProvider.class.getName());
+    final WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
+    try {
+      final Set<WAL> seen = new HashSet<WAL>(1);
+      final Random random = new Random();
+      assertTrue("first attempt to add WAL from default provider should work.",
+          seen.add(wals.getWAL(Bytes.toBytes(random.nextInt()))));
+      for (int i = 0; i < 1000; i++) {
+        assertFalse("default wal provider is only supposed to return a single wal, which should " +
+            "compare as .equals itself.", seen.add(wals.getWAL(Bytes.toBytes(random.nextInt()))));
+      }
+    } finally {
+      wals.close();
+    }
   }
 }
