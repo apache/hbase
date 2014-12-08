@@ -30,7 +30,7 @@ import java.io.FileOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

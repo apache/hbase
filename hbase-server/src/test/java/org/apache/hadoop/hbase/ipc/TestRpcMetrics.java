@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

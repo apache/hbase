@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.YammerHistogramUtils;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;

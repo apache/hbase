@@ -28,7 +28,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.ServerConfigurationKeys;
 import org.apache.hadoop.hbase.http.lib.StaticUserWebFilter.StaticUserFilter;
 import org.junit.Test;

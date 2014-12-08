@@ -25,7 +25,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import javax.naming.NamingException;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

@@ -19,17 +19,8 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.Base64;
-
-import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)

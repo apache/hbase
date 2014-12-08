@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;

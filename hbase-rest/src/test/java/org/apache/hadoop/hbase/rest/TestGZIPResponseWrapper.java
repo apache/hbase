@@ -30,7 +30,7 @@ import java.io.IOException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.rest.filter.GZIPResponseStream;
 import org.apache.hadoop.hbase.rest.filter.GZIPResponseWrapper;
 import org.junit.Test;

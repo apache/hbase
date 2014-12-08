@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;

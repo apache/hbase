@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.zookeeper.KeeperException;
 
 import org.junit.Test;

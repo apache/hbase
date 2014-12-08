@@ -22,9 +22,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.*;
 import java.net.*;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.HttpServer;
-import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;

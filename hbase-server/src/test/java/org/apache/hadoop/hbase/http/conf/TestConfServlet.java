@@ -27,8 +27,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.conf.ConfServlet;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mortbay.util.ajax.JSON;

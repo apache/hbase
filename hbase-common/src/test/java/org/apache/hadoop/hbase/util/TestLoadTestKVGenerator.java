@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 
 @Category(SmallTests.class)
 public class TestLoadTestKVGenerator {

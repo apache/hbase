@@ -21,8 +21,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.HttpServer;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 
 import java.io.FileNotFoundException;
 

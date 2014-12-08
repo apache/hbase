@@ -22,7 +22,7 @@ import static org.junit.Assert.assertNotEquals;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

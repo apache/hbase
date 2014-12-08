@@ -12,7 +12,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.regionserver.MemStoreFlusher.FlushRegionEntry;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;

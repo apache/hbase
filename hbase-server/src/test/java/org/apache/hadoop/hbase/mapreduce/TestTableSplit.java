@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
 import org.junit.Test;

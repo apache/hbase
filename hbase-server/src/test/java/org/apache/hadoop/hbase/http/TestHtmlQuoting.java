@@ -21,9 +21,7 @@ import static org.junit.Assert.*;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.HtmlQuoting;
-import org.apache.hadoop.hbase.http.HttpServer;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;

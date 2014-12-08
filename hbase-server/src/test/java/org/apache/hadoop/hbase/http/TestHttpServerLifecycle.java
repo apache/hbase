@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.HttpRequestLogAppender;
-import org.apache.hadoop.hbase.http.HttpServer;
-import org.apache.log4j.Logger;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

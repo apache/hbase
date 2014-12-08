@@ -23,9 +23,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.apache.hadoop.hbase.util.MultiThreadedReader;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
 

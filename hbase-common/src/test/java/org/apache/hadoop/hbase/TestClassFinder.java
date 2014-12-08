@@ -42,7 +42,7 @@ import java.util.jar.Manifest;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
 /**

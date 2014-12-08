@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat.WALRecordReader;
 import org.apache.hadoop.hbase.mapreduce.HLogInputFormat.HLogKeyRecordReader;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;

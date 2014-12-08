@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.ProgramDriver;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

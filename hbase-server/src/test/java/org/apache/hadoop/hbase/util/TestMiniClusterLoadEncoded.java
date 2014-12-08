@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.Parameterized.Parameters;

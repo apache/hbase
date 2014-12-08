@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.timestamp;
 import java.io.IOException;
 import java.util.Collection;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.timestamp.TimestampDecoder;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.LongEncoder;

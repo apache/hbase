@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util.bytes;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.junit.Test;

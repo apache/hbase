@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 

@@ -25,7 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.row.TestRowData;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataRandomKeyValuesWithTags;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataTrivialWithTags;

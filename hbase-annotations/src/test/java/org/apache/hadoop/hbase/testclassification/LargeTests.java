@@ -17,21 +17,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.testclassification;
 
 /**
- * Tag a test as 'Medium', meaning that the test class has the following
+ * Tag a test as 'large', meaning that the test class has the following
  * characteristics:
  *  - executed in an isolated JVM. Tests can however be executed in different
  *    JVM on the same machine simultaneously.
- *  - will have to be executed by the developer before submitting a bug
- *  - ideally, last less than 1 minutes to help parallelization
+ *  - will not have to be executed by the developer before submitting a bug
+ *  - ideally, last less than 2 minutes to help parallelization
  *
- *  Use it for tests that cannot be tagged as 'Small'.
+ *  It the worst case compared to small or medium, use it only for tests that
+ *    you cannot put in the other categories
  *
  * @see SmallTests
- * @see LargeTests
+ * @see MediumTests
  * @see IntegrationTests
  */
-public interface MediumTests {
+public interface LargeTests {
 }

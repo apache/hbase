@@ -38,7 +38,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;

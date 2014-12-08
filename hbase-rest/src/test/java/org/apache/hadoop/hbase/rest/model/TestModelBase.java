@@ -21,7 +21,7 @@
 package org.apache.hadoop.hbase.rest.model;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.provider.JAXBContextResolver;
 import org.apache.hadoop.hbase.util.Base64;

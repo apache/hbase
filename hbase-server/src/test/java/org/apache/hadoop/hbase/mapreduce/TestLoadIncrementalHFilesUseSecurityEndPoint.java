@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;

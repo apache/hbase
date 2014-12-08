@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.util.vint;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.vint.UFIntTool;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

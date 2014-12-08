@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

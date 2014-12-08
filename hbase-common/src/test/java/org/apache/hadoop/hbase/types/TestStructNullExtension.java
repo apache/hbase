@@ -24,7 +24,7 @@ import static org.junit.Assert.assertNull;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.Test;
