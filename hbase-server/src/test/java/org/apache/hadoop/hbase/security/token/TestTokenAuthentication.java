@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -401,7 +400,7 @@ public class TestTokenAuthentication {
     testuser.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws Exception {
         Configuration c = server.getConfiguration();
-        RpcClient rpcClient = RpcClientFactory.createClient(c, clusterId.toString());
+        RpcClient rpcClient = new RpcClient(c, clusterId.toString());
         ServerName sn =
             ServerName.valueOf(server.getAddress().getHostName(), server.getAddress().getPort(),
                 System.currentTimeMillis());
@@ -417,7 +416,7 @@ public class TestTokenAuthentication {
           String authMethod = response.getAuthMethod();
           assertEquals("TOKEN", authMethod);
         } finally {
-          rpcClient.close();
+          rpcClient.stop();
         }
         return null;
       }

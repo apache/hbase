@@ -112,7 +112,7 @@ public class TestProtoBufRpc {
 
   @Test
   public void testProtoBufRpc() throws Exception {
-    RpcClient rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClient rpcClient = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(this.isa.getHostName(), this.isa.getPort(), System.currentTimeMillis()),
@@ -136,7 +136,7 @@ public class TestProtoBufRpc {
       } catch (ServiceException e) {
       }
     } finally {
-      rpcClient.close();
+      rpcClient.stop();
     }
   }
 }

@@ -394,7 +394,7 @@ public class TestHCM {
 
     LOG.info("Going to cancel connections. connection=" + conn.toString() + ", sn=" + sn);
     for (int i = 0; i < 5000; i++) {
-      rpcClient.cancelConnections(sn);
+      rpcClient.cancelConnections(sn.getHostname(), sn.getPort());
       Thread.sleep(5);
     }
 

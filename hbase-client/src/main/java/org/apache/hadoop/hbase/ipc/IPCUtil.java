@@ -51,7 +51,7 @@ import com.google.protobuf.Message;
  * Utility to help ipc'ing.
  */
 @InterfaceAudience.Private
-public class IPCUtil {
+class IPCUtil {
   public static final Log LOG = LogFactory.getLog(IPCUtil.class);
   /**
    * How much we think the decompressor will expand the original compressed content.
@@ -60,7 +60,7 @@ public class IPCUtil {
   private final int cellBlockBuildingInitialBufferSize;
   private final Configuration conf;
 
-  public IPCUtil(final Configuration conf) {
+  IPCUtil(final Configuration conf) {
     super();
     this.conf = conf;
     this.cellBlockDecompressionMultiplier =
@@ -81,14 +81,14 @@ public class IPCUtil {
    * <code>compressor</code>.
    * @param codec
    * @param compressor
-   * @param cellScanner
+   * @Param cellScanner
    * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
    * passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
    * flipped and is ready for reading.  Use limit to find total size.
    * @throws IOException
    */
   @SuppressWarnings("resource")
-  public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
+  ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
     final CellScanner cellScanner)
   throws IOException {
     if (cellScanner == null) return null;
@@ -145,7 +145,7 @@ public class IPCUtil {
    * @return CellScanner to work against the content of <code>cellBlock</code>
    * @throws IOException
    */
-  public CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
+  CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
       final byte [] cellBlock)
   throws IOException {
     return createCellScanner(codec, compressor, cellBlock, 0, cellBlock.length);
@@ -159,7 +159,7 @@ public class IPCUtil {
    * @return CellScanner to work against the content of <code>cellBlock</code>
    * @throws IOException
    */
-  public CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
+  CellScanner createCellScanner(final Codec codec, final CompressionCodec compressor,
       final byte [] cellBlock, final int offset, final int length)
   throws IOException {
     // If compressed, decompress it first before passing it on else we will leak compression
@@ -200,7 +200,7 @@ public class IPCUtil {
    * @return The passed in Message serialized with delimiter.  Return null if <code>m</code> is null
    * @throws IOException
    */
-  public static ByteBuffer getDelimitedMessageAsByteBuffer(final Message m) throws IOException {
+  static ByteBuffer getDelimitedMessageAsByteBuffer(final Message m) throws IOException {
     if (m == null) return null;
     int serializedSize = m.getSerializedSize();
     int vintSize = CodedOutputStream.computeRawVarint32Size(serializedSize);
@@ -223,7 +223,7 @@ public class IPCUtil {
    * @return Total number of bytes written.
    * @throws IOException
    */
-  public static int write(final OutputStream dos, final Message header, final Message param,
+  static int write(final OutputStream dos, final Message header, final Message param,
       final ByteBuffer cellBlock)
   throws IOException {
     // Must calculate total size and write that first so other side can read it all in in one
@@ -255,7 +255,7 @@ public class IPCUtil {
    * @param len
    * @throws IOException
    */
-  public static void readChunked(final DataInput in, byte[] dest, int offset, int len)
+  static void readChunked(final DataInput in, byte[] dest, int offset, int len)
       throws IOException {
     int maxRead = 8192;
 
@@ -265,9 +265,11 @@ public class IPCUtil {
   }
 
   /**
+   * @param header
+   * @param body
    * @return Size on the wire when the two messages are written with writeDelimitedTo
    */
-  public static int getTotalSizeWhenWrittenDelimited(Message ... messages) {
+  static int getTotalSizeWhenWrittenDelimited(Message ... messages) {
     int totalSize = 0;
     for (Message m: messages) {
       if (m == null) continue;
