@@ -36,7 +36,7 @@ public class TestHBaseClient {
   public void testFailedServer(){
     ManualEnvironmentEdge ee = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(  ee );
-    RpcClient.FailedServers fs = new RpcClient.FailedServers(new Configuration());
+    FailedServers fs = new FailedServers(new Configuration());
 
     InetSocketAddress ia = InetSocketAddress.createUnresolved("bad", 12);
     InetSocketAddress ia2 = InetSocketAddress.createUnresolved("bad", 12);  // same server as ia

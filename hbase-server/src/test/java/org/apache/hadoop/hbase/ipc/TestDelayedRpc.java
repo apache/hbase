@@ -89,7 +89,8 @@ public class TestDelayedRpc {
         conf,
         new FifoRpcScheduler(conf, 1));
     rpcServer.start();
-    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
+    RpcClient rpcClient = RpcClientFactory.createClient(
+        conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
@@ -118,7 +119,7 @@ public class TestDelayedRpc {
       assertEquals(UNDELAYED, results.get(1).intValue());
       assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :  0xDEADBEEF);
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 
@@ -170,7 +171,8 @@ public class TestDelayedRpc {
         conf,
         new FifoRpcScheduler(conf, 1));
     rpcServer.start();
-    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
+    RpcClient rpcClient = RpcClientFactory.createClient(
+        conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
@@ -200,7 +202,7 @@ public class TestDelayedRpc {
 
       log.removeAppender(listAppender);
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 
@@ -293,7 +295,8 @@ public class TestDelayedRpc {
         conf,
         new FifoRpcScheduler(conf, 1));
     rpcServer.start();
-    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
+    RpcClient rpcClient = RpcClientFactory.createClient(
+        conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
@@ -323,7 +326,7 @@ public class TestDelayedRpc {
       }
       assertTrue(caughtException);
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 

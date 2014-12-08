@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -619,7 +620,7 @@ class ConnectionManager {
       this.registry = setupRegistry();
       retrieveClusterId();
 
-      this.rpcClient = new RpcClient(this.conf, this.clusterId);
+      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId);
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
 
       // Do we publish the status?
@@ -639,7 +640,7 @@ class ConnectionManager {
                 @Override
                 public void newDead(ServerName sn) {
                   clearCaches(sn);
-                  rpcClient.cancelConnections(sn.getHostname(), sn.getPort());
+                  rpcClient.cancelConnections(sn);
                 }
               }, conf, listenerClass);
         }
@@ -781,18 +782,6 @@ class ConnectionManager {
      */
     private Registry setupRegistry() throws IOException {
       return RegistryFactory.getRegistry(this);
-    }
-
-    /**
-     * For tests only.
-     * @param rpcClient Client we should use instead.
-     * @return Previous rpcClient
-     */
-    @VisibleForTesting
-    RpcClient setRpcClient(final RpcClient rpcClient) {
-      RpcClient oldRpcClient = this.rpcClient;
-      this.rpcClient = rpcClient;
-      return oldRpcClient;
     }
 
     /**
@@ -2336,7 +2325,7 @@ class ConnectionManager {
         clusterStatusListener.close();
       }
       if (rpcClient != null) {
-        rpcClient.stop();
+        rpcClient.close();
       }
     }
 

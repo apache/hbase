@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,6 +36,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
+import org.apache.hadoop.hbase.ipc.RpcClientImpl;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -61,6 +64,10 @@ public class TestClientTimeouts {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
+    // Set the custom RPC client with random timeouts as the client
+    TEST_UTIL.getConfiguration().set(
+        RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY,
+        RandomTimeoutRpcClient.class.getName());
   }
 
   /**
@@ -81,7 +88,9 @@ public class TestClientTimeouts {
     Connection lastConnection = null;
     boolean lastFailed = false;
     int initialInvocations = RandomTimeoutBlockingRpcChannel.invokations.get();
-    RpcClient rpcClient = newRandomTimeoutRpcClient();
+    RandomTimeoutRpcClient rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
+        .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+
     try {
       for (int i = 0; i < 5 || (lastFailed && i < 100); ++i) {
         lastFailed = false;
@@ -94,13 +103,6 @@ public class TestClientTimeouts {
           Connection connection = admin.getConnection();
           assertFalse(connection == lastConnection);
           lastConnection = connection;
-          // Override the connection's rpc client for timeout testing
-          RpcClient oldRpcClient =
-            ((ConnectionManager.HConnectionImplementation)connection).setRpcClient(
-              rpcClient);
-          if (oldRpcClient != null) {
-            oldRpcClient.stop();
-          }
           // run some admin commands
           HBaseAdmin.checkHBaseAvailable(conf);
           admin.setBalancerRunning(false, false);
@@ -111,7 +113,8 @@ public class TestClientTimeouts {
         } finally {
           admin.close();
           if (admin.getConnection().isClosed()) {
-            rpcClient = newRandomTimeoutRpcClient();
+            rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
+                .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
           }
         }
       }
@@ -119,31 +122,36 @@ public class TestClientTimeouts {
       assertFalse(lastFailed);
       assertTrue(RandomTimeoutBlockingRpcChannel.invokations.get() > initialInvocations);
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 
-  private static RpcClient newRandomTimeoutRpcClient() {
-    return new RpcClient(
-        TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey()) {
-      // Return my own instance, one that does random timeouts
-      @Override
-      public BlockingRpcChannel createBlockingRpcChannel(ServerName sn,
-          User ticket, int rpcTimeout) {
-        return new RandomTimeoutBlockingRpcChannel(this, sn, ticket, rpcTimeout);
-      }
-    };
+  /**
+   * Rpc Channel implementation with RandomTimeoutBlockingRpcChannel
+   */
+  public static class RandomTimeoutRpcClient extends RpcClientImpl{
+    public RandomTimeoutRpcClient(Configuration conf, String clusterId, SocketAddress localAddr) {
+      super(conf, clusterId, localAddr);
+    }
+
+    // Return my own instance, one that does random timeouts
+    @Override
+    public BlockingRpcChannel createBlockingRpcChannel(ServerName sn,
+        User ticket, int rpcTimeout) {
+      return new RandomTimeoutBlockingRpcChannel(this, sn, ticket, rpcTimeout);
+    }
   }
 
   /**
    * Blocking rpc channel that goes via hbase rpc.
    */
-  static class RandomTimeoutBlockingRpcChannel extends RpcClient.BlockingRpcChannelImplementation {
+  static class RandomTimeoutBlockingRpcChannel
+      extends RpcClientImpl.BlockingRpcChannelImplementation {
     private static final Random RANDOM = new Random(System.currentTimeMillis());
     public static final double CHANCE_OF_TIMEOUT = 0.3;
     private static AtomicInteger invokations = new AtomicInteger();
 
-    RandomTimeoutBlockingRpcChannel(final RpcClient rpcClient, final ServerName sn,
+    RandomTimeoutBlockingRpcChannel(final RpcClientImpl rpcClient, final ServerName sn,
         final User ticket, final int rpcTimeout) {
       super(rpcClient, sn, ticket, rpcTimeout);
     }
