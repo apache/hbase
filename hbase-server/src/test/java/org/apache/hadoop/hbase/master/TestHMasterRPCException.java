@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -52,7 +53,7 @@ public class TestHMasterRPCException {
     CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
     HMaster hm = new HMaster(conf, cp);
     ServerName sm = hm.getServerName();
-    RpcClient rpcClient = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClient rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       int i = 0;
       //retry the RPC a few times; we have seen SocketTimeoutExceptions if we
@@ -87,7 +88,7 @@ public class TestHMasterRPCException {
       }
       fail();
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 }

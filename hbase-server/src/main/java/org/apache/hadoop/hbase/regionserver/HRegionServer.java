@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -776,10 +777,11 @@ public class HRegionServer extends HasThread implements
     }
 
     // Setup RPC client for master communication
-    rpcClient = new RpcClient(conf, clusterId, new InetSocketAddress(
-      rpcServices.isa.getAddress(), 0));
+    rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
+        rpcServices.isa.getAddress(), 0));
 
-    int storefileRefreshPeriod = conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD
+    int storefileRefreshPeriod = conf.getInt(
+        StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD
       , StorefileRefresherChore.DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD);
     if (storefileRefreshPeriod > 0) {
       this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod, this, this);
@@ -980,7 +982,7 @@ public class HRegionServer extends HasThread implements
       this.rssStub = null;
     }
     if (this.rpcClient != null) {
-      this.rpcClient.stop();
+      this.rpcClient.close();
     }
     if (this.leases != null) {
       this.leases.close();
@@ -2596,7 +2598,7 @@ public class HRegionServer extends HasThread implements
       }
     } else if (Boolean.FALSE.equals(previous)) {
       LOG.info("Received CLOSE for the region: " + encodedName +
-        " ,which we are already trying to CLOSE, but not completed yet");
+        ", which we are already trying to CLOSE, but not completed yet");
       // The master will retry till the region is closed. We need to do this since
       // the region could fail to close somehow. If we mark the region closed in master
       // while it is not, there could be data loss.

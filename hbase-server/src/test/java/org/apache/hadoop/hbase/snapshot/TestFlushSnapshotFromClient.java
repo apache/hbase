@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -82,7 +83,7 @@ public class TestFlushSnapshotFromClient {
     // Uncomment the following lines if more verbosity is needed for
     // debugging (see HBASE-12285 for details).
     //((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
+    //((Log4JLogger)AbstractRpcClient.LOG).getLogger().setLevel(Level.ALL);
     //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);

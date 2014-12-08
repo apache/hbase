@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -96,7 +96,7 @@ public class TestFromClientSideNoCodec {
   public void testNoCodec() {
     Configuration c = new Configuration();
     c.set("hbase.client.default.rpc.codec", "");
-    String codec = RpcClient.getDefaultCodec(c);
+    String codec = AbstractRpcClient.getDefaultCodec(c);
     assertTrue(codec == null || codec.length() == 0);
   }
 }

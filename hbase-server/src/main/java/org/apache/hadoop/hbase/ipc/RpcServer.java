@@ -148,7 +148,7 @@ import com.google.protobuf.TextFormat;
  * CallRunner#run executes the call.  When done, asks the included Call to put itself on new
  * queue for Responder to pull from and return result to client.
  *
- * @see RpcClient
+ * @see RpcClientImpl
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving

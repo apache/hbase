@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -114,7 +114,7 @@ public class FilterTestingCluster {
   @BeforeClass
   public static void setUp() throws Exception {
     ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)AbstractRpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     TEST_UTIL.startMiniCluster(1);
     initialize(TEST_UTIL.getConfiguration());

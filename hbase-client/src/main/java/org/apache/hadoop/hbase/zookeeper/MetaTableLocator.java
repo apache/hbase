@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -317,7 +317,7 @@ public class MetaTableLocator {
       LOG.debug("Exception connecting to " + sn);
     } catch (UnknownHostException e) {
       LOG.debug("Unknown host exception connecting to  " + sn);
-    } catch (RpcClient.FailedServerException e) {
+    } catch (FailedServerException e) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Server " + sn + " is in failed server list.");
       }

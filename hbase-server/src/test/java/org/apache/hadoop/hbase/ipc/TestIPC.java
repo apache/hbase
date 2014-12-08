@@ -177,7 +177,7 @@ public class TestIPC {
   @Test
   public void testNoCodec() throws InterruptedException, IOException {
     Configuration conf = HBaseConfiguration.create();
-    RpcClient client = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT) {
+    RpcClientImpl client = new RpcClientImpl(conf, HConstants.CLUSTER_ID_DEFAULT) {
       @Override
       Codec getCodec() {
         return null;
@@ -196,7 +196,7 @@ public class TestIPC {
       // Silly assertion that the message is in the returned pb.
       assertTrue(r.getFirst().toString().contains(message));
     } finally {
-      client.stop();
+      client.close();
       rpcServer.stop();
     }
   }
@@ -215,10 +215,10 @@ public class TestIPC {
   throws IOException, InterruptedException, SecurityException, NoSuchMethodException {
     Configuration conf = new Configuration(HBaseConfiguration.create());
     conf.set("hbase.client.rpc.compressor", GzipCodec.class.getCanonicalName());
-    doSimpleTest(conf, new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT));
+    doSimpleTest(conf, new RpcClientImpl(conf, HConstants.CLUSTER_ID_DEFAULT));
   }
 
-  private void doSimpleTest(final Configuration conf, final RpcClient client)
+  private void doSimpleTest(final Configuration conf, final RpcClientImpl client)
   throws InterruptedException, IOException {
     TestRpcServer rpcServer = new TestRpcServer();
     List<Cell> cells = new ArrayList<Cell>();
@@ -238,7 +238,7 @@ public class TestIPC {
       }
       assertEquals(count, index);
     } finally {
-      client.stop();
+      client.close();
       rpcServer.stop();
     }
   }
@@ -257,7 +257,7 @@ public class TestIPC {
     }).when(spyFactory).createSocket();
 
     TestRpcServer rpcServer = new TestRpcServer();
-    RpcClient client = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, spyFactory);
+    RpcClientImpl client = new RpcClientImpl(conf, HConstants.CLUSTER_ID_DEFAULT, spyFactory);
     try {
       rpcServer.start();
       InetSocketAddress address = rpcServer.getListenerAddress();
@@ -269,7 +269,7 @@ public class TestIPC {
       LOG.info("Caught expected exception: " + e.toString());
       assertTrue(StringUtils.stringifyException(e).contains("Injected fault"));
     } finally {
-      client.stop();
+      client.close();
       rpcServer.stop();
     }
   }
@@ -280,7 +280,7 @@ public class TestIPC {
     RpcScheduler scheduler = spy(new FifoRpcScheduler(CONF, 1));
     RpcServer rpcServer = new TestRpcServer(scheduler);
     verify(scheduler).init((RpcScheduler.Context) anyObject());
-    RpcClient client = new RpcClient(CONF, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClientImpl client = new RpcClientImpl(CONF, HConstants.CLUSTER_ID_DEFAULT);
     try {
       rpcServer.start();
       verify(scheduler).start();
@@ -311,7 +311,7 @@ public class TestIPC {
     TestRpcServer rpcServer = new TestRpcServer();
     MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
     EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-    RpcClient client = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClientImpl client = new RpcClientImpl(conf, HConstants.CLUSTER_ID_DEFAULT);
     KeyValue kv = KeyValueUtil.ensureKeyValue(BIG_CELL);
     Put p = new Put(kv.getRow());
     for (int i = 0; i < cellcount; i++) {
@@ -353,7 +353,7 @@ public class TestIPC {
       LOG.info("Cycled " + cycles + " time(s) with " + cellcount + " cell(s) in " +
          (System.currentTimeMillis() - startTime) + "ms");
     } finally {
-      client.stop();
+      client.close();
       rpcServer.stop();
     }
   }
