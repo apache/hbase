@@ -872,7 +872,7 @@ public class AccessController extends BaseMasterAndRegionObserver
    @Override
   public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c,
       final TableName tableName) throws IOException {
-    requirePermission("truncateTable", tableName, null, null, Action.ADMIN);
+    requirePermission("truncateTable", tableName, null, null, Action.ADMIN, Action.CREATE);
     final Configuration conf = c.getEnvironment().getConfiguration();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
