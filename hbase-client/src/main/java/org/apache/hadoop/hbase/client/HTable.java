@@ -116,7 +116,6 @@ public class HTable implements HTableInterface, RegionLocator {
   private TableConfiguration tableConfiguration;
   protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
   private long writeBufferSize;
-  private boolean clearBufferOnFail = true;
   private boolean autoFlush = true;
   protected long currentWriteBufferSize = 0 ;
   private boolean closed = false;
@@ -1092,8 +1091,7 @@ public class HTable implements HTableInterface, RegionLocator {
         while (!writeAsyncBuffer.isEmpty()) {
           ap.submit(tableName, writeAsyncBuffer, true, null, false);
         }
-        List<Row> failedRows = clearBufferOnFail ? null : writeAsyncBuffer;
-        RetriesExhaustedWithDetailsException error = ap.waitForAllPreviousOpsAndReset(failedRows);
+        RetriesExhaustedWithDetailsException error = ap.waitForAllPreviousOpsAndReset(null);
         if (error != null) {
           throw error;
         }
@@ -1568,7 +1566,7 @@ public class HTable implements HTableInterface, RegionLocator {
   @Deprecated
   @Override
   public void setAutoFlush(boolean autoFlush) {
-    setAutoFlush(autoFlush, autoFlush);
+    this.autoFlush = autoFlush;
   }
 
   /**
@@ -1576,7 +1574,7 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @Override
   public void setAutoFlushTo(boolean autoFlush) {
-    setAutoFlush(autoFlush, clearBufferOnFail);
+    this.autoFlush = autoFlush;
   }
 
   /**
@@ -1585,7 +1583,6 @@ public class HTable implements HTableInterface, RegionLocator {
   @Override
   public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
     this.autoFlush = autoFlush;
-    this.clearBufferOnFail = autoFlush || clearBufferOnFail;
   }
 
   /**

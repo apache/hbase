@@ -735,11 +735,12 @@ public class TestAsyncProcess {
   }
 
 
+/*
   @Test
   public void testWithNoClearOnFail() throws IOException {
     HTable ht = new HTable();
     ht.ap = new MyAsyncProcess(createHConnection(), conf, true);
-    ht.setAutoFlush(false);
+    ht.setAutoFlushTo(false);
 
     Put p = createPut(1, false);
     ht.put(p);
@@ -757,6 +758,7 @@ public class TestAsyncProcess {
     }
     Assert.assertEquals(1, ht.writeAsyncBuffer.size());
   }
+  */
 
   @Test
   public void testBatch() throws IOException, InterruptedException {
@@ -806,7 +808,7 @@ public class TestAsyncProcess {
     ht.ap.serverTrackerTimeout = 1;
 
     Put p = createPut(1, false);
-    ht.setAutoFlush(false);
+    ht.setAutoFlushTo(false);
     ht.put(p);
 
     try {
@@ -828,7 +830,7 @@ public class TestAsyncProcess {
     Assert.assertNotNull(ht.ap.createServerErrorTracker());
 
     Put p = createPut(1, true);
-    ht.setAutoFlush(false);
+    ht.setAutoFlushTo(false);
     ht.put(p);
 
     try {
