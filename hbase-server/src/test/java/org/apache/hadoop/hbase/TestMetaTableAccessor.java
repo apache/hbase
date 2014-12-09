@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -66,10 +67,11 @@ public class TestMetaTableAccessor {
     // responsive.  1 second is default as is ten retries.
     c.setLong("hbase.client.pause", 1000);
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
-    connection = HConnectionManager.getConnection(c);
+    connection = ConnectionFactory.createConnection(c);
   }
 
   @AfterClass public static void afterClass() throws Exception {
+    connection.close();
     UTIL.shutdownMiniCluster();
   }
 

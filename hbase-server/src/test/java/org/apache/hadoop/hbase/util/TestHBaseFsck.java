@@ -271,12 +271,12 @@ public class TestHBaseFsck {
    * This method is used to undeploy a region -- close it and attempt to
    * remove its state from the Master.
    */
-  private void undeployRegion(HBaseAdmin admin, ServerName sn,
+  private void undeployRegion(HConnection conn, ServerName sn,
       HRegionInfo hri) throws IOException, InterruptedException {
     try {
-      HBaseFsckRepair.closeRegionSilentlyAndWait(admin, sn, hri);
+      HBaseFsckRepair.closeRegionSilentlyAndWait(conn, sn, hri);
       if (!hri.isMetaTable()) {
-        admin.offline(hri.getRegionName());
+        conn.getAdmin().offline(hri.getRegionName());
       }
     } catch (IOException ioe) {
       LOG.warn("Got exception when attempting to offline region "
@@ -311,6 +311,7 @@ public class TestHBaseFsck {
     dumpMeta(htd.getTableName());
 
     Map<HRegionInfo, ServerName> hris = tbl.getRegionLocations();
+    HConnection conn = (HConnection) ConnectionFactory.createConnection(conf);
     for (Entry<HRegionInfo, ServerName> e: hris.entrySet()) {
       HRegionInfo hri = e.getKey();
       ServerName hsa = e.getValue();
@@ -323,7 +324,7 @@ public class TestHBaseFsck {
 
         if (unassign) {
           LOG.info("Undeploying region " + hri + " from server " + hsa);
-          undeployRegion(new HBaseAdmin(conf), hsa, hri);
+          undeployRegion(conn, hsa, hri);
         }
 
         if (regionInfoOnly) {
@@ -360,6 +361,7 @@ public class TestHBaseFsck {
     TEST_UTIL.getMetaTableRows(htd.getTableName());
     LOG.info("*** After delete:");
     dumpMeta(htd.getTableName());
+    conn.close();
   }
 
   /**
@@ -418,8 +420,9 @@ public class TestHBaseFsck {
    * @throws IOException
    */
   void deleteTable(TableName tablename) throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.getConnection().clearRegionCache();
+    HConnection conn = (HConnection) ConnectionFactory.createConnection(conf);
+    Admin admin = conn.getAdmin();
+    conn.clearRegionCache();
     if (admin.isTableEnabled(tablename)) {
       admin.disableTableAsync(tablename);
     }
@@ -439,6 +442,8 @@ public class TestHBaseFsck {
       }
     }
     admin.deleteTable(tablename);
+    admin.close();
+    conn.close();
   }
 
   /**
@@ -899,7 +904,7 @@ public class TestHBaseFsck {
   public void testSidelineOverlapRegion() throws Exception {
     TableName table =
         TableName.valueOf("testSidelineOverlapRegion");
-    try {
+    try (HConnection conn = (HConnection) ConnectionFactory.createConnection(conf)){
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
 
@@ -941,7 +946,7 @@ public class TestHBaseFsck {
           }
 
           HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-          HBaseFsckRepair.closeRegionSilentlyAndWait(admin,
+          HBaseFsckRepair.closeRegionSilentlyAndWait(conn,
             cluster.getRegionServer(k).getServerName(), hbi.getHdfsHRI());
           admin.offline(regionName);
           break;
@@ -950,7 +955,7 @@ public class TestHBaseFsck {
 
       assertNotNull(regionName);
       assertNotNull(serverName);
-      Table meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
+      Table meta = conn.getTable(TableName.META_TABLE_NAME, executorService);
       Put put = new Put(regionName);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
         Bytes.toBytes(serverName.getHostAndPort()));
@@ -1635,8 +1640,8 @@ public class TestHBaseFsck {
   public void testSplitDaughtersNotInMeta() throws Exception {
     TableName table =
         TableName.valueOf("testSplitdaughtersNotInMeta");
-    Table meta = null;
-    try {
+    try (HConnection conn = (HConnection) ConnectionFactory.createConnection(conf);
+        Table meta = conn.getTable(TableName.META_TABLE_NAME)){
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
 
@@ -1644,13 +1649,11 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseAdmin().flush(table);
       HRegionLocation location = tbl.getRegionLocation("B");
 
-      meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = location.getRegionInfo();
 
       // do a regular split
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
       byte[] regionName = location.getRegionInfo().getRegionName();
-      admin.splitRegion(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
+      conn.getAdmin().splitRegion(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
       TestEndToEndSplitTransaction.blockUntilRegionSplit(
           TEST_UTIL.getConfiguration(), 60000, regionName, true);
 
@@ -1658,8 +1661,8 @@ public class TestHBaseFsck {
 
       // Delete daughter regions from meta, but not hdfs, unassign it.
       Map<HRegionInfo, ServerName> hris = tbl.getRegionLocations();
-      undeployRegion(admin, hris.get(daughters.getFirst()), daughters.getFirst());
-      undeployRegion(admin, hris.get(daughters.getSecond()), daughters.getSecond());
+      undeployRegion(conn, hris.get(daughters.getFirst()), daughters.getFirst());
+      undeployRegion(conn, hris.get(daughters.getSecond()), daughters.getSecond());
 
       meta.delete(new Delete(daughters.getFirst().getRegionName()));
       meta.delete(new Delete(daughters.getSecond().getRegionName()));
@@ -1693,7 +1696,6 @@ public class TestHBaseFsck {
       assertNoErrors(doFsck(conf, false)); //should be fixed by now
     } finally {
       deleteTable(table);
-      IOUtils.closeQuietly(meta);
     }
   }
 
@@ -2418,13 +2420,9 @@ public class TestHBaseFsck {
     HRegionInfo hri = metaLocation.getRegionInfo();
     if (unassign) {
       LOG.info("Undeploying meta region " + hri + " from server " + hsa);
-      Connection unmanagedConnection = ConnectionFactory.createConnection(conf);
-      HBaseAdmin admin = (HBaseAdmin) unmanagedConnection.getAdmin();
-      try {
-        undeployRegion(admin, hsa, hri);
-      } finally {
-        admin.close();
-        unmanagedConnection.close();
+      try (HConnection unmanagedConnection =
+          (HConnection) ConnectionFactory.createConnection(conf)) {
+        undeployRegion(unmanagedConnection, hsa, hri);
       }
     }
 
