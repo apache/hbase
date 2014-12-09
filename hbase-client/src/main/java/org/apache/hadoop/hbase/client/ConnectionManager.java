@@ -2476,6 +2476,11 @@ class ConnectionManager {
     public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
       return RpcRetryingCallerFactory.instantiate(conf, this.interceptor);
     }
+
+    @Override
+    public boolean isManaged() {
+      return managed;
+    }
   }
 
   /**

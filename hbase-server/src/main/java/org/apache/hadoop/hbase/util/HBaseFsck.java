@@ -1752,7 +1752,7 @@ public class HBaseFsck extends Configured {
     for (OnlineEntry rse : hi.deployedEntries) {
       LOG.debug("Undeploy region "  + rse.hri + " from " + rse.hsa);
       try {
-        HBaseFsckRepair.closeRegionSilentlyAndWait(admin, rse.hsa, rse.hri);
+        HBaseFsckRepair.closeRegionSilentlyAndWait(connection, rse.hsa, rse.hri);
         offline(rse.hri.getRegionName());
       } catch (IOException ioe) {
         LOG.warn("Got exception when attempting to offline region "
@@ -1804,7 +1804,7 @@ public class HBaseFsck extends Configured {
     }
 
     // close the region -- close files and remove assignment
-    HBaseFsckRepair.closeRegionSilentlyAndWait(admin, serverName, hri);
+    HBaseFsckRepair.closeRegionSilentlyAndWait(connection, serverName, hri);
   }
 
   private void tryAssignmentRepair(HbckInfo hbi, String msg) throws IOException,
@@ -1969,7 +1969,7 @@ public class HBaseFsck extends Configured {
       if (shouldFixAssignments()) {
         errors.print("Trying to close the region " + descriptiveName);
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(admin, hbi.metaEntry, hbi.deployedOn);
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.metaEntry, hbi.deployedOn);
       }
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
       errors.reportError(ERROR_CODE.MULTI_DEPLOYED, "Region " + descriptiveName
@@ -1980,7 +1980,7 @@ public class HBaseFsck extends Configured {
       if (shouldFixAssignments()) {
         errors.print("Trying to fix assignment error...");
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(admin, hbi.metaEntry, hbi.deployedOn);
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.metaEntry, hbi.deployedOn);
       }
     } else if (inMeta && inHdfs && isDeployed && !deploymentMatchesMeta) {
       errors.reportError(ERROR_CODE.SERVER_DOES_NOT_MATCH_META, "Region "
@@ -1991,7 +1991,7 @@ public class HBaseFsck extends Configured {
       if (shouldFixAssignments()) {
         errors.print("Trying to fix assignment error...");
         setShouldRerun();
-        HBaseFsckRepair.fixMultiAssignment(admin, hbi.metaEntry, hbi.deployedOn);
+        HBaseFsckRepair.fixMultiAssignment(connection, hbi.metaEntry, hbi.deployedOn);
         HBaseFsckRepair.waitUntilAssigned(admin, hbi.getHdfsHRI());
       }
     } else {
@@ -2896,7 +2896,7 @@ public class HBaseFsck extends Configured {
           errors.print("Trying to fix a problem with hbase:meta..");
           setShouldRerun();
           // try fix it (treat is a dupe assignment)
-          HBaseFsckRepair.fixMultiAssignment(admin, metaHbckInfo.metaEntry, servers);
+          HBaseFsckRepair.fixMultiAssignment(connection, metaHbckInfo.metaEntry, servers);
         }
       }
       // rerun hbck with hopefully fixed META
