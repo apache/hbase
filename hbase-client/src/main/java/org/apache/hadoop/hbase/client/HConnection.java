@@ -258,13 +258,6 @@ public interface HConnection extends Connection {
   @Deprecated
   HTableDescriptor[] listTables() throws IOException;
 
-  /**
-   * List all the userspace tables matching the pattern.
-   * @return - returns an array of HTableDescriptors
-   * @throws IOException if a remote or network exception occurs
-   */
-  HTableDescriptor[] listTables(String pattern) throws IOException;
-
   // This is a bit ugly - We call this getTableNames in 0.94 and the
   // successor function, returning TableName, listTableNames in later versions
   // because Java polymorphism doesn't consider return value types

@@ -178,7 +178,7 @@ public class AccessControlClient {
             String namespace = tableRegex.substring(1);
             permList = ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(namespace));
           } else {
-            htds = admin.listTables(Pattern.compile(tableRegex));
+            htds = admin.listTables(Pattern.compile(tableRegex), true);
             for (HTableDescriptor hd : htds) {
               permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
             }

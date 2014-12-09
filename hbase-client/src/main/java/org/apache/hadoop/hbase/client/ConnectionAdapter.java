@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 /**
  * An internal class that delegates to an {@link HConnection} instance.
  * A convenience to override when customizing method implementations.
- * 
+ *
  *
  * @see ConnectionUtils#createShortCircuitHConnection(HConnection, ServerName,
  * AdminService.BlockingInterface, ClientService.BlockingInterface) for case where we make
@@ -174,11 +174,6 @@ abstract class ConnectionAdapter implements ClusterConnection {
   @Override
   public HTableDescriptor[] listTables() throws IOException {
     return wrappedConnection.listTables();
-  }
-
-  @Override
-  public HTableDescriptor[] listTables(String regex) throws IOException {
-    return wrappedConnection.listTables(regex);
   }
 
   @Override

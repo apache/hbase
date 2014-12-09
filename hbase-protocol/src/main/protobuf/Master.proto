@@ -315,6 +315,7 @@ message GetSchemaAlterStatusResponse {
 message GetTableDescriptorsRequest {
   repeated TableName table_names = 1;
   optional string regex = 2;
+  optional bool include_sys_tables = 3 [default=false];
 }
 
 message GetTableDescriptorsResponse {
@@ -322,6 +323,8 @@ message GetTableDescriptorsResponse {
 }
 
 message GetTableNamesRequest {
+  optional string regex = 1;
+  optional bool include_sys_tables = 2 [default=false];
 }
 
 message GetTableNamesResponse {

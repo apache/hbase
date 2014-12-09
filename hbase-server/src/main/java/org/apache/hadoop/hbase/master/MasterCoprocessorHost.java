@@ -812,17 +812,6 @@ public class MasterCoprocessorHost
   }
 
   public boolean preGetTableDescriptors(final List<TableName> tableNamesList,
-    final List<HTableDescriptor> descriptors) throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
-      @Override
-      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.preGetTableDescriptors(ctx, tableNamesList, descriptors);
-      }
-    });
-  }
-
-  public boolean preGetTableDescriptors(final List<TableName> tableNamesList,
       final List<HTableDescriptor> descriptors, final String regex) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
@@ -833,24 +822,35 @@ public class MasterCoprocessorHost
     });
   }
 
-  public void postGetTableDescriptors(final List<HTableDescriptor> descriptors)
-      throws IOException {
+  public void postGetTableDescriptors(final List<TableName> tableNamesList,
+      final List<HTableDescriptor> descriptors, final String regex) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.postGetTableDescriptors(ctx, descriptors);
+        oserver.postGetTableDescriptors(ctx, tableNamesList, descriptors, regex);
       }
     });
   }
 
-  public void postGetTableDescriptors(final List<HTableDescriptor> descriptors, final String regex)
-      throws IOException {
+  public boolean preGetTableNames(final List<HTableDescriptor> descriptors,
+      final String regex) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preGetTableNames(ctx, descriptors, regex);
+      }
+    });
+  }
+
+  public void postGetTableNames(final List<HTableDescriptor> descriptors,
+      final String regex) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.postGetTableDescriptors(ctx, descriptors, regex);
+        oserver.postGetTableNames(ctx, descriptors, regex);
       }
     });
   }

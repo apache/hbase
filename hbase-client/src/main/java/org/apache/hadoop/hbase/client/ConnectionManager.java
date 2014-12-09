@@ -2384,20 +2384,6 @@ class ConnectionManager {
      */
     @Deprecated
     @Override
-    public HTableDescriptor[] listTables(String regex) throws IOException {
-      MasterKeepAliveConnection master = getKeepAliveMasterService();
-      try {
-        GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest(regex);
-        return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
-      } catch (ServiceException se) {
-        throw ProtobufUtil.getRemoteException(se);
-      } finally {
-        master.close();
-      }
-    }
-
-    @Override
     public String[] getTableNames() throws IOException {
       TableName[] tableNames = listTableNames();
       String result[] = new String[tableNames.length];

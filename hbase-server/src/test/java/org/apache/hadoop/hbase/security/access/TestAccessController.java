@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -264,7 +265,7 @@ public class TestAccessController extends SecureTestUtil {
     try {
       assertEquals(4, AccessControlClient.getUserPermissions(conf, TEST_TABLE.toString()).size());
     } catch (Throwable e) {
-      LOG.error("error during call of AccessControlClient.getUserPermissions. " + e.getStackTrace());
+      LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
     }
   }
 
@@ -2059,11 +2060,14 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction listTablesAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Admin admin = TEST_UTIL.getHBaseAdmin();
+        Connection unmanagedConnection =
+          ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Admin admin = unmanagedConnection.getAdmin();
         try {
           admin.listTables();
         } finally {
           admin.close();
+          unmanagedConnection.close();
         }
         return null;
       }
@@ -2072,21 +2076,45 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction getTableDescAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Admin admin = TEST_UTIL.getHBaseAdmin();
+        Connection unmanagedConnection =
+          ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Admin admin = unmanagedConnection.getAdmin();
         try {
           admin.getTableDescriptor(TEST_TABLE.getTableName());
         } finally {
           admin.close();
+          unmanagedConnection.close();
         }
         return null;
       }
     };
 
-    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN);
-    verifyDenied(listTablesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, TABLE_ADMIN);
+    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN, USER_CREATE, TABLE_ADMIN);
+    verifyDenied(listTablesAction, USER_RW, USER_RO, USER_NONE);
 
     verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, TABLE_ADMIN);
     verifyDenied(getTableDescAction, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testTableNameEnumeration() throws Exception {
+    AccessTestAction listTablesAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        Connection unmanagedConnection =
+            ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+        Admin admin = unmanagedConnection.getAdmin();
+        try {
+          return Arrays.asList(admin.listTableNames());
+        } finally {
+          admin.close();
+          unmanagedConnection.close();
+        }
+      }
+    };
+
+    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN, USER_CREATE, USER_RW, USER_RO);
+    verifyDenied(listTablesAction, USER_NONE);
   }
 
   @Test
@@ -2166,7 +2194,7 @@ public class TestAccessController extends SecureTestUtil {
       grantOnTableUsingAccessControlClient(TEST_UTIL, conf, testGrantRevoke.getShortName(),
           TEST_TABLE.getTableName(), null, null, Permission.Action.READ);
     } catch (Throwable e) {
-      LOG.error("error during call of AccessControlClient.grant. " + e.getStackTrace());
+      LOG.error("error during call of AccessControlClient.grant. ", e);
     }
 
     // Now testGrantRevoke should be able to read also
@@ -2177,7 +2205,7 @@ public class TestAccessController extends SecureTestUtil {
       revokeFromTableUsingAccessControlClient(TEST_UTIL, conf, testGrantRevoke.getShortName(),
           TEST_TABLE.getTableName(), null, null, Permission.Action.READ);
     } catch (Throwable e) {
-      LOG.error("error during call of AccessControlClient.revoke " + e.getStackTrace());
+      LOG.error("error during call of AccessControlClient.revoke ", e);
     }
 
     // Now testGrantRevoke shouldn't be able read
@@ -2207,7 +2235,7 @@ public class TestAccessController extends SecureTestUtil {
       grantOnNamespaceUsingAccessControlClient(TEST_UTIL, conf, testNS.getShortName(),
           TEST_TABLE.getTableName().getNamespaceAsString(), Permission.Action.READ);
     } catch (Throwable e) {
-      LOG.error("error during call of AccessControlClient.grant. " + e.getStackTrace());
+      LOG.error("error during call of AccessControlClient.grant. ", e);
     }
 
     // Now testNS should be able to read also
@@ -2218,7 +2246,7 @@ public class TestAccessController extends SecureTestUtil {
       revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, conf, testNS.getShortName(),
           TEST_TABLE.getTableName().getNamespaceAsString(), Permission.Action.READ);
     } catch (Throwable e) {
-      LOG.error("error during call of AccessControlClient.revoke " + e.getStackTrace());
+      LOG.error("error during call of AccessControlClient.revoke ", e);
     }
 
     // Now testNS shouldn't be able read
@@ -2451,8 +2479,7 @@ public class TestAccessController extends SecureTestUtil {
         try {
           return AccessControlClient.getUserPermissions(conf, regex);
         } catch (Throwable e) {
-          LOG.error("error during call of AccessControlClient.getUserPermissions. "
-              + e.getStackTrace());
+          LOG.error("error during call of AccessControlClient.getUserPermissions.", e);
           return null;
         }
       }
@@ -2462,10 +2489,12 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testAccessControlClientUserPerms() throws Exception {
     // adding default prefix explicitly as it is not included in the table name.
-    final String regex = TEST_TABLE.getTableName().getNamespaceAsString() + ":"
-        + TEST_TABLE.getTableName().getNameAsString();
+    assertEquals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR,
+                 TEST_TABLE.getTableName().getNamespaceAsString());
+    final String regex = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR +
+      TableName.NAMESPACE_DELIM + TEST_TABLE.getTableName().getNameAsString();
     User testUserPerms = User.createUserForTesting(conf, "testUserPerms", new String[0]);
-    assertNull(testUserPerms.runAs(getPrivilegedAction(regex)));
+    assertEquals(0, testUserPerms.runAs(getPrivilegedAction(regex)).size());
     // Grant TABLE ADMIN privs to testUserPerms
     grantOnTable(TEST_UTIL, testUserPerms.getShortName(), TEST_TABLE.getTableName(), null,
       null, Action.ADMIN);
@@ -2475,12 +2504,12 @@ public class TestAccessController extends SecureTestUtil {
     assertEquals(5, perms.size());
   }
 
-
-
   @Test
-  public void testAccessControllerRegexHandling() throws Exception {
+  public void testAccessControllerUserPermsRegexHandling() throws Exception {
     User testRegexHandler = User.createUserForTesting(conf, "testRegexHandling", new String[0]);
-    String tableName = "testRegex";
+
+    final String REGEX_ALL_TABLES = ".*";
+    final String tableName = "testRegex";
     final TableName table1 = TableName.valueOf(tableName);
     final byte[] family = Bytes.toBytes("f1");
 
@@ -2494,20 +2523,32 @@ public class TestAccessController extends SecureTestUtil {
     // creating the ns and table in it
     String ns = "testNamespace";
     NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
-    final TableName table2 = TableName.valueOf(ns + ":" + tableName);
+    final TableName table2 = TableName.valueOf(ns, tableName);
     TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
     htd = new HTableDescriptor(table2);
     htd.addFamily(new HColumnDescriptor(family));
     admin.createTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(table2);
+
+    // Verify that we can read sys-tables
+    String aclTableName = AccessControlLists.ACL_TABLE_NAME.getNameAsString();
+    assertEquals(1, SUPERUSER.runAs(getPrivilegedAction(aclTableName)).size());
+    assertEquals(0, testRegexHandler.runAs(getPrivilegedAction(aclTableName)).size());
 
     // Grant TABLE ADMIN privs to testUserPerms
+    assertEquals(0, testRegexHandler.runAs(getPrivilegedAction(REGEX_ALL_TABLES)).size());
     grantOnTable(TEST_UTIL, testRegexHandler.getShortName(), table1, null, null, Action.ADMIN);
+    assertEquals(2, testRegexHandler.runAs(getPrivilegedAction(REGEX_ALL_TABLES)).size());
     grantOnTable(TEST_UTIL, testRegexHandler.getShortName(), table2, null, null, Action.ADMIN);
+    assertEquals(4, testRegexHandler.runAs(getPrivilegedAction(REGEX_ALL_TABLES)).size());
 
     // USER_ADMIN, testUserPerms must have a row each.
     assertEquals(2, testRegexHandler.runAs(getPrivilegedAction(tableName)).size());
-    assertEquals(2, testRegexHandler.runAs(getPrivilegedAction("default:" + tableName)).size());
-    assertEquals(2, testRegexHandler.runAs(getPrivilegedAction(ns + ":" + tableName)).size());
+    assertEquals(2, testRegexHandler.runAs(getPrivilegedAction(
+          NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR + TableName.NAMESPACE_DELIM + tableName)
+        ).size());
+    assertEquals(2, testRegexHandler.runAs(getPrivilegedAction(
+        ns + TableName.NAMESPACE_DELIM + tableName)).size());
     assertEquals(0, testRegexHandler.runAs(getPrivilegedAction("notMatchingAny")).size());
 
     TEST_UTIL.deleteTable(table1);

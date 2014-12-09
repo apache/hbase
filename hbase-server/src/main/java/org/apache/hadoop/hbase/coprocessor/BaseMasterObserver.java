@@ -411,22 +411,23 @@ public class BaseMasterObserver implements MasterObserver {
 
   @Override
   public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<TableName> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
-  }
-
-  @Override
-  public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<TableName> tableNamesList, List<HTableDescriptor> descriptors, String regex)
       throws IOException {
   }
 
   @Override
   public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<HTableDescriptor> descriptors) throws IOException {
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      String regex) throws IOException {
   }
 
   @Override
-  public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+  public void preGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors, String regex) throws IOException {
+  }
+
+  @Override
+  public void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<HTableDescriptor> descriptors, String regex) throws IOException {
   }
 

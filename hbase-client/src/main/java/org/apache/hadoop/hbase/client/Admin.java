@@ -115,12 +115,72 @@ public interface Admin extends Abortable, Closeable {
   HTableDescriptor[] listTables(String regex) throws IOException;
 
   /**
+   * List all the tables matching the given pattern.
+   *
+   * @param pattern The compiled regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return - returns an array of HTableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTables()
+   */
+  HTableDescriptor[] listTables(Pattern pattern, boolean includeSysTables)
+      throws IOException;
+
+  /**
+   * List all the tables matching the given pattern.
+   *
+   * @param regex The regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return - returns an array of HTableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTables(java.util.regex.Pattern, boolean)
+   */
+  HTableDescriptor[] listTables(String regex, boolean includeSysTables)
+      throws IOException;
+
+  /**
    * List all of the names of userspace tables.
    *
    * @return TableName[] table names
    * @throws IOException if a remote or network exception occurs
    */
   TableName[] listTableNames() throws IOException;
+
+  /**
+   * List all of the names of userspace tables.
+   * @param pattern The regular expression to match against
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  TableName[] listTableNames(Pattern pattern) throws IOException;
+
+  /**
+   * List all of the names of userspace tables.
+   * @param regex The regular expression to match against
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  TableName[] listTableNames(String regex) throws IOException;
+
+  /**
+   * List all of the names of userspace tables.
+   * @param pattern The regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  TableName[] listTableNames(final Pattern pattern, final boolean includeSysTables)
+      throws IOException;
+
+  /**
+   * List all of the names of userspace tables.
+   * @param regex The regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  TableName[] listTableNames(final String regex, final boolean includeSysTables)
+      throws IOException;
 
   /**
    * Method for getting the tableDescriptor

@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -150,6 +151,8 @@ public class TestMasterObserver {
     private boolean postModifyTableHandlerCalled;
     private boolean preGetTableDescriptorsCalled;
     private boolean postGetTableDescriptorsCalled;
+    private boolean postGetTableNamesCalled;
+    private boolean preGetTableNamesCalled;
 
     public void enableBypass(boolean bypass) {
       this.bypass = bypass;
@@ -224,6 +227,8 @@ public class TestMasterObserver {
       postModifyTableHandlerCalled = false;
       preGetTableDescriptorsCalled = false;
       postGetTableDescriptorsCalled = false;
+      postGetTableNamesCalled = false;
+      preGetTableNamesCalled = false;
     }
 
     @Override
@@ -773,11 +778,6 @@ public class TestMasterObserver {
       postDeleteSnapshotCalled = true;
     }
 
-    @Override
-    public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<TableName> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
-    }
-
     public boolean wasDeleteSnapshotCalled() {
       return preDeleteSnapshotCalled && postDeleteSnapshotCalled;
     }
@@ -1018,17 +1018,29 @@ public class TestMasterObserver {
 
     @Override
     public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<HTableDescriptor> descriptors) throws IOException {
-    }
-
-    @Override
-    public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        List<HTableDescriptor> descriptors, String regex) throws IOException {
+        List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+        String regex) throws IOException {
       postGetTableDescriptorsCalled = true;
     }
 
     public boolean wasGetTableDescriptorsCalled() {
       return preGetTableDescriptorsCalled && postGetTableDescriptorsCalled;
+    }
+
+    @Override
+    public void preGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<HTableDescriptor> descriptors, String regex) throws IOException {
+      preGetTableNamesCalled = true;
+    }
+
+    @Override
+    public void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        List<HTableDescriptor> descriptors, String regex) throws IOException {
+      postGetTableNamesCalled = true;
+    }
+
+    public boolean wasGetTableNamesCalled() {
+      return preGetTableNamesCalled && postGetTableNamesCalled;
     }
 
     @Override
@@ -1552,4 +1564,19 @@ public class TestMasterObserver {
       cp.wasGetTableDescriptorsCalled());
   }
 
+  @Test
+  public void testTableNamesEnumeration() throws Exception {
+    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+
+    HMaster master = cluster.getMaster();
+    MasterCoprocessorHost host = master.getMasterCoprocessorHost();
+    CPMasterObserver cp = (CPMasterObserver)host.findCoprocessor(
+        CPMasterObserver.class.getName());
+    cp.resetStates();
+
+    master.getMasterRpcServices().getTableNames(null,
+        GetTableNamesRequest.newBuilder().build());
+    assertTrue("Coprocessor should be called on table names request",
+      cp.wasGetTableNamesCalled());
+  }
 }
