@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -76,6 +78,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -157,6 +160,37 @@ public class RegionCoprocessorHost
 
   }
 
+  static class TableCoprocessorAttribute {
+    private Path path;
+    private String className;
+    private int priority;
+    private Configuration conf;
+
+    public TableCoprocessorAttribute(Path path, String className, int priority,
+        Configuration conf) {
+      this.path = path;
+      this.className = className;
+      this.priority = priority;
+      this.conf = conf;
+    }
+
+    public Path getPath() {
+      return path;
+    }
+
+    public String getClassName() {
+      return className;
+    }
+
+    public int getPriority() {
+      return priority;
+    }
+
+    public Configuration getConf() {
+      return conf;
+    }
+  }
+
   /** The region server services */
   RegionServerServices rsServices;
   /** The region */
@@ -188,15 +222,13 @@ public class RegionCoprocessorHost
     loadTableCoprocessors(conf);
   }
 
-  void loadTableCoprocessors(final Configuration conf) {
-    // scan the table attributes for coprocessor load specifications
-    // initialize the coprocessors
-    List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
-    for (Map.Entry<ImmutableBytesWritable,ImmutableBytesWritable> e:
-        region.getTableDesc().getValues().entrySet()) {
+  static List<TableCoprocessorAttribute> getTableCoprocessorAttrsFromSchema(Configuration conf,
+      HTableDescriptor htd) {
+    List<TableCoprocessorAttribute> result = Lists.newArrayList();
+    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: htd.getValues().entrySet()) {
       String key = Bytes.toString(e.getKey().get()).trim();
-      String spec = Bytes.toString(e.getValue().get()).trim();
       if (HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(key).matches()) {
+        String spec = Bytes.toString(e.getValue().get()).trim();
         // found one
         try {
           Matcher matcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
@@ -206,6 +238,11 @@ public class RegionCoprocessorHost
             Path path = matcher.group(1).trim().isEmpty() ?
                 null : new Path(matcher.group(1).trim());
             String className = matcher.group(2).trim();
+            if (className.isEmpty()) {
+              LOG.error("Malformed table coprocessor specification: key=" +
+                key + ", spec: " + spec);
+              continue;
+            }
             int priority = matcher.group(3).trim().isEmpty() ?
                 Coprocessor.PRIORITY_USER : Integer.valueOf(matcher.group(3));
             String cfgSpec = null;
@@ -227,20 +264,7 @@ public class RegionCoprocessorHost
             } else {
               ourConf = conf;
             }
-            // Load encompasses classloading and coprocessor initialization
-            try {
-              RegionEnvironment env = load(path, className, priority, ourConf);
-              configured.add(env);
-              LOG.info("Loaded coprocessor " + className + " from HTD of " +
-                region.getTableDesc().getTableName().getNameAsString() + " successfully.");
-            } catch (Throwable t) {
-              // Coprocessor failed to load, do we abort on error?
-              if (conf.getBoolean(ABORT_ON_ERROR_KEY, DEFAULT_ABORT_ON_ERROR)) {
-                abortServer(className, t);
-              } else {
-                LOG.error("Failed to load coprocessor " + className, t);
-              }
-            }
+            result.add(new TableCoprocessorAttribute(path, className, priority, ourConf));
           } else {
             LOG.error("Malformed table coprocessor specification: key=" + key +
               ", spec: " + spec);
@@ -248,6 +272,65 @@ public class RegionCoprocessorHost
         } catch (Exception ioe) {
           LOG.error("Malformed table coprocessor specification: key=" + key +
             ", spec: " + spec);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Sanity check the table coprocessor attributes of the supplied schema. Will
+   * throw an exception if there is a problem.
+   * @param conf
+   * @param htd
+   * @throws IOException
+   */
+  public static void testTableCoprocessorAttrs(final Configuration conf,
+      final HTableDescriptor htd) throws IOException {
+    String pathPrefix = UUID.randomUUID().toString();
+    for (TableCoprocessorAttribute attr: getTableCoprocessorAttrsFromSchema(conf, htd)) {
+      if (attr.getPriority() < 0) {
+        throw new IOException("Priority for coprocessor " + attr.getClassName() +
+          " cannot be less than 0");
+      }
+      ClassLoader old = Thread.currentThread().getContextClassLoader();
+      try {
+        ClassLoader cl;
+        if (attr.getPath() != null) {
+          cl = CoprocessorClassLoader.getClassLoader(attr.getPath(),
+            CoprocessorHost.class.getClassLoader(), pathPrefix, conf);
+        } else {
+          cl = CoprocessorHost.class.getClassLoader();
+        }
+        Thread.currentThread().setContextClassLoader(cl);
+        cl.loadClass(attr.getClassName());
+      } catch (ClassNotFoundException e) {
+        throw new IOException("Class " + attr.getClassName() + " cannot be loaded", e);
+      } finally {
+        Thread.currentThread().setContextClassLoader(old);
+      }
+    }
+  }
+
+  void loadTableCoprocessors(final Configuration conf) {
+    // scan the table attributes for coprocessor load specifications
+    // initialize the coprocessors
+    List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
+    for (TableCoprocessorAttribute attr: getTableCoprocessorAttrsFromSchema(conf, 
+        region.getTableDesc())) {
+      // Load encompasses classloading and coprocessor initialization
+      try {
+        RegionEnvironment env = load(attr.getPath(), attr.getClassName(), attr.getPriority(),
+          attr.getConf());
+        configured.add(env);
+        LOG.info("Loaded coprocessor " + attr.getClassName() + " from HTD of " +
+            region.getTableDesc().getTableName().getNameAsString() + " successfully.");
+      } catch (Throwable t) {
+        // Coprocessor failed to load, do we abort on error?
+        if (conf.getBoolean(ABORT_ON_ERROR_KEY, DEFAULT_ABORT_ON_ERROR)) {
+          abortServer(attr.getClassName(), t);
+        } else {
+          LOG.error("Failed to load coprocessor " + attr.getClassName(), t);
         }
       }
     }
