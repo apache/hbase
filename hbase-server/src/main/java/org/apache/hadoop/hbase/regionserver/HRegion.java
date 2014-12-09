@@ -940,6 +940,13 @@ public class HRegion implements HeapSize { // , Writable{
     return this.rsServices;
   }
 
+  /**
+   * @return split policy for this region.
+   */
+  public RegionSplitPolicy getSplitPolicy() {
+    return this.splitPolicy;
+  }
+
   /** @return readRequestsCount for this region */
   long getReadRequestsCount() {
     return this.readRequestsCount.get();

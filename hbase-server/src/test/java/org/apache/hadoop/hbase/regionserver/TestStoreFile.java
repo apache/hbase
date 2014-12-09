@@ -936,7 +936,7 @@ public class TestStoreFile extends HBaseTestCase {
       final String family, final StoreFile sf, final byte[] splitKey, boolean isTopRef)
       throws IOException {
     FileSystem fs = regionFs.getFileSystem();
-    Path path = regionFs.splitStoreFile(hri, family, sf, splitKey, isTopRef);
+    Path path = regionFs.splitStoreFile(hri, family, sf, splitKey, isTopRef, null);
     if (null == path) {
       return null;
     }

@@ -27,6 +27,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -1076,6 +1077,36 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
+  @Test
+  public void testStoreFileReferenceCreationWhenSplitPolicySaysToSkipRangeCheck()
+      throws Exception {
+    final TableName tableName =
+        TableName.valueOf("testStoreFileReferenceCreationWhenSplitPolicySaysToSkipRangeCheck");
+    try {
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor("f"));
+      htd.setRegionSplitPolicyClassName(CustomSplitPolicy.class.getName());
+      admin.createTable(htd);
+      List<HRegion> regions = awaitTableRegions(tableName.toBytes());
+      HRegion region = regions.get(0);
+      for(int i = 3;i<9;i++) {
+        Put p = new Put(Bytes.toBytes("row"+i));
+        p.add(Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("value"+i));
+        region.put(p);
+      }
+      region.flushcache();
+      Store store = region.getStore(Bytes.toBytes("f"));
+      Collection<StoreFile> storefiles = store.getStorefiles();
+      assertEquals(storefiles.size(), 1);
+      assertFalse(region.hasReferences());
+      Path referencePath = region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "f",
+        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
+      assertNotNull(referencePath);
+    } finally {
+      TESTING_UTIL.deleteTable(tableName);
+    }
+  }
+
   public static class MockedSplitTransaction extends SplitTransaction {
 
     private HRegion currentRegion;
@@ -1363,6 +1394,19 @@ public class TestSplitTransactionOnCluster {
       st.stepsAfterPONR(rs, rs, daughterRegions);
     }
 
+  }
+
+  static class CustomSplitPolicy extends RegionSplitPolicy {
+
+    @Override
+    protected boolean shouldSplit() {
+      return true;
+    }
+
+    @Override
+    public boolean skipStoreFileRangeCheck() {
+      return true;
+    }
   }
 }
 
