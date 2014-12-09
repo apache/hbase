@@ -45,6 +45,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     conf.set("hbase.regions.slop", "0");
     loadBalancer = new SimpleLoadBalancer();
     loadBalancer.setConf(conf);

@@ -48,7 +48,10 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -63,6 +66,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     loadBalancer = new StochasticLoadBalancer();
