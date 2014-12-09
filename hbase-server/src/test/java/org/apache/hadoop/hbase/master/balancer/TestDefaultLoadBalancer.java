@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -46,6 +47,7 @@ public class TestDefaultLoadBalancer extends BalancerTestBase {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     conf.set("hbase.regions.slop", "0");
     loadBalancer = new SimpleLoadBalancer();
     loadBalancer.setConf(conf);

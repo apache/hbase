@@ -33,6 +33,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.Assert;
 
 /**
@@ -52,6 +54,28 @@ public class BalancerTestBase {
 
   protected static Random rand = new Random();
   static int regionId = 0;
+
+  // This class is introduced because IP to rack resolution can be lengthy.
+  static class MockMapping implements DNSToSwitchMapping {
+    public MockMapping(Configuration conf) {
+    }
+
+    public List<String> resolve(List<String> names) {
+      List<String> ret = new ArrayList<String>(names.size());
+      for (String name : names) {
+        ret.add("rack");
+      }
+      return ret;
+    }
+
+    // do not add @Override annotations here. It mighty break compilation with earlier Hadoops
+    public void reloadCachedMappings() {
+    }
+
+    // do not add @Override annotations here. It mighty break compilation with earlier Hadoops
+    public void reloadCachedMappings(List<String> arg0) {
+    }
+  }
 
   /**
    * Invariant is that all servers have between floor(avg) and ceiling(avg)
