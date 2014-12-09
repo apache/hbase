@@ -106,6 +106,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -1244,9 +1245,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           + "if you want to bypass sanity checks");
     }
 
-    // check split policy class can be loaded
+    // check that coprocessors and other specified plugin classes can be loaded
     try {
-      RegionSplitPolicy.getSplitPolicyClass(htd, conf);
+      checkClassLoading(conf, htd);
     } catch (Exception ex) {
       throw new DoNotRetryIOException(ex);
     }
@@ -1397,6 +1398,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   throws IOException {
     if (!this.masterCheckEncryption) return;
     EncryptionTest.testEncryption(conf, hcd.getEncryptionType(), hcd.getEncryptionKey());
+  }
+
+  private void checkClassLoading(final Configuration conf, final HTableDescriptor htd)
+  throws IOException {
+    RegionSplitPolicy.getSplitPolicyClass(htd, conf);
+    RegionCoprocessorHost.testTableCoprocessorAttrs(conf, htd);
   }
 
   private HRegionInfo[] getHRegionInfos(HTableDescriptor hTableDescriptor,

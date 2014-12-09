@@ -4855,8 +4855,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    */
   protected HRegion openHRegion(final CancelableProgressable reporter)
   throws IOException {
+    // Refuse to open the region if we are missing local compression support
     checkCompressionCodecs();
+    // Refuse to open the region if encryption configuration is incorrect or
+    // codec support is missing
     checkEncryption();
+    // Refuse to open the region if a required class cannot be loaded
+    checkClassLoading();
     this.openSeqNum = initialize(reporter);
     this.setSequenceId(openSeqNum);
     if (wal != null && getRegionServerServices() != null) {
@@ -4876,6 +4881,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     for (HColumnDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
       EncryptionTest.testEncryption(conf, fam.getEncryptionType(), fam.getEncryptionKey());
     }
+  }
+
+  private void checkClassLoading() throws IOException {
+    RegionSplitPolicy.getSplitPolicyClass(this.htableDescriptor, conf);
+    RegionCoprocessorHost.testTableCoprocessorAttrs(conf, this.htableDescriptor);
   }
 
   /**
