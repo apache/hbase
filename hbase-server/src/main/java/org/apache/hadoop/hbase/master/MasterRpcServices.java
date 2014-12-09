@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -775,67 +774,30 @@ public class MasterRpcServices extends RSRpcServices
       GetTableDescriptorsRequest req) throws ServiceException {
     try {
       master.checkInitialized();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
 
-    List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
-    List<TableName> tableNameList = new ArrayList<TableName>();
-    for(HBaseProtos.TableName tableNamePB: req.getTableNamesList()) {
-      tableNameList.add(ProtobufUtil.toTableName(tableNamePB));
-    }
-    boolean bypass = false;
-    if (master.cpHost != null) {
-      try {
-        bypass = master.cpHost.preGetTableDescriptors(tableNameList, descriptors);
-      } catch (IOException ioe) {
-        throw new ServiceException(ioe);
-      }
-    }
-
-    if (!bypass) {
-      if (req.getTableNamesCount() == 0) {
-        // request for all TableDescriptors
-        Map<String, HTableDescriptor> descriptorMap = null;
-        try {
-          descriptorMap = master.getTableDescriptors().getAll();
-        } catch (IOException e) {
-          LOG.warn("Failed getting all descriptors", e);
-        }
-        if (descriptorMap != null) {
-          for(HTableDescriptor desc: descriptorMap.values()) {
-            if(!desc.getTableName().isSystemTable()) {
-              descriptors.add(desc);
-            }
-          }
-        }
-      } else {
-        for (TableName s: tableNameList) {
-          try {
-            HTableDescriptor desc = master.getTableDescriptors().get(s);
-            if (desc != null) {
-              descriptors.add(desc);
-            }
-          } catch (IOException e) {
-            LOG.warn("Failed getting descriptor for " + s, e);
-          }
+      final String regex = req.hasRegex() ? req.getRegex() : null;
+      List<TableName> tableNameList = null;
+      if (req.getTableNamesCount() > 0) {
+        tableNameList = new ArrayList<TableName>(req.getTableNamesCount());
+        for (HBaseProtos.TableName tableNamePB: req.getTableNamesList()) {
+          tableNameList.add(ProtobufUtil.toTableName(tableNamePB));
         }
       }
 
-      if (master.cpHost != null) {
-        try {
-          master.cpHost.postGetTableDescriptors(descriptors);
-        } catch (IOException ioe) {
-          throw new ServiceException(ioe);
+      List<HTableDescriptor> descriptors = master.listTableDescriptors(regex, tableNameList,
+          req.getIncludeSysTables());
+
+      GetTableDescriptorsResponse.Builder builder = GetTableDescriptorsResponse.newBuilder();
+      if (descriptors != null && descriptors.size() > 0) {
+        // Add the table descriptors to the response
+        for (HTableDescriptor htd: descriptors) {
+          builder.addTableSchema(htd.convert());
         }
       }
+      return builder.build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
     }
-
-    GetTableDescriptorsResponse.Builder builder = GetTableDescriptorsResponse.newBuilder();
-    for (HTableDescriptor htd: descriptors) {
-      builder.addTableSchema(htd.convert());
-    }
-    return builder.build();
   }
 
   /**
@@ -850,13 +812,16 @@ public class MasterRpcServices extends RSRpcServices
       GetTableNamesRequest req) throws ServiceException {
     try {
       master.checkInitialized();
-      Collection<HTableDescriptor> descriptors = master.getTableDescriptors().getAll().values();
+
+      final String regex = req.hasRegex() ? req.getRegex() : null;
+      List<TableName> tableNames = master.listTableNames(regex, req.getIncludeSysTables());
+
       GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
-      for (HTableDescriptor descriptor: descriptors) {
-        if (descriptor.getTableName().isSystemTable()) {
-          continue;
+      if (tableNames != null && tableNames.size() > 0) {
+        // Add the table names to the response
+        for (TableName table: tableNames) {
+          builder.addTableNames(ProtobufUtil.toProtoTableName(table));
         }
-        builder.addTableNames(ProtobufUtil.toProtoTableName(descriptor.getTableName()));
       }
       return builder.build();
     } catch (IOException e) {

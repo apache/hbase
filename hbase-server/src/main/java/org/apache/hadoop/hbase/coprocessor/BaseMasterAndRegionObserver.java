@@ -417,6 +417,28 @@ public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      String regex) throws IOException {
+  }
+
+  @Override
+  public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      String regex) throws IOException {
+  }
+
+  @Override
+  public void preGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors, String regex) throws IOException {
+  }
+
+  @Override
+  public void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors, String regex) throws IOException {
+  }
+
+  @Override
   public void preTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName) throws IOException {
   }

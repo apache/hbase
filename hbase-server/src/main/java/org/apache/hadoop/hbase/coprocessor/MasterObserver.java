@@ -673,19 +673,66 @@ public interface MasterObserver extends Coprocessor {
    * @param tableNamesList the list of table names, or null if querying for all
    * @param descriptors an empty list, can be filled with what to return if bypassing
    * @throws IOException
+   * @deprecated Use preGetTableDescriptors with regex instead.
    */
+  @Deprecated
   void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<TableName> tableNamesList,
-      List<HTableDescriptor> descriptors) throws IOException;
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors) throws IOException;
 
   /**
    * Called after a getTableDescriptors request has been processed.
    * @param ctx the environment to interact with the framework and master
    * @param descriptors the list of descriptors about to be returned
    * @throws IOException
+   * @deprecated Use postGetTableDescriptors with regex instead.
    */
+  @Deprecated
   void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<HTableDescriptor> descriptors) throws IOException;
+
+  /**
+   * Called before a getTableDescriptors request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableNamesList the list of table names, or null if querying for all
+   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @param regex regular expression used for filtering the table names
+   * @throws IOException
+   */
+  void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      String regex) throws IOException;
+
+  /**
+   * Called after a getTableDescriptors request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableNamesList the list of table names, or null if querying for all
+   * @param descriptors the list of descriptors about to be returned
+   * @param regex regular expression used for filtering the table names
+   * @throws IOException
+   */
+  void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      String regex) throws IOException;
+
+  /**
+   * Called before a getTableNames request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @param regex regular expression used for filtering the table names
+   * @throws IOException
+   */
+  void preGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors, String regex) throws IOException;
+
+  /**
+   * Called after a getTableNames request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors the list of descriptors about to be returned
+   * @param regex regular expression used for filtering the table names
+   * @throws IOException
+   */
+  void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors, String regex) throws IOException;
 
   /**
    * Called before a new namespace is created by

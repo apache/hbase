@@ -313,6 +313,8 @@ message GetSchemaAlterStatusResponse {
 
 message GetTableDescriptorsRequest {
   repeated TableName table_names = 1;
+  optional string regex = 2;
+  optional bool include_sys_tables = 3 [default=false];
 }
 
 message GetTableDescriptorsResponse {
@@ -320,6 +322,8 @@ message GetTableDescriptorsResponse {
 }
 
 message GetTableNamesRequest {
+  optional string regex = 1;
+  optional bool include_sys_tables = 2 [default=false];
 }
 
 message GetTableNamesResponse {
@@ -396,7 +400,7 @@ service MasterService {
 
  /** Master dispatch merging the regions */
   rpc DispatchMergingRegions(DispatchMergingRegionsRequest)
-    returns(DispatchMergingRegionsResponse);    
+    returns(DispatchMergingRegionsResponse);
 
   /** Assign a region to a server chosen at random. */
   rpc AssignRegion(AssignRegionRequest)
@@ -489,7 +493,7 @@ service MasterService {
   rpc ExecMasterService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 
-  /** 
+  /**
    * Create a snapshot for the given table.
    */
   rpc Snapshot(SnapshotRequest) returns(SnapshotResponse);

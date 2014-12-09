@@ -223,7 +223,7 @@ public class TableAuthManager {
    * Updates the internal permissions cache for a single table, splitting
    * the permissions listed into separate caches for users and groups to optimize
    * group lookups.
-   * 
+   *
    * @param table
    * @param tablePerms
    */
@@ -349,6 +349,20 @@ public class TableAuthManager {
     return false;
   }
 
+  private boolean hasAccess(List<TablePermission> perms,
+                            TableName table, Permission.Action action) {
+    if (perms != null) {
+      for (TablePermission p : perms) {
+        if (p.implies(action)) {
+          return true;
+        }
+      }
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug("No permissions found for table="+table);
+    }
+    return false;
+  }
+
   /**
    * Authorize a user for a given KV. This is called from AccessControlFilter.
    */
@@ -442,12 +456,31 @@ public class TableAuthManager {
       byte[] qualifier, Permission.Action action) {
     if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
     // Global and namespace authorizations supercede table level
-    if (authorize(user, table.getNamespaceAsString(), action)) {    
+    if (authorize(user, table.getNamespaceAsString(), action)) {
       return true;
     }
     // Check table permissions
     return authorize(getTablePermissions(table).getUser(user.getShortName()), table, family,
         qualifier, action);
+  }
+
+  /**
+   * Checks if the user has access to the full table or at least a family/qualifier
+   * for the specified action.
+   *
+   * @param user
+   * @param table
+   * @param action
+   * @return true if the user has access to the table, false otherwise
+   */
+  public boolean userHasAccess(User user, TableName table, Permission.Action action) {
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
+    // Global and namespace authorizations supercede table level
+    if (authorize(user, table.getNamespaceAsString(), action)) {
+      return true;
+    }
+    // Check table permissions
+    return hasAccess(getTablePermissions(table).getUser(user.getShortName()), table, action);
   }
 
   /**
@@ -460,7 +493,7 @@ public class TableAuthManager {
 
   /**
    * Checks authorization to a given table and column family for a group, based
-   * on the stored permissions. 
+   * on the stored permissions.
    * @param groupName
    * @param table
    * @param family
@@ -483,6 +516,29 @@ public class TableAuthManager {
     return authorize(getTablePermissions(table).getGroup(groupName), table, family, action);
   }
 
+  /**
+   * Checks if the user has access to the full table or at least a family/qualifier
+   * for the specified action.
+   * @param groupName
+   * @param table
+   * @param action
+   * @return true if the group has access to the table, false otherwise
+   */
+  public boolean groupHasAccess(String groupName, TableName table, Permission.Action action) {
+    // Global authorization supercedes table level
+    if (authorizeGroup(groupName, action)) {
+      return true;
+    }
+    if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
+    // Namespace authorization supercedes table level
+    if (hasAccess(getNamespacePermissions(table.getNamespaceAsString()).getGroup(groupName),
+        table, action)) {
+      return true;
+    }
+    // Check table level
+    return hasAccess(getTablePermissions(table).getGroup(groupName), table, action);
+  }
+
   public boolean authorize(User user, TableName table, byte[] family,
       byte[] qualifier, Permission.Action action) {
     if (authorizeUser(user, table, family, qualifier, action)) {
@@ -493,6 +549,22 @@ public class TableAuthManager {
     if (groups != null) {
       for (String group : groups) {
         if (authorizeGroup(group, table, family, action)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  public boolean hasAccess(User user, TableName table, Permission.Action action) {
+    if (userHasAccess(user, table, action)) {
+      return true;
+    }
+
+    String[] groups = user.getGroupNames();
+    if (groups != null) {
+      for (String group : groups) {
+        if (groupHasAccess(group, table, action)) {
           return true;
         }
       }

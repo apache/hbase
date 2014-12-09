@@ -26,13 +26,17 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -2011,5 +2015,121 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       tableNames.add(descriptor.getTableName());
     }
     return tableNames;
+  }
+
+  /**
+   * Returns the list of table descriptors that match the specified request
+   *
+   * @param regex The regular expression to match against, or null if querying for all
+   * @param tableNameList the list of table names, or null if querying for all
+   * @param includeSysTables False to match only against userspace tables
+   * @return the list of table descriptors
+   */
+  public List<HTableDescriptor> listTableDescriptors(final String regex,
+      final List<TableName> tableNameList, final boolean includeSysTables)
+      throws IOException {
+    final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
+
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preGetTableDescriptors(tableNameList, descriptors);
+      // method required for AccessController.
+      bypass |= cpHost.preGetTableDescriptors(tableNameList, descriptors, regex);
+    }
+
+    if (!bypass) {
+      if (tableNameList == null || tableNameList.size() == 0) {
+        // request for all TableDescriptors
+        Collection<HTableDescriptor> htds = tableDescriptors.getAll().values();
+        for (HTableDescriptor desc: htds) {
+          if (includeSysTables || !desc.getTableName().isSystemTable()) {
+            descriptors.add(desc);
+          }
+        }
+      } else {
+        for (TableName s: tableNameList) {
+          HTableDescriptor desc = tableDescriptors.get(s);
+          if (desc != null) {
+            descriptors.add(desc);
+          }
+        }
+      }
+
+      // Retains only those matched by regular expression.
+      if (regex != null) {
+        filterTablesByRegex(descriptors, Pattern.compile(regex));
+      }
+
+      if (cpHost != null) {
+        cpHost.postGetTableDescriptors(descriptors);
+        // method required for AccessController.
+        cpHost.postGetTableDescriptors(tableNameList, descriptors, regex);
+      }
+    }
+    return descriptors;
+  }
+
+  /**
+   * Returns the list of table names that match the specified request
+   * @param regex The regular expression to match against, or null if querying for all
+   * @param includeSysTables False to match only against userspace tables
+   * @return the list of table names
+   */
+  public List<TableName> listTableNames(final String regex, final boolean includeSysTables)
+      throws IOException {
+    final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
+
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preGetTableNames(descriptors, regex);
+    }
+
+    if (!bypass) {
+      // get all descriptors
+      Collection<HTableDescriptor> htds = tableDescriptors.getAll().values();
+      for (HTableDescriptor htd: htds) {
+        if (includeSysTables || !htd.getTableName().isSystemTable()) {
+          descriptors.add(htd);
+        }
+      }
+
+      // Retains only those matched by regular expression.
+      if (regex != null) {
+        filterTablesByRegex(descriptors, Pattern.compile(regex));
+      }
+
+      if (cpHost != null) {
+        cpHost.postGetTableNames(descriptors, regex);
+      }
+    }
+
+    List<TableName> result = new ArrayList(descriptors.size());
+    for (HTableDescriptor htd: descriptors) {
+      result.add(htd.getTableName());
+    }
+    return result;
+  }
+
+
+  /**
+   * Removes the table descriptors that don't match the pattern.
+   * @param descriptors list of table descriptors to filter
+   * @param pattern the regex to use
+   */
+  private static void filterTablesByRegex(final Collection<HTableDescriptor> descriptors,
+      final Pattern pattern) {
+    final String defaultNS = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
+    Iterator<HTableDescriptor> itr = descriptors.iterator();
+    while (itr.hasNext()) {
+      HTableDescriptor htd = itr.next();
+      String tableName = htd.getTableName().getNameAsString();
+      boolean matched = pattern.matcher(tableName).matches();
+      if (!matched && htd.getTableName().getNamespaceAsString().equals(defaultNS)) {
+        matched = pattern.matcher(defaultNS + TableName.NAMESPACE_DELIM + tableName).matches();
+      }
+      if (!matched) {
+        itr.remove();
+      }
+    }
   }
 }

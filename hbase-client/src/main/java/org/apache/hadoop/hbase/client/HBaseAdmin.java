@@ -291,59 +291,38 @@ public class HBaseAdmin implements Admin {
     return tableExists(TableName.valueOf(tableName));
   }
 
-  /**
-   * List all the userspace tables.  In other words, scan the hbase:meta table.
-   *
-   * If we wanted this to be really fast, we could implement a special
-   * catalog table that just contains table names and their descriptors.
-   * Right now, it only exists as part of the hbase:meta table's region info.
-   *
-   * @return - returns an array of HTableDescriptors
-   * @throws IOException if a remote or network exception occurs
-   */
   @Override
   public HTableDescriptor[] listTables() throws IOException {
-   return executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection()) {
+    return listTables((Pattern)null, false);
+  }
+
+  @Override
+  public HTableDescriptor[] listTables(Pattern pattern) throws IOException {
+    return listTables(pattern, false);
+  }
+
+  @Override
+  public HTableDescriptor[] listTables(String regex) throws IOException {
+    return listTables(Pattern.compile(regex), false);
+  }
+
+  @Override
+  public HTableDescriptor[] listTables(final Pattern pattern, final boolean includeSysTables)
+      throws IOException {
+    return executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection()) {
       @Override
       public HTableDescriptor[] call(int callTimeout) throws ServiceException {
         GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest((List<TableName>)null);
+            RequestConverter.buildGetTableDescriptorsRequest(pattern, includeSysTables);
         return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
       }
     });
   }
 
-  /**
-   * List all the userspace tables matching the given pattern.
-   *
-   * @param pattern The compiled regular expression to match against
-   * @return - returns an array of HTableDescriptors
-   * @throws IOException if a remote or network exception occurs
-   * @see #listTables()
-   */
   @Override
-  public HTableDescriptor[] listTables(Pattern pattern) throws IOException {
-    List<HTableDescriptor> matched = new LinkedList<HTableDescriptor>();
-    HTableDescriptor[] tables = listTables();
-    for (HTableDescriptor table : tables) {
-      if (pattern.matcher(table.getTableName().getNameAsString()).matches()) {
-        matched.add(table);
-      }
-    }
-    return matched.toArray(new HTableDescriptor[matched.size()]);
-  }
-
-  /**
-   * List all the userspace tables matching the given regular expression.
-   *
-   * @param regex The regular expression to match against
-   * @return - returns an array of HTableDescriptors
-   * @throws IOException if a remote or network exception occurs
-   * @see #listTables(java.util.regex.Pattern)
-   */
-  @Override
-  public HTableDescriptor[] listTables(String regex) throws IOException {
-    return listTables(Pattern.compile(regex));
+  public HTableDescriptor[] listTables(String regex, boolean includeSysTables)
+      throws IOException {
+    return listTables(Pattern.compile(regex), includeSysTables);
   }
 
   /**
@@ -367,17 +346,16 @@ public class HBaseAdmin implements Admin {
    * @param pattern The regular expression to match against
    * @return String[] table names
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link Admin#listTables(Pattern)} instead.
+   * @deprecated Use {@link Admin#listTableNames(Pattern)} instead.
    */
   @Deprecated
   public String[] getTableNames(Pattern pattern) throws IOException {
-    List<String> matched = new ArrayList<String>();
-    for (String name: getTableNames()) {
-      if (pattern.matcher(name).matches()) {
-        matched.add(name);
-      }
+    TableName[] tableNames = listTableNames(pattern);
+    String result[] = new String[tableNames.length];
+    for (int i = 0; i < tableNames.length; i++) {
+      result[i] = tableNames[i].getNameAsString();
     }
-    return matched.toArray(new String[matched.size()]);
+    return result;
   }
 
   /**
@@ -385,28 +363,46 @@ public class HBaseAdmin implements Admin {
    * @param regex The regular expression to match against
    * @return String[] table names
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link Admin#listTables(Pattern)} instead.
+   * @deprecated Use {@link Admin#listTableNames(Pattern)} instead.
    */
   @Deprecated
   public String[] getTableNames(String regex) throws IOException {
     return getTableNames(Pattern.compile(regex));
   }
 
-  /**
-   * List all of the names of userspace tables.
-   * @return TableName[] table names
-   * @throws IOException if a remote or network exception occurs
-   */
   @Override
   public TableName[] listTableNames() throws IOException {
+    return listTableNames((Pattern)null, false);
+  }
+
+  @Override
+  public TableName[] listTableNames(Pattern pattern) throws IOException {
+    return listTableNames(pattern, false);
+  }
+
+  @Override
+  public TableName[] listTableNames(String regex) throws IOException {
+    return listTableNames(Pattern.compile(regex), false);
+  }
+
+  @Override
+  public TableName[] listTableNames(final Pattern pattern, final boolean includeSysTables)
+      throws IOException {
     return executeCallable(new MasterCallable<TableName[]>(getConnection()) {
       @Override
       public TableName[] call(int callTimeout) throws ServiceException {
-        return ProtobufUtil.getTableNameArray(master.getTableNames(null,
-          GetTableNamesRequest.newBuilder().build())
-        .getTableNamesList());
+        GetTableNamesRequest req =
+            RequestConverter.buildGetTableNamesRequest(pattern, includeSysTables);
+        return ProtobufUtil.getTableNameArray(master.getTableNames(null, req)
+            .getTableNamesList());
       }
     });
+  }
+
+  @Override
+  public TableName[] listTableNames(final String regex, final boolean includeSysTables)
+      throws IOException {
+    return listTableNames(Pattern.compile(regex), includeSysTables);
   }
 
   /**
@@ -2638,7 +2634,7 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Roll the log writer. I.e. when using a file system based write ahead log, 
+   * Roll the log writer. I.e. when using a file system based write ahead log,
    * start writing log messages to a new file.
    *
    * Note that when talking to a version 1.0+ HBase deployment, the rolling is asynchronous.

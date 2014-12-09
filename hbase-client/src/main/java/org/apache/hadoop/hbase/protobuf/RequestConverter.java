@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.protobuf;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 
@@ -90,6 +91,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
@@ -761,7 +763,7 @@ public final class RequestConverter {
    for (Triple<HRegionInfo, Integer, List<ServerName>> regionOpenInfo: regionOpenInfos) {
      Integer second = regionOpenInfo.getSecond();
      int versionOfOfflineNode = second == null ? -1 : second.intValue();
-     builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(), versionOfOfflineNode, 
+     builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(), versionOfOfflineNode,
        regionOpenInfo.getThird(), openForReplay));
    }
    if (server != null) {
@@ -784,7 +786,7 @@ public final class RequestConverter {
      final HRegionInfo region, final int versionOfOfflineNode, List<ServerName> favoredNodes,
      Boolean openForReplay) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode, favoredNodes, 
+   builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode, favoredNodes,
      openForReplay));
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
@@ -1243,6 +1245,36 @@ public final class RequestConverter {
         builder.addTableNames(ProtobufUtil.toProtoTableName(tableName));
       }
     }
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetTableDescriptorsRequest
+   *
+   * @param pattern The compiled regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return a GetTableDescriptorsRequest
+   */
+  public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(final Pattern pattern,
+      boolean includeSysTables) {
+    GetTableDescriptorsRequest.Builder builder = GetTableDescriptorsRequest.newBuilder();
+    if (pattern != null) builder.setRegex(pattern.toString());
+    builder.setIncludeSysTables(includeSysTables);
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetTableNamesRequest
+   *
+   * @param pattern The compiled regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return a GetTableNamesRequest
+   */
+  public static GetTableNamesRequest buildGetTableNamesRequest(final Pattern pattern,
+      boolean includeSysTables) {
+    GetTableNamesRequest.Builder builder = GetTableNamesRequest.newBuilder();
+    if (pattern != null) builder.setRegex(pattern.toString());
+    builder.setIncludeSysTables(includeSysTables);
     return builder.build();
   }
 

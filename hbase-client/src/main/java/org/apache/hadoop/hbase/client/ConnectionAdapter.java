@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 /**
  * An internal class that delegates to an {@link HConnection} instance.
  * A convenience to override when customizing method implementations.
- * 
+ *
  *
  * @see ConnectionUtils#createShortCircuitHConnection(HConnection, ServerName,
  * AdminService.BlockingInterface, ClientService.BlockingInterface) for case where we make

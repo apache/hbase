@@ -429,6 +429,36 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   /**
+   * Authorizes that the current user has any of the given permissions to access the table.
+   *
+   * @param tableName Table requested
+   * @param permissions Actions being requested
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if user has no authorization
+   */
+  private void requireAccess(String request, TableName tableName,
+      Action... permissions) throws IOException {
+    User user = getActiveUser();
+    AuthResult result = null;
+
+    for (Action permission : permissions) {
+      if (authManager.hasAccess(user, tableName, permission)) {
+        result = AuthResult.allow(request, "Table permission granted", user,
+                                  permission, tableName, null, null);
+        break;
+      } else {
+        // rest of the world
+        result = AuthResult.deny(request, "Insufficient permissions", user,
+                                 permission, tableName, null, null);
+      }
+    }
+    logResult(result);
+    if (!result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
+    }
+  }
+
+  /**
    * Authorizes that the current user has global privileges for the given action.
    * @param perm The action being requested
    * @throws IOException if obtaining the current user fails
@@ -974,7 +1004,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       TableName tableName, final HTableDescriptor htd) throws IOException {
     final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
-    final String owner = (htd.getOwnerString() != null) ? htd.getOwnerString() : 
+    final String owner = (htd.getOwnerString() != null) ? htd.getOwnerString() :
       getActiveUser().getShortName();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
@@ -2230,16 +2260,13 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<TableName> tableNamesList,
-      List<HTableDescriptor> descriptors) throws IOException {
-    // If the list is empty, this is a request for all table descriptors and requires GLOBAL
-    // ADMIN privs.
-    if (tableNamesList == null || tableNamesList.isEmpty()) {
-      requireGlobalPermission("getTableDescriptors", Action.ADMIN, null, null);
-    }
-    // Otherwise, if the requestor has ADMIN or CREATE privs for all listed tables, the
-    // request can be granted.
-    else {
+       List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+       String regex) throws IOException {
+    // We are delegating the authorization check to postGetTableDescriptors as we don't have
+    // any concrete set of table names when a regex is present or the full list is requested.
+    if (regex == null && tableNamesList != null && !tableNamesList.isEmpty()) {
+      // Otherwise, if the requestor has ADMIN or CREATE privs for all listed tables, the
+      // request can be granted.
       MasterServices masterServices = ctx.getEnvironment().getMasterServices();
       for (TableName tableName: tableNamesList) {
         // Skip checks for a table that does not exist
@@ -2247,7 +2274,45 @@ public class AccessController extends BaseMasterAndRegionObserver
           continue;
         }
         requirePermission("getTableDescriptors", tableName, null, null,
-          Action.ADMIN, Action.CREATE);
+            Action.ADMIN, Action.CREATE);
+      }
+    }
+  }
+
+  @Override
+  public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      String regex) throws IOException {
+    // Skipping as checks in this case are already done by preGetTableDescriptors.
+    if (regex == null && tableNamesList != null && !tableNamesList.isEmpty()) {
+      return;
+    }
+
+    // Retains only those which passes authorization checks, as the checks weren't done as part
+    // of preGetTableDescriptors.
+    Iterator<HTableDescriptor> itr = descriptors.iterator();
+    while (itr.hasNext()) {
+      HTableDescriptor htd = itr.next();
+      try {
+        requirePermission("getTableDescriptors", htd.getTableName(), null, null,
+            Action.ADMIN, Action.CREATE);
+      } catch (AccessDeniedException e) {
+        itr.remove();
+      }
+    }
+  }
+
+  @Override
+  public void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors, String regex) throws IOException {
+    // Retains only those which passes authorization checks.
+    Iterator<HTableDescriptor> itr = descriptors.iterator();
+    while (itr.hasNext()) {
+      HTableDescriptor htd = itr.next();
+      try {
+        requireAccess("getTableNames", htd.getTableName(), Action.values());
+      } catch (AccessDeniedException e) {
+        itr.remove();
       }
     }
   }
