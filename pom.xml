@@ -334,8 +334,8 @@
       <name>Rajeshbabu Chintaguntla</name>
       <email>rajeshbabu@apache.org</email>
       <timezone>+5</timezone>
-      <organization>Huawei</organization>
-      <organizationUrl>http://www.huawei.com</organizationUrl>
+      <organization>Hortonworks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>ramkrishna</id>
