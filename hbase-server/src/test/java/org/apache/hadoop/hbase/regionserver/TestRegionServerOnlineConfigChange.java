@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +32,9 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -41,25 +46,25 @@ import java.io.IOException;
  */
 
 @Category({MediumTests.class})
-public class TestRegionServerOnlineConfigChange extends TestCase {
-  static final Log LOG =
+public class TestRegionServerOnlineConfigChange {
+  private static final Log LOG =
           LogFactory.getLog(TestRegionServerOnlineConfigChange.class.getName());
-  HBaseTestingUtility hbaseTestingUtility = new HBaseTestingUtility();
-  Configuration conf = null;
+  private static HBaseTestingUtility hbaseTestingUtility = new HBaseTestingUtility();
+  private static Configuration conf = null;
 
-  HTable t1 = null;
-  HRegionServer rs1 = null;
-  byte[] r1name = null;
-  HRegion r1 = null;
+  private static HTable t1 = null;
+  private static HRegionServer rs1 = null;
+  private static byte[] r1name = null;
+  private static HRegion r1 = null;
 
-  final String table1Str = "table1";
-  final String columnFamily1Str = "columnFamily1";
-  final byte[] TABLE1 = Bytes.toBytes(table1Str);
-  final byte[] COLUMN_FAMILY1 = Bytes.toBytes(columnFamily1Str);
+  private final static String table1Str = "table1";
+  private final static String columnFamily1Str = "columnFamily1";
+  private final static byte[] TABLE1 = Bytes.toBytes(table1Str);
+  private final static byte[] COLUMN_FAMILY1 = Bytes.toBytes(columnFamily1Str);
 
 
-  @Override
-  public void setUp() throws Exception {
+  @BeforeClass
+  public static void setUp() throws Exception {
     conf = hbaseTestingUtility.getConfiguration();
     hbaseTestingUtility.startMiniCluster(1,1);
     t1 = hbaseTestingUtility.createTable(TABLE1, COLUMN_FAMILY1);
@@ -71,8 +76,8 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
     r1 = rs1.getRegion(r1name);
   }
 
-  @Override
-  public void tearDown() throws Exception {
+  @AfterClass
+  public static void tearDown() throws Exception {
     hbaseTestingUtility.shutdownMiniCluster();
   }
 
@@ -80,6 +85,7 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
    * Check if the number of compaction threads changes online
    * @throws IOException
    */
+  @Test
   public void testNumCompactionThreadsOnlineChange() throws IOException {
     assertTrue(rs1.compactSplitThread != null);
     int newNumSmallThreads =
@@ -105,6 +111,7 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
    *
    * @throws IOException
    */
+  @Test
   public void testCompactionConfigurationOnlineChange() throws IOException {
     String strPrefix = "hbase.hstore.compaction.";
     Store s = r1.getStore(COLUMN_FAMILY1);

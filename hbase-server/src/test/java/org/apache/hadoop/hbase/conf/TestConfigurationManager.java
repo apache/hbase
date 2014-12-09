@@ -18,17 +18,19 @@
 
 package org.apache.hadoop.hbase.conf;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({SmallTests.class, ClientTests.class})
-public class TestConfigurationManager extends TestCase {
+public class TestConfigurationManager {
   public static final Log LOG = LogFactory.getLog(TestConfigurationManager.class);
 
   class DummyConfigurationObserver implements ConfigurationObserver {
@@ -66,6 +68,7 @@ public class TestConfigurationManager extends TestCase {
    * Test if observers get notified by the <code>ConfigurationManager</code>
    * when the Configuration is reloaded.
    */
+  @Test
   public void testCheckIfObserversNotified() {
     Configuration conf = new Configuration();
     ConfigurationManager cm = new ConfigurationManager();
@@ -101,6 +104,7 @@ public class TestConfigurationManager extends TestCase {
   /**
    * Test if out-of-scope observers are deregistered on GC.
    */
+  @Test
   public void testDeregisterOnOutOfScope() {
     Configuration conf = new Configuration();
     ConfigurationManager cm = new ConfigurationManager();
