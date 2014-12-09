@@ -6715,4 +6715,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       configurationManager.get().deregisterObserver(s);
     }
   }
+
+  /**
+   * @return split policy for this region.
+   */
+  public RegionSplitPolicy getSplitPolicy() {
+    return this.splitPolicy;
+  }
 }
