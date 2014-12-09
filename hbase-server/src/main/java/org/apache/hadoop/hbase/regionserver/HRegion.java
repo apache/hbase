@@ -1425,6 +1425,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
   }
 
   /**
+   * @return split policy for this region.
+   */
+  public RegionSplitPolicy getSplitPolicy() {
+    return this.splitPolicy;
+  }
+
+  /**
    * A split takes the config from the parent region & passes it to the daughter
    * region's constructor. If 'conf' was passed, you would end up using the HTD
    * of the parent region in addition to the new daughter HTD. Pass 'baseConf'

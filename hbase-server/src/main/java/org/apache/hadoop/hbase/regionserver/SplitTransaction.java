@@ -666,9 +666,12 @@ public class SplitTransaction {
   private Pair<Path, Path> splitStoreFile(final byte[] family, final StoreFile sf) throws IOException {
     HRegionFileSystem fs = this.parent.getRegionFileSystem();
     String familyName = Bytes.toString(family);
-
-    Path path_a = fs.splitStoreFile(this.hri_a, familyName, sf, this.splitrow, false);
-    Path path_b = fs.splitStoreFile(this.hri_b, familyName, sf, this.splitrow, true);
+    Path path_a =
+        fs.splitStoreFile(this.hri_a, familyName, sf, this.splitrow, false,
+          this.parent.getSplitPolicy());
+    Path path_b =
+        fs.splitStoreFile(this.hri_b, familyName, sf, this.splitrow, true,
+          this.parent.getSplitPolicy());
     return new Pair<Path,Path>(path_a, path_b);
   }
 
