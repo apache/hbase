@@ -56,7 +56,7 @@ public class BalancerTestBase {
   static int regionId = 0;
 
   // This class is introduced because IP to rack resolution can be lengthy.
-  static class MockMapping implements DNSToSwitchMapping {
+  public static class MockMapping implements DNSToSwitchMapping {
     public MockMapping(Configuration conf) {
     }
 
