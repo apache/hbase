@@ -113,10 +113,10 @@ public abstract class Compactor {
         LOG.warn("Null reader for " + file.getPath());
         continue;
       }
-      // NOTE: getFilterEntries could cause under-sized blooms if the user
-      // switches bloom type (e.g. from ROW to ROWCOL)
-      long keyCount = (r.getBloomFilterType() == store.getFamily().getBloomFilterType())
-          ? r.getFilterEntries() : r.getEntries();
+      // NOTE: use getEntries when compacting instead of getFilterEntries, otherwise under-sized
+      // blooms can cause progress to be miscalculated or if the user switches bloom
+      // type (e.g. from ROW to ROWCOL)
+      long keyCount = r.getEntries();
       fd.maxKeyCount += keyCount;
       // calculate the latest MVCC readpoint in any of the involved store files
       Map<byte[], byte[]> fileInfo = r.loadFileInfo();
