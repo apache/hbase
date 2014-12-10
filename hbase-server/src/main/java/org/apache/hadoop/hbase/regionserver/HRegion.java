@@ -1550,7 +1550,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       return false;
     }
     MonitoredTask status = null;
-    boolean didPerformCompaction = false;
+    boolean requestNeedsCancellation = true;
     // block waiting for the lock for compaction
     lock.readLock().lock();
     try {
@@ -1587,7 +1587,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         doRegionCompactionPrep();
         try {
           status.setStatus("Compacting store " + store);
-          didPerformCompaction = true;
+          // We no longer need to cancel the request on the way out of this
+          // method because Store#compact will clean up unconditionally
+          requestNeedsCancellation = false;
           store.compact(compaction);
         } catch (InterruptedIOException iioe) {
           String msg = "compaction interrupted";
@@ -1609,7 +1611,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       return true;
     } finally {
       try {
-        if (!didPerformCompaction) store.cancelRequestedCompaction(compaction);
+        if (requestNeedsCancellation) store.cancelRequestedCompaction(compaction);
         if (status != null) status.cleanup();
       } finally {
         lock.readLock().unlock();
