@@ -27,11 +27,14 @@ Syntax : grant <user> <permissions> [<@namespace> [<table> [<column family> [<co
 permissions is either zero or more letters from the set "RWXCA".
 READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A')
 
-Note: A namespace must always precede with '@' character.
+Note: Groups and users are granted access in the same way, but groups are prefixed with an '@' 
+      character. In the same way, tables and namespaces are specified, but namespaces are 
+      prefixed with an '@' character.
 
 For example:
 
     hbase> grant 'bobsmith', 'RWXCA'
+    hbase> grant '@admins', 'RWXCA'
     hbase> grant 'bobsmith', 'RWXCA', '@ns1'
     hbase> grant 'bobsmith', 'RW', 't1', 'f1', 'col1'
     hbase> grant 'bobsmith', 'RW', 'ns1:t1', 'f1', 'col1'
