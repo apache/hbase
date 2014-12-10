@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.net.InetAddress;
 
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.servlet.http.HttpServlet;
 
@@ -140,6 +141,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.JSONBean;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1924,6 +1926,13 @@ public class HRegionServer extends HasThread implements
     // java.util.HashSet's toString() method to print the coprocessor names.
     LOG.fatal("RegionServer abort: loaded coprocessors are: " +
         CoprocessorHost.getLoadedCoprocessors());
+    // Try and dump metrics if abort -- might give clue as to how fatal came about....
+    try {
+      LOG.info("Dump of metrics as JSON on abort: " + JSONBean.dumpRegionServerMetrics());
+    } catch (MalformedObjectNameException | IOException e) {
+      LOG.warn("Failed dumping metrics", e);
+    }
+
     // Do our best to report our abort to the master, but this may not work
     try {
       if (cause != null) {

@@ -85,7 +85,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Key for cache data into L1 if cache is set up with more than one tier.
    * To set in the shell, do something like this:
-   * <code>hbase(main):003:0> create 't', {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}</code>
+   * <code>hbase(main):003:0> create 't',
+   *    {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}</code>
    */
   public static final String CACHE_DATA_IN_L1 = "CACHE_DATA_IN_L1";
 
