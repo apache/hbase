@@ -389,7 +389,7 @@ public class TestAssignmentManager {
    * @throws KeeperException
    * @throws DeserializationException
    */
-  @Test
+  @Test (timeout=180000)
   public void testBalance() throws IOException, KeeperException, DeserializationException,
       InterruptedException, CoordinatedStateException {
     // Create and startup an executor.  This is used by AssignmentManager
@@ -463,7 +463,7 @@ public class TestAssignmentManager {
    * @throws KeeperException
    * @throws IOException
    */
-  @Test
+  @Test (timeout=180000)
   public void testShutdownHandler()
       throws KeeperException, IOException, CoordinatedStateException, ServiceException {
     // Create and startup an executor.  This is used by AssignmentManager
@@ -492,7 +492,7 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws ServiceException
    */
-  @Test
+  @Test (timeout=180000)
   public void testSSHWhenDisableTableInProgress() throws KeeperException, IOException,
     CoordinatedStateException, ServiceException {
     testCaseWithPartiallyDisabledState(Table.State.DISABLING);
@@ -507,7 +507,7 @@ public class TestAssignmentManager {
    * @throws KeeperException
    * @throws IOException
    */
-  @Test
+  @Test (timeout=180000)
   public void testSSHWhenSplitRegionInProgress() throws KeeperException, IOException, Exception {
     // true indicates the region is split but still in RIT
     testCaseWithSplitRegionPartial(true);
@@ -699,7 +699,7 @@ public class TestAssignmentManager {
     return executor;
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testUnassignWithSplitAtSameTime() throws KeeperException,
       IOException, CoordinatedStateException {
     // Region to use in test.
@@ -978,7 +978,7 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws Exception
    */
-  @Test
+  @Test (timeout=180000)
   public void testMasterRestartWhenTableInEnabling() throws KeeperException, IOException, Exception {
     enabling = true;
     List<ServerName> destServers = new ArrayList<ServerName>(1);
@@ -1027,7 +1027,7 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws Exception
    */
-  @Test
+  @Test (timeout=180000)
   public void testMasterRestartShouldRemoveStaleZnodesOfUnknownTableAsForMeta()
       throws Exception {
     List<ServerName> destServers = new ArrayList<ServerName>(1);
@@ -1064,7 +1064,7 @@ public class TestAssignmentManager {
    * the region assignment takes a long time normally (waiting for timeout monitor to trigger assign).
    * This test is to make sure SSH reassigns it right away.
    */
-  @Test
+  @Test (timeout=180000)
   public void testSSHTimesOutOpeningRegionTransition()
       throws KeeperException, IOException, CoordinatedStateException, ServiceException {
     // Create an AM.
@@ -1100,7 +1100,7 @@ public class TestAssignmentManager {
    *  <li> the master must handle this nicely and reassign.
    *  </ul>
    */
-  @Test
+  @Test (timeout=180000)
   public void testClosingFailureDuringRecovery() throws Exception {
 
     AssignmentManagerWithExtrasForTesting am =
@@ -1346,7 +1346,7 @@ public class TestAssignmentManager {
     while (!t.isAlive()) Threads.sleep(1);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testForceAssignMergingRegion() throws Exception {
     // Region to use in test.
     final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
@@ -1379,7 +1379,7 @@ public class TestAssignmentManager {
    * if ZK is used during the assignment action (only hbck doesn't use ZK for region
    * assignment). So during master failover, we can ignored such events too.
    */
-  @Test
+  @Test (timeout=180000)
   public void testAssignmentEventIgnoredIfNotExpected() throws KeeperException, IOException,
       CoordinatedStateException {
     // Region to use in test.
@@ -1428,7 +1428,7 @@ public class TestAssignmentManager {
    * Otherwise, the region will be brought back.
    * @throws Exception
    */
-  @Test
+  @Test (timeout=180000)
   public void testBalanceRegionOfDeletedTable() throws Exception {
     AssignmentManager am = new AssignmentManager(this.server, this.serverManager,
       balancer, null, null, master.getTableLockManager());
@@ -1449,7 +1449,7 @@ public class TestAssignmentManager {
    * for openRegion. AM should assign this somewhere else. (HBASE-9721)
    */
   @SuppressWarnings("unchecked")
-  @Test
+  @Test (timeout=180000)
   public void testOpenCloseRegionRPCIntendedForPreviousServer() throws Exception {
     Mockito.when(this.serverManager.sendRegionOpen(Mockito.eq(SERVERNAME_B), Mockito.eq(REGIONINFO),
       Mockito.anyInt(), (List<ServerName>)Mockito.any()))
