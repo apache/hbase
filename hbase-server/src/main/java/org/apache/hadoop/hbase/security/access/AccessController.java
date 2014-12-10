@@ -1185,6 +1185,22 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
+  public void postListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<NamespaceDescriptor> descriptors) throws IOException {
+    // Retains only those which passes authorization checks, as the checks weren't done as part
+    // of preGetTableDescriptors.
+    Iterator<NamespaceDescriptor> itr = descriptors.iterator();
+    while (itr.hasNext()) {
+      NamespaceDescriptor desc = itr.next();
+      try {
+        requireGlobalPermission("listNamespaces", Action.ADMIN, desc.getName());
+      } catch (AccessDeniedException e) {
+        itr.remove();
+      }
+    }
+  }
+
+  @Override
   public void preTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName) throws IOException {
     requirePermission("flushTable", tableName, null, null, Action.ADMIN, Action.CREATE);

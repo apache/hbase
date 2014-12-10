@@ -776,6 +776,7 @@ public class MasterRpcServices extends RSRpcServices
       master.checkInitialized();
 
       final String regex = req.hasRegex() ? req.getRegex() : null;
+      final String namespace = req.hasNamespace() ? req.getNamespace() : null;
       List<TableName> tableNameList = null;
       if (req.getTableNamesCount() > 0) {
         tableNameList = new ArrayList<TableName>(req.getTableNamesCount());
@@ -784,8 +785,8 @@ public class MasterRpcServices extends RSRpcServices
         }
       }
 
-      List<HTableDescriptor> descriptors = master.listTableDescriptors(regex, tableNameList,
-          req.getIncludeSysTables());
+      List<HTableDescriptor> descriptors = master.listTableDescriptors(namespace, regex,
+          tableNameList, req.getIncludeSysTables());
 
       GetTableDescriptorsResponse.Builder builder = GetTableDescriptorsResponse.newBuilder();
       if (descriptors != null && descriptors.size() > 0) {
@@ -814,7 +815,9 @@ public class MasterRpcServices extends RSRpcServices
       master.checkInitialized();
 
       final String regex = req.hasRegex() ? req.getRegex() : null;
-      List<TableName> tableNames = master.listTableNames(regex, req.getIncludeSysTables());
+      final String namespace = req.hasNamespace() ? req.getNamespace() : null;
+      List<TableName> tableNames = master.listTableNames(namespace, regex,
+          req.getIncludeSysTables());
 
       GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
       if (tableNames != null && tableNames.size() > 0) {

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -30,6 +31,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -184,6 +188,31 @@ public class TestNamespaceCommands extends SecureTestUtil {
     // all others should be denied
     verifyDenied(createNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_NSP_ADMIN);
     verifyDenied(deleteNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW);
+  }
+
+  @Test
+  public void testListNamespaces() throws Exception {
+    AccessTestAction listAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        Connection unmanagedConnection =
+            ConnectionFactory.createConnection(UTIL.getConfiguration());
+        Admin admin = unmanagedConnection.getAdmin();
+        try {
+          return Arrays.asList(admin.listNamespaceDescriptors());
+        } finally {
+          admin.close();
+          unmanagedConnection.close();
+        }
+      }
+    };
+
+    verifyAllowed(listAction, SUPERUSER, USER_NSP_ADMIN);
+    verifyDenied(listAction, USER_NSP_WRITE, USER_CREATE, USER_RW);
+
+    // we have 3 namespaces: [default, hbase, TEST_NAMESPACE, TEST_NAMESPACE2]
+    assertEquals(4, ((List)SUPERUSER.runAs(listAction)).size());
+    assertEquals(2, ((List)USER_NSP_ADMIN.runAs(listAction)).size());
   }
 
   @Test

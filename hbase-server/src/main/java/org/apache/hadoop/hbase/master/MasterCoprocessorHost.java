@@ -139,6 +139,28 @@ public class MasterCoprocessorHost
     });
   }
 
+  public boolean preListNamespaceDescriptors(final List<NamespaceDescriptor> descriptors)
+      throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preListNamespaceDescriptors(ctx, descriptors);
+      }
+    });
+  }
+
+  public void postListNamespaceDescriptors(final List<NamespaceDescriptor> descriptors)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postListNamespaceDescriptors(ctx, descriptors);
+      }
+    });
+  }
+
   /* Implementation of hooks for invoking MasterObservers */
 
   public void preCreateTable(final HTableDescriptor htd, final HRegionInfo[] regions)
