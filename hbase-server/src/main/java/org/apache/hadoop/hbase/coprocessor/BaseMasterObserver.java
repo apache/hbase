@@ -152,6 +152,16 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<NamespaceDescriptor> descriptors) throws IOException {
+  }
+
+  @Override
+  public void postListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<NamespaceDescriptor> descriptors) throws IOException {
+  }
+
+  @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName, HColumnDescriptor column) throws IOException {
   }

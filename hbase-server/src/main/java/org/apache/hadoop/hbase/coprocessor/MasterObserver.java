@@ -789,6 +789,25 @@ public interface MasterObserver extends Coprocessor {
       NamespaceDescriptor ns) throws IOException;
 
   /**
+   * Called before a listNamespaceDescriptors request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @throws IOException
+   */
+  void preListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<NamespaceDescriptor> descriptors) throws IOException;
+
+  /**
+   * Called after a listNamespaceDescriptors request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors the list of descriptors about to be returned
+   * @throws IOException
+   */
+  void postListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<NamespaceDescriptor> descriptors) throws IOException;
+
+
+  /**
    * Called before the table memstore is flushed to disk.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table

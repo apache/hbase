@@ -140,7 +140,6 @@ import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
@@ -2042,34 +2041,45 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
     checkNamespaceManagerReady();
-    return Lists.newArrayList(tableNamespaceManager.list());
+
+    final List<NamespaceDescriptor> descriptors = new ArrayList<NamespaceDescriptor>();
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preListNamespaceDescriptors(descriptors);
+    }
+
+    if (!bypass) {
+      descriptors.addAll(tableNamespaceManager.list());
+
+      if (cpHost != null) {
+        cpHost.postListNamespaceDescriptors(descriptors);
+      }
+    }
+    return descriptors;
   }
 
   @Override
   public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
     getNamespaceDescriptor(name); // check that namespace exists
-    return Lists.newArrayList(tableDescriptors.getByNamespace(name).values());
+    return listTableDescriptors(name, null, null, true);
   }
 
   @Override
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
-    List<TableName> tableNames = Lists.newArrayList();
     getNamespaceDescriptor(name); // check that namespace exists
-    for (HTableDescriptor descriptor: tableDescriptors.getByNamespace(name).values()) {
-      tableNames.add(descriptor.getTableName());
-    }
-    return tableNames;
+    return listTableNames(name, null, true);
   }
 
   /**
    * Returns the list of table descriptors that match the specified request
    *
+   * @param namespace the namespace to query, or null if querying for all
    * @param regex The regular expression to match against, or null if querying for all
    * @param tableNameList the list of table names, or null if querying for all
    * @param includeSysTables False to match only against userspace tables
    * @return the list of table descriptors
    */
-  public List<HTableDescriptor> listTableDescriptors(final String regex,
+  public List<HTableDescriptor> listTableDescriptors(final String namespace, final String regex,
       final List<TableName> tableNameList, final boolean includeSysTables)
       throws IOException {
     final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
@@ -2082,7 +2092,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (!bypass) {
       if (tableNameList == null || tableNameList.size() == 0) {
         // request for all TableDescriptors
-        Collection<HTableDescriptor> htds = tableDescriptors.getAll().values();
+        Collection<HTableDescriptor> htds;
+        if (namespace != null && namespace.length() > 0) {
+          htds = tableDescriptors.getByNamespace(namespace).values();
+        } else {
+          htds = tableDescriptors.getAll().values();
+        }
+
         for (HTableDescriptor desc: htds) {
           if (includeSysTables || !desc.getTableName().isSystemTable()) {
             descriptors.add(desc);
@@ -2112,11 +2128,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /**
    * Returns the list of table names that match the specified request
    * @param regex The regular expression to match against, or null if querying for all
+   * @param namespace the namespace to query, or null if querying for all
    * @param includeSysTables False to match only against userspace tables
    * @return the list of table names
    */
-  public List<TableName> listTableNames(final String regex, final boolean includeSysTables)
-      throws IOException {
+  public List<TableName> listTableNames(final String namespace, final String regex,
+      final boolean includeSysTables) throws IOException {
     final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
 
     boolean bypass = false;
@@ -2126,7 +2143,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     if (!bypass) {
       // get all descriptors
-      Collection<HTableDescriptor> htds = tableDescriptors.getAll().values();
+      Collection<HTableDescriptor> htds;
+      if (namespace != null && namespace.length() > 0) {
+        htds = tableDescriptors.getByNamespace(namespace).values();
+      } else {
+        htds = tableDescriptors.getAll().values();
+      }
+
       for (HTableDescriptor htd: htds) {
         if (includeSysTables || !htd.getTableName().isSystemTable()) {
           descriptors.add(htd);
