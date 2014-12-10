@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
@@ -48,14 +48,12 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -74,9 +72,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -127,6 +126,7 @@ public class TestAssignmentManager {
   private MetaTableLocator mtl;
   private LoadBalancer balancer;
   private HMaster master;
+  private ClusterConnection connection;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -166,7 +166,7 @@ public class TestAssignmentManager {
     Mockito.when(server.getMetaTableLocator()).thenReturn(mtl);
 
     // Get a connection w/ mocked up common methods.
-    ClusterConnection connection =
+    this.connection =
       (ClusterConnection)HConnectionTestingUtility.getMockedConnection(HTU.getConfiguration());
 
     // Make it so we can get a catalogtracker from servermanager.. .needed
@@ -205,14 +205,14 @@ public class TestAssignmentManager {
     Mockito.when(this.master.getServerManager()).thenReturn(serverManager);
   }
 
-  @After
-    public void after() throws KeeperException {
+  @After public void after() throws KeeperException, IOException {
     if (this.watcher != null) {
       // Clean up all znodes
       ZKAssign.deleteAllNodes(this.watcher);
       this.watcher.close();
       this.cp.stop();
     }
+    if (this.connection != null) this.connection.close();
   }
 
   /**
@@ -658,29 +658,39 @@ public class TestAssignmentManager {
     ClusterConnection connection =
       HConnectionTestingUtility.getMockedConnectionAndDecorate(HTU.getConfiguration(),
         null, implementation, SERVERNAME_B, REGIONINFO);
+    // These mocks were done up when all connections were managed.  World is different now we
+    // moved to unmanaged connections.  It messes up the intercepts done in these tests.
+    // Just mark connections as marked and then down in MetaTableAccessor, it will go the path
+    // that picks up the above mocked up 'implementation' so 'scans' of meta return the expected
+    // result.  Redo in new realm of unmanaged connections.
+    Mockito.when(connection.isManaged()).thenReturn(true);
+    try {
+      // Make it so we can get a catalogtracker from servermanager.. .needed
+      // down in guts of server shutdown handler.
+      Mockito.when(this.server.getConnection()).thenReturn(connection);
 
-    // Make it so we can get a catalogtracker from servermanager.. .needed
-    // down in guts of server shutdown handler.
-    Mockito.when(this.server.getConnection()).thenReturn(connection);
-
-    // Now make a server shutdown handler instance and invoke process.
-    // Have it that SERVERNAME_A died.
-    DeadServer deadServers = new DeadServer();
-    deadServers.add(SERVERNAME_A);
-    // I need a services instance that will return the AM
-    MasterFileSystem fs = Mockito.mock(MasterFileSystem.class);
-    Mockito.doNothing().when(fs).setLogRecoveryMode();
-    Mockito.when(fs.getLogRecoveryMode()).thenReturn(RecoveryMode.LOG_REPLAY);
-    MasterServices services = Mockito.mock(MasterServices.class);
-    Mockito.when(services.getAssignmentManager()).thenReturn(am);
-    Mockito.when(services.getServerManager()).thenReturn(this.serverManager);
-    Mockito.when(services.getZooKeeper()).thenReturn(this.watcher);
-    Mockito.when(services.getMasterFileSystem()).thenReturn(fs);
-    ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
-      services, deadServers, SERVERNAME_A, false);
-    am.failoverCleanupDone.set(true);
-    handler.process();
-    // The region in r will have been assigned.  It'll be up in zk as unassigned.
+      // Now make a server shutdown handler instance and invoke process.
+      // Have it that SERVERNAME_A died.
+      DeadServer deadServers = new DeadServer();
+      deadServers.add(SERVERNAME_A);
+      // I need a services instance that will return the AM
+      MasterFileSystem fs = Mockito.mock(MasterFileSystem.class);
+      Mockito.doNothing().when(fs).setLogRecoveryMode();
+      Mockito.when(fs.getLogRecoveryMode()).thenReturn(RecoveryMode.LOG_REPLAY);
+      MasterServices services = Mockito.mock(MasterServices.class);
+      Mockito.when(services.getAssignmentManager()).thenReturn(am);
+      Mockito.when(services.getServerManager()).thenReturn(this.serverManager);
+      Mockito.when(services.getZooKeeper()).thenReturn(this.watcher);
+      Mockito.when(services.getMasterFileSystem()).thenReturn(fs);
+      Mockito.when(services.getConnection()).thenReturn(connection);
+      ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
+          services, deadServers, SERVERNAME_A, false);
+      am.failoverCleanupDone.set(true);
+      handler.process();
+      // The region in r will have been assigned.  It'll be up in zk as unassigned.
+    } finally {
+      if (connection != null) connection.close();
+    }
   }
 
   /**
@@ -769,6 +779,8 @@ public class TestAssignmentManager {
       fail("Should not throw NPE");
     } catch (RuntimeException e) {
       assertEquals("Aborted", e.getLocalizedMessage());
+    } finally {
+      am.shutdown();
     }
   }
   /**
@@ -909,6 +921,7 @@ public class TestAssignmentManager {
     }
     assertTrue("The region should be assigned immediately.", null != am.regionPlans.get(REGIONINFO
         .getEncodedName()));
+    am.shutdown();
   }
 
   /**
@@ -1057,6 +1070,7 @@ public class TestAssignmentManager {
       assertFalse("Table should not be present in zookeeper.",
         am.getTableStateManager().isTablePresent(tableName));
     } finally {
+      am.shutdown();
     }
   }
   /**
@@ -1088,6 +1102,7 @@ public class TestAssignmentManager {
     } finally {
       am.getRegionStates().regionsInTransition.remove(REGIONINFO.getEncodedName());
       am.regionPlans.remove(REGIONINFO.getEncodedName());
+      am.shutdown();
     }
   }
 
@@ -1106,13 +1121,17 @@ public class TestAssignmentManager {
     AssignmentManagerWithExtrasForTesting am =
         setUpMockedAssignmentManager(this.server, this.serverManager);
     ZKAssign.createNodeClosing(this.watcher, REGIONINFO, SERVERNAME_A);
-    am.getRegionStates().createRegionState(REGIONINFO);
+    try {
+      am.getRegionStates().createRegionState(REGIONINFO);
 
-    assertFalse( am.getRegionStates().isRegionsInTransition() );
+      assertFalse( am.getRegionStates().isRegionsInTransition() );
 
-    am.processRegionInTransition(REGIONINFO.getEncodedName(), REGIONINFO);
+      am.processRegionInTransition(REGIONINFO.getEncodedName(), REGIONINFO);
 
-    assertTrue( am.getRegionStates().isRegionsInTransition() );
+      assertTrue( am.getRegionStates().isRegionsInTransition() );
+    } finally {
+      am.shutdown();
+    }
   }
 
   /**
@@ -1216,9 +1235,15 @@ public class TestAssignmentManager {
     Mockito.when(ri.get((RpcController)Mockito.any(), (GetRequest) Mockito.any())).
       thenReturn(getBuilder.build());
     // Get a connection w/ mocked up common methods.
-    HConnection connection = HConnectionTestingUtility.
+    ClusterConnection connection = (ClusterConnection)HConnectionTestingUtility.
       getMockedConnectionAndDecorate(HTU.getConfiguration(), null,
         ri, SERVERNAME_B, REGIONINFO);
+    // These mocks were done up when all connections were managed.  World is different now we
+    // moved to unmanaged connections.  It messes up the intercepts done in these tests.
+    // Just mark connections as marked and then down in MetaTableAccessor, it will go the path
+    // that picks up the above mocked up 'implementation' so 'scans' of meta return the expected
+    // result.  Redo in new realm of unmanaged connections.
+    Mockito.when(connection.isManaged()).thenReturn(true);
     // Make it so we can get the connection from our mocked catalogtracker
     // Create and startup an executor. Used by AM handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("mockedAMExecutor");
@@ -1237,10 +1262,10 @@ public class TestAssignmentManager {
     boolean processRITInvoked = false;
     boolean assignInvoked = false;
     AtomicBoolean gate = new AtomicBoolean(true);
-    private HConnection connection;
+    private ClusterConnection connection;
 
     public AssignmentManagerWithExtrasForTesting(
-        final Server master, HConnection connection, final ServerManager serverManager,
+        final Server master, ClusterConnection connection, final ServerManager serverManager,
         final LoadBalancer balancer,
         final ExecutorService service, final TableLockManager tableLockManager)
             throws KeeperException, IOException, CoordinatedStateException {
@@ -1303,8 +1328,19 @@ public class TestAssignmentManager {
     /*
      * Convenient method to retrieve mocked up connection
      */
-    HConnection getConnection() {
+    ClusterConnection getConnection() {
       return this.connection;
+    }
+
+    @Override
+    public void shutdown() {
+      super.shutdown();
+      if (this.connection != null)
+        try {
+          this.connection.close();
+        } catch (IOException e) {
+          fail("Failed to close connection");
+        }
     }
   }
 
@@ -1442,6 +1478,7 @@ public class TestAssignmentManager {
     am.balance(plan);
     assertFalse("The region should not in transition",
       regionStates.isRegionInTransition(hri));
+    am.shutdown();
   }
 
   /**
@@ -1471,6 +1508,7 @@ public class TestAssignmentManager {
       am.assign(hri, true, false);
     } finally {
       assertEquals(SERVERNAME_A, regionStates.getRegionState(REGIONINFO).getServerName());
+      am.shutdown();
     }
   }
 }
