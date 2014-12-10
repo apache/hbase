@@ -96,4 +96,10 @@ public class PayloadCarryingRpcController
   public int getPriority() {
     return priority;
   }
+
+  @Override public void reset() {
+    super.reset();
+    priority = 0;
+    cellScanner = null;
+  }
 }

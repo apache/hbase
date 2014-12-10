@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-
-
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -38,6 +37,11 @@ public class TimeLimitedRpcController implements RpcController {
   protected final AtomicReference<RpcCallback<Object>> cancellationCb =
       new AtomicReference<RpcCallback<Object>>(null);
 
+  protected final AtomicReference<RpcCallback<IOException>> failureCb =
+      new AtomicReference<RpcCallback<IOException>>(null);
+
+  private IOException exception;
+
   public Integer getCallTimeout() {
     return callTimeout;
   }
@@ -52,12 +56,20 @@ public class TimeLimitedRpcController implements RpcController {
 
   @Override
   public String errorText() {
-    throw new UnsupportedOperationException();
+    if (exception != null) {
+      return exception.getMessage();
+    } else {
+      return null;
+    }
   }
 
+  /**
+   * For use in async rpc clients
+   * @return true if failed
+   */
   @Override
   public boolean failed() {
-    throw new UnsupportedOperationException();
+    return this.exception != null;
   }
 
   @Override
@@ -68,16 +80,52 @@ public class TimeLimitedRpcController implements RpcController {
   @Override
   public void notifyOnCancel(RpcCallback<Object> cancellationCb) {
     this.cancellationCb.set(cancellationCb);
+    if (this.cancelled) {
+      cancellationCb.run(null);
+    }
+  }
+
+  /**
+   * Notify a callback on error.
+   * For use in async rpc clients
+   *
+   * @param failureCb the callback to call on error
+   */
+  public void notifyOnFail(RpcCallback<IOException> failureCb) {
+    this.failureCb.set(failureCb);
+    if (this.exception != null) {
+      failureCb.run(this.exception);
+    }
   }
 
   @Override
   public void reset() {
-    throw new UnsupportedOperationException();
+    exception = null;
+    cancelled = false;
+    failureCb.set(null);
+    cancellationCb.set(null);
+    callTimeout = null;
   }
 
   @Override
-  public void setFailed(String arg0) {
-    throw new UnsupportedOperationException();
+  public void setFailed(String reason) {
+    this.exception = new IOException(reason);
+    if (this.failureCb.get() != null) {
+      this.failureCb.get().run(this.exception);
+    }
+  }
+
+  /**
+   * Set failed with an exception to pass on.
+   * For use in async rpc clients
+   *
+   * @param e exception to set with
+   */
+  public void setFailed(IOException e) {
+    this.exception = e;
+    if (this.failureCb.get() != null) {
+      this.failureCb.get().run(this.exception);
+    }
   }
 
   @Override
