@@ -21,11 +21,14 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -43,12 +46,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * Test whether region re-balancing works. (HBASE-71)
@@ -100,8 +97,7 @@ public class TestRegionRebalancing {
   @SuppressWarnings("deprecation")
   public void testRebalanceOnRegionServerNumberChange()
   throws IOException, InterruptedException {
-    Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-    Admin admin = connection.getAdmin();
+    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
     admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
         1, HBaseTestingUtility.KEYS.length));
     this.table = new HTable(UTIL.getConfiguration(), this.desc.getTableName());

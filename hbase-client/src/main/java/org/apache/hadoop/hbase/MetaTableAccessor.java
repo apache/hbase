@@ -22,9 +22,8 @@ import com.google.protobuf.ServiceException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -171,31 +170,37 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Callers should call close on the returned {@link Table} instance.
-   * @param connection connection we're using to access Meta
-   * @return An {@link Table} for <code>hbase:meta</code>
+   * Callers should call close on the returned {@link HTable} instance.
+   * @param connection connection we're using to access table
+   * @param tableName Table to get an {@link org.apache.hadoop.hbase.client.HTable} against.
+   * @return An {@link org.apache.hadoop.hbase.client.HTable} for <code>tableName</code>
    * @throws IOException
+   * @SuppressWarnings("deprecation")
    */
-  static Table getMetaHTable(final Connection connection)
+  private static Table getHTable(final Connection connection, final TableName tableName)
   throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
     if (connection == null || connection.isClosed()) {
       throw new NullPointerException("No connection");
     }
     // If the passed in 'connection' is 'managed' -- i.e. every second test uses
-    // a Table or an HBaseAdmin with managed connections -- then doing
+    // an HTable or an HBaseAdmin with managed connections -- then doing
     // connection.getTable will throw an exception saying you are NOT to use
     // managed connections getting tables.  Leaving this as it is for now. Will
     // revisit when inclined to change all tests.  User code probaby makes use of
     // managed connections too so don't change it till post hbase 1.0.
-    //
-    // There should still be a way to use this method with an unmanaged connection.
-    if (connection instanceof ClusterConnection) {
-      if (((ClusterConnection) connection).isManaged()) {
-        return new HTable(TableName.META_TABLE_NAME, (ClusterConnection) connection);
-      }
-    }
-    return connection.getTable(TableName.META_TABLE_NAME);
+    return new HTable(tableName, connection);
+  }
+
+  /**
+   * Callers should call close on the returned {@link HTable} instance.
+   * @param connection connection we're using to access Meta
+   * @return An {@link HTable} for <code>hbase:meta</code>
+   * @throws IOException
+   */
+  static Table getMetaHTable(final Connection connection)
+  throws IOException {
+    return getHTable(connection, TableName.META_TABLE_NAME);
   }
 
   /**
@@ -803,7 +808,7 @@ public class MetaTableAccessor {
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
    */
-  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) {
+  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
     HRegionInfo splitA = getHRegionInfo(data, HConstants.SPLITA_QUALIFIER);
     HRegionInfo splitB = getHRegionInfo(data, HConstants.SPLITB_QUALIFIER);
 
@@ -817,7 +822,7 @@ public class MetaTableAccessor {
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
    */
-  public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) {
+  public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) throws IOException {
     HRegionInfo mergeA = getHRegionInfo(data, HConstants.MERGEA_QUALIFIER);
     HRegionInfo mergeB = getHRegionInfo(data, HConstants.MERGEB_QUALIFIER);
 
@@ -1084,8 +1089,8 @@ public class MetaTableAccessor {
 
   /**
    * Adds a hbase:meta row for the specified new region to the given catalog table. The
-   * Table is not flushed or closed.
-   * @param meta the Table for META
+   * HTable is not flushed or closed.
+   * @param meta the HTable for META
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
    */
@@ -1100,7 +1105,7 @@ public class MetaTableAccessor {
    * {@link #splitRegion(org.apache.hadoop.hbase.client.Connection,
    *   HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
    * if you want to do that.
-   * @param meta the Table for META
+   * @param meta the HTable for META
    * @param regionInfo region information
    * @param splitA first split daughter of the parent regionInfo
    * @param splitB second split daughter of the parent regionInfo

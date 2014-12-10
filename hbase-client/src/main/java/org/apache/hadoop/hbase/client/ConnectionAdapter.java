@@ -437,9 +437,4 @@ abstract class ConnectionAdapter implements ClusterConnection {
   public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
     return wrappedConnection.getNewRpcRetryingCallerFactory(conf);
   }
-  
-  @Override
-  public boolean isManaged() {
-    return wrappedConnection.isManaged();
-  }
 }

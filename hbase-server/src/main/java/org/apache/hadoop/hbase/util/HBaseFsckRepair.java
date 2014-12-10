@@ -18,20 +18,23 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Table;
@@ -40,12 +43,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.zookeeper.KeeperException;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
 
 /**
  * This class contains helper methods that repair parts of hbase's filesystem
@@ -60,22 +57,22 @@ public class HBaseFsckRepair {
    * and then force ZK unassigned node to OFFLINE to trigger assignment by
    * master.
    *
-   * @param connection HBase connection to the cluster
+   * @param admin HBase admin used to undeploy
    * @param region Region to undeploy
    * @param servers list of Servers to undeploy from
    */
-  public static void fixMultiAssignment(HConnection connection, HRegionInfo region,
+  public static void fixMultiAssignment(HBaseAdmin admin, HRegionInfo region,
       List<ServerName> servers)
   throws IOException, KeeperException, InterruptedException {
     HRegionInfo actualRegion = new HRegionInfo(region);
 
     // Close region on the servers silently
     for(ServerName server : servers) {
-      closeRegionSilentlyAndWait(connection, server, actualRegion);
+      closeRegionSilentlyAndWait(admin, server, actualRegion);
     }
 
     // Force ZK node to OFFLINE so master assigns
-    forceOfflineInZK(connection.getAdmin(), actualRegion);
+    forceOfflineInZK(admin, actualRegion);
   }
 
   /**
@@ -149,15 +146,16 @@ public class HBaseFsckRepair {
    * (default 120s) to close the region.  This bypasses the active hmaster.
    */
   @SuppressWarnings("deprecation")
-  public static void closeRegionSilentlyAndWait(HConnection connection, 
+  public static void closeRegionSilentlyAndWait(HBaseAdmin admin,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
+    HConnection connection = admin.getConnection();
     AdminService.BlockingInterface rs = connection.getAdmin(server);
     try {
       ProtobufUtil.closeRegion(rs, server, region.getRegionName(), false);
     } catch (IOException e) {
       LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
     }
-    long timeout = connection.getConfiguration()
+    long timeout = admin.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);
     long expiration = timeout + System.currentTimeMillis();
     while (System.currentTimeMillis() < expiration) {
@@ -179,11 +177,9 @@ public class HBaseFsckRepair {
    */
   public static void fixMetaHoleOnline(Configuration conf,
       HRegionInfo hri) throws IOException {
-    Connection conn = ConnectionFactory.createConnection(conf);
-    Table meta = conn.getTable(TableName.META_TABLE_NAME);
+    Table meta = new HTable(conf, TableName.META_TABLE_NAME);
     MetaTableAccessor.addRegionToMeta(meta, hri);
     meta.close();
-    conn.close();
   }
 
   /**

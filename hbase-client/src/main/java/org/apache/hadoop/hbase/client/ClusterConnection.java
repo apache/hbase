@@ -282,11 +282,5 @@ public interface ClusterConnection extends HConnection {
    * @return RpcRetryingCallerFactory
    */
   RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf);
-  
-  /**
-   * 
-   * @return true if this is a managed connection.
-   */
-  boolean isManaged();
 }
 
