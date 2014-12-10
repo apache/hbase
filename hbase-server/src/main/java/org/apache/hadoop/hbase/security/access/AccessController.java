@@ -1160,7 +1160,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       requirePermission("restoreSnapshot", hTableDescriptor.getTableName(), null, null,
         Permission.Action.ADMIN);
     } else {
-      requirePermission("restore", Action.ADMIN);
+      requirePermission("restoreSnapshot", Action.ADMIN);
     }
   }
 
