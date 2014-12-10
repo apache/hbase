@@ -166,7 +166,7 @@ public final class CellUtil {
     return new KeyValue(row, family, qualifier, timestamp, KeyValue.Type.codeToType(type), value);
   }
 
-  public static Cell createCell (final byte [] rowArray, final int rowOffset, final int rowLength,
+  public static Cell createCell(final byte [] rowArray, final int rowOffset, final int rowLength,
       final byte [] familyArray, final int familyOffset, final int familyLength,
       final byte [] qualifierArray, final int qualifierOffset, final int qualifierLength) {
     // See createCell(final byte [] row, final byte [] value) for why we default Maximum type.
@@ -560,7 +560,7 @@ public final class CellUtil {
   /********************* tags *************************************/
   /**
    * Util method to iterate through the tags
-   * 
+   *
    * @param tags
    * @param offset
    * @param length

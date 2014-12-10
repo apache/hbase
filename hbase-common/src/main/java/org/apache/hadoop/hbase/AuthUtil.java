@@ -39,6 +39,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Evolving
 public class AuthUtil {
   private static final Log LOG = LogFactory.getLog(AuthUtil.class);
+
+  private AuthUtil() {
+    super();
+  }
+
   /**
    * Checks if security is enabled and if so, launches chore for refreshing kerberos ticket.
    */
