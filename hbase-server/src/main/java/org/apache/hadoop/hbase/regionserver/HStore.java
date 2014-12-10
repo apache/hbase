@@ -1079,25 +1079,29 @@ public class HStore implements Store {
    */
   @Override
   public List<StoreFile> compact(CompactionContext compaction) throws IOException {
-    assert compaction != null && compaction.hasSelection();
-    CompactionRequest cr = compaction.getRequest();
-    Collection<StoreFile> filesToCompact = cr.getFiles();
-    assert !filesToCompact.isEmpty();
-    synchronized (filesCompacting) {
-      // sanity check: we're compacting files that this store knows about
-      // TODO: change this to LOG.error() after more debugging
-      Preconditions.checkArgument(filesCompacting.containsAll(filesToCompact));
-    }
-
-    // Ready to go. Have list of files to compact.
-    LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
-        + this + " of " + this.getRegionInfo().getRegionNameAsString()
-        + " into tmpdir=" + fs.getTempDir() + ", totalSize="
-        + StringUtils.humanReadableInt(cr.getSize()));
-
-    long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
+    assert compaction != null;
     List<StoreFile> sfs = null;
+    CompactionRequest cr = compaction.getRequest();;
     try {
+      // Do all sanity checking in here if we have a valid CompactionRequest
+      // because we need to clean up after it on the way out in a finally
+      // block below
+      long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
+      assert compaction.hasSelection();
+      Collection<StoreFile> filesToCompact = cr.getFiles();
+      assert !filesToCompact.isEmpty();
+      synchronized (filesCompacting) {
+        // sanity check: we're compacting files that this store knows about
+        // TODO: change this to LOG.error() after more debugging
+        Preconditions.checkArgument(filesCompacting.containsAll(filesToCompact));
+      }
+
+      // Ready to go. Have list of files to compact.
+      LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
+          + this + " of " + this.getRegionInfo().getRegionNameAsString()
+          + " into tmpdir=" + fs.getTempDir() + ", totalSize="
+          + StringUtils.humanReadableInt(cr.getSize()));
+
       // Commence the compaction.
       List<Path> newFiles = compaction.compact();
 
@@ -1126,11 +1130,12 @@ public class HStore implements Store {
       }
       // At this point the store will use new files for all new scanners.
       completeCompaction(filesToCompact); // Archive old files & update store size.
+
+      logCompactionEndMessage(cr, sfs, compactionStartTime);
+      return sfs;
     } finally {
       finishCompactionRequest(cr);
     }
-    logCompactionEndMessage(cr, sfs, compactionStartTime);
-    return sfs;
   }
 
   private List<StoreFile> moveCompatedFilesIntoPlace(
