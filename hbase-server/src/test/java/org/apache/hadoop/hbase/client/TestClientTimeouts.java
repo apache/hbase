@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcClientImpl;
@@ -145,7 +146,7 @@ public class TestClientTimeouts {
    * Blocking rpc channel that goes via hbase rpc.
    */
   static class RandomTimeoutBlockingRpcChannel
-      extends RpcClientImpl.BlockingRpcChannelImplementation {
+      extends AbstractRpcClient.BlockingRpcChannelImplementation {
     private static final Random RANDOM = new Random(System.currentTimeMillis());
     public static final double CHANCE_OF_TIMEOUT = 0.3;
     private static AtomicInteger invokations = new AtomicInteger();
