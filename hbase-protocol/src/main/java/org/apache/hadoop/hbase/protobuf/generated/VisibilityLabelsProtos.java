@@ -4961,6 +4961,1012 @@ public final class VisibilityLabelsProtos {
     // @@protoc_insertion_point(class_scope:GetAuthsResponse)
   }
 
+  public interface ListLabelsRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional string regex = 1;
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    boolean hasRegex();
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    java.lang.String getRegex();
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getRegexBytes();
+  }
+  /**
+   * Protobuf type {@code ListLabelsRequest}
+   */
+  public static final class ListLabelsRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements ListLabelsRequestOrBuilder {
+    // Use ListLabelsRequest.newBuilder() to construct.
+    private ListLabelsRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ListLabelsRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ListLabelsRequest defaultInstance;
+    public static ListLabelsRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ListLabelsRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ListLabelsRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              regex_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ListLabelsRequest> PARSER =
+        new com.google.protobuf.AbstractParser<ListLabelsRequest>() {
+      public ListLabelsRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ListLabelsRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ListLabelsRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // optional string regex = 1;
+    public static final int REGEX_FIELD_NUMBER = 1;
+    private java.lang.Object regex_;
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    public boolean hasRegex() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    public java.lang.String getRegex() {
+      java.lang.Object ref = regex_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          regex_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string regex = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getRegexBytes() {
+      java.lang.Object ref = regex_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        regex_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private void initFields() {
+      regex_ = "";
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getRegexBytes());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getRegexBytes());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest other = (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest) obj;
+
+      boolean result = true;
+      result = result && (hasRegex() == other.hasRegex());
+      if (hasRegex()) {
+        result = result && getRegex()
+            .equals(other.getRegex());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasRegex()) {
+        hash = (37 * hash) + REGEX_FIELD_NUMBER;
+        hash = (53 * hash) + getRegex().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ListLabelsRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        regex_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest result = new org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.regex_ = regex_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.getDefaultInstance()) return this;
+        if (other.hasRegex()) {
+          bitField0_ |= 0x00000001;
+          regex_ = other.regex_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional string regex = 1;
+      private java.lang.Object regex_ = "";
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public boolean hasRegex() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public java.lang.String getRegex() {
+        java.lang.Object ref = regex_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          regex_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getRegexBytes() {
+        java.lang.Object ref = regex_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b =
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          regex_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public Builder setRegex(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        regex_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public Builder clearRegex() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        regex_ = getDefaultInstance().getRegex();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string regex = 1;</code>
+       */
+      public Builder setRegexBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        regex_ = value;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ListLabelsRequest)
+    }
+
+    static {
+      defaultInstance = new ListLabelsRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:ListLabelsRequest)
+  }
+
+  public interface ListLabelsResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // repeated bytes label = 1;
+    /**
+     * <code>repeated bytes label = 1;</code>
+     */
+    java.util.List<com.google.protobuf.ByteString> getLabelList();
+    /**
+     * <code>repeated bytes label = 1;</code>
+     */
+    int getLabelCount();
+    /**
+     * <code>repeated bytes label = 1;</code>
+     */
+    com.google.protobuf.ByteString getLabel(int index);
+  }
+  /**
+   * Protobuf type {@code ListLabelsResponse}
+   */
+  public static final class ListLabelsResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements ListLabelsResponseOrBuilder {
+    // Use ListLabelsResponse.newBuilder() to construct.
+    private ListLabelsResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ListLabelsResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ListLabelsResponse defaultInstance;
+    public static ListLabelsResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ListLabelsResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ListLabelsResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                label_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              label_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          label_ = java.util.Collections.unmodifiableList(label_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ListLabelsResponse> PARSER =
+        new com.google.protobuf.AbstractParser<ListLabelsResponse>() {
+      public ListLabelsResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ListLabelsResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ListLabelsResponse> getParserForType() {
+      return PARSER;
+    }
+
+    // repeated bytes label = 1;
+    public static final int LABEL_FIELD_NUMBER = 1;
+    private java.util.List<com.google.protobuf.ByteString> label_;
+    /**
+     * <code>repeated bytes label = 1;</code>
+     */
+    public java.util.List<com.google.protobuf.ByteString>
+        getLabelList() {
+      return label_;
+    }
+    /**
+     * <code>repeated bytes label = 1;</code>
+     */
+    public int getLabelCount() {
+      return label_.size();
+    }
+    /**
+     * <code>repeated bytes label = 1;</code>
+     */
+    public com.google.protobuf.ByteString getLabel(int index) {
+      return label_.get(index);
+    }
+
+    private void initFields() {
+      label_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < label_.size(); i++) {
+        output.writeBytes(1, label_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      {
+        int dataSize = 0;
+        for (int i = 0; i < label_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(label_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getLabelList().size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse other = (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse) obj;
+
+      boolean result = true;
+      result = result && getLabelList()
+          .equals(other.getLabelList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getLabelCount() > 0) {
+        hash = (37 * hash) + LABEL_FIELD_NUMBER;
+        hash = (53 * hash) + getLabelList().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ListLabelsResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        label_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse result = new org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          label_ = java.util.Collections.unmodifiableList(label_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.label_ = label_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.getDefaultInstance()) return this;
+        if (!other.label_.isEmpty()) {
+          if (label_.isEmpty()) {
+            label_ = other.label_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureLabelIsMutable();
+            label_.addAll(other.label_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // repeated bytes label = 1;
+      private java.util.List<com.google.protobuf.ByteString> label_ = java.util.Collections.emptyList();
+      private void ensureLabelIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          label_ = new java.util.ArrayList<com.google.protobuf.ByteString>(label_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      /**
+       * <code>repeated bytes label = 1;</code>
+       */
+      public java.util.List<com.google.protobuf.ByteString>
+          getLabelList() {
+        return java.util.Collections.unmodifiableList(label_);
+      }
+      /**
+       * <code>repeated bytes label = 1;</code>
+       */
+      public int getLabelCount() {
+        return label_.size();
+      }
+      /**
+       * <code>repeated bytes label = 1;</code>
+       */
+      public com.google.protobuf.ByteString getLabel(int index) {
+        return label_.get(index);
+      }
+      /**
+       * <code>repeated bytes label = 1;</code>
+       */
+      public Builder setLabel(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLabelIsMutable();
+        label_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes label = 1;</code>
+       */
+      public Builder addLabel(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureLabelIsMutable();
+        label_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes label = 1;</code>
+       */
+      public Builder addAllLabel(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureLabelIsMutable();
+        super.addAll(values, label_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes label = 1;</code>
+       */
+      public Builder clearLabel() {
+        label_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ListLabelsResponse)
+    }
+
+    static {
+      defaultInstance = new ListLabelsResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:ListLabelsResponse)
+  }
+
   /**
    * Protobuf service {@code VisibilityLabelsService}
    */
@@ -5001,6 +6007,14 @@ public final class VisibilityLabelsProtos {
           org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse> done);
 
+      /**
+       * <code>rpc listLabels(.ListLabelsRequest) returns (.ListLabelsResponse);</code>
+       */
+      public abstract void listLabels(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -5038,6 +6052,14 @@ public final class VisibilityLabelsProtos {
           impl.getAuths(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void listLabels(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse> done) {
+          impl.listLabels(controller, request, done);
+        }
+
       };
     }
 
@@ -5068,6 +6090,8 @@ public final class VisibilityLabelsProtos {
               return impl.clearAuths(controller, (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest)request);
             case 3:
               return impl.getAuths(controller, (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest)request);
+            case 4:
+              return impl.listLabels(controller, (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -5090,6 +6114,8 @@ public final class VisibilityLabelsProtos {
               return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest.getDefaultInstance();
             case 3:
               return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest.getDefaultInstance();
+            case 4:
+              return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -5112,6 +6138,8 @@ public final class VisibilityLabelsProtos {
               return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse.getDefaultInstance();
             case 3:
               return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.getDefaultInstance();
+            case 4:
+              return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -5151,6 +6179,14 @@ public final class VisibilityLabelsProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse> done);
+
+    /**
+     * <code>rpc listLabels(.ListLabelsRequest) returns (.ListLabelsResponse);</code>
+     */
+    public abstract void listLabels(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse> done);
 
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
@@ -5194,6 +6230,11 @@ public final class VisibilityLabelsProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse>specializeCallback(
               done));
           return;
+        case 4:
+          this.listLabels(controller, (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -5216,6 +6257,8 @@ public final class VisibilityLabelsProtos {
           return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest.getDefaultInstance();
         case 3:
           return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest.getDefaultInstance();
+        case 4:
+          return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -5238,6 +6281,8 @@ public final class VisibilityLabelsProtos {
           return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse.getDefaultInstance();
         case 3:
           return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.getDefaultInstance();
+        case 4:
+          return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -5318,6 +6363,21 @@ public final class VisibilityLabelsProtos {
             org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.getDefaultInstance()));
       }
+
+      public  void listLabels(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(4),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -5344,6 +6404,11 @@ public final class VisibilityLabelsProtos {
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse getAuths(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse listLabels(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -5401,6 +6466,18 @@ public final class VisibilityLabelsProtos {
           org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.getDefaultInstance());
       }
 
+
+      public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse listLabels(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(4),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.getDefaultInstance());
+      }
+
     }
 
     // @@protoc_insertion_point(class_scope:VisibilityLabelsService)
@@ -5446,6 +6523,16 @@ public final class VisibilityLabelsProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_GetAuthsResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ListLabelsRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ListLabelsRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ListLabelsResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ListLabelsResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -5466,15 +6553,19 @@ public final class VisibilityLabelsProtos {
       "ltiUserAuthorizations\022&\n\tuserAuths\030\001 \003(\013" +
       "2\023.UserAuthorizations\"\037\n\017GetAuthsRequest",
       "\022\014\n\004user\030\001 \002(\014\".\n\020GetAuthsResponse\022\014\n\004us" +
-      "er\030\001 \002(\014\022\014\n\004auth\030\002 \003(\0142\200\002\n\027VisibilityLab" +
-      "elsService\022@\n\taddLabels\022\030.VisibilityLabe" +
-      "lsRequest\032\031.VisibilityLabelsResponse\0227\n\010" +
-      "setAuths\022\020.SetAuthsRequest\032\031.VisibilityL" +
-      "abelsResponse\0229\n\nclearAuths\022\020.SetAuthsRe" +
-      "quest\032\031.VisibilityLabelsResponse\022/\n\010getA" +
-      "uths\022\020.GetAuthsRequest\032\021.GetAuthsRespons" +
-      "eBL\n*org.apache.hadoop.hbase.protobuf.ge" +
-      "neratedB\026VisibilityLabelsProtosH\001\210\001\001\240\001\001"
+      "er\030\001 \002(\014\022\014\n\004auth\030\002 \003(\014\"\"\n\021ListLabelsRequ" +
+      "est\022\r\n\005regex\030\001 \001(\t\"#\n\022ListLabelsResponse" +
+      "\022\r\n\005label\030\001 \003(\0142\267\002\n\027VisibilityLabelsServ" +
+      "ice\022@\n\taddLabels\022\030.VisibilityLabelsReque" +
+      "st\032\031.VisibilityLabelsResponse\0227\n\010setAuth" +
+      "s\022\020.SetAuthsRequest\032\031.VisibilityLabelsRe" +
+      "sponse\0229\n\nclearAuths\022\020.SetAuthsRequest\032\031" +
+      ".VisibilityLabelsResponse\022/\n\010getAuths\022\020." +
+      "GetAuthsRequest\032\021.GetAuthsResponse\0225\n\nli",
+      "stLabels\022\022.ListLabelsRequest\032\023.ListLabel" +
+      "sResponseBL\n*org.apache.hadoop.hbase.pro" +
+      "tobuf.generatedB\026VisibilityLabelsProtosH" +
+      "\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -5529,6 +6620,18 @@ public final class VisibilityLabelsProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetAuthsResponse_descriptor,
               new java.lang.String[] { "User", "Auth", });
+          internal_static_ListLabelsRequest_descriptor =
+            getDescriptor().getMessageTypes().get(8);
+          internal_static_ListLabelsRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ListLabelsRequest_descriptor,
+              new java.lang.String[] { "Regex", });
+          internal_static_ListLabelsResponse_descriptor =
+            getDescriptor().getMessageTypes().get(9);
+          internal_static_ListLabelsResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ListLabelsResponse_descriptor,
+              new java.lang.String[] { "Label", });
           return null;
         }
       };

@@ -100,6 +100,20 @@ module Hbase
       end
     end
 
+    def list_labels(regex = ".*")
+      lables_table_available?
+      begin
+        response = VisibilityClient.listLabels(@config, regex)
+        if response.nil?
+          raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
+        end
+        if response.getLabelList.empty?
+          raise(ArgumentError, "No auth label defined")
+        end
+        return response.getLabelList
+      end
+    end
+
     def clear_auths(user, *args)
       lables_table_available?
       # Normalize args

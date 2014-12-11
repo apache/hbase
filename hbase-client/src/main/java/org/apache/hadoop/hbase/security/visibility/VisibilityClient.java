@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
@@ -158,6 +161,57 @@ public class VisibilityClient {
             HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, callable);
         return result.values().iterator().next(); // There will be exactly one region for labels
         // table and so one entry in result Map.
+      }
+    }
+  }
+
+  /**
+   * Retrieve the list of visibility labels defined in the system.
+   * @param conf
+   * @param regex  The regular expression to filter which labels are returned.
+   * @return labels The list of visibility labels defined in the system.
+   * @throws Throwable
+   */
+  public static ListLabelsResponse listLabels(Configuration conf, final String regex)
+      throws Throwable {
+    Connection connection = null;
+    Table table = null;
+    try {
+      connection = ConnectionFactory.createConnection(conf);
+      table = connection.getTable(LABELS_TABLE_NAME);
+      Batch.Call<VisibilityLabelsService, ListLabelsResponse> callable =
+          new Batch.Call<VisibilityLabelsService, ListLabelsResponse>() {
+        ServerRpcController controller = new ServerRpcController();
+        BlockingRpcCallback<ListLabelsResponse> rpcCallback =
+            new BlockingRpcCallback<ListLabelsResponse>();
+
+        public ListLabelsResponse call(VisibilityLabelsService service) throws IOException {
+          ListLabelsRequest.Builder listAuthLabelsReqBuilder = ListLabelsRequest.newBuilder();
+          if (regex != null) {
+            // Compile the regex here to catch any regex exception earlier.
+            Pattern pattern = Pattern.compile(regex);
+            listAuthLabelsReqBuilder.setRegex(pattern.toString());
+          }
+          service.listLabels(controller, listAuthLabelsReqBuilder.build(), rpcCallback);
+          ListLabelsResponse response = rpcCallback.get();
+          if (controller.failedOnException()) {
+            throw controller.getFailedOn();
+          }
+          return response;
+        }
+      };
+      Map<byte[], ListLabelsResponse> result =
+          table.coprocessorService(VisibilityLabelsService.class, HConstants.EMPTY_BYTE_ARRAY,
+            HConstants.EMPTY_BYTE_ARRAY, callable);
+      return result.values().iterator().next(); // There will be exactly one region for labels
+      // table and so one entry in result Map.
+    }
+    finally {
+      if (table != null) {
+        table.close();
+      }
+      if (connection != null) {
+        connection.close();
       }
     }
   }
