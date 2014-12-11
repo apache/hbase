@@ -384,7 +384,7 @@ public class TestRegionServerMetrics {
     byte[] cf = Bytes.toBytes("d");
     byte[] qualifier = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("mobdata");
-    int compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
+    int numHfiles = conf.getInt("hbase.hstore.compactionThreshold", 3) - 1;
     HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(cf);
     hcd.setMobEnabled(true);
@@ -394,14 +394,14 @@ public class TestRegionServerMetrics {
     HTable t = TEST_UTIL.createTable(htd, new byte[0][0], conf);
     HRegion region = rs.getOnlineRegions(tableName).get(0);
     t.setAutoFlush(true, true);
-    for (int insertCount = 0; insertCount < compactionThreshold; insertCount++) {
+    for (int insertCount = 0; insertCount < numHfiles; insertCount++) {
       Put p = new Put(Bytes.toBytes(insertCount));
       p.add(cf, qualifier, val);
       t.put(p);
       admin.flush(tableName);
     }
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    metricsHelper.assertCounter("mobFlushCount", compactionThreshold, serverSource);
+    metricsHelper.assertCounter("mobFlushCount", numHfiles, serverSource);
     Scan scan = new Scan(Bytes.toBytes(0), Bytes.toBytes(2));
     ResultScanner scanner = t.getScanner(scan);
     scanner.next(100);
@@ -412,7 +412,7 @@ public class TestRegionServerMetrics {
     region.initialize();
     region.compactStores(true);
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    metricsHelper.assertCounter("mobCompactedFromMobCellsCount", compactionThreshold,
+    metricsHelper.assertCounter("mobCompactedFromMobCellsCount", numHfiles,
         serverSource);
     metricsHelper.assertCounter("mobCompactedIntoMobCellsCount", 0, serverSource);
     scanner = t.getScanner(scan);
@@ -420,8 +420,8 @@ public class TestRegionServerMetrics {
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     // metrics are reset by the region initialization
     metricsHelper.assertCounter("mobScanCellsCount", 0, serverSource);
-    for (int insertCount = compactionThreshold;
-        insertCount < 2 * compactionThreshold - 1; insertCount++) {
+    for (int insertCount = numHfiles;
+        insertCount < 2 * numHfiles - 1; insertCount++) {
       Put p = new Put(Bytes.toBytes(insertCount));
       p.add(cf, qualifier, val);
       t.put(p);
@@ -433,7 +433,7 @@ public class TestRegionServerMetrics {
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     // metrics are reset by the region initialization
     metricsHelper.assertCounter("mobCompactedFromMobCellsCount", 0, serverSource);
-    metricsHelper.assertCounter("mobCompactedIntoMobCellsCount", 2 * compactionThreshold - 1,
+    metricsHelper.assertCounter("mobCompactedIntoMobCellsCount", 2 * numHfiles - 1,
         serverSource);
     t.close();
     admin.close();
