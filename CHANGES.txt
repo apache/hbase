@@ -1,5 +1,72 @@
 HBase Change Log
 
+Release 0.98.9 - 12/17/2014
+
+** Sub-task
+    * [HBASE-12517] - Several HConstant members are assignable
+    * [HBASE-12573] - Backport HBASE-10591 Sanity check table configuration in createTable
+    * [HBASE-12575] - Sanity check table coprocessor classes are loadable
+    * [HBASE-12604] - Backport HBASE-12128 (Cache configuration and RpcController selection for Table in Connection) to 0.98
+    * [HBASE-12606] - Sanity check encryption configuration before opening WAL or onlining regions
+
+** Bug
+    * [HBASE-11099] - Two situations where we could open a region with smaller sequence number
+    * [HBASE-11979] - Compaction progress reporting is wrong
+    * [HBASE-12053] - SecurityBulkLoadEndPoint set 777 permission on input data files 
+    * [HBASE-12277] - Refactor bulkLoad methods in AccessController to its own interface
+    * [HBASE-12337] - Import tool fails with NullPointerException if clusterIds is not initialized
+    * [HBASE-12346] - Scan's default auths behavior under Visibility labels
+    * [HBASE-12398] - Region isn't assigned in an extreme race condition
+    * [HBASE-12431] - Use of getColumnLatestCell(byte[], int, int, byte[], int, int) is Not Thread Safe
+    * [HBASE-12449] - Use the max timestamp of current or old cell's timestamp in HRegion.append()
+    * [HBASE-12454] - Setting didPerformCompaction early in HRegion#compact
+    * [HBASE-12464] - meta table region assignment stuck in the FAILED_OPEN state due to region server not fully ready to serve
+    * [HBASE-12467] - Master joins cluster but never completes initialization
+    * [HBASE-12479] - Backport HBASE-11689 (Track meta in transition) to 0.98 and branch-1
+    * [HBASE-12491] - TableMapReduceUtil.findContainingJar() NPE
+    * [HBASE-12513] - Graceful stop script does not restore the balancer state
+    * [HBASE-12533] - staging directories are not deleted after secure bulk load
+    * [HBASE-12537] - HBase should log the remote host on replication error
+    * [HBASE-12539] - HFileLinkCleaner logs are uselessly noisy
+    * [HBASE-12550] - Check all storefiles are referenced before splitting
+    * [HBASE-12551] - Backport HBASE-10955 'HBCK leaves the region in masters in-memory RegionStates if region hdfs dir is lost' to 0.98
+    * [HBASE-12560] - [WINDOWS] Append the classpath from Hadoop to HBase classpath in bin/hbase.cmd
+    * [HBASE-12580] - Zookeeper instantiated even though we might not need it in the shell
+    * [HBASE-12614] - Potentially unclosed StoreFile(s) in DefaultCompactor#compact()
+    * [HBASE-12616] - We lost the IntegrationTestBigLinkedList COMMANDS in recent usage refactoring
+    * [HBASE-12618] - Add 'Namespace' to headers while displaying user permissions.
+    * [HBASE-12622] - user_permission should require global admin to display global and ns permissions
+    * [HBASE-12632] - ThrottledInputStream/ExportSnapshot does not throttle
+    * [HBASE-12634] -  Fix the AccessController#requireGlobalPermission(ns) with NS
+    * [HBASE-12635] - Delete acl notify znode of table after the table is deleted
+    * [HBASE-12639] - Backport HBASE-12565 Race condition in HRegion.batchMutate() causes partial data to be written when region closes
+    * [HBASE-12642] - LoadIncrementalHFiles does not throw exception after hitting hbase.bulkload.retries.number setting
+    * [HBASE-12647] - Truncate table should work with C as well
+
+** Improvement
+    * [HBASE-8572] - Enhance delete_snapshot.rb to call snapshot deletion API with regex
+    * [HBASE-12411] - Optionally enable p-reads and private readers for compactions
+    * [HBASE-12529] - Use ThreadLocalRandom for RandomQueueBalancer
+    * [HBASE-12582] - Backport HBASE-10881 'Support reverse scan in thrift2' to 0.98
+    * [HBASE-12583] - Allow creating reference files even the split row not lies in the storefile range if required
+    * [HBASE-12619] - Backport HBASE-11639 (Replicate the visibility of Cells as strings) to 0.98
+
+** New Feature
+    * [HBASE-10560] - Per cell TTLs
+    * [HBASE-12496] - A blockedRequestsCount metric
+
+** Task
+    * [HBASE-11992] - Backport HBASE-11367 (Pluggable replication endpoint) to 0.98
+    * [HBASE-12383] - Move 0.98 build to surefire 2.18
+    * [HBASE-12624] - Remove rename_snapshot.rb from code as there is no equivalent renameSnapshot api in Admin class
+    * [HBASE-12631] - Backport HBASE-12576 (Add metrics for rolling the HLog if there are too few DN's in the write pipeline) to 0.98
+
+** Test
+    * [HBASE-12163] - Move test annotation classes to the same package as in master
+    * [HBASE-12472] - Improve debuggability of IntegrationTestBulkLoad
+    * [HBASE-12549] - Fix TestAssignmentManagerOnCluster#testAssignRacingWithSSH() flaky test
+
+
 Release 0.98.8 - 11/18/2014
 
 ** Sub-task
