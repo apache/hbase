@@ -1227,7 +1227,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
 
     String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
-    getNamespaceDescriptor(namespace); // ensure namespace exists
+    ensureNamespaceExists(namespace);
 
     HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
@@ -2028,13 +2028,39 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  @Override
-  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
+  /**
+   * Ensure that the specified namespace exists, otherwise throws a NamespaceNotFoundException
+   *
+   * @param name the namespace to check
+   * @throws IOException if the namespace manager is not ready yet.
+   * @throws NamespaceNotFoundException if the namespace does not exists
+   */
+  private void ensureNamespaceExists(final String name)
+      throws IOException, NamespaceNotFoundException {
     checkNamespaceManagerReady();
     NamespaceDescriptor nsd = tableNamespaceManager.get(name);
     if (nsd == null) {
       throw new NamespaceNotFoundException(name);
     }
+  }
+
+  @Override
+  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
+    checkNamespaceManagerReady();
+
+    if (cpHost != null) {
+      cpHost.preGetNamespaceDescriptor(name);
+    }
+
+    NamespaceDescriptor nsd = tableNamespaceManager.get(name);
+    if (nsd == null) {
+      throw new NamespaceNotFoundException(name);
+    }
+
+    if (cpHost != null) {
+      cpHost.postGetNamespaceDescriptor(nsd);
+    }
+
     return nsd;
   }
 
@@ -2060,13 +2086,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   @Override
   public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
-    getNamespaceDescriptor(name); // check that namespace exists
+    ensureNamespaceExists(name);
     return listTableDescriptors(name, null, null, true);
   }
 
   @Override
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
-    getNamespaceDescriptor(name); // check that namespace exists
+    ensureNamespaceExists(name);
     return listTableNames(name, null, true);
   }
 

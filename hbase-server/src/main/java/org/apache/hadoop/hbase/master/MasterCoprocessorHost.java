@@ -150,6 +150,28 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preGetNamespaceDescriptor(final String namespaceName)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preGetNamespaceDescriptor(ctx, namespaceName);
+      }
+    });
+  }
+
+  public void postGetNamespaceDescriptor(final NamespaceDescriptor ns)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postGetNamespaceDescriptor(ctx, ns);
+      }
+    });
+  }
+
   public boolean preListNamespaceDescriptors(final List<NamespaceDescriptor> descriptors)
       throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {

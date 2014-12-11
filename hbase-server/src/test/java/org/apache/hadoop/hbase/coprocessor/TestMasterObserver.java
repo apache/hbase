@@ -93,6 +93,8 @@ public class TestMasterObserver {
     private boolean postDeleteNamespaceCalled;
     private boolean preModifyNamespaceCalled;
     private boolean postModifyNamespaceCalled;
+    private boolean preGetNamespaceDescriptorCalled;
+    private boolean postGetNamespaceDescriptorCalled;
     private boolean preListNamespaceDescriptorsCalled;
     private boolean postListNamespaceDescriptorsCalled;
     private boolean preAddColumnCalled;
@@ -175,6 +177,8 @@ public class TestMasterObserver {
       postDeleteNamespaceCalled = false;
       preModifyNamespaceCalled = false;
       postModifyNamespaceCalled = false;
+      preGetNamespaceDescriptorCalled = false;
+      postGetNamespaceDescriptorCalled = false;
       preListNamespaceDescriptorsCalled = false;
       postListNamespaceDescriptorsCalled = false;
       preAddColumnCalled = false;
@@ -396,6 +400,23 @@ public class TestMasterObserver {
 
     public boolean preModifyNamespaceCalledOnly() {
       return preModifyNamespaceCalled && !postModifyNamespaceCalled;
+    }
+
+
+    @Override
+    public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        String namespace) throws IOException {
+      preGetNamespaceDescriptorCalled = true;
+    }
+
+    @Override
+    public void postGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        NamespaceDescriptor ns) throws IOException {
+      postGetNamespaceDescriptorCalled = true;
+    }
+
+    public boolean wasGetNamespaceDescriptorCalled() {
+      return preGetNamespaceDescriptorCalled && postGetNamespaceDescriptorCalled;
     }
 
     @Override
@@ -1424,6 +1445,8 @@ public class TestMasterObserver {
     assertTrue("Test namespace should be created", cp.wasCreateNamespaceCalled());
 
     assertNotNull(admin.getNamespaceDescriptor(testNamespace));
+    assertTrue("Test namespace descriptor should have been called",
+        cp.wasGetNamespaceDescriptorCalled());
 
     // turn off bypass, run the tests again
     cp.enableBypass(true);
@@ -1434,11 +1457,15 @@ public class TestMasterObserver {
         cp.preModifyNamespaceCalledOnly());
 
     assertNotNull(admin.getNamespaceDescriptor(testNamespace));
+    assertTrue("Test namespace descriptor should have been called",
+        cp.wasGetNamespaceDescriptorCalled());
 
     admin.deleteNamespace(testNamespace);
     assertTrue("Test namespace should not have been deleted", cp.preDeleteNamespaceCalledOnly());
 
     assertNotNull(admin.getNamespaceDescriptor(testNamespace));
+    assertTrue("Test namespace descriptor should have been called",
+        cp.wasGetNamespaceDescriptorCalled());
 
     cp.enableBypass(false);
     cp.resetStates();

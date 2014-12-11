@@ -1207,6 +1207,12 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
+  public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx, String namespace)
+      throws IOException {
+    requireGlobalPermission("getNamespaceDescriptor", Action.ADMIN, namespace);
+  }
+
+  @Override
   public void postListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<NamespaceDescriptor> descriptors) throws IOException {
     // Retains only those which passes authorization checks, as the checks weren't done as part
