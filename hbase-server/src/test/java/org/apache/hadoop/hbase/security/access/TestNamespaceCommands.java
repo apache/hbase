@@ -191,6 +191,21 @@ public class TestNamespaceCommands extends SecureTestUtil {
   }
 
   @Test
+  public void testGetNamespaceDescriptor() throws Exception {
+    AccessTestAction getNamespaceAction = new AccessTestAction() {
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetNamespaceDescriptor(ObserverContext.createAndPrepare(CP_ENV, null),
+          TEST_NAMESPACE);
+        return null;
+      }
+    };
+    // verify that superuser or hbase admin can get the namespace descriptor.
+    verifyAllowed(getNamespaceAction, SUPERUSER, USER_NSP_ADMIN);
+    // all others should be denied
+    verifyDenied(getNamespaceAction, USER_NSP_WRITE, USER_CREATE, USER_RW);
+  }
+
+  @Test
   public void testListNamespaces() throws Exception {
     AccessTestAction listAction = new AccessTestAction() {
       @Override

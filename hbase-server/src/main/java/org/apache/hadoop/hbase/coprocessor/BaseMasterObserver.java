@@ -151,6 +151,16 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String namespace) throws IOException {
+  }
+
+  @Override
+  public void postGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      NamespaceDescriptor ns) throws IOException {
+  }
+
+  @Override
   public void preListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
       List<NamespaceDescriptor> descriptors) throws IOException {
   }
