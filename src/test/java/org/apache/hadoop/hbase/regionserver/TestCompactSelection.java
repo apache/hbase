@@ -265,7 +265,7 @@ public class TestCompactSelection extends TestCase {
     assertEquals(maxFiles,
         store.compactSelection(sfCreate(true, 7,6,5,4,3,2,1)).getFilesToCompact().size());
     // reference compaction
-    compactEquals(sfCreate(true, 7, 6, 5, 4, 3, 2, 1), 5, 4, 3, 2, 1);
+    compactEquals(sfCreate(true, 7, 6, 5, 4, 3, 2, 1), 7, 6, 5, 4, 3);
     
     // empty case
     compactEquals(new ArrayList<StoreFile>() /* empty */);

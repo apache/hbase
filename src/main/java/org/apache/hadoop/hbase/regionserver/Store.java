@@ -1598,8 +1598,10 @@ public class Store extends SchemaConfigured implements HeapSize {
         }
       } else if (compactSelection.getFilesToCompact().size() > this.maxFilesToCompact) {
         // all files included in this compaction, up to max
-        int pastMax = compactSelection.getFilesToCompact().size() - this.maxFilesToCompact;
-        compactSelection.getFilesToCompact().subList(0, pastMax).clear();
+        int excess = compactSelection.getFilesToCompact().size() - this.maxFilesToCompact;
+        LOG.debug("Too many admissible files. Excluding " + excess
+          + " files from compaction candidates");
+        candidates.subList(this.maxFilesToCompact, candidates.size()).clear();
       }
     }
     return compactSelection;
