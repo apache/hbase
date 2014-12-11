@@ -29,6 +29,8 @@
  */
 -->
     <title>Upgrading</title>
+
+
     <para>You cannot skip major versions upgrading. If you are upgrading from version 0.90.x to
         0.94.x, you must first go from 0.90.x to 0.92.x and then go from 0.92.x to 0.94.x.</para>
     <note>
@@ -40,13 +42,243 @@
             linkend="configuration" />, in particular the section on Hadoop version. </para>
     <section
         xml:id="hbase.versioning">
-        <title>HBase version numbers</title>
-        <para>HBase has not walked a straight line where version numbers are concerned. Since we
-            came up out of hadoop itself, we originally tracked hadoop versioning. Later we left
-            hadoop versioning behind because we were moving at a different rate to that of our
-            parent. If you are into the arcane, checkout our old wiki page on <link
+        <title>HBase version number and compatibility</title>
+        <para>HBase has two versioning schemes, pre-1.0 and post-1.0. Both are detailed below. </para>
+		    
+	    <section xml:id="hbase.versioning.post10">
+		  <title>Post 1.0 versions</title>
+		  <para>Starting with 1.0.0 release, HBase uses <link xlink:href="http://semver.org/">Semantic Versioning</link> for it release versioning.
+		In summary:
+		<blockquote>
+	    <para>
+		Given a version number MAJOR.MINOR.PATCH, increment the:
+        <itemizedlist>
+          <listitem>MAJOR version when you make incompatible API changes,</listitem>
+          <listitem>MINOR version when you add functionality in a backwards-compatible manner, and</listitem>
+          <listitem>PATCH version when you make backwards-compatible bug fixes.</listitem>
+          <listitem>Additional labels for pre-release and build metadata are available as extensions to the MAJOR.MINOR.PATCH format.</listitem>
+	    </itemizedlist>
+        </para>
+        </blockquote>
+		</para>
+
+	    <section xml:id="hbase.versioning.compat">
+		  <title>Compatibility Dimensions</title>	
+		<para>In addition to the usual API versioning considerations HBase has other compatibility dimensions that we need to consider.</para>
+
+	    <section>
+		  <title>Client-Server wire protocol compatibility</title>	
+            <para><itemizedlist>
+              <listitem>Allows updating client and server out of sync.</listitem>
+              <listitem>We could only allow upgrading the server first. I.e. the server would be backward compatible to an old client, that way new APIs are OK.</listitem>
+              <listitem>Example: A user should be able to use an old client to connect to an upgraded cluster.</listitem>
+            </itemizedlist></para>
+        </section>
+	    <section>
+		  <title>Server-Server protocol compatibility</title>	
+          <para><itemizedlist>
+	        <listitem>Servers of different versions can co-exist in the same cluster.</listitem>
+	        <listitem>The wire protocol between servers is compatible.</listitem>
+	        <listitem>Workers for distributed tasks, such as replication and log splitting, can co-exist in the same cluster.</listitem>
+	        <listitem>Dependent protocols (such as using ZK for coordination) will also not be changed.</listitem>
+	        <listitem>Example: A user can perform a rolling upgrade.</listitem>
+          </itemizedlist></para> 
+        </section>
+	    <section>
+		  <title>File format compatibility</title>
+          <para><itemizedlist>
+	        <listitem>Support file formats backward and forward compatible</listitem>
+	        <listitem>Example: File, ZK encoding, directory layout is upgraded automatically as part of an HBase upgrade. User can rollback to the older version and everything will continue to work.</listitem>
+          </itemizedlist></para> 
+        </section>
+	    <section>
+		  <title>Client API compatibility</title>	
+          <para><itemizedlist>
+	        <listitem>Allow changing or removing existing client APIs.</listitem>
+	        <listitem>An API needs to deprecated for a major version before we will change/remove it.</listitem>
+	        <listitem>Example: A user using a newly deprecated api does not need to modify application code with hbase api calls until the next major version.</listitem>
+          </itemizedlist></para> 
+        </section>
+	    <section>
+		  <title>Client Binary compatibility</title>	
+          <para><itemizedlist>
+	        <listitem>Old client code can run unchanged (no recompilation needed) against new jars.</listitem>
+	        <listitem>Example: Old compiled client code will work unchanged with the new jars.</listitem>
+          </itemizedlist></para> 
+        </section>
+	    <section>
+		  <title>Server-Side Limited API compatibility (taken from Hadoop)</title>	
+          <para><itemizedlist>
+	        <listitem>Internal APIs are marked as Stable, Evolving, or Unstable</listitem>
+	        <listitem>This implies binary compatibility for coprocessors and plugins (pluggable classes, including replication) as long as these are only using marked interfaces/classes.</listitem>
+	        <listitem>Example: Old compiled Coprocessor, Filter, or Plugin code will work unchanged with the new jars.</listitem>
+          </itemizedlist></para> 
+        </section>
+	    <section>
+		  <title>Dependency Compatibility</title>	
+          <para><itemizedlist>
+	        <listitem>An upgrade of HBase will not require an incompatible upgrade of a dependent project, including the Java runtime.</listitem>
+	        <listitem>Example: An upgrade of Hadoop will not invalidate any of the compatibilities guarantees we made.</listitem>
+          </itemizedlist></para> 
+        </section>
+	    <section>
+		  <title>Operational Compatibility</title>	
+          <para><itemizedlist>
+	        <listitem>Metric changes</listitem>
+	        <listitem>Behavioral changes of services</listitem>
+	        <listitem>Web page APIs</listitem>
+          </itemizedlist></para> 
+        </section>
+	    <section>
+		  <title>Summary</title>	
+            <para><itemizedlist>
+	          <listitem>A patch upgrade is a drop-in replacement. Any change that is not Java binary compatible would not be allowed.<footnote><link xlink:href="http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html"/></footnote></listitem>
+	          <listitem>A minor upgrade requires no application/client code modification. Ideally it would be a drop-in replacement but client code, coprocessors, filters, etc might have to be recompiled if new jars are used.</listitem>
+	          <listitem>A major upgrade allows the HBase community to make breaking changes.</listitem> 
+          </itemizedlist></para> 
+        </section>
+   	    <section>
+		  <title>Compatibility Matrix <footnote><para>Note that this indicates what could break, not that it will break. We will/should add specifics in our release notes.</para></footnote></title>	
+           <para> (Y means we support the compatibility. N means we can break it.) </para>
+      <table>
+        <title>Compatibility Matrix</title>
+        <tgroup
+          cols="4"
+          align="left"
+          colsep="1"
+          rowsep="1">
+          <colspec
+            colname="c1"
+            align="left" />
+          <colspec
+            colname="c2"
+            align="center" />
+          <colspec
+            colname="c3"
+            align="center" />
+          <colspec
+            colname="c4"
+            align="center" />
+          <thead>
+            <row>
+              <entry> </entry>
+              <entry>Major</entry>
+              <entry>Minor</entry>
+              <entry>Patch</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>Client-Server wire Compatibility</entry>
+              <entry>N</entry>
+              <entry>Y</entry>
+              <entry>Y</entry>
+            </row>
+            <row>
+              <entry>Server-Server Compatibility</entry>
+              <entry>N</entry>
+              <entry>Y</entry>
+              <entry>Y</entry>
+            </row>
+            <row>
+              <entry>File Format Compatibility</entry>
+              <entry>N<footnote><para>Running an offline upgrade tool without rollback might be needed. We will typically only support migrating data from major version X to major version X+1.
+</para></footnote></entry>
+              <entry>Y</entry>
+              <entry>Y</entry>
+            </row>
+            <row>
+              <entry>Client API Compatibility</entry>
+              <entry>N</entry>
+              <entry>Y</entry>
+              <entry>Y</entry>
+            </row>
+            <row>
+              <entry>Client Binary Compatibility</entry>
+              <entry>N</entry>
+              <entry>N</entry>
+              <entry>Y</entry>
+            </row>
+            <row>
+              <entry>Server-Side Limited API Compatibility</entry>
+              <entry></entry>
+              <entry></entry>
+              <entry></entry>
+            </row>
+            <row>
+              <entry><itemizedlist><listitem>Stable</listitem></itemizedlist></entry>
+              <entry>N</entry>
+              <entry>Y</entry>
+              <entry>Y</entry>
+            </row>
+            <row>
+              <entry><itemizedlist><listitem>Evolving</listitem></itemizedlist></entry>
+              <entry>N</entry>
+              <entry>N</entry>
+              <entry>Y</entry>
+            </row>
+            <row>
+              <entry><itemizedlist><listitem>Unstable</listitem></itemizedlist></entry>
+              <entry>N</entry>
+              <entry>N</entry>
+              <entry>N</entry>
+            </row>
+            <row>
+              <entry>Dependency Compatibility</entry>
+              <entry>N</entry>
+              <entry>Y</entry>
+              <entry>Y</entry>
+            </row>
+            <row>
+              <entry>Operational Compatibility</entry>
+              <entry>N</entry>
+              <entry>N</entry>
+              <entry>Y</entry>
+            </row>
+          </tbody>
+          </tgroup>
+        </table>
+      </section>
+
+	    <section xml:id="hbase.client.api">
+		  <title>HBase API surface</title>
+		  <para> HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses a version of 
+		  <link xlink:href="https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html">Hadoop's Interface classification</link>. HBase's Interface classification classes can be found <link xlink:href="https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/classification/package-summary.html"> here</link>. 
+		<itemizedlist>
+		<listitem>InterfaceAudience: captures the intended audience, possible values are Public (for end users and external projects), LimitedPrivate (for other Projects, Coprocessors or other plugin points), and Private (for internal use).</listitem>
+        <listitem>InterfaceStability: describes what types of interface changes are permitted. Possible values are Stable, Evolving, Unstable, and Deprecated.</listitem>
+        </itemizedlist>
+		</para>
+		
+       <section xml:id="hbase.client.api">
+		  <title>HBase Client API</title>
+		  <para>HBase Client API consists of all the classes or methods that are marked with InterfaceAudience.Public interface. All main classes in hbase-client and dependent modules have either InterfaceAudience.Public, InterfaceAudience.LimitedPrivate, or InterfaceAudience.Private marker. Not all classes in other modules (hbase-server, etc) have the marker. If a class is not annotated with one of these, it is assumed to be a InterfaceAudience.Private class. </para>
+        </section>
+
+       <section xml:id="hbase.limitetprivate.api">
+		  <title>HBase LimitedPrivate API</title>
+		  <para>LimitedPrivate annotation comes with a set of target consumers for the interfaces. Those consumers are coprocessors, phoenix, replication endpoint implemnetations or similar.   At this point, HBase only guarantees source and binary compatibility for these interfaces between patch versions. </para>
+        </section>
+
+        <section xml:id="hbase.private.api">
+		  <title>HBase Private API</title>
+		  <para>All classes annotated with InterfaceAudience.Private or all classes that do not have the annotation are for HBase internal use only. The interfaces and method signatures can change at any point in time. If you are relying on a particular interface that is marked Private, you should open a jira to propose changing the interface to be Public or LimitedPrivate, or an interface exposed for this purpose. </para>
+        </section>
+
+        </section>
+        </section>
+		
+	    </section>
+	
+	    <section xml:id="hbase.versioning.pre10">
+		  <title>Pre 1.0 versions</title>
+		  <para></para>
+
+        <para> Before the semantic versioning scheme pre-1.0, HBase tracked either Hadoop's versions (0.2x) 
+	           or 0.9x versions. If you are into the arcane, checkout our old wiki page on <link
                 xlink:href="http://wiki.apache.org/hadoop/Hbase/HBaseVersions">HBase
-                Versioning</link> which tries to connect the HBase version dots.</para>
+                Versioning</link> which tries to connect the HBase version dots. Below sections cover ONLY the 
+                releases before 1.0.</para>
         <section
             xml:id="hbase.development.series">
             <title>Odd/Even Versioning or "Development"" Series Releases</title>
@@ -60,6 +292,8 @@
                 issues we've missed ahead of our rolling a production-worthy release. </para>
             <para>Our first "Development" Series was the 0.89 set that came out ahead of HBase
                 0.90.0. HBase 0.95 is another "Development" Series that portends HBase 0.96.0.
+                0.99.x is the last series in "developer preview" mode before 1.0. Afterwards, 
+                we will be using semantic versioning naming scheme (see above).
             </para>
         </section>
         <section
@@ -70,12 +304,15 @@
                 compatible but differently versioned servers. It means too that you can just swap
                 out the jars of one version and replace them with the jars of another, compatible
                 version and all will just work. Unless otherwise specified, HBase point versions are
-                binary compatible. You can safely do rolling upgrades between binary compatible
+                (mostly) binary compatible. You can safely do rolling upgrades between binary compatible
                 versions; i.e. across point versions: e.g. from 0.94.5 to 0.94.6. See <link
-                            xlink:href="http://search-hadoop.com/m/bOOvwHGW981/Does+compatibility+between+versions+also+mean+binary+compatibility%253F&amp;subj=Re+Does+compatibility+between+versions+also+mean+binary+compatibility+">Does
+                xlink:href="http://search-hadoop.com/m/bOOvwHGW981/Does+compatibility+between+versions+also+mean+binary+compatibility%253F&amp;subj=Re+">Does
                             compatibility between versions also mean binary compatibility?</link>
                         discussion on the hbaes dev mailing list. </para>
         </section>
+
+ 
+	    </section>
         <section xml:id="hbase.rolling.upgrade">
           <title><firstterm>Rolling Upgrades</firstterm></title>
           <para>A rolling upgrade is the process by which you update the servers
