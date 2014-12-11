@@ -400,6 +400,7 @@ Shell.load_command_group(
   :comment => "NOTE: Above commands are only applicable if running with the VisibilityController coprocessor",
   :commands => %w[
     add_labels
+    list_labels
     set_auths
     get_auths
     clear_auths

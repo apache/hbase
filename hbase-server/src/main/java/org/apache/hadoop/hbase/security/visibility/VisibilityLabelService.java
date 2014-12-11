@@ -82,6 +82,13 @@ public interface VisibilityLabelService extends Configurable {
   List<String> getAuths(byte[] user, boolean systemCall) throws IOException;
 
   /**
+   * Retrieve the list of visibility labels defined in the system.
+   * @param regex  The regular expression to filter which labels are returned.
+   * @return List of visibility labels
+   */
+  List<String> listLabels(String regex) throws IOException;
+
+  /**
    * Creates tags corresponding to given visibility expression.
    * <br>
    * Note: This will be concurrently called from multiple threads and implementation should

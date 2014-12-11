@@ -78,6 +78,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResul
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
@@ -876,6 +878,37 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       } catch (IOException e) {
         LOG.error(e);
         setExceptionResults(auths.size(), e, response);
+      }
+    }
+    done.run(response.build());
+  }
+
+  @Override
+  public synchronized void listLabels(RpcController controller, ListLabelsRequest request,
+      RpcCallback<ListLabelsResponse> done) {
+    ListLabelsResponse.Builder response = ListLabelsResponse.newBuilder();
+    if (!initialized) {
+      controller.setFailed("VisibilityController not yet initialized");
+    } else {
+      List<String> labels = null;
+      try {
+        // We do ACL check here as we create scanner directly on region. It will not make calls to
+        // AccessController CP methods.
+        if (this.acOn && !isSystemOrSuperUser()) {
+          User requestingUser = VisibilityUtils.getActiveUser();
+          throw new AccessDeniedException("User '"
+              + (requestingUser != null ? requestingUser.getShortName() : "null")
+              + "' is not authorized to perform this action.");
+        }
+        String regex = request.hasRegex() ? request.getRegex() : null;
+        labels = this.visibilityLabelService.listLabels(regex);
+      } catch (IOException e) {
+        ResponseConverter.setControllerException(controller, e);
+      }
+      if (labels != null && !labels.isEmpty()) {
+        for (String label : labels) {
+          response.addLabel(ByteStringer.wrap(Bytes.toBytes(label)));
+        }
       }
     }
     done.run(response.build());
