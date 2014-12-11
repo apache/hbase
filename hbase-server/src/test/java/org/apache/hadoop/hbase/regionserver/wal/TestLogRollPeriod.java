@@ -149,7 +149,7 @@ public class TestLogRollPeriod {
       @Override
       public void postLogArchive(Path oldFile, Path newFile) {}
       @Override
-      public void logRollRequested() {}
+      public void logRollRequested(boolean tooFewReplicas) {}
       @Override
       public void logCloseRequested() {}
       @Override

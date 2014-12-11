@@ -225,7 +225,7 @@ public class TestReplicationHLogReaderManager {
     public void postLogArchive(Path oldPath, Path newPath) throws IOException {}
 
     @Override
-    public void logRollRequested() {}
+    public void logRollRequested(boolean tooFewReplicas) {}
 
     @Override
     public void logCloseRequested() {}

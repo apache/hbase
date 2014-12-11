@@ -36,7 +36,6 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -439,6 +438,7 @@ class FSHLog implements HLog, Syncable {
     coprocessorHost = new WALCoprocessorHost(this, conf);
 
     this.metrics = new MetricsWAL();
+    registerWALActionsListener(metrics);
   }
 
   /**
@@ -1258,16 +1258,16 @@ class FSHLog implements HLog, Syncable {
           asyncNotifier.setFlushedTxid(this.lastSyncedTxid);
 
           // 4. check and do logRoll if needed
-          boolean logRollNeeded = false;
+          boolean lowReplication = false;
           if (rollWriterLock.tryLock()) {
             try {
-              logRollNeeded = checkLowReplication();
+              lowReplication = checkLowReplication();
             } finally {
               rollWriterLock.unlock();
             }            
             try {
-              if (logRollNeeded || writer != null && writer.getLength() > logrollsize) {
-                requestLogRoll();
+              if (lowReplication || writer != null && writer.getLength() > logrollsize) {
+                requestLogRoll(lowReplication);
               }
             } catch (IOException e) {
               LOG.warn("writer.getLength() failed,this failure won't block here");
@@ -1467,9 +1467,13 @@ class FSHLog implements HLog, Syncable {
   }
 
   private void requestLogRoll() {
+    requestLogRoll(false);
+  }
+
+  private void requestLogRoll(boolean tooFewReplicas) {
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i: this.listeners) {
-        i.logRollRequested();
+        i.logRollRequested(tooFewReplicas);
       }
     }
   }

@@ -57,6 +57,11 @@ public interface MetricsWALSource extends BaseSource {
   String SLOW_APPEND_COUNT_DESC = "Number of appends that were slow.";
   String SYNC_TIME = "syncTime";
   String SYNC_TIME_DESC = "The time it took to sync the HLog to HDFS.";
+  String ROLL_REQUESTED = "rollRequest";
+  String ROLL_REQUESTED_DESC = "How many times a log roll has been requested total";
+  String LOW_REPLICA_ROLL_REQUESTED = "lowReplicaRollRequest";
+  String LOW_REPLICA_ROLL_REQUESTED_DESC =
+      "How many times a log roll was requested due to too few DN's in the write pipeline.";
 
   /**
    * Add the append size.
@@ -82,5 +87,9 @@ public interface MetricsWALSource extends BaseSource {
    * Add the time it took to sync the hlog.
    */
   void incrementSyncTime(long time);
+
+  void incrementLogRollRequested();
+
+  void incrementLowReplicationLogRoll();
 
 }

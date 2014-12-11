@@ -1222,7 +1222,7 @@ public class TestHLog  {
     }
 
     @Override
-    public void logRollRequested() {
+    public void logRollRequested(boolean tooFewReplicas) {
       // TODO Auto-generated method stub
 
     }

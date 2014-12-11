@@ -37,6 +37,8 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   private final MetricHistogram syncTimeHisto;
   private final MutableCounterLong appendCount;
   private final MutableCounterLong slowAppendCount;
+  private final MutableCounterLong logRollRequested;
+  private final MutableCounterLong lowReplicationLogRollRequested;
 
   public MetricsWALSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
@@ -52,8 +54,13 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     appendTimeHisto = this.getMetricsRegistry().newHistogram(APPEND_TIME, APPEND_TIME_DESC);
     appendSizeHisto = this.getMetricsRegistry().newHistogram(APPEND_SIZE, APPEND_SIZE_DESC);
     appendCount = this.getMetricsRegistry().newCounter(APPEND_COUNT, APPEND_COUNT_DESC, 0l);
-    slowAppendCount = this.getMetricsRegistry().newCounter(SLOW_APPEND_COUNT, SLOW_APPEND_COUNT_DESC, 0l);
+    slowAppendCount =
+        this.getMetricsRegistry().newCounter(SLOW_APPEND_COUNT, SLOW_APPEND_COUNT_DESC, 0l);
     syncTimeHisto = this.getMetricsRegistry().newHistogram(SYNC_TIME, SYNC_TIME_DESC);
+    logRollRequested =
+        this.getMetricsRegistry().newCounter(ROLL_REQUESTED, ROLL_REQUESTED_DESC, 0L);
+    lowReplicationLogRollRequested = this.getMetricsRegistry()
+        .newCounter(LOW_REPLICA_ROLL_REQUESTED, LOW_REPLICA_ROLL_REQUESTED_DESC, 0L);
   }
 
   @Override
@@ -79,5 +86,15 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   @Override
   public void incrementSyncTime(long time) {
     syncTimeHisto.add(time);
+  }
+
+  @Override
+  public void incrementLogRollRequested() {
+    logRollRequested.incr();
+  }
+
+  @Override
+  public void incrementLowReplicationLogRoll() {
+    lowReplicationLogRollRequested.incr();
   }
 }

@@ -705,7 +705,7 @@ public class TestImportExport {
     }
 
     @Override
-    public void logRollRequested() {
+    public void logRollRequested(boolean tooFewReplicas) {
       // Not interested in this method.
     }
 

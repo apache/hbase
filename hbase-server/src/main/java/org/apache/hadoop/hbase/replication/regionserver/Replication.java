@@ -298,7 +298,7 @@ public class Replication implements WALActionsListener,
   }
 
   @Override
-  public void logRollRequested() {
+  public void logRollRequested(boolean tooFewReplicas) {
     // Not interested
   }
 

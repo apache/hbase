@@ -19,11 +19,18 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 
 /**
@@ -31,13 +38,18 @@ import org.apache.hadoop.util.StringUtils;
  * single function call and turn it into multiple manipulations of the hadoop metrics system.
  */
 @InterfaceAudience.Private
-public class MetricsWAL {
+public class MetricsWAL implements WALActionsListener {
   static final Log LOG = LogFactory.getLog(MetricsWAL.class);
 
   private final MetricsWALSource source;
 
   public MetricsWAL() {
-    source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+    this(CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
+  }
+
+  @VisibleForTesting
+  MetricsWAL(MetricsWALSource s) {
+    this.source = s;
   }
 
   public void finishSync(long time) {
@@ -57,5 +69,41 @@ public class MetricsWAL {
           time,
           StringUtils.humanReadableInt(size)));
     }
+  }
+
+  @Override
+  public void logRollRequested(boolean underReplicated) {
+    source.incrementLogRollRequested();
+    if (underReplicated) {
+      source.incrementLowReplicationLogRoll();
+    }
+  }
+
+  @Override
+  public void preLogRoll(Path oldPath, Path newPath) throws IOException {
+  }
+
+  @Override
+  public void postLogRoll(Path oldPath, Path newPath) throws IOException {
+  }
+
+  @Override
+  public void preLogArchive(Path oldPath, Path newPath) throws IOException {
+  }
+
+  @Override
+  public void postLogArchive(Path oldPath, Path newPath) throws IOException {
+  }
+
+  @Override
+  public void logCloseRequested() {
+  }
+
+  @Override
+  public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit) {
+  }
+
+  @Override
+  public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey, WALEdit logEdit) {
   }
 }

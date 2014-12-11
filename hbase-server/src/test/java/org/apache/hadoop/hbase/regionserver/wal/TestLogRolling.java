@@ -32,10 +32,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -63,12 +63,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.log4j.Level;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -91,18 +89,6 @@ public class TestLogRolling  {
   private HBaseAdmin admin;
   private MiniHBaseCluster cluster;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
- // verbose logging on classes that are touched in these tests
- {
-   ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hdfs.server.namenode.FSNamesystem"))
-     .getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HRegionServer.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HRegion.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
- }
 
   /**
    * constructor
@@ -341,6 +327,37 @@ public class TestLogRolling  {
 
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     this.log = server.getWAL();
+    final AtomicBoolean lowReplicationHookCalled = new AtomicBoolean(false);
+
+    log.registerWALActionsListener(new WALActionsListener() {
+      @Override
+      public void logRollRequested(boolean lowReplication) {
+        if (lowReplication) {
+          lowReplicationHookCalled.lazySet(true);
+        }
+      }
+
+      @Override
+      public void preLogRoll(Path oldPath, Path newPath) throws IOException { }
+
+      @Override
+      public void postLogRoll(Path oldPath, Path newPath) throws IOException { }
+
+      @Override
+      public void preLogArchive(Path oldPath, Path newPath) throws IOException { }
+
+      @Override
+      public void postLogArchive(Path oldPath, Path newPath) throws IOException { }
+
+      @Override
+      public void logCloseRequested() { }
+
+      @Override
+      public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit) { }
+
+      @Override
+      public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey, WALEdit logEdit) { }
+    });
 
     assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)
@@ -388,6 +405,9 @@ public class TestLogRolling  {
 
     assertTrue("Missing datanode should've triggered a log roll",
         newFilenum > oldFilenum && newFilenum > curTime);
+
+    assertTrue("The log rolling hook should have been called with the low replication flag",
+      lowReplicationHookCalled.get());
 
     // write some more log data (this should use a new hdfs_out)
     writeData(table, 3);
@@ -461,7 +481,7 @@ public class TestLogRolling  {
       @Override
       public void postLogArchive(Path oldFile, Path newFile) {}
       @Override
-      public void logRollRequested() {}
+      public void logRollRequested(boolean tooFewReplicas) {}
       @Override
       public void logCloseRequested() {}
       @Override

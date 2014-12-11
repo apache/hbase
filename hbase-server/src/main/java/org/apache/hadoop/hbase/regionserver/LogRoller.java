@@ -141,7 +141,7 @@ class LogRoller extends HasThread implements WALActionsListener {
     }
   }
 
-  public void logRollRequested() {
+  public void logRollRequested(boolean lowReplicas) {
     synchronized (rollLog) {
       rollLog.set(true);
       rollLog.notifyAll();
