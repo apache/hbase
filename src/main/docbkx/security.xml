@@ -28,7 +28,37 @@
  * limitations under the License.
  */
 -->
-  <title>Secure Apache HBase</title>
+  <title>Securing Apache HBase</title>
+  <para>HBase provides mechanisms to secure various components and aspects of HBase and how it
+    relates to the rest of the Hadoop infrastructure, as well as clients and resources outside
+    Hadoop.</para>
+  <section>
+    <title>Using Secure HTTP (HTTPS) for the Web UI</title>
+    <para>A default HBase install uses insecure HTTP connections for web UIs for the master and
+      region servers. To enable secure HTTP (HTTPS) connections instead, set
+        <code>hadoop.ssl.enabled</code> to <literal>true</literal> in
+        <filename>hbase-site.xml</filename>. This does not change the port used by the Web UI. To
+      change the port for the web UI for a given HBase component, configure that port's setting in
+      hbase-site.xml. These settings are:</para>
+    <itemizedlist>
+      <listitem><para><code>hbase.master.info.port</code></para></listitem>
+      <listitem><para><code>hbase.regionserver.info.port</code></para></listitem>
+    </itemizedlist>
+    <note>
+      <title>If you enable HTTPS, clients should avoid using the non-secure HTTP connection.</title>
+      <para>If you enable secure HTTP, clients should connect to HBase using the
+          <code>https://</code> URL. Clients using the <code>http://</code> URL will receive an HTTP
+        response of <literal>200</literal>, but will not receive any data. The following exception is logged:</para>
+      <screen>javax.net.ssl.SSLException: Unrecognized SSL message, plaintext connection?</screen>
+      <para>This is because the same port is used for HTTP and HTTPS.</para>
+      <para>HBase uses Jetty for the Web UI. Without modifying Jetty itself, it does not seem
+        possible to configure Jetty to redirect one port to another on the same host. See Nick
+        Dimiduk's contribution on this <link
+          xlink:href="http://stackoverflow.com/questions/20611815/redirect-from-http-to-https-in-jetty"
+          >Stack Overflow</link> thread for more information. If you know how to fix this without
+        opening a second port for HTTPS, patches are appreciated.</para>
+    </note>
+  </section>
   <section
     xml:id="hbase.secure.configuration">
     <title>Secure Client Access to Apache HBase</title>
