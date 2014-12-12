@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -364,6 +365,26 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       results.clear();
     }
     return auths;
+  }
+
+  @Override
+  public List<String> listLabels(String regex) throws IOException {
+    assert (labelsRegion != null);
+    Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths =
+        extractLabelsAndAuths(getExistingLabelsWithAuths());
+    Map<String, Integer> labels = labelsAndUserAuths.getFirst();
+    labels.remove(SYSTEM_LABEL);
+    if (regex != null) {
+      Pattern pattern = Pattern.compile(regex);
+      ArrayList<String> matchedLabels = new ArrayList<String>();
+      for (String label : labels.keySet()) {
+        if (pattern.matcher(label).matches()) {
+          matchedLabels.add(label);
+        }
+      }
+      return matchedLabels;
+    }
+    return new ArrayList<String>(labels.keySet());
   }
 
   @Override

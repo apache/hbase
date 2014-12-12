@@ -167,6 +167,12 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   }
 
   @Override
+  public List<String> listLabels(String regex) throws IOException {
+    // return an empty list for this implementation.
+    return new ArrayList<String>();
+  }
+
+  @Override
   public List<Tag> createVisibilityExpTags(String visExpression, boolean withSerializationFormat,
       boolean checkAuths) throws IOException {
     ExpressionNode node = null;
