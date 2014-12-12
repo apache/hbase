@@ -240,7 +240,5 @@ public class TestThriftServerCmdLine {
       throw new Exception(cmdLineException);
     }
   }
-
-
 }
 
