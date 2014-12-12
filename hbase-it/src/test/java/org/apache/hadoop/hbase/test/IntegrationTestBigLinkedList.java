@@ -154,7 +154,7 @@ import com.google.common.collect.Sets;
  * UNREFERENCED are· ok, any UNDEFINED counts are bad. Do not run at the· same
  * time as the Generator.
  *
- * Walker - A standalong program that start following a linked list· and emits timing info.··
+ * Walker - A standalone program that start following a linked list· and emits timing info.··
  *
  * Print - A standalone program that prints nodes in the linked list
  *
@@ -314,8 +314,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      *                _________________________
      *               |                  ______ |
      *               |                 |      ||
-     *             __+_________________+_____ ||
-     *             v v                 v     |||
+     *             .-+-----------------+-----.||
+     *             | |                 |     |||
      * first   = [ . . . . . . . . . . . ]   |||
      *             ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^     |||
      *             | | | | | | | | | | |     |||
@@ -327,8 +327,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      * ...                                   |||
      *                                       |||
      * last    = [ . . . . . . . . . . . ]   |||
-     *             | | | | | | | | | | |-----|||
-     *             |                 |--------||
+     *             ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^_____|||
+     *             |                 |________||
      *             |___________________________|
      */
     static class GeneratorMapper
