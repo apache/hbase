@@ -509,6 +509,21 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
     <para> See <link
         xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html"
         >HColumnDescriptor</link> for more information. </para>
+    <para>Recent versions of HBase also support setting time to live on a per cell basis. See <link
+        xlink:href="https://issues.apache.org/jira/browse/HBASE-10560">HBASE-10560</link> for more
+        information. Cell TTLs are submitted as an attribute on mutation requests (Appends,
+        Increments, Puts, etc.) using Mutation#setTTL. If the TTL attribute is set, it will be applied
+        to all cells updated on the server by the operation. There are two notable differences
+        between cell TTL handling and ColumnFamily TTLs:</para>
+    <itemizedlist>
+      <listitem>
+        <para>Cell TTLs are expressed in units of milliseconds instead of seconds.</para>
+      </listitem>
+      <listitem>
+        <para>A cell TTLs cannot extend the effective lifetime of a cell beyond a ColumnFamily level
+          TTL setting.</para>
+      </listitem>
+    </itemizedlist>
   </section>
   <section
     xml:id="cf.keep.deleted">
