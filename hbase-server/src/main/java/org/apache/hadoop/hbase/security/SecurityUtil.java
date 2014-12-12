@@ -38,4 +38,12 @@ public class SecurityUtil {
     }
     return (i > -1) ? principal.substring(0, i) : principal;
   }
+
+  /**
+   * Get the user name from a principal
+   */
+  public static String getPrincipalWithoutRealm(final String principal) {
+    int i = principal.indexOf("@");
+    return (i > -1) ? principal.substring(0, i) : principal;
+  }
 }
