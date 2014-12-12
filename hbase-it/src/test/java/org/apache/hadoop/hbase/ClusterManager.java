@@ -20,10 +20,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configured;
 
 
 /**
@@ -32,16 +30,7 @@ import org.apache.hadoop.conf.Configured;
  * functionality for carrying out deployment-specific tasks.
  */
 @InterfaceAudience.Private
-public abstract class ClusterManager extends Configured {
-  protected static final Log LOG = LogFactory.getLog(ClusterManager.class);
-
-  private static final String SIGKILL = "SIGKILL";
-  private static final String SIGSTOP = "SIGSTOP";
-  private static final String SIGCONT = "SIGCONT";
-
-  public ClusterManager() {
-  }
-
+interface ClusterManager extends Configurable {
   /**
    * Type of the service daemon
    */
@@ -72,50 +61,38 @@ public abstract class ClusterManager extends Configured {
   /**
    * Start the service on the given host
    */
-  public abstract void start(ServiceType service, String hostname) throws IOException;
+  void start(ServiceType service, String hostname) throws IOException;
 
   /**
    * Stop the service on the given host
    */
-  public abstract void stop(ServiceType service, String hostname) throws IOException;
+  void stop(ServiceType service, String hostname) throws IOException;
 
   /**
-   * Restart the service on the given host
+   * Restarts the service on the given host
    */
-  public abstract void restart(ServiceType service, String hostname) throws IOException;
+  void restart(ServiceType service, String hostname) throws IOException;
 
   /**
-   * Send the given posix signal to the service
+   * Kills the service running on the given host
    */
-  public abstract void signal(ServiceType service, String signal,
-      String hostname) throws IOException;
+  void kill(ServiceType service, String hostname) throws IOException;
 
   /**
-   * Kill the service running on given host
+   * Suspends the service running on the given host
    */
-  public void kill(ServiceType service, String hostname) throws IOException {
-    signal(service, SIGKILL, hostname);
-  }
+  void suspend(ServiceType service, String hostname) throws IOException;
 
   /**
-   * Suspend the service running on given host
+   * Resumes the services running on the given host
    */
-  public void suspend(ServiceType service, String hostname) throws IOException {
-    signal(service, SIGSTOP, hostname);
-  }
-
-  /**
-   * Resume the services running on given hosts
-   */
-  public void resume(ServiceType service, String hostname) throws IOException {
-    signal(service, SIGCONT, hostname);
-  }
+  void resume(ServiceType service, String hostname) throws IOException;
 
   /**
    * Returns whether the service is running on the remote host. This only checks whether the
    * service still has a pid.
    */
-  public abstract boolean isRunning(ServiceType service, String hostname) throws IOException;
+  boolean isRunning(ServiceType service, String hostname) throws IOException;
 
   /* TODO: further API ideas:
    *
