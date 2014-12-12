@@ -338,8 +338,10 @@ public class Scan extends Query {
 
   /**
    * Set the start row of the scan.
-   * @param startRow row to start scan on (inclusive)
-   * Note: In order to make startRow exclusive add a trailing 0 byte
+   * <p>
+   * If the specified row does not exist, the Scanner will start from the
+   * next closest row after the specified row.
+   * @param startRow row to start scanner at or after
    * @return this
    */
   public Scan setStartRow(byte [] startRow) {
@@ -348,9 +350,11 @@ public class Scan extends Query {
   }
 
   /**
-   * Set the stop row.
+   * Set the stop row of the scan.
    * @param stopRow row to end at (exclusive)
-   * <p><b>Note:</b> In order to make stopRow inclusive add a trailing 0 byte</p>
+   * <p>
+   * The scan will include rows that are lexicographically less than
+   * the provided stopRow.
    * <p><b>Note:</b> When doing a filter for a rowKey <u>Prefix</u>
    * use {@link #setRowPrefixFilter(byte[])}.
    * The 'trailing 0' will not yield the desired result.</p>
