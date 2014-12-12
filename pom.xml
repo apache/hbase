@@ -418,6 +418,14 @@
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
+      <id>virag</id>
+      <name>Virag Kothari</name>
+      <email>virag@yahoo-inc.com</email>
+      <timezone>-8</timezone>
+      <organization>Yahoo!</organization>
+      <organizationUrl>http://www.yahoo.com</organizationUrl>
+    </developer>
+    <developer>
       <id>zjushch</id>
       <name>Chunhui Shen</name>
       <email>zjushch@apache.org</email>
