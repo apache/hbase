@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -4105,6 +4106,8 @@ public class HBaseFsck extends Configured {
         errors.print("Allow checking/fixes for table: " + cmd);
       }
     }
+
+    errors.print("HBaseFsck command line options: " + StringUtils.join(args, " "));
 
     // pre-check current user has FS write permission or not
     try {

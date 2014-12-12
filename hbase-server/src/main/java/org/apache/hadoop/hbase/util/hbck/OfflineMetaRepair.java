@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util.hbck;
 
 import java.io.IOException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -109,6 +110,8 @@ public class OfflineMetaRepair {
         printUsageAndExit();
       }
     }
+
+    System.out.println("OfflineMetaRepair command line options: " + StringUtils.join(args, " "));
 
     // Fsck doesn't shutdown and and doesn't provide a way to shutdown its
     // threads cleanly, so we do a System.exit.
