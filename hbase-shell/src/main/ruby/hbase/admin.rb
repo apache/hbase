@@ -384,7 +384,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
     def truncate_preserve(table_name, conf = @conf)
-      h_table = @connection.getTable(table_name)
+      h_table = @conn.getTable(table_name)
       splits = h_table.getRegionLocations().keys().map{|i| Bytes.toString(i.getStartKey)}.delete_if{|k| k == ""}.to_java :String
       splits = org.apache.hadoop.hbase.util.Bytes.toByteArrays(splits)
       table_description = h_table.getTableDescriptor()
