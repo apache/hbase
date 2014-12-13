@@ -166,7 +166,8 @@ class LogRoller extends HasThread {
     if (r != null) {
       requester = this.services.getFlushRequester();
       if (requester != null) {
-        requester.requestFlush(r);
+        // force flushing all stores to clean old logs
+        requester.requestFlush(r, true);
         scheduled = true;
       }
     }

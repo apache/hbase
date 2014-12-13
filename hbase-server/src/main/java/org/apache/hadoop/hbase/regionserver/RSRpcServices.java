@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -150,8 +149,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
-import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Counter;
@@ -159,6 +156,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
@@ -694,7 +693,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private OperationStatus [] doReplayBatchOp(final HRegion region,
       final List<WALSplitter.MutationReplay> mutations, long replaySeqId) throws IOException {
-
     long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
@@ -1076,7 +1074,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       LOG.info("Flushing " + region.getRegionNameAsString());
       boolean shouldFlush = true;
       if (request.hasIfOlderThanTs()) {
-        shouldFlush = region.getLastFlushTime() < request.getIfOlderThanTs();
+        shouldFlush = region.getEarliestFlushTimeForAllStores() < request.getIfOlderThanTs();
       }
       FlushRegionResponse.Builder builder = FlushRegionResponse.newBuilder();
       if (shouldFlush) {
@@ -1093,7 +1091,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         builder.setFlushed(result);
       }
-      builder.setLastFlushTime(region.getLastFlushTime());
+      builder.setLastFlushTime( region.getEarliestFlushTimeForAllStores());
       return builder.build();
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical

@@ -27,7 +27,10 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -787,13 +790,15 @@ public class TestWALReplay {
 
     // Add 1k to each family.
     final int countPerFamily = 1000;
+    Set<byte[]> familyNames = new HashSet<byte[]>();
     for (HColumnDescriptor hcd: htd.getFamilies()) {
       addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily,
           ee, wal, htd, sequenceId);
+      familyNames.add(hcd.getName());
     }
 
     // Add a cache flush, shouldn't have any effect
-    wal.startCacheFlush(regionName);
+    wal.startCacheFlush(regionName, familyNames);
     wal.completeCacheFlush(regionName);
 
     // Add an edit to another family, should be skipped.
@@ -833,11 +838,11 @@ public class TestWALReplay {
           final HRegion region =
               new HRegion(basedir, newWal, newFS, newConf, hri, htd, null) {
             @Override
-            protected FlushResult internalFlushcache(
-                final WAL wal, final long myseqid, MonitoredTask status)
+            protected FlushResult internalFlushcache(final WAL wal, final long myseqid,
+                Collection<Store> storesToFlush, MonitoredTask status)
             throws IOException {
               LOG.info("InternalFlushCache Invoked");
-              FlushResult fs = super.internalFlushcache(wal, myseqid,
+              FlushResult fs = super.internalFlushcache(wal, myseqid, storesToFlush,
                   Mockito.mock(MonitoredTask.class));
               flushcount.incrementAndGet();
               return fs;
@@ -959,16 +964,16 @@ public class TestWALReplay {
     private HRegion r;
 
     @Override
-    public void requestFlush(HRegion region) {
+    public void requestFlush(HRegion region, boolean forceFlushAllStores) {
       try {
-        r.flushcache();
+        r.flushcache(forceFlushAllStores);
       } catch (IOException e) {
         throw new RuntimeException("Exception flushing", e);
       }
     }
 
     @Override
-    public void requestDelayedFlush(HRegion region, long when) {
+    public void requestDelayedFlush(HRegion region, long when, boolean forceFlushAllStores) {
       // TODO Auto-generated method stub
 
     }

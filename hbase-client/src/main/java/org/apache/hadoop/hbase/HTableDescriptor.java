@@ -130,6 +130,8 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   private static final Bytes MEMSTORE_FLUSHSIZE_KEY =
       new Bytes(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
 
+  public static final String FLUSH_POLICY = "FLUSH_POLICY";
+
   /**
    * <em>INTERNAL</em> Used by rest interface to access this metadata
    * attribute which denotes if the table is a -ROOT- region or not
@@ -763,6 +765,28 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   public HTableDescriptor setMemStoreFlushSize(long memstoreFlushSize) {
     setValue(MEMSTORE_FLUSHSIZE_KEY, Long.toString(memstoreFlushSize));
     return this;
+  }
+
+  /**
+   * This sets the class associated with the flush policy which determines determines the stores
+   * need to be flushed when flushing a region. The class used by default is defined in
+   * {@link org.apache.hadoop.hbase.regionserver.FlushPolicy}
+   * @param clazz the class name
+   */
+  public HTableDescriptor setFlushPolicyClassName(String clazz) {
+    setValue(FLUSH_POLICY, clazz);
+    return this;
+  }
+
+  /**
+   * This gets the class associated with the flush policy which determines the stores need to be
+   * flushed when flushing a region. The class used by default is defined in
+   * {@link org.apache.hadoop.hbase.regionserver.FlushPolicy}
+   * @return the class name of the flush policy for this table. If this returns null, the default
+   *         flush policy is used.
+   */
+  public String getFlushPolicyClassName() {
+    return getValue(FLUSH_POLICY);
   }
 
   /**

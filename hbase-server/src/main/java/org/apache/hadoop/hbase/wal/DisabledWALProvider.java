@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -182,7 +183,7 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public boolean startCacheFlush(final byte[] encodedRegionName) {
+    public boolean startCacheFlush(final byte[] encodedRegionName, Set<byte[]> flushedFamilyNames) {
       return !(closed.get());
     }
 
@@ -201,6 +202,11 @@ class DisabledWALProvider implements WALProvider {
 
     @Override
     public long getEarliestMemstoreSeqNum(byte[] encodedRegionName) {
+      return HConstants.NO_SEQNUM;
+    }
+
+    @Override
+    public long getEarliestMemstoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
       return HConstants.NO_SEQNUM;
     }
 
