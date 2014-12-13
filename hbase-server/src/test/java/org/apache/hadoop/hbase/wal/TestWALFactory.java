@@ -479,8 +479,9 @@ public class TestWALFactory {
   @Test
   public void testEditAdd() throws IOException {
     final int COL_COUNT = 10;
-    final TableName tableName =
-        TableName.valueOf("tablename");
+    final HTableDescriptor htd =
+        new HTableDescriptor(TableName.valueOf("tablename")).addFamily(new HColumnDescriptor(
+            "column"));
     final byte [] row = Bytes.toBytes("row");
     WAL.Reader reader = null;
     try {
@@ -495,16 +496,15 @@ public class TestWALFactory {
             Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
-      HRegionInfo info = new HRegionInfo(tableName,
+      HRegionInfo info = new HRegionInfo(htd.getTableName(),
         row,Bytes.toBytes(Bytes.toString(row) + "1"), false);
-      HTableDescriptor htd = new HTableDescriptor();
-      htd.addFamily(new HColumnDescriptor("column"));
       final WAL log = wals.getWAL(info.getEncodedNameAsBytes());
 
-      final long txid = log.append(htd, info, new WALKey(info.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis()), cols, sequenceId, true, null);
+      final long txid = log.append(htd, info,
+        new WALKey(info.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis()),
+        cols, sequenceId, true, null);
       log.sync(txid);
-      log.startCacheFlush(info.getEncodedNameAsBytes());
+      log.startCacheFlush(info.getEncodedNameAsBytes(), htd.getFamiliesKeys());
       log.completeCacheFlush(info.getEncodedNameAsBytes());
       log.shutdown();
       Path filename = DefaultWALProvider.getCurrentFileName(log);
@@ -518,7 +518,7 @@ public class TestWALFactory {
         WALKey key = entry.getKey();
         WALEdit val = entry.getEdit();
         assertTrue(Bytes.equals(info.getEncodedNameAsBytes(), key.getEncodedRegionName()));
-        assertTrue(tableName.equals(key.getTablename()));
+        assertTrue(htd.getTableName().equals(key.getTablename()));
         Cell cell = val.getCells().get(0);
         assertTrue(Bytes.equals(row, cell.getRow()));
         assertEquals((byte)(i + '0'), cell.getValue()[0]);
@@ -537,8 +537,9 @@ public class TestWALFactory {
   @Test
   public void testAppend() throws IOException {
     final int COL_COUNT = 10;
-    final TableName tableName =
-        TableName.valueOf("tablename");
+    final HTableDescriptor htd =
+        new HTableDescriptor(TableName.valueOf("tablename")).addFamily(new HColumnDescriptor(
+            "column"));
     final byte [] row = Bytes.toBytes("row");
     WAL.Reader reader = null;
     final AtomicLong sequenceId = new AtomicLong(1);
@@ -552,15 +553,14 @@ public class TestWALFactory {
           Bytes.toBytes(Integer.toString(i)),
           timestamp, new byte[] { (byte)(i + '0') }));
       }
-      HRegionInfo hri = new HRegionInfo(tableName,
+      HRegionInfo hri = new HRegionInfo(htd.getTableName(),
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      HTableDescriptor htd = new HTableDescriptor();
-      htd.addFamily(new HColumnDescriptor("column"));
       final WAL log = wals.getWAL(hri.getEncodedNameAsBytes());
-      final long txid = log.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis()), cols, sequenceId, true, null);
+      final long txid = log.append(htd, hri,
+        new WALKey(hri.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis()),
+        cols, sequenceId, true, null);
       log.sync(txid);
-      log.startCacheFlush(hri.getEncodedNameAsBytes());
+      log.startCacheFlush(hri.getEncodedNameAsBytes(), htd.getFamiliesKeys());
       log.completeCacheFlush(hri.getEncodedNameAsBytes());
       log.shutdown();
       Path filename = DefaultWALProvider.getCurrentFileName(log);
@@ -572,7 +572,7 @@ public class TestWALFactory {
       for (Cell val : entry.getEdit().getCells()) {
         assertTrue(Bytes.equals(hri.getEncodedNameAsBytes(),
           entry.getKey().getEncodedRegionName()));
-        assertTrue(tableName.equals(entry.getKey().getTablename()));
+        assertTrue(htd.getTableName().equals(entry.getKey().getTablename()));
         assertTrue(Bytes.equals(row, val.getRow()));
         assertEquals((byte)(idx + '0'), val.getValue()[0]);
         System.out.println(entry.getKey() + " " + val);

@@ -1379,7 +1379,7 @@ public class HRegionServer extends HasThread implements
       .setWriteRequestsCount(r.writeRequestsCount.get())
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
-      .setCompleteSequenceId(r.lastFlushSeqId)
+      .setCompleteSequenceId(r.maxFlushedSeqId)
       .setDataLocality(dataLocality);
 
     return regionLoadBldr.build();
@@ -1475,7 +1475,7 @@ public class HRegionServer extends HasThread implements
             //Throttle the flushes by putting a delay. If we don't throttle, and there
             //is a balanced write-load on the regions in a table, we might end up
             //overwhelming the filesystem with too many flushes at once.
-            requester.requestDelayedFlush(r, randomDelay);
+            requester.requestDelayedFlush(r, randomDelay, false);
           }
         }
       }

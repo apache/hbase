@@ -266,7 +266,7 @@ public class TestIOFencing {
       compactingRegion = (CompactionBlockerRegion)testRegions.get(0);
       LOG.info("Blocking compactions");
       compactingRegion.stopCompactions();
-      long lastFlushTime = compactingRegion.getLastFlushTime();
+      long lastFlushTime = compactingRegion.getEarliestFlushTimeForAllStores();
       // Load some rows
       TEST_UTIL.loadNumericRows(table, FAMILY, 0, FIRST_BATCH_COUNT);
 
@@ -282,7 +282,7 @@ public class TestIOFencing {
 
       // Wait till flush has happened, otherwise there won't be multiple store files
       long startWaitTime = System.currentTimeMillis();
-      while (compactingRegion.getLastFlushTime() <= lastFlushTime ||
+      while (compactingRegion.getEarliestFlushTimeForAllStores() <= lastFlushTime ||
           compactingRegion.countStoreFiles() <= 1) {
         LOG.info("Waiting for the region to flush " + compactingRegion.getRegionNameAsString());
         Thread.sleep(1000);
