@@ -59,17 +59,15 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
 
   public void start() throws KeeperException {
     watcher.registerListener(this);
-    if (ZKUtil.watchAndCheckExists(watcher, labelZnode)) {
-      byte[] data = ZKUtil.getDataAndWatch(watcher, labelZnode);
-      if (data != null) {
-        refreshVisibilityLabelsCache(data);
-      }
+    ZKUtil.createWithParents(watcher, labelZnode);
+    ZKUtil.createWithParents(watcher, userAuthsZnode);
+    byte[] data = ZKUtil.getDataAndWatch(watcher, labelZnode);
+    if (data != null && data.length > 0) {
+      refreshVisibilityLabelsCache(data);
     }
-    if (ZKUtil.watchAndCheckExists(watcher, userAuthsZnode)) {
-      byte[] data = ZKUtil.getDataAndWatch(watcher, userAuthsZnode);
-      if (data != null) {
-        refreshUserAuthsCache(data);
-      }
+    data = ZKUtil.getDataAndWatch(watcher, userAuthsZnode);
+    if (data != null && data.length > 0) {
+      refreshUserAuthsCache(data);
     }
   }
 
@@ -143,7 +141,6 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
       znode = this.userAuthsZnode;
     }
     try {
-      ZKUtil.createWithParents(watcher, znode);
       ZKUtil.updateExistingNodeData(watcher, znode, data, -1);
     } catch (KeeperException e) {
       LOG.error("Failed writing to " + znode, e);
