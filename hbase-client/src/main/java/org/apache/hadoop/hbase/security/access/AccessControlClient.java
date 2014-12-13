@@ -100,6 +100,20 @@ public class AccessControlClient {
     }
   }
 
+  /**
+   * Grant global permissions for the specified user.
+   */
+  public static void grant(Configuration conf, final String userName,
+       final Permission.Action... actions) throws Throwable {
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, actions);
+      }
+    }
+  }
+
   public static boolean isAccessControllerRunning(Configuration conf)
       throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     // TODO: Make it so caller passes in a Connection rather than have us do this expensive
@@ -149,6 +163,20 @@ public class AccessControlClient {
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       try (Table table = connection.getTable(ACL_TABLE_NAME)) {
         ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, namespace, actions);
+      }
+    }
+  }
+
+  /**
+   * Revoke global permissions for the specified user.
+   */
+  public static void revoke(Configuration conf, final String userName,
+      final Permission.Action... actions) throws Throwable {
+    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
+    // setup each time.  This class only used in test and shell at moment though.
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+        ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, actions);
       }
     }
   }

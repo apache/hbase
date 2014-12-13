@@ -38,20 +38,13 @@ module Hbase
       # TODO: need to validate user name
 
       begin
-        meta_table = @connection.getTable(
-          org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
-        service = meta_table.coprocessorService(
-          org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)
-
-        protocol = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos::
-          AccessControlService.newBlockingStub(service)
-        perm = org.apache.hadoop.hbase.security.access.Permission.new(
-          permissions.to_java_bytes)
-
         # Verify that the specified permission is valid
         if (permissions == nil || permissions.length == 0)
           raise(ArgumentError, "Invalid permission: no actions associated with user")
         end
+
+        perm = org.apache.hadoop.hbase.security.access.Permission.new(
+                  permissions.to_java_bytes)
 
         if (table_name != nil)
           tablebytes=table_name.to_java_bytes
@@ -62,9 +55,8 @@ module Hbase
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless
               namespace_exists?(namespace_name)
 
-            # invoke cp endpoint to perform access controlse
-            org.apache.hadoop.hbase.protobuf.ProtobufUtil.grant(
-              protocol, user, namespace_name, perm.getActions())
+            org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
+              @config, namespace_name, user, perm.getActions())
           else
             # Table should exist
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
@@ -79,19 +71,14 @@ module Hbase
             fambytes = family.to_java_bytes if (family != nil)
             qualbytes = qualifier.to_java_bytes if (qualifier != nil)
 
-            # invoke cp endpoint to perform access controlse
-            org.apache.hadoop.hbase.protobuf.ProtobufUtil.grant(
-              protocol, user, tableName, fambytes,
-              qualbytes, perm.getActions())
+            org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
+              @config, tableName, user, fambytes, qualbytes, perm.getActions())
           end
         else
-          # invoke cp endpoint to perform access controlse
-          org.apache.hadoop.hbase.protobuf.ProtobufUtil.grant(
-            protocol, user, perm.getActions())
+          # invoke cp endpoint to perform access controls
+          org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
+            @config, user, perm.getActions())
         end
-
-      ensure
-        meta_table.close()
       end
     end
 
@@ -102,14 +89,6 @@ module Hbase
       # TODO: need to validate user name
 
       begin
-        meta_table = @connection.getTable(
-          org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
-        service = meta_table.coprocessorService(
-          org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)
-
-        protocol = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos::
-          AccessControlService.newBlockingStub(service)
-
         if (table_name != nil)
           #check if the tablename passed is actually a namespace
           if (isNamespace?(table_name))
@@ -118,9 +97,8 @@ module Hbase
             raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
 
             tablebytes=table_name.to_java_bytes
-            # invoke cp endpoint to perform access controlse
-            org.apache.hadoop.hbase.protobuf.ProtobufUtil.revoke(
-              protocol, user, namespace_name)
+            org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
+              @config, namespace_name, user)
           else
              # Table should exist
              raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
@@ -135,17 +113,14 @@ module Hbase
              fambytes = family.to_java_bytes if (family != nil)
              qualbytes = qualifier.to_java_bytes if (qualifier != nil)
 
-            # invoke cp endpoint to perform access controlse
-            org.apache.hadoop.hbase.protobuf.ProtobufUtil.revoke(
-              protocol, user, tableName, fambytes, qualbytes)
+            org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
+              @config, tableName, user, fambytes, qualbytes)
           end
         else
-          # invoke cp endpoint to perform access controlse
           perm = org.apache.hadoop.hbase.security.access.Permission.new(''.to_java_bytes)
-          org.apache.hadoop.hbase.protobuf.ProtobufUtil.revoke(protocol, user, perm.getActions())
+          org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
+            @config, user, perm.getActions())
         end
-      ensure
-        meta_table.close()
       end
     end
 
