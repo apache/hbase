@@ -2148,6 +2148,48 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
+  public void testAccessControlClientGlobalGrantRevoke() throws Exception {
+    // Create user for testing, who has no READ privileges by default.
+    User testGlobalGrantRevoke = User.createUserForTesting(conf,
+      "testGlobalGrantRevoke", new String[0]);
+    AccessTestAction getAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(new Get(TEST_ROW));
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    verifyDenied(getAction, testGlobalGrantRevoke);
+
+    // Grant table READ permissions to testGlobalGrantRevoke.
+    try {
+      grantGlobalUsingAccessControlClient(TEST_UTIL, conf, testGlobalGrantRevoke.getShortName(),
+        Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. ", e);
+    }
+
+    // Now testGlobalGrantRevoke should be able to read also
+    verifyAllowed(getAction, testGlobalGrantRevoke);
+
+    // Revoke table READ permission to testGlobalGrantRevoke.
+    try {
+      revokeGlobalUsingAccessControlClient(TEST_UTIL, conf, testGlobalGrantRevoke.getShortName(),
+        Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke ", e);
+    }
+
+    // Now testGlobalGrantRevoke shouldn't be able read
+    verifyDenied(getAction, testGlobalGrantRevoke);
+  }
+
+  @Test
   public void testAccessControlClientGrantRevokeOnNamespace() throws Exception {
     // Create user for testing, who has no READ privileges by default.
     User testNS = User.createUserForTesting(conf, "testNS", new String[0]);
