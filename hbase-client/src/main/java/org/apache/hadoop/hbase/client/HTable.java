@@ -178,7 +178,7 @@ public class HTable implements HTableInterface, RegionLocator {
       this.connection = null;
       return;
     }
-    this.connection = ConnectionManager.getConnectionInternal(conf);
+    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
     this.configuration = conf;
 
     this.pool = getDefaultExecutor(conf);
@@ -250,7 +250,7 @@ public class HTable implements HTableInterface, RegionLocator {
   @Deprecated
   public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
       throws IOException {
-    this.connection = ConnectionManager.getConnectionInternal(conf);
+    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
     this.configuration = conf;
     this.pool = pool;
     if (pool == null) {

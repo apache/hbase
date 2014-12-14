@@ -35,20 +35,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -123,15 +123,17 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * Creates a table with given table name and specified number of column
    * families if the table does not already exist.
    */
-  private void setupTable(TableName table, int cfs) throws IOException {
+  private void setupTable(final Connection connection, TableName table, int cfs)
+  throws IOException {
     try {
       LOG.info("Creating table " + table);
       HTableDescriptor htd = new HTableDescriptor(table);
       for (int i = 0; i < cfs; i++) {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
-
-      util.getHBaseAdmin().createTable(htd);
+      try (Admin admin = connection.getAdmin()) {
+        admin.createTable(htd);
+      }
     } catch (TableExistsException tee) {
       LOG.info("Table " + table + " already exists");
     }
@@ -170,12 +172,14 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   /**
    * Populate table with known values.
    */
-  private void populateTable(TableName table, int value) throws Exception {
+  private void populateTable(final Connection connection, TableName table, int value)
+  throws Exception {
     // create HFiles for different column families
     LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration());
     Path bulk1 = buildBulkFiles(table, value);
-    HTable t = new HTable(util.getConfiguration(), table);
-    lih.doBulkLoad(bulk1, t);
+    try (Table t = connection.getTable(table)) {
+      lih.doBulkLoad(bulk1, (HTable)t);
+    }
   }
 
   /**
@@ -265,20 +269,18 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   @Test(expected=IOException.class, timeout=120000)
   public void testBulkLoadPhaseFailure() throws Exception {
     TableName table = TableName.valueOf("bulkLoadPhaseFailure");
-    setupTable(table, 10);
-
     final AtomicInteger attmptedCalls = new AtomicInteger();
     final AtomicInteger failedCalls = new AtomicInteger();
     util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
-    try {
+    try (Connection connection = ConnectionFactory.createConnection(this.util.getConfiguration())) {
+      setupTable(connection, table, 10);
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
-
         protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
             TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis)
-            throws IOException {
+                throws IOException {
           int i = attmptedCalls.incrementAndGet();
           if (i == 1) {
-            HConnection errConn = null;
+            Connection errConn = null;
             try {
               errConn = getMockedConnection(util.getConfiguration());
             } catch (Exception e) {
@@ -286,23 +288,24 @@ public class TestLoadIncrementalHFilesSplitRecovery {
               throw new RuntimeException("mocking cruft, should never happen");
             }
             failedCalls.incrementAndGet();
-            return super.tryAtomicRegionLoad(errConn, tableName, first, lqis);
+            return super.tryAtomicRegionLoad((HConnection)errConn, tableName, first, lqis);
           }
 
-          return super.tryAtomicRegionLoad(conn, tableName, first, lqis);
+          return super.tryAtomicRegionLoad((HConnection)conn, tableName, first, lqis);
         }
       };
-
-      // create HFiles for different column families
-      Path dir = buildBulkFiles(table, 1);
-      HTable t = new HTable(util.getConfiguration(), table);
-      lih.doBulkLoad(dir, t);
-    } finally {
-      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-        HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+      try {
+        // create HFiles for different column families
+        Path dir = buildBulkFiles(table, 1);
+        try (Table t = connection.getTable(table)) {
+          lih.doBulkLoad(dir, (HTable)t);
+        }
+      } finally {
+        util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+            HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+      }
+      fail("doBulkLoad should have thrown an exception");
     }
-
-    fail("doBulkLoad should have thrown an exception");
   }
 
   @SuppressWarnings("deprecation")
@@ -337,39 +340,39 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   @Test (timeout=120000)
   public void testSplitWhileBulkLoadPhase() throws Exception {
     final TableName table = TableName.valueOf("splitWhileBulkloadPhase");
-    setupTable(table, 10);
-    populateTable(table,1);
-    assertExpectedTable(table, ROWCOUNT, 1);
+    try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+      setupTable(connection, table, 10);
+      populateTable(connection, table,1);
+      assertExpectedTable(table, ROWCOUNT, 1);
 
-    // Now let's cause trouble.  This will occur after checks and cause bulk
-    // files to fail when attempt to atomically import.  This is recoverable.
-    final AtomicInteger attemptedCalls = new AtomicInteger();
-    LoadIncrementalHFiles lih2 = new LoadIncrementalHFiles(
-        util.getConfiguration()) {
-
-      protected void bulkLoadPhase(final Table htable, final HConnection conn,
-          ExecutorService pool, Deque<LoadQueueItem> queue,
-          final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
-        int i = attemptedCalls.incrementAndGet();
-        if (i == 1) {
-          // On first attempt force a split.
-          forceSplit(table);
+      // Now let's cause trouble.  This will occur after checks and cause bulk
+      // files to fail when attempt to atomically import.  This is recoverable.
+      final AtomicInteger attemptedCalls = new AtomicInteger();
+      LoadIncrementalHFiles lih2 = new LoadIncrementalHFiles(util.getConfiguration()) {
+        protected void bulkLoadPhase(final Table htable, final HConnection conn,
+            ExecutorService pool, Deque<LoadQueueItem> queue,
+            final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
+          int i = attemptedCalls.incrementAndGet();
+          if (i == 1) {
+            // On first attempt force a split.
+            forceSplit(table);
+          }
+          super.bulkLoadPhase(htable, conn, pool, queue, regionGroups);
         }
+      };
 
-        super.bulkLoadPhase(htable, conn, pool, queue, regionGroups);
+      // create HFiles for different column families
+      try (Table t = connection.getTable(table)) {
+        Path bulk = buildBulkFiles(table, 2);
+        lih2.doBulkLoad(bulk, (HTable)t);
       }
-    };
 
-    // create HFiles for different column families
-    HTable t = new HTable(util.getConfiguration(), table);
-    Path bulk = buildBulkFiles(table, 2);
-    lih2.doBulkLoad(bulk, t);
-
-    // check that data was loaded
-    // The three expected attempts are 1) failure because need to split, 2)
-    // load of split top 3) load of split bottom
-    assertEquals(attemptedCalls.get(), 3);
-    assertExpectedTable(table, ROWCOUNT, 2);
+      // check that data was loaded
+      // The three expected attempts are 1) failure because need to split, 2)
+      // load of split top 3) load of split bottom
+      assertEquals(attemptedCalls.get(), 3);
+      assertExpectedTable(table, ROWCOUNT, 2);
+    }
   }
 
   /**
@@ -379,33 +382,35 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   @Test (timeout=120000)
   public void testGroupOrSplitPresplit() throws Exception {
     final TableName table = TableName.valueOf("groupOrSplitPresplit");
-    setupTable(table, 10);
-    populateTable(table, 1);
-    assertExpectedTable(table, ROWCOUNT, 1);
-    forceSplit(table);
+    try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+      setupTable(connection, table, 10);
+      populateTable(connection, table, 1);
+      assertExpectedTable(connection, table, ROWCOUNT, 1);
+      forceSplit(table);
 
-    final AtomicInteger countedLqis= new AtomicInteger();
-    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
-        util.getConfiguration()) {
-      protected List<LoadQueueItem> groupOrSplit(
-          Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-          final LoadQueueItem item, final HTable htable,
-          final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
-        List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
-        if (lqis != null) {
-          countedLqis.addAndGet(lqis.size());
+      final AtomicInteger countedLqis= new AtomicInteger();
+      LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
+          util.getConfiguration()) {
+        protected List<LoadQueueItem> groupOrSplit(
+            Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+            final LoadQueueItem item, final HTable htable,
+            final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+          List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
+          if (lqis != null) {
+            countedLqis.addAndGet(lqis.size());
+          }
+          return lqis;
         }
-        return lqis;
+      };
+
+      // create HFiles for different column families
+      Path bulk = buildBulkFiles(table, 2);
+      try (Table t = connection.getTable(table)) {
+        lih.doBulkLoad(bulk, (HTable)t);
       }
-    };
-
-    // create HFiles for different column families
-    Path bulk = buildBulkFiles(table, 2);
-    HTable ht = new HTable(util.getConfiguration(), table);
-    lih.doBulkLoad(bulk, ht);
-
-    assertExpectedTable(table, ROWCOUNT, 2);
-    assertEquals(20, countedLqis.get());
+      assertExpectedTable(connection, table, ROWCOUNT, 2);
+      assertEquals(20, countedLqis.get());
+    }
   }
 
   /**
@@ -415,29 +420,32 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   @Test(expected = IOException.class, timeout=120000)
   public void testGroupOrSplitFailure() throws Exception {
     TableName table = TableName.valueOf("groupOrSplitFailure");
-    setupTable(table, 10);
+    try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+      setupTable(connection, table, 10);
 
-    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
-        util.getConfiguration()) {
-      int i = 0;
+      LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
+          util.getConfiguration()) {
+        int i = 0;
 
-      protected List<LoadQueueItem> groupOrSplit(
-          Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-          final LoadQueueItem item, final HTable table,
-          final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
-        i++;
+        protected List<LoadQueueItem> groupOrSplit(
+            Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+            final LoadQueueItem item, final HTable table,
+            final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+          i++;
 
-        if (i == 5) {
-          throw new IOException("failure");
+          if (i == 5) {
+            throw new IOException("failure");
+          }
+          return super.groupOrSplit(regionGroups, item, table, startEndKeys);
         }
-        return super.groupOrSplit(regionGroups, item, table, startEndKeys);
-      }
-    };
+      };
 
-    // create HFiles for different column families
-    Path dir = buildBulkFiles(table,1);
-    HTable t = new HTable(util.getConfiguration(), table);
-    lih.doBulkLoad(dir, t);
+      // create HFiles for different column families
+      Path dir = buildBulkFiles(table,1);
+      try (Table t = connection.getTable(table)) {
+        lih.doBulkLoad(dir, (HTable)t);
+      }
+    }
 
     fail("doBulkLoad should have thrown an exception");
   }

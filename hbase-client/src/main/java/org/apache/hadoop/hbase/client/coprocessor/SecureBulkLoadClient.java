@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
-import static org.apache.hadoop.hbase.HConstants.LAST_ROW;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
