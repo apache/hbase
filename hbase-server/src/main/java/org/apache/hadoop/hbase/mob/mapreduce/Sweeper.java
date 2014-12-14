@@ -56,7 +56,7 @@ public class Sweeper extends Configured implements Tool {
    * @throws KeeperException
    * @throws ServiceException
    */
-  void sweepFamily(String tableName, String familyName) throws IOException, InterruptedException,
+  int sweepFamily(String tableName, String familyName) throws IOException, InterruptedException,
       ClassNotFoundException, KeeperException, ServiceException {
     Configuration conf = getConf();
     // make sure the target HBase exists.
@@ -68,11 +68,14 @@ public class Sweeper extends Configured implements Tool {
       HTableDescriptor htd = admin.getTableDescriptor(tn);
       HColumnDescriptor family = htd.getFamily(Bytes.toBytes(familyName));
       if (family == null || !family.isMobEnabled()) {
-        throw new IOException("Column family " + familyName + " is not a MOB column family");
+          throw new IOException("Column family " + familyName + " is not a MOB column family");
       }
       SweepJob job = new SweepJob(conf, fs);
       // Run the sweeping
-      job.sweep(tn, family);
+      return job.sweep(tn, family);
+    } catch (Exception e) {
+      System.err.println("Job failed. " + e);
+      return 2; // job failed
     } finally {
       try {
         admin.close();
@@ -84,7 +87,8 @@ public class Sweeper extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    ToolRunner.run(conf, new Sweeper(), args);
+    int ret = ToolRunner.run(conf, new Sweeper(), args);
+    System.exit(ret);
   }
 
   private void printUsage() {
@@ -101,7 +105,6 @@ public class Sweeper extends Configured implements Tool {
     }
     String table = args[0];
     String family = args[1];
-    sweepFamily(table, family);
-    return 0;
+    return sweepFamily(table, family);
   }
 }

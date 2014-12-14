@@ -120,7 +120,7 @@ public class SweepJob {
    * @throws InterruptedException
    * @throws KeeperException
    */
-  public void sweep(TableName tn, HColumnDescriptor family) throws IOException,
+  public int sweep(TableName tn, HColumnDescriptor family) throws IOException,
       ClassNotFoundException, InterruptedException, KeeperException {
     Configuration conf = new Configuration(this.conf);
     // check whether the current user is the same one with the owner of hbase root
@@ -148,7 +148,7 @@ public class SweepJob {
       if (!zk.lockColumnFamily(tn.getNameAsString(), familyName)) {
         LOG.warn("Can not lock the store " + familyName
             + ". The major compaction in HBase may be in-progress. Please re-run the job.");
-        return;
+        return 3;
       }
       try {
         // Checks whether there're HBase major compaction now.
@@ -156,13 +156,13 @@ public class SweepJob {
         if (hasChildren) {
           LOG.warn("The major compaction in HBase may be in-progress."
               + " Please re-run the job.");
-          return;
+          return 4;
         } else {
           // Checks whether there's sweep tool in progress.
           boolean hasSweeper = zk.isSweeperZNodeExist(tn.getNameAsString(), familyName);
           if (hasSweeper) {
             LOG.warn("Another sweep job is running");
-            return;
+            return 5;
           } else {
             // add the sweeper node, mark that there's one sweep tool in progress.
             // All the HBase major compaction and sweep tool in this column family could not
@@ -202,6 +202,9 @@ public class SweepJob {
         if (job.waitForCompletion(true)) {
           // Archive the unused mob files.
           removeUnusedFiles(job, tn, family);
+        } else {
+          System.err.println("Job Failed");
+          return 6;
         }
       } finally {
         cleanup(job, tn, familyName);
@@ -210,6 +213,7 @@ public class SweepJob {
     } finally {
       zk.close();
     }
+    return 0;
   }
 
   /**
@@ -417,7 +421,7 @@ public class SweepJob {
   /**
    * Deletes the working directory.
    * @param job The current job.
-   * @param store The current MobFileStore.
+   * @param familyName The family to cleanup
    * @throws IOException
    */
   private void cleanup(Job job, TableName tn, String familyName) throws IOException {
