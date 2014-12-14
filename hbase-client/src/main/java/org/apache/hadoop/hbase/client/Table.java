@@ -293,10 +293,11 @@ public interface Table extends Closeable {
    * @param deletes List of things to delete.  List gets modified by this
    * method (in particular it gets re-ordered, so the order in which the elements
    * are inserted in the list gives no guarantee as to the order in which the
-   * {@link Delete}s are executed).
+   * {@link Delete}s are executed), make sure that you pass a mutable list.
    * @throws IOException if a remote or network exception occurs. In that case
    * the {@code deletes} argument will contain the {@link Delete} instances
    * that have not be successfully applied.
+   * @exception java.lang.UnsupportedOperationException if the {@code deletes} argument is immutable.
    * @since 0.20.1
    */
   void delete(List<Delete> deletes) throws IOException;
