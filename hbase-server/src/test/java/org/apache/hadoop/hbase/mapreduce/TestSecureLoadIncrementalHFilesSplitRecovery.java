@@ -31,7 +31,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Reruns TestSecureLoadIncrementalHFilesSplitRecovery
  * using LoadIncrementalHFiles in secure mode.
- * This suite is unable to verify the security handoff/turnover
+ * This suite is unable to verify the security handoff/turnove
  * as miniCluster is running as system user thus has root privileges
  * and delegation tokens don't seem to work on miniDFS.
  *
@@ -61,9 +61,8 @@ public class TestSecureLoadIncrementalHFilesSplitRecovery extends TestLoadIncrem
   }
 
   //Disabling this test as it does not work in secure mode
-  @Test
+  @Test (timeout=180000)
   @Override
   public void testBulkLoadPhaseFailure() {
   }
 }
-

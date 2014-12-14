@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
-import static org.apache.hadoop.hbase.HConstants.LAST_ROW;
-
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.ByteStringer;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
@@ -77,7 +77,7 @@ public class SecureBulkLoadClient {
       if (controller.failedOnException()) {
         throw controller.getFailedOn();
       }
-      
+
       return response.getBulkToken();
     } catch (Throwable throwable) {
       throw new IOException(throwable);

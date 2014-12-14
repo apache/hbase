@@ -646,10 +646,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           if (!isSecureBulkLoadEndpointAvailable()) {
             success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds);
           } else {
-            Table table = new HTable(conn.getConfiguration(), getTableName());
-            secureClient = new SecureBulkLoadClient(table);
-            success = secureClient.bulkLoadHFiles(famPaths, fsDelegationToken.getUserToken(),
-              bulkToken, getLocation().getRegionInfo().getStartKey());
+            try (Table table = conn.getTable(getTableName())) {
+              secureClient = new SecureBulkLoadClient(table);
+              success = secureClient.bulkLoadHFiles(famPaths, fsDelegationToken.getUserToken(),
+                bulkToken, getLocation().getRegionInfo().getStartKey());
+            }
           }
           return success;
         } finally {
