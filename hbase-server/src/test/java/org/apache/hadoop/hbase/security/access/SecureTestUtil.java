@@ -502,6 +502,27 @@ public class SecureTestUtil {
   }
 
   /**
+   * Grant global permissions to the given user using AccessControlClient. Will wait until all
+   * active AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void grantGlobalUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final Permission.Action... actions)
+      throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.grant(conf, user, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
    * Revoke permissions on a table from the given user. Will wait until all active
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
@@ -539,6 +560,27 @@ public class SecureTestUtil {
       public Void call() throws Exception {
         try {
           AccessControlClient.revoke(conf, table, user, family, qualifier, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke global permissions from the given user using AccessControlClient. Will wait until
+   * all active AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeGlobalUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user,final Permission.Action... actions)
+      throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.revoke(conf, user, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }

@@ -105,6 +105,23 @@ public class AccessControlClient {
       }
     }
   }
+
+  /**
+   * Grant global permissions for the specified user.
+   */
+  public static void grant(Configuration conf, final String userName,
+       final Permission.Action... actions) throws Throwable {
+    HTable ht = null;
+    try {
+      ht = getAclTable(conf);
+      ProtobufUtil.grant(getAccessControlServiceStub(ht), userName, actions);
+    } finally {
+      if (ht != null) {
+        ht.close();
+      }
+    }
+  }
+
   public static boolean isAccessControllerRunning(Configuration conf)
       throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     HBaseAdmin ha = null;
@@ -156,6 +173,22 @@ public class AccessControlClient {
     try {
       ht = getAclTable(conf);
       ProtobufUtil.revoke(getAccessControlServiceStub(ht), userName, namespace, actions);
+    } finally {
+      if (ht != null) {
+        ht.close();
+      }
+    }
+  }
+
+  /**
+   * Revoke global permissions for the specified user.
+   */
+  public static void revoke(Configuration conf, final String userName,
+      final Permission.Action... actions) throws Throwable {
+    HTable ht = null;
+    try {
+      ht = getAclTable(conf);
+      ProtobufUtil.revoke(getAccessControlServiceStub(ht), userName, actions);
     } finally {
       if (ht != null) {
         ht.close();
