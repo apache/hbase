@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Map;
@@ -35,14 +36,14 @@ import org.apache.hadoop.hbase.monitoring.LogMonitoring;
 import org.apache.hadoop.hbase.monitoring.StateDumpServlet;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.RSDumpServlet;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 
 @InterfaceAudience.Private
 public class MasterDumpServlet extends StateDumpServlet {
   private static final long serialVersionUID = 1L;
   private static final String LINE =
     "===========================================================";
-  
+
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
@@ -52,10 +53,10 @@ public class MasterDumpServlet extends StateDumpServlet {
     response.setContentType("text/plain");
     OutputStream os = response.getOutputStream();
     PrintWriter out = new PrintWriter(os);
-    
+
     out.println("Master status for " + master.getServerName()
         + " as of " + new Date());
-    
+
     out.println("\n\nVersion Info:");
     out.println(LINE);
     dumpVersionInfo(out);
@@ -63,34 +64,36 @@ public class MasterDumpServlet extends StateDumpServlet {
     out.println("\n\nTasks:");
     out.println(LINE);
     TaskMonitor.get().dumpAsText(out);
-    
+
     out.println("\n\nServers:");
     out.println(LINE);
     dumpServers(master, out);
-    
+
     out.println("\n\nRegions-in-transition:");
     out.println(LINE);
     dumpRIT(master, out);
-    
+
     out.println("\n\nExecutors:");
     out.println(LINE);
     dumpExecutors(master.getExecutorService(), out);
-    
+
     out.println("\n\nStacks:");
     out.println(LINE);
-    ReflectionUtils.printThreadInfo(out, "");
-    
+    PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
+    Threads.printThreadInfo(ps, "");
+    ps.flush();
+
     out.println("\n\nMaster configuration:");
     out.println(LINE);
     Configuration conf = master.getConfiguration();
     out.flush();
     conf.writeXml(os);
     os.flush();
-    
+
     out.println("\n\nRecent regionserver aborts:");
     out.println(LINE);
     master.getRegionServerFatalLogBuffer().dumpTo(out);
-    
+
     out.println("\n\nLogs");
     out.println(LINE);
     long tailKb = getTailKbParam(request);
@@ -103,7 +106,7 @@ public class MasterDumpServlet extends StateDumpServlet {
     }
     out.flush();
   }
-  
+
 
   private void dumpRIT(HMaster master, PrintWriter out) {
     AssignmentManager am = master.getAssignmentManager();
