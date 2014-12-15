@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.InterruptedIOException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -32,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Utility used running a cluster all in the one JVM.
@@ -86,7 +84,7 @@ public class JVMClusterUtil {
   throws IOException {
     HRegionServer server;
     try {
-      
+
       Constructor<? extends HRegionServer> ctor = hrsc.getConstructor(Configuration.class,
       CoordinatedStateManager.class);
       ctor.setAccessible(true);
@@ -222,7 +220,7 @@ public class JVMClusterUtil {
       }
       if (System.currentTimeMillis() > startTime + maxwait) {
         String msg = "Master not initialized after " + maxwait + "ms seconds";
-        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+        Threads.printThreadInfo(System.out,
           "Thread dump because: " + msg);
         throw new RuntimeException(msg);
       }
