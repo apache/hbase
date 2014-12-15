@@ -908,7 +908,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       restoreHandler.cancel(why);
     }
     try {
-      coordinator.close();
+      if (coordinator != null) {
+        coordinator.close();
+      }
     } catch (IOException e) {
       LOG.error("stop ProcedureCoordinator error", e);
     }
