@@ -848,7 +848,7 @@
           <useIdAsFilename>true</useIdAsFilename>
           <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
           <sectionAutolabel>true</sectionAutolabel>
-          <htmlStylesheet>${baserdir}/src/main/site/resources/css/freebsd_docbook.css</htmlStylesheet>
+          <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
           <htmlCustomization>${basedir}/src/main/docbkx/customization.xsl</htmlCustomization>
           <tocMaxDepth>2</tocMaxDepth>
