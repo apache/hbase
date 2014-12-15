@@ -23,6 +23,7 @@ java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.ServerName
+java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos::SnapshotDescription
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
@@ -43,7 +44,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns a list of tables in hbase
     def list(regex = ".*")
-      @admin.listTableNames(regex).map { |t| t.getNameAsString }
+      @admin.listTables(regex).map { |t| t.getNameAsString }
     end
 
     #----------------------------------------------------------------------------------------------
@@ -346,17 +347,17 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns table's structure description
     def describe(table_name)
-      @admin.getTableDescriptor(table_name.to_java_bytes).to_s
+      @admin.getTableDescriptor(TableName.valueOf(table_name)).to_s
     end
 
     def get_column_families(table_name)
-      @admin.getTableDescriptor(table_name.to_java_bytes).getColumnFamilies()
+      @admin.getTableDescriptor(TableName.valueOf(table_name)).getColumnFamilies()
     end
 
     #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name, conf = @conf)
-      table_description = @admin.getTableDescriptor(table_name.to_java_bytes)
+      table_description = @admin.getTableDescriptor(TableName.valueOf(table_name))
       raise ArgumentError, "Table #{table_name} is not enabled. Enable it first.'" unless enabled?(table_name)
       yield 'Disabling table...' if block_given?
       @admin.disableTable(table_name)
@@ -446,7 +447,7 @@ module Hbase
       raise(ArgumentError, "There should be at least one argument but the table name") if args.empty?
 
       # Get table descriptor
-      htd = @admin.getTableDescriptor(table_name.to_java_bytes)
+      htd = @admin.getTableDescriptor(TableName.valueOf(table_name))
 
       # Process all args
       args.each do |arg|
@@ -478,7 +479,7 @@ module Hbase
           end
 
           # We bypass descriptor when adding column families; refresh it to apply other args correctly.
-          htd = @admin.getTableDescriptor(table_name.to_java_bytes)
+          htd = @admin.getTableDescriptor(TableName.valueOf(table_name))
           next
         end
 
@@ -513,7 +514,7 @@ module Hbase
 
           if method == "delete"
             # We bypass descriptor when deleting column families; refresh it to apply other args correctly.
-            htd = @admin.getTableDescriptor(table_name.to_java_bytes)
+            htd = @admin.getTableDescriptor(TableName.valueOf(table_name))
           end
           next
         end
