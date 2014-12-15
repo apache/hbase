@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RackManager;
@@ -1372,5 +1373,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     } else {
       return new HashMap<ServerName, List<HRegionInfo>>();
     }
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
   }
 }
