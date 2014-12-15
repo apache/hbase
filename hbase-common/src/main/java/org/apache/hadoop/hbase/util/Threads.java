@@ -18,8 +18,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -116,7 +119,7 @@ public class Threads {
     while (t.isAlive()) {
       t.join(60 * 1000);
       if (t.isAlive()) {
-        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+        printThreadInfo(System.out,
             "Automatic Stack Trace every 60 seconds waiting on " +
             t.getName());
       }
@@ -241,5 +244,49 @@ public class Threads {
       }
 
     };
+  }
+
+  private static Method printThreadInfoMethod = null;
+  private static boolean printThreadInfoMethodWithPrintStream = true;
+
+  /**
+   * Print all of the thread's information and stack traces. Wrapper around Hadoop's method.
+   *
+   * @param stream the stream to
+   * @param title a string title for the stack trace
+   */
+  public static void printThreadInfo(PrintStream stream, String title) {
+
+    if (printThreadInfoMethod == null) {
+      try {
+        // Hadoop 2.7+ declares printThreadInfo(PrintStream, String)
+        printThreadInfoMethod = ReflectionUtils.class.getMethod("printThreadInfo",
+          PrintStream.class, String.class);
+      } catch (NoSuchMethodException e) {
+        // Hadoop 2.6 and earlier declares printThreadInfo(PrintWriter, String)
+        printThreadInfoMethodWithPrintStream = false;
+        try {
+          printThreadInfoMethod = ReflectionUtils.class.getMethod("printThreadInfo",
+            PrintWriter.class, String.class);
+        } catch (NoSuchMethodException e1) {
+          throw new RuntimeException("Cannot find method. Check hadoop jars linked", e1);
+        }
+      }
+      printThreadInfoMethod.setAccessible(true);
+    }
+
+    try {
+      if (printThreadInfoMethodWithPrintStream) {
+        printThreadInfoMethod.invoke(null, stream, title);
+      } else {
+        printThreadInfoMethod.invoke(null, new PrintWriter(stream), title);
+      }
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException(e.getCause());
+    } catch (IllegalArgumentException e) {
+      throw new RuntimeException(e.getCause());
+    } catch (InvocationTargetException e) {
+      throw new RuntimeException(e.getCause());
+    }
   }
 }

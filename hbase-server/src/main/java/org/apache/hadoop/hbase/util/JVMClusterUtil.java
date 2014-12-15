@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -216,7 +215,7 @@ public class JVMClusterUtil {
       }
       if (System.currentTimeMillis() > startTime + maxwait) {
         String msg = "Master not initialized after " + maxwait + "ms seconds";
-        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+        Threads.printThreadInfo(System.out,
           "Thread dump because: " + msg);
         throw new RuntimeException(msg);
       }
