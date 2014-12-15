@@ -50,6 +50,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.security.SecurityUtil;
@@ -88,7 +89,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * ThriftServer - this class starts up a Thrift server which implements the HBase API specified in the
  * HbaseClient.thrift IDL file.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class ThriftServer {
   private static final Log log = LogFactory.getLog(ThriftServer.class);
@@ -106,7 +107,7 @@ public class ThriftServer {
 
   public static final int DEFAULT_LISTEN_PORT = 9090;
 
-  
+
   public ThriftServer() {
   }
 

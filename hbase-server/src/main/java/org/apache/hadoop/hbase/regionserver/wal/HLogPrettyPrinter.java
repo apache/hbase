@@ -41,24 +41,25 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
 import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * HLogPrettyPrinter prints the contents of a given HLog with a variety of
  * options affecting formatting and extent of content.
- * 
+ *
  * It targets two usage cases: pretty printing for ease of debugging directly by
  * humans, and JSON output for consumption by monitoring and/or maintenance
  * scripts.
- * 
+ *
  * It can filter by row, region, or sequence id.
- * 
+ *
  * It can also toggle output of values.
- * 
+ *
  * @deprecated use the "hbase wal" command
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 @Deprecated
 public class HLogPrettyPrinter extends WALPrettyPrinter {
@@ -72,7 +73,7 @@ public class HLogPrettyPrinter extends WALPrettyPrinter {
 
   /**
    * Fully specified constructor.
-   * 
+   *
    * @param outputValues
    *          when true, enables output of values along with other log
    *          information
@@ -92,7 +93,7 @@ public class HLogPrettyPrinter extends WALPrettyPrinter {
    *          keeps a single list running for multiple files. if enabled, the
    *          endPersistentOutput() method must be used!
    * @param out
-   *          Specifies an alternative to stdout for the destination of this 
+   *          Specifies an alternative to stdout for the destination of this
    *          PrettyPrinter's output.
    */
   public HLogPrettyPrinter(boolean outputValues, boolean outputJSON,

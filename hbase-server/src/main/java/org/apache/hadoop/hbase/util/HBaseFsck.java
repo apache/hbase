@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -176,7 +177,7 @@ import com.google.protobuf.ServiceException;
  * can be used to limit the kinds of repairs hbck will do.  See the code in
  * {@link #printUsageAndExit()} for more details.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class HBaseFsck extends Configured {
   public static final long DEFAULT_TIME_LAG = 60000; // default value of 1 minute

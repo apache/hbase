@@ -28,6 +28,7 @@ import org.apache.commons.math.random.RandomDataImpl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * This class runs performance benchmarks for {@link HFile}.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class HFilePerformanceEvaluation {
   private static final int ROW_LENGTH = 10;
   private static final int ROW_COUNT = 1000000;
@@ -91,6 +93,7 @@ public class HFilePerformanceEvaluation {
     runBenchmark(new SequentialWriteBenchmark(conf, fs, mf, ROW_COUNT),
         ROW_COUNT);
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      @Override
       public void run() {
         try {
           runBenchmark(new UniformRandomSmallScan(conf, fs, mf, ROW_COUNT),
@@ -101,6 +104,7 @@ public class HFilePerformanceEvaluation {
       }
     });
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      @Override
       public void run() {
         try {
           runBenchmark(new UniformRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
@@ -111,6 +115,7 @@ public class HFilePerformanceEvaluation {
       }
     });
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      @Override
       public void run() {
         try {
           runBenchmark(new GaussianRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
@@ -121,6 +126,7 @@ public class HFilePerformanceEvaluation {
       }
     });
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      @Override
       public void run() {
         try {
           runBenchmark(new SequentialReadBenchmark(conf, fs, mf, ROW_COUNT),

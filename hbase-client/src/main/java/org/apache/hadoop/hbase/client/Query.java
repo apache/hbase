@@ -145,7 +145,7 @@ public abstract class Query extends OperationWithAttributes {
     return this.targetReplicaId;
   }
 
-  /*
+  /**
    * Set the isolation level for this query. If the
    * isolation level is set to READ_UNCOMMITTED, then
    * this query will return data from committed and
@@ -160,7 +160,8 @@ public abstract class Query extends OperationWithAttributes {
     setAttribute(ISOLATION_LEVEL, level.toBytes());
     return this;
   }
-  /*
+
+  /**
    * @return The isolation level of this query.
    * If no isolation level was set for this query object,
    * then it returns READ_COMMITTED.

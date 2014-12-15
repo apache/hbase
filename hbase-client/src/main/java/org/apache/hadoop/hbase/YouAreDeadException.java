@@ -29,7 +29,7 @@ import java.io.IOException;
  * its session but didn't figure it yet.
  */
 @SuppressWarnings("serial")
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class YouAreDeadException extends IOException {
   public YouAreDeadException(String message) {

@@ -34,12 +34,14 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -51,17 +53,18 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 /**
  * WALPrettyPrinter prints the contents of a given WAL with a variety of
  * options affecting formatting and extent of content.
- * 
+ *
  * It targets two usage cases: pretty printing for ease of debugging directly by
  * humans, and JSON output for consumption by monitoring and/or maintenance
  * scripts.
- * 
+ *
  * It can filter by row, region, or sequence id.
- * 
+ *
  * It can also toggle output of values.
- * 
+ *
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
+@InterfaceStability.Evolving
 public class WALPrettyPrinter {
   private boolean outputValues;
   private boolean outputJSON;
@@ -93,7 +96,7 @@ public class WALPrettyPrinter {
 
   /**
    * Fully specified constructor.
-   * 
+   *
    * @param outputValues
    *          when true, enables output of values along with other log
    *          information
@@ -113,7 +116,7 @@ public class WALPrettyPrinter {
    *          keeps a single list running for multiple files. if enabled, the
    *          endPersistentOutput() method must be used!
    * @param out
-   *          Specifies an alternative to stdout for the destination of this 
+   *          Specifies an alternative to stdout for the destination of this
    *          PrettyPrinter's output.
    */
   public WALPrettyPrinter(boolean outputValues, boolean outputJSON,
@@ -162,7 +165,7 @@ public class WALPrettyPrinter {
 
   /**
    * sets the region by which output will be filtered
-   * 
+   *
    * @param sequence
    *          when nonnegative, serves as a filter; only log entries with this
    *          sequence id will be printed
@@ -173,7 +176,7 @@ public class WALPrettyPrinter {
 
   /**
    * sets the region by which output will be filtered
-   * 
+   *
    * @param region
    *          when not null, serves as a filter; only log entries from this
    *          region will be printed
@@ -184,7 +187,7 @@ public class WALPrettyPrinter {
 
   /**
    * sets the region by which output will be filtered
-   * 
+   *
    * @param row
    *          when not null, serves as a filter; only log entries from this row
    *          will be printed
@@ -221,7 +224,7 @@ public class WALPrettyPrinter {
   /**
    * reads a log file and outputs its contents, one transaction at a time, as
    * specified by the currently configured options
-   * 
+   *
    * @param conf
    *          the HBase configuration relevant to this log file
    * @param p
@@ -339,7 +342,7 @@ public class WALPrettyPrinter {
   /**
    * Pass one or more log file names and formatting options and it will dump out
    * a text version of the contents on <code>stdout</code>.
-   * 
+   *
    * @param args
    *          Command line arguments
    * @throws IOException

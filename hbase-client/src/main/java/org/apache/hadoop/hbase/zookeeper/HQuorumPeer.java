@@ -44,6 +44,9 @@ import java.util.Properties;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_ZK_SESSION_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.ZK_SESSION_TIMEOUT;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 /**
  * HBase's version of ZooKeeper's QuorumPeer. When HBase is set to manage
@@ -52,10 +55,10 @@ import static org.apache.hadoop.hbase.HConstants.ZK_SESSION_TIMEOUT;
  * control over the process. This class uses {@link ZKConfig} to parse the
  * zoo.cfg and inject variables from HBase's site.xml configuration in.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class HQuorumPeer {
-  
+
   /**
    * Parse ZooKeeper configuration from HBase XML config and run a QuorumPeer.
    * @param args String[] of command line arguments. Not used.

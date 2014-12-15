@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 @InterfaceAudience.Private
 public class RegionState {
 
-  @InterfaceAudience.Public
+  @InterfaceAudience.Private
   @InterfaceStability.Evolving
   public enum State {
     OFFLINE,        // region is in an offline state

@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -160,7 +161,7 @@ import com.google.protobuf.Service;
  *
  * @see org.apache.zookeeper.Watcher
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings("deprecation")
 public class HMaster extends HRegionServer implements MasterServices, Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
@@ -421,6 +422,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /**
    * For compatibility, if failed with regionserver credentials, try the master one
    */
+  @Override
   protected void login(UserProvider user, String host) throws IOException {
     try {
       super.login(user, host);
@@ -435,6 +437,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * wait till a backup master becomes active.
    * Otherwise, loop till the server is stopped or aborted.
    */
+  @Override
   protected void waitForMasterActive(){
     boolean tablesOnMaster = BaseLoadBalancer.tablesOnMaster(conf);
     while (!(tablesOnMaster && isActiveMaster)
@@ -452,22 +455,27 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return getMasterRpcServices().switchBalancer(b, BalanceSwitchMode.ASYNC);
   }
 
+  @Override
   protected String getProcessName() {
     return MASTER;
   }
 
+  @Override
   protected boolean canCreateBaseZNode() {
     return true;
   }
 
+  @Override
   protected boolean canUpdateTableDescriptor() {
     return true;
   }
 
+  @Override
   protected RSRpcServices createRpcServices() throws IOException {
     return new MasterRpcServices(this);
   }
 
+  @Override
   protected void configureInfoServer() {
     infoServer.addServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
@@ -476,6 +484,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
+  @Override
   protected Class<? extends HttpServlet> getDumpServlet() {
     return MasterDumpServlet.class;
   }
@@ -484,6 +493,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * Emit the HMaster metrics, such as region in transition metrics.
    * Surrounding in a try block just to be sure metrics doesn't abort HMaster.
    */
+  @Override
   protected void doMetrics() {
     try {
       if (assignmentManager != null) {
@@ -985,6 +995,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
+  @Override
   protected void stopServiceThreads() {
     if (masterJettyServer != null) {
       LOG.info("Stopping master jetty server");
@@ -1391,6 +1402,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         masterInfoPort, this);
     // Start a thread to try to become the active master, so we won't block here
     Threads.setDaemonThreadRunning(new Thread(new Runnable() {
+      @Override
       public void run() {
         int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
           HConstants.DEFAULT_ZK_SESSION_TIMEOUT);

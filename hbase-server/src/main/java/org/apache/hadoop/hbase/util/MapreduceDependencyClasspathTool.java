@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -29,6 +31,7 @@ import org.apache.log4j.Logger;
  * Generate a classpath string containing any jars required by mapreduce jobs. Specify
  * additional values by providing a comma-separated list of paths via -Dtmpjars.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class MapreduceDependencyClasspathTool implements Tool {
 
   private Configuration conf;

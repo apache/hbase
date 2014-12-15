@@ -29,7 +29,9 @@ import java.io.IOException;
  * Defines methods to create new HTableInterface.
  *
  * @since 0.21.0
+ * @deprecated in favor of {@link ConnectionFactory} and {@link Connection}.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface HTableInterfaceFactory {
