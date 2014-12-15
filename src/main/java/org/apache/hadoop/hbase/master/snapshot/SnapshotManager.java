@@ -899,7 +899,9 @@ public class SnapshotManager implements Stoppable {
     }
 
     try {
-      coordinator.close();
+      if (coordinator != null) {
+        coordinator.close();
+      }
     } catch (IOException e) {
       LOG.error("stop ProcedureCoordinator error", e);
     }
