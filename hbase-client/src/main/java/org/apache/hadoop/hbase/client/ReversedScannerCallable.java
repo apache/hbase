@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,8 +37,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * A reversed ScannerCallable which supports backward scanning.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ReversedScannerCallable extends ScannerCallable {
   /**
    * The start row for locating regions. In reversed scanner, may locate the

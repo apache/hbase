@@ -37,7 +37,9 @@ import org.apache.hadoop.io.WritableComparable;
  * <p>
  * This class runs performance benchmarks for {@link MapFile}.
  * </p>
+ * @deprecated HBase does not use MapFiles any more.
  */
+@Deprecated
 public class MapFilePerformanceEvaluation {
   protected final Configuration conf;
   private static final int ROW_LENGTH = 10;
@@ -70,6 +72,7 @@ public class MapFilePerformanceEvaluation {
         ROW_COUNT);
 
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      @Override
       public void run() {
         try {
           runBenchmark(new UniformRandomSmallScan(conf, fs, mf, ROW_COUNT),
@@ -80,6 +83,7 @@ public class MapFilePerformanceEvaluation {
       }
     });
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      @Override
       public void run() {
         try {
           runBenchmark(new UniformRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
@@ -90,6 +94,7 @@ public class MapFilePerformanceEvaluation {
       }
     });
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      @Override
       public void run() {
         try {
           runBenchmark(new GaussianRandomReadBenchmark(conf, fs, mf, ROW_COUNT),
@@ -100,6 +105,7 @@ public class MapFilePerformanceEvaluation {
       }
     });
     PerformanceEvaluationCommons.concurrentReads(new Runnable() {
+      @Override
       public void run() {
         try {
           runBenchmark(new SequentialReadBenchmark(conf, fs, mf, ROW_COUNT),

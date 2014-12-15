@@ -18,23 +18,25 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.util.ProgramDriver;
+
 import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Driver for hbase mapreduce jobs. Select which to run by passing name of job
  * to this main.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Stable
 public class Driver {
 
   private static ProgramDriver pgd = new ProgramDriver();
 
   @VisibleForTesting
-  static void setProgramDriver(ProgramDriver pgd0) {    
+  static void setProgramDriver(ProgramDriver pgd0) {
     pgd = pgd0;
   }
 
@@ -45,6 +47,6 @@ public class Driver {
   public static void main(String[] args) throws Throwable {
     pgd.addClass(RowCounter.NAME, RowCounter.class, "Count rows in HBase table");
     ProgramDriver.class.getMethod("driver", new Class[] { String[].class })
-        .invoke(pgd, new Object[] { args });    
+        .invoke(pgd, new Object[] { args });
   }
 }

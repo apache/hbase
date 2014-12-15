@@ -39,4 +39,10 @@ public final class HBaseInterfaceAudience {
    * Denotes class names that appear in user facing configuration files.
    */
   public static final String CONFIG = "Configuration";
+
+  /**
+   * Denotes classes used as tools (Used from cmd line). Usually, the compatibility is required
+   * for class name, and arguments.
+   */
+  public static final String TOOLS = "Tools";
 }

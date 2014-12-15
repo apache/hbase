@@ -27,6 +27,8 @@ import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeperMain;
 
@@ -34,6 +36,7 @@ import org.apache.zookeeper.ZooKeeperMain;
  * Tool for running ZookeeperMain from HBase by  reading a ZooKeeper server
  * from HBase XML configuration.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ZooKeeperMainServer {
   private static final String SERVER_ARG = "-server";
 

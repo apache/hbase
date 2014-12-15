@@ -24,11 +24,11 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -53,8 +53,7 @@ import com.google.common.base.Preconditions;
  * Utility that can merge any two regions in the same table: adjacent,
  * overlapping or disjoint.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class Merge extends Configured implements Tool {
   static final Log LOG = LogFactory.getLog(Merge.class);
   private Path rootdir;
@@ -77,6 +76,7 @@ public class Merge extends Configured implements Tool {
     setConf(conf);
   }
 
+  @Override
   public int run(String[] args) throws Exception {
     if (parseArgs(args) != 0) {
       return -1;

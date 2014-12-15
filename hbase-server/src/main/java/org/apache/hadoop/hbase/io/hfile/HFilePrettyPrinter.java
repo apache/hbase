@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -77,7 +78,7 @@ import com.yammer.metrics.reporting.ConsoleReporter;
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class HFilePrettyPrinter extends Configured implements Tool {
 
@@ -206,6 +207,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
    * Runs the command-line pretty-printer, and returns the desired command
    * exit code (zero for success, non-zero for failure).
    */
+  @Override
   public int run(String[] args) {
     if (getConf() == null) {
       throw new RuntimeException("A Configuration instance must be provided.");
@@ -261,7 +263,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       boolean shouldScanKeysValues = false;
       if (this.isSeekToRow) {
         // seek to the first kv on this row
-        shouldScanKeysValues = 
+        shouldScanKeysValues =
           (scanner.seekTo(KeyValueUtil.createFirstOnRow(this.row).getKey()) != -1);
       } else {
         shouldScanKeysValues = scanner.seekTo();

@@ -35,6 +35,7 @@ import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Strings;
@@ -52,10 +53,10 @@ import org.apache.zookeeper.server.quorum.QuorumPeerMain;
  * control over the process. This class uses {@link ZKConfig} to parse the
  * zoo.cfg and inject variables from HBase's site.xml configuration in.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class HQuorumPeer {
-  
+
   /**
    * Parse ZooKeeper configuration from HBase XML config and run a QuorumPeer.
    * @param args String[] of command line arguments. Not used.

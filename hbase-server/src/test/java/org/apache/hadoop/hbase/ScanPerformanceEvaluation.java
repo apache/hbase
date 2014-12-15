@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -53,6 +54,7 @@ import com.google.common.base.Stopwatch;
  * A simple performance evaluation tool for single client and MR scans
  * and snapshot scans.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ScanPerformanceEvaluation extends AbstractHBaseTool {
 
   private static final String HBASE_COUNTER_GROUP_NAME = "HBase Counters";
