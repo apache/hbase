@@ -306,7 +306,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
               + count + " with " + queue.size() + " files remaining to group or split");
         }
 
-        int maxRetries = getConf().getInt("hbase.bulkload.retries.number", 0);
+        int maxRetries = getConf().getInt("hbase.bulkload.retries.number", 10);
         if (maxRetries != 0 && count >= maxRetries) {
           throw new IOException("Retry attempted " + count +
             " times without completing, bailing out");
