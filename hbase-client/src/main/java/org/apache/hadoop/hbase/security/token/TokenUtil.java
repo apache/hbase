@@ -353,7 +353,7 @@ public class TokenUtil {
     Token<AuthenticationTokenIdentifier> token = getAuthToken(conn.getConfiguration(), user);
     if (token == null) {
       token = obtainToken(conn, user);
-      user.getUGI().addToken(token.getService(), token);
+      user.getUGI().addToken(token);
       return true;
     }
     return false;
