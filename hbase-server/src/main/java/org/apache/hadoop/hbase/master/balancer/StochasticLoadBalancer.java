@@ -229,10 +229,19 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       clusterState.remove(masterServerName);
     }
 
+    // On clusters with lots of HFileLinks or lots of reference files,
+    // instantiating the storefile infos can be quite expensive.
+    // Allow turning this feature off if the locality cost is not going to
+    // be used in any computations.
+    RegionLocationFinder finder = null;
+    if (this.localityCost != null && this.localityCost.getMultiplier() > 0) {
+      finder = this.regionFinder;
+    }
+
     //The clusterState that is given to this method contains the state
     //of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(clusterState, loads, regionFinder, rackManager);
+    Cluster cluster = new Cluster(clusterState, loads, finder, rackManager);
     if (!needsBalance(cluster)) {
       return null;
     }
