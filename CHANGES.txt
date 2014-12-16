@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.9 - 12/17/2014
+Release 0.98.9 - 12/22/2014
 
 ** Sub-task
     * [HBASE-12517] - Several HConstant members are assignable
@@ -16,6 +16,7 @@ Release 0.98.9 - 12/17/2014
     * [HBASE-12277] - Refactor bulkLoad methods in AccessController to its own interface
     * [HBASE-12337] - Import tool fails with NullPointerException if clusterIds is not initialized
     * [HBASE-12346] - Scan's default auths behavior under Visibility labels
+    * [HBASE-12348] - preModifyColumn and preDeleteColumn in AC denies user to perform its operation though it has required rights
     * [HBASE-12398] - Region isn't assigned in an extreme race condition
     * [HBASE-12431] - Use of getColumnLatestCell(byte[], int, int, byte[], int, int) is Not Thread Safe
     * [HBASE-12449] - Use the max timestamp of current or old cell's timestamp in HRegion.append()
@@ -42,14 +43,23 @@ Release 0.98.9 - 12/17/2014
     * [HBASE-12639] - Backport HBASE-12565 Race condition in HRegion.batchMutate() causes partial data to be written when region closes
     * [HBASE-12642] - LoadIncrementalHFiles does not throw exception after hitting hbase.bulkload.retries.number setting
     * [HBASE-12647] - Truncate table should work with C as well
+    * [HBASE-12666] - TestAssignmentManager hanging; add timeouts
+    * [HBASE-12683] - Compilation with hadoop-2.7.0-SNAPSHOT is broken
+    * [HBASE-12686] - Failures in split before PONR not clearing the daughter regions from regions in transition during rollback
+    * [HBASE-12692] - NPE from SnapshotManager#stop
+    * [HBASE-12696] - Possible NPE in HRegionFileSystem#splitStoreFile when skipStoreFileRangeCheck in splitPolicy return true
 
 ** Improvement
     * [HBASE-8572] - Enhance delete_snapshot.rb to call snapshot deletion API with regex
+    * [HBASE-12373] - Provide a command to list visibility labels
     * [HBASE-12411] - Optionally enable p-reads and private readers for compactions
     * [HBASE-12529] - Use ThreadLocalRandom for RandomQueueBalancer
     * [HBASE-12582] - Backport HBASE-10881 'Support reverse scan in thrift2' to 0.98
     * [HBASE-12583] - Allow creating reference files even the split row not lies in the storefile range if required
     * [HBASE-12619] - Backport HBASE-11639 (Replicate the visibility of Cells as strings) to 0.98
+    * [HBASE-12659] - Replace the method calls to grant and revoke in shell scripts with AccessControlClient 
+    * [HBASE-12676] - Fix the misleading ASCII art in IntegrationTestBigLinkedList
+    * [HBASE-12678] - HBCK should print command line arguments
 
 ** New Feature
     * [HBASE-10560] - Per cell TTLs
@@ -58,6 +68,7 @@ Release 0.98.9 - 12/17/2014
 ** Task
     * [HBASE-11992] - Backport HBASE-11367 (Pluggable replication endpoint) to 0.98
     * [HBASE-12383] - Move 0.98 build to surefire 2.18
+    * [HBASE-12493] - User class should provide a way to re-use existing token
     * [HBASE-12624] - Remove rename_snapshot.rb from code as there is no equivalent renameSnapshot api in Admin class
     * [HBASE-12631] - Backport HBASE-12576 (Add metrics for rolling the HLog if there are too few DN's in the write pipeline) to 0.98
 
@@ -65,6 +76,7 @@ Release 0.98.9 - 12/17/2014
     * [HBASE-12163] - Move test annotation classes to the same package as in master
     * [HBASE-12472] - Improve debuggability of IntegrationTestBulkLoad
     * [HBASE-12549] - Fix TestAssignmentManagerOnCluster#testAssignRacingWithSSH() flaky test
+    * [HBASE-12685] - TestSplitLogManager#testLogFilesAreArchived sometimes times out due to race condition 
 
 
 Release 0.98.8 - 11/18/2014
