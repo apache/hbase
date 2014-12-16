@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
@@ -668,7 +669,7 @@ public class HFile {
         bbpBuilder.setSecond(ByteStringer.wrap(e.getValue()));
         builder.addMapEntry(bbpBuilder.build());
       }
-      out.write(ProtobufUtil.PB_MAGIC);
+      out.write(ProtobufMagic.PB_MAGIC);
       builder.build().writeDelimitedTo(out);
     }
 

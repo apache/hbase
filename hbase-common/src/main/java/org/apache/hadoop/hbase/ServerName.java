@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -369,8 +369,8 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    */
   public static ServerName parseFrom(final byte [] data) throws DeserializationException {
     if (data == null || data.length <= 0) return null;
-    if (ProtobufUtil.isPBMagicPrefix(data)) {
-      int prefixLen = ProtobufUtil.lengthOfPBMagic();
+    if (ProtobufMagic.isPBMagicPrefix(data)) {
+      int prefixLen = ProtobufMagic.lengthOfPBMagic();
       try {
         ZooKeeperProtos.Master rss =
           ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
