@@ -1,4 +1,13 @@
 HBase Change Log
+Release 0.94.26 - 12/16/2014
+Bug
+
+    [HBASE-12279] - Generated thrift files were generated with the wrong parameters
+    [HBASE-12491] - TableMapReduceUtil.findContainingJar() NPE
+    [HBASE-12635] - Delete acl notify znode of table after the table is deleted
+    [HBASE-12657] - The Region is not being split and far exceeds the desired maximum size.
+    [HBASE-12692] - NPE from SnapshotManager#stop
+
 Release 0.94.25 - 11/7/2014
 Bug
 
