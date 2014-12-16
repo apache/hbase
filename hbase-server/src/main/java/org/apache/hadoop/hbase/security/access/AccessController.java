@@ -1022,13 +1022,14 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HColumnDescriptor descriptor) throws IOException {
-    requirePermission("modifyColumn", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission("modifyColumn", tableName, descriptor.getName(), null, Action.ADMIN,
+      Action.CREATE);
   }
 
   @Override
   public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       byte[] col) throws IOException {
-    requirePermission("deleteColumn", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requirePermission("deleteColumn", tableName, col, null, Action.ADMIN, Action.CREATE);
   }
 
   @Override
