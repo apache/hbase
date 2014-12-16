@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
@@ -164,6 +165,9 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private final Map<String, PairOfSameType<HRegionInfo>> mergingRegions
     = new HashMap<String, PairOfSameType<HRegionInfo>>();
+
+  private final Map<HRegionInfo, PairOfSameType<HRegionInfo>> splitRegions
+  = new HashMap<HRegionInfo, PairOfSameType<HRegionInfo>>();
 
   /**
    * The sleep time for which the assignment will wait before retrying in case of hbase:meta assignment
@@ -1321,14 +1325,30 @@ public class AssignmentManager extends ZooKeeperListener {
 
             ServerName serverName = rs.getServerName();
             if (serverManager.isServerOnline(serverName)) {
-              if (rs.isOnServer(serverName)
-                  && (rs.isOpened() || rs.isSplitting())) {
-                regionOnline(regionInfo, serverName);
-                if (disabled) {
-                  // if server is offline, no hurt to unassign again
-                  LOG.info("Opened " + regionNameStr
-                    + "but this table is disabled, triggering close of region");
-                  unassign(regionInfo);
+              if (rs.isOnServer(serverName) && (rs.isOpened() || rs.isSplitting())) {
+                synchronized (regionStates) {
+                  regionOnline(regionInfo, serverName);
+                  if (rs.isSplitting() && splitRegions.containsKey(regionInfo)) {
+                    // Check if the daugter regions are still there, if they are present, offline
+                    // as its the case of a rollback.
+                    HRegionInfo hri_a = splitRegions.get(regionInfo).getFirst();
+                    HRegionInfo hri_b = splitRegions.get(regionInfo).getSecond();
+                    if (!regionStates.isRegionInTransition(hri_a.getEncodedName())) {
+                      LOG.warn("Split daughter region not in transition " + hri_a);
+                    }
+                    if (!regionStates.isRegionInTransition(hri_b.getEncodedName())) {
+                      LOG.warn("Split daughter region not in transition" + hri_b);
+                    }
+                    regionOffline(hri_a);
+                    regionOffline(hri_b);
+                    splitRegions.remove(regionInfo);
+                  }
+                  if (disabled) {
+                    // if server is offline, no hurt to unassign again
+                    LOG.info("Opened " + regionNameStr
+                        + "but this table is disabled, triggering close of region");
+                    unassign(regionInfo);
+                  }
                 }
               } else if (rs.isMergingNew()) {
                 synchronized (regionStates) {
@@ -3798,6 +3818,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     synchronized (regionStates) {
+      splitRegions.put(p, new PairOfSameType<HRegionInfo>(hri_a, hri_b));
       regionStates.updateRegionState(hri_a, State.SPLITTING_NEW, sn);
       regionStates.updateRegionState(hri_b, State.SPLITTING_NEW, sn);
       regionStates.updateRegionState(rt, State.SPLITTING);
@@ -3813,6 +3834,7 @@ public class AssignmentManager extends ZooKeeperListener {
         regionOffline(p, State.SPLIT);
         regionOnline(hri_a, sn);
         regionOnline(hri_b, sn);
+        splitRegions.remove(p);
       }
     }
 

@@ -58,6 +58,8 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -1158,6 +1160,42 @@ public class TestSplitTransactionOnCluster {
         storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
       assertNotNull(referencePath);
     } finally {
+      TESTING_UTIL.deleteTable(tableName);
+    }
+  }
+  
+  @Test
+  public void testFailedSplit() throws Exception {
+    TableName tableName = TableName.valueOf("testFailedSplit");
+    byte[] colFamily = Bytes.toBytes("info");
+    TESTING_UTIL.createTable(tableName, colFamily);
+    Connection connection = ConnectionFactory.createConnection(TESTING_UTIL.getConfiguration());
+    HTable table = (HTable) connection.getTable(tableName);
+    try {
+      TESTING_UTIL.loadTable(table, colFamily);
+      List<HRegionInfo> regions = TESTING_UTIL.getHBaseAdmin().getTableRegions(tableName);
+      assertTrue(regions.size() == 1);
+      final HRegion actualRegion = cluster.getRegions(tableName).get(0);
+      actualRegion.getCoprocessorHost().load(FailingSplitRegionObserver.class,
+        Coprocessor.PRIORITY_USER, actualRegion.getBaseConf());
+
+      // The following split would fail.
+      admin.split(tableName);
+      FailingSplitRegionObserver.latch.await();
+      LOG.info("Waiting for region to come out of RIT");
+      TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
+          Map<String, RegionState> rit = regionStates.getRegionsInTransition();
+          return !rit.containsKey(actualRegion.getRegionInfo().getEncodedName());
+        }
+      });
+      regions = TESTING_UTIL.getHBaseAdmin().getTableRegions(tableName);
+      assertTrue(regions.size() == 1);
+    } finally {
+      table.close();
+      connection.close();
       TESTING_UTIL.deleteTable(tableName);
     }
   }
