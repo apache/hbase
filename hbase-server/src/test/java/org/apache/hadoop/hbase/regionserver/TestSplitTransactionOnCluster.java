@@ -1162,6 +1162,40 @@ public class TestSplitTransactionOnCluster {
     return(null);
   }
 
+  @Test
+  public void testFailedSplit() throws Exception {
+    TableName tableName = TableName.valueOf("testFailedSplit");
+    byte[] colFamily = Bytes.toBytes("info");
+    TESTING_UTIL.createTable(tableName, colFamily);
+    HTable table = new HTable(TESTING_UTIL.getConfiguration(), tableName);
+    try {
+      TESTING_UTIL.loadTable(table, colFamily);
+      List<HRegionInfo> regions = TESTING_UTIL.getHBaseAdmin().getTableRegions(tableName);
+      assertTrue(regions.size() == 1);
+      final HRegion actualRegion = cluster.getRegions(tableName).get(0);
+      actualRegion.getCoprocessorHost().load(FailingSplitRegionObserver.class,
+        Coprocessor.PRIORITY_USER, actualRegion.getBaseConf());
+
+      // The following split would fail.
+      admin.split(tableName.getNameAsString());
+      FailingSplitRegionObserver.latch.await();
+      LOG.info("Waiting for region to come out of RIT");
+      TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
+          Map<String, RegionState> rit = regionStates.getRegionsInTransition();
+          return !rit.containsKey(actualRegion.getRegionInfo().getEncodedName());
+        }
+      });
+      regions = TESTING_UTIL.getHBaseAdmin().getTableRegions(tableName);
+      assertTrue(regions.size() == 1);
+    } finally {
+      table.close();
+      TESTING_UTIL.deleteTable(tableName);
+    }
+  }
+
   private List<HRegion> checkAndGetDaughters(byte[] tableName)
       throws InterruptedException {
     List<HRegion> daughters = null;
