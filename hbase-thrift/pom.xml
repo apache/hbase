@@ -52,7 +52,7 @@
           <execution>
             <id>default-compile</id>
             <configuration>
-              <compilerId>javac-with-errorprone</compilerId>
+              <compilerId>${java.default.compiler}</compilerId>
               <forceJavacCompilerUse>true</forceJavacCompilerUse>
               <useIncrementalCompilation>false</useIncrementalCompilation>
             </configuration>
@@ -60,7 +60,7 @@
           <execution>
             <id>default-testCompile</id>
             <configuration>
-              <compilerId>javac-with-errorprone</compilerId>
+              <compilerId>${java.default.compiler}</compilerId>
               <forceJavacCompilerUse>true</forceJavacCompilerUse>
               <useIncrementalCompilation>false</useIncrementalCompilation>
             </configuration>

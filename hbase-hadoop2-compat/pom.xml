@@ -40,7 +40,7 @@ limitations under the License.
           <execution>
             <id>default-compile</id>
             <configuration>
-              <compilerId>javac-with-errorprone</compilerId>
+              <compilerId>${java.default.compiler}</compilerId>
               <forceJavacCompilerUse>true</forceJavacCompilerUse>
               <useIncrementalCompilation>false</useIncrementalCompilation>
             </configuration>
@@ -48,7 +48,7 @@ limitations under the License.
           <execution>
             <id>default-testCompile</id>
             <configuration>
-              <compilerId>javac-with-errorprone</compilerId>
+              <compilerId>${java.default.compiler}</compilerId>
               <forceJavacCompilerUse>true</forceJavacCompilerUse>
               <useIncrementalCompilation>false</useIncrementalCompilation>
             </configuration>

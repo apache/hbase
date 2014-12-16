@@ -1021,6 +1021,7 @@
     <!-- Build dependencies -->
     <maven.min.version>3.0.3</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
+    <java.default.compiler>javac-with-errorprone</java.default.compiler>
     <!-- Dependencies -->
     <hadoop-two.version>2.5.1</hadoop-two.version>
     <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
@@ -2397,6 +2398,15 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>javac</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <java.default.compiler>javac</java.default.compiler>
+      </properties>
     </profile>
   </profiles>
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
