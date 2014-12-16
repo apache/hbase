@@ -155,6 +155,8 @@ public class TestAccessController extends SecureTestUtil {
   private static User USER_CREATE;
   // user with no permissions
   private static User USER_NONE;
+  // user with admin rights on the column family
+  private static User USER_ADMIN_CF;
 
   // TODO: convert this test to cover the full matrix in
   // https://hbase.apache.org/book/appendix_acl_matrix.html
@@ -213,6 +215,7 @@ public class TestAccessController extends SecureTestUtil {
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
+    USER_ADMIN_CF = User.createUserForTesting(conf, "col_family_admin", new String[0]);
   }
 
   @AfterClass
@@ -261,9 +264,13 @@ public class TestAccessController extends SecureTestUtil {
       TEST_TABLE.getTableName(), TEST_FAMILY, null,
       Permission.Action.READ);
 
-    assertEquals(4, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
+    grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(),
+      TEST_TABLE.getTableName(), TEST_FAMILY,
+      null, Permission.Action.ADMIN);
+
+    assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
     try {
-      assertEquals(4, AccessControlClient.getUserPermissions(conf, TEST_TABLE.toString()).size());
+      assertEquals(5, AccessControlClient.getUserPermissions(conf, TEST_TABLE.toString()).size());
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
     }
@@ -378,7 +385,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF);
     verifyDenied(action, USER_RW, USER_RO, USER_NONE);
   }
 
@@ -393,7 +400,7 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF);
     verifyDenied(action, USER_RW, USER_RO, USER_NONE);
   }
 
@@ -2542,8 +2549,8 @@ public class TestAccessController extends SecureTestUtil {
       null, Action.ADMIN);
     List<UserPermission> perms = testUserPerms.runAs(getPrivilegedAction(regex));
     assertNotNull(perms);
-    // USER_ADMIN, USER_CREATE, USER_RW, USER_RO, testUserPerms has row each.
-    assertEquals(5, perms.size());
+    // USER_ADMIN, USER_CREATE, USER_RW, USER_RO, testUserPerms, USER_ADMIN_CF has row each.
+    assertEquals(6, perms.size());
   }
 
   @Test
