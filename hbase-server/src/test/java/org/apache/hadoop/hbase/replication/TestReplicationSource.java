@@ -62,12 +62,10 @@ public class TestReplicationSource {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniDFSCluster(1);
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), FS.getHomeDirectory());
-    oldLogDir = new Path(FS.getHomeDirectory(),
-        HConstants.HREGION_OLDLOGDIR_NAME);
+    Path rootDir = TEST_UTIL.createRootDir();
+    oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     if (FS.exists(oldLogDir)) FS.delete(oldLogDir, true);
-    logDir = new Path(FS.getHomeDirectory(),
-        HConstants.HREGION_LOGDIR_NAME);
+    logDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
     if (FS.exists(logDir)) FS.delete(logDir, true);
   }
 
