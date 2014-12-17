@@ -90,11 +90,14 @@ public class RpcRetryingCallerFactory {
     String clazzName = RpcRetryingCallerFactory.class.getName();
     String rpcCallerFactoryClazz =
         configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY, clazzName);
+    RpcRetryingCallerFactory factory;
     if (rpcCallerFactoryClazz.equals(clazzName)) {
-      return new RpcRetryingCallerFactory(configuration, interceptor);
+      factory = new RpcRetryingCallerFactory(configuration, interceptor);
+    } else {
+      factory = ReflectionUtils.instantiateWithCustomCtor(
+          rpcCallerFactoryClazz, new Class[] { Configuration.class },
+          new Object[] { configuration });
     }
-    RpcRetryingCallerFactory factory = ReflectionUtils.instantiateWithCustomCtor(
-        rpcCallerFactoryClazz, new Class[] { Configuration.class }, new Object[] { configuration });
 
     // setting for backwards compat with existing caller factories, rather than in the ctor
     factory.setStatisticTracker(stats);
