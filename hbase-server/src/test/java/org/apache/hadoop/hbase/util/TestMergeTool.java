@@ -139,10 +139,7 @@ public class TestMergeTool extends HBaseTestCase {
     this.fs = this.dfsCluster.getFileSystem();
     System.out.println("fs=" + this.fs);
     FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
-    Path parentdir = fs.getHomeDirectory();
-    FSUtils.setRootDir(conf, parentdir);
-    fs.mkdirs(parentdir);
-    FSUtils.setVersion(fs, parentdir);
+    TEST_UTIL.createRootDir();
 
     // Note: we must call super.setUp after starting the mini cluster or
     // we will end up with a local file system

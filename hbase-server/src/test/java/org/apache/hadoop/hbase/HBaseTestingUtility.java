@@ -442,7 +442,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Sets up a path in test filesystem to be used by tests
+   * Sets up a path in test filesystem to be used by tests.
+   * Creates a new directory if not already setup.
    */
   private void setupDataTestDirOnTestFS() throws IOException {
     if (dataTestDirOnTestFS != null) {
@@ -450,22 +451,30 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           + dataTestDirOnTestFS.toString());
       return;
     }
+    dataTestDirOnTestFS = getNewDataTestDirOnTestFS();
+  }
 
+  /**
+   * Sets up a new path in test filesystem to be used by tests.
+   */
+  private Path getNewDataTestDirOnTestFS() throws IOException {
     //The file system can be either local, mini dfs, or if the configuration
     //is supplied externally, it can be an external cluster FS. If it is a local
     //file system, the tests should use getBaseTestDir, otherwise, we can use
     //the working directory, and create a unique sub dir there
     FileSystem fs = getTestFileSystem();
+    Path newDataTestDir = null;
     if (fs.getUri().getScheme().equals(FileSystem.getLocal(conf).getUri().getScheme())) {
       File dataTestDir = new File(getDataTestDir().toString());
       if (deleteOnExit()) dataTestDir.deleteOnExit();
-      dataTestDirOnTestFS = new Path(dataTestDir.getAbsolutePath());
+      newDataTestDir = new Path(dataTestDir.getAbsolutePath());
     } else {
       Path base = getBaseTestDirOnTestFS();
       String randomStr = UUID.randomUUID().toString();
-      dataTestDirOnTestFS = new Path(base, randomStr);
-      if (deleteOnExit()) fs.deleteOnExit(dataTestDirOnTestFS);
+      newDataTestDir = new Path(base, randomStr);
+      if (deleteOnExit()) fs.deleteOnExit(newDataTestDir);
     }
+    return newDataTestDir;
   }
 
   /**
@@ -740,6 +749,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Start up a minicluster of hbase, dfs, and zookeeper.
+   * Set the <code>create</code> flag to create root or data directory path or not
+   * (will overwrite if dir already exists)
+   * @throws Exception
+   * @return Mini hbase cluster instance created.
+   * @see {@link #shutdownMiniDFSCluster()}
+   */
+  public MiniHBaseCluster startMiniCluster(final int numSlaves, boolean create)
+  throws Exception {
+    return startMiniCluster(1, numSlaves, create);
+  }
+
+  /**
    * Start up a minicluster of hbase, optionally dfs, and zookeeper.
    * Modifies Configuration.  Homes the cluster data directory under a random
    * subdirectory in a directory under System property test.build.data.
@@ -754,9 +776,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public MiniHBaseCluster startMiniCluster(final int numSlaves)
   throws Exception {
-    return startMiniCluster(1, numSlaves);
+    return startMiniCluster(1, numSlaves, false);
   }
 
+  /**
+   * Start minicluster. Whether to create a new root or data dir path even if such a path
+   * has been created earlier is decided based on flag <code>create</code>
+   * @throws Exception
+   * @see {@link #shutdownMiniCluster()}
+   * @return Mini hbase cluster instance created.
+   */
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+      final int numSlaves, boolean create)
+    throws Exception {
+      return startMiniCluster(numMasters, numSlaves, null, create);
+  }
 
   /**
    * start minicluster
@@ -767,7 +801,14 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public MiniHBaseCluster startMiniCluster(final int numMasters,
     final int numSlaves)
   throws Exception {
-    return startMiniCluster(numMasters, numSlaves, null);
+    return startMiniCluster(numMasters, numSlaves, null, false);
+  }
+
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+      final int numSlaves, final String[] dataNodeHosts, boolean create)
+      throws Exception {
+    return startMiniCluster(numMasters, numSlaves, numSlaves, dataNodeHosts,
+        null, null, create);
   }
 
   /**
@@ -796,7 +837,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
       final int numSlaves, final String[] dataNodeHosts) throws Exception {
-    return startMiniCluster(numMasters, numSlaves, numSlaves, dataNodeHosts, null, null);
+    return startMiniCluster(numMasters, numSlaves, numSlaves, dataNodeHosts,
+        null, null);
   }
 
   /**
@@ -843,15 +885,27 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         numMasters, numSlaves, numSlaves, dataNodeHosts, masterClass, regionserverClass);
   }
 
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+      final int numSlaves, int numDataNodes, final String[] dataNodeHosts,
+      Class<? extends HMaster> masterClass,
+      Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+    throws Exception {
+    return startMiniCluster(numMasters, numSlaves, numDataNodes, dataNodeHosts,
+        masterClass, regionserverClass, false);
+  }
+
   /**
    * Same as {@link #startMiniCluster(int, int, String[], Class, Class)}, but with custom
    * number of datanodes.
    * @param numDataNodes Number of data nodes.
+   * @param create Set this flag to create a new
+   * root or data directory path or not (will overwrite if exists already).
    */
   public MiniHBaseCluster startMiniCluster(final int numMasters,
     final int numSlaves, int numDataNodes, final String[] dataNodeHosts,
     Class<? extends HMaster> masterClass,
-    Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+    Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
+    boolean create)
   throws Exception {
     if (dataNodeHosts != null && dataNodeHosts.length != 0) {
       numDataNodes = dataNodeHosts.length;
@@ -879,12 +933,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
 
     // Start the MiniHBaseCluster
-    return startMiniHBaseCluster(numMasters, numSlaves, masterClass, regionserverClass);
+    return startMiniHBaseCluster(numMasters, numSlaves, masterClass,
+      regionserverClass, create);
   }
 
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters, final int numSlaves)
       throws IOException, InterruptedException{
-    return startMiniHBaseCluster(numMasters, numSlaves, null, null);
+    return startMiniHBaseCluster(numMasters, numSlaves, null, null, false);
   }
 
   /**
@@ -893,6 +948,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
    * @param numMasters
    * @param numSlaves
+   * @param create Whether to create a
+   * root or data directory path or not; will overwrite if exists already.
    * @return Reference to the hbase mini hbase cluster.
    * @throws IOException
    * @throws InterruptedException
@@ -900,10 +957,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
         final int numSlaves, Class<? extends HMaster> masterClass,
-        Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass)
+        Class<? extends MiniHBaseCluster.MiniHBaseClusterRegionServer> regionserverClass,
+        boolean create)
   throws IOException, InterruptedException {
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
-    createRootDir();
+    createRootDir(create);
 
     // These settings will make the server waits until this exact number of
     // regions servers are connected.
@@ -1026,14 +1084,30 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Returns the path to the default root dir the minicluster uses.
+   * Returns the path to the default root dir the minicluster uses. If getNewDirPathIfExists
+   * is true, a new root directory path is fetched irrespective of whether it has been fetched
+   * before or not. If false, previous path is used.
+   * Note: this does not cause the root dir to be created.
+   * @return Fully qualified path for the default hbase root dir
+   * @throws IOException
+   */
+  public Path getDefaultRootDirPath(boolean create) throws IOException {
+    if (!create) {
+      return getDataTestDirOnTestFS();
+    } else {
+      return getNewDataTestDirOnTestFS();
+    }
+  }
+
+  /**
+   * Same as {{@link HBaseTestingUtility#getDefaultRootDirPath(boolean getNewDirPathIfExists)}
+   * except that getNewDirPathIfExists flag is false.
    * Note: this does not cause the root dir to be created.
    * @return Fully qualified path for the default hbase root dir
    * @throws IOException
    */
   public Path getDefaultRootDirPath() throws IOException {
-    FileSystem fs = FileSystem.get(this.conf);
-    return new Path(fs.makeQualified(fs.getHomeDirectory()),"hbase");
+    return getDefaultRootDirPath(false);
   }
 
   /**
@@ -1041,16 +1115,30 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * version file.  Normally you won't make use of this method.  Root hbasedir
    * is created for you as part of mini cluster startup.  You'd only use this
    * method if you were doing manual operation.
+   * @param getNewDirPathIfExists This flag decides whether to get a new
+   * root or data directory path or not, if it has been fetched already.
+   * Note : Directory will be made irrespective of whether path has been fetched or not.
+   * If directory already exists, it will be overwritten
    * @return Fully qualified path to hbase root dir
    * @throws IOException
    */
-  public Path createRootDir() throws IOException {
+  public Path createRootDir(boolean getNewDirPathIfExists) throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
-    Path hbaseRootdir = getDefaultRootDirPath();
+    Path hbaseRootdir = getDefaultRootDirPath(getNewDirPathIfExists);
     FSUtils.setRootDir(this.conf, hbaseRootdir);
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
     return hbaseRootdir;
+  }
+
+  /**
+   * Same as {@link HBaseTestingUtility#createRootDir(boolean getNewDirPathIfExists)}
+   * except that getNewDirPathIfExists flag is false.
+   * @return Fully qualified path to hbase root dir
+   * @throws IOException
+   */
+  public Path createRootDir() throws IOException {
+    return createRootDir(false);
   }
 
   /**
