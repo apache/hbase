@@ -500,6 +500,16 @@ public final class CellUtil {
   /**
    * @param cell
    * @return Estimate of the <code>cell</code> size in bytes.
+   * @deprecated please use estimatedSerializedSizeOf(Cell)
+   */
+  @Deprecated
+  public static int estimatedSizeOf(final Cell cell) {
+    return estimatedSerializedSizeOf(cell);
+  }
+
+  /**
+   * @param cell
+   * @return Estimate of the <code>cell</code> size in bytes.
    */
   public static int estimatedSerializedSizeOf(final Cell cell) {
     // If a KeyValue, we can give a good estimate of size.
