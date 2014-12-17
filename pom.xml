@@ -458,6 +458,7 @@
                 But it builds the test jar.  From SUREFIRE-172.
               -->
             <arguments>-Dmaven.test.skip.exec</arguments>
+            <goals>${goals}</goals>
             <pomFileName>pom.xml</pomFileName>
           </configuration>
         </plugin>
