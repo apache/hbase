@@ -1084,7 +1084,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Returns the path to the default root dir the minicluster uses. If getNewDirPathIfExists
+   * Returns the path to the default root dir the minicluster uses. If <code>create</code>
    * is true, a new root directory path is fetched irrespective of whether it has been fetched
    * before or not. If false, previous path is used.
    * Note: this does not cause the root dir to be created.
@@ -1100,8 +1100,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Same as {{@link HBaseTestingUtility#getDefaultRootDirPath(boolean getNewDirPathIfExists)}
-   * except that getNewDirPathIfExists flag is false.
+   * Same as {{@link HBaseTestingUtility#getDefaultRootDirPath(boolean create)}
+   * except that <code>create</code> flag is false.
    * Note: this does not cause the root dir to be created.
    * @return Fully qualified path for the default hbase root dir
    * @throws IOException
@@ -1115,16 +1115,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * version file.  Normally you won't make use of this method.  Root hbasedir
    * is created for you as part of mini cluster startup.  You'd only use this
    * method if you were doing manual operation.
-   * @param getNewDirPathIfExists This flag decides whether to get a new
+   * @param create This flag decides whether to get a new
    * root or data directory path or not, if it has been fetched already.
    * Note : Directory will be made irrespective of whether path has been fetched or not.
    * If directory already exists, it will be overwritten
    * @return Fully qualified path to hbase root dir
    * @throws IOException
    */
-  public Path createRootDir(boolean getNewDirPathIfExists) throws IOException {
+  public Path createRootDir(boolean create) throws IOException {
     FileSystem fs = FileSystem.get(this.conf);
-    Path hbaseRootdir = getDefaultRootDirPath(getNewDirPathIfExists);
+    Path hbaseRootdir = getDefaultRootDirPath(create);
     FSUtils.setRootDir(this.conf, hbaseRootdir);
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
@@ -1132,8 +1132,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Same as {@link HBaseTestingUtility#createRootDir(boolean getNewDirPathIfExists)}
-   * except that getNewDirPathIfExists flag is false.
+   * Same as {@link HBaseTestingUtility#createRootDir(boolean create)}
+   * except that <code>create</code> flag is false.
    * @return Fully qualified path to hbase root dir
    * @throws IOException
    */
@@ -2666,7 +2666,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Get a Connection to the cluster.
    * Not thread-safe (This class needs a lot of work to make it thread-safe).
    * @return A Connection that can be shared. Don't close. Will be closed on shutdown of cluster.
-   * @throws IOException 
+   * @throws IOException
    */
   public Connection getConnection() throws IOException {
     if (this.connection == null) {
