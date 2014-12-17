@@ -50,7 +50,8 @@ public class TestClientPushback {
     conf.setBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE, true);
     // turn the memstore size way down so we don't need to write a lot to see changes in memstore
     // load
-    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeBytes);
+    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE,
+        flushSizeBytes);
     // ensure we block the flushes when we are double that flushsize
     conf.setLong("hbase.hregion.memstore.block.multiplier", 2);
 
@@ -64,11 +65,10 @@ public class TestClientPushback {
   }
 
   @Test
-  public void testClientTracksServerPushback() throws Exception{
+  public void testClientTrackesServerPushback() throws Exception{
     Configuration conf = UTIL.getConfiguration();
     TableName tablename = TableName.valueOf(tableName);
-    Connection conn = ConnectionFactory.createConnection(conf);
-    HTable table = (HTable) conn.getTable(tablename);
+    HTable table = new HTable(conf, tablename);
     //make sure we flush after each put
     table.setAutoFlushTo(true);
 
@@ -78,8 +78,8 @@ public class TestClientPushback {
     table.put(p);
 
     // get the stats for the region hosting our table
-    ClusterConnection connection = table.connection;
-    ServerStatisticTracker stats = connection.getStatisticsTracker();
+    ClusterConnection conn = ConnectionManager.getConnectionInternal(conf);
+    ServerStatisticTracker stats = conn.getStatisticsTracker();
     assertNotNull( "No stats configured for the client!", stats);
     // get the names so we can query the stats
     ServerName server = UTIL.getHBaseCluster().getRegionServer(0).getServerName();

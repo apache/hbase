@@ -64,7 +64,7 @@ public class StatsTrackingRpcRetryingCaller<T> implements RpcRetryingCaller<T> {
 
     // mutli-server callables span multiple regions, so they don't have a location,
     // but they are region server callables, so we have to handle them when we process the
-    // result in AsyncProcess#receiveMultiAction, not in here
+    // result, not in here
     if (callable instanceof MultiServerCallable) {
       return result;
     }
