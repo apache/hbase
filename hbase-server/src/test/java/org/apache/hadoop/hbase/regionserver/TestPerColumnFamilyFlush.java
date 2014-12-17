@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -69,7 +69,7 @@ import com.google.common.hash.Hashing;
 /**
  * This test verifies the correctness of the Per Column Family flushing strategy
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestPerColumnFamilyFlush {
   private static final Log LOG = LogFactory.getLog(TestPerColumnFamilyFlush.class);
 
