@@ -780,12 +780,12 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.regionserver.thread.compaction.throttle</name>
-    <value>2560</value>
+    <value>2684354560</value>
     <description>There are two different thread pools for compactions, one for large compactions and
       the other for small compactions. This helps to keep compaction of lean tables (such as
         <systemitem>hbase:meta</systemitem>) fast. If a compaction is larger than this threshold, it
       goes into the large compaction pool. In most cases, the default value is appropriate. Default:
-      2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size (which defaults to 128).
+      2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size (which defaults to 128MB).
       The value field assumes that the value of hbase.hregion.memstore.flush.size is unchanged from
       the default.</description>
   </property>
