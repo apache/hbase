@@ -137,6 +137,8 @@ public class HConnectionTestingUtility {
             RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR));
     HTableInterface t = Mockito.mock(HTableInterface.class);
     Mockito.when(c.getTable((TableName)Mockito.any())).thenReturn(t);
+    ResultScanner rs = Mockito.mock(ResultScanner.class);
+    Mockito.when(t.getScanner((Scan)Mockito.any())).thenReturn(rs);
     return c;
   }
 
