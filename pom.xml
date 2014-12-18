@@ -502,6 +502,13 @@
             <systemPropertyVariables>
               <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
             </systemPropertyVariables>
+
+            <excludes>
+	      <!-- users can add -D option to skip particular test classes
+		   ex: mvn test -Dtest.exclude.pattern=**/TestFoo.java,**/TestBar.java
+	      -->
+	      <exclude>${test.exclude.pattern}</exclude>
+	    </excludes>
           </configuration>
           <executions>
             <execution>
@@ -1039,6 +1046,7 @@
     <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
+    <test.exclude.pattern></test.exclude.pattern>
     <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx1900m
       -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true
