@@ -201,7 +201,8 @@ public class FSHLog implements WAL {
   /**
    * file system instance
    */
-  private final FileSystem fs;
+  protected final FileSystem fs;
+
   /**
    * WAL directory, where all WAL files would be placed.
    */
@@ -236,7 +237,7 @@ public class FSHLog implements WAL {
   /**
    * conf object
    */
-  private final Configuration conf;
+  protected final Configuration conf;
   /** Listeners that are called on WAL events. */
   private final List<WALActionsListener> listeners = new CopyOnWriteArrayList<WALActionsListener>();
 
