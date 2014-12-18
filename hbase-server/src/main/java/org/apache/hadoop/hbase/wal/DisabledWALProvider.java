@@ -57,9 +57,12 @@ class DisabledWALProvider implements WALProvider {
 
   @Override
   public void init(final WALFactory factory, final Configuration conf,
-      final List<WALActionsListener> listeners, final String providerId) throws IOException {
+      final List<WALActionsListener> listeners, String providerId) throws IOException {
     if (null != disabled) {
       throw new IllegalStateException("WALProvider.init should only be called once.");
+    }
+    if (null == providerId) {
+      providerId = "defaultDisabled";
     }
     disabled = new DisabledWAL(new Path(FSUtils.getRootDir(conf), providerId), conf, null);
   }
