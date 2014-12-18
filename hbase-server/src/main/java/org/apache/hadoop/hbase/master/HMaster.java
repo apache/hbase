@@ -207,8 +207,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
                 + " consider submitting a bug report including a thread dump of this process.");
             if (haltOnTimeout) {
               LOG.error("Zombie Master exiting. Thread dump to stdout");
-              org.apache.hadoop.util.ReflectionUtils.printThreadInfo(
-                  new PrintWriter(System.out), "Zombie HMaster");
+              Threads.printThreadInfo(System.out, "Zombie HMaster");
               System.exit(-1);
             }
           }
