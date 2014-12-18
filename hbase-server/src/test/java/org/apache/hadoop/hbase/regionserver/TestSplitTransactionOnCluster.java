@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -201,10 +200,7 @@ public class TestSplitTransactionOnCluster {
       this.admin.split(region.getRegionName(), new byte[] {42});
 
       // we have to wait until the SPLITTING state is seen by the master
-      FailingSplitRegionObserver observer = (FailingSplitRegionObserver) region
-          .getCoprocessorHost().findCoprocessor(FailingSplitRegionObserver.class.getName());
-      assertNotNull(observer);
-      observer.latch.await();
+      FailingSplitRegionObserver.latch.await();
 
       LOG.info("Waiting for region to come out of RIT");
       TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
@@ -270,11 +266,7 @@ public class TestSplitTransactionOnCluster {
   }
 
   public static class FailingSplitRegionObserver extends BaseRegionObserver {
-    volatile CountDownLatch latch;
-    @Override
-    public void start(CoprocessorEnvironment e) throws IOException {
-      latch = new CountDownLatch(1);
-    }
+    static volatile CountDownLatch latch = new CountDownLatch(1);
     @Override
     public void preSplitBeforePONR(ObserverContext<RegionCoprocessorEnvironment> ctx,
         byte[] splitKey, List<Mutation> metaEntries) throws IOException {
@@ -657,19 +649,10 @@ public class TestSplitTransactionOnCluster {
       tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
         tableName);
       assertEquals("The specified table should present.", true, tableExists);
-      Map<String, RegionState> rit = cluster.getMaster().getAssignmentManager().getRegionStates()
-          .getRegionsInTransition();
-      assertTrue(rit.size() == 3);
-      cluster.getMaster().getAssignmentManager().regionOffline(st.getFirstDaughter());
-      cluster.getMaster().getAssignmentManager().regionOffline(st.getSecondDaughter());
-      cluster.getMaster().getAssignmentManager().regionOffline(region.getRegionInfo());
-      rit = cluster.getMaster().getAssignmentManager().getRegionStates().getRegionsInTransition();
-      assertTrue(rit.size() == 0);
     } finally {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
-      TESTING_UTIL.deleteTable(tableName);
     }
   }
 
