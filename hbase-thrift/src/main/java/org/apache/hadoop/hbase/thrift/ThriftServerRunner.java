@@ -50,6 +50,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -60,7 +61,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -99,7 +99,6 @@ import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -109,7 +108,6 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.TServlet;
 import org.apache.thrift.server.TThreadedSelectorServer;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
@@ -118,13 +116,6 @@ import org.apache.thrift.transport.TSaslServerTransport;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
-import org.mortbay.jetty.Connector;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.security.SslSelectChannelConnector;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.thread.QueuedThreadPool;
 
 import com.google.common.base.Joiner;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -148,15 +139,6 @@ public class ThriftServerRunner implements Runnable {
   static final String MAX_FRAME_SIZE_CONF_KEY = "hbase.regionserver.thrift.framed.max_frame_size_in_mb";
   static final String PORT_CONF_KEY = "hbase.regionserver.thrift.port";
   static final String COALESCE_INC_KEY = "hbase.regionserver.thrift.coalesceIncrement";
-  static final String USE_HTTP_CONF_KEY = "hbase.regionserver.thrift.http";
-  static final String HTTP_MIN_THREADS = "hbase.thrift.http_threads.min";
-  static final String HTTP_MAX_THREADS = "hbase.thrift.http_threads.max";
-
-  static final String THRIFT_SSL_ENABLED = "hbase.thrift.ssl.enabled";
-  static final String THRIFT_SSL_KEYSTORE_STORE = "hbase.thrift.ssl.keystore.store";
-  static final String THRIFT_SSL_KEYSTORE_PASSWORD = "hbase.thrift.ssl.keystore.password";
-  static final String THRIFT_SSL_KEYSTORE_KEYPASSWORD = "hbase.thrift.ssl.keystore.keypassword";
-
 
   /**
    * Thrift quality of protection configuration key. Valid values can be:
@@ -172,12 +154,10 @@ public class ThriftServerRunner implements Runnable {
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   public static final int DEFAULT_LISTEN_PORT = 9090;
   public static final int HREGION_VERSION = 1;
-  static final String THRIFT_SUPPORT_PROXYUSER = "hbase.thrift.support.proxyuser";
   private final int listenPort;
 
   private Configuration conf;
   volatile TServer tserver;
-  volatile Server httpServer;
   private final Hbase.Iface handler;
   private final ThriftMetrics metrics;
   private final HBaseHandler hbaseHandler;
@@ -185,9 +165,6 @@ public class ThriftServerRunner implements Runnable {
 
   private final String qop;
   private String host;
-
-  private final boolean securityEnabled;
-  private final boolean doAsEnabled;
 
   /** An enum of server implementation selections */
   enum ImplType {
@@ -290,7 +267,7 @@ public class ThriftServerRunner implements Runnable {
   public ThriftServerRunner(Configuration conf) throws IOException {
     UserProvider userProvider = UserProvider.instantiate(conf);
     // login the server principal (if using secure Hadoop)
-    securityEnabled = userProvider.isHadoopSecurityEnabled()
+    boolean securityEnabled = userProvider.isHadoopSecurityEnabled()
       && userProvider.isHBaseSecurityEnabled();
     if (securityEnabled) {
       host = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
@@ -308,7 +285,6 @@ public class ThriftServerRunner implements Runnable {
       hbaseHandler, metrics, conf);
     this.realUser = userProvider.getCurrent().getUGI();
     qop = conf.get(THRIFT_QOP_KEY);
-    doAsEnabled = conf.getBoolean(THRIFT_SUPPORT_PROXYUSER, false);
     if (qop != null) {
       if (!qop.equals("auth") && !qop.equals("auth-int")
           && !qop.equals("auth-conf")) {
@@ -327,27 +303,21 @@ public class ThriftServerRunner implements Runnable {
    */
   @Override
   public void run() {
-    realUser.doAs(new PrivilegedAction<Object>() {
-      @Override
-      public Object run() {
-        try {
-          if (conf.getBoolean(USE_HTTP_CONF_KEY, false)) {
-            setupHTTPServer();
-            httpServer.start();
-            httpServer.join();
-          } else {
+    realUser.doAs(
+      new PrivilegedAction<Object>() {
+        @Override
+        public Object run() {
+          try {
             setupServer();
             tserver.serve();
+          } catch (Exception e) {
+            LOG.fatal("Cannot run ThriftServer", e);
+            // Crash the process if the ThriftServer is not running
+            System.exit(-1);
           }
-        } catch (Exception e) {
-          LOG.fatal("Cannot run ThriftServer", e);
-          // Crash the process if the ThriftServer is not running
-          System.exit(-1);
+          return null;
         }
-        return null;
-      }
-    });
-
+      });
   }
 
   public void shutdown() {
@@ -355,70 +325,6 @@ public class ThriftServerRunner implements Runnable {
       tserver.stop();
       tserver = null;
     }
-    if (httpServer != null) {
-      try {
-        httpServer.stop();
-        httpServer = null;
-      } catch (Exception e) {
-        LOG.error("Problem encountered in shutting down HTTP server " + e.getCause());
-      }
-      httpServer = null;
-    }
-  }
-
-  private void setupHTTPServer() throws IOException {
-    TProtocolFactory protocolFactory = new TBinaryProtocol.Factory();
-    TProcessor processor = new Hbase.Processor<Hbase.Iface>(handler);
-    TServlet thriftHttpServlet = new ThriftHttpServlet(processor, protocolFactory, realUser,
-        conf, hbaseHandler, securityEnabled, doAsEnabled);
-
-    httpServer = new Server();
-    // Context handler
-    Context context = new Context(httpServer, "/", Context.SESSIONS);
-    context.setContextPath("/");
-    String httpPath = "/*";
-    httpServer.setHandler(context);
-    context.addServlet(new ServletHolder(thriftHttpServlet), httpPath);
-
-    // set up Jetty and run the embedded server
-    Connector connector = new SelectChannelConnector();
-    if(conf.getBoolean(THRIFT_SSL_ENABLED, false)) {
-      SslSelectChannelConnector sslConnector = new SslSelectChannelConnector();
-      String keystore = conf.get(THRIFT_SSL_KEYSTORE_STORE);
-      String password = HBaseConfiguration.getPassword(conf,
-          THRIFT_SSL_KEYSTORE_PASSWORD, null);
-      String keyPassword = HBaseConfiguration.getPassword(conf,
-          THRIFT_SSL_KEYSTORE_KEYPASSWORD, password);
-      sslConnector.setKeystore(keystore);
-      sslConnector.setPassword(password);
-      sslConnector.setKeyPassword(keyPassword);
-      connector = sslConnector;
-    }
-    String host = getBindAddress(conf).getHostAddress();
-    connector.setPort(listenPort);
-    connector.setHost(host);
-    httpServer.addConnector(connector);
-
-    if (doAsEnabled) {
-      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
-    }
-
-    // Set the default max thread number to 100 to limit
-    // the number of concurrent requests so that Thrfit HTTP server doesn't OOM easily.
-    // Jetty set the default max thread number to 250, if we don't set it.
-    //
-    // Our default min thread number 2 is the same as that used by Jetty.
-    int minThreads = conf.getInt(HTTP_MIN_THREADS, 2);
-    int maxThreads = conf.getInt(HTTP_MAX_THREADS, 100);
-    QueuedThreadPool threadPool = new QueuedThreadPool(maxThreads);
-    threadPool.setMinThreads(minThreads);
-    httpServer.setThreadPool(threadPool);
-
-    httpServer.setSendServerVersion(false);
-    httpServer.setSendDateHeader(false);
-    httpServer.setStopAtShutdown(true);
-
-    LOG.info("Starting Thrift HTTP Server on " + Integer.toString(listenPort));
   }
 
   /**
