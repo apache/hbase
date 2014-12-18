@@ -65,6 +65,7 @@ public class TestThriftHttpServer {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.thrift.http", true);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.table.sanity.checks", false);
     TEST_UTIL.startMiniCluster();
     //ensure that server time increments every time we do an operation, otherwise
     //successive puts having the same timestamp will override each other
