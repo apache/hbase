@@ -26,8 +26,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public interface LastSequenceId {
   /**
-   * @param regionName Encoded region name
-   * @return Last flushed sequence Id for regionName or -1 if it can't be determined
+   * @param encodedRegionName Encoded region name
+   * @return Last flushed sequence Id for region or -1 if it can't be determined
    */
-  long getLastSequenceId(byte[] regionName);
+  long getLastSequenceId(byte[] encodedRegionName);
 }

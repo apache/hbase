@@ -2134,15 +2134,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   }
 
   @Override
-  public long getLastSequenceId(byte[] region) {
-    Long lastFlushedSequenceId = -1l;
+  public long getLastSequenceId(byte[] encodedRegionName) {
+    long lastFlushedSequenceId = -1L;
     try {
       GetLastFlushedSequenceIdRequest req = RequestConverter
-          .buildGetLastFlushedSequenceIdRequest(region);
+          .buildGetLastFlushedSequenceIdRequest(encodedRegionName);
       lastFlushedSequenceId = rssStub.getLastFlushedSequenceId(null, req)
           .getLastFlushedSequenceId();
     } catch (ServiceException e) {
-      lastFlushedSequenceId = -1l;
+      lastFlushedSequenceId = -1L;
       LOG.warn("Unable to connect to the master to check " + "the last flushed sequence id", e);
     }
     return lastFlushedSequenceId;
