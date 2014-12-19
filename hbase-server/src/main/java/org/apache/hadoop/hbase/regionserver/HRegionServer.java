@@ -2129,11 +2129,11 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public long getLastSequenceId(byte[] region) {
-    Long lastFlushedSequenceId = -1l;
+  public long getLastSequenceId(byte[] encodedRegionName) {
+    long lastFlushedSequenceId = -1L;
     try {
       GetLastFlushedSequenceIdRequest req = RequestConverter
-          .buildGetLastFlushedSequenceIdRequest(region);
+          .buildGetLastFlushedSequenceIdRequest(encodedRegionName);
       RegionServerStatusService.BlockingInterface rss = rssStub;
       if (rss == null) { // Try to connect one more time
         createRegionServerStatusStub();
@@ -2142,7 +2142,7 @@ public class HRegionServer extends HasThread implements
           // Still no luck, we tried
           LOG.warn("Unable to connect to the master to check "
             + "the last flushed sequence id");
-          return -1l;
+          return -1L;
         }
       }
       lastFlushedSequenceId = rss.getLastFlushedSequenceId(null, req)
