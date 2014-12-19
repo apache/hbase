@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -270,8 +269,8 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    byte[] regionName = request.getRegionName().toByteArray();
-    long seqId = master.serverManager.getLastFlushedSequenceId(regionName);
+    byte[] encodedRegionName = request.getRegionName().toByteArray();
+    long seqId = master.serverManager.getLastFlushedSequenceId(encodedRegionName);
     return ResponseConverter.buildGetLastFlushedSequenceIdResponse(seqId);
   }
 

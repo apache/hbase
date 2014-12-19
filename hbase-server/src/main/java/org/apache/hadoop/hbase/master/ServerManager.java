@@ -93,7 +93,6 @@ import com.google.protobuf.ServiceException;
  * and has completed the handling.
  */
 @InterfaceAudience.Private
-@SuppressWarnings("deprecation")
 public class ServerManager {
   public static final String WAIT_ON_REGIONSERVERS_MAXTOSTART =
       "hbase.master.wait.on.regionservers.maxtostart";
@@ -255,7 +254,8 @@ public class ServerManager {
   private void updateLastFlushedSequenceIds(ServerName sn, ServerLoad hsl) {
     Map<byte[], RegionLoad> regionsLoad = hsl.getRegionsLoad();
     for (Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
-      Long existingValue = flushedSequenceIdByRegion.get(entry.getKey());
+      byte[] encodedRegionName = Bytes.toBytes(HRegionInfo.encodeRegionName(entry.getKey()));
+      Long existingValue = flushedSequenceIdByRegion.get(encodedRegionName);
       long l = entry.getValue().getCompleteSequenceId();
       if (existingValue != null) {
         if (l != -1 && l < existingValue) {
@@ -265,11 +265,10 @@ public class ServerManager {
               existingValue + ") for region " +
               Bytes.toString(entry.getKey()) + " Ignoring.");
 
-          continue; // Don't let smaller sequence ids override greater
-          // sequence ids.
+          continue; // Don't let smaller sequence ids override greater sequence ids.
         }
       }
-      flushedSequenceIdByRegion.put(entry.getKey(), l);
+      flushedSequenceIdByRegion.put(encodedRegionName, l);
     }
   }
 
@@ -408,10 +407,10 @@ public class ServerManager {
     this.rsAdmins.remove(serverName);
   }
 
-  public long getLastFlushedSequenceId(byte[] regionName) {
-    long seqId = -1;
-    if (flushedSequenceIdByRegion.containsKey(regionName)) {
-      seqId = flushedSequenceIdByRegion.get(regionName);
+  public long getLastFlushedSequenceId(byte[] encodedRegionName) {
+    long seqId = -1L;
+    if (flushedSequenceIdByRegion.containsKey(encodedRegionName)) {
+      seqId = flushedSequenceIdByRegion.get(encodedRegionName);
     }
     return seqId;
   }
