@@ -285,7 +285,9 @@ public class TestAccessController extends SecureTestUtil {
       // Test deleted the table, no problem
       LOG.info("Test deleted table " + TEST_TABLE.getTableName());
     }
+    // Verify all table/namespace permissions are erased
     assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
+    assertEquals(0, AccessControlLists.getNamespacePermissions(conf, TEST_TABLE.getTableName().getNameAsString()).size());
   }
 
   @Test
