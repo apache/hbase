@@ -103,7 +103,7 @@ public class SplitTransaction {
   private HRegionInfo hri_b;
   private long fileSplitTimeout = 30000;
   private int znodeVersion = -1;
-  boolean useZKForAssignment;
+  boolean useZKForAssignment = true;
 
   /*
    * Row to split around
