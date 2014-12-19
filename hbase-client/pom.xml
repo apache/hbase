@@ -195,13 +195,15 @@
       </activation>
       <dependencies>
         <dependency>
+           <groupId>com.google.code.findbugs</groupId>
+           <artifactId>jsr305</artifactId>
+           <version>1.3.9</version>
+           <optional>true</optional>
+        </dependency>
+        <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
           <exclusions>
-            <exclusion>
-              <groupId>com.google.code.findbugs</groupId>
-              <artifactId>jsr305</artifactId>
-            </exclusion>
             <exclusion>
               <groupId>com.github.stephenc.findbugs</groupId>
               <artifactId>findbugs-annotations</artifactId>
@@ -248,11 +250,47 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
           <exclusions>
-          <exclusion>
-            <groupId>com.sun.jersey.jersey-test-framework</groupId>
-            <artifactId>jersey-test-framework-grizzly2</artifactId>
-          </exclusion>
-        </exclusions>
+           <exclusion>
+              <groupId>com.sun.jersey.jersey-test-framework</groupId>
+              <artifactId>jersey-test-framework-grizzly2</artifactId>
+           </exclusion>
+           <exclusion>
+              <groupId>javax.servlet</groupId>
+              <artifactId>servlet-api</artifactId>
+           </exclusion>
+           <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-server</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-json</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.sun.jersey.contribs</groupId>
+              <artifactId>jersey-guice</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.google.inject</groupId>
+              <artifactId>guice</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>com.google.inject.extensions</groupId>
+              <artifactId>guice-servlet</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-jaxrs</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.codehaus.jackson</groupId>
+              <artifactId>jackson-xc</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
     </profile>
