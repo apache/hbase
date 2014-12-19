@@ -94,7 +94,7 @@ public class SplitTransaction {
   private HRegionInfo hri_b;
   private long fileSplitTimeout = 30000;
   public SplitTransactionCoordination.SplitTransactionDetails std;
-  boolean useZKForAssignment = true;
+  boolean useZKForAssignment;
 
   /*
    * Row to split around
