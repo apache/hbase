@@ -743,8 +743,10 @@ $ mvn deploy -DskipTests -Papache-release</programlisting>
                         You can always delete it if the build goes haywire. </para>
                 </step>
                 <step>
-                    <title>Sign and upload your version directory to <link
-                            xlink:href="http://people.apache.org">people.apache.org</link>.</title>
+                    <title>Sign, upload, and 'stage' your version directory to <link
+                        xlink:href="http://people.apache.org">people.apache.org</link> (TODO:
+                      There is a new location to stage releases using svnpubsub.  See
+                      (<link xlink:href="https://issues.apache.org/jira/browse/HBASE-10554">HBASE-10554 Please delete old releases from mirroring system</link>).</title>
                     <para> If all checks out, next put the <emphasis>version directory</emphasis> up
                         on <link xlink:href="http://people.apache.org">people.apache.org</link>. You
                         will need to sign and fingerprint them before you push them up. In the
@@ -874,12 +876,13 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
     </programlisting>
     <para>
       Alternatively, you may limit the shell tests that run using the system variable
-      <classname>shell.test</classname>. This value may specify a particular test case by name. For
-      example, the tests that cover the shell commands for altering tables are contained in the test
-      case <classname>AdminAlterTableTest</classname> and you can run them with:
+      <classname>shell.test</classname>. This value should specify the ruby literal equivalent of a
+        particular test case by name. For example, the tests that cover the shell commands for
+        altering tables are contained in the test case <classname>AdminAlterTableTest</classname>
+        and you can run them with:
     </para>
     <programlisting language="bourne">
-      mvn clean test -Dtest=TestShell -Dshell.test=AdminAlterTableTest
+      mvn clean test -Dtest=TestShell -Dshell.test=/AdminAlterTableTest/
     </programlisting>
     <para>
       You may also use a <link xlink:href=

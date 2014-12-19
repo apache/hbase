@@ -966,7 +966,7 @@ table.put(put);
     <section
       xml:id="hbase.mapreduce.classpath">
       <title>HBase, MapReduce, and the CLASSPATH</title>
-      <para>Ny default, MapReduce jobs deployed to a MapReduce cluster do not have access to either
+      <para>By default, MapReduce jobs deployed to a MapReduce cluster do not have access to either
         the HBase configuration under <envar>$HBASE_CONF_DIR</envar> or the HBase classes.</para>
       <para>To give the MapReduce jobs the access they need, you could add
           <filename>hbase-site.xml</filename> to the
