@@ -168,7 +168,7 @@ public class ThriftServer {
     try {
       if (cmd.hasOption("infoport")) {
         String val = cmd.getOptionValue("infoport");
-        conf.setInt("hbase.thrift.info.port", Integer.valueOf(val));
+        conf.setInt("hbase.thrift.info.port", Integer.parseInt(val));
         LOG.debug("Web UI port set to " + val);
       }
     } catch (NumberFormatException e) {
