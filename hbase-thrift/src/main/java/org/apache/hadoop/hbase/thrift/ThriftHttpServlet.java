@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -43,15 +44,19 @@ import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 
-
+/**
+ * Thrift Http Servlet is used for performing Kerberos authentication if security is enabled and
+ * also used for setting the user specified in "doAs" parameter.
+ */
+@InterfaceAudience.Private
 public class ThriftHttpServlet extends TServlet {
   private static final long serialVersionUID = 1L;
   public static final Log LOG = LogFactory.getLog(ThriftHttpServlet.class.getName());
-  private final UserGroupInformation realUser;
-  private final Configuration conf;
+  private transient final UserGroupInformation realUser;
+  private transient final Configuration conf;
   private final boolean securityEnabled;
   private final boolean doAsEnabled;
-  ThriftServerRunner.HBaseHandler hbaseHandler;
+  private transient ThriftServerRunner.HBaseHandler hbaseHandler;
 
   public ThriftHttpServlet(TProcessor processor, TProtocolFactory protocolFactory,
       UserGroupInformation realUser, Configuration conf, ThriftServerRunner.HBaseHandler
@@ -116,7 +121,7 @@ public class ThriftHttpServlet extends TServlet {
   }
 
 
-  class HttpKerberosServerAction implements PrivilegedExceptionAction<String> {
+  private static class HttpKerberosServerAction implements PrivilegedExceptionAction<String> {
     HttpServletRequest request;
     UserGroupInformation serviceUGI;
     HttpKerberosServerAction(HttpServletRequest request, UserGroupInformation serviceUGI) {
