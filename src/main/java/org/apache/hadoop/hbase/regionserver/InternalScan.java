@@ -19,11 +19,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
- * Special internal-only scanner, currently used for increment operations to
+ * Special scanner, currently used for increment operations to
  * allow additional server-side arguments for Scan operations.
  * <p>
  * Rather than adding new options/parameters to the public Scan API, this new
@@ -33,7 +35,7 @@ import org.apache.hadoop.hbase.client.Scan;
  * {@link #checkOnlyMemStore()} or to only read from StoreFiles with
  * {@link #checkOnlyStoreFiles()}.
  */
-class InternalScan extends Scan {
+public class InternalScan extends Scan {
   private boolean memOnly = false;
   private boolean filesOnly = false;
 
@@ -43,7 +45,16 @@ class InternalScan extends Scan {
   public InternalScan(Get get) {
     super(get);
   }
-
+  
+  /**
+   * @param scan - original scan
+   * @throws IOException 
+   */
+  public InternalScan(Scan scan) 
+      throws IOException 
+  {
+    super(scan);
+  }
   /**
    * StoreFiles will not be scanned. Only MemStore will be scanned.
    */
