@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -36,6 +40,7 @@ import static org.junit.Assert.assertNotNull;
 @Category(MediumTests.class)
 public class TestClientPushback {
 
+  private static final Log LOG = LogFactory.getLog(TestClientPushback.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final byte[] tableName = Bytes.toBytes("client-pushback");
@@ -54,7 +59,7 @@ public class TestClientPushback {
     // ensure we block the flushes when we are double that flushsize
     conf.setLong("hbase.hregion.memstore.block.multiplier", 2);
 
-    UTIL.startMiniCluster();
+    UTIL.startMiniCluster(1);
     UTIL.createTable(tableName, family);
   }
 
@@ -69,29 +74,32 @@ public class TestClientPushback {
     TableName tablename = TableName.valueOf(tableName);
     Connection conn = ConnectionFactory.createConnection(conf);
     HTable table = (HTable) conn.getTable(tablename);
-    //make sure we flush after each put
-    table.setAutoFlushTo(true);
 
+    HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
+    HRegion region = rs.getOnlineRegions(tablename).get(0);
+
+    LOG.debug("Writing some data to "+tablename);
     // write some data
     Put p = new Put(Bytes.toBytes("row"));
     p.add(family, qualifier, Bytes.toBytes("value1"));
     table.put(p);
+    table.flushCommits();
+
+    // get the current load on RS. Hopefully memstore isn't flushed since we wrote the the data
+    int load = (int)((region.addAndGetGlobalMemstoreSize(0) * 100) / flushSizeBytes);
+    LOG.debug("Done writing some data to "+tablename);
 
     // get the stats for the region hosting our table
     ClusterConnection connection = table.connection;
     ServerStatisticTracker stats = connection.getStatisticsTracker();
     assertNotNull( "No stats configured for the client!", stats);
     // get the names so we can query the stats
-    ServerName server = UTIL.getHBaseCluster().getRegionServer(0).getServerName();
-    byte[] regionName = UTIL.getHBaseCluster().getRegionServer(0).getOnlineRegions(tablename).get
-        (0).getRegionName();
+    ServerName server = rs.getServerName();
+    byte[] regionName = region.getRegionName();
 
     // check to see we found some load on the memstore
     ServerStatistics serverStats = stats.getServerStatsForTesting(server);
     ServerStatistics.RegionStatistics regionStats = serverStats.getStatsForRegion(regionName);
-    int load = regionStats.getMemstoreLoadPercent();
-    if (load < 11) {
-      assertEquals("Load on memstore too low", 11, load);
-    }
+    assertEquals(load, regionStats.getMemstoreLoadPercent());
   }
 }
