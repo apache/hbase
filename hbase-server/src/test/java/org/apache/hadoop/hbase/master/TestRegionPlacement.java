@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -73,6 +75,7 @@ public class TestRegionPlacement {
   final static Log LOG = LogFactory.getLog(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int SLAVES = 10;
+  private static Connection CONNECTION;
   private static Admin admin;
   private static RegionPlacementMaintainer rp;
   private static Position[] positions = Position.values();
@@ -89,7 +92,8 @@ public class TestRegionPlacement {
         FavoredNodeLoadBalancer.class, LoadBalancer.class);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     TEST_UTIL.startMiniCluster(SLAVES);
-    admin = new HBaseAdmin(conf);
+    CONNECTION = TEST_UTIL.getConnection();
+    admin = CONNECTION.getAdmin();
     rp = new RegionPlacementMaintainer(conf);
   }
 
@@ -522,7 +526,7 @@ public class TestRegionPlacement {
       @Override
       public void close() throws IOException {}
     };
-    MetaScanner.metaScan(TEST_UTIL.getConfiguration(), visitor);
+    MetaScanner.metaScan(CONNECTION, visitor);
     LOG.info("There are " + regionOnPrimaryNum.intValue() + " out of " +
         totalRegionNum.intValue() + " regions running on the primary" +
         " region servers" );
@@ -549,8 +553,7 @@ public class TestRegionPlacement {
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
 
-    @SuppressWarnings("deprecation")
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    HTable ht = (HTable) CONNECTION.getTable(tableName);
     @SuppressWarnings("deprecation")
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions "

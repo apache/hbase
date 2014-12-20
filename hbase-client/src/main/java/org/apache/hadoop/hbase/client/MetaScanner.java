@@ -63,32 +63,30 @@ public class MetaScanner {
    * start row value as table name.
    * 
    * <p>Visible for testing. Use {@link
-   * #metaScan(Configuration, Connection, MetaScannerVisitor, TableName)} instead.
+   * #metaScan(Connection, MetaScannerVisitor, TableName)} instead.
    *
-   * @param configuration conf
    * @param visitor A custom visitor
    * @throws IOException e
    */
   @VisibleForTesting // Do not use. Used by tests only and hbck.
-  public static void metaScan(Configuration configuration, MetaScannerVisitor visitor)
-  throws IOException {
-    metaScan(configuration, visitor, null, null, Integer.MAX_VALUE);
+  public static void metaScan(Connection connection,
+      MetaScannerVisitor visitor) throws IOException {
+    metaScan(connection, visitor, null, null, Integer.MAX_VALUE);
   }
 
   /**
    * Scans the meta table and calls a visitor on each RowResult. Uses a table
    * name to locate meta regions.
    *
-   * @param configuration config
    * @param connection connection to use internally (null to use a new instance)
    * @param visitor visitor object
    * @param userTableName User table name in meta table to start scan at.  Pass
    * null if not interested in a particular table.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration, Connection connection,
+  public static void metaScan(Connection connection,
       MetaScannerVisitor visitor, TableName userTableName) throws IOException {
-    metaScan(configuration, connection, visitor, userTableName, null, Integer.MAX_VALUE,
+    metaScan(connection, visitor, userTableName, null, Integer.MAX_VALUE,
         TableName.META_TABLE_NAME);
   }
 
@@ -98,9 +96,9 @@ public class MetaScanner {
    * <code>rowLimit</code> of rows.
    * 
    * <p>Visible for testing. Use {@link
-   * #metaScan(Configuration, Connection, MetaScannerVisitor, TableName)} instead.
+   * #metaScan(Connection, MetaScannerVisitor, TableName)} instead.
    *
-   * @param configuration HBase configuration.
+   * @param connection to scan on
    * @param visitor Visitor object.
    * @param userTableName User table name in meta table to start scan at.  Pass
    * null if not interested in a particular table.
@@ -111,11 +109,12 @@ public class MetaScanner {
    * @throws IOException e
    */
   @VisibleForTesting // Do not use. Used by Master but by a method that is used testing.
-  public static void metaScan(Configuration configuration,
+  public static void metaScan(Connection connection,
       MetaScannerVisitor visitor, TableName userTableName, byte[] row,
       int rowLimit)
   throws IOException {
-    metaScan(configuration, null, visitor, userTableName, row, rowLimit, TableName.META_TABLE_NAME);
+    metaScan(connection, visitor, userTableName, row, rowLimit, TableName
+        .META_TABLE_NAME);
   }
 
   /**
@@ -123,7 +122,6 @@ public class MetaScanner {
    * name and a row name to locate meta regions. And it only scans at most
    * <code>rowLimit</code> of rows.
    *
-   * @param configuration HBase configuration.
    * @param connection connection to use internally (null to use a new instance)
    * @param visitor Visitor object. Closes the visitor before returning.
    * @param tableName User table name in meta table to start scan at.  Pass
@@ -135,16 +133,10 @@ public class MetaScanner {
    * @param metaTableName Meta table to scan, root or meta.
    * @throws IOException e
    */
-  static void metaScan(Configuration configuration, Connection connection,
+  static void metaScan(Connection connection,
       final MetaScannerVisitor visitor, final TableName tableName,
       final byte[] row, final int rowLimit, final TableName metaTableName)
     throws IOException {
-
-    boolean closeConnection = false;
-    if (connection == null) {
-      connection = ConnectionFactory.createConnection(configuration);
-      closeConnection = true;
-    }
 
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
     // Calculate startrow for scan.
@@ -179,8 +171,9 @@ public class MetaScanner {
           HConstants.ZEROES, false);
       }
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
-      int scannerCaching = configuration.getInt(HConstants.HBASE_META_SCANNER_CACHING,
-        HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+      int scannerCaching = connection.getConfiguration()
+          .getInt(HConstants.HBASE_META_SCANNER_CACHING,
+              HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
       if (rowUpperLimit <= scannerCaching) {
           scan.setSmall(true);
       }
@@ -210,9 +203,6 @@ public class MetaScanner {
           ExceptionUtil.rethrowIfInterrupt(t);
           LOG.debug("Got exception in closing the meta scanner visitor", t);
         }
-      }
-      if (closeConnection) {
-        if (connection != null) connection.close();
       }
     }
   }
@@ -246,14 +236,16 @@ public class MetaScanner {
 
   /**
    * Lists all of the regions currently in META.
-   * @param conf
+   * @param conf configuration
+   * @param connection to connect with
    * @param offlined True if we are to include offlined regions, false and we'll
    * leave out offlined regions from returned list.
    * @return List of all user-space regions.
    * @throws IOException
    */
   @VisibleForTesting // And for hbck.
-  public static List<HRegionInfo> listAllRegions(Configuration conf, final boolean offlined)
+  public static List<HRegionInfo> listAllRegions(Configuration conf, Connection connection,
+      final boolean offlined)
   throws IOException {
     final List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
@@ -276,7 +268,7 @@ public class MetaScanner {
           return true;
         }
     };
-    metaScan(conf, visitor);
+    metaScan(connection, visitor);
     return regions;
   }
 
@@ -287,23 +279,22 @@ public class MetaScanner {
    * leave out offlined regions from returned list.
    * @return Map of all user-space regions to servers
    * @throws IOException
-   * @deprecated Use {@link #allTableRegions(Configuration, Connection, TableName)} instead
+   * @deprecated Use {@link #allTableRegions(Connection, TableName)} instead
    */
   @Deprecated
   public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
       Connection connection, final TableName tableName, boolean offlined) throws IOException {
-    return allTableRegions(conf, connection, tableName);
+    return allTableRegions(connection, tableName);
   }
 
   /**
    * Lists all of the table regions currently in META.
-   * @param conf
    * @param connection
    * @param tableName
    * @return Map of all user-space regions to servers
    * @throws IOException
    */
-  public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
+  public static NavigableMap<HRegionInfo, ServerName> allTableRegions(
       Connection connection, final TableName tableName) throws IOException {
     final NavigableMap<HRegionInfo, ServerName> regions =
       new TreeMap<HRegionInfo, ServerName>();
@@ -321,7 +312,7 @@ public class MetaScanner {
         return true;
       }
     };
-    metaScan(conf, connection, visitor, tableName);
+    metaScan(connection, visitor, tableName);
     return regions;
   }
 
@@ -340,7 +331,7 @@ public class MetaScanner {
         return true;
       }
     };
-    metaScan(conf, connection, visitor, tableName);
+    metaScan(connection, visitor, tableName);
     return regions;
   }
 

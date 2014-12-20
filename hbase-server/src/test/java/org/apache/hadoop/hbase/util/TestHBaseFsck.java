@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -303,7 +304,7 @@ public class TestHBaseFsck {
     dumpMeta(htd.getTableName());
 
     Map<HRegionInfo, ServerName> hris = tbl.getRegionLocations();
-    HConnection conn = (HConnection) ConnectionFactory.createConnection(conf);
+    ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
     for (Entry<HRegionInfo, ServerName> e: hris.entrySet()) {
       HRegionInfo hri = e.getKey();
       ServerName hsa = e.getValue();
@@ -2015,15 +2016,15 @@ public class TestHBaseFsck {
    */
   @Test (timeout=180000)
   public void testMissingRegionInfoQualifier() throws Exception {
-    TableName table =
-        TableName.valueOf("testMissingRegionInfoQualifier");
+    Connection connection = ConnectionFactory.createConnection(conf);
+    TableName table = TableName.valueOf("testMissingRegionInfoQualifier");
     try {
       setupTable(table);
 
       // Mess it up by removing the RegionInfo for one region.
       final List<Delete> deletes = new LinkedList<Delete>();
-      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
-      MetaScanner.metaScan(conf, new MetaScanner.MetaScannerVisitor() {
+      Table meta = connection.getTable(TableName.META_TABLE_NAME);
+      MetaScanner.metaScan(connection, new MetaScanner.MetaScannerVisitor() {
 
         @Override
         public boolean processRow(Result rowResult) throws IOException {
@@ -2060,6 +2061,7 @@ public class TestHBaseFsck {
     } finally {
       deleteTable(table);
     }
+    connection.close();
   }
 
 
