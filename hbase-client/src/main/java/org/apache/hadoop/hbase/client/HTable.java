@@ -654,7 +654,7 @@ public class HTable implements HTableInterface, RegionLocator {
   @Deprecated
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
     // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocator, singular, returns an HRegionLocation.
-    return MetaScanner.allTableRegions(getConfiguration(), this.connection, getName());
+    return MetaScanner.allTableRegions(this.connection, getName());
   }
 
   /**

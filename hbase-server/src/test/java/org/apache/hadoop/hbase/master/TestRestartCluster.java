@@ -28,7 +28,15 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -92,6 +100,8 @@ public class TestRestartCluster {
   @Test (timeout=300000)
   public void testClusterRestart() throws Exception {
     UTIL.startMiniCluster(3);
+    Connection connection = UTIL.getConnection();
+
     while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
       Threads.sleep(1);
     }
@@ -104,7 +114,7 @@ public class TestRestartCluster {
     }
 
     List<HRegionInfo> allRegions =
-      MetaScanner.listAllRegions(UTIL.getConfiguration(), true);
+        MetaScanner.listAllRegions(UTIL.getConfiguration(), connection, true);
     assertEquals(4, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
@@ -119,7 +129,8 @@ public class TestRestartCluster {
     // Need to use a new 'Configuration' so we make a new HConnection.
     // Otherwise we're reusing an HConnection that has gone stale because
     // the shutdown of the cluster also called shut of the connection.
-    allRegions = MetaScanner.listAllRegions(new Configuration(UTIL.getConfiguration()), true);
+    allRegions =
+        MetaScanner.listAllRegions(new Configuration(UTIL.getConfiguration()), connection, true);
     assertEquals(4, allRegions.size());
     LOG.info("\n\nWaiting for tables to be available");
     for(TableName TABLE: TABLES) {

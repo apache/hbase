@@ -1649,7 +1649,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         }
     };
 
-    MetaScanner.metaScan(conf, visitor, tableName, rowKey, 1);
+    MetaScanner.metaScan(clusterConnection, visitor, tableName, rowKey, 1);
     return result.get();
   }
 

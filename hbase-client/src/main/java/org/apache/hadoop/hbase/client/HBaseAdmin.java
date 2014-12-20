@@ -576,7 +576,7 @@ public class HBaseAdmin implements Admin {
             return true;
           }
         };
-        MetaScanner.metaScan(conf, connection, visitor, desc.getTableName());
+        MetaScanner.metaScan(connection, visitor, desc.getTableName());
         if (actualRegCount.get() < numRegs) {
           if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
             throw new RegionOfflineException("Only " + actualRegCount.get() +
@@ -2223,7 +2223,7 @@ public class HBaseAdmin implements Admin {
         }
       };
 
-      MetaScanner.metaScan(conf, connection, visitor, null);
+      MetaScanner.metaScan(connection, visitor, null);
       pair = result.get();
     }
     return pair;
