@@ -918,7 +918,7 @@ class ConnectionManager {
           return true;
         }
       };
-      MetaScanner.metaScan(conf, this, visitor, tableName);
+      MetaScanner.metaScan(this, visitor, tableName);
       return available.get() && (regionCount.get() > 0);
     }
 
@@ -963,7 +963,7 @@ class ConnectionManager {
           return true;
         }
       };
-      MetaScanner.metaScan(conf, this, visitor, tableName);
+      MetaScanner.metaScan(this, visitor, tableName);
       // +1 needs to be added so that the empty start row is also taken into account
       return available.get() && (regionCount.get() == splitKeys.length + 1);
     }
@@ -1005,8 +1005,7 @@ class ConnectionManager {
     @Override
     public List<HRegionLocation> locateRegions(final TableName tableName,
         final boolean useCache, final boolean offlined) throws IOException {
-      NavigableMap<HRegionInfo, ServerName> regions =
-        MetaScanner.allTableRegions(conf, this, tableName);
+      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(this, tableName);
       final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
       for (HRegionInfo regionInfo : regions.keySet()) {
         RegionLocations list = locateRegion(tableName, regionInfo.getStartKey(), useCache, true);

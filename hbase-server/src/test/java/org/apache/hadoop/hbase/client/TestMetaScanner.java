@@ -54,9 +54,11 @@ import org.junit.experimental.categories.Category;
 public class TestMetaScanner {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private Connection connection;
 
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
+    this.connection = TEST_UTIL.getConnection();
   }
 
   @After
@@ -67,13 +69,13 @@ public class TestMetaScanner {
   @Test
   public void testMetaScanner() throws Exception {
     LOG.info("Starting testMetaScanner");
+
     setUp();
-    final TableName TABLENAME =
-        TableName.valueOf("testMetaScanner");
+    final TableName TABLENAME = TableName.valueOf("testMetaScanner");
     final byte[] FAMILY = Bytes.toBytes("family");
     TEST_UTIL.createTable(TABLENAME, FAMILY);
     Configuration conf = TEST_UTIL.getConfiguration();
-    HTable table = new HTable(conf, TABLENAME);
+    HTable table = (HTable) connection.getTable(TABLENAME);
     TEST_UTIL.createMultiRegions(conf, table, FAMILY,
         new byte[][]{
           HConstants.EMPTY_START_ROW,
@@ -87,28 +89,28 @@ public class TestMetaScanner {
     doReturn(true).when(visitor).processRow((Result)anyObject());
 
     // Scanning the entire table should give us three rows
-    MetaScanner.metaScan(conf, null, visitor, TABLENAME);
+    MetaScanner.metaScan(connection, visitor, TABLENAME);
     verify(visitor, times(3)).processRow((Result)anyObject());
 
     // Scanning the table with a specified empty start row should also
     // give us three hbase:meta rows
     reset(visitor);
     doReturn(true).when(visitor).processRow((Result)anyObject());
-    MetaScanner.metaScan(conf, visitor, TABLENAME, HConstants.EMPTY_BYTE_ARRAY, 1000);
+    MetaScanner.metaScan(connection, visitor, TABLENAME, HConstants.EMPTY_BYTE_ARRAY, 1000);
     verify(visitor, times(3)).processRow((Result)anyObject());
 
     // Scanning the table starting in the middle should give us two rows:
     // region_a and region_b
     reset(visitor);
     doReturn(true).when(visitor).processRow((Result)anyObject());
-    MetaScanner.metaScan(conf, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1000);
+    MetaScanner.metaScan(connection, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1000);
     verify(visitor, times(2)).processRow((Result)anyObject());
 
     // Scanning with a limit of 1 should only give us one row
     reset(visitor);
-    doReturn(true).when(visitor).processRow((Result)anyObject());
-    MetaScanner.metaScan(conf, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1);
-    verify(visitor, times(1)).processRow((Result)anyObject());
+    doReturn(true).when(visitor).processRow((Result) anyObject());
+    MetaScanner.metaScan(connection, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1);
+    verify(visitor, times(1)).processRow((Result) anyObject());
     table.close();
   }
 
@@ -135,8 +137,8 @@ public class TestMetaScanner {
       public void run() {
         while (!isStopped()) {
           try {
-            List<HRegionInfo> regions = MetaScanner.listAllRegions(
-              TEST_UTIL.getConfiguration(), false);
+            List<HRegionInfo> regions = MetaScanner.listAllRegions(TEST_UTIL.getConfiguration(),
+                connection, false);
 
             //select a random region
             HRegionInfo parent = regions.get(random.nextInt(regions.size()));
@@ -167,7 +169,7 @@ public class TestMetaScanner {
               Bytes.toBytes(midKey),
               end);
 
-            MetaTableAccessor.splitRegion(TEST_UTIL.getHBaseAdmin().getConnection(),
+            MetaTableAccessor.splitRegion(connection,
               parent, splita, splitb, ServerName.valueOf("fooserver", 1, 0));
 
             Threads.sleep(random.nextInt(200));
@@ -190,7 +192,7 @@ public class TestMetaScanner {
          while(!isStopped()) {
            try {
             NavigableMap<HRegionInfo, ServerName> regions =
-                MetaScanner.allTableRegions(TEST_UTIL.getConfiguration(), null, TABLENAME);
+                MetaScanner.allTableRegions(connection, TABLENAME);
 
             LOG.info("-------");
             byte[] lastEndKey = HConstants.EMPTY_START_ROW;
@@ -243,4 +245,3 @@ public class TestMetaScanner {
   }
 
 }
-

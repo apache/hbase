@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -216,6 +218,7 @@ public class TestEndToEndSplitTransaction {
   }
 
   static class RegionSplitter extends Thread {
+    final Connection connection;
     Throwable ex;
     Table table;
     TableName tableName;
@@ -229,6 +232,7 @@ public class TestEndToEndSplitTransaction {
       this.family = table.getTableDescriptor().getFamiliesKeys().iterator().next();
       admin = TEST_UTIL.getHBaseAdmin();
       rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+      connection = TEST_UTIL.getConnection();
     }
 
     @Override
@@ -236,8 +240,8 @@ public class TestEndToEndSplitTransaction {
       try {
         Random random = new Random();
         for (int i= 0; i< 5; i++) {
-          NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, null,
-              tableName);
+          NavigableMap<HRegionInfo, ServerName> regions =
+              MetaScanner.allTableRegions(connection, tableName);
           if (regions.size() == 0) {
             continue;
           }
@@ -294,27 +298,30 @@ public class TestEndToEndSplitTransaction {
    * Checks regions using MetaScanner, MetaTableAccessor and HTable methods
    */
   static class RegionChecker extends Chore {
+    Connection connection;
     Configuration conf;
     TableName tableName;
     Throwable ex;
 
-    RegionChecker(Configuration conf, Stoppable stopper, TableName tableName) {
+    RegionChecker(Configuration conf, Stoppable stopper, TableName tableName) throws IOException {
       super("RegionChecker", 10, stopper);
       this.conf = conf;
       this.tableName = tableName;
       this.setDaemon(true);
+
+      this.connection = ConnectionFactory.createConnection(conf);
     }
 
     /** verify region boundaries obtained from MetaScanner */
     void verifyRegionsUsingMetaScanner() throws Exception {
 
       //MetaScanner.allTableRegions()
-      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, null,
+      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(connection,
           tableName);
       verifyTableRegions(regions.keySet());
 
       //MetaScanner.listAllRegions()
-      List<HRegionInfo> regionList = MetaScanner.listAllRegions(conf, false);
+      List<HRegionInfo> regionList = MetaScanner.listAllRegions(conf, connection, false);
       verifyTableRegions(Sets.newTreeSet(regionList));
     }
 

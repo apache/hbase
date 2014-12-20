@@ -621,7 +621,7 @@ public class HBaseFsck extends Configured {
   public void checkRegionBoundaries() {
     try {
       ByteArrayComparator comparator = new ByteArrayComparator();
-      List<HRegionInfo> regions = MetaScanner.listAllRegions(getConf(), false);
+      List<HRegionInfo> regions = MetaScanner.listAllRegions(getConf(), connection, false);
       final RegionBoundariesInformation currentRegionBoundariesInformation =
           new RegionBoundariesInformation();
       Path hbaseRoot = FSUtils.getRootDir(getConf());
@@ -3077,7 +3077,7 @@ public class HBaseFsck extends Configured {
     };
     if (!checkMetaOnly) {
       // Scan hbase:meta to pick up user regions
-      MetaScanner.metaScan(getConf(), visitor);
+      MetaScanner.metaScan(connection, visitor);
     }
 
     errors.print("");

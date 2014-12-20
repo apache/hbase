@@ -170,7 +170,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * @throws IOException
    */
   @Test
-  public void testRocTimeout() throws IOException {
+  public void testRpcTimeout() throws IOException {
     Configuration localConfig = HBaseConfiguration.create(this.conf);
     // This override mocks up our exists/get call to throw a RegionServerStoppedException.
     localConfig.set("hbase.client.connection.impl", RpcTimeoutConnection.class.getName());
@@ -204,7 +204,9 @@ public class TestClientNoCluster extends Configured implements Tool {
   public void testDoNotRetryMetaScanner() throws IOException {
     this.conf.set("hbase.client.connection.impl",
       RegionServerStoppedOnScannerOpenConnection.class.getName());
-    MetaScanner.metaScan(this.conf, null);
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      MetaScanner.metaScan(connection, null);
+    }
   }
 
   @Test
