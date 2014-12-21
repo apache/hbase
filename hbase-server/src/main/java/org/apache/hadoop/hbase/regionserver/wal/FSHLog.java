@@ -1685,7 +1685,7 @@ public class FSHLog implements WAL {
     oldestUnflushedStoreSequenceIdsOfRegion =
         new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
     ConcurrentMap<byte[], Long> alreadyPut =
-        oldestUnflushedStoreSequenceIds.put(encodedRegionName,
+        oldestUnflushedStoreSequenceIds.putIfAbsent(encodedRegionName,
           oldestUnflushedStoreSequenceIdsOfRegion);
     return alreadyPut == null ? oldestUnflushedStoreSequenceIdsOfRegion : alreadyPut;
   }
