@@ -539,7 +539,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   /**
    * Checks that the user has the given global or namespace permission.
    * @param namespace
-   * @param perm Action being requested
+   * @param permissions Actions being requested
    */
   public void requireNamespacePermission(String request, String namespace,
       Action... permissions) throws IOException {
