@@ -925,8 +925,8 @@ stopping hbase...............</screen>
       <!--presumes the pre-site target has put the hbase-default.xml at this location-->
       <xi:include
         xmlns:xi="http://www.w3.org/2001/XInclude"
-        href="../../../target/docbkx/hbase-default.xml">
-        <xi:fallback>
+        href="hbase-default.xml">
+	<!--<xi:fallback>
           <section
             xml:id="hbase_default_configurations">
             <title />
@@ -1007,7 +1007,7 @@ stopping hbase...............</screen>
               </section>
             </section>
           </section>
-        </xi:fallback>
+	</xi:fallback>-->
       </xi:include>
     </section>
 

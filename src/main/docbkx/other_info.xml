@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<appendix
+    xml:id="other.info"
+    version="5.0"
+    xmlns="http://docbook.org/ns/docbook"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    xmlns:svg="http://www.w3.org/2000/svg"
+    xmlns:m="http://www.w3.org/1998/Math/MathML"
+    xmlns:html="http://www.w3.org/1999/xhtml"
+    xmlns:db="http://docbook.org/ns/docbook">
+    <!--/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+    <title>Other Information About HBase</title>
+    <section xml:id="other.info.videos"><title>HBase Videos</title>
+        <para>Introduction to HBase
+            <itemizedlist>
+                <listitem><para><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/presentation/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon.html">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
+                </para></listitem>
+                <listitem><para><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon (2010).
+                </para></listitem>
+            </itemizedlist>
+        </para>
+        <para><link xlink:href="http://www.cloudera.com/videos/hadoop-world-2011-presentation-video-building-realtime-big-data-services-at-facebook-with-hadoop-and-hbase">Building Real Time Services at Facebook with HBase</link> by Jonathan Gray (Hadoop World 2011).
+        </para>
+        <para><link xlink:href="http://www.cloudera.com/videos/hw10_video_how_stumbleupon_built_and_advertising_platform_using_hbase_and_hadoop">HBase and Hadoop, Mixing Real-Time and Batch Processing at StumbleUpon</link> by JD Cryans (Hadoop World 2010).
+        </para>
+    </section>
+    <section xml:id="other.info.pres"><title>HBase Presentations (Slides)</title>
+        <para><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/hadoopworld/hadoop-world-2011-presentation-video-advanced-hbase-schema-design.html">Advanced HBase Schema Design</link> by Lars George (Hadoop World 2011).
+        </para>
+        <para><link xlink:href="http://www.slideshare.net/cloudera/chicago-data-summit-apache-hbase-an-introduction">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
+        </para>
+        <para><link xlink:href="http://www.slideshare.net/cloudera/hw09-practical-h-base-getting-the-most-from-your-h-base-install">Getting The Most From Your HBase Install</link> by Ryan Rawson, Jonathan Gray (Hadoop World 2009).
+        </para>
+    </section>
+    <section xml:id="other.info.papers"><title>HBase Papers</title>
+        <para><link xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> by Google (2006).
+        </para>
+        <para><link xlink:href="http://www.larsgeorge.com/2010/05/hbase-file-locality-in-hdfs.html">HBase and HDFS Locality</link> by Lars George (2010).
+        </para>
+        <para><link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link> by Ian Varley (2009).
+        </para>
+    </section>
+    <section xml:id="other.info.sites"><title>HBase Sites</title>
+        <para><link xlink:href="http://www.cloudera.com/blog/category/hbase/">Cloudera's HBase Blog</link> has a lot of links to useful HBase information.
+            <itemizedlist>
+                <listitem><para><link xlink:href="http://www.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/">CAP Confusion</link> is a relevant entry for background information on
+                    distributed storage systems.</para>
+                </listitem>
+            </itemizedlist>
+        </para>
+        <para><link xlink:href="http://wiki.apache.org/hadoop/HBase/HBasePresentations">HBase Wiki</link> has a page with a number of presentations.
+        </para>
+        <para><link xlink:href="http://refcardz.dzone.com/refcardz/hbase">HBase RefCard</link> from DZone.
+        </para>
+    </section>
+    <section xml:id="other.info.books"><title>HBase Books</title>
+        <para><link xlink:href="http://shop.oreilly.com/product/0636920014348.do">HBase:  The Definitive Guide</link> by Lars George.
+        </para>
+    </section>
+    <section xml:id="other.info.books.hadoop"><title>Hadoop Books</title>
+        <para><link xlink:href="http://shop.oreilly.com/product/9780596521981.do">Hadoop:  The Definitive Guide</link> by Tom White.
+        </para>
+    </section>
+
+</appendix>

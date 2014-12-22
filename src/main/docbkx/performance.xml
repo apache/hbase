@@ -273,7 +273,7 @@ tableDesc.addFamily(cfDesc);
         If there is enough RAM, increasing this can help.
         </para>
     </section>
-    <section xml:id="hbase.regionserver.checksum.verify">
+    <section xml:id="hbase.regionserver.checksum.verify.performance">
         <title><varname>hbase.regionserver.checksum.verify</varname></title>
         <para>Have HBase write the checksum into the datablock and save
         having to do the checksum seek whenever you read.</para>

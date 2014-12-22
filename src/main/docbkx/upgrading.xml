@@ -240,7 +240,7 @@
         </table>
       </section>
 
-	    <section xml:id="hbase.client.api">
+	    <section xml:id="hbase.client.api.surface">
 		  <title>HBase API surface</title>
 		  <para> HBase has a lot of API points, but for the compatibility matrix above, we differentiate between Client API, Limited Private API, and Private API. HBase uses a version of 
 		  <link xlink:href="https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html">Hadoop's Interface classification</link>. HBase's Interface classification classes can be found <link xlink:href="https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/classification/package-summary.html"> here</link>. 

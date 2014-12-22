@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<appendix
+    xml:id="orca"
+    version="5.0"
+    xmlns="http://docbook.org/ns/docbook"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    xmlns:svg="http://www.w3.org/2000/svg"
+    xmlns:m="http://www.w3.org/1998/Math/MathML"
+    xmlns:html="http://www.w3.org/1999/xhtml"
+    xmlns:db="http://docbook.org/ns/docbook">
+    <!--/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+    <title>Apache HBase Orca</title>
+    <figure>
+        <title>Apache HBase Orca</title>
+        <mediaobject>
+            <imageobject>
+                <imagedata align="center" valign="right"
+                    fileref="jumping-orca_rotated_25percent.png"/>
+            </imageobject>
+        </mediaobject>
+    </figure>
+    <para><link xlink:href="https://issues.apache.org/jira/browse/HBASE-4920">An Orca is the Apache
+            HBase mascot.</link>
+        See NOTICES.txt.  Our Orca logo we got here: http://www.vectorfree.com/jumping-orca
+        It is licensed Creative Commons Attribution 3.0.  See https://creativecommons.org/licenses/by/3.0/us/
+        We changed the logo by stripping the colored background, inverting
+        it and then rotating it some.
+    </para>
+</appendix>

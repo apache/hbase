@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<appendix
+    xml:id="compression"
+    version="5.0"
+    xmlns="http://docbook.org/ns/docbook"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    xmlns:svg="http://www.w3.org/2000/svg"
+    xmlns:m="http://www.w3.org/1998/Math/MathML"
+    xmlns:html="http://www.w3.org/1999/xhtml"
+    xmlns:db="http://docbook.org/ns/docbook">
+    <!--/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+    <title>Compression and Data Block Encoding In
+          HBase<indexterm><primary>Compression</primary><secondary>Data Block
+          Encoding</secondary><seealso>codecs</seealso></indexterm></title>
+    <note>
+      <para>Codecs mentioned in this section are for encoding and decoding data blocks or row keys.
+       For information about replication codecs, see <xref
+          linkend="cluster.replication.preserving.tags" />.</para>
+    </note>
+    <para>Some of the information in this section is pulled from a <link
+        xlink:href="http://search-hadoop.com/m/lL12B1PFVhp1/v=threaded">discussion</link> on the
+      HBase Development mailing list.</para>
+    <para>HBase supports several different compression algorithms which can be enabled on a
+      ColumnFamily. Data block encoding attempts to limit duplication of information in keys, taking
+      advantage of some of the fundamental designs and patterns of HBase, such as sorted row keys
+      and the schema of a given table. Compressors reduce the size of large, opaque byte arrays in
+      cells, and can significantly reduce the storage space needed to store uncompressed
+      data.</para>
+    <para>Compressors and data block encoding can be used together on the same ColumnFamily.</para>
+    
+    <formalpara>
+      <title>Changes Take Effect Upon Compaction</title>
+      <para>If you change compression or encoding for a ColumnFamily, the changes take effect during
+       compaction.</para>
+    </formalpara>
+
+    <para>Some codecs take advantage of capabilities built into Java, such as GZip compression.
+      Others rely on native libraries. Native libraries may be available as part of Hadoop, such as
+      LZ4. In this case, HBase only needs access to the appropriate shared library. Other codecs,
+      such as Google Snappy, need to be installed first. Some codecs are licensed in ways that
+      conflict with HBase's license and cannot be shipped as part of HBase.</para>
+
+    <para>This section discusses common codecs that are used and tested with HBase. No matter what
+      codec you use, be sure to test that it is installed correctly and is available on all nodes in
+      your cluster. Extra operational steps may be necessary to be sure that codecs are available on
+      newly-deployed nodes. You can use the <xref
+        linkend="compression.test" /> utility to check that a given codec is correctly
+      installed.</para>
+
+    <para>To configure HBase to use a compressor, see <xref
+        linkend="compressor.install" />. To enable a compressor for a ColumnFamily, see <xref
+        linkend="changing.compression" />. To enable data block encoding for a ColumnFamily, see
+      <xref linkend="data.block.encoding.enable" />.</para>
+    <itemizedlist>
+      <title>Block Compressors</title>
+      <listitem>
+        <para>none</para>
+      </listitem>
+      <listitem>
+        <para>Snappy</para>
+      </listitem>
+      <listitem>
+        <para>LZO</para>
+      </listitem>
+      <listitem>
+        <para>LZ4</para>
+      </listitem>
+      <listitem>
+        <para>GZ</para>
+      </listitem>
+    </itemizedlist>
+
+
+    <itemizedlist xml:id="data.block.encoding.types">
+      <title>Data Block Encoding Types</title>
+      <listitem>
+        <para>Prefix - Often, keys are very similar. Specifically, keys often share a common prefix
+          and only differ near the end. For instance, one key might be
+            <literal>RowKey:Family:Qualifier0</literal> and the next key might be
+            <literal>RowKey:Family:Qualifier1</literal>. In Prefix encoding, an extra column is
+          added which holds the length of the prefix shared between the current key and the previous
+          key. Assuming the first key here is totally different from the key before, its prefix
+          length is 0. The second key's prefix length is <literal>23</literal>, since they have the
+          first 23 characters in common.</para>
+        <para>Obviously if the keys tend to have nothing in common, Prefix will not provide much
+          benefit.</para>
+        <para>The following image shows a hypothetical ColumnFamily with no data block encoding.</para>
+        <figure>
+          <title>ColumnFamily with No Encoding</title>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="data_block_no_encoding.png" width="800"/>
+            </imageobject>
+            <caption><para>A ColumnFamily with no encoding></para></caption>
+          </mediaobject>
+        </figure>
+        <para>Here is the same data with prefix data encoding.</para>
+        <figure>
+          <title>ColumnFamily with Prefix Encoding</title>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="data_block_prefix_encoding.png" width="800"/>
+            </imageobject>
+            <caption><para>A ColumnFamily with prefix encoding</para></caption>
+          </mediaobject>
+        </figure>
+      </listitem>
+      <listitem>
+        <para>Diff - Diff encoding expands upon Prefix encoding. Instead of considering the key
+          sequentially as a monolithic series of bytes, each key field is split so that each part of
+          the key can be compressed more efficiently. Two new fields are added: timestamp and type.
+          If the ColumnFamily is the same as the previous row, it is omitted from the current row.
+          If the key length, value length or type are the same as the previous row, the field is
+          omitted. In addition, for increased compression, the timestamp is stored as a Diff from
+          the previous row's timestamp, rather than being stored in full. Given the two row keys in
+          the Prefix example, and given an exact match on timestamp and the same type, neither the
+          value length, or type needs to be stored for the second row, and the timestamp value for
+          the second row is just 0, rather than a full timestamp.</para>
+        <para>Diff encoding is disabled by default because writing and scanning are slower but more
+          data is cached.</para>
+        <para>This image shows the same ColumnFamily from the previous images, with Diff encoding.</para>
+        <figure>
+          <title>ColumnFamily with Diff Encoding</title>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="data_block_diff_encoding.png" width="800"/>
+            </imageobject>
+            <caption><para>A ColumnFamily with diff encoding</para></caption>
+          </mediaobject>
+        </figure>
+      </listitem>
+      <listitem>
+        <para>Fast Diff - Fast Diff works similar to Diff, but uses a faster implementation. It also
+          adds another field which stores a single bit to track whether the data itself is the same
+          as the previous row. If it is, the data is not stored again. Fast Diff is the recommended
+          codec to use if you have long keys or many columns. The data format is nearly identical to
+        Diff encoding, so there is not an image to illustrate it.</para>
+      </listitem>
+      <listitem>
+        <para>Prefix Tree encoding was introduced as an experimental feature in HBase 0.96. It
+          provides similar memory savings to the Prefix, Diff, and Fast Diff encoder, but provides
+          faster random access at a cost of slower encoding speed. Prefix Tree may be appropriate
+          for applications that have high block cache hit ratios. It introduces new 'tree' fields
+          for the row and column. The row tree field contains a list of offsets/references
+          corresponding to the cells in that row. This allows for a good deal of compression. For
+          more details about Prefix Tree encoding, see <link
+            xlink:href="https://issues.apache.org/jira/browse/HBASE-4676">HBASE-4676</link>. It is
+          difficult to graphically illustrate a prefix tree, so no image is included. See the
+          Wikipedia article for <link
+            xlink:href="http://en.wikipedia.org/wiki/Trie">Trie</link> for more general information
+          about this data structure.</para>
+      </listitem>
+    </itemizedlist>
+
+    <section>
+      <title>Which Compressor or Data Block Encoder To Use</title>
+      <para>The compression or codec type to use depends on the characteristics of your data.
+        Choosing the wrong type could cause your data to take more space rather than less, and can
+        have performance implications. In general, you need to weigh your options between smaller
+        size and faster compression/decompression. Following are some general guidelines, expanded from a discussion at <link xlink:href="http://search-hadoop.com/m/lL12B1PFVhp1">Documenting Guidance on compression and codecs</link>. </para>
+      <itemizedlist>
+        <listitem>
+          <para>If you have long keys (compared to the values) or many columns, use a prefix
+            encoder. FAST_DIFF is recommended, as more testing is needed for Prefix Tree
+            encoding.</para>
+        </listitem>
+        <listitem>
+          <para>If the values are large (and not precompressed, such as images), use a data block
+            compressor.</para>
+        </listitem>
+        <listitem>
+          <para>Use GZIP for <firstterm>cold data</firstterm>, which is accessed infrequently. GZIP
+            compression uses more CPU resources than Snappy or LZO, but provides a higher
+            compression ratio.</para>
+        </listitem>
+        <listitem>
+          <para>Use Snappy or LZO for <firstterm>hot data</firstterm>, which is accessed
+            frequently. Snappy and LZO use fewer CPU resources than GZIP, but do not provide as high
+          of a compression ratio.</para>
+        </listitem>
+        <listitem>
+          <para>In most cases, enabling Snappy or LZO by default is a good choice, because they have
+            a low performance overhead and provide space savings.</para>
+        </listitem>
+        <listitem>
+          <para>Before Snappy became available by Google in 2011, LZO was the default. Snappy has
+            similar qualities as LZO but has been shown to perform better.</para>
+        </listitem>
+      </itemizedlist>
+    </section>
+    <section xml:id="hadoop.native.lib">
+      <title>Making use of Hadoop Native Libraries in HBase</title>
+      <para>The Hadoop shared library has a bunch of facility including
+        compression libraries and fast crc'ing. To make this facility available
+        to HBase, do the following. HBase/Hadoop will fall back to use
+        alternatives if it cannot find the native library versions -- or
+        fail outright if you asking for an explicit compressor and there is
+      no alternative available.</para>
+    <para>If you see the following in your HBase logs, you know that HBase was unable
+      to locate the Hadoop native libraries:
+      <programlisting>2014-08-07 09:26:20,139 WARN  [main] util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable</programlisting>
+      If the libraries loaded successfully, the WARN message does not show.
+    </para>
+    <para>Lets presume your Hadoop shipped with a native library that
+      suits the platform you are running HBase on.  To check if the Hadoop
+      native library is available to HBase, run the following tool (available in 
+      Hadoop 2.1 and greater):
+      <programlisting>$ ./bin/hbase --config ~/conf_hbase org.apache.hadoop.util.NativeLibraryChecker
+2014-08-26 13:15:38,717 WARN  [main] util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Native library checking:
+hadoop: false
+zlib:   false
+snappy: false
+lz4:    false
+bzip2:  false
+2014-08-26 13:15:38,863 INFO  [main] util.ExitUtil: Exiting with status 1</programlisting>
+Above shows that the native hadoop library is not available in HBase context.
+    </para>
+    <para>To fix the above, either copy the Hadoop native libraries local or symlink to
+      them if the Hadoop and HBase stalls are adjacent in the filesystem. 
+      You could also point at their location by setting the <varname>LD_LIBRARY_PATH</varname> environment
+      variable.</para>
+    <para>Where the JVM looks to find native librarys is "system dependent"
+      (See <classname>java.lang.System#loadLibrary(name)</classname>). On linux, by default,
+      is going to look in <filename>lib/native/PLATFORM</filename> where <varname>PLATFORM</varname>
+      is the label for the platform your HBase is installed on.
+      On a local linux machine, it seems to be the concatenation of the java properties
+      <varname>os.name</varname> and <varname>os.arch</varname> followed by whether 32 or 64 bit.
+      HBase on startup prints out all of the java system properties so find the os.name and os.arch
+      in the log. For example:
+      <programlisting>....
+      2014-08-06 15:27:22,853 INFO  [main] zookeeper.ZooKeeper: Client environment:os.name=Linux
+      2014-08-06 15:27:22,853 INFO  [main] zookeeper.ZooKeeper: Client environment:os.arch=amd64
+      ...
+    </programlisting>
+     So in this case, the PLATFORM string is <varname>Linux-amd64-64</varname>.
+     Copying the Hadoop native libraries or symlinking at <filename>lib/native/Linux-amd64-64</filename>
+     will ensure they are found.  Check with the Hadoop <filename>NativeLibraryChecker</filename>. 
+    </para>
+
+    <para>Here is example of how to point at the Hadoop libs with <varname>LD_LIBRARY_PATH</varname>
+      environment variable:
+      <programlisting>$ LD_LIBRARY_PATH=~/hadoop-2.5.0-SNAPSHOT/lib/native ./bin/hbase --config ~/conf_hbase org.apache.hadoop.util.NativeLibraryChecker
+2014-08-26 13:42:49,332 INFO  [main] bzip2.Bzip2Factory: Successfully loaded &amp; initialized native-bzip2 library system-native
+2014-08-26 13:42:49,337 INFO  [main] zlib.ZlibFactory: Successfully loaded &amp; initialized native-zlib library
+Native library checking:
+hadoop: true /home/stack/hadoop-2.5.0-SNAPSHOT/lib/native/libhadoop.so.1.0.0
+zlib:   true /lib64/libz.so.1
+snappy: true /usr/lib64/libsnappy.so.1
+lz4:    true revision:99
+bzip2:  true /lib64/libbz2.so.1</programlisting>
+Set in <filename>hbase-env.sh</filename> the LD_LIBRARY_PATH environment variable when starting your HBase.
+    </para>
+    </section>
+
+    <section>
+      <title>Compressor Configuration, Installation, and Use</title>
+      <section
+        xml:id="compressor.install">
+        <title>Configure HBase For Compressors</title>
+        <para>Before HBase can use a given compressor, its libraries need to be available. Due to
+          licensing issues, only GZ compression is available to HBase (via native Java libraries) in
+          a default installation. Other compression libraries are available via the shared library
+          bundled with your hadoop.  The hadoop native library needs to be findable when HBase
+          starts.  See </para>
+        <section>
+          <title>Compressor Support On the Master</title>
+          <para>A new configuration setting was introduced in HBase 0.95, to check the Master to
+            determine which data block encoders are installed and configured on it, and assume that
+            the entire cluster is configured the same. This option,
+              <code>hbase.master.check.compression</code>, defaults to <literal>true</literal>. This
+            prevents the situation described in <link
+              xlink:href="https://issues.apache.org/jira/browse/HBASE-6370">HBASE-6370</link>, where
+            a table is created or modified to support a codec that a region server does not support,
+            leading to failures that take a long time to occur and are difficult to debug. </para>
+          <para>If <code>hbase.master.check.compression</code> is enabled, libraries for all desired
+            compressors need to be installed and configured on the Master, even if the Master does
+            not run a region server.</para>
+        </section>
+        <section>
+          <title>Install GZ Support Via Native Libraries</title>
+          <para>HBase uses Java's built-in GZip support unless the native Hadoop libraries are
+            available on the CLASSPATH. The recommended way to add libraries to the CLASSPATH is to
+            set the environment variable <envar>HBASE_LIBRARY_PATH</envar> for the user running
+            HBase. If native libraries are not available and Java's GZIP is used, <literal>Got
+              brand-new compressor</literal> reports will be present in the logs. See <xref
+              linkend="brand.new.compressor" />).</para>
+        </section>
+        <section
+          xml:id="lzo.compression">
+          <title>Install LZO Support</title>
+          <para>HBase cannot ship with LZO because of incompatibility between HBase, which uses an
+            Apache Software License (ASL) and LZO, which uses a GPL license. See the <link
+              xlink:href="http://wiki.apache.org/hadoop/UsingLzoCompression">Using LZO
+              Compression</link> wiki page for information on configuring LZO support for HBase. </para>
+          <para>If you depend upon LZO compression, consider configuring your RegionServers to fail
+            to start if LZO is not available. See <xref
+              linkend="hbase.regionserver.codecs" />.</para>
+        </section>
+        <section
+          xml:id="lz4.compression">
+          <title>Configure LZ4 Support</title>
+          <para>LZ4 support is bundled with Hadoop. Make sure the hadoop shared library
+            (libhadoop.so) is accessible when you start
+            HBase. After configuring your platform (see <xref
+              linkend="hbase.native.platform" />), you can make a symbolic link from HBase to the native Hadoop
+            libraries. This assumes the two software installs are colocated. For example, if my
+            'platform' is Linux-amd64-64:
+            <programlisting language="bourne">$ cd $HBASE_HOME
+$ mkdir lib/native
+$ ln -s $HADOOP_HOME/lib/native lib/native/Linux-amd64-64</programlisting>
+            Use the compression tool to check that LZ4 is installed on all nodes. Start up (or restart)
+            HBase. Afterward, you can create and alter tables to enable LZ4 as a
+            compression codec.:
+            <screen>
+hbase(main):003:0> <userinput>alter 'TestTable', {NAME => 'info', COMPRESSION => 'LZ4'}</userinput>
+            </screen>
+          </para>
+        </section>
+        <section
+          xml:id="snappy.compression.installation">
+          <title>Install Snappy Support</title>
+          <para>HBase does not ship with Snappy support because of licensing issues. You can install
+            Snappy binaries (for instance, by using <command>yum install snappy</command> on CentOS)
+            or build Snappy from source. After installing Snappy, search for the shared library,
+            which will be called <filename>libsnappy.so.X</filename> where X is a number. If you
+            built from source, copy the shared library to a known location on your system, such as
+              <filename>/opt/snappy/lib/</filename>.</para>
+          <para>In addition to the Snappy library, HBase also needs access to the Hadoop shared
+            library, which will be called something like <filename>libhadoop.so.X.Y</filename>,
+            where X and Y are both numbers. Make note of the location of the Hadoop library, or copy
+            it to the same location as the Snappy library.</para>
+          <note>
+            <para>The Snappy and Hadoop libraries need to be available on each node of your cluster.
+              See <xref
+                linkend="compression.test" /> to find out how to test that this is the case.</para>
+            <para>See <xref
+                linkend="hbase.regionserver.codecs" /> to configure your RegionServers to fail to
+              start if a given compressor is not available.</para>
+          </note>
+          <para>Each of these library locations need to be added to the environment variable
+              <envar>HBASE_LIBRARY_PATH</envar> for the operating system user that runs HBase. You
+            need to restart the RegionServer for the changes to take effect.</para>
+        </section>
+
+
+        <section
+          xml:id="compression.test">
+          <title>CompressionTest</title>
+          <para>You can use the CompressionTest tool to verify that your compressor is available to
+            HBase:</para>
+          <screen language="bourne">
+ $ hbase org.apache.hadoop.hbase.util.CompressionTest hdfs://<replaceable>host/path/to/hbase</replaceable> snappy       
+          </screen>
+        </section>
+
+
+        <section
+          xml:id="hbase.regionserver.codecs">
+          <title>Enforce Compression Settings On a RegionServer</title>
+          <para>You can configure a RegionServer so that it will fail to restart if compression is
+            configured incorrectly, by adding the option hbase.regionserver.codecs to the
+              <filename>hbase-site.xml</filename>, and setting its value to a comma-separated list
+            of codecs that need to be available. For example, if you set this property to
+              <literal>lzo,gz</literal>, the RegionServer would fail to start if both compressors
+            were not available. This would prevent a new server from being added to the cluster
+            without having codecs configured properly.</para>
+        </section>
+      </section>
+
+      <section
+        xml:id="changing.compression">
+        <title>Enable Compression On a ColumnFamily</title>
+        <para>To enable compression for a ColumnFamily, use an <code>alter</code> command. You do
+          not need to re-create the table or copy data. If you are changing codecs, be sure the old
+          codec is still available until all the old StoreFiles have been compacted.</para>
+        <example>
+          <title>Enabling Compression on a ColumnFamily of an Existing Table using HBase
+            Shell</title>
+          <screen><![CDATA[
+hbase> disable 'test'
+hbase> alter 'test', {NAME => 'cf', COMPRESSION => 'GZ'}
+hbase> enable 'test']]>
+        </screen>
+        </example>
+        <example>
+          <title>Creating a New Table with Compression On a ColumnFamily</title>
+          <screen><![CDATA[
+hbase> create 'test2', { NAME => 'cf2', COMPRESSION => 'SNAPPY' }         
+          ]]></screen>
+        </example>
+        <example>
+          <title>Verifying a ColumnFamily's Compression Settings</title>
+          <screen><![CDATA[
+hbase> describe 'test'
+DESCRIPTION                                          ENABLED
+ 'test', {NAME => 'cf', DATA_BLOCK_ENCODING => 'NONE false
+ ', BLOOMFILTER => 'ROW', REPLICATION_SCOPE => '0',
+ VERSIONS => '1', COMPRESSION => 'GZ', MIN_VERSIONS
+ => '0', TTL => 'FOREVER', KEEP_DELETED_CELLS => 'fa
+ lse', BLOCKSIZE => '65536', IN_MEMORY => 'false', B
+ LOCKCACHE => 'true'}
+1 row(s) in 0.1070 seconds
+          ]]></screen>
+        </example>
+      </section>
+
+      <section>
+        <title>Testing Compression Performance</title>
+        <para>HBase includes a tool called LoadTestTool which provides mechanisms to test your
+          compression performance. You must specify either <literal>-write</literal> or
+          <literal>-update-read</literal> as your first parameter, and if you do not specify another
+        parameter, usage advice is printed for each option.</para>
+        <example>
+          <title><command>LoadTestTool</command> Usage</title>
+          <screen language="bourne"><![CDATA[
+$ bin/hbase org.apache.hadoop.hbase.util.LoadTestTool -h            
+usage: bin/hbase org.apache.hadoop.hbase.util.LoadTestTool <options>
+Options:
+ -batchupdate                 Whether to use batch as opposed to separate
+                              updates for every column in a row
+ -bloom <arg>                 Bloom filter type, one of [NONE, ROW, ROWCOL]
+ -compression <arg>           Compression type, one of [LZO, GZ, NONE, SNAPPY,
+                              LZ4]
+ -data_block_encoding <arg>   Encoding algorithm (e.g. prefix compression) to
+                              use for data blocks in the test column family, one
+                              of [NONE, PREFIX, DIFF, FAST_DIFF, PREFIX_TREE].
+ -encryption <arg>            Enables transparent encryption on the test table,
+                              one of [AES]
+ -generator <arg>             The class which generates load for the tool. Any
+                              args for this class can be passed as colon
+                              separated after class name
+ -h,--help                    Show usage
+ -in_memory                   Tries to keep the HFiles of the CF inmemory as far
+                              as possible.  Not guaranteed that reads are always
+                              served from inmemory
+ -init_only                   Initialize the test table only, don't do any
+                              loading
+ -key_window <arg>            The 'key window' to maintain between reads and
+                              writes for concurrent write/read workload. The
+                              default is 0.
+ -max_read_errors <arg>       The maximum number of read errors to tolerate
+                              before terminating all reader threads. The default
+                              is 10.
+ -multiput                    Whether to use multi-puts as opposed to separate
+                              puts for every column in a row
+ -num_keys <arg>              The number of keys to read/write
+ -num_tables <arg>            A positive integer number. When a number n is
+                              speicfied, load test tool  will load n table
+                              parallely. -tn parameter value becomes table name
+                              prefix. Each table name is in format
+                              <tn>_1...<tn>_n
+ -read <arg>                  <verify_percent>[:<#threads=20>]
+ -regions_per_server <arg>    A positive integer number. When a number n is
+                              specified, load test tool will create the test
+                              table with n regions per server
+ -skip_init                   Skip the initialization; assume test table already
+                              exists
+ -start_key <arg>             The first key to read/write (a 0-based index). The
+                              default value is 0.
+ -tn <arg>                    The name of the table to read or write
+ -update <arg>                <update_percent>[:<#threads=20>][:<#whether to
+                              ignore nonce collisions=0>]
+ -write <arg>                 <avg_cols_per_key>:<avg_data_size>[:<#threads=20>]
+ -zk <arg>                    ZK quorum as comma-separated host names without
+                              port numbers
+ -zk_root <arg>               name of parent znode in zookeeper            
+          ]]></screen>
+        </example>
+        <example>
+          <title>Example Usage of LoadTestTool</title>
+          <screen language="bourne">
+$ hbase org.apache.hadoop.hbase.util.LoadTestTool -write 1:10:100 -num_keys 1000000
+          -read 100:30 -num_tables 1 -data_block_encoding NONE -tn load_test_tool_NONE
+          </screen>
+        </example>
+      </section>
+    </section>
+
+    <section xml:id="data.block.encoding.enable">
+      <title>Enable Data Block Encoding</title>
+      <para>Codecs are built into HBase so no extra configuration is needed. Codecs are enabled on a
+        table by setting the <code>DATA_BLOCK_ENCODING</code> property. Disable the table before
+        altering its DATA_BLOCK_ENCODING setting. Following is an example using HBase Shell:</para>
+      <example>
+        <title>Enable Data Block Encoding On a Table</title>
+        <screen><![CDATA[
+hbase>  disable 'test'
+hbase> alter 'test', { NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST_DIFF' }
+Updating all regions with the new schema...
+0/1 regions updated.
+1/1 regions updated.
+Done.
+0 row(s) in 2.2820 seconds
+hbase> enable 'test'
+0 row(s) in 0.1580 seconds          
+          ]]></screen>
+      </example>
+      <example>
+        <title>Verifying a ColumnFamily's Data Block Encoding</title>
+        <screen><![CDATA[
+hbase> describe 'test'
+DESCRIPTION                                          ENABLED
+ 'test', {NAME => 'cf', DATA_BLOCK_ENCODING => 'FAST true
+ _DIFF', BLOOMFILTER => 'ROW', REPLICATION_SCOPE =>
+ '0', VERSIONS => '1', COMPRESSION => 'GZ', MIN_VERS
+ IONS => '0', TTL => 'FOREVER', KEEP_DELETED_CELLS =
+ > 'false', BLOCKSIZE => '65536', IN_MEMORY => 'fals
+ e', BLOCKCACHE => 'true'}
+1 row(s) in 0.0650 seconds          
+        ]]></screen>
+      </example>
+    </section>
+  
+
+</appendix>
