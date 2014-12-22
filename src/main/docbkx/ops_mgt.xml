@@ -215,6 +215,54 @@ private static final int ERROR_EXIT_CODE = 4;</programlisting>
         <screen language="bourne">$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -t 600000</screen>
       </section>
 
+      <section>
+        <title>Running Canary in a Kerberos-enabled Cluster</title>
+        <para>To run Canary in a Kerberos-enabled cluster, configure the following two properties in
+            <filename>hbase-site.xml</filename>:</para>
+        <itemizedlist>
+          <listitem>
+            <para><code>hbase.client.keytab.file</code></para>
+          </listitem>
+          <listitem>
+            <para><code>hbase.client.kerberos.principal</code></para>
+          </listitem>
+        </itemizedlist>
+        <para>Kerberos credentials are refreshed every 30 seconds when Canary runs in daemon
+          mode.</para>
+        <para>To configure the DNS interface for the client, configure the following optional
+          properties in <filename>hbase-site.xml</filename>.</para>
+        <itemizedlist>
+          <listitem>
+            <para><code>hbase.client.dns.interface</code></para>
+          </listitem>
+          <listitem>
+            <para><code>hbase.client.dns.nameserver</code></para>
+          </listitem>
+        </itemizedlist>
+        <example>
+          <title>Canary in a Kerberos-Enabled Cluster</title>
+          <para>This example shows each of the properties with valid values.</para>
+          <programlisting language="xml"><![CDATA[
+<property>
+  <name>hbase.client.kerberos.principal</name>
+  <value>hbase/_HOST@YOUR-REALM.COM</value>
+</property>
+<property>
+  <name>hbase.client.keytab.file</name>
+  <value>/etc/hbase/conf/keytab.krb5</value>
+</property>
+<!-- optional params -->
+property>
+  <name>hbase.client.dns.interface</name>
+  <value>default</value>
+</property>
+<property>
+  <name>hbase.client.dns.nameserver</name>
+  <value>default</value>
+</property>
+    ]]></programlisting>
+        </example>
+      </section>
     </section>
 
     <section
