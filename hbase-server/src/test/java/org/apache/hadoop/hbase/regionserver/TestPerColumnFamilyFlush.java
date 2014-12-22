@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
@@ -40,22 +39,14 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
-import org.apache.hadoop.hbase.regionserver.DefaultMemStore;
-import org.apache.hadoop.hbase.regionserver.FlushAllStoresPolicy;
-import org.apache.hadoop.hbase.regionserver.FlushLargeStoresPolicy;
-import org.apache.hadoop.hbase.regionserver.FlushPolicy;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -134,10 +125,8 @@ public class TestPerColumnFamilyFlush {
     // Set up the configuration
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 200 * 1024);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-      FlushLargeStoresPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND,
-      100 * 1024);
+    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushLargeStoresPolicy.class.getName());
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND, 100 * 1024);
     // Intialize the HRegion
     initHRegion("testSelectiveFlushWhenEnabled", conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
@@ -342,8 +331,7 @@ public class TestPerColumnFamilyFlush {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 20000);
     // Carefully chosen limits so that the memstore just flushes when we're done
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-      FlushLargeStoresPolicy.class.getName());
+    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushLargeStoresPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND, 10000);
     final int numRegionServers = 4;
     TEST_UTIL.startMiniCluster(numRegionServers);
@@ -440,8 +428,7 @@ public class TestPerColumnFamilyFlush {
   public void testFlushingWhenLogRolling() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 300000);
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-      FlushLargeStoresPolicy.class.getName());
+    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushLargeStoresPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND, 100000);
 
     // Also, let us try real hard to get a log roll to happen.
@@ -503,7 +490,8 @@ public class TestPerColumnFamilyFlush {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private void doPut(HTableInterface table) throws IOException {
+  private void doPut(Table table, long memstoreFlushSize) throws IOException, InterruptedException {
+    HRegion region = getRegionWithName(table.getName()).getFirst();
     // cf1 4B per row, cf2 40B per row and cf3 400B per row
     byte[] qf = Bytes.toBytes("qf");
     Random rand = new Random();
@@ -520,6 +508,10 @@ public class TestPerColumnFamilyFlush {
       put.add(FAMILY2, qf, value2);
       put.add(FAMILY3, qf, value3);
       table.put(put);
+      // slow down to let regionserver flush region.
+      while (region.getMemstoreSize().get() > memstoreFlushSize) {
+        Thread.sleep(100);
+      }
     }
   }
 
@@ -527,11 +519,11 @@ public class TestPerColumnFamilyFlush {
   // percolumnfamilyflush enabled.
   @Test
   public void testCompareStoreFileCount() throws Exception {
+    long memstoreFlushSize = 1024L * 1024;
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
+    conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, memstoreFlushSize);
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllStoresPolicy.class.getName());
-    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND,
-      400 * 1024);
+    conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND, 400 * 1024);
     conf.setInt(HStore.BLOCKING_STOREFILES_KEY, 10000);
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
@@ -548,9 +540,9 @@ public class TestPerColumnFamilyFlush {
       NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
     TEST_UTIL.getHBaseAdmin().createTable(htd);
     getRegionWithName(TABLENAME).getFirst();
-    HConnection conn = HConnectionManager.createConnection(conf);
-    HTableInterface table = conn.getTable(TABLENAME);
-    doPut(table);
+    Connection conn = ConnectionFactory.createConnection(conf);
+    Table table = conn.getTable(TABLENAME);
+    doPut(table, memstoreFlushSize);
     table.close();
     conn.close();
 
@@ -561,15 +553,14 @@ public class TestPerColumnFamilyFlush {
     TEST_UTIL.shutdownMiniCluster();
 
     LOG.info("==============Test with selective flush enabled===============");
-    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
-      FlushLargeStoresPolicy.class.getName());
+    conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushLargeStoresPolicy.class.getName());
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getHBaseAdmin().createNamespace(
       NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
     TEST_UTIL.getHBaseAdmin().createTable(htd);
-    conn = HConnectionManager.createConnection(conf);
+    conn = ConnectionFactory.createConnection(conf);
     table = conn.getTable(TABLENAME);
-    doPut(table);
+    doPut(table, memstoreFlushSize);
     table.close();
     conn.close();
 
@@ -602,8 +593,8 @@ public class TestPerColumnFamilyFlush {
     htd.addFamily(new HColumnDescriptor(FAMILY3));
 
     Configuration conf = HBaseConfiguration.create();
-    HConnection conn = HConnectionManager.createConnection(conf);
-    HBaseAdmin admin = new HBaseAdmin(conn);
+    Connection conn = ConnectionFactory.createConnection(conf);
+    Admin admin = conn.getAdmin();
     if (admin.tableExists(TABLENAME)) {
       admin.disableTable(TABLENAME);
       admin.deleteTable(TABLENAME);
@@ -618,7 +609,7 @@ public class TestPerColumnFamilyFlush {
     }
     admin.close();
 
-    HTableInterface table = conn.getTable(TABLENAME);
+    Table table = conn.getTable(TABLENAME);
     byte[] qf = Bytes.toBytes("qf");
     Random rand = new Random();
     byte[] value1 = new byte[16];
