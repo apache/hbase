@@ -926,7 +926,7 @@ stopping hbase...............</screen>
       <xi:include
         xmlns:xi="http://www.w3.org/2001/XInclude"
         href="hbase-default.xml">
-	<!--<xi:fallback>
+	<xi:fallback>
           <section
             xml:id="hbase_default_configurations">
             <title />
@@ -1007,7 +1007,7 @@ stopping hbase...............</screen>
               </section>
             </section>
           </section>
-	</xi:fallback>-->
+	</xi:fallback>
       </xi:include>
     </section>
 
