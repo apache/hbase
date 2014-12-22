@@ -253,8 +253,6 @@ public class ClusterStatusPublisher extends Chore {
 
     @Override
     public void connect(Configuration conf) throws IOException {
-      NetworkInterface ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
-
       String mcAddress = conf.get(HConstants.STATUS_MULTICAST_ADDRESS,
           HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
       int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
@@ -269,13 +267,19 @@ public class ClusterStatusPublisher extends Chore {
       }
 
       final InetSocketAddress isa = new InetSocketAddress(mcAddress, port);
-      InternetProtocolFamily family = InternetProtocolFamily.IPv4;
+
+      InternetProtocolFamily family;
+      InetAddress localAddress;
       if (ina instanceof Inet6Address) {
+        localAddress = Addressing.getIp6Address();
         family = InternetProtocolFamily.IPv6;
+      }else{
+        localAddress = Addressing.getIp4Address();
+        family = InternetProtocolFamily.IPv4;
       }
+      NetworkInterface ni = NetworkInterface.getByInetAddress(localAddress);
 
       Bootstrap b = new Bootstrap();
-
       b.group(group)
       .channelFactory(new HBaseDatagramChannelFactory<Channel>(NioDatagramChannel.class, family))
       .option(ChannelOption.SO_REUSEADDR, true)

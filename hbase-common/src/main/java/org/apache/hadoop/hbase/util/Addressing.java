@@ -83,6 +83,34 @@ public class Addressing {
   }
 
   public static InetAddress getIpAddress() throws SocketException {
+    return getIpAddress(new AddressSelectionCondition() {
+      @Override
+      public boolean isAcceptableAddress(InetAddress addr) {
+        return addr instanceof Inet4Address || addr instanceof Inet6Address;
+      }
+    });
+  }
+
+  public static InetAddress getIp4Address() throws SocketException {
+    return getIpAddress(new AddressSelectionCondition() {
+      @Override
+      public boolean isAcceptableAddress(InetAddress addr) {
+        return addr instanceof Inet4Address;
+      }
+    });
+  }
+
+  public static InetAddress getIp6Address() throws SocketException {
+    return getIpAddress(new AddressSelectionCondition() {
+      @Override
+      public boolean isAcceptableAddress(InetAddress addr) {
+        return addr instanceof Inet6Address;
+      }
+    });
+  }
+
+  private static InetAddress getIpAddress(AddressSelectionCondition condition) throws
+      SocketException {
     // Before we connect somewhere, we cannot be sure about what we'd be bound to; however,
     // we only connect when the message where client ID is, is long constructed. Thus,
     // just use whichever IP address we can find.
@@ -94,7 +122,7 @@ public class Addressing {
       while (addresses.hasMoreElements()) {
         InetAddress addr = addresses.nextElement();
         if (addr.isLoopbackAddress()) continue;
-        if (addr instanceof Inet4Address || addr instanceof Inet6Address) {
+        if (condition.isAcceptableAddress(addr)) {
           return addr;
         }
       }
@@ -122,5 +150,17 @@ public class Addressing {
       }
     }
     return local;
+  }
+
+  /**
+   * Interface for AddressSelectionCondition to check if address is acceptable
+   */
+  public interface AddressSelectionCondition{
+    /**
+     * Condition on which to accept inet address
+     * @param address to check
+     * @return true to accept this address
+     */
+    public boolean isAcceptableAddress(InetAddress address);
   }
 }
