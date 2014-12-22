@@ -1644,7 +1644,7 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
         <listitem>
           <para>On the source cluster, in HBase Shell, add the destination cluster as a peer, using
             the <code>add_peer</code> command. The syntax is as follows:</para>
-          <screen>hbase&lt; add_peer 'ID' 'CLUSTER_KEY'</screen>
+          <screen>hbase> add_peer 'ID' 'CLUSTER_KEY'</screen>
           <para>The ID is a string (prior to <link
               xlink:href="https://issues.apache.org/jira/browse/HBASE-11367">HBASE-11367</link>, it
             was a short integer), which <emphasis>must not contain a hyphen</emphasis> (see <link

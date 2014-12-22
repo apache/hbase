@@ -1285,7 +1285,7 @@ public static void verifyAllowed(User user, AccessTestAction action, int count) 
             <title>Define the List of Visibility Labels</title>
             <example>
               <title>HBase Shell</title>
-              <screen>hbase&lt; <userinput>add_labels [ 'admin', 'service', 'developer', 'test' ]</userinput></screen>
+              <screen>hbase&gt; <userinput>add_labels [ 'admin', 'service', 'developer', 'test' ]</userinput></screen>
             </example>
             <example>
               <title>Java API</title>
@@ -1313,9 +1313,9 @@ public static void addLabels() throws Exception {
             <title>Associate Labels with Users</title>
             <example>
               <title>HBase Shell</title>
-              <screen>hbase&lt; <userinput>set_auths 'service', [ 'service' ]</userinput></screen>
-              <screen>hbase&lt; <userinput>set_auths 'testuser', [ 'test' ]</userinput></screen>
-              <screen>hbase&lt; <userinput>set_auths 'qa', [ 'test', 'developer' ]</userinput></screen>
+              <screen>hbase&gt; <userinput>set_auths 'service', [ 'service' ]</userinput></screen>
+              <screen>gbase&gt; <userinput>set_auths 'testuser', [ 'test' ]</userinput></screen>
+              <screen>hbase&gt; <userinput>set_auths 'qa', [ 'test', 'developer' ]</userinput></screen>
             </example>
             <example>
               <title>Java API</title>
@@ -1339,9 +1339,9 @@ public void testSetAndGetUserAuths() throws Throwable {
             <title>Clear Labels From Users</title>
             <example>
               <title>HBase Shell</title>
-              <screen>hbase&lt; <userinput>clear_auths 'service', [ 'service' ]</userinput></screen>
-              <screen>hbase&lt; <userinput>clear_auths 'testuser', [ 'test' ]</userinput></screen>
-              <screen>hbase&lt; <userinput>clear_auths 'qa', [ 'test', 'developer' ]</userinput></screen>
+              <screen>hbase&gt; <userinput>clear_auths 'service', [ 'service' ]</userinput></screen>
+              <screen>hbase&gt; <userinput>clear_auths 'testuser', [ 'test' ]</userinput></screen>
+              <screen>hbase&gt; <userinput>clear_auths 'qa', [ 'test', 'developer' ]</userinput></screen>
             </example>
             <example>
               <title>Java API</title>
@@ -1363,11 +1363,11 @@ try {
               given version of the cell.</para>
             <example>
               <title>HBase Shell</title>
-              <screen>hbase&lt; <userinput>set_visibility 'user', 'admin|service|developer', \
+              <screen>hbase&gt; <userinput>set_visibility 'user', 'admin|service|developer', \
   { COLUMNS => 'i' }</userinput></screen>
-              <screen>hbase&lt; <userinput>set_visibility 'user', 'admin|service', \
+              <screen>hbase&gt; <userinput>set_visibility 'user', 'admin|service', \
   { COLUMNS => ' pii' }</userinput></screen>
-              <screen>hbase&lt; <userinput>COLUMNS => [ 'i', 'pii' ], \
+              <screen>hbase&gt; <userinput>COLUMNS => [ 'i', 'pii' ], \
     FILTER => "(PrefixFilter ('test'))" }</userinput></screen>
             </example>
             <note>
