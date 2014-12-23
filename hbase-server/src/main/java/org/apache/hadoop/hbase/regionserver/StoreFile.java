@@ -162,9 +162,6 @@ public class StoreFile {
    */
   private final BloomType cfBloomType;
 
-  // the last modification time stamp
-  private long modificationTimeStamp = 0L;
-
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a
    * substantial amount of ram depending on the underlying files (10-20MB?).
@@ -214,9 +211,6 @@ public class StoreFile {
           "cfBloomType=" + cfBloomType + " (disabled in config)");
       this.cfBloomType = BloomType.NONE;
     }
-
-    // cache the modification time stamp of this store file
-    this.modificationTimeStamp = fileInfo.getModificationTime();
   }
 
   /**
@@ -228,7 +222,6 @@ public class StoreFile {
     this.fileInfo = other.fileInfo;
     this.cacheConf = other.cacheConf;
     this.cfBloomType = other.cfBloomType;
-    this.modificationTimeStamp = other.modificationTimeStamp;
   }
 
   /**
@@ -285,10 +278,15 @@ public class StoreFile {
     return this.sequenceid;
   }
 
-  public long getModificationTimeStamp() {
-    return modificationTimeStamp;
+  public long getModificationTimeStamp() throws IOException {
+    return (fileInfo == null) ? 0 : fileInfo.getModificationTime();
   }
 
+  /**
+   * Only used by the Striped Compaction Policy
+   * @param key
+   * @return value associated with the metadata key
+   */
   public byte[] getMetadataValue(byte[] key) {
     return metadataMap.get(key);
   }

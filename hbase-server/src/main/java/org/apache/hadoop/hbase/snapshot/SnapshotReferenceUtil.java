@@ -273,7 +273,7 @@ public final class SnapshotReferenceUtil {
       refPath = StoreFileInfo.getReferredToFile(refPath);
       String refRegion = refPath.getParent().getParent().getName();
       refPath = HFileLink.createPath(table, refRegion, family, refPath.getName());
-      if (!new HFileLink(conf, refPath).exists(fs)) {
+      if (!HFileLink.buildFromHFileLinkPattern(conf, refPath).exists(fs)) {
         throw new CorruptedSnapshotException("Missing parent hfile for: " + fileName +
           " path=" + refPath, snapshot);
       }
@@ -292,11 +292,11 @@ public final class SnapshotReferenceUtil {
       linkPath = new Path(family, fileName);
     } else {
       linkPath = new Path(family, HFileLink.createHFileLinkName(
-        table, regionInfo.getEncodedName(), fileName));
+              table, regionInfo.getEncodedName(), fileName));
     }
 
     // check if the linked file exists (in the archive, or in the table dir)
-    HFileLink link = new HFileLink(conf, linkPath);
+    HFileLink link = HFileLink.buildFromHFileLinkPattern(conf, linkPath);
     try {
       FileStatus fstat = link.getFileStatus(fs);
       if (storeFile.hasFileSize() && storeFile.getFileSize() != fstat.getLen()) {

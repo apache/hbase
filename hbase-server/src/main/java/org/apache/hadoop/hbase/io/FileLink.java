@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.hbase.io;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileNotFoundException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -137,12 +139,12 @@ public class FileLink {
     }
 
     @Override
-    public int read(byte b[]) throws IOException {
+    public int read(byte[] b) throws IOException {
        return read(b, 0, b.length);
     }
 
     @Override
-    public int read(byte b[], int off, int len) throws IOException {
+    public int read(byte[] b, int off, int len) throws IOException {
       int n;
       try {
         n = in.read(b, off, len);
@@ -422,9 +424,18 @@ public class FileLink {
    */
   protected void setLocations(Path originPath, Path... alternativePaths) {
     assert this.locations == null : "Link locations already set";
-    this.locations = new Path[1 + alternativePaths.length];
-    this.locations[0] = originPath;
-    System.arraycopy(alternativePaths, 0, this.locations, 1, alternativePaths.length);
+
+    List<Path> paths = new ArrayList<Path>(alternativePaths.length +1);
+    if (originPath != null) {
+      paths.add(originPath);
+    }
+
+    for (int i = 0; i < alternativePaths.length; i++) {
+      if (alternativePaths[i] != null) {
+        paths.add(alternativePaths[i]);
+      }
+    }
+    this.locations = paths.toArray(new Path[0]);
   }
 
   /**
