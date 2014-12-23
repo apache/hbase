@@ -1,5 +1,23 @@
 package org.apache.hadoop.hbase.consensus.quorum;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.NoLeaderForRegionException;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.consensus.exceptions.CommitQueueOverloadedException;
+import org.apache.hadoop.hbase.consensus.exceptions.NewLeaderException;
+import org.apache.hadoop.hbase.consensus.metrics.ConsensusMetrics;
+import org.apache.hadoop.hbase.consensus.protocol.ConsensusHost;
+import org.apache.hadoop.hbase.consensus.raft.events.ReplicateEntriesEvent;
+import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.metrics.TimeStat;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.DaemonThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -13,26 +31,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.NoLeaderForRegionException;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.consensus.exceptions.CommitQueueOverloadedException;
-import org.apache.hadoop.hbase.consensus.exceptions.NewLeaderException;
-import org.apache.hadoop.hbase.consensus.metrics.ConsensusMetrics;
-import org.apache.hadoop.hbase.consensus.protocol.ConsensusHost;
-import org.apache.hadoop.hbase.consensus.raft.events.ReplicateEntriesEvent;
-import org.apache.hadoop.hbase.io.hfile.Compression;
-import org.apache.hadoop.hbase.metrics.TimeStat;
-import org.apache.hadoop.hbase.regionserver.wal.AbstractWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.DaemonThreadFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 
 /**
  * This is an agent that runs on the RaftQuorumContext side, and it is
@@ -248,7 +246,6 @@ public class QuorumAgent implements ConfigurationObserver {
     checkBeforeCommit();
 
     // increase the write size
-    AbstractWAL.getWriteSizeHistogram().addValue(edits.getTotalKeyValueLength());
 
     long start = System.nanoTime();
     ListenableFuture<Long> future = internalCommit(edits);
@@ -260,7 +257,6 @@ public class QuorumAgent implements ConfigurationObserver {
       double syncMicros = (System.nanoTime() - start) / 1000.0;
       getRaftQuorumContext().getConsensusMetrics().getFsSyncLatency()
         .add((long)syncMicros, TimeUnit.MICROSECONDS);
-      AbstractWAL.getSyncTimeHistogram().addValue(syncMicros);
       return seq;
     } catch (Exception e) {
       throw new IOException(e);
@@ -438,7 +434,6 @@ public class QuorumAgent implements ConfigurationObserver {
             double gsyncMicros = (System.nanoTime() - start) / 1000.0;
             getRaftQuorumContext().getConsensusMetrics().getFsGSyncLatency()
               .add((long) gsyncMicros, TimeUnit.MICROSECONDS);
-            AbstractWAL.getGSyncTimeHistogram().addValue(gsyncMicros);
           } catch (Throwable e) {
             LOG.error("Unexpected exception: ", e);
           }
