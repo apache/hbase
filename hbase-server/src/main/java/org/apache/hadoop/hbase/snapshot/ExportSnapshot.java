@@ -391,13 +391,14 @@ public class ExportSnapshot extends Configured implements Tool {
      * if the file is not found.
      */
     private FSDataInputStream openSourceFile(Context context, final SnapshotFileInfo fileInfo)
-        throws IOException {
+            throws IOException {
       try {
+        Configuration conf = context.getConfiguration();
         FileLink link = null;
         switch (fileInfo.getType()) {
           case HFILE:
             Path inputPath = new Path(fileInfo.getHfile());
-            link = new HFileLink(inputRoot, inputArchive, inputPath);
+            link = HFileLink.buildFromHFileLinkPattern(conf, inputPath);
             break;
           case WAL:
             String serverName = fileInfo.getWalServer();
@@ -418,11 +419,12 @@ public class ExportSnapshot extends Configured implements Tool {
     private FileStatus getSourceFileStatus(Context context, final SnapshotFileInfo fileInfo)
         throws IOException {
       try {
+        Configuration conf = context.getConfiguration();
         FileLink link = null;
         switch (fileInfo.getType()) {
           case HFILE:
             Path inputPath = new Path(fileInfo.getHfile());
-            link = new HFileLink(inputRoot, inputArchive, inputPath);
+            link = HFileLink.buildFromHFileLinkPattern(conf, inputPath);
             break;
           case WAL:
             link = new WALLink(inputRoot, fileInfo.getWalServer(), fileInfo.getWalName());
@@ -510,7 +512,7 @@ public class ExportSnapshot extends Configured implements Tool {
             if (storeFile.hasFileSize()) {
               size = storeFile.getFileSize();
             } else {
-              size = new HFileLink(conf, path).getFileStatus(fs).getLen();
+              size = HFileLink.buildFromHFileLinkPattern(conf, path).getFileStatus(fs).getLen();
             }
             files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
           }

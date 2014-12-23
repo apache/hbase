@@ -618,7 +618,7 @@ public class RestoreSnapshotHelper {
     } else {
       InputStream in;
       if (linkPath != null) {
-        in = new HFileLink(conf, linkPath).open(fs);
+        in = HFileLink.buildFromHFileLinkPattern(conf, linkPath).open(fs);
       } else {
         linkPath = new Path(new Path(HRegion.getRegionDir(snapshotManifest.getSnapshotDir(),
                         regionInfo.getEncodedName()), familyDir.getName()), hfileName);

@@ -365,7 +365,7 @@ public class HFileV1Detector extends Configured implements Tool {
    * @throws IOException
    */
   public FileLink getFileLinkWithPreNSPath(Path storeFilePath) throws IOException {
-    HFileLink link = new HFileLink(getConf(), storeFilePath);
+    HFileLink link = HFileLink.buildFromHFileLinkPattern(getConf(), storeFilePath);
     List<Path> pathsToProcess = getPreNSPathsForHFileLink(link);
     pathsToProcess.addAll(Arrays.asList(link.getLocations()));
     return new FileLink(pathsToProcess);
@@ -383,7 +383,7 @@ public class HFileV1Detector extends Configured implements Tool {
 
   /**
    * Removes the prefix of defaultNamespace from the path.
-   * @param originPath
+   * @param originalPath
    */
   private String removeDefaultNSPath(Path originalPath) {
     String pathStr = originalPath.toString();

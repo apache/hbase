@@ -424,7 +424,7 @@ public class SnapshotTestingUtils {
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
         String region = regionInfo.getEncodedName();
         String hfile = storeFile.getName();
-        HFileLink link = HFileLink.create(conf, table, region, family, hfile);
+        HFileLink link = HFileLink.build(conf, table, region, family, hfile);
         if (corruptedFiles.size() % 2 == 0) {
           fs.delete(link.getAvailablePath(fs), true);
           corruptedFiles.add(hfile);

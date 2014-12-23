@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * Describe a StoreFile (hfile, reference, link)
  */
 @InterfaceAudience.Private
-public class StoreFileInfo implements Comparable<StoreFileInfo> {
+public class StoreFileInfo {
   public static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
 
   /**
@@ -70,6 +70,9 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
   // Configuration
   private Configuration conf;
 
+  // FileSystem handle
+  private final FileSystem fs;
+
   // HDFS blocks distribution information
   private HDFSBlocksDistribution hdfsBlocksDistribution = null;
 
@@ -79,8 +82,7 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
   // If this storefile is a link to another, this is the link instance.
   private final HFileLink link;
 
-  // FileSystem information for the file.
-  private final FileStatus fileStatus;
+  private final Path initialPath;
 
   private RegionCoprocessorHost coprocessorHost;
 
@@ -88,11 +90,42 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
    * Create a Store File Info
    * @param conf the {@link Configuration} to use
    * @param fs The current file system to use.
-   * @param path The {@link Path} of the file
+   * @param initialPath The {@link Path} of the file
    */
-  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path path)
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final Path initialPath)
       throws IOException {
-    this(conf, fs, fs.getFileStatus(path));
+    assert fs != null;
+    assert initialPath != null;
+    assert conf != null;
+
+    this.fs = fs;
+    this.conf = conf;
+    this.initialPath = initialPath;
+    Path p = initialPath;
+    if (HFileLink.isHFileLink(p)) {
+      // HFileLink
+      this.reference = null;
+      this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
+      if (LOG.isTraceEnabled()) LOG.trace(p + " is a link");
+    } else if (isReference(p)) {
+      this.reference = Reference.read(fs, p);
+      Path referencePath = getReferredToFile(p);
+      if (HFileLink.isHFileLink(referencePath)) {
+        // HFileLink Reference
+        this.link = HFileLink.buildFromHFileLinkPattern(conf, referencePath);
+      } else {
+        // Reference
+        this.link = null;
+      }
+      if (LOG.isTraceEnabled()) LOG.trace(p + " is a " + reference.getFileRegion() +
+              " reference to " + referencePath);
+    } else if (isHFile(p)) {
+      // HFile
+      this.reference = null;
+      this.link = null;
+    } else {
+      throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
+    }
   }
 
   /**
@@ -103,33 +136,7 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
    */
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus)
       throws IOException {
-    this.conf = conf;
-    this.fileStatus = fileStatus;
-    Path p = fileStatus.getPath();
-    if (HFileLink.isHFileLink(p)) {
-      // HFileLink
-      this.reference = null;
-      this.link = new HFileLink(conf, p);
-      if (LOG.isTraceEnabled()) LOG.trace(p + " is a link");
-    } else if (isReference(p)) {
-      this.reference = Reference.read(fs, p);
-      Path referencePath = getReferredToFile(p);
-      if (HFileLink.isHFileLink(referencePath)) {
-        // HFileLink Reference
-        this.link = new HFileLink(conf, referencePath);
-      } else {
-        // Reference
-        this.link = null;
-      }
-      if (LOG.isTraceEnabled()) LOG.trace(p + " is a " + reference.getFileRegion() +
-        " reference to " + referencePath);
-    } else if (isHFile(p)) {
-      // HFile
-      this.reference = null;
-      this.link = null;
-    } else {
-      throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
-    }
+    this(conf, fs, fileStatus.getPath());
   }
 
   /**
@@ -141,8 +148,10 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
   public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
       final HFileLink link)
       throws IOException {
+    this.fs = fs;
     this.conf = conf;
-    this.fileStatus = fileStatus;
+    // initialPath can be null only if we get a link.
+    this.initialPath = (fileStatus == null) ? null : fileStatus.getPath();
       // HFileLink
     this.reference = null;
     this.link = link;
@@ -206,7 +215,7 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
       status = fs.getFileStatus(referencePath);
     } else {
       in = new FSDataInputStreamWrapper(fs, this.getPath());
-      status = fileStatus;
+      status = fs.getFileStatus(initialPath);
     }
     long length = status.getLen();
     hdfsBlocksDistribution = computeHDFSBlocksDistribution(fs);
@@ -221,7 +230,7 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
         reader = new HalfStoreFileReader(fs, this.getPath(), in, length, cacheConf, reference,
           conf);
       } else {
-        reader = new StoreFile.Reader(fs, this.getPath(), in, length, cacheConf, conf);
+        reader = new StoreFile.Reader(fs, status.getPath(), in, length, cacheConf, conf);
       }
     }
     if (this.coprocessorHost != null) {
@@ -237,7 +246,7 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
   public HDFSBlocksDistribution computeHDFSBlocksDistribution(final FileSystem fs)
       throws IOException {
 
-    // guard agains the case where we get the FileStatus from link, but by the time we
+    // guard against the case where we get the FileStatus from link, but by the time we
     // call compute the file is moved again
     if (this.link != null) {
       FileNotFoundException exToThrow = null;
@@ -304,7 +313,7 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
         }
         throw exToThrow;
       } else {
-        status = this.fileStatus;
+        status = fs.getFileStatus(initialPath);
       }
     }
     return status;
@@ -312,17 +321,17 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
 
   /** @return The {@link Path} of the file */
   public Path getPath() {
-    return this.fileStatus.getPath();
+    return initialPath;
   }
 
   /** @return The {@link FileStatus} of the file */
-  public FileStatus getFileStatus() {
-    return this.fileStatus;
+  public FileStatus getFileStatus() throws IOException {
+    return getReferencedFileStatus(fs);
   }
 
   /** @return Get the modification time of the file. */
-  public long getModificationTime() {
-    return this.fileStatus.getModificationTime();
+  public long getModificationTime() throws IOException {
+    return getFileStatus().getModificationTime();
   }
 
   @Override
@@ -458,24 +467,36 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
 
   @Override
   public boolean equals(Object that) {
-    if (that == null) {
-      return false;
-    }
+    if (this == that) return true;
+    if (that == null) return false;
 
-    if (that instanceof StoreFileInfo) {
-      return this.compareTo((StoreFileInfo)that) == 0;
-    }
+    if (!(that instanceof StoreFileInfo)) return false;
 
-    return false;
+    StoreFileInfo o = (StoreFileInfo)that;
+    if (initialPath != null && o.initialPath == null) return false;
+    if (initialPath == null && o.initialPath != null) return false;
+    if (initialPath != o.initialPath && initialPath != null
+            && !initialPath.equals(o.initialPath)) return false;
+
+    if (reference != null && o.reference == null) return false;
+    if (reference == null && o.reference != null) return false;
+    if (reference != o.reference && reference != null
+            && !reference.equals(o.reference)) return false;
+
+    if (link != null && o.link == null) return false;
+    if (link == null && o.link != null) return false;
+    if (link != o.link && link != null && !link.equals(o.link)) return false;
+
+    return true;
   };
 
-  @Override
-  public int compareTo(StoreFileInfo o) {
-    return this.fileStatus.compareTo(o.fileStatus);
-  }
 
   @Override
   public int hashCode() {
-    return this.fileStatus.hashCode();
+    int hash = 17;
+    hash = hash * 31 + ((reference == null) ? 0 : reference.hashCode());
+    hash = hash * 31 + ((initialPath ==  null) ? 0 : initialPath.hashCode());
+    hash = hash * 31 + ((link == null) ? 0 : link.hashCode());
+    return  hash;
   }
 }

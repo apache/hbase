@@ -84,9 +84,8 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     }
 
     // else create a store file link. The link file does not exists on filesystem though.
-    HFileLink link = new HFileLink(conf,
-      HFileLink.createPath(regionInfoForFs.getTable(), regionInfoForFs.getEncodedName()
-        , familyName, status.getPath().getName()));
+    HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
+            regionInfoForFs.getEncodedName(), familyName, status.getPath().getName());
     return new StoreFileInfo(conf, fs, status, link);
   }
 

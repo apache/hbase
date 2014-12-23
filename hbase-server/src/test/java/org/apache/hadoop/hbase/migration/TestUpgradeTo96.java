@@ -202,7 +202,8 @@ public class TestUpgradeTo96 {
     boolean preNSArchivePathExists = false;
     boolean preNSTempPathExists = false;
     assertTrue(HFileLink.isHFileLink(aFileLink));
-    HFileLink hFileLink = new HFileLink(TEST_UTIL.getConfiguration(), aFileLink);
+    HFileLink hFileLink = 
+      HFileLink.buildFromHFileLinkPattern(TEST_UTIL.getConfiguration(), aFileLink);
     assertTrue(hFileLink.getArchivePath().toString().startsWith(rootDir.toString()));
 
     HFileV1Detector t = new HFileV1Detector();
