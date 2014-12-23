@@ -40,7 +40,7 @@ public class HbckTestingUtil {
 
   public static HBaseFsck doFsck(
       Configuration conf, boolean fix, TableName table) throws Exception {
-    return doFsck(conf, fix, fix, fix, fix,fix, fix, fix, fix, fix, fix, table);
+    return doFsck(conf, fix, fix, fix, fix, fix, fix, fix, fix, fix, fix, table);
   }
 
   public static HBaseFsck doFsck(Configuration conf, boolean fixAssignments,
@@ -66,6 +66,7 @@ public class HbckTestingUtil {
       fsck.includeTable(table);
     }
     fsck.onlineHbck();
+    fsck.close();
     return fsck;
   }
 
