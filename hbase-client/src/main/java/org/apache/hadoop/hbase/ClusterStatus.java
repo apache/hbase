@@ -160,7 +160,7 @@ public class ClusterStatus extends VersionedWritable {
   public int getRequestsCount() {
     int count = 0;
     for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-      count += e.getValue().getTotalNumberOfRequests();
+      count += e.getValue().getNumberOfRequests();
     }
     return count;
   }
