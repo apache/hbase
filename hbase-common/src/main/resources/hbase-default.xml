@@ -300,14 +300,6 @@ possible configurations would overwhelm and obscure the important.
       blocked due to memstore limiting.</description>
   </property>
   <property>
-    <name>hbase.regionserver.global.memstore.size</name>
-    <value>0.4</value>
-    <description>Maximum size of all memstores in a region server before new updates are blocked 
-      and flushes are forced. Defaults to 40% of heap (0.4). Updates are blocked and region level
-      flushes are forced until size of all memstores in a region server hits 
-      hbase.regionserver.global.memstore.lowerLimit.</description>
-  </property>
-  <property>
     <name>hbase.regionserver.optionalcacheflushinterval</name>
     <value>3600000</value>
     <description>
