@@ -89,6 +89,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   protected boolean isRegionServerRemote = true;
   private long nextCallSeq = 0;
   protected RpcControllerFactory controllerFactory;
+  protected PayloadCarryingRpcController controller;
 
   /**
    * @param connection which connection
@@ -122,6 +123,10 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     logScannerActivity = conf.getBoolean(LOG_SCANNER_ACTIVITY, false);
     logCutOffLatency = conf.getInt(LOG_SCANNER_LATENCY_CUTOFF, 1000);
     this.controllerFactory = rpcControllerFactory;
+  }
+
+  PayloadCarryingRpcController getController() {
+    return controller;
   }
 
   /**
@@ -192,7 +197,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           incRPCcallsMetrics();
           request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
-          PayloadCarryingRpcController controller = controllerFactory.newController();
+          controller = controllerFactory.newController();
           controller.setPriority(getTableName());
           controller.setCallTimeout(callTimeout);
           try {
