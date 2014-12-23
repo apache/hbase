@@ -56,6 +56,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
 
   // Identifier for this watcher (for logging only).  It is made of the prefix
   // passed on construction and the zookeeper sessionid.
+  private String prefix;
   private String identifier;
 
   // zookeeper quorum
@@ -147,7 +148,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
     // Identifier will get the sessionid appended later below down when we
     // handle the syncconnect event.
-    this.identifier = descriptor;
+    this.prefix = descriptor;
+    this.identifier = descriptor + "0x0";
     this.abortable = abortable;
     setNodeNames(conf);
     this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, this, descriptor);
@@ -365,7 +367,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
             this.constructorCaller);
           throw new NullPointerException("ZK is null");
         }
-        this.identifier = this.identifier + "-0x" +
+        this.identifier = this.prefix + "-0x" +
           Long.toHexString(this.recoverableZooKeeper.getSessionId());
         // Update our identifier.  Otherwise ignore.
         LOG.debug(this.identifier + " connected");
@@ -459,7 +461,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   public void abort(String why, Throwable e) {
     this.abortable.abort(why, e);
   }
-  
+
   @Override
   public boolean isAborted() {
     return this.abortable.isAborted();
