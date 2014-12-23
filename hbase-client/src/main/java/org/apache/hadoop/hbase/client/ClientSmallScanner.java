@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -169,7 +168,7 @@ public class ClientSmallScanner extends ClientScanner {
       ScanRequest request = RequestConverter.buildScanRequest(getLocation()
           .getRegionInfo().getRegionName(), getScan(), getCaching(), true);
       ScanResponse response = null;
-      PayloadCarryingRpcController controller = controllerFactory.newController();
+      controller = controllerFactory.newController();
       try {
         controller.setPriority(getTableName());
         controller.setCallTimeout(timeout);
@@ -183,8 +182,8 @@ public class ClientSmallScanner extends ClientScanner {
 
     @Override
     public ScannerCallable getScannerCallableForReplica(int id) {
-      return new SmallScannerCallable((ClusterConnection)connection, tableName, getScan(), scanMetrics,
-        controllerFactory, getCaching(), id);
+      return new SmallScannerCallable((ClusterConnection)connection, tableName, getScan(),
+          scanMetrics, controllerFactory, getCaching(), id);
     }
   }
 

@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Implements the scanner interface for the HBase client.
  * If there are multiple regions in a table, this scanner will iterate
@@ -274,6 +276,11 @@ public class ClientScanner extends AbstractClientScanner {
       }
       return true;
     }
+
+  @VisibleForTesting
+  boolean isAnyRPCcancelled() {
+    return callable.isAnyRPCcancelled();
+  }
 
   static Result[] call(Scan scan, ScannerCallableWithReplicas callable,
       RpcRetryingCaller<Result[]> caller, int scannerTimeout)

@@ -539,6 +539,54 @@ public class TestReplicasClient {
     runMultipleScansOfOneType(true, false);
   }
 
+  @Test
+  public void testCancelOfScan() throws Exception {
+    openRegion(hriSecondary);
+    int NUMROWS = 100;
+    try {
+      for (int i = 0; i < NUMROWS; i++) {
+        byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
+        Put p = new Put(b1);
+        p.add(f, b1, b1);
+        table.put(p);
+      }
+      LOG.debug("PUT done");
+      int caching = 20;
+      byte[] start;
+      start = Bytes.toBytes("testUseRegionWithReplica" + 0);
+
+      flushRegion(hriPrimary);
+      LOG.info("flush done");
+      Thread.sleep(1000 + REFRESH_PERIOD * 2);
+
+      // now make some 'next' calls slow
+      SlowMeCopro.slowDownNext.set(true);
+      SlowMeCopro.countOfNext.set(0);
+      SlowMeCopro.sleepTime.set(5000);
+
+      Scan scan = new Scan(start);
+      scan.setCaching(caching);
+      scan.setConsistency(Consistency.TIMELINE);
+      ResultScanner scanner = table.getScanner(scan);
+      Iterator<Result> iter = scanner.iterator();
+      iter.next();
+      Assert.assertTrue(((ClientScanner)scanner).isAnyRPCcancelled());
+      SlowMeCopro.slowDownNext.set(false);
+      SlowMeCopro.countOfNext.set(0);
+    } finally {
+      SlowMeCopro.getCdl().get().countDown();
+      SlowMeCopro.sleepTime.set(0);
+      SlowMeCopro.slowDownNext.set(false);
+      SlowMeCopro.countOfNext.set(0);
+      for (int i = 0; i < NUMROWS; i++) {
+        byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
+        Delete d = new Delete(b1);
+        table.delete(d);
+      }
+      closeRegion(hriSecondary);
+    }
+  }
+
   private void runMultipleScansOfOneType(boolean reversed, boolean small) throws Exception {
     openRegion(hriSecondary);
     int NUMROWS = 100;
