@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -184,7 +185,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
-public class HBaseFsck extends Configured {
+public class HBaseFsck extends Configured implements Closeable {
   public static final long DEFAULT_TIME_LAG = 60000; // default value of 1 minute
   public static final long DEFAULT_SLEEP_BEFORE_RERUN = 10000;
   private static final int MAX_NUM_THREADS = 50; // #threads to contact regions
@@ -395,7 +396,8 @@ public class HBaseFsck extends Configured {
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-          unlockHbck();
+        IOUtils.closeStream(HBaseFsck.this);
+        unlockHbck();
       }
     });
     LOG.debug("Launching hbck");
@@ -609,6 +611,11 @@ public class HBaseFsck extends Configured {
     byte[] result = new byte[rowlength];
     System.arraycopy(b, Bytes.SIZEOF_SHORT, result, 0, rowlength);
     return result;
+  }
+
+  @Override
+  public void close() throws IOException {
+    IOUtils.cleanup(null, admin, meta, connection);
   }
 
   private static class RegionBoundariesInformation {
@@ -4082,6 +4089,7 @@ public class HBaseFsck extends Configured {
     public int run(String[] args) throws Exception {
       HBaseFsck hbck = new HBaseFsck(getConf());
       hbck.exec(hbck.executor, args);
+      hbck.close();
       return hbck.getRetCode();
     }
   };
@@ -4300,7 +4308,7 @@ public class HBaseFsck extends Configured {
         setRetCode(code);
       }
     } finally {
-      IOUtils.cleanup(null, connection, meta, admin);
+      IOUtils.cleanup(null, this);
     }
     return this;
   }
