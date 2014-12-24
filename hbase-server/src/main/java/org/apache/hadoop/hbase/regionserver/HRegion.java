@@ -2994,28 +2994,27 @@ public class HRegion implements HeapSize { // , Writable{
     Path rootDir = FSUtils.getRootDir(conf);
     Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
 
-    if (Bytes.equals(getStartKey(), HConstants.EMPTY_START_ROW)) {
-      Map<byte[], Store> stores = getStores();
-      boolean hasMobStore = false;
-      for (Entry<byte[], Store> store : stores.entrySet()) {
-        hasMobStore = store.getValue().getFamily().isMobEnabled();
-        if (hasMobStore) {
-          break;
-        }
-      }
-      if (hasMobStore) {
-        // if this is the first region, snapshot the mob files.
-        SnapshotManifest snapshotManifest = SnapshotManifest.create(conf, getFilesystem(),
+    SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
             snapshotDir, desc, exnSnare);
+    manifest.addRegion(this);
+
+    // The regionserver holding the first region of the table is responsible for taking the
+    // manifest of the mob dir.
+    if (!Bytes.equals(getStartKey(), HConstants.EMPTY_START_ROW))
+      return;
+
+    // if any cf's have is mob enabled, add the "mob region" to the manifest.
+    Map<byte[], Store> stores = getStores();
+    for (Entry<byte[], Store> store : stores.entrySet()) {
+      boolean hasMobStore = store.getValue().getFamily().isMobEnabled();
+      if (hasMobStore) {
         // use the .mob as the start key and 0 as the regionid
         HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(this.getTableDesc().getTableName());
         mobRegionInfo.setOffline(true);
-        snapshotManifest.addMobRegion(mobRegionInfo, this.getTableDesc().getColumnFamilies());
+        manifest.addMobRegion(mobRegionInfo, this.getTableDesc().getColumnFamilies());
+        return;
       }
     }
-    SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
-                                                        snapshotDir, desc, exnSnare);
-    manifest.addRegion(this);
   }
 
   /**
