@@ -219,7 +219,8 @@ public class DefaultMobCompactor extends DefaultCompactor {
       } while (hasMore);
     } finally {
       if (mobFileWriter != null) {
-        appendMetadataAndCloseWriter(mobFileWriter, fd, major);
+        mobFileWriter.appendMetadata(fd.maxSeqId, major, mobCells);
+        mobFileWriter.close();
       }
     }
     if(mobFileWriter!=null) {

@@ -122,7 +122,7 @@ public class MemStoreWrapper {
    */
   private void internalFlushCache(final MemStoreSnapshot snapshot)
       throws IOException {
-    if (snapshot.getSize() == 0) {
+    if (snapshot.getCellsCount() == 0) {
       return;
     }
     // generate the files into a temp directory.
@@ -135,18 +135,16 @@ public class MemStoreWrapper {
     LOG.info("Create files under a temp directory " + mobFileWriter.getPath().toString());
 
     byte[] referenceValue = Bytes.toBytes(relativePath);
-    int keyValueCount = 0;
     KeyValueScanner scanner = snapshot.getScanner();
     Cell cell = null;
     while (null != (cell = scanner.next())) {
       KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
       mobFileWriter.append(kv);
-      keyValueCount++;
     }
     scanner.close();
     // Write out the log sequence number that corresponds to this output
     // hfile. The hfile is current up to and including logCacheFlushId.
-    mobFileWriter.appendMetadata(Long.MAX_VALUE, false);
+    mobFileWriter.appendMetadata(Long.MAX_VALUE, false, snapshot.getCellsCount());
     mobFileWriter.close();
 
     MobUtils.commitFile(conf, fs, mobFileWriter.getPath(), mobFamilyDir, cacheConfig);
@@ -164,9 +162,7 @@ public class MemStoreWrapper {
       table.put(put);
       context.getCounter(SweepCounter.RECORDS_UPDATED).increment(1);
     }
-    if (keyValueCount > 0) {
-      table.flushCommits();
-    }
+    table.flushCommits();
     scanner.close();
   }
 

@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -169,6 +170,8 @@ public class TestMobCompaction {
     assertEquals("Before compaction: mob file count", compactionThreshold, countMobFiles());
     assertEquals("Before compaction: rows", compactionThreshold, countRows());
     assertEquals("Before compaction: mob rows", compactionThreshold, countMobRows());
+    assertEquals("Before compaction: number of mob cells", compactionThreshold,
+        countMobCellsInMetadata());
     // Change the threshold larger than the data size
     region.getTableDesc().getFamily(COLUMN_FAMILY).setMobThreshold(500);
     region.initialize();
@@ -217,6 +220,8 @@ public class TestMobCompaction {
     assertEquals("After compaction: rows", compactionThreshold, countRows());
     assertEquals("After compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("After compaction: referenced mob file count", 1, countReferencedMobFiles());
+    assertEquals("After compaction: number of mob cells", compactionThreshold,
+        countMobCellsInMetadata());
   }
 
   /**
@@ -288,6 +293,26 @@ public class TestMobCompaction {
       return files.length;
     }
     return 0;
+  }
+
+  private long countMobCellsInMetadata() throws IOException {
+    long mobCellsCount = 0;
+    Path mobDirPath = new Path(MobUtils.getMobRegionPath(conf, htd.getTableName()),
+        hcd.getNameAsString());
+    Configuration copyOfConf = new Configuration(conf);
+    copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
+    CacheConfig cacheConfig = new CacheConfig(copyOfConf);
+    if (fs.exists(mobDirPath)) {
+      FileStatus[] files = UTIL.getTestFileSystem().listStatus(mobDirPath);
+      for (FileStatus file : files) {
+        StoreFile sf = new StoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE);
+        Map<byte[], byte[]> fileInfo = sf.createReader().loadFileInfo();
+        byte[] count = fileInfo.get(StoreFile.MOB_CELLS_COUNT);
+        assertTrue(count != null);
+        mobCellsCount += Bytes.toLong(count);
+      }
+    }
+    return mobCellsCount;
   }
 
   private Put createPut(int rowIdx, byte[] dummyData) throws IOException {

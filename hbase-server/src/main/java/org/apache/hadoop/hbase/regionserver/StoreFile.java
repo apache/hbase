@@ -112,6 +112,9 @@ public class StoreFile {
   /** Key for timestamp of earliest-put in metadata*/
   public static final byte[] EARLIEST_PUT_TS = Bytes.toBytes("EARLIEST_PUT_TS");
 
+  /** Key for the number of mob cells in metadata*/
+  public static final byte[] MOB_CELLS_COUNT = Bytes.toBytes("MOB_CELLS_COUNT");
+
   private final StoreFileInfo fileInfo;
   private final FileSystem fs;
 
@@ -776,6 +779,22 @@ public class StoreFile {
       writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
       writer.appendFileInfo(MAJOR_COMPACTION_KEY,
           Bytes.toBytes(majorCompaction));
+      appendTrackedTimestampsToMetadata();
+    }
+
+    /**
+     * Writes meta data.
+     * Call before {@link #close()} since its written as meta data to this file.
+     * @param maxSequenceId Maximum sequence id.
+     * @param majorCompaction True if this file is product of a major compaction
+     * @param mobCellsCount The number of mob cells.
+     * @throws IOException problem writing to FS
+     */
+    public void appendMetadata(final long maxSequenceId, final boolean majorCompaction,
+        final long mobCellsCount) throws IOException {
+      writer.appendFileInfo(MAX_SEQ_ID_KEY, Bytes.toBytes(maxSequenceId));
+      writer.appendFileInfo(MAJOR_COMPACTION_KEY, Bytes.toBytes(majorCompaction));
+      writer.appendFileInfo(MOB_CELLS_COUNT, Bytes.toBytes(mobCellsCount));
       appendTrackedTimestampsToMetadata();
     }
 
