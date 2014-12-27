@@ -346,7 +346,6 @@ def unloadRegions(options, hostname, port)
     # Remove those already tried to move
     rs.removeAll(movedRegions)
     break if rs.length == 0
-    count = 0
     $LOG.info("Moving " + rs.length.to_s + " region(s) from " + servername +
       " on " + servers.length.to_s + " servers using " + options[:maxthreads].to_s + " threads.")
     counter = 0
@@ -400,7 +399,6 @@ def loadRegions(options, hostname, port)
     sleep 0.5
   end
   $LOG.info("Moving " + regions.size().to_s + " regions to " + servername)
-  count = 0
   # sleep 20s to make sure the rs finished initialization.
   sleep 20
   counter = 0
@@ -417,13 +415,13 @@ def loadRegions(options, hostname, port)
     next unless exists
     currentServer = getServerNameForRegion(admin, r)
     if currentServer and currentServer == servername
-      $LOG.info("Region " + r.getRegionNameAsString() + " (" + count.to_s +
+      $LOG.info("Region " + r.getRegionNameAsString() + " (" + counter.to_s +
         " of " + regions.length.to_s + ") already on target server=" + servername)
       counter = counter + 1
       next
     end
-    pool.launch(r,currentServer,count) do |_r,_currentServer,_count|
-      $LOG.info("Moving region " + _r.getRegionNameAsString() + " (" + (_count + 1).to_s +
+    pool.launch(r,currentServer,counter) do |_r,_currentServer,_counter|
+      $LOG.info("Moving region " + _r.getRegionNameAsString() + " (" + (_counter + 1).to_s +
         " of " + regions.length.to_s + ") from " + _currentServer.to_s + " to server=" +
         servername);      
       move(admin, _r, servername, _currentServer)
