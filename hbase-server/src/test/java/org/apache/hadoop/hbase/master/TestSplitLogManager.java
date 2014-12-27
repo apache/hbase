@@ -639,6 +639,7 @@ public class TestSplitLogManager {
     SplitLogCounters.resetCounters();
     Configuration testConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     testConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    ds = new DummyServer(zkw, testConf);
 
     zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "testRecovery"),
       new SplitLogTask.Unassigned(
