@@ -61,9 +61,11 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.Op;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.DeleteRequest;
@@ -955,7 +957,16 @@ public class ZKUtil {
   }
 
   private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
+    if (!node.startsWith(zkw.baseZNode)) {
+      return Ids.OPEN_ACL_UNSAFE;
+    }
     if (isSecureZooKeeper(zkw.getConfiguration())) {
+      String superUser = zkw.getConfiguration().get("hbase.superuser");
+      ArrayList<ACL> acls = new ArrayList<ACL>();
+      // add permission to hbase supper user
+      if (superUser != null) {
+        acls.add(new ACL(Perms.ALL, new Id("auth", superUser)));
+      }
       // Certain znodes are accessed directly by the client,
       // so they must be readable by non-authenticated clients
       if ((node.equals(zkw.baseZNode) == true) ||
@@ -966,9 +977,12 @@ public class ZKUtil {
           (node.equals(zkw.backupMasterAddressesZNode) == true) ||
           (node.startsWith(zkw.assignmentZNode) == true) ||
           (node.startsWith(zkw.tableZNode) == true)) {
-        return ZooKeeperWatcher.CREATOR_ALL_AND_WORLD_READABLE;
+        acls.addAll(Ids.CREATOR_ALL_ACL);
+        acls.addAll(Ids.READ_ACL_UNSAFE);
+      } else {
+        acls.addAll(Ids.CREATOR_ALL_ACL);
       }
-      return Ids.CREATOR_ALL_ACL;
+      return acls;
     } else {
       return Ids.OPEN_ACL_UNSAFE;
     }
@@ -1324,8 +1338,8 @@ public class ZKUtil {
           deleteNodeRecursively(zkw, joinZNode(node, child));
         }
       }
-      //Zookeeper Watches are one time triggers; When children of parent nodes are deleted recursively. 
-      //Must set another watch, get notified of delete node   
+      //Zookeeper Watches are one time triggers; When children of parent nodes are deleted recursively.
+      //Must set another watch, get notified of delete node
       if (zkw.getRecoverableZooKeeper().exists(node, zkw) != null){
         zkw.getRecoverableZooKeeper().delete(node, -1);
       }
@@ -1838,7 +1852,7 @@ public class ZKUtil {
       try {
         data = ZKUtil.getData(zkw, znode);
       } catch(KeeperException e) {
-        if (e instanceof KeeperException.SessionExpiredException 
+        if (e instanceof KeeperException.SessionExpiredException
             || e instanceof KeeperException.AuthFailedException) {
           // non-recoverable errors so stop here
           throw new InterruptedException("interrupted due to " + e);
