@@ -539,7 +539,7 @@ public class TestPerColumnFamilyFlush {
     TEST_UTIL.getHBaseAdmin().createNamespace(
       NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
     TEST_UTIL.getHBaseAdmin().createTable(htd);
-    getRegionWithName(TABLENAME).getFirst();
+    TEST_UTIL.waitTableAvailable(TABLENAME);
     Connection conn = ConnectionFactory.createConnection(conf);
     Table table = conn.getTable(TABLENAME);
     doPut(table, memstoreFlushSize);
