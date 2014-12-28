@@ -39,9 +39,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import static org.apache.hadoop.hbase.client.ReversedClientScanner.createClosestRowBefore;
+
 /**
  * This class has the logic for handling scanners for regions with and without replicas.
  * 1. A scan is attempted on the default (primary) region
@@ -272,8 +276,13 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
         continue; //this was already scheduled earlier
       }
       ScannerCallable s = currentScannerCallable.getScannerCallableForReplica(id);
+
       if (this.lastResult != null) {
-        s.getScan().setStartRow(this.lastResult.getRow());
+        if(s.getScan().isReversed()){
+          s.getScan().setStartRow(createClosestRowBefore(this.lastResult.getRow()));
+        }else {
+          s.getScan().setStartRow(Bytes.add(this.lastResult.getRow(), new byte[1]));
+        }
       }
       outstandingCallables.add(s);
       RetryingRPC retryingOnReplica = new RetryingRPC(s);
