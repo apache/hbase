@@ -110,7 +110,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // znode containing namespace descriptors
   public static String namespaceZNode = "namespace";
 
-
   // Certain ZooKeeper nodes need to be world-readable
   public static final ArrayList<ACL> CREATOR_ALL_AND_WORLD_READABLE =
     new ArrayList<ACL>() { {
