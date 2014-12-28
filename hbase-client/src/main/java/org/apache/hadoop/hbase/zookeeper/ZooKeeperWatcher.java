@@ -111,11 +111,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public static String namespaceZNode = "namespace";
 
 
-  // Certain ZooKeeper nodes need to be world-readable
-  public static final List<ACL> CREATOR_ALL_AND_WORLD_READABLE =
-    Arrays.asList(new ACL(ZooDefs.Perms.READ,ZooDefs.Ids.ANYONE_ID_UNSAFE),
-      new ACL(ZooDefs.Perms.ALL,ZooDefs.Ids.AUTH_IDS));
-
   private final Configuration conf;
 
   private final Exception constructorCaller;
