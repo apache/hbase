@@ -1700,8 +1700,19 @@ public class Bytes {
       diffBI = diffBI.add(BigInteger.ONE);
     }
     final BigInteger splitsBI = BigInteger.valueOf(num + 1);
+    //when diffBI < splitBI, use an additional byte to increase diffBI
     if(diffBI.compareTo(splitsBI) < 0) {
-      return null;
+      byte[] aPaddedAdditional = new byte[aPadded.length+1];
+      byte[] bPaddedAdditional = new byte[bPadded.length+1];
+      for (int i = 0; i < aPadded.length; i++){
+        aPaddedAdditional[i] = aPadded[i];
+      }
+      for (int j = 0; j < bPadded.length; j++){
+        bPaddedAdditional[j] = bPadded[j];
+      }
+      aPaddedAdditional[aPadded.length] = 0;
+      bPaddedAdditional[bPadded.length] = 0;
+      return iterateOnSplits(aPaddedAdditional, bPaddedAdditional, inclusive,  num);
     }
     final BigInteger intervalBI;
     try {
