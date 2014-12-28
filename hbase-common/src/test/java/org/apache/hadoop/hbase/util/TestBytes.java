@@ -101,9 +101,10 @@ public class TestBytes extends TestCase {
     }
     assertTrue("Returned split should have 3 parts but has " + parts.length, parts.length == 3);
 
-    // If split more than once, this should fail
+    // If split more than once, use additional byte to split
     parts = Bytes.split(low, high, 2);
-    assertTrue("Returned split but should have failed", parts == null);
+    assertTrue("Split with an additional byte", parts != null);
+    assertEquals(parts.length, low.length + 1);
 
     // Split 0 times should throw IAE
     try {
