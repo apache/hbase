@@ -155,6 +155,11 @@ public class CompressionTest {
     Configuration conf = new Configuration();
     Path path = new Path(args[0]);
     FileSystem fs = path.getFileSystem(conf);
+    if (fs.exists(path)) {
+      System.err.println("The specified path exists, aborting!");
+      System.exit(1);
+    }
+
     try {
       doSmokeTest(fs, path, args[1]);
     } finally {
