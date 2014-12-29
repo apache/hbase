@@ -820,7 +820,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         }
 
         if (index < 0) {
-          cost += 1;
+          if (regionLocations.length > 0) {
+            cost += 1;
+          }
         } else {
           cost += (double) index / (double) regionLocations.length;
         }
