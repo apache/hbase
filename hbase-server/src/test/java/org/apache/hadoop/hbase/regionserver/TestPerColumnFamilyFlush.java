@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -120,7 +121,7 @@ public class TestPerColumnFamilyFlush {
       Arrays.equals(r.getFamilyMap(family).get(qf), val));
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testSelectiveFlushWhenEnabled() throws IOException {
     // Set up the configuration
     Configuration conf = HBaseConfiguration.create();
@@ -258,7 +259,7 @@ public class TestPerColumnFamilyFlush {
     assertEquals(0, region.getMemstoreSize().get());
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testSelectiveFlushWhenNotEnabled() throws IOException {
     // Set up the configuration
     Configuration conf = HBaseConfiguration.create();
@@ -326,7 +327,7 @@ public class TestPerColumnFamilyFlush {
     return null;
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testLogReplay() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 20000);
@@ -414,7 +415,7 @@ public class TestPerColumnFamilyFlush {
   // In distributed log replay, the log splitters ask the master for the
   // last flushed sequence id for a region. This test would ensure that we
   // are doing the book-keeping correctly.
-  @Test
+  @Test (timeout=180000)
   public void testLogReplayWithDistributedReplay() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
     testLogReplay();
@@ -426,7 +427,7 @@ public class TestPerColumnFamilyFlush {
    * test ensures that we do a full-flush in that scenario.
    * @throws IOException
    */
-  @Test
+  @Test (timeout=180000)
   public void testFlushingWhenLogRolling() throws Exception {
     TableName tableName = TableName.valueOf("testFlushingWhenLogRolling");
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -439,12 +440,22 @@ public class TestPerColumnFamilyFlush {
     conf.setLong("hbase.regionserver.logroll.period", 2000);
     // Keep the block size small so that we fill up the log files very fast.
     conf.setLong("hbase.regionserver.hlog.blocksize", 6144);
-    int maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
+    // Make it 10 as max logs before a flush comes on.
+    final int walcount = 10;
+    conf.setInt("hbase.regionserver.maxlogs", walcount);
+    int maxLogs = conf.getInt("hbase.regionserver.maxlogs", walcount);
 
     final int numRegionServers = 4;
     try {
       TEST_UTIL.startMiniCluster(numRegionServers);
-      HTable table = TEST_UTIL.createTable(tableName, families);
+      HTable table = null;
+      table = TEST_UTIL.createTable(tableName, families);
+      // Force flush the namespace table so edits to it are not hanging around as oldest
+      // edits. Otherwise, below, when we make maximum number of WAL files, then it will be
+      // the namespace region that is flushed and not the below 'desiredRegion'.
+      try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+        admin.flush(TableName.NAMESPACE_TABLE_NAME);
+      }
       HRegion desiredRegion = getRegionWithName(tableName).getFirst();
       assertTrue("Could not find a region which hosts the new region.", desiredRegion != null);
       LOG.info("Writing to region=" + desiredRegion);
@@ -468,7 +479,7 @@ public class TestPerColumnFamilyFlush {
       }
       table.close();
       // Wait for some time till the flush caused by log rolling happens.
-      Thread.sleep(4000);
+      while (((FSHLog) (desiredRegion.getWAL())).getNumLogFiles() > maxLogs) Threads.sleep(100);
       LOG.info("Finished waiting on flush after too many WALs...");
 
       // We have artificially created the conditions for a log roll. When a
@@ -517,7 +528,7 @@ public class TestPerColumnFamilyFlush {
 
   // Under the same write load, small stores should have less store files when
   // percolumnfamilyflush enabled.
-  @Test
+  @Test (timeout=180000)
   public void testCompareStoreFileCount() throws Exception {
     long memstoreFlushSize = 1024L * 1024;
     Configuration conf = TEST_UTIL.getConfiguration();
