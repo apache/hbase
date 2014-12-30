@@ -309,6 +309,15 @@ public class ThriftServer {
       System.exit(1);
     }
 
+    // Get address to bind
+    String bindAddress;
+    if (cmd.hasOption("bind")) {
+      bindAddress = cmd.getOptionValue("bind");
+      conf.set("hbase.thrift.info.bindAddress", bindAddress);
+    } else {
+      bindAddress = conf.get("hbase.thrift.info.bindAddress");
+    }
+
     // Get port to bind to
     int listenPort = 0;
     try {
@@ -387,7 +396,7 @@ public class ThriftServer {
         conf.getBoolean("hbase.regionserver.thrift.framed", false) || nonblocking || hsha;
     TTransportFactory transportFactory = getTTransportFactory(qop, name, host, framed,
         conf.getInt("hbase.regionserver.thrift.framed.max_frame_size_in_mb", 2) * 1024 * 1024);
-    InetSocketAddress inetSocketAddress = bindToPort(cmd.getOptionValue("bind"), listenPort);
+    InetSocketAddress inetSocketAddress = bindToPort(bindAddress, listenPort);
     conf.setBoolean("hbase.regionserver.thrift.framed", framed);
     if (qop != null) {
       // Create a processor wrapper, to get the caller
