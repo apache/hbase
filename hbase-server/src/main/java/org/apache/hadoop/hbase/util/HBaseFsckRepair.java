@@ -210,7 +210,7 @@ public class HBaseFsckRepair {
     HRegion region = HRegion.createHRegion(hri, root, conf, htd, null);
 
     // Close the new region to flush to disk. Close log file too.
-    HRegion.closeHRegion(region);
+    region.close();
     return region;
   }
 }
