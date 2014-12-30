@@ -186,10 +186,18 @@ public class HalfStoreFileReader extends StoreFile.Reader {
           // The equals sign isn't strictly necessary just here to be consistent with seekTo
           if (getComparator().compareFlatKey(key, offset, length, splitkey, 0,
               splitkey.length) >= 0) {
-            return this.delegate.seekBefore(splitkey, 0, splitkey.length);
+            boolean ret = this.delegate.seekBefore(splitkey, 0, splitkey.length);
+            if (ret) {
+              atEnd = false;
+            }
+            return ret;
           }
         }
-        return this.delegate.seekBefore(key, offset, length);
+        boolean ret = this.delegate.seekBefore(key, offset, length);
+        if (ret) {
+          atEnd = false;
+        }
+        return ret;
       }
 
       public boolean seekTo() throws IOException {
