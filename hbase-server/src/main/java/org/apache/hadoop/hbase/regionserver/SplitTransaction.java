@@ -697,6 +697,7 @@ public class SplitTransaction {
       // no file needs to be splitted.
       return new Pair<Integer, Integer>(0,0);
     }
+    LOG.info("Preparing to split " + nbFiles + " storefiles for region " + this.parent);
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
     builder.setNameFormat("StoreFileSplitter-%1$d");
     ThreadFactory factory = builder.build();
@@ -746,6 +747,10 @@ public class SplitTransaction {
       }
     }
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Split storefiles for region " + this.parent + " Daugther A: " + created_a
+          + " storefiles, Daugther B: " + created_b + " storefiles.");
+    }
     return new Pair<Integer, Integer>(created_a, created_b);
   }
 
