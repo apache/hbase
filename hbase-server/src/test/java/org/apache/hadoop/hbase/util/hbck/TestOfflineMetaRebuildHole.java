@@ -66,6 +66,7 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
     // attempt to rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);
     assertFalse(fsck.rebuildMeta(false));
+    fsck.close();
 
     // bring up the minicluster
     TEST_UTIL.startMiniZKCluster(); // tables seem enabled by default
