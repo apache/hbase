@@ -5009,6 +5009,7 @@ public class TestHRegion {
         Bytes.toString(CellUtil.cloneValue(kv)));
   }
 
+  @Test (timeout=60000)
   public void testReverseScanner_FromMemStore_SingleCF_Normal()
       throws IOException {
     byte[] rowC = Bytes.toBytes("rowC");
@@ -5064,6 +5065,7 @@ public class TestHRegion {
     }
   }
 
+  @Test (timeout=60000)
   public void testReverseScanner_FromMemStore_SingleCF_LargerKey()
       throws IOException {
     byte[] rowC = Bytes.toBytes("rowC");
@@ -5120,6 +5122,7 @@ public class TestHRegion {
     }
   }
 
+  @Test (timeout=60000)
   public void testReverseScanner_FromMemStore_SingleCF_FullScan()
       throws IOException {
     byte[] rowC = Bytes.toBytes("rowC");
@@ -5173,6 +5176,7 @@ public class TestHRegion {
     }
   }
 
+  @Test (timeout=60000)
   public void testReverseScanner_moreRowsMayExistAfter() throws IOException {
     // case for "INCLUDE_AND_SEEK_NEXT_ROW & SEEK_NEXT_ROW" endless loop
     byte[] rowA = Bytes.toBytes("rowA");
@@ -5250,6 +5254,7 @@ public class TestHRegion {
     }
   }
 
+  @Test (timeout=60000)
   public void testReverseScanner_smaller_blocksize() throws IOException {
     // case to ensure no conflict with HFile index optimization
     byte[] rowA = Bytes.toBytes("rowA");
@@ -5329,6 +5334,7 @@ public class TestHRegion {
     }
   }
 
+  @Test (timeout=60000)
   public void testReverseScanner_FromMemStoreAndHFiles_MultiCFs1()
       throws IOException {
     byte[] row0 = Bytes.toBytes("row0"); // 1 kv
@@ -5489,6 +5495,7 @@ public class TestHRegion {
     }
   }
 
+  @Test (timeout=60000)
   public void testReverseScanner_FromMemStoreAndHFiles_MultiCFs2()
       throws IOException {
     byte[] row1 = Bytes.toBytes("row1");
@@ -5556,6 +5563,101 @@ public class TestHRegion {
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row1));
       assertFalse(hasNext);
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  @Test (timeout=60000)
+  public void testSplitRegionWithReverseScan() throws IOException {
+    byte [] tableName = Bytes.toBytes("testSplitRegionWithReverseScan");
+    byte [] qualifier = Bytes.toBytes("qualifier");
+    Configuration hc = initSplit();
+    int numRows = 3;
+    byte [][] families = {fam1};
+
+    //Setting up region
+    String method = this.getName();
+    this.region = initHRegion(tableName, method, hc, families);
+
+    //Put data in region
+    int startRow = 100;
+    putData(startRow, numRows, qualifier, families);
+    int splitRow = startRow + numRows;
+    putData(splitRow, numRows, qualifier, families);
+    int endRow = splitRow + numRows;
+    region.flushcache();
+
+    HRegion [] regions = null;
+    try {
+      regions = splitRegion(region, Bytes.toBytes("" + splitRow));
+      //Opening the regions returned.
+      for (int i = 0; i < regions.length; i++) {
+        regions[i] = HRegion.openHRegion(regions[i], null);
+      }
+      //Verifying that the region has been split
+      assertEquals(2, regions.length);
+
+      //Verifying that all data is still there and that data is in the right
+      //place
+      verifyData(regions[0], startRow, numRows, qualifier, families);
+      verifyData(regions[1], splitRow, numRows, qualifier, families);
+
+      //fire the reverse scan1:  top range, and larger than the last row
+      Scan scan = new Scan(Bytes.toBytes(String.valueOf(startRow + 10 * numRows)));
+      scan.setReversed(true);
+      InternalScanner scanner = regions[1].getScanner(scan);
+      List<Cell> currRow = new ArrayList<Cell>();
+      boolean more = false;
+      int verify = startRow + 2 * numRows - 1;
+      do {
+        more = scanner.next(currRow);
+        assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
+        verify--;
+        currRow.clear();
+      } while(more);
+      assertEquals(verify, startRow + numRows - 1);
+      scanner.close();
+      //fire the reverse scan2:  top range, and equals to the last row
+      scan = new Scan(Bytes.toBytes(String.valueOf(startRow + 2 * numRows - 1)));
+      scan.setReversed(true);
+      scanner = regions[1].getScanner(scan);
+      verify = startRow + 2 * numRows - 1;
+      do {
+        more = scanner.next(currRow);
+        assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
+        verify--;
+        currRow.clear();
+      } while(more);
+      assertEquals(verify, startRow + numRows - 1);
+      scanner.close();
+      //fire the reverse scan3:  bottom range, and larger than the last row
+      scan = new Scan(Bytes.toBytes(String.valueOf(startRow + numRows)));
+      scan.setReversed(true);
+      scanner = regions[0].getScanner(scan);
+      verify = startRow + numRows - 1;
+      do {
+        more = scanner.next(currRow);
+        assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
+        verify--;
+        currRow.clear();
+      } while(more);
+      assertEquals(verify, 99);
+      scanner.close();
+      //fire the reverse scan4:  bottom range, and equals to the last row
+      scan = new Scan(Bytes.toBytes(String.valueOf(startRow + numRows - 1)));
+      scan.setReversed(true);
+      scanner = regions[0].getScanner(scan);
+      verify = startRow + numRows - 1;
+      do {
+        more = scanner.next(currRow);
+        assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
+        verify--;
+        currRow.clear();
+      } while(more);
+      assertEquals(verify, startRow - 1);
+      scanner.close();
     } finally {
       HRegion.closeHRegion(this.region);
       this.region = null;
