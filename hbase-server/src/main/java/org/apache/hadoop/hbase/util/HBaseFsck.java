@@ -128,6 +128,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -320,7 +321,7 @@ public class HBaseFsck extends Configured {
     errors = getErrorReporter(getConf());
     this.executor = exec;
   }
-
+  
   /**
    * This method maintains a lock using a file. If the creation fails we return null
    *
@@ -328,6 +329,7 @@ public class HBaseFsck extends Configured {
    * @throws IOException
    */
   private FSDataOutputStream checkAndMarkRunningHbck() throws IOException {
+    long start = EnvironmentEdgeManager.currentTime();
     try {
       FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
       FsPermission defaultPerms = FSUtils.getFilePermissions(fs, getConf(),
@@ -344,6 +346,13 @@ public class HBaseFsck extends Configured {
         return null;
       } else {
         throw e;
+      }
+    } finally {
+      long duration = EnvironmentEdgeManager.currentTime() - start;
+      if (duration > 30000) {
+        LOG.warn("Took " + duration + " milliseconds to obtain lock");
+        // took too long to obtain lock
+        return null;
       }
     }
   }
