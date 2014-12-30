@@ -320,7 +320,7 @@ public class HBaseFsck extends Configured {
    * @throws IOException
    */
   private FSDataOutputStream checkAndMarkRunningHbck() throws IOException {
-    long start = EnvironmentEdgeManager.currentTime();
+    long start = EnvironmentEdgeManager.currentTimeMillis();
     try {
       FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
       FsPermission defaultPerms = FSUtils.getFilePermissions(fs, getConf(),
@@ -339,7 +339,7 @@ public class HBaseFsck extends Configured {
         throw e;
       }
     } finally {
-      long duration = EnvironmentEdgeManager.currentTime() - start;
+      long duration = EnvironmentEdgeManager.currentTimeMillis() - start;
       if (duration > 30000) {
         LOG.warn("Took " + duration + " milliseconds to obtain lock");
         // took too long to obtain lock
