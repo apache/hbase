@@ -599,6 +599,7 @@ public class SplitTransaction {
       // no file needs to be splitted.
       return;
     }
+    LOG.info("Preparing to split " + nbFiles + " storefiles for region " + this.parent);
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
     builder.setNameFormat("StoreFileSplitter-%1$d");
     ThreadFactory factory = builder.build();
