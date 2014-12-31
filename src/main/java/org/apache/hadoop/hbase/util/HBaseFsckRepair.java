@@ -147,7 +147,11 @@ public class HBaseFsckRepair {
     HConnection connection = admin.getConnection();
     HRegionInterface rs = connection.getHRegionConnection(server.getHostname(),
         server.getPort());
-    rs.closeRegion(region, false);
+    try {
+      rs.closeRegion(region, false);
+    } catch (IOException ioe) {
+      LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), ioe);
+    }
     long timeout = admin.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);
     long expiration = timeout + System.currentTimeMillis();
