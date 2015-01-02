@@ -37,7 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -160,48 +158,27 @@ public class TestCacheOnWrite {
   }
 
   public TestCacheOnWrite(CacheOnWriteType cowType, Compression.Algorithm compress,
-      BlockEncoderTestType encoderType, boolean cacheCompressedData, BlockCache blockCache) {
+      BlockEncoderTestType encoderType, boolean cacheCompressedData) {
     this.cowType = cowType;
     this.compress = compress;
     this.encoderType = encoderType;
     this.encoder = encoderType.getEncoder();
     this.cacheCompressedData = cacheCompressedData;
-    this.blockCache = blockCache;
     testDescription = "[cacheOnWrite=" + cowType + ", compress=" + compress +
         ", encoderType=" + encoderType + ", cacheCompressedData=" + cacheCompressedData + "]";
     System.out.println(testDescription);
   }
 
-  private static List<BlockCache> getBlockCaches() throws IOException {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    List<BlockCache> blockcaches = new ArrayList<BlockCache>();
-    // default
-    blockcaches.add(new CacheConfig(conf).getBlockCache());
-
-    // memory
-    BlockCache lru = new LruBlockCache(128 * 1024 * 1024, 64 * 1024, TEST_UTIL.getConfiguration());
-    blockcaches.add(lru);
-
-    // bucket cache
-    FileSystem.get(conf).mkdirs(TEST_UTIL.getDataTestDir());
-    int[] bucketSizes = {INDEX_BLOCK_SIZE, DATA_BLOCK_SIZE, BLOOM_BLOCK_SIZE, 64 * 1024 };
-    BlockCache bucketcache =
-        new BucketCache("file:" + TEST_UTIL.getDataTestDir() + "/bucket.data",
-            128 * 1024 * 1024, 64 * 1024, bucketSizes, 5, 64 * 100, null);
-    blockcaches.add(bucketcache);
-    return blockcaches;
-  }
-
   @Parameters
-  public static Collection<Object[]> getParameters() throws IOException {
+  public static Collection<Object[]> getParameters() {
     List<Object[]> cowTypes = new ArrayList<Object[]>();
-    for (BlockCache blockache : getBlockCaches()) {
-      for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
-        for (Compression.Algorithm compress : HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
-          for (BlockEncoderTestType encoderType : BlockEncoderTestType.values()) {
-            for (boolean cacheCompressedData : new boolean[] { false, true }) {
-              cowTypes.add(new Object[] { cowType, compress, encoderType, cacheCompressedData, blockache});
-            }
+    for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
+      for (Compression.Algorithm compress :
+           HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
+        for (BlockEncoderTestType encoderType :
+             BlockEncoderTestType.values()) {
+          for (boolean cacheCompressedData : new boolean[] { false, true }) {
+            cowTypes.add(new Object[] { cowType, compress, encoderType, cacheCompressedData });
           }
         }
       }
@@ -217,13 +194,17 @@ public class TestCacheOnWrite {
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, INDEX_BLOCK_SIZE);
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZE);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY,
+      cowType.shouldBeCached(BlockType.DATA));
+    conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.LEAF_INDEX));
+    conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
     conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, cacheCompressedData);
     cowType.modifyConf(conf);
     fs = HFileSystem.get(conf);
-    cacheConf =
-        new CacheConfig(blockCache, true, true, cowType.shouldBeCached(BlockType.DATA),
-        cowType.shouldBeCached(BlockType.LEAF_INDEX),
-        cowType.shouldBeCached(BlockType.BLOOM_CHUNK), false, cacheCompressedData, true, false);
+    cacheConf = new CacheConfig(conf);
+    blockCache = cacheConf.getBlockCache();
   }
 
   @After
@@ -326,11 +307,6 @@ public class TestCacheOnWrite {
     } else {
       assertEquals("{" + cachedDataBlockType
           + "=1379, LEAF_INDEX=154, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=18}", countByType);
-    }
-
-    // iterate all the keyvalue from hfile
-    while (scanner.next()) {
-      Cell cell = scanner.getKeyValue();
     }
     reader.close();
   }
