@@ -21,13 +21,17 @@ package org.apache.hadoop.hbase.ipc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -41,13 +45,24 @@ public abstract class RpcExecutor {
   private final List<Thread> handlers;
   private final int handlerCount;
   private final String name;
+  private final AtomicInteger failedHandlerCount = new AtomicInteger(0);
 
   private boolean running;
+
+  private Configuration conf = null;
+  private Abortable abortable = null;
 
   public RpcExecutor(final String name, final int handlerCount) {
     this.handlers = new ArrayList<Thread>(handlerCount);
     this.handlerCount = handlerCount;
     this.name = Strings.nullToEmpty(name);
+  }
+
+  public RpcExecutor(final String name, final int handlerCount, final Configuration conf,
+      final Abortable abortable) {
+    this(name, handlerCount);
+    this.conf = conf;
+    this.abortable = abortable;
   }
 
   public void start(final int port) {
@@ -94,7 +109,7 @@ public abstract class RpcExecutor {
       });
       t.setDaemon(true);
       t.setName(threadPrefix + "RpcServer.handler=" + handlers.size() +
-          ",queue=" + index + ",port=" + port);
+        ",queue=" + index + ",port=" + port);
       t.start();
       LOG.debug(threadPrefix + " Start Handler index=" + handlers.size() + " queue=" + index);
       handlers.add(t);
@@ -103,6 +118,9 @@ public abstract class RpcExecutor {
 
   protected void consumerLoop(final BlockingQueue<CallRunner> myQueue) {
     boolean interrupted = false;
+    double handlerFailureThreshhold =
+        conf == null ? 1.0 : conf.getDouble(HConstants.REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT,
+          HConstants.DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT);
     try {
       while (running) {
         try {
@@ -110,9 +128,30 @@ public abstract class RpcExecutor {
           try {
             activeHandlerCount.incrementAndGet();
             task.run();
-          } catch (Throwable t) {
-            LOG.error("RpcServer handler thread throws exception: ", t);
-            throw t;
+          } catch (Throwable e) {
+            if (e instanceof Error) {
+              int failedCount = failedHandlerCount.incrementAndGet();
+              if (handlerFailureThreshhold >= 0
+                  && failedCount > handlerCount * handlerFailureThreshhold) {
+                String message =
+                    "Number of failed RpcServer handler exceeded threshhold "
+                        + handlerFailureThreshhold + "  with failed reason: "
+                        + StringUtils.stringifyException(e);
+                if (abortable != null) {
+                  abortable.abort(message, e);
+                } else {
+                  LOG.error("Received " + StringUtils.stringifyException(e)
+                    + " but not aborting due to abortable being null");
+                  throw e;
+                }
+              } else {
+                LOG.warn("RpcServer handler threads encountered errors "
+                    + StringUtils.stringifyException(e));
+              }
+            } else {
+              LOG.warn("RpcServer handler threads encountered exceptions "
+                  + StringUtils.stringifyException(e));
+            }
           } finally {
             activeHandlerCount.decrementAndGet();
           }
