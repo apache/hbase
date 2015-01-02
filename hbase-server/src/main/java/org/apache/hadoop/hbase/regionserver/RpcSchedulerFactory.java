@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 
@@ -34,5 +35,9 @@ public interface RpcSchedulerFactory {
   /**
    * Constructs a {@link org.apache.hadoop.hbase.ipc.RpcScheduler}.
    */
+  RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server);
+
+  @Deprecated
   RpcScheduler create(Configuration conf, PriorityFunction priority);
+
 }

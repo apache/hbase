@@ -788,7 +788,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     rpcServer = new RpcServer(rs, name, getServices(),
       initialIsa, // BindAddress is IP we got for this server.
       rs.conf,
-      rpcSchedulerFactory.create(rs.conf, this));
+      rpcSchedulerFactory.create(rs.conf, this, rs));
 
     scannerLeaseTimeoutPeriod = rs.conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
