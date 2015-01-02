@@ -223,7 +223,7 @@ public class TestCacheOnWrite {
     cacheConf =
         new CacheConfig(blockCache, true, true, cowType.shouldBeCached(BlockType.DATA),
         cowType.shouldBeCached(BlockType.LEAF_INDEX),
-        cowType.shouldBeCached(BlockType.BLOOM_CHUNK), false, cacheCompressedData, true);
+        cowType.shouldBeCached(BlockType.BLOOM_CHUNK), false, cacheCompressedData, true, false);
   }
 
   @After
@@ -422,7 +422,7 @@ public class TestCacheOnWrite {
     final String cf = "myCF";
     final byte[] cfBytes = Bytes.toBytes(cf);
     final int maxVersions = 3;
-    HRegion region = TEST_UTIL.createTestRegion(table,
+    HRegion region = TEST_UTIL.createTestRegion(table, 
         new HColumnDescriptor(cf)
             .setCompressionType(compress)
             .setBloomFilterType(BLOOM_TYPE)
@@ -433,7 +433,7 @@ public class TestCacheOnWrite {
     long ts = EnvironmentEdgeManager.currentTimeMillis();
     for (int iFile = 0; iFile < 5; ++iFile) {
       for (int iRow = 0; iRow < 500; ++iRow) {
-        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" +
+        String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" + 
             iRow;
         Put p = new Put(Bytes.toBytes(rowStr));
         ++rowIdx;
