@@ -22,9 +22,11 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
@@ -40,12 +42,23 @@ public class BalancedQueueRpcExecutor extends RpcExecutor {
 
   public BalancedQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final int maxQueueLength) {
-    this(name, handlerCount, numQueues, LinkedBlockingQueue.class, maxQueueLength);
+    this(name, handlerCount, numQueues, maxQueueLength, null, null);
+  }
+
+  public BalancedQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
+      final int maxQueueLength, final Configuration conf, final Abortable abortable) {
+    this(name, handlerCount, numQueues, conf, abortable, LinkedBlockingQueue.class, maxQueueLength);
   }
 
   public BalancedQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final Class<? extends BlockingQueue> queueClass, Object... initargs) {
-    super(name, Math.max(handlerCount, numQueues));
+    this(name, handlerCount, numQueues, null, null,  queueClass, initargs);
+  }
+
+  public BalancedQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
+      final Configuration conf, final Abortable abortable,
+      final Class<? extends BlockingQueue> queueClass, Object... initargs) {
+    super(name, Math.max(handlerCount, numQueues), conf, abortable);
     queues = new ArrayList<BlockingQueue<CallRunner>>(numQueues);
     this.balancer = getBalancer(numQueues);
     initializeQueues(numQueues, queueClass, initargs);

@@ -22,11 +22,12 @@ import java.util.Comparator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 
 /**
@@ -93,6 +94,8 @@ public class SimpleRpcScheduler extends RpcScheduler {
   /** What level a high priority call is at. */
   private final int highPriorityLevel;
 
+  private Abortable abortable = null;
+
   /**
    * @param conf
    * @param handlerCount the number of handler threads that will be used to process calls
@@ -107,11 +110,13 @@ public class SimpleRpcScheduler extends RpcScheduler {
       int priorityHandlerCount,
       int replicationHandlerCount,
       PriorityFunction priority,
+      Abortable server,
       int highPriorityLevel) {
     int maxQueueLength = conf.getInt("hbase.ipc.server.max.callqueue.length",
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
+    this.abortable = server;
 
     String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
     float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
@@ -127,30 +132,41 @@ public class SimpleRpcScheduler extends RpcScheduler {
       if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
         callExecutor = new RWQueueRpcExecutor("RW.default", handlerCount, numCallQueues,
-            callqReadShare, callqScanShare, maxQueueLength,
+            callqReadShare, callqScanShare, maxQueueLength, conf, abortable,
             BoundedPriorityBlockingQueue.class, callPriority);
       } else {
         callExecutor = new RWQueueRpcExecutor("RW.default", handlerCount, numCallQueues,
-            callqReadShare, callqScanShare, maxQueueLength);
+          callqReadShare, callqScanShare, maxQueueLength, conf, abortable);
       }
     } else {
       // multiple queues
       if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
         callExecutor = new BalancedQueueRpcExecutor("B.default", handlerCount, numCallQueues,
-            BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
+          conf, abortable, BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
       } else {
         callExecutor = new BalancedQueueRpcExecutor("B.default", handlerCount,
-            numCallQueues, maxQueueLength);
+            numCallQueues, maxQueueLength, conf, abortable);
       }
     }
 
    this.priorityExecutor =
      priorityHandlerCount > 0 ? new BalancedQueueRpcExecutor("Priority", priorityHandlerCount,
-       1, maxQueueLength) : null;
+       1, maxQueueLength, conf, abortable) : null;
    this.replicationExecutor =
      replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("Replication",
-       replicationHandlerCount, 1, maxQueueLength) : null;
+       replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
+  }
+
+  public SimpleRpcScheduler(
+	      Configuration conf,
+	      int handlerCount,
+	      int priorityHandlerCount,
+	      int replicationHandlerCount,
+	      PriorityFunction priority,
+	      int highPriorityLevel) {
+	  this(conf, handlerCount, priorityHandlerCount, replicationHandlerCount, priority,
+	    null, highPriorityLevel);
   }
 
   @Override
