@@ -26,8 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -68,7 +66,7 @@ public class TestRegionRebalancing {
   private static final byte[] FAMILY_NAME = Bytes.toBytes("col");
   public static final Log LOG = LogFactory.getLog(TestRegionRebalancing.class);
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private RegionLocator table;
+  private RegionLocator regionLocator;
   private HTableDescriptor desc;
   private String balancerName;
 
@@ -100,59 +98,59 @@ public class TestRegionRebalancing {
   @SuppressWarnings("deprecation")
   public void testRebalanceOnRegionServerNumberChange()
   throws IOException, InterruptedException {
-    Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-    Admin admin = connection.getAdmin();
-    admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
-        1, HBaseTestingUtility.KEYS.length));
-    this.table = new HTable(UTIL.getConfiguration(), this.desc.getTableName());
-
-    MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
-
-    assertEquals("Test table should have right number of regions",
-      HBaseTestingUtility.KEYS.length,
-      this.table.getStartKeys().length);
-
-    // verify that the region assignments are balanced to start out
-    assertRegionsAreBalanced();
-
-    // add a region server - total of 2
-    LOG.info("Started second server=" +
-      UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
-    UTIL.getHBaseCluster().getMaster().balance();
-    assertRegionsAreBalanced();
-
-    // On a balanced cluster, calling balance() should return true
-    assert(UTIL.getHBaseCluster().getMaster().balance() == true);
-
-    // if we add a server, then the balance() call should return true
-    // add a region server - total of 3
-    LOG.info("Started third server=" +
+    try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
+        Admin admin = connection.getAdmin()) {
+      admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
+          1, HBaseTestingUtility.KEYS.length));
+      this.regionLocator = connection.getRegionLocator(this.desc.getTableName());
+  
+      MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
+  
+      assertEquals("Test table should have right number of regions",
+        HBaseTestingUtility.KEYS.length,
+        this.regionLocator.getStartKeys().length);
+  
+      // verify that the region assignments are balanced to start out
+      assertRegionsAreBalanced();
+  
+      // add a region server - total of 2
+      LOG.info("Started second server=" +
         UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
-    assert(UTIL.getHBaseCluster().getMaster().balance() == true);
-    assertRegionsAreBalanced();
-
-    // kill a region server - total of 2
-    LOG.info("Stopped third server=" + UTIL.getHBaseCluster().stopRegionServer(2, false));
-    UTIL.getHBaseCluster().waitOnRegionServer(2);
-    UTIL.getHBaseCluster().getMaster().balance();
-    assertRegionsAreBalanced();
-
-    // start two more region servers - total of 4
-    LOG.info("Readding third server=" +
-        UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
-    LOG.info("Added fourth server=" +
-        UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
-    assert(UTIL.getHBaseCluster().getMaster().balance() == true);
-    assertRegionsAreBalanced();
-
-    for (int i = 0; i < 6; i++){
-      LOG.info("Adding " + (i + 5) + "th region server");
-      UTIL.getHBaseCluster().startRegionServer();
+      UTIL.getHBaseCluster().getMaster().balance();
+      assertRegionsAreBalanced();
+  
+      // On a balanced cluster, calling balance() should return true
+      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+  
+      // if we add a server, then the balance() call should return true
+      // add a region server - total of 3
+      LOG.info("Started third server=" +
+          UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
+      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+      assertRegionsAreBalanced();
+  
+      // kill a region server - total of 2
+      LOG.info("Stopped third server=" + UTIL.getHBaseCluster().stopRegionServer(2, false));
+      UTIL.getHBaseCluster().waitOnRegionServer(2);
+      UTIL.getHBaseCluster().getMaster().balance();
+      assertRegionsAreBalanced();
+  
+      // start two more region servers - total of 4
+      LOG.info("Readding third server=" +
+          UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
+      LOG.info("Added fourth server=" +
+          UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
+      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+      assertRegionsAreBalanced();
+  
+      for (int i = 0; i < 6; i++){
+        LOG.info("Adding " + (i + 5) + "th region server");
+        UTIL.getHBaseCluster().startRegionServer();
+      }
+      assert(UTIL.getHBaseCluster().getMaster().balance() == true);
+      assertRegionsAreBalanced();
+      regionLocator.close();
     }
-    assert(UTIL.getHBaseCluster().getMaster().balance() == true);
-    assertRegionsAreBalanced();
-    table.close();
-    admin.close();
   }
 
   /**

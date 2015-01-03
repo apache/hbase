@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -110,7 +108,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class HTable implements HTableInterface, RegionLocator {
+public class HTable implements HTableInterface {
   private static final Log LOG = LogFactory.getLog(HTable.class);
   protected ClusterConnection connection;
   private final TableName tableName;
@@ -127,6 +125,7 @@ public class HTable implements HTableInterface, RegionLocator {
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
   private final boolean cleanupConnectionOnClose; // close the connection in close()
   private Consistency defaultConsistency = Consistency.STRONG;
+  private HRegionLocator locator;
 
   /** The Async process for puts with autoflush set to false or multiputs */
   protected AsyncProcess ap;
@@ -367,6 +366,7 @@ public class HTable implements HTableInterface, RegionLocator {
     // puts need to track errors globally due to how the APIs currently work.
     ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true, rpcControllerFactory);
     multiAp = this.connection.getAsyncProcess();
+    this.locator = new HRegionLocator(getName(), connection);
 
     this.closed = false;
   }
@@ -478,25 +478,25 @@ public class HTable implements HTableInterface, RegionLocator {
   @Deprecated
   public HRegionLocation getRegionLocation(final String row)
   throws IOException {
-    return connection.getRegionLocation(tableName, Bytes.toBytes(row), false);
+    return getRegionLocation(Bytes.toBytes(row), false);
   }
 
   /**
-   * {@inheritDoc}
+   * @deprecated Use {@link RegionLocator#getRegionLocation(byte[])} instead.
    */
-  @Override
+  @Deprecated
   public HRegionLocation getRegionLocation(final byte [] row)
   throws IOException {
-    return connection.getRegionLocation(tableName, row, false);
+    return locator.getRegionLocation(row);
   }
 
   /**
-   * {@inheritDoc}
+   * @deprecated Use {@link RegionLocator#getRegionLocation(byte[], boolean)} instead.
    */
-  @Override
+  @Deprecated
   public HRegionLocation getRegionLocation(final byte [] row, boolean reload)
   throws IOException {
-    return connection.getRegionLocation(tableName, row, reload);
+    return locator.getRegionLocation(row, reload);
   }
 
   /**
@@ -602,45 +602,27 @@ public class HTable implements HTableInterface, RegionLocator {
   }
 
   /**
-   * {@inheritDoc}
+   * @deprecated Use {@link RegionLocator#getStartEndKeys()} instead;
    */
-  @Override
+  @Deprecated
   public byte [][] getStartKeys() throws IOException {
-    return getStartEndKeys().getFirst();
+    return locator.getStartKeys();
   }
 
   /**
-   * {@inheritDoc}
+   * @deprecated Use {@link RegionLocator#getEndKeys()} instead;
    */
-  @Override
+  @Deprecated
   public byte[][] getEndKeys() throws IOException {
-    return getStartEndKeys().getSecond();
+    return locator.getEndKeys();
   }
 
   /**
-   * {@inheritDoc}
+   * @deprecated Use {@link RegionLocator#getStartEndKeys()} instead;
    */
-  @Override
+  @Deprecated
   public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
-
-    List<RegionLocations> regions = listRegionLocations();
-    final List<byte[]> startKeyList = new ArrayList<byte[]>(regions.size());
-    final List<byte[]> endKeyList = new ArrayList<byte[]>(regions.size());
-
-    for (RegionLocations locations : regions) {
-      HRegionInfo region = locations.getRegionLocation().getRegionInfo();
-      startKeyList.add(region.getStartKey());
-      endKeyList.add(region.getEndKey());
-    }
-
-    return new Pair<byte [][], byte [][]>(
-      startKeyList.toArray(new byte[startKeyList.size()][]),
-      endKeyList.toArray(new byte[endKeyList.size()][]));
-  }
-
-  @VisibleForTesting
-  List<RegionLocations> listRegionLocations() throws IOException {
-    return MetaScanner.listTableRegionLocations(getConfiguration(), this.connection, getName());
+    return locator.getStartEndKeys();
   }
 
   /**
@@ -663,15 +645,12 @@ public class HTable implements HTableInterface, RegionLocator {
    * This is mainly useful for the MapReduce integration.
    * @return A map of HRegionInfo with it's server address
    * @throws IOException if a remote or network exception occurs
+   * 
+   * @deprecated Use {@link RegionLocator#getAllRegionLocations()} instead;
    */
-  @Override
+  @Deprecated
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
-    NavigableMap<HRegionInfo, ServerName> locations = getRegionLocations();
-    ArrayList<HRegionLocation> regions = new ArrayList<>(locations.size());
-    for (Entry<HRegionInfo, ServerName> entry : locations.entrySet()) {
-      regions.add(new HRegionLocation(entry.getKey(), entry.getValue()));
-    }
-    return regions;
+    return locator.getAllRegionLocations();
   }
 
   /**
@@ -1927,5 +1906,9 @@ public class HTable implements HTableInterface, RegionLocator {
       throw new RetriesExhaustedWithDetailsException(callbackErrorExceptions, callbackErrorActions,
           callbackErrorServers);
     }
+  }
+
+  public RegionLocator getRegionLocator() {
+    return this.locator;
   }
 }

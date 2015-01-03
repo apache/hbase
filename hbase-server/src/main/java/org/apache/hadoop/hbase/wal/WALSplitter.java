@@ -86,6 +86,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -120,6 +121,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -1816,17 +1818,29 @@ public class WALSplitter {
       RegionServerWriter rsw = null;
 
       long startTime = System.nanoTime();
-      try {
-        rsw = getRegionServerWriter(key);
-        rsw.sink.replayEntries(actions);
+      boolean shouldRetry = true;
+      int retryCount = 0;
+      while (shouldRetry) {
+        try {
+          rsw = getRegionServerWriter(key);
+          rsw.sink.replayEntries(actions);
 
-        // Pass along summary statistics
-        rsw.incrementEdits(actions.size());
-        rsw.incrementNanoTime(System.nanoTime() - startTime);
-      } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
-        LOG.fatal(" Got while writing log entry to log", e);
-        throw e;
+          // Pass along summary statistics
+          rsw.incrementEdits(actions.size());
+          rsw.incrementNanoTime(System.nanoTime() - startTime);
+          shouldRetry = false;
+        } catch (IOException e) {
+          e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
+          LOG.fatal("Got while writing log entry to log", e);
+          if (e instanceof RetriesExhaustedException &&
+              ((RetriesExhaustedException)e).getMessage().contains("RegionTooBusyException")) {
+            // keep retrying
+            retryCount++;
+            LOG.warn("replayEntries retry count " + retryCount);
+            continue;
+          }
+          throw e;
+        }
       }
     }
 
