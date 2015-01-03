@@ -274,10 +274,13 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.distributed.log.replay</name>
-    <value>false</value>
-    <description>True to enable 'distributed log replay' as default engine splitting
-    WAL files on server crash. 'Disributed log replay' improves MTTR because it does not
-    write intermediate files.
+    <value>true</value>
+    <description>Enable 'distributed log replay' as default engine splitting
+    WAL files on server crash.  This default is new in hbase 1.0.  To fall
+    back to the old mode 'distributed log splitter', set the value to
+    'false'.  'Disributed log replay' improves MTTR because it does not
+    write intermediate files.  'DLR' required that 'hfile.format.version'
+    be set to version 3 or higher. 
     </description>
   </property>
   <property>
