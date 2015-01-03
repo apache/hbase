@@ -237,6 +237,11 @@ public class MasterFileSystem {
           return serverNames;
         }
         for (FileStatus status : logFolders) {
+          FileStatus[] curLogFiles = FSUtils.listStatus(this.fs, status.getPath(), null);
+          if (curLogFiles == null || curLogFiles.length == 0) {
+            // Empty log folder. No recovery needed
+            continue;
+          }
           final ServerName serverName = DefaultWALProvider.getServerNameFromWALDirectoryName(
               status.getPath());
           if (null == serverName) {
