@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
-import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HRegionLocator;
