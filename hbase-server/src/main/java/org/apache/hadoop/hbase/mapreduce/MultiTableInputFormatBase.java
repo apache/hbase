@@ -155,10 +155,14 @@ public abstract class MultiTableInputFormatBase extends
       Map.Entry<TableName, List<Scan>> entry = (Map.Entry<TableName, List<Scan>>) iter.next();
       TableName tableName = entry.getKey();
       List<Scan> scanList = entry.getValue();
+      Table table = null;
+      RegionLocator regionLocator = null;
+      Connection conn = null;
 
-      try (Connection conn = ConnectionFactory.createConnection(context.getConfiguration());
-        Table table = conn.getTable(tableName);
-        RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
+      try{
+        conn = ConnectionFactory.createConnection(context.getConfiguration());
+        table = conn.getTable(tableName);
+        regionLocator = (RegionLocator) table;
         RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(
                 regionLocator, conn.getAdmin());
         Pair<byte[][], byte[][]> keys = regionLocator.getStartEndKeys();
@@ -206,6 +210,10 @@ public abstract class MultiTableInputFormatBase extends
             }
           }
         }
+      } finally {
+        if (null != table) table.close();
+        if (null != regionLocator) regionLocator.close();
+        if (null != conn) conn.close();
       }
     }
 

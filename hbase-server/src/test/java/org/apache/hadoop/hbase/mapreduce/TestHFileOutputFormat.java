@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HRegionLocator;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -336,10 +335,9 @@ public class TestHFileOutputFormat  {
   public void testJobConfiguration() throws Exception {
     Job job = new Job(util.getConfiguration());
     job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
-    HTableDescriptor tableDescriptor = Mockito.mock(HTableDescriptor.class);
-    RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
-    setupMockStartKeys(regionLocator);
-    HFileOutputFormat2.configureIncrementalLoad(job, tableDescriptor, regionLocator);
+    HTable table = Mockito.mock(HTable.class);
+    setupMockStartKeys(table);
+    HFileOutputFormat.configureIncrementalLoad(job, table);
     assertEquals(job.getNumReduceTasks(), 4);
   }
 
@@ -469,13 +467,12 @@ public class TestHFileOutputFormat  {
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
         KeyValueSerialization.class.getName());
     setupRandomGeneratorMapper(job);
-    HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
-        table.getRegionLocator());
+    HFileOutputFormat.configureIncrementalLoad(job, table);
     FileOutputFormat.setOutputPath(job, outDir);
 
     Assert.assertFalse( util.getTestFileSystem().exists(outDir)) ;
 
-    assertEquals(table.getRegionLocator().getAllRegionLocations().size(), job.getNumReduceTasks());
+    assertEquals(table.getRegionLocations().size(), job.getNumReduceTasks());
 
     assertTrue(job.waitForCompletion(true));
   }
@@ -772,14 +769,14 @@ public class TestHFileOutputFormat  {
     return familyToDataBlockEncoding;
   }
 
-  private void setupMockStartKeys(RegionLocator regionLocator) throws IOException {
+  private void setupMockStartKeys(RegionLocator table) throws IOException {
     byte[][] mockKeys = new byte[][] {
         HConstants.EMPTY_BYTE_ARRAY,
         Bytes.toBytes("aaa"),
         Bytes.toBytes("ggg"),
         Bytes.toBytes("zzz")
     };
-    Mockito.doReturn(mockKeys).when(regionLocator).getStartKeys();
+    Mockito.doReturn(mockKeys).when(table).getStartKeys();
   }
 
   /**
@@ -794,8 +791,7 @@ public class TestHFileOutputFormat  {
     Path dir = util.getDataTestDir("testColumnFamilySettings");
 
     // Setup table descriptor
-    Table table = Mockito.mock(Table.class);
-    RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
+    HTable table = Mockito.mock(HTable.class);
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     Mockito.doReturn(htd).when(table).getTableDescriptor();
     for (HColumnDescriptor hcd: this.util.generateColumnDescriptors()) {
@@ -803,7 +799,7 @@ public class TestHFileOutputFormat  {
     }
 
     // set up the table to return some mock keys
-    setupMockStartKeys(regionLocator);
+    setupMockStartKeys(table);
 
     try {
       // partial map red setup to get an operational writer for testing
@@ -813,7 +809,7 @@ public class TestHFileOutputFormat  {
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
       setupRandomGeneratorMapper(job);
-      HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+      HFileOutputFormat.configureIncrementalLoad(job, table);
       FileOutputFormat.setOutputPath(job, dir);
       context = createTestTaskAttemptContext(job);
       HFileOutputFormat hof = new HFileOutputFormat();

@@ -706,7 +706,11 @@ class ConnectionManager {
 
     @Override
     public RegionLocator getRegionLocator(TableName tableName) throws IOException {
-      return new HRegionLocator(tableName, this);
+      if (managed) {
+        throw new IOException("The connection has to be unmanaged.");
+      }
+      return new HTable(
+        tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, getBatchPool());
     }
 
     @Override

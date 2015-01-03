@@ -307,93 +307,91 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testSingleMethod() throws Throwable {
-    try (HTable table = new HTable(util.getConfiguration(), TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
-      Map<byte [], String> results = table.coprocessorService(PingProtos.PingService.class,
-        null, ROW_A,
-        new Batch.Call<PingProtos.PingService, String>() {
-          @Override
-          public String call(PingProtos.PingService instance) throws IOException {
-            BlockingRpcCallback<PingProtos.PingResponse> rpcCallback =
-              new BlockingRpcCallback<PingProtos.PingResponse>();
-            instance.ping(null, PingProtos.PingRequest.newBuilder().build(), rpcCallback);
-            return rpcCallback.get().getPong();
-          }
-        });
-      // Should have gotten results for 1 of the three regions only since we specified
-      // rows from 1 region
-      assertEquals(1, results.size());
-      verifyRegionResults(locator, results, ROW_A);
-  
-      final String name = "NAME";
-      results = hello(table, name, null, ROW_A);
-      // Should have gotten results for 1 of the three regions only since we specified
-      // rows from 1 region
-      assertEquals(1, results.size());
-      verifyRegionResults(locator, results, "Hello, NAME", ROW_A);
-    }
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Map<byte [], String> results = table.coprocessorService(PingProtos.PingService.class,
+      null, ROW_A,
+      new Batch.Call<PingProtos.PingService, String>() {
+        @Override
+        public String call(PingProtos.PingService instance) throws IOException {
+          BlockingRpcCallback<PingProtos.PingResponse> rpcCallback =
+            new BlockingRpcCallback<PingProtos.PingResponse>();
+          instance.ping(null, PingProtos.PingRequest.newBuilder().build(), rpcCallback);
+          return rpcCallback.get().getPong();
+        }
+      });
+    // Should have gotten results for 1 of the three regions only since we specified
+    // rows from 1 region
+    assertEquals(1, results.size());
+    verifyRegionResults(table, results, ROW_A);
+
+    final String name = "NAME";
+    results = hello(table, name, null, ROW_A);
+    // Should have gotten results for 1 of the three regions only since we specified
+    // rows from 1 region
+    assertEquals(1, results.size());
+    verifyRegionResults(table, results, "Hello, NAME", ROW_A);
+    table.close();
   }
 
   @Test
   public void testRowRange() throws Throwable {
-    try (HTable table = new HTable(util.getConfiguration(), TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
-      for (Entry<HRegionInfo, ServerName> e: table.getRegionLocations().entrySet()) {
-        LOG.info("Region " + e.getKey().getRegionNameAsString() + ", servername=" + e.getValue());
-      }
-      // Here are what regions looked like on a run:
-      //
-      // test,,1355943549657.c65d4822d8bdecc033a96451f3a0f55d.
-      // test,bbb,1355943549661.110393b070dd1ed93441e0bc9b3ffb7e.
-      // test,ccc,1355943549665.c3d6d125141359cbbd2a43eaff3cdf74.
-  
-      Map<byte [], String> results = ping(table, null, ROW_A);
-      // Should contain first region only.
-      assertEquals(1, results.size());
-      verifyRegionResults(locator, results, ROW_A);
-  
-      // Test start row + empty end
-      results = ping(table, ROW_BC, null);
-      assertEquals(2, results.size());
-      // should contain last 2 regions
-      HRegionLocation loc = table.getRegionLocation(ROW_A, true);
-      assertNull("Should be missing region for row aaa (prior to start row)",
-        results.get(loc.getRegionInfo().getRegionName()));
-      verifyRegionResults(locator, results, ROW_B);
-      verifyRegionResults(locator, results, ROW_C);
-  
-      // test empty start + end
-      results = ping(table, null, ROW_BC);
-      // should contain the first 2 regions
-      assertEquals(2, results.size());
-      verifyRegionResults(locator, results, ROW_A);
-      verifyRegionResults(locator, results, ROW_B);
-      loc = table.getRegionLocation(ROW_C, true);
-      assertNull("Should be missing region for row ccc (past stop row)",
-          results.get(loc.getRegionInfo().getRegionName()));
-  
-      // test explicit start + end
-      results = ping(table, ROW_AB, ROW_BC);
-      // should contain first 2 regions
-      assertEquals(2, results.size());
-      verifyRegionResults(locator, results, ROW_A);
-      verifyRegionResults(locator, results, ROW_B);
-      loc = table.getRegionLocation(ROW_C, true);
-      assertNull("Should be missing region for row ccc (past stop row)",
-          results.get(loc.getRegionInfo().getRegionName()));
-  
-      // test single region
-      results = ping(table, ROW_B, ROW_BC);
-      // should only contain region bbb
-      assertEquals(1, results.size());
-      verifyRegionResults(locator, results, ROW_B);
-      loc = table.getRegionLocation(ROW_A, true);
-      assertNull("Should be missing region for row aaa (prior to start)",
-          results.get(loc.getRegionInfo().getRegionName()));
-      loc = table.getRegionLocation(ROW_C, true);
-      assertNull("Should be missing region for row ccc (past stop row)",
-          results.get(loc.getRegionInfo().getRegionName()));
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    for (Entry<HRegionInfo, ServerName> e: table.getRegionLocations().entrySet()) {
+      LOG.info("Region " + e.getKey().getRegionNameAsString() + ", servername=" + e.getValue());
     }
+    // Here are what regions looked like on a run:
+    //
+    // test,,1355943549657.c65d4822d8bdecc033a96451f3a0f55d.
+    // test,bbb,1355943549661.110393b070dd1ed93441e0bc9b3ffb7e.
+    // test,ccc,1355943549665.c3d6d125141359cbbd2a43eaff3cdf74.
+
+    Map<byte [], String> results = ping(table, null, ROW_A);
+    // Should contain first region only.
+    assertEquals(1, results.size());
+    verifyRegionResults(table, results, ROW_A);
+
+    // Test start row + empty end
+    results = ping(table, ROW_BC, null);
+    assertEquals(2, results.size());
+    // should contain last 2 regions
+    HRegionLocation loc = table.getRegionLocation(ROW_A, true);
+    assertNull("Should be missing region for row aaa (prior to start row)",
+      results.get(loc.getRegionInfo().getRegionName()));
+    verifyRegionResults(table, results, ROW_B);
+    verifyRegionResults(table, results, ROW_C);
+
+    // test empty start + end
+    results = ping(table, null, ROW_BC);
+    // should contain the first 2 regions
+    assertEquals(2, results.size());
+    verifyRegionResults(table, results, ROW_A);
+    verifyRegionResults(table, results, ROW_B);
+    loc = table.getRegionLocation(ROW_C, true);
+    assertNull("Should be missing region for row ccc (past stop row)",
+        results.get(loc.getRegionInfo().getRegionName()));
+
+    // test explicit start + end
+    results = ping(table, ROW_AB, ROW_BC);
+    // should contain first 2 regions
+    assertEquals(2, results.size());
+    verifyRegionResults(table, results, ROW_A);
+    verifyRegionResults(table, results, ROW_B);
+    loc = table.getRegionLocation(ROW_C, true);
+    assertNull("Should be missing region for row ccc (past stop row)",
+        results.get(loc.getRegionInfo().getRegionName()));
+
+    // test single region
+    results = ping(table, ROW_B, ROW_BC);
+    // should only contain region bbb
+    assertEquals(1, results.size());
+    verifyRegionResults(table, results, ROW_B);
+    loc = table.getRegionLocation(ROW_A, true);
+    assertNull("Should be missing region for row aaa (prior to start)",
+        results.get(loc.getRegionInfo().getRegionName()));
+    loc = table.getRegionLocation(ROW_C, true);
+    assertNull("Should be missing region for row ccc (past stop row)",
+        results.get(loc.getRegionInfo().getRegionName()));
+    table.close();
   }
 
   private Map<byte [], String> ping(final Table table, final byte [] start, final byte [] end)
@@ -416,46 +414,40 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testCompoundCall() throws Throwable {
-    try (HTable table = new HTable(util.getConfiguration(), TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
-      Map<byte [], String> results = compoundOfHelloAndPing(table, ROW_A, ROW_C);
-      verifyRegionResults(locator, results, "Hello, pong", ROW_A);
-      verifyRegionResults(locator, results, "Hello, pong", ROW_B);
-      verifyRegionResults(locator, results, "Hello, pong", ROW_C);
-    }
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Map<byte [], String> results = compoundOfHelloAndPing(table, ROW_A, ROW_C);
+    verifyRegionResults(table, results, "Hello, pong", ROW_A);
+    verifyRegionResults(table, results, "Hello, pong", ROW_B);
+    verifyRegionResults(table, results, "Hello, pong", ROW_C);
+    table.close();
   }
 
   @Test
   public void testNullCall() throws Throwable {
-    try(HTable table = new HTable(util.getConfiguration(), TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
-      Map<byte[],String> results = hello(table, null, ROW_A, ROW_C);
-      verifyRegionResults(locator, results, "Who are you?", ROW_A);
-      verifyRegionResults(locator, results, "Who are you?", ROW_B);
-      verifyRegionResults(locator, results, "Who are you?", ROW_C);
-    }
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Map<byte[],String> results = hello(table, null, ROW_A, ROW_C);
+    verifyRegionResults(table, results, "Who are you?", ROW_A);
+    verifyRegionResults(table, results, "Who are you?", ROW_B);
+    verifyRegionResults(table, results, "Who are you?", ROW_C);
   }
 
   @Test
   public void testNullReturn() throws Throwable {
-    try (HTable table = new HTable(util.getConfiguration(), TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
-      Map<byte[],String> results = hello(table, "nobody", ROW_A, ROW_C);
-      verifyRegionResults(locator, results, null, ROW_A);
-      verifyRegionResults(locator, results, null, ROW_B);
-      verifyRegionResults(locator, results, null, ROW_C);
-    }
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Map<byte[],String> results = hello(table, "nobody", ROW_A, ROW_C);
+    verifyRegionResults(table, results, null, ROW_A);
+    verifyRegionResults(table, results, null, ROW_B);
+    verifyRegionResults(table, results, null, ROW_C);
   }
 
   @Test
   public void testEmptyReturnType() throws Throwable {
-    try (HTable table = new HTable(util.getConfiguration(), TEST_TABLE)) {
-      Map<byte[],String> results = noop(table, ROW_A, ROW_C);
-      assertEquals("Should have results from three regions", 3, results.size());
-      // all results should be null
-      for (Object v : results.values()) {
-        assertNull(v);
-      }
+    Table table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Map<byte[],String> results = noop(table, ROW_A, ROW_C);
+    assertEquals("Should have results from three regions", 3, results.size());
+    // all results should be null
+    for (Object v : results.values()) {
+      assertNull(v);
     }
   }
 
@@ -464,7 +456,7 @@ public class TestServerCustomProtocol {
     verifyRegionResults(table, results, "pong", row);
   }
 
-  private void verifyRegionResults(RegionLocator regionLocator,
+  private void verifyRegionResults(RegionLocator table,
       Map<byte[], String> results, String expected, byte[] row)
   throws Exception {
     for (Map.Entry<byte [], String> e: results.entrySet()) {
@@ -472,7 +464,7 @@ public class TestServerCustomProtocol {
        ", result key=" + Bytes.toString(e.getKey()) +
        ", value=" + e.getValue());
     }
-    HRegionLocation loc = regionLocator.getRegionLocation(row, true);
+    HRegionLocation loc = table.getRegionLocation(row, true);
     byte[] region = loc.getRegionInfo().getRegionName();
     assertTrue("Results should contain region " +
       Bytes.toStringBinary(region) + " for row '" + Bytes.toStringBinary(row)+ "'",

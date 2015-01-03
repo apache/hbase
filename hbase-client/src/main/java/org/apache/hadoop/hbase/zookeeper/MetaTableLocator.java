@@ -56,6 +56,7 @@ import java.rmi.UnknownHostException;
 import java.util.List;
 import java.util.ArrayList;
 
+import javax.annotation.Nullable;
 
 /**
  * Utility class to perform operation (get/wait for/verify/set/delete) on znode in ZooKeeper
@@ -126,6 +127,7 @@ public class MetaTableLocator {
    * @param zkw zookeeper connection to use
    * @return server name or null if we failed to get the data.
    */
+  @Nullable
   public ServerName getMetaRegionLocation(final ZooKeeperWatcher zkw) {
     try {
       RegionState state = getMetaRegionState(zkw);

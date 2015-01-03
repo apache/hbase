@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   // Public because used outside of this package over in ipc.
   static final Log LOG = LogFactory.getLog(RegionServerCallable.class);
-  protected final Connection connection;
+  protected final HConnection connection;
   protected final TableName tableName;
   protected final byte[] row;
   protected HRegionLocation location;
@@ -61,7 +61,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    * @param tableName Table name to which <code>row</code> belongs.
    * @param row The row we want in <code>tableName</code>.
    */
-  public RegionServerCallable(Connection connection, TableName tableName, byte [] row) {
+  public RegionServerCallable(HConnection connection, TableName tableName, byte [] row) {
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
@@ -75,9 +75,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    */
   @Override
   public void prepare(final boolean reload) throws IOException {
-    try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
-      this.location = regionLocator.getRegionLocation(row, reload);
-    }
+    this.location = connection.getRegionLocation(tableName, row, reload);
     if (this.location == null) {
       throw new IOException("Failed to find location, tableName=" + tableName +
         ", row=" + Bytes.toString(row) + ", reload=" + reload);
@@ -89,7 +87,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    * @return {@link HConnection} instance used by this Callable.
    */
   HConnection getConnection() {
-    return (HConnection) this.connection;
+    return this.connection;
   }
 
   protected ClientService.BlockingInterface getStub() {

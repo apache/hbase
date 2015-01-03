@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Table;
@@ -88,8 +87,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   public static void configureIncrementalLoad(Job job, HTable table)
       throws IOException {
-    HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
-        table.getRegionLocator());
+    HFileOutputFormat2.configureIncrementalLoad(job, table, table);
   }
 
   /**
@@ -152,8 +150,20 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     HFileOutputFormat2.configurePartitioner(job, splitPoints);
   }
 
+  /**
+   * Serialize column family to compression algorithm map to configuration.
+   * Invoked while configuring the MR job for incremental load.
+   *
+   * @param table to read the properties from
+   * @param conf to persist serialized values into
+   * @throws IOException
+   *           on failure to read column family descriptors
+   */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+      value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
+  @VisibleForTesting
   static void configureCompression(Table table, Configuration conf) throws IOException {
-    HFileOutputFormat2.configureCompression(conf, table.getTableDescriptor());
+    HFileOutputFormat2.configureCompression(table, conf);
   }
 
   /**
@@ -167,7 +177,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   @VisibleForTesting
   static void configureBlockSize(Table table, Configuration conf) throws IOException {
-    HFileOutputFormat2.configureBlockSize(table.getTableDescriptor(), conf);
+    HFileOutputFormat2.configureBlockSize(table, conf);
   }
 
   /**
@@ -181,7 +191,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   @VisibleForTesting
   static void configureBloomType(Table table, Configuration conf) throws IOException {
-    HFileOutputFormat2.configureBloomType(table.getTableDescriptor(), conf);
+    HFileOutputFormat2.configureBloomType(table, conf);
   }
 
   /**
@@ -196,7 +206,6 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   @VisibleForTesting
   static void configureDataBlockEncoding(Table table,
       Configuration conf) throws IOException {
-    HTableDescriptor tableDescriptor = table.getTableDescriptor();
-    HFileOutputFormat2.configureDataBlockEncoding(tableDescriptor, conf);
+    HFileOutputFormat2.configureDataBlockEncoding(table, conf);
   }
 }
