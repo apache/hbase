@@ -27,7 +27,6 @@ import java.rmi.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -126,7 +125,6 @@ public class MetaTableLocator {
    * @param zkw zookeeper connection to use
    * @return server name or null if we failed to get the data.
    */
-  @Nullable
   public ServerName getMetaRegionLocation(final ZooKeeperWatcher zkw) {
     try {
       RegionState state = getMetaRegionState(zkw);

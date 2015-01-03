@@ -549,7 +549,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   @Deprecated
   protected void setHTable(HTable table) throws IOException {
     this.table = table;
-    this.regionLocator = table;
+    this.regionLocator = table.getRegionLocator();
     this.admin = table.getConnection().getAdmin();
   }
 

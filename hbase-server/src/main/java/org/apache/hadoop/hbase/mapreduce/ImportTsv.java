@@ -20,17 +20,13 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static java.lang.String.format;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -40,11 +36,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -59,9 +58,11 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Tool to import data from a TSV file.
@@ -496,7 +497,8 @@ public class ImportTsv extends Configured implements Tool {
                 throw new TableNotFoundException(errorMsg);
               }
             }
-            try (HTable table = (HTable)connection.getTable(tableName)) {
+            try (Table table = connection.getTable(tableName);
+                RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
               boolean noStrict = conf.getBoolean(NO_STRICT_COL_FAMILY, false);
               // if no.strict is false then check column family
               if(!noStrict) {
@@ -534,7 +536,8 @@ public class ImportTsv extends Configured implements Tool {
                 job.setMapOutputValueClass(Put.class);
                 job.setCombinerClass(PutCombiner.class);
               }
-              HFileOutputFormat2.configureIncrementalLoad(job, table, table);
+              HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
+                  regionLocator);
             }
           } else {
             if (!admin.tableExists(tableName)) {

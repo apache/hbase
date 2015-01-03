@@ -32,8 +32,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 
-import javax.annotation.Nonnull;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -1000,7 +998,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    *         1 if there is a mismatch in the contents
    */
   @Override
-  public int compareTo(@Nonnull final HTableDescriptor other) {
+  public int compareTo(final HTableDescriptor other) {
     int result = this.name.compareTo(other.name);
     if (result == 0) {
       result = families.size() - other.families.size();

@@ -76,10 +76,11 @@ public class TestMultiTableInputFormat {
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
     for (int i = 0; i < 3; i++) {
-      HTable table =
-          TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME + String.valueOf(i)), INPUT_FAMILY);
-      TEST_UTIL.createMultiRegions(TEST_UTIL.getConfiguration(), table, INPUT_FAMILY, 4);
-      TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
+      try (HTable table =
+          TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME + String.valueOf(i)), INPUT_FAMILY)) {
+        TEST_UTIL.createMultiRegions(TEST_UTIL.getConfiguration(), table, INPUT_FAMILY, 4);
+        TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
+      }
     }
     // start MR cluster
     TEST_UTIL.startMiniMapReduceCluster();
@@ -139,6 +140,7 @@ public class TestMultiTableInputFormat {
     private String first = null;
     private String last = null;
 
+    @Override
     protected void reduce(ImmutableBytesWritable key,
         Iterable<ImmutableBytesWritable> values, Context context)
         throws IOException, InterruptedException {
@@ -154,6 +156,7 @@ public class TestMultiTableInputFormat {
       assertEquals(3, count);
     }
 
+    @Override
     protected void cleanup(Context context) throws IOException,
         InterruptedException {
       Configuration c = context.getConfiguration();
