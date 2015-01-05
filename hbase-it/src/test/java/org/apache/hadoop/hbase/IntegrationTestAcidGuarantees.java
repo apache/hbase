@@ -17,28 +17,27 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This Integration Test verifies acid guarantees across column families by frequently writing
  * values to rows with multiple column families and concurrently reading entire rows that expect all
  * column families.
+ *
+ * <p>
+ * Sample usage:
+ * <pre>
+ * hbase org.apache.hadoop.hbase.IntegrationTestAcidGuarantees -Dmillis=10000 -DnumWriters=50
+ * -DnumGetters=2 -DnumScanners=2 -DnumUniqueRows=5
+ * </pre>
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestAcidGuarantees extends IntegrationTestBase {
