@@ -3170,17 +3170,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     } finally {
       meta.close();
     }
-    // So, all regions are in the meta table but make sure master knows of the assignments before
-    // returing -- sometimes this can lag.
-    HMaster master = getHBaseCluster().getMaster();
-    final RegionStates states = master.getAssignmentManager().getRegionStates();
-    waitFor(timeout, 200, new Predicate<IOException>() {
-      @Override
-      public boolean evaluate() throws IOException {
-        List<HRegionInfo> hris = states.getRegionsOfTable(tableName);
-        return hris != null && !hris.isEmpty();
-      }
-    });
+
+    // check from the master state if we are using a mini cluster
+    if (!getHBaseClusterInterface().isDistributedCluster()) {
+      // So, all regions are in the meta table but make sure master knows of the assignments before
+      // returing -- sometimes this can lag.
+      HMaster master = getHBaseCluster().getMaster();
+      final RegionStates states = master.getAssignmentManager().getRegionStates();
+      waitFor(timeout, 200, new Predicate<IOException>() {
+        @Override
+        public boolean evaluate() throws IOException {
+          List<HRegionInfo> hris = states.getRegionsOfTable(tableName);
+          return hris != null && !hris.isEmpty();
+        }
+      });
+    }
   }
 
   /**
