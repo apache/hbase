@@ -1878,7 +1878,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Count of rows loaded.
    * @throws IOException
    */
-  public int loadTable(final HTable t, final byte[] f) throws IOException {
+  public int loadTable(final Table t, final byte[] f) throws IOException {
     return loadTable(t, new byte[][] {f});
   }
 
@@ -1889,7 +1889,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Count of rows loaded.
    * @throws IOException
    */
-  public int loadTable(final HTable t, final byte[] f, boolean writeToWAL) throws IOException {
+  public int loadTable(final Table t, final byte[] f, boolean writeToWAL) throws IOException {
     return loadTable(t, new byte[][] {f}, null, writeToWAL);
   }
 
@@ -1900,7 +1900,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Count of rows loaded.
    * @throws IOException
    */
-  public int loadTable(final HTable t, final byte[][] f) throws IOException {
+  public int loadTable(final Table t, final byte[][] f) throws IOException {
     return loadTable(t, f, null);
   }
 
@@ -1912,7 +1912,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Count of rows loaded.
    * @throws IOException
    */
-  public int loadTable(final HTable t, final byte[][] f, byte[] value) throws IOException {
+  public int loadTable(final Table t, final byte[][] f, byte[] value) throws IOException {
     return loadTable(t, f, value, true);
   }
 
@@ -1924,20 +1924,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return Count of rows loaded.
    * @throws IOException
    */
-  public int loadTable(final HTable t, final byte[][] f, byte[] value, boolean writeToWAL) throws IOException {
-    t.setAutoFlushTo(false);
-    int rowCount = 0;
+  public int loadTable(final Table t, final byte[][] f, byte[] value, boolean writeToWAL) throws IOException {
+    List<Put> puts = new ArrayList<>();
     for (byte[] row : HBaseTestingUtility.ROWS) {
       Put put = new Put(row);
       put.setDurability(writeToWAL ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
       for (int i = 0; i < f.length; i++) {
         put.add(f[i], null, value != null ? value : row);
       }
-      t.put(put);
-      rowCount++;
+      puts.add(put);
     }
-    t.flushCommits();
-    return rowCount;
+    t.put(puts);
+    return puts.size();
   }
 
   /** A tracker for tracking and validating table rows

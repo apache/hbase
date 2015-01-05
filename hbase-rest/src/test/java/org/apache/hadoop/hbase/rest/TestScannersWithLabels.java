@@ -24,7 +24,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 import javax.xml.bind.JAXBContext;
@@ -90,23 +92,22 @@ public class TestScannersWithLabels {
   private static Configuration conf;
 
   private static int insertData(TableName tableName, String column, double prob) throws IOException {
-    Random rng = new Random();
-    int count = 0;
-    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     byte[] k = new byte[3];
     byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
 
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < 9; i++) {
       Put put = new Put(Bytes.toBytes("row" + i));
       put.setDurability(Durability.SKIP_WAL);
       put.add(famAndQf[0], famAndQf[1], k);
       put.setCellVisibility(new CellVisibility("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!"
           + TOPSECRET));
-      table.put(put);
-      count++;
+      puts.add(put);
     }
-    table.flushCommits();
-    return count;
+    try (Table table = new HTable(TEST_UTIL.getConfiguration(), tableName)) {
+      table.put(puts);
+    }
+    return puts.size();
   }
 
   private static int countCellSet(CellSetModel model) {

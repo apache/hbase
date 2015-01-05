@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -245,15 +246,14 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   @Test(timeout=300000)
   public void testSmallBatch() throws Exception {
     LOG.info("testSmallBatch");
-    Put put;
     // normal Batch tests
-    htable1.setAutoFlushTo(false);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
-      put = new Put(Bytes.toBytes(i));
+      Put put = new Put(Bytes.toBytes(i));
       put.add(famName, row, row);
-      htable1.put(put);
+      puts.add(put);
     }
-    htable1.flushCommits();
+    htable1.put(puts);
 
     Scan scan = new Scan();
 
@@ -386,14 +386,16 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   @Test(timeout=300000)
   public void testLoading() throws Exception {
     LOG.info("Writing out rows to table1 in testLoading");
-    htable1.setWriteBufferSize(1024);
-    ((HTable)htable1).setAutoFlushTo(false);
+    List<Put> puts = new ArrayList<Put>();
     for (int i = 0; i < NB_ROWS_IN_BIG_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.add(famName, row, row);
-      htable1.put(put);
+      puts.add(put);
     }
-    htable1.flushCommits();
+    htable1.setWriteBufferSize(1024);
+    // The puts will be iterated through and flushed only when the buffer
+    // size is reached.
+    htable1.put(puts);
 
     Scan scan = new Scan();
 

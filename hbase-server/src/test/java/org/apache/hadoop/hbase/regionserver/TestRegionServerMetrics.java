@@ -198,7 +198,6 @@ public class TestRegionServerMetrics {
     p.setDurability(Durability.SKIP_WAL);
 
     t.put(p);
-    t.flushCommits();
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertGauge("mutationsWithoutWALCount", 1, serverSource);
@@ -227,7 +226,6 @@ public class TestRegionServerMetrics {
     Put p = new Put(row);
     p.add(cf, qualifier, val);
     t.put(p);
-    t.flushCommits();
     TEST_UTIL.getHBaseAdmin().flush(tableName);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
@@ -253,18 +251,14 @@ public class TestRegionServerMetrics {
     Put p = new Put(row);
     p.add(cf, qualifier, valOne);
     t.put(p);
-    t.flushCommits();
 
     Put pTwo = new Put(row);
     pTwo.add(cf, qualifier, valTwo);
     t.checkAndPut(row, cf, qualifier, valOne, pTwo);
-    t.flushCommits();
 
     Put pThree = new Put(row);
     pThree.add(cf, qualifier, valThree);
     t.checkAndPut(row, cf, qualifier, valOne, pThree);
-    t.flushCommits();
-
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("checkMutateFailedCount", 1, serverSource);
@@ -289,15 +283,12 @@ public class TestRegionServerMetrics {
     Put p = new Put(row);
     p.add(cf, qualifier, val);
     t.put(p);
-    t.flushCommits();
 
     for(int count = 0; count< 13; count++) {
       Increment inc = new Increment(row);
       inc.addColumn(cf, qualifier, 100);
       t.increment(inc);
     }
-
-    t.flushCommits();
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("incrementNumOps", 13, serverSource);
@@ -321,15 +312,12 @@ public class TestRegionServerMetrics {
     Put p = new Put(row);
     p.add(cf, qualifier, val);
     t.put(p);
-    t.flushCommits();
 
     for(int count = 0; count< 73; count++) {
       Append append = new Append(row);
       append.add(cf, qualifier, Bytes.toBytes(",Test"));
       t.append(append);
     }
-
-    t.flushCommits();
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("appendNumOps", 73, serverSource);

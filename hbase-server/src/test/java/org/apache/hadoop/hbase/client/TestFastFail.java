@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -119,8 +120,17 @@ public class TestFastFail {
     /**
      * Write numRows worth of data, so that the workers can arbitrarily read.
      */
-    try (Table table = connection.getTable(TableName.valueOf(tableName));) {
-      writeData(table, numRows);
+    List<Put> puts = new ArrayList<>();
+    for (long i = 0; i < numRows; i++) {
+      byte[] rowKey = longToByteArrayKey(i);
+      Put put = new Put(rowKey);
+      byte[] value = rowKey; // value is the same as the row key
+      put.add(FAMILY, QUALIFIER, value);
+      puts.add(put);
+    }
+    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
+      table.put(puts);
+      LOG.info("Written all puts.");
     }
 
     /**
@@ -296,18 +306,5 @@ public class TestFastFail {
 
   private byte[] longToByteArrayKey(long rowKey) {
     return LoadTestKVGenerator.md5PrefixedKey(rowKey).getBytes();
-  }
-
-  public void writeData(Table table, long numRows) throws IOException,
-      InterruptedException {
-    table.flushCommits();
-    for (long i = 0; i < numRows; i++) {
-      byte[] rowKey = longToByteArrayKey(i);
-      Put put = new Put(rowKey);
-      byte[] value = rowKey; // value is the same as the row key
-      put.add(FAMILY, QUALIFIER, value);
-      table.put(put);
-    }
-    LOG.info("Written all puts.");
   }
 }

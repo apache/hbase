@@ -699,7 +699,6 @@ public class TestHBaseFsck {
       //add a location with replicaId as 2 (since we already have replicas with replicaid 0 and 1)
       MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), 2);
       meta.put(put);
-      meta.flushCommits();
       // assign the new replica
       HBaseFsckRepair.fixUnassigned(admin, newHri);
       HBaseFsckRepair.waitUntilAssigned(admin, newHri);
@@ -709,7 +708,6 @@ public class TestHBaseFsck {
       delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(2));
       delete.addColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(2));
       meta.delete(delete);
-      meta.flushCommits();
       meta.close();
       // check that problem exists
       HBaseFsck hbck = doFsck(conf, false);
@@ -1529,7 +1527,6 @@ public class TestHBaseFsck {
       hri.setSplit(true);
 
       MetaTableAccessor.addRegionToMeta(meta, hri, a, b);
-      meta.flushCommits();
       meta.close();
       admin.flush(TableName.META_TABLE_NAME);
 
@@ -1655,9 +1652,10 @@ public class TestHBaseFsck {
       undeployRegion(connection, hris.get(daughters.getFirst()), daughters.getFirst());
       undeployRegion(connection, hris.get(daughters.getSecond()), daughters.getSecond());
 
-      meta.delete(new Delete(daughters.getFirst().getRegionName()));
-      meta.delete(new Delete(daughters.getSecond().getRegionName()));
-      meta.flushCommits();
+      List<Delete> deletes = new ArrayList<>();
+      deletes.add(new Delete(daughters.getFirst().getRegionName()));
+      deletes.add(new Delete(daughters.getSecond().getRegionName()));
+      meta.delete(deletes);
 
       // Remove daughters from regionStates
       RegionStates regionStates = TEST_UTIL.getMiniHBaseCluster().getMaster().

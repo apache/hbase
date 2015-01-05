@@ -265,7 +265,6 @@ public class TestRegionObserverScannerOpenHook {
     Put put = new Put(ROW);
     put.add(A, A, A);
     table.put(put);
-    table.flushCommits();
 
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(desc.getTableName());
     List<HRegion> regions = rs.getOnlineRegions(desc.getTableName());
@@ -279,7 +278,6 @@ public class TestRegionObserverScannerOpenHook {
     put = new Put(Bytes.toBytes("anotherrow"));
     put.add(A, A, A);
     table.put(put);
-    table.flushCommits();
     admin.flushRegion(region.getRegionName());
 
     // run a compaction, which normally would should get rid of the data
