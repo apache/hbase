@@ -544,8 +544,8 @@ public class HFileOutputFormat2
     FileSystem fs = FileSystem.get(job.getConfiguration());
     Path partitionsPath = new Path("/tmp", "partitions_" + UUID.randomUUID());
     fs.makeQualified(partitionsPath);
-    fs.deleteOnExit(partitionsPath);
     writePartitions(job.getConfiguration(), partitionsPath, splitPoints);
+    fs.deleteOnExit(partitionsPath);
 
     // configure job to use it
     job.setPartitionerClass(TotalOrderPartitioner.class);
