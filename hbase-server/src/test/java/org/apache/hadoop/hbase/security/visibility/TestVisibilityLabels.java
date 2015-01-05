@@ -895,24 +895,15 @@ public abstract class TestVisibilityLabels {
 
   static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
       throws Exception {
-    Table table = null;
-    try {
-      table = TEST_UTIL.createTable(tableName, fam);
-      int i = 1;
-      List<Put> puts = new ArrayList<Put>();
-      for (String labelExp : labelExps) {
-        Put put = new Put(Bytes.toBytes("row" + i));
-        put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
-        put.setCellVisibility(new CellVisibility(labelExp));
-        puts.add(put);
-        i++;
-      }
-      table.put(puts);
-    } finally {
-      if (table != null) {
-        table.flushCommits();
-      }
+    List<Put> puts = new ArrayList<Put>();
+    for (int i = 0; i < labelExps.length; i++) {
+      Put put = new Put(Bytes.toBytes("row" + (i+1)));
+      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+      put.setCellVisibility(new CellVisibility(labelExps[i]));
+      puts.add(put);
     }
+    Table table = TEST_UTIL.createTable(tableName, fam);
+    table.put(puts);
     return table;
   }
 

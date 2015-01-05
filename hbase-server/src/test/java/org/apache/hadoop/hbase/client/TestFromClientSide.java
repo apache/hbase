@@ -5506,22 +5506,17 @@ public class TestFromClientSide {
     Put p = new Put(row);
     p.add(FAMILY, QUALIFIER, 10, VALUE);
     table.put(p);
-    table.flushCommits();
-
     p = new Put(row);
     p.add(FAMILY, QUALIFIER, 11, ArrayUtils.add(VALUE, (byte) 2));
     table.put(p);
-    table.flushCommits();
 
     p = new Put(row);
     p.add(FAMILY, QUALIFIER, 12, ArrayUtils.add(VALUE, (byte) 3));
     table.put(p);
-    table.flushCommits();
 
     p = new Put(row);
     p.add(FAMILY, QUALIFIER, 13, ArrayUtils.add(VALUE, (byte) 4));
     table.put(p);
-    table.flushCommits();
 
     int versions = 4;
     Scan s = new Scan(row);
@@ -5642,7 +5637,6 @@ public class TestFromClientSide {
     put = new Put(Bytes.toBytes("0-b22222-0000000000000000009"));
     put.add(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
-    ht.flushCommits();
     Scan scan = new Scan(Bytes.toBytes("0-b11111-9223372036854775807"),
         Bytes.toBytes("0-b11111-0000000000000000000"));
     scan.setReversed(true);

@@ -243,12 +243,10 @@ public class TestRegionObserverInterface {
   public void testCheckAndPutHooks() throws IOException {
     TableName tableName =
         TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndPutHooks");
-    Table table = util.createTable(tableName, new byte[][] {A, B, C});
-    try {
+    try (Table table = util.createTable(tableName, new byte[][] {A, B, C})) {
       Put p = new Put(Bytes.toBytes(0));
       p.add(A, A, A);
       table.put(p);
-      table.flushCommits();
       p = new Put(Bytes.toBytes(0));
       p.add(A, A, A);
       verifyMethodResult(SimpleRegionObserver.class,
@@ -266,7 +264,6 @@ public class TestRegionObserverInterface {
           );
     } finally {
       util.deleteTable(tableName);
-      table.close();
     }
   }
 
@@ -279,7 +276,6 @@ public class TestRegionObserverInterface {
       Put p = new Put(Bytes.toBytes(0));
       p.add(A, A, A);
       table.put(p);
-      table.flushCommits();
       Delete d = new Delete(Bytes.toBytes(0));
       table.delete(d);
       verifyMethodResult(SimpleRegionObserver.class,

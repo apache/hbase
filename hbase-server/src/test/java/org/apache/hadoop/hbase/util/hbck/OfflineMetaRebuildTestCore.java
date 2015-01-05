@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -146,15 +146,16 @@ public class OfflineMetaRebuildTestCore {
 
   private void populateTable(Table tbl) throws IOException {
     byte[] values = { 'A', 'B', 'C', 'D' };
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < values.length; i++) {
       for (int j = 0; j < values.length; j++) {
         Put put = new Put(new byte[] { values[i], values[j] });
         put.add(Bytes.toBytes("fam"), new byte[] {}, new byte[] { values[i],
             values[j] });
-        tbl.put(put);
+        puts.add(put);
       }
     }
-    tbl.flushCommits();
+    tbl.put(puts);
   }
 
   /**
@@ -252,7 +253,6 @@ public class OfflineMetaRebuildTestCore {
       }
     }
     meta.delete(dels);
-    meta.flushCommits();
     scanner.close();
     meta.close();
   }

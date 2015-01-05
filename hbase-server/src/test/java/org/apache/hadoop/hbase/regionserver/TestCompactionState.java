@@ -226,7 +226,6 @@ public class TestCompactionState {
         puts.add(p);
       }
       ht.put(puts);
-      ht.flushCommits();
       TEST_UTIL.flush();
       puts.clear();
     }

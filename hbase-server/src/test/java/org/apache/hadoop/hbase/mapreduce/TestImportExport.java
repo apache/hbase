@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -428,20 +429,18 @@ public class TestImportExport {
     UTIL.getHBaseAdmin().createTable(desc);
     Table exportTable = new HTable(UTIL.getConfiguration(), desc.getTableName());
 
-    Put p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now, QUAL);
-    p.add(FAMILYA, QUAL, now + 1, QUAL);
-    p.add(FAMILYA, QUAL, now + 2, QUAL);
-    p.add(FAMILYA, QUAL, now + 3, QUAL);
-    p.add(FAMILYA, QUAL, now + 4, QUAL);
-    exportTable.put(p);
+    Put p1 = new Put(ROW1);
+    p1.add(FAMILYA, QUAL, now, QUAL);
+    p1.add(FAMILYA, QUAL, now + 1, QUAL);
+    p1.add(FAMILYA, QUAL, now + 2, QUAL);
+    p1.add(FAMILYA, QUAL, now + 3, QUAL);
+    p1.add(FAMILYA, QUAL, now + 4, QUAL);
 
     // Having another row would actually test the filter.
-    p = new Put(ROW2);
-    p.add(FAMILYA, QUAL, now, QUAL);
-    exportTable.put(p);
-    // Flush the commits.
-    exportTable.flushCommits();
+    Put p2 = new Put(ROW2);
+    p2.add(FAMILYA, QUAL, now, QUAL);
+
+    exportTable.put(Arrays.asList(p1, p2));
 
     // Export the simple table
     String[] args = new String[] { EXPORT_TABLE, FQ_OUTPUT_DIR, "1000" };

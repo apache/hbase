@@ -927,9 +927,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         = new org.apache.hadoop.hbase.client.Delete(val);
 
       Table table = new HTable(getConf(), getTableName(getConf()));
-
       table.delete(delete);
-      table.flushCommits();
       table.close();
 
       System.out.println("Delete successful");

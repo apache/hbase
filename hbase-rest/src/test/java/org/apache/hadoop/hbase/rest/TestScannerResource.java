@@ -19,10 +19,17 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 import javax.xml.bind.JAXBContext;
@@ -32,11 +39,16 @@ import javax.xml.bind.Unmarshaller;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -47,9 +59,6 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import static org.junit.Assert.*;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -78,10 +87,9 @@ public class TestScannerResource {
   static int insertData(Configuration conf, TableName tableName, String column, double prob)
       throws IOException {
     Random rng = new Random();
-    int count = 0;
-    Table table = new HTable(conf, tableName);
     byte[] k = new byte[3];
     byte [][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
+    List<Put> puts = new ArrayList<>();
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
       for (byte b2 = 'a'; b2 < 'z'; b2++) {
         for (byte b3 = 'a'; b3 < 'z'; b3++) {
@@ -92,15 +100,16 @@ public class TestScannerResource {
             Put put = new Put(k);
             put.setDurability(Durability.SKIP_WAL);
             put.add(famAndQf[0], famAndQf[1], k);
-            table.put(put);
-            count++;
+            puts.add(put);
           }
         }
       }
     }
-    table.flushCommits();
-    table.close();
-    return count;
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+        Table table = conn.getTable(tableName)) {
+      table.put(puts);
+    }
+    return puts.size();
   }
 
   static int countCellSet(CellSetModel model) {

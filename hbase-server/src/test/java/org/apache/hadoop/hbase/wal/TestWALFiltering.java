@@ -90,14 +90,13 @@ public class TestWALFiltering {
                 ts + "_random_" + rand.nextLong());
             put.add(cf, qual, ts, value);
           } else if (rand.nextDouble() < 0.8) {
-            del.deleteColumn(cf, qual, ts);
+            del.addColumn(cf, qual, ts);
           } else {
-            del.deleteColumns(cf, qual, ts);
+            del.addColumn(cf, qual, ts);
           }
         }
         table.put(put);
         table.delete(del);
-        table.flushCommits();
       }
     }
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
