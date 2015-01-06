@@ -1366,7 +1366,6 @@ public class TestHBaseFsck {
       hri.setSplit(true);
 
       MetaTableAccessor.addRegionToMeta(meta, hri, a, b);
-      meta.flushCommits();
       meta.close();
       admin.flush(TableName.META_TABLE_NAME);
 
@@ -1492,9 +1491,10 @@ public class TestHBaseFsck {
       undeployRegion(connection, hris.get(daughters.getFirst()), daughters.getFirst());
       undeployRegion(connection, hris.get(daughters.getSecond()), daughters.getSecond());
 
-      meta.delete(new Delete(daughters.getFirst().getRegionName()));
-      meta.delete(new Delete(daughters.getSecond().getRegionName()));
-      meta.flushCommits();
+      List<Delete> deletes = new ArrayList<>();
+      deletes.add(new Delete(daughters.getFirst().getRegionName()));
+      deletes.add(new Delete(daughters.getSecond().getRegionName()));
+      meta.delete(deletes);
 
       // Remove daughters from regionStates
       RegionStates regionStates = TEST_UTIL.getMiniHBaseCluster().getMaster().

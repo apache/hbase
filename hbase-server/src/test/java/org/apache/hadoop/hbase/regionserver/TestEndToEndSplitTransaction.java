@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -301,13 +302,13 @@ public class TestEndToEndSplitTransaction {
     }
 
     void addData(int start) throws IOException {
+      List<Put> puts = new ArrayList<>();
       for (int i=start; i< start + 100; i++) {
         Put put = new Put(Bytes.toBytes(i));
-
         put.add(family, family, Bytes.toBytes(i));
-        table.put(put);
+        puts.add(put);
       }
-      table.flushCommits();
+      table.put(puts);
     }
   }
 

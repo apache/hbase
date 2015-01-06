@@ -117,13 +117,14 @@ public class TestTimeRangeMapRed {
         tsList.add(kv.getTimestamp());
       }
 
+      List<Put> puts = new ArrayList<>();
       for (Long ts : tsList) {
         Put put = new Put(key.get());
         put.setDurability(Durability.SKIP_WAL);
         put.add(FAMILY_NAME, COLUMN_NAME, ts, Bytes.toBytes(true));
-        table.put(put);
+        puts.add(put);
       }
-      table.flushCommits();
+      table.put(puts);
     }
 
     @Override
@@ -150,20 +151,18 @@ public class TestTimeRangeMapRed {
     col.setMaxVersions(Integer.MAX_VALUE);
     desc.addFamily(col);
     admin.createTable(desc);
-    Table table = new HTable(UTIL.getConfiguration(), desc.getTableName());
-    prepareTest(table);
-    runTestOnTable();
-    verify(table);
-  }
-
-  private void prepareTest(final Table table) throws IOException {
+    List<Put> puts = new ArrayList<Put>();
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
       put.setDurability(Durability.SKIP_WAL);
       put.add(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
-      table.put(put);
+      puts.add(put);
     }
-    table.flushCommits();
+    Table table = new HTable(UTIL.getConfiguration(), desc.getTableName());
+    table.put(puts);
+    runTestOnTable();
+    verify(table);
+    table.close();
   }
 
   private void runTestOnTable()

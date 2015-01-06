@@ -70,7 +70,6 @@ public class TestOpenTableInCoprocessor {
         final WALEdit edit, final Durability durability) throws IOException {
       Table table = e.getEnvironment().getTable(otherTable);
       table.put(put);
-      table.flushCommits();
       completed[0] = true;
       table.close();
     }
@@ -165,7 +164,6 @@ public class TestOpenTableInCoprocessor {
     Put p = new Put(new byte[] { 'a' });
     p.add(family, null, new byte[] { 'a' });
     table.put(p);
-    table.flushCommits();
     table.close();
 
     Table target = new HTable(UTIL.getConfiguration(), otherTable);

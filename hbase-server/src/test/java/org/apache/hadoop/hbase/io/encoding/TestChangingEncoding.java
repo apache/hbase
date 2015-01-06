@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -128,8 +130,7 @@ public class TestChangingEncoding {
   static void writeTestDataBatch(Configuration conf, TableName tableName,
       int batchId) throws Exception {
     LOG.debug("Writing test data batch " + batchId);
-    Table table = new HTable(conf, tableName);
-    table.setAutoFlushTo(false);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       Put put = new Put(getRowKey(batchId, i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
@@ -137,10 +138,12 @@ public class TestChangingEncoding {
             getValue(batchId, i, j));
       }
       put.setDurability(Durability.SKIP_WAL);
-      table.put(put);
+      puts.add(put);
     }
-    table.flushCommits();
-    table.close();
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+        Table table = conn.getTable(tableName)) {
+      table.put(puts);
+    }
   }
 
   static void verifyTestDataBatch(Configuration conf, TableName tableName,

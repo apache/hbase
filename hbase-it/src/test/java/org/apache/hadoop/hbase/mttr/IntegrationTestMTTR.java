@@ -486,7 +486,6 @@ public class IntegrationTestMTTR {
       Put p = new Put(Bytes.toBytes(RandomStringUtils.randomAlphanumeric(5)));
       p.add(FAMILY, Bytes.toBytes("\0"), Bytes.toBytes(RandomStringUtils.randomAscii(5)));
       table.put(p);
-      table.flushCommits();
       return true;
     }
 

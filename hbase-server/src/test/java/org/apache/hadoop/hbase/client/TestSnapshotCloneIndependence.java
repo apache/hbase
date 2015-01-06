@@ -172,7 +172,7 @@ public class TestSnapshotCloneIndependence {
         // Restore the interrupted status
         Thread.currentThread().interrupt();
       }
-      if (t.getRegionLocations().size() > originalCount) {
+      if (t.getAllRegionLocations().size() > originalCount) {
         return;
       }
     }
@@ -193,9 +193,7 @@ public class TestSnapshotCloneIndependence {
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
 
-    HTable original = UTIL.createTable(localTableName, TEST_FAM);
-    try {
-
+    try (Table original = UTIL.createTable(localTableName, TEST_FAM)) {
       UTIL.loadTable(original, TEST_FAM);
       final int origTableRowCount = UTIL.countRows(original);
 
@@ -212,9 +210,7 @@ public class TestSnapshotCloneIndependence {
       TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
       admin.cloneSnapshot(snapshotName, cloneTableName);
 
-      Table clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName);
-
-      try {
+      try (Table clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName)){
         final int clonedTableRowCount = UTIL.countRows(clonedTable);
 
         Assert.assertEquals(
@@ -227,7 +223,6 @@ public class TestSnapshotCloneIndependence {
         Put p = new Put(Bytes.toBytes(rowKey));
         p.add(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
         original.put(p);
-        original.flushCommits();
 
         // Verify that it is not present in the original table
         Assert.assertEquals("The row count of the original table was not modified by the put",
@@ -239,7 +234,6 @@ public class TestSnapshotCloneIndependence {
         p = new Put(Bytes.toBytes(rowKey));
         p.add(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
         clonedTable.put(p);
-        clonedTable.flushCommits();
 
         // Verify that the new family is not in the restored table's description
         Assert.assertEquals(
@@ -247,13 +241,7 @@ public class TestSnapshotCloneIndependence {
           origTableRowCount + 1, UTIL.countRows(original));
         Assert.assertEquals("The row count of the cloned table was not modified by the put",
           clonedTableRowCount + 1, UTIL.countRows(clonedTable));
-      } finally {
-
-        clonedTable.close();
       }
-    } finally {
-
-      original.close();
     }
   }
 

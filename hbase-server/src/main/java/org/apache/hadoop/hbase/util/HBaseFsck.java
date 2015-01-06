@@ -1707,7 +1707,6 @@ public class HBaseFsck extends Configured implements Closeable {
   private void deleteMetaRegion(byte[] metaKey) throws IOException {
     Delete d = new Delete(metaKey);
     meta.delete(d);
-    meta.flushCommits();
     LOG.info("Deleted " + Bytes.toString(metaKey) + " from META" );
   }
 
@@ -1728,7 +1727,6 @@ public class HBaseFsck extends Configured implements Closeable {
     mutations.add(p);
 
     meta.mutateRow(mutations);
-    meta.flushCommits();
     LOG.info("Reset split parent " + hi.metaEntry.getRegionNameAsString() + " in META" );
   }
 

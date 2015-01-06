@@ -412,7 +412,6 @@ public class TestFromClientSide3 {
     Put put = new Put(ROW_BYTES);
     put.add(FAMILY, COL_QUAL, VAL_BYTES);
     table.put(put);
-    table.flushCommits();
 
     //Try getting the row with an empty row key
     Result res = null;
