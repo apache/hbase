@@ -411,6 +411,7 @@ EOF
         filter = args["FILTER"]
         startrow = args["STARTROW"] || ''
         stoprow = args["STOPROW"]
+        rowprefixfilter = args["ROWPREFIXFILTER"]
         timestamp = args["TIMESTAMP"]
         columns = args["COLUMNS"] || args["COLUMN"] || []
         # If CACHE_BLOCKS not set, then default 'true'.
@@ -434,6 +435,9 @@ EOF
         else
           org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes)
         end
+
+        # This will overwrite any startrow/stoprow settings
+        scan.setRowPrefixFilter(rowprefixfilter.to_java_bytes) if rowprefixfilter
 
         columns.each do |c| 
           family, qualifier = parse_column_name(c.to_s)

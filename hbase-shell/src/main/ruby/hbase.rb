@@ -42,6 +42,7 @@ module HBaseConstants
   METADATA = org.apache.hadoop.hbase.HConstants::METADATA
   STOPROW = "STOPROW"
   STARTROW = "STARTROW"
+  ROWPREFIXFILTER = "ROWPREFIXFILTER"
   ENDROW = STOPROW
   RAW = "RAW"
   LIMIT = "LIMIT"

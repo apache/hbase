@@ -24,7 +24,7 @@ Set the visibility expression on one or more existing cells.
 
 Pass table name, visibility expression, and a dictionary containing
 scanner specifications.  Scanner specifications may include one or more
-of: TIMERANGE, FILTER, STARTROW, STOPROW, TIMESTAMP, or COLUMNS
+of: TIMERANGE, FILTER, STARTROW, STOPROW, ROWPREFIXFILTER, TIMESTAMP, or COLUMNS
 
 If no columns are specified, all columns will be included.
 To include all members of a column family, leave the qualifier empty as in
@@ -40,8 +40,8 @@ Examples:
     hbase> set_visibility 't1', 'A|B', {COLUMNS => ['c1', 'c2']}
     hbase> set_visibility 't1', '(A&B)|C', {COLUMNS => 'c1',
         TIMERANGE => [1303668804, 1303668904]}
-    hbase> set_visibility 't1', 'A&B&C', {FILTER => "(PrefixFilter ('row2') AND
-        (QualifierFilter (>=, 'binary:xyz'))) AND
+    hbase> set_visibility 't1', 'A&B&C', {ROWPREFIXFILTER => 'row2',
+        FILTER => "(QualifierFilter (>=, 'binary:xyz')) AND
         (TimestampsFilter ( 123, 456))"}
 
 This command will only affect existing cells and is expected to be mainly
