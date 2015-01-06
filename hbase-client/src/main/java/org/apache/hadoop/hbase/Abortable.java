@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Interface to support the aborting of a given server or client.
@@ -28,7 +29,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * <p>
  * Implemented by the Master, RegionServer, and TableServers (client).
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceStability.Evolving
 public interface Abortable {
   /**
    * Abort the server or client.
@@ -36,9 +38,9 @@ public interface Abortable {
    * @param e Throwable that caused abort. Can be null.
    */
   void abort(String why, Throwable e);
-  
+
   /**
-   * Check if the server or client was aborted. 
+   * Check if the server or client was aborted.
    * @return true if the server or client was aborted, false otherwise
    */
   boolean isAborted();
