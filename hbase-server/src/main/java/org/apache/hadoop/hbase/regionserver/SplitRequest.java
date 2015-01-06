@@ -63,6 +63,7 @@ class SplitRequest implements Runnable {
       return;
     }
     boolean success = false;
+    server.getMetrics().incrSplitRequest();
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
     SplitTransaction st = new SplitTransaction(parent, midKey);
     try {
@@ -129,6 +130,7 @@ class SplitRequest implements Runnable {
       // Update regionserver metrics with the split transaction total running time
       server.getMetrics().updateSplitTime(endTime - startTime);
       if (success) {
+        server.getMetrics().incrSplitSuccess();
         // Log success
         LOG.info("Region split, hbase:meta updated, and report to master. Parent="
             + parent.getRegionNameAsString() + ", new regions: "

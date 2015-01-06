@@ -154,6 +154,11 @@ public interface MetricsRegionServerWrapper {
   int getPercentFileLocal();
 
   /**
+   * Get the size of the split queue
+   */
+  int getSplitQueueSize();
+
+  /**
    * Get the size of the compaction queue
    */
   int getCompactionQueueSize();

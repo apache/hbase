@@ -44,6 +44,8 @@ public class MetricsRegionServerSourceImpl
   private final MetricMutableCounterLong slowGet;
   private final MetricMutableCounterLong slowIncrement;
   private final MetricMutableCounterLong slowAppend;
+  private final MetricMutableCounterLong splitRequest;
+  private final MetricMutableCounterLong splitSuccess;
 
   private final MetricHistogram splitTimeHisto;
   private final MetricHistogram flushTimeHisto;
@@ -79,6 +81,9 @@ public class MetricsRegionServerSourceImpl
 
     splitTimeHisto = getMetricsRegistry().newHistogram(SPLIT_KEY);
     flushTimeHisto = getMetricsRegistry().newHistogram(FLUSH_KEY);
+
+    splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0l);
+    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0l);
   }
 
   @Override
@@ -134,6 +139,16 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void incrSlowAppend() {
     slowAppend.incr();
+  }
+
+  @Override
+  public void incrSplitRequest() {
+    splitRequest.incr();
+  }
+
+  @Override
+  public void incrSplitSuccess() {
+    splitSuccess.incr();
   }
 
   @Override
