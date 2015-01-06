@@ -166,6 +166,14 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public int getSplitQueueSize() {
+    if (this.regionServer.compactSplitThread == null) {
+      return 0;
+    }
+    return this.regionServer.compactSplitThread.getSplitQueueSize();
+  }
+
+  @Override
   public int getCompactionQueueSize() {
     //The thread could be zero.  if so assume there is no queue.
     if (this.regionServer.compactSplitThread == null) {
