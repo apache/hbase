@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
@@ -219,8 +221,14 @@ public class TestFastFail {
     ClusterStatus status = TEST_UTIL.getHBaseCluster().getClusterStatus();
 
     // Kill a regionserver
-    TEST_UTIL.getHBaseCluster().getRegionServer(0).getRpcServer().stop();
-    TEST_UTIL.getHBaseCluster().getRegionServer(0).stop("Testing");
+    for (int i = 0; i < SLAVES; i++) {
+      HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(i);
+      List<HRegion> regions = server.getOnlineRegions(TableName.META_TABLE_NAME);
+      if (regions.size() > 0) continue; // We don't want to kill META table because that adds extra
+                                        // latencies which can't be tested very easily.
+      server.getRpcServer().stop();
+      server.stop("Testing");
+    }
 
     // Let the threads continue going
     continueOtherHalf.countDown();
