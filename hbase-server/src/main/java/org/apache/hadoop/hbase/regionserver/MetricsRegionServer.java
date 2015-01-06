@@ -99,6 +99,14 @@ public class MetricsRegionServer {
     serverSource.updateSplitTime(t);
   }
 
+  public void incrSplitRequest() {
+    serverSource.incrSplitRequest();
+  }
+
+  public void incrSplitSuccess() {
+    serverSource.incrSplitSuccess();
+  }
+
   public void updateFlushTime(long t) {
     serverSource.updateFlushTime(t);
   }

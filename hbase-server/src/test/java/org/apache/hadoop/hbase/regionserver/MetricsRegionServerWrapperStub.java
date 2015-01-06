@@ -255,4 +255,9 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   public long getBlockedRequestsCount() {
     return 0;
   }
+
+  @Override
+  public int getSplitQueueSize() {
+    return 0;
+  }
 }
