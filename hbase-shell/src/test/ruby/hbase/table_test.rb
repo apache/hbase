@@ -412,6 +412,26 @@ module Hbase
       assert_nil(res['2'])
     end
 
+    define_test "scan should support ROWPREFIXFILTER parameter (test 1)" do
+      res = @test_table._scan_internal ROWPREFIXFILTER => '1'
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_not_nil(res['1'])
+      assert_not_nil(res['1']['x:a'])
+      assert_not_nil(res['1']['x:b'])
+      assert_nil(res['2'])
+    end
+
+    define_test "scan should support ROWPREFIXFILTER parameter (test 2)" do
+      res = @test_table._scan_internal ROWPREFIXFILTER => '2'
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_nil(res['1'])
+      assert_not_nil(res['2'])
+      assert_not_nil(res['2']['x:a'])
+      assert_not_nil(res['2']['x:b'])
+    end
+
     define_test "scan should support LIMIT parameter" do
       res = @test_table._scan_internal LIMIT => 1
       assert_not_nil(res)
