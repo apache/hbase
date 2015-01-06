@@ -48,6 +48,8 @@ public class MetricsRegionServerSourceImpl
   private final MutableCounterLong slowGet;
   private final MutableCounterLong slowIncrement;
   private final MutableCounterLong slowAppend;
+  private final MutableCounterLong splitRequest;
+  private final MutableCounterLong splitSuccess;
 
   private final MetricHistogram splitTimeHisto;
   private final MetricHistogram flushTimeHisto;
@@ -83,6 +85,9 @@ public class MetricsRegionServerSourceImpl
 
     splitTimeHisto = getMetricsRegistry().newHistogram(SPLIT_KEY);
     flushTimeHisto = getMetricsRegistry().newHistogram(FLUSH_KEY);
+
+    splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0l);
+    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0l);
   }
 
   @Override
@@ -138,6 +143,16 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void incrSlowAppend() {
     slowAppend.incr();
+  }
+
+  @Override
+  public void incrSplitRequest() {
+    splitRequest.incr();
+  }
+
+  @Override
+  public void incrSplitSuccess() {
+    splitSuccess.incr();
   }
 
   @Override
@@ -198,6 +213,8 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getDataInMemoryWithoutWAL())
           .addGauge(Interns.info(PERCENT_FILES_LOCAL, PERCENT_FILES_LOCAL_DESC),
               rsWrap.getPercentFileLocal())
+          .addGauge(Interns.info(SPLIT_QUEUE_LENGTH, SPLIT_QUEUE_LENGTH_DESC),
+              rsWrap.getSplitQueueSize())
           .addGauge(Interns.info(COMPACTION_QUEUE_LENGTH, COMPACTION_QUEUE_LENGTH_DESC),
               rsWrap.getCompactionQueueSize())
           .addGauge(Interns.info(FLUSH_QUEUE_LENGTH, FLUSH_QUEUE_LENGTH_DESC),
