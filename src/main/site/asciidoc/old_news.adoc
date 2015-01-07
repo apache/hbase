@@ -1,0 +1,117 @@
+////
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+////
+
+= Old Apache HBase (TM) News
+
+February 10th, 2014:: link:http://www.meetup.com/hbaseusergroup/events/163139322/[HBase Meetup @ Continuuity] in Palo Alto
+
+January 30th, 2014:: link:http://www.meetup.com/hbaseusergroup/events/158491762/[HBase Meetup @ Apple] in Cupertino
+
+January 30th, 2014:: link:http://www.meetup.com/Los-Angeles-HBase-User-group/events/160560282/[Los Angeles HBase User Group] in El Segundo
+
+October 24th, 2013:: link:http://www.meetup.com/hbaseusergroup/events/140759692/[HBase User] and link:http://www.meetup.com/hackathon/events/144366512/[Developer] Meetup at HortonWorksin Palo Alto
+
+September 26, 2013:: link:http://www.meetup.com/hbaseusergroup/events/135862292/[HBase Meetup at Arista Networks] in San Francisco
+
+August 20th, 2013:: link:http://www.meetup.com/hbaseusergroup/events/120534362/[HBase Meetup at Flurry] in San Francisco
+
+July 16th, 2013:: link:http://www.meetup.com/hbaseusergroup/events/119929152/[HBase Meetup at Twitter] in San Francisco
+
+June 25th, 2013:: link:http://www.meetup.com/hbaseusergroup/events/119154442/[Hadoop Summit Meetup].at San Jose Convention Center
+
+June 14th, 2013:: link:http://kijicon.eventbrite.com/[KijiCon: Building Big Data Apps] in San Francisco.
+
+June 13th, 2013:: link:http://www.hbasecon.com/[HBaseCon2013] in San Francisco.  Submit an Abstract!
+
+June 12th, 2013:: link:http://www.meetup.com/hackathon/events/123403802/[HBaseConHackAthon] at the Cloudera office in San Francisco.
+
+April 11th, 2013:: link:http://www.meetup.com/hbaseusergroup/events/103587852/[HBase Meetup at AdRoll] in San Francisco
+
+February 28th, 2013:: link:http://www.meetup.com/hbaseusergroup/events/96584102/[HBase Meetup at Intel Mission Campus]
+
+February 19th, 2013:: link:http://www.meetup.com/hackathon/events/103633042/[Developers PowWow] at HortonWorks' new digs
+
+January 23rd, 2013:: link:http://www.meetup.com/hbaseusergroup/events/91381312/[HBase Meetup at WibiData World HQ!]
+
+December 4th, 2012:: link:http://www.meetup.com/hackathon/events/90536432/[0.96 Bug Squashing and Testing Hackathon] at Cloudera, SF.
+
+October 29th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/82791572/[HBase User Group Meetup] at Wize Commerce in San Mateo.
+
+October 25th, 2012:: link:http://www.meetup.com/HBase-NYC/events/81728932/[Strata/Hadoop World HBase Meetup.] in NYC
+
+September 11th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/80621872/[Contributor's Pow-Wow at HortonWorks HQ.]
+
+August 8th, 2012:: link:http://www.apache.org/dyn/closer.cgi/hbase/[Apache HBase 0.94.1 is available for download]
+
+June 15th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/59829652/[Birds-of-a-feather] in San Jose, day after:: link:http://hadoopsummit.org[Hadoop Summit]
+
+May 23rd, 2012:: link:http://www.meetup.com/hackathon/events/58953522/[HackConAthon] in Palo Alto
+
+May 22nd, 2012:: link:http://www.hbasecon.com[HBaseCon2012] in San Francisco
+
+March 27th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/56021562/[Meetup @ StumbleUpon] in San Francisco
+
+January 19th, 2012:: link:http://www.meetup.com/hbaseusergroup/events/46702842/[Meetup @ EBay]
+
+January 23rd, 2012:: Apache HBase 0.92.0 released. link:http://www.apache.org/dyn/closer.cgi/hbase/[Download it!]
+
+December 23rd, 2011:: Apache HBase 0.90.5 released. link:http://www.apache.org/dyn/closer.cgi/hbase/[Download it!]
+
+November 29th, 2011:: link:http://www.meetup.com/hackathon/events/41025972/[Developer Pow-Wow in SF] at Salesforce HQ
+
+November 7th, 2011:: link:http://www.meetup.com/hbaseusergroup/events/35682812/[HBase Meetup in NYC (6PM)] at the AppNexus office
+
+August 22nd, 2011:: link:http://www.meetup.com/hbaseusergroup/events/28518471/[HBase Hackathon (11AM) and Meetup (6PM)] at FB in PA
+
+June 30th, 2011:: link:http://www.meetup.com/hbaseusergroup/events/20572251/[HBase Contributor Day], the day after the:: link:http://developer.yahoo.com/events/hadoopsummit2011/[Hadoop Summit] hosted by Y!
+
+June 8th, 2011:: link:http://berlinbuzzwords.de/wiki/hbase-workshop-and-hackathon[HBase Hackathon] in Berlin to coincide with:: link:http://berlinbuzzwords.de/[Berlin Buzzwords]
+
+May 19th, 2011: Apache HBase 0.90.3 released. link:http://www.apache.org/dyn/closer.cgi/hbase/[Download it!]
+
+April 12th, 2011: Apache HBase 0.90.2 released. link:http://www.apache.org/dyn/closer.cgi/hbase/[Download it!]
+
+March 21st, 2011:: link:http://www.meetup.com/hackathon/events/16770852/[HBase 0.92 Hackathon at StumbleUpon, SF]
+February 22nd, 2011:: link:http://www.meetup.com/hbaseusergroup/events/16492913/[HUG12: February HBase User Group at StumbleUpon SF]
+December 13th, 2010:: link:http://www.meetup.com/hackathon/calendar/15597555/[HBase Hackathon: Coprocessor Edition]
+November 19th, 2010:: link:http://huguk.org/[Hadoop HUG in London] is all about Apache HBase
+November 15-19th, 2010:: link:http://www.devoxx.com/display/Devoxx2K10/Home[Devoxx] features HBase Training and multiple HBase presentations
+
+October 12th, 2010:: HBase-related presentations by core contributors and users at:: link:http://www.cloudera.com/company/press-center/hadoop-world-nyc/[Hadoop World 2010]
+
+October 11th, 2010:: link:http://www.meetup.com/hbaseusergroup/calendar/14606174/[HUG-NYC: HBase User Group NYC Edition] (Night before Hadoop World)
+June 30th, 2010:: link:http://www.meetup.com/hbaseusergroup/calendar/13562846/[Apache HBase Contributor Workshop] (Day after Hadoop Summit)
+May 10th, 2010:: Apache HBase graduates from Hadoop sub-project to Apache Top Level Project 
+
+April 19, 2010:: Signup for link:http://www.meetup.com/hbaseusergroup/calendar/12689490/[HBase User Group Meeting, HUG10] hosted by Trend Micro
+
+March 10th, 2010:: link:http://www.meetup.com/hbaseusergroup/calendar/12689351/[HBase User Group Meeting, HUG9] hosted by Mozilla
+
+January 27th, 2010:: Sign up for the link:http://www.meetup.com/hbaseusergroup/calendar/12241393/[HBase User Group Meeting, HUG8], at StumbleUpon in SF
+
+September 8th, 2010:: Apache HBase 0.20.0 is faster, stronger, slimmer, and sweeter tasting than any previous Apache HBase release.  Get it off the link:http://www.apache.org/dyn/closer.cgi/hbase/[Releases] page.
+
+November 2-6th, 2009:: link:http://dev.us.apachecon.com/c/acus2009/[ApacheCon] in Oakland. The Apache Foundation will be celebrating its 10th anniversary in beautiful Oakland by the Bay. Lots of good talks and meetups including an HBase presentation by a couple of the lads.
+
+October 2nd, 2009:: HBase at Hadoop World in NYC. A few of us will be talking on Practical HBase out east at link:http://www.cloudera.com/hadoop-world-nyc[Hadoop World: NYC].
+
+August 7th-9th, 2009:: HUG7 and HBase Hackathon at StumbleUpon in SF: Sign up for the:: link:http://www.meetup.com/hbaseusergroup/calendar/10950511/[HBase User Group Meeting, HUG7] or for the link:http://www.meetup.com/hackathon/calendar/10951718/[Hackathon] or for both (all are welcome!).
+
+June, 2009::  HBase at HadoopSummit2009 and at NOSQL: See the link:http://wiki.apache.org/hadoop/HBase/HBasePresentations[presentations]
+
+March 3rd, 2009 :: HUG6 -- link:http://www.meetup.com/hbaseusergroup/calendar/9764004/[HBase User Group 6]
+
+January 30th, 2009:: LA Hbackathon: link:http://www.meetup.com/hbasela/calendar/9450876/[HBase January Hackathon Los Angeles] at link:http://streamy.com[Streamy] in Manhattan Beach
+

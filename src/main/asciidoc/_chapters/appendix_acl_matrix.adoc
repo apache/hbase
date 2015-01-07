@@ -1,0 +1,133 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[appendix]
+[[appendix_acl_matrix]]
+== Access Control Matrix
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+:toc: left
+:source-language: java
+
+The following matrix shows the minimum permission set required to perform operations in HBase.
+Before using the table, read through the information about how to interpret it.
+
+.Interpreting the ACL Matrix Table
+The following conventions are used in the ACL Matrix table:
+
+=== Scopes
+Permissions are evaluated starting at the widest scope and working to the narrowest scope.
+
+A scope corresponds to a level of the data model. From broadest to narrowest, the scopes are as follows:
+
+.Scopes
+* Global
+* Namespace (NS)
+* Table
+* Column Family (CF)
+* Column Qualifier (CQ)
+* Cell
+
+For instance, a permission granted at table level dominates any grants done at the Column Family, Column Qualifier, or cell level. The user can do what that grant implies at any location in the table. A permission granted at global scope dominates all: the user is always allowed to take that action everywhere.
+
+=== Permissions
+Possible permissions include the following:
+
+.Permissions
+* Superuser - a special user that belongs to group "supergroup" and has unlimited access
+* Admin (A)
+* Create \(C)
+* Write (W)
+* Read \(R)
+* Execute (X)
+
+For the most part, permissions work in an expected way, with the following caveats:
+
+Having Write permission does not imply Read permission.::
+  It is possible and sometimes desirable for a user to be able to write data that same user cannot read. One such example is a log-writing process. 
+The [systemitem]+hbase:meta+ table is readable by every user, regardless of the user's other grants or restrictions.::
+  This is a requirement for HBase to function correctly.
+[code]+CheckAndPut+ and [code]+CheckAndDelete+ operations will fail if the user does not have both Write and Read permission.::
+[code]+Increment+ and [code]+Append+ operations do not require Read access.::
+
+The following table is sorted by the interface that provides each operation.
+In case the table goes out of date, the unit tests which check for accuracy of permissions can be found in [path]_hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java_, and the access controls themselves can be examined in [path]_hbase-server/src/main/java/org/apache/hadoop/hbase/security/access/AccessController.java_.
+
+.ACL Matrix
+[cols="1,1,1,1", frame="all", options="header"]
+|===
+| Interface | Operation | Minimum Scope | Minimum Permission
+| Master | createTable | Global | C
+|        | modifyTable | Table | A\|C                    
+|        | deleteTable | Table | A\|C                   
+| | truncateTable | Table | A\|C                   
+| | addColumn | Table | A\|C
+| | modifyColumn | Table | A\|C
+| | deleteColumn | Table | A\|C
+| | disableTable | Table | A\|C
+| | disableAclTable | None | Not allowed
+| | enableTable | Table | A\|C
+| | move | Global | A
+| | assign | Global | A
+| | unassign | Global | A
+| | regionOffline | Global | A
+| | balance | Global | A
+| | balanceSwitch | Global | A
+| | shutdown | Global | A
+| | stopMaster | Global | A
+| | snapshot | Global | A
+| | clone | Global | A
+| | restore | Global | A
+| | deleteSnapshot | Global | A
+| | createNamespace | Global | A
+| | deleteNamespace | Namespace | A
+| | modifyNamespace | Namespace | A
+| | flushTable | Table | A\|C
+| | getTableDescriptors | Global\|Table | A
+| | mergeRegions | Global | A
+| Region | openRegion | Global | A
+| | closeRegion | Global | A
+| | stopRegionServer | Global | A
+| | rollHLog | Global | A
+| | mergeRegions | Global | A
+| | flush | Global\|Table | A\|C 
+| | split | Global\|Table | A
+| | compact | Global\|Table | A\|C
+| | bulkLoadHFile    | Table | W
+| | prepareBulkLoad  | Table |C
+| | cleanupBulkLoad  | Table |W
+| | checkAndDelete   | Table\|CF\|CQ | RW
+| | checkAndPut | Table\|CF\|CQ | RW
+| | incrementColumnValue  | Table\|CF\|CQ | RW
+| | scannerClose |     Table | R
+| | scannerNext | Table |  R
+| | scannerOpen | Table\|CF\|CQ | R     
+| Endpoint | invoke | Endpoint | X
+| AccessController | grant | Global\|Table\|NS | A 
+| | revoke | Global\|Table\|NS | A                   
+| | getUserPermissions | Global\|Table\|NS | A
+| | checkPermissions | Global\|Table\|NS | A                 
+|===
+
+:numbered:

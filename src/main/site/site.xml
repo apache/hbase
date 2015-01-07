@@ -63,14 +63,13 @@
       <item name="Other resources" href="resources.html" />
     </menu>
     <menu name="Documentation">
-      <item name="Getting Started" href="book/quickstart.html" />
+      <item name="Reference Guide" href="book.html" target="_blank" />
+      <item name="Getting Started" href="book.html#quickstart" />
       <item name="User API" href="apidocs/index.html" />
       <item name="Developer API" href="devapidocs/index.html" />
       <item name="X-Ref" href="xref/index.html" />
-      <item name="Ref Guide (multi-page)" href="book/book.html" />
-      <item name="Ref Guide (single-page)" href="book.html" />
       <item name="中文参考指南(单页)" href="http://abloz.com/hbase/book.html" />
-      <item name="FAQ" href="book/faq.html" />
+      <item name="FAQ" href="book.html#faq" />
       <item name="Videos/Presentations" href="book.html#other.info" />
       <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
       <item name="ACID Semantics" href="acid-semantics.html" />

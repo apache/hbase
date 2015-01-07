@@ -1,0 +1,47 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[appendix]
+[[asf]]
+== HBase and the Apache Software Foundation
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+:toc: left
+:source-language: java
+
+HBase is a project in the Apache Software Foundation and as such there are responsibilities to the ASF to ensure a healthy project.
+
+[[asf.devprocess]]
+=== ASF Development Process
+
+See the link:http://www.apache.org/dev/#committers[Apache Development Process page]            for all sorts of information on how the ASF is structured (e.g., PMC, committers, contributors), to tips on contributing and getting involved, and how open-source works at ASF. 
+
+[[asf.reporting]]
+=== ASF Board Reporting
+
+Once a quarter, each project in the ASF portfolio submits a report to the ASF board.
+This is done by the HBase project lead and the committers.
+See link:http://www.apache.org/foundation/board/reporting[ASF board reporting] for more information. 
+
+:numbered:
