@@ -364,7 +364,7 @@ public class HFileOutputFormat2
   @Deprecated
   public static void configureIncrementalLoad(Job job, HTable table)
       throws IOException {
-    configureIncrementalLoad(job, table, table);
+    configureIncrementalLoad(job, table.getTableDescriptor(), table.getRegionLocator());
   }
 
   /**
@@ -383,13 +383,32 @@ public class HFileOutputFormat2
    */
   public static void configureIncrementalLoad(Job job, Table table, RegionLocator regionLocator)
       throws IOException {
-    configureIncrementalLoad(job, table, regionLocator, HFileOutputFormat2.class);
+    configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
   }
 
-  static void configureIncrementalLoad(Job job, Table table, RegionLocator regionLocator,
-      Class<? extends OutputFormat<?, ?>> cls) throws IOException {
-    Configuration conf = job.getConfiguration();
+  /**
+   * Configure a MapReduce Job to perform an incremental load into the given
+   * table. This
+   * <ul>
+   *   <li>Inspects the table to configure a total order partitioner</li>
+   *   <li>Uploads the partitions file to the cluster and adds it to the DistributedCache</li>
+   *   <li>Sets the number of reduce tasks to match the current number of regions</li>
+   *   <li>Sets the output key/value class to match HFileOutputFormat2's requirements</li>
+   *   <li>Sets the reducer up to perform the appropriate sorting (either KeyValueSortReducer or
+   *     PutSortReducer)</li>
+   * </ul>
+   * The user should be sure to set the map output value class to either KeyValue or Put before
+   * running this function.
+   */
+  public static void configureIncrementalLoad(Job job, HTableDescriptor tableDescriptor,
+      RegionLocator regionLocator) throws IOException {
+    configureIncrementalLoad(job, tableDescriptor, regionLocator, HFileOutputFormat2.class);
+  }
 
+  static void configureIncrementalLoad(Job job, HTableDescriptor tableDescriptor,
+      RegionLocator regionLocator, Class<? extends OutputFormat<?, ?>> cls) throws IOException,
+      UnsupportedEncodingException {
+    Configuration conf = job.getConfiguration();
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(KeyValue.class);
     job.setOutputFormatClass(cls);
@@ -412,7 +431,7 @@ public class HFileOutputFormat2
         KeyValueSerialization.class.getName());
 
     // Use table's region boundaries for TOP split points.
-    LOG.info("Looking up current regions for table " + table.getName());
+    LOG.info("Looking up current regions for table " + tableDescriptor.getTableName());
     List<ImmutableBytesWritable> startKeys = getRegionStartKeys(regionLocator);
     LOG.info("Configuring " + startKeys.size() + " reduce partitions " +
         "to match current region count");
@@ -420,14 +439,14 @@ public class HFileOutputFormat2
 
     configurePartitioner(job, startKeys);
     // Set compression algorithms based on column families
-    configureCompression(table, conf);
-    configureBloomType(table, conf);
-    configureBlockSize(table, conf);
-    configureDataBlockEncoding(table, conf);
+    configureCompression(conf, tableDescriptor);
+    configureBloomType(tableDescriptor, conf);
+    configureBlockSize(tableDescriptor, conf);
+    configureDataBlockEncoding(tableDescriptor, conf);
 
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
-    LOG.info("Incremental table " + table.getName() + " output configured.");
+    LOG.info("Incremental table " + regionLocator.getName() + " output configured.");
   }
   
   public static void configureIncrementalLoadMap(Job job, Table table) throws IOException {
@@ -438,10 +457,11 @@ public class HFileOutputFormat2
     job.setOutputFormatClass(HFileOutputFormat2.class);
 
     // Set compression algorithms based on column families
-    configureCompression(table, conf);
-    configureBloomType(table, conf);
-    configureBlockSize(table, conf);
-    configureDataBlockEncoding(table, conf);
+    configureCompression(conf, table.getTableDescriptor());
+    configureBloomType(table.getTableDescriptor(), conf);
+    configureBlockSize(table.getTableDescriptor(), conf);
+    HTableDescriptor tableDescriptor = table.getTableDescriptor();
+    configureDataBlockEncoding(tableDescriptor, conf);
 
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
@@ -590,10 +610,9 @@ public class HFileOutputFormat2
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @VisibleForTesting
-  static void configureCompression(
-      Table table, Configuration conf) throws IOException {
+  static void configureCompression(Configuration conf, HTableDescriptor tableDescriptor)
+      throws UnsupportedEncodingException {
     StringBuilder compressionConfigValue = new StringBuilder();
-    HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if(tableDescriptor == null){
       // could happen with mock table instance
       return;
@@ -617,17 +636,16 @@ public class HFileOutputFormat2
   /**
    * Serialize column family to block size map to configuration.
    * Invoked while configuring the MR job for incremental load.
-   *
-   * @param table to read the properties from
+   * @param tableDescriptor to read the properties from
    * @param conf to persist serialized values into
+   *
    * @throws IOException
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureBlockSize(
-      Table table, Configuration conf) throws IOException {
+  static void configureBlockSize(HTableDescriptor tableDescriptor, Configuration conf)
+      throws UnsupportedEncodingException {
     StringBuilder blockSizeConfigValue = new StringBuilder();
-    HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if (tableDescriptor == null) {
       // could happen with mock table instance
       return;
@@ -651,16 +669,15 @@ public class HFileOutputFormat2
   /**
    * Serialize column family to bloom type map to configuration.
    * Invoked while configuring the MR job for incremental load.
-   *
-   * @param table to read the properties from
+   * @param tableDescriptor to read the properties from
    * @param conf to persist serialized values into
+   *
    * @throws IOException
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureBloomType(
-      Table table, Configuration conf) throws IOException {
-    HTableDescriptor tableDescriptor = table.getTableDescriptor();
+  static void configureBloomType(HTableDescriptor tableDescriptor, Configuration conf)
+      throws UnsupportedEncodingException {
     if (tableDescriptor == null) {
       // could happen with mock table instance
       return;
@@ -694,9 +711,8 @@ public class HFileOutputFormat2
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureDataBlockEncoding(Table table,
-      Configuration conf) throws IOException {
-    HTableDescriptor tableDescriptor = table.getTableDescriptor();
+  static void configureDataBlockEncoding(HTableDescriptor tableDescriptor,
+      Configuration conf) throws UnsupportedEncodingException {
     if (tableDescriptor == null) {
       // could happen with mock table instance
       return;

@@ -18,17 +18,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import static org.junit.Assert.assertEquals;
 
 import com.google.common.base.Joiner;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -42,20 +35,23 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -79,7 +75,15 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Test Bulk Load and MR on a distributed cluster.
@@ -247,7 +251,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         EnvironmentEdgeManager.currentTime();
     Configuration conf = new Configuration(util.getConfiguration());
     Path p = util.getDataTestDirOnTestFS(getTablename() +  "-" + iteration);
-    HTable table = new HTable(conf, getTablename());
 
     conf.setBoolean("mapreduce.map.speculative", false);
     conf.setBoolean("mapreduce.reduce.speculative", false);
@@ -273,18 +276,23 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
     // Set where to place the hfiles.
     FileOutputFormat.setOutputPath(job, p);
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+        Admin admin = conn.getAdmin();
+        Table table = conn.getTable(getTablename());
+        RegionLocator regionLocator = conn.getRegionLocator(getTablename())) {
+      
+      // Configure the partitioner and other things needed for HFileOutputFormat.
+      HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
 
-    // Configure the partitioner and other things needed for HFileOutputFormat.
-    HFileOutputFormat2.configureIncrementalLoad(job, table, table);
+      // Run the job making sure it works.
+      assertEquals(true, job.waitForCompletion(true));
 
-    // Run the job making sure it works.
-    assertEquals(true, job.waitForCompletion(true));
+      // Create a new loader.
+      LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
 
-    // Create a new loader.
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
-
-    // Load the HFiles in.
-    loader.doBulkLoad(p, table);
+      // Load the HFiles in.
+      loader.doBulkLoad(p, admin, table, regionLocator);
+    }
 
     // Delete the files.
     util.getTestFileSystem().delete(p, true);

@@ -41,13 +41,18 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -441,15 +446,18 @@ public class Import {
 
     if (hfileOutPath != null) {
       job.setMapperClass(KeyValueImporter.class);
-      HTable table = new HTable(conf, tableName);
-      job.setReducerClass(KeyValueSortReducer.class);
-      Path outputDir = new Path(hfileOutPath);
-      FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-      job.setMapOutputValueClass(KeyValue.class);
-      HFileOutputFormat2.configureIncrementalLoad(job, table, table);
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
-          com.google.common.base.Preconditions.class);
+      try (Connection conn = ConnectionFactory.createConnection(conf); 
+          Table table = conn.getTable(tableName);
+          RegionLocator regionLocator = conn.getRegionLocator(tableName)){
+        job.setReducerClass(KeyValueSortReducer.class);
+        Path outputDir = new Path(hfileOutPath);
+        FileOutputFormat.setOutputPath(job, outputDir);
+        job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+        job.setMapOutputValueClass(KeyValue.class);
+        HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+        TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+            com.google.common.base.Preconditions.class);
+      }
     } else {
       // No reducers.  Just write straight to table.  Call initTableReducerJob
       // because it sets up the TableOutputFormat.

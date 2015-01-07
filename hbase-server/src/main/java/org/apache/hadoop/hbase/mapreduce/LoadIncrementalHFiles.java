@@ -20,42 +20,21 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static java.lang.String.format;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -64,10 +43,14 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Table;
@@ -95,12 +78,30 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
@@ -235,12 +236,24 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public void doBulkLoad(Path hfofDir, final HTable table)
     throws TableNotFoundException, IOException
   {
-    final HConnection conn = table.getConnection();
+    doBulkLoad(hfofDir, table.getConnection().getAdmin(), table, table.getRegionLocator());
+  }
+  
+  /**
+   * Perform a bulk load of the given directory into the given
+   * pre-existing table.  This method is not threadsafe.
+   *
+   * @param hfofDir the directory that was provided as the output path
+   * of a job using HFileOutputFormat
+   * @param table the table to load into
+   * @throws TableNotFoundException if table does not yet exist
+   */
+  @SuppressWarnings("deprecation")
+  public void doBulkLoad(Path hfofDir, final Admin admin, Table table,
+      RegionLocator regionLocator) throws TableNotFoundException, IOException  {
 
-    if (!conn.isTableAvailable(table.getName())) {
-      throw new TableNotFoundException("Table " +
-          Bytes.toStringBinary(table.getTableName()) +
-          "is not currently available.");
+    if (!admin.isTableAvailable(regionLocator.getName())) {
+      throw new TableNotFoundException("Table " + table.getName() + "is not currently available.");
     }
 
     // initialize thread pools
@@ -276,7 +289,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         String msg =
             "Unmatched family names found: unmatched family names in HFiles to be bulkloaded: "
                 + unmatchedFamilies + "; valid family names of table "
-                + Bytes.toString(table.getTableName()) + " are: " + familyNames;
+                + table.getName() + " are: " + familyNames;
         LOG.error(msg);
         throw new IOException(msg);
       }
@@ -300,7 +313,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       // Assumes that region splits can happen while this occurs.
       while (!queue.isEmpty()) {
         // need to reload split keys each iteration.
-        final Pair<byte[][], byte[][]> startEndKeys = table.getStartEndKeys();
+        final Pair<byte[][], byte[][]> startEndKeys = regionLocator.getStartEndKeys();
         if (count != 0) {
           LOG.info("Split occured while grouping HFiles, retry attempt " +
               + count + " with " + queue.size() + " files remaining to group or split");
@@ -323,7 +336,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
             + " hfiles to one family of one region");
         }
 
-        bulkLoadPhase(table, conn, pool, queue, regionGroups);
+        bulkLoadPhase(table, admin.getConnection(), pool, queue, regionGroups);
 
         // NOTE: The next iteration's split / group could happen in parallel to
         // atomic bulkloads assuming that there are splits and no merges, and
@@ -359,7 +372,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * them.  Any failures are re-queued for another pass with the
    * groupOrSplitPhase.
    */
-  protected void bulkLoadPhase(final Table table, final HConnection conn,
+  protected void bulkLoadPhase(final Table table, final Connection conn,
       ExecutorService pool, Deque<LoadQueueItem> queue,
       final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
     // atomically bulk load the groups.
@@ -431,7 +444,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @return A Multimap<startkey, LoadQueueItem> that groups LQI by likely
    * bulk load region targets.
    */
-  private Multimap<ByteBuffer, LoadQueueItem> groupOrSplitPhase(final HTable table,
+  private Multimap<ByteBuffer, LoadQueueItem> groupOrSplitPhase(final Table table,
       ExecutorService pool, Deque<LoadQueueItem> queue,
       final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
     // <region start key, LQI> need synchronized only within this scope of this
@@ -524,7 +537,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @throws IOException
    */
   protected List<LoadQueueItem> groupOrSplit(Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-      final LoadQueueItem item, final HTable table,
+      final LoadQueueItem item, final Table table,
       final Pair<byte[][], byte[][]> startEndKeys)
       throws IOException {
     final Path hfilePath = item.hfilePath;
@@ -569,18 +582,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
      */
     if (indexForCallable < 0) {
       throw new IOException("The first region info for table "
-          + Bytes.toString(table.getTableName())
+          + table.getName()
           + " cann't be found in hbase:meta.Please use hbck tool to fix it first.");
     } else if ((indexForCallable == startEndKeys.getFirst().length - 1)
         && !Bytes.equals(startEndKeys.getSecond()[indexForCallable], HConstants.EMPTY_BYTE_ARRAY)) {
       throw new IOException("The last region info for table "
-          + Bytes.toString(table.getTableName())
+          + table.getName()
           + " cann't be found in hbase:meta.Please use hbck tool to fix it first.");
     } else if (indexForCallable + 1 < startEndKeys.getFirst().length
         && !(Bytes.compareTo(startEndKeys.getSecond()[indexForCallable],
           startEndKeys.getFirst()[indexForCallable + 1]) == 0)) {
       throw new IOException("The endkey of one region for table "
-          + Bytes.toString(table.getTableName())
+          + table.getName()
           + " is not equal to the startkey of the next region in hbase:meta."
           + "Please use hbck tool to fix it first.");
     }
@@ -623,7 +636,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * @return empty list if success, list of items to retry on recoverable
    * failure
    */
-  protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
+  protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
       final TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis)
   throws IOException {
     final List<Pair<byte[], String>> famPaths =

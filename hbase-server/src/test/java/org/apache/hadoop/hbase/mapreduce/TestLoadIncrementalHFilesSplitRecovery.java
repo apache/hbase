@@ -274,7 +274,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     try (Connection connection = ConnectionFactory.createConnection(this.util.getConfiguration())) {
       setupTable(connection, table, 10);
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration()) {
-        protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
+        @Override
+        protected List<LoadQueueItem> tryAtomicRegionLoad(final Connection conn,
             TableName tableName, final byte[] first, Collection<LoadQueueItem> lqis)
                 throws IOException {
           int i = attmptedCalls.incrementAndGet();
@@ -348,7 +349,8 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       // files to fail when attempt to atomically import.  This is recoverable.
       final AtomicInteger attemptedCalls = new AtomicInteger();
       LoadIncrementalHFiles lih2 = new LoadIncrementalHFiles(util.getConfiguration()) {
-        protected void bulkLoadPhase(final Table htable, final HConnection conn,
+        @Override
+        protected void bulkLoadPhase(final Table htable, final Connection conn,
             ExecutorService pool, Deque<LoadQueueItem> queue,
             final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
           int i = attemptedCalls.incrementAndGet();
@@ -390,9 +392,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       final AtomicInteger countedLqis= new AtomicInteger();
       LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
           util.getConfiguration()) {
+        @Override
         protected List<LoadQueueItem> groupOrSplit(
             Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-            final LoadQueueItem item, final HTable htable,
+            final LoadQueueItem item, final Table htable,
             final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
           List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
           if (lqis != null) {
@@ -426,9 +429,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
           util.getConfiguration()) {
         int i = 0;
 
+        @Override
         protected List<LoadQueueItem> groupOrSplit(
             Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-            final LoadQueueItem item, final HTable table,
+            final LoadQueueItem item, final Table table,
             final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
           i++;
 

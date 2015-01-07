@@ -127,7 +127,6 @@ public class MetaTableLocator {
    * @param zkw zookeeper connection to use
    * @return server name or null if we failed to get the data.
    */
-  @Nullable
   public ServerName getMetaRegionLocation(final ZooKeeperWatcher zkw) {
     try {
       RegionState state = getMetaRegionState(zkw);

@@ -98,8 +98,8 @@ public class RpcRetryingCaller<T> {
   }
 
   public void cancel(){
-    cancelled.set(true);
     synchronized (cancelled){
+      cancelled.set(true);
       cancelled.notifyAll();
     }
   }

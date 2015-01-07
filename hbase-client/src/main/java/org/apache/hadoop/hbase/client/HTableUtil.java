@@ -62,7 +62,7 @@ public class HTableUtil {
    */
   public static void bucketRsPut(HTable htable, List<Put> puts) throws IOException {
 
-    Map<String, List<Put>> putMap = createRsPutMap(htable, puts);
+    Map<String, List<Put>> putMap = createRsPutMap(htable.getRegionLocator(), puts);
     for (List<Put> rsPuts: putMap.values()) {
       htable.put( rsPuts );
     }
@@ -92,7 +92,7 @@ public class HTableUtil {
   public static void bucketRsBatch(HTable htable, List<Row> rows) throws IOException {
 
     try {
-      Map<String, List<Row>> rowMap = createRsRowMap(htable, rows);
+      Map<String, List<Row>> rowMap = createRsRowMap(htable.getRegionLocator(), rows);
       for (List<Row> rsRows: rowMap.values()) {
         htable.batch( rsRows );
       }

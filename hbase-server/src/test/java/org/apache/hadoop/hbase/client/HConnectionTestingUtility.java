@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * {@link ClusterConnection} testing utility.
@@ -64,6 +66,23 @@ public class HConnectionTestingUtility {
         ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;
+    }
+  }
+
+  /**
+   * @param connection
+   */
+  private static void mockRegionLocator(final HConnectionImplementation connection) {
+    try {
+      Mockito.when(connection.getRegionLocator(Mockito.any(TableName.class))).thenAnswer(
+          new Answer<RegionLocator>() {
+            @Override
+            public RegionLocator answer(InvocationOnMock invocation) throws Throwable {
+              TableName tableName = (TableName) invocation.getArguments()[0];
+              return new HRegionLocator(tableName, connection);
+            }
+          });
+    } catch (IOException e) {
     }
   }
 
@@ -107,6 +126,7 @@ public class HConnectionTestingUtility {
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(hri, sn);
+    mockRegionLocator(c);
     Mockito.when(c.getRegionLocation((TableName) Mockito.any(),
         (byte[]) Mockito.any(), Mockito.anyBoolean())).
       thenReturn(loc);
