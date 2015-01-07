@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
@@ -293,7 +294,10 @@ public class TestSplitTransactionOnCluster {
       this.admin.split(region.getRegionName(), new byte[] {42});
 
       // we have to wait until the SPLITTING state is seen by the master
-      FailingSplitRegionObserver.latch.await();
+      FailingSplitRegionObserver observer = (FailingSplitRegionObserver) region
+          .getCoprocessorHost().findCoprocessor(FailingSplitRegionObserver.class.getName());
+      assertNotNull(observer);
+      observer.latch.await();
 
       LOG.info("Waiting for region to come out of RIT");
       TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
@@ -312,12 +316,25 @@ public class TestSplitTransactionOnCluster {
   }
 
   public static class FailingSplitRegionObserver extends BaseRegionObserver {
-    static volatile CountDownLatch latch = new CountDownLatch(1);
+    volatile CountDownLatch latch;
+    volatile CountDownLatch postSplit;
+    @Override
+    public void start(CoprocessorEnvironment e) throws IOException {
+      latch = new CountDownLatch(1);
+      postSplit = new CountDownLatch(1);
+    }
     @Override
     public void preSplitBeforePONR(ObserverContext<RegionCoprocessorEnvironment> ctx,
         byte[] splitKey, List<Mutation> metaEntries) throws IOException {
       latch.countDown();
+      LOG.info("Causing rollback of region split");
       throw new IOException("Causing rollback of region split");
+    }
+    @Override
+    public void postCompleteSplit(ObserverContext<RegionCoprocessorEnvironment> ctx)
+        throws IOException {
+      postSplit.countDown();
+      LOG.info("postCompleteSplit called");
     }
   }
 
@@ -855,6 +872,14 @@ public class TestSplitTransactionOnCluster {
       tableExists = MetaReader.tableExists(regionServer.getCatalogTracker(),
           tableName);
       assertEquals("The specified table should present.", true, tableExists);
+      Map<String, RegionState> rit = cluster.getMaster().getAssignmentManager().getRegionStates()
+          .getRegionsInTransition();
+      assertTrue(rit.size() == 3);
+      cluster.getMaster().getAssignmentManager().regionOffline(st.getFirstDaughter());
+      cluster.getMaster().getAssignmentManager().regionOffline(st.getSecondDaughter());
+      cluster.getMaster().getAssignmentManager().regionOffline(region.getRegionInfo());
+      rit = cluster.getMaster().getAssignmentManager().getRegionStates().getRegionsInTransition();
+      assertTrue(rit.size() == 0);
     } finally {
       if (regions != null) {
         String node = ZKAssign.getNodeName(zkw, regions.get(0).getRegionInfo()
@@ -864,6 +889,7 @@ public class TestSplitTransactionOnCluster {
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
       t.close();
+      TESTING_UTIL.deleteTable(tableName);
     }
   }
 
@@ -1162,7 +1188,7 @@ public class TestSplitTransactionOnCluster {
     return(null);
   }
 
-  @Test
+  @Test(timeout = 120000)
   public void testFailedSplit() throws Exception {
     TableName tableName = TableName.valueOf("testFailedSplit");
     byte[] colFamily = Bytes.toBytes("info");
@@ -1178,18 +1204,23 @@ public class TestSplitTransactionOnCluster {
 
       // The following split would fail.
       admin.split(tableName.getNameAsString());
-      FailingSplitRegionObserver.latch.await();
+      FailingSplitRegionObserver observer = (FailingSplitRegionObserver) actualRegion
+          .getCoprocessorHost().findCoprocessor(FailingSplitRegionObserver.class.getName());
+      assertNotNull(observer);
+      observer.latch.await();
+      observer.postSplit.await();
       LOG.info("Waiting for region to come out of RIT");
       TESTING_UTIL.waitFor(60000, 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           RegionStates regionStates = cluster.getMaster().getAssignmentManager().getRegionStates();
           Map<String, RegionState> rit = regionStates.getRegionsInTransition();
-          return !rit.containsKey(actualRegion.getRegionInfo().getEncodedName());
+          return (rit.size() == 0);
         }
       });
       regions = TESTING_UTIL.getHBaseAdmin().getTableRegions(tableName);
       assertTrue(regions.size() == 1);
+      assertTrue(admin.balancer());
     } finally {
       table.close();
       TESTING_UTIL.deleteTable(tableName);

@@ -217,6 +217,7 @@ public class SplitTransaction {
     this.parent = r;
     this.splitrow = splitrow;
     this.journal.add(new JournalEntry(JournalEntryType.STARTED));
+    this.useZKForAssignment = ConfigUtil.useZKForAssignment(r.getBaseConf());
   }
 
   /**
