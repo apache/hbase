@@ -298,6 +298,14 @@
       <organizationUrl>http://www.xiaomi.com/</organizationUrl>
     </developer>
     <developer>
+      <id>liushaohui</id>
+      <name>Shaohui Liu</name>
+      <email>liushaohui@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Xiaomi</organization>
+      <organizationUrl>http://www.xiaomi.com/</organizationUrl>
+    </developer>
+    <developer>
       <id>mbautin</id>
       <name>Mikhail Bautin</name>
       <email>mbautin@apache.org</email>
