@@ -135,7 +135,7 @@ public class CompressionTest {
     try {
       reader.loadFileInfo();
       HFileScanner scanner = reader.getScanner(false, true);
-      scanner.next();
+      scanner.seekTo(); // position to the start of file
       // Scanner does not do Cells yet. Do below for now till fixed.
       cc = scanner.getKeyValue();
       if (CellComparator.compareRows(c, cc) != 0) {
