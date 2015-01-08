@@ -42,11 +42,12 @@ public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
   public RpcScheduler create(Configuration conf, PriorityFunction priority, Abortable server) {
     int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
 		HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT);
+
     return new SimpleRpcScheduler(
       conf,
       handlerCount,
-      conf.getInt(HConstants.REGION_SERVER_META_HANDLER_COUNT,
-        HConstants.DEFAULT_REGION_SERVER_META_HANDLER_COUNT),
+      conf.getInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT,
+        HConstants.DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT),
       conf.getInt(HConstants.REGION_SERVER_REPLICATION_HANDLER_COUNT,
           HConstants.DEFAULT_REGION_SERVER_REPLICATION_HANDLER_COUNT),
       priority,

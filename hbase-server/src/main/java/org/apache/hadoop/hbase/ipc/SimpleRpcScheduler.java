@@ -150,9 +150,10 @@ public class SimpleRpcScheduler extends RpcScheduler {
       }
     }
 
-   this.priorityExecutor =
-     priorityHandlerCount > 0 ? new BalancedQueueRpcExecutor("Priority", priorityHandlerCount,
-       1, maxQueueLength, conf, abortable) : null;
+    // Create 2 queues to help priorityExecutor be more scalable.
+    this.priorityExecutor = priorityHandlerCount > 0 ?
+        new BalancedQueueRpcExecutor("Priority", priorityHandlerCount, 2, maxQueueLength) : null;
+
    this.replicationExecutor =
      replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("Replication",
        replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;

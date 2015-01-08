@@ -91,10 +91,10 @@ public class TestPriorityRpc {
     HRegionInfo mockRegionInfo = Mockito.mock(HRegionInfo.class);
     Mockito.when(mockRpc.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
-    Mockito.when(mockRegionInfo.isMetaTable()).thenReturn(true);
+    Mockito.when(mockRegionInfo.isSystemTable()).thenReturn(true);
     // Presume type.
     ((AnnotationReadingPriorityFunction)priority).setRegionServer(mockRS);
-    assertEquals(HConstants.HIGH_QOS, priority.getPriority(header, getRequest));
+    assertEquals(HConstants.SYSTEMTABLE_QOS, priority.getPriority(header, getRequest));
   }
 
   @Test
@@ -126,7 +126,7 @@ public class TestPriorityRpc {
     HRegionInfo mockRegionInfo = Mockito.mock(HRegionInfo.class);
     Mockito.when(mockRpc.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
-    Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(false);
+    Mockito.when(mockRegionInfo.isSystemTable()).thenReturn(false);
     // Presume type.
     ((AnnotationReadingPriorityFunction)priority).setRegionServer(mockRS);
     int qos = priority.getPriority(header, scanRequest);
@@ -142,15 +142,15 @@ public class TestPriorityRpc {
     Mockito.when(mockRegionScanner.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRpc.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
-    Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(true);
+    Mockito.when(mockRegionInfo.isSystemTable()).thenReturn(true);
 
     // Presume type.
     ((AnnotationReadingPriorityFunction)priority).setRegionServer(mockRS);
 
-    assertEquals(HConstants.HIGH_QOS, priority.getPriority(header, scanRequest));
+    assertEquals(HConstants.SYSTEMTABLE_QOS, priority.getPriority(header, scanRequest));
 
     //the same as above but with non-meta region
-    Mockito.when(mockRegionInfo.isMetaRegion()).thenReturn(false);
+    Mockito.when(mockRegionInfo.isSystemTable()).thenReturn(false);
     assertEquals(HConstants.NORMAL_QOS, priority.getPriority(header, scanRequest));
   }
 }

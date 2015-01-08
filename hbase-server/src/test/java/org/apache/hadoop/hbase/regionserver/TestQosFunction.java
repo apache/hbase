@@ -49,7 +49,7 @@ public class TestQosFunction {
     // Set method name in pb style with the method name capitalized.
     checkMethod("ReplicateWALEntry", HConstants.REPLICATION_QOS, qosFunction);
     // Set method name in pb style with the method name capitalized.
-    checkMethod("OpenRegion", HConstants.HIGH_QOS, qosFunction);
+    checkMethod("OpenRegion", HConstants.ADMIN_QOS, qosFunction);
     // Check multi works.
     checkMethod("Multi", HConstants.NORMAL_QOS, qosFunction, MultiRequest.getDefaultInstance());
   }
