@@ -475,8 +475,8 @@ public class TableAuthManager {
     }
     if (table == null) table = AccessControlLists.ACL_TABLE_NAME;
     // Namespace authorization supercedes table level
-    if (authorize(getNamespacePermissions(table.getNamespaceAsString()).getGroup(groupName),
-        table, family, action)) {
+    String namespace = table.getNamespaceAsString();
+    if (authorize(getNamespacePermissions(namespace).getGroup(groupName), namespace, action)) {
       return true;
     }
     // Check table level
