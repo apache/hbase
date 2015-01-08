@@ -741,13 +741,15 @@ public class RegionStates {
 
     Map<ServerName, ServerLoad>
       onlineSvrs = serverManager.getOnlineServers();
-    // Take care of servers w/o assignments.
+    // Take care of servers w/o assignments, and remove servers in draining mode
+    List<ServerName> drainingServers = this.serverManager.getDrainingServersList();
     for (Map<ServerName, List<HRegionInfo>> map: result.values()) {
       for (ServerName svr: onlineSvrs.keySet()) {
         if (!map.containsKey(svr)) {
           map.put(svr, new ArrayList<HRegionInfo>());
         }
       }
+      map.keySet().removeAll(drainingServers);
     }
     return result;
   }
