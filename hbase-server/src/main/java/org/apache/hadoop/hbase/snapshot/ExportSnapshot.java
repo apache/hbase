@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionM
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
@@ -152,12 +153,14 @@ public class ExportSnapshot extends Configured implements Tool {
       testFailures = conf.getBoolean(CONF_TEST_FAILURE, false);
 
       try {
+        conf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
         inputFs = FileSystem.get(inputRoot.toUri(), conf);
       } catch (IOException e) {
         throw new IOException("Could not get the input FileSystem with root=" + inputRoot, e);
       }
 
       try {
+        conf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
         outputFs = FileSystem.get(outputRoot.toUri(), conf);
       } catch (IOException e) {
         throw new IOException("Could not get the output FileSystem with root="+ outputRoot, e);
@@ -171,6 +174,12 @@ public class ExportSnapshot extends Configured implements Tool {
       for (Counter c : Counter.values()) {
         context.getCounter(c).increment(0);
       }
+    }
+
+    @Override
+    protected void cleanup(Context context) {
+      IOUtils.closeStream(inputFs);
+      IOUtils.closeStream(outputFs);
     }
 
     @Override
@@ -852,8 +861,10 @@ public class ExportSnapshot extends Configured implements Tool {
       targetName = snapshotName;
     }
 
+    conf.setBoolean("fs." + inputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem inputFs = FileSystem.get(inputRoot.toUri(), conf);
     LOG.debug("inputFs=" + inputFs.getUri().toString() + " inputRoot=" + inputRoot);
+    conf.setBoolean("fs." + outputRoot.toUri().getScheme() + ".impl.disable.cache", true);
     FileSystem outputFs = FileSystem.get(outputRoot.toUri(), conf);
     LOG.debug("outputFs=" + outputFs.getUri().toString() + " outputRoot=" + outputRoot.toString());
 
@@ -947,6 +958,9 @@ public class ExportSnapshot extends Configured implements Tool {
       }
       outputFs.delete(outputSnapshotDir, true);
       return 1;
+    } finally {
+      IOUtils.closeStream(inputFs);
+      IOUtils.closeStream(outputFs);
     }
   }
 
