@@ -189,7 +189,8 @@ public class IntegrationTestMTTR {
 
     // Set up the action that will restart a region server holding a region from our table
     // because this table should only have one region we should be good.
-    restartRSAction = new RestartRsHoldingTableAction(sleepTime, tableName.getNameAsString());
+    restartRSAction = new RestartRsHoldingTableAction(sleepTime,
+        util.getConnection().getRegionLocator(tableName));
 
     // Set up the action that will kill the region holding meta.
     restartMetaAction = new RestartRsHoldingMetaAction(sleepTime);
@@ -478,7 +479,7 @@ public class IntegrationTestMTTR {
 
     public PutCallable(Future<?> f) throws IOException {
       super(f);
-      this.table = new HTable(util.getConfiguration(), tableName);
+      this.table = util.getConnection().getTable(tableName);
     }
 
     @Override
@@ -504,7 +505,7 @@ public class IntegrationTestMTTR {
 
     public ScanCallable(Future<?> f) throws IOException {
       super(f);
-      this.table = new HTable(util.getConfiguration(), tableName);
+      this.table = util.getConnection().getTable(tableName);
     }
 
     @Override
@@ -545,7 +546,7 @@ public class IntegrationTestMTTR {
     protected boolean doAction() throws Exception {
       Admin admin = null;
       try {
-        admin = new HBaseAdmin(util.getConfiguration());
+        admin = util.getHBaseAdmin();
         ClusterStatus status = admin.getClusterStatus();
         return status != null;
       } finally {

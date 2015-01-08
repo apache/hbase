@@ -28,6 +28,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -113,7 +115,8 @@ public class TestAcidGuarantees implements Tool {
       super(ctx);
       this.targetRows = targetRows;
       this.targetFamilies = targetFamilies;
-      table = new HTable(ctx.getConf(), TABLE_NAME);
+      Connection connection = ConnectionFactory.createConnection(ctx.getConf());
+      table = connection.getTable(TABLE_NAME);
     }
     public void doAnAction() throws Exception {
       // Pick a random row to write into
@@ -148,7 +151,8 @@ public class TestAcidGuarantees implements Tool {
       super(ctx);
       this.targetRow = targetRow;
       this.targetFamilies = targetFamilies;
-      table = new HTable(ctx.getConf(), TABLE_NAME);
+      Connection connection = ConnectionFactory.createConnection(ctx.getConf());
+      table = connection.getTable(TABLE_NAME);
     }
 
     public void doAnAction() throws Exception {
@@ -205,7 +209,8 @@ public class TestAcidGuarantees implements Tool {
                            byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.targetFamilies = targetFamilies;
-      table = new HTable(ctx.getConf(), TABLE_NAME);
+      Connection connection = ConnectionFactory.createConnection(ctx.getConf());
+      table = connection.getTable(TABLE_NAME);
     }
 
     public void doAnAction() throws Exception {

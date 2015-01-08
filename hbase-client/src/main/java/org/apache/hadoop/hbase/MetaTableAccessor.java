@@ -190,7 +190,7 @@ public class MetaTableAccessor {
     // There should still be a way to use this method with an unmanaged connection.
     if (connection instanceof ClusterConnection) {
       if (((ClusterConnection) connection).isManaged()) {
-        return new HTable(TableName.META_TABLE_NAME, (ClusterConnection) connection);
+        return new HTable(TableName.META_TABLE_NAME, connection);
       }
     }
     return connection.getTable(TableName.META_TABLE_NAME);

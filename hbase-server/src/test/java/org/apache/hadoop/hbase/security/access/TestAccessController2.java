@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -164,7 +165,7 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction writeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        Table t = TEST_UTIL.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME);
         try {
           t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
             TEST_VALUE));
@@ -187,7 +188,7 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction scanAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        Table t = TEST_UTIL.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME);
         try {
           ResultScanner s = t.getScanner(new Scan());
           try {

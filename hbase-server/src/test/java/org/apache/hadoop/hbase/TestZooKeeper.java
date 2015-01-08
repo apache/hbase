@@ -35,11 +35,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -127,7 +127,7 @@ public class TestZooKeeper {
     }
   }
 
-  private ZooKeeperWatcher getZooKeeperWatcher(HConnection c)
+  private ZooKeeperWatcher getZooKeeperWatcher(Connection c)
   throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
     Method getterZK = c.getClass().getDeclaredMethod("getKeepAliveZooKeeperWatcher");
     getterZK.setAccessible(true);
@@ -148,7 +148,7 @@ public class TestZooKeeper {
     // We don't want to share the connection as we will check its state
     c.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "1111");
 
-    HConnection connection = HConnectionManager.getConnection(c);
+    Connection connection = ConnectionFactory.createConnection(c);
 
     ZooKeeperWatcher connectionZK = getZooKeeperWatcher(connection);
     LOG.info("ZooKeeperWatcher= 0x"+ Integer.toHexString(
@@ -253,15 +253,14 @@ public class TestZooKeeper {
     HColumnDescriptor family = new HColumnDescriptor("fam");
     desc.addFamily(family);
     LOG.info("Creating table " + tableName);
-    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     try {
       admin.createTable(desc);
     } finally {
       admin.close();
     }
 
-    Table table =
-      new HTable(new Configuration(TEST_UTIL.getConfiguration()), desc.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     Put put = new Put(Bytes.toBytes("testrow"));
     put.add(Bytes.toBytes("fam"),
         Bytes.toBytes("col"), Bytes.toBytes("testdata"));
@@ -273,11 +272,11 @@ public class TestZooKeeper {
   @Test
   public void testMultipleZK()
   throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-    Table localMeta =
-      new HTable(new Configuration(TEST_UTIL.getConfiguration()), TableName.META_TABLE_NAME);
+    Table localMeta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
     otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
-    Table ipMeta = new HTable(otherConf, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(otherConf);
+    Table ipMeta = connection.getTable(TableName.META_TABLE_NAME);
 
     // dummy, just to open the connection
     final byte [] row = new byte [] {'r'};
@@ -294,6 +293,7 @@ public class TestZooKeeper {
 
     localMeta.close();
     ipMeta.close();
+    connection.close();
   }
 
   /**
@@ -494,7 +494,7 @@ public class TestZooKeeper {
     ZooKeeperWatcher zkw = m.getZooKeeper();
     int expectedNumOfListeners = zkw.getNumberOfListeners();
     // now the cluster is up. So assign some regions.
-    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     try {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
         Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
@@ -531,7 +531,7 @@ public class TestZooKeeper {
     cluster.startRegionServer();
     HMaster m = cluster.getMaster();
     // now the cluster is up. So assign some regions.
-    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     Table table = null;
     try {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
@@ -543,7 +543,7 @@ public class TestZooKeeper {
       htd.addFamily(hcd);
       admin.createTable(htd, SPLIT_KEYS);
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-      table = new HTable(TEST_UTIL.getConfiguration(), htd.getTableName());
+      table = TEST_UTIL.getConnection().getTable(htd.getTableName());
       Put p;
       int numberOfPuts;
       for (numberOfPuts = 0; numberOfPuts < 6; numberOfPuts++) {

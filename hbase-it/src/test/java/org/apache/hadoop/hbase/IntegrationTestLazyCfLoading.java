@@ -27,6 +27,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -224,7 +226,8 @@ public class IntegrationTestLazyCfLoading {
     long maxRuntime = conf.getLong(timeoutKey, DEFAULT_TIMEOUT_MINUTES);
     long serverCount = util.getHBaseClusterInterface().getClusterStatus().getServersSize();
     long keysToWrite = serverCount * KEYS_TO_WRITE_PER_SERVER;
-    Table table = new HTable(conf, TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(TABLE_NAME);
 
     // Create multi-threaded writer and start it. We write multiple columns/CFs and verify
     // their integrity, therefore multi-put is necessary.
@@ -288,5 +291,6 @@ public class IntegrationTestLazyCfLoading {
     Assert.assertEquals("There are write failures", 0, writer.getNumWriteFailures());
     Assert.assertTrue("Writer is not done", isWriterDone);
     // Assert.fail("Boom!");
+    connection.close();
   }
 }

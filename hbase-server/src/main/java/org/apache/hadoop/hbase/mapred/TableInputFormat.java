@@ -25,8 +25,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -58,8 +59,8 @@ public class TableInputFormat extends TableInputFormatBase implements
     }
     setInputColumns(m_cols);
     try {
-      setHTable(
-          new HTable(HBaseConfiguration.create(job), TableName.valueOf(tableNames[0].getName())));
+      Connection connection = ConnectionFactory.createConnection(job);
+      setHTable((HTable) connection.getTable(TableName.valueOf(tableNames[0].getName())));
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }

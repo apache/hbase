@@ -118,7 +118,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           try {
             int mod = ((int) rowKeyBase % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
-              localTable = new HTable(conf, tableName);
+              localTable = connection.getTable(tableName);
               userVsTable.put(userNames[mod], localTable);
               res = localTable.get(get);
             } else {
@@ -227,7 +227,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
       public Object run() throws Exception {
         try {
           if (table == null) {
-            table = new HTable(conf, tableName);
+            table = connection.getTable(tableName);
           }
           if (m instanceof Increment) {
             table.increment((Increment) m);

@@ -205,7 +205,7 @@ public class TestAssignmentListener {
       assertEquals(0, listener.getCloseCount());
 
       // Add some data
-      Table table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
+      Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
       try {
         for (int i = 0; i < 10; ++i) {
           byte[] key = Bytes.toBytes("row-" + i);

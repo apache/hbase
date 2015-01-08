@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -85,8 +87,7 @@ public class TestVisibilityLabelsReplication {
   protected static final String TEMP = "temp";
   protected static Configuration conf;
   protected static Configuration conf1;
-  protected static String TABLE_NAME = "TABLE_NAME";
-  protected static byte[] TABLE_NAME_BYTES = Bytes.toBytes(TABLE_NAME);
+  protected static TableName TABLE_NAME = TableName.valueOf("TABLE_NAME");
   protected static ReplicationAdmin replicationAdmin;
   public static final String TOPSECRET = "topsecret";
   public static final String PUBLIC = "public";
@@ -187,7 +188,7 @@ public class TestVisibilityLabelsReplication {
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     TEST_UTIL1.startMiniCluster(1);
     HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+    HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor desc = new HColumnDescriptor(fam);
     desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(desc);
@@ -218,8 +219,7 @@ public class TestVisibilityLabelsReplication {
 
   @Test
   public void testVisibilityReplication() throws Exception {
-    TableName tableName = TableName.valueOf(TABLE_NAME);
-    Table table = writeData(tableName, "(" + SECRET + "&" + PUBLIC + ")" + "|(" + CONFIDENTIAL
+    Table table = writeData(TABLE_NAME, "(" + SECRET + "&" + PUBLIC + ")" + "|(" + CONFIDENTIAL
         + ")&(" + TOPSECRET + ")", "(" + PRIVATE + "|" + CONFIDENTIAL + ")&(" + PUBLIC + "|"
         + TOPSECRET + ")", "(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET,
         CellVisibility.quote(UNICODE_VIS_TAG) + "&" + SECRET);
@@ -252,9 +252,9 @@ public class TestVisibilityLabelsReplication {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row4, 0, row4.length));
-      HTable table2 = null;
+      Table table2 = null;
       try {
-        table2 = new HTable(TEST_UTIL1.getConfiguration(), TABLE_NAME_BYTES);
+        table2 = TEST_UTIL1.getConnection().getTable(TABLE_NAME);
         s = new Scan();
         // Ensure both rows are replicated
         scanner = table2.getScanner(s);
@@ -314,11 +314,13 @@ public class TestVisibilityLabelsReplication {
       final boolean nullExpected, final String... auths) throws IOException,
       InterruptedException {
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
-      HTable table2 = null;
+      Table table2 = null;
+      Connection connection = null;
 
       public Void run() throws Exception {
         try {
-          table2 = new HTable(conf1, TABLE_NAME_BYTES);
+          connection = ConnectionFactory.createConnection(conf1);
+          table2 = connection.getTable(TABLE_NAME);
           CellScanner cellScanner;
           Cell current;
           Get get = new Get(row);
@@ -355,6 +357,9 @@ public class TestVisibilityLabelsReplication {
         } finally {
           if (table2 != null) {
             table2.close();
+          }
+          if(connection != null) {
+            connection.close();
           }
         }
       }
@@ -394,9 +399,9 @@ public class TestVisibilityLabelsReplication {
   }
 
   static Table writeData(TableName tableName, String... labelExps) throws Exception {
-    HTable table = null;
+    Table table = null;
     try {
-      table = new HTable(conf, TABLE_NAME_BYTES);
+      table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
       int i = 1;
       List<Put> puts = new ArrayList<Put>();
       for (String labelExp : labelExps) {

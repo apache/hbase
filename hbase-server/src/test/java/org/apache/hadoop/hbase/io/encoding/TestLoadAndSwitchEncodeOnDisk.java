@@ -68,14 +68,14 @@ public class TestLoadAndSwitchEncodeOnDisk extends
 
   @Test(timeout=TIMEOUT_MS)
   public void loadTest() throws Exception {
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     compression = Compression.Algorithm.GZ; // used for table setup
     super.loadTest();
 
     HColumnDescriptor hcd = getColumnDesc(admin);
     System.err.println("\nDisabling encode-on-disk. Old column descriptor: " + hcd + "\n");
-    HTable t = new HTable(this.conf, TABLE);
+    HTable t = (HTable) TEST_UTIL.getConnection().getTable(TABLE);
     assertAllOnLine(t);
 
     admin.disableTable(TABLE);

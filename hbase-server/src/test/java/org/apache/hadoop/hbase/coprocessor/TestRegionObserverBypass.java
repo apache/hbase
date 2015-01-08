@@ -93,7 +93,7 @@ public class TestRegionObserverBypass {
    */
   @Test
   public void testSimple() throws Exception {
-    Table t = new HTable(util.getConfiguration(), tableName);
+    Table t = util.getConnection().getTable(tableName);
     Put p = new Put(row1);
     p.add(test,dummy,dummy);
     // before HBASE-4331, this would throw an exception
@@ -112,7 +112,7 @@ public class TestRegionObserverBypass {
     //previous deletes will eclipse successive puts having the same timestamp
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
 
-    Table t = new HTable(util.getConfiguration(), tableName);
+    Table t = util.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<Put>();
     Put p = new Put(row1);
     p.add(dummy,dummy,dummy);

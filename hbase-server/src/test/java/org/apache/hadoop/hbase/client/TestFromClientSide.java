@@ -182,8 +182,7 @@ public class TestFromClientSide {
      HTableDescriptor desc = new HTableDescriptor(TABLENAME);
      desc.addFamily(hcd);
      TEST_UTIL.getHBaseAdmin().createTable(desc);
-     Configuration c = TEST_UTIL.getConfiguration();
-     Table h = new HTable(c, TABLENAME);
+     Table h = TEST_UTIL.getConnection().getTable(TABLENAME);
 
      long ts = System.currentTimeMillis();
      Put p = new Put(T1, ts);
@@ -415,7 +414,7 @@ public class TestFromClientSide {
     putRows(ht, 3, value2, keyPrefix1);
     putRows(ht, 3, value2, keyPrefix2);
     putRows(ht, 3, value2, keyPrefix3);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+    Table table = TEST_UTIL.getConnection().getTable(TABLE);
     System.out.println("Checking values for key: " + keyPrefix1);
     assertEquals("Got back incorrect number of rows from scan", 3,
         getNumberOfRows(keyPrefix1, value2, table));
@@ -641,8 +640,8 @@ public class TestFromClientSide {
   private Map<HRegionInfo, ServerName> splitTable(final HTable t)
   throws IOException, InterruptedException {
     // Split this table in two.
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    admin.split(t.getTableName());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    admin.split(t.getName());
     admin.close();
     Map<HRegionInfo, ServerName> regions = waitOnSplit(t);
     assertTrue(regions.size() > 1);
@@ -1748,7 +1747,7 @@ public class TestFromClientSide {
 
   @Test
   public void testDeleteFamilyVersion() throws Exception {
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     byte [] TABLE = Bytes.toBytes("testDeleteFamilyVersion");
 
     byte [][] QUALIFIERS = makeNAscii(QUALIFIER, 1);
@@ -1793,7 +1792,7 @@ public class TestFromClientSide {
     byte [][] VALUES = makeN(VALUE, 5);
     long [] ts = {1000, 2000, 3000, 4000, 5000};
 
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY, 5);
     Put put = null;
     Result result = null;
@@ -3633,7 +3632,7 @@ public class TestFromClientSide {
 
     TableName TABLE = TableName.valueOf("testUpdatesWithMajorCompaction");
     Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     // Write a column with values at timestamp 1, 2 and 3
     byte[] row = Bytes.toBytes("row2");
@@ -3695,7 +3694,7 @@ public class TestFromClientSide {
     String tableName = "testMajorCompactionBetweenTwoUpdates";
     byte [] TABLE = Bytes.toBytes(tableName);
     Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     // Write a column with values at timestamp 1, 2 and 3
     byte[] row = Bytes.toBytes("row3");
@@ -4104,7 +4103,7 @@ public class TestFromClientSide {
     for (int i = 0; i < tables.length; i++) {
       TEST_UTIL.createTable(tables[i], FAMILY);
     }
-    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor[] ts = admin.listTables();
     HashSet<HTableDescriptor> result = new HashSet<HTableDescriptor>(ts.length);
     Collections.addAll(result, ts);
@@ -4196,7 +4195,7 @@ public class TestFromClientSide {
     a.put(put);
 
     // open a new connection to A and a connection to b
-    Table newA = new HTable(TEST_UTIL.getConfiguration(), tableAname);
+    Table newA = TEST_UTIL.getConnection().getTable(tableAname);
 
     // copy data from A to B
     Scan scan = new Scan();
@@ -4216,7 +4215,7 @@ public class TestFromClientSide {
     }
 
     // Opening a new connection to A will cause the tables to be reloaded
-    Table anotherA = new HTable(TEST_UTIL.getConfiguration(), tableAname);
+    Table anotherA = TEST_UTIL.getConnection().getTable(tableAname);
     Get get = new Get(ROW);
     get.addFamily(HConstants.CATALOG_FAMILY);
     anotherA.get(get);
@@ -4226,7 +4225,7 @@ public class TestFromClientSide {
     // to be reloaded.
 
     // Test user metadata
-    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     // make a modifiable descriptor
     HTableDescriptor desc = new HTableDescriptor(a.getTableDescriptor());
     // offline the table
@@ -4984,12 +4983,9 @@ public class TestFromClientSide {
   public void testScanMetrics() throws Exception {
     TableName TABLENAME = TableName.valueOf("testScanMetrics");
 
-    Configuration conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.createTable(TABLENAME, FAMILY);
-
     // Set up test table:
     // Create table:
-    HTable ht = new HTable(conf, TABLENAME);
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     // Create multiple regions for this table
     int numOfRegions = TEST_UTIL.createMultiRegions(ht, FAMILY);
@@ -5203,7 +5199,7 @@ public class TestFromClientSide {
     byte [] family1 = Bytes.toBytes("f1");
     byte [] family2 = Bytes.toBytes("f2");
     try (HTable table = TEST_UTIL.createTable(TABLE, new byte[][] {family1, family2}, 10);
-        Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration())) {
+        Admin admin = TEST_UTIL.getHBaseAdmin()) {
       Map <HRegionInfo, ServerName> regionsMap = table.getRegionLocations();
       assertEquals(1, regionsMap.size());
       HRegionInfo regionInfo = regionsMap.keySet().iterator().next();

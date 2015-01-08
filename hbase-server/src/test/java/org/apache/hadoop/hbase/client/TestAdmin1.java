@@ -367,7 +367,7 @@ public class TestAdmin1 {
     splitKeys[1] = Bytes.toBytes(8);
 
     // Create & Fill the table
-    HTable table = TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY, splitKeys);
+    Table table = TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY, splitKeys);
     try {
       TEST_UTIL.loadNumericRows(table, HConstants.CATALOG_FAMILY, 0, 10);
       assertEquals(10, TEST_UTIL.countRows(table));
@@ -379,7 +379,7 @@ public class TestAdmin1 {
     // Truncate & Verify
     this.admin.disableTable(tableName);
     this.admin.truncateTable(tableName, preserveSplits);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    table = TEST_UTIL.getConnection().getTable(tableName);
     try {
       assertEquals(0, TEST_UTIL.countRows(table));
     } finally {
@@ -402,7 +402,7 @@ public class TestAdmin1 {
     htd.addFamily(fam2);
     htd.addFamily(fam3);
     this.admin.createTable(htd);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), htd.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     HTableDescriptor confirmedHtd = table.getTableDescriptor();
     assertEquals(htd.compareTo(confirmedHtd), 0);
     table.close();
@@ -585,7 +585,7 @@ public class TestAdmin1 {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    HTable ht = (HTable) TEST_UTIL.getConnection().getTable(tableName);
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
     assertEquals("Table should have only 1 region", 1, regions.size());
     ht.close();
@@ -594,7 +594,7 @@ public class TestAdmin1 {
     desc = new HTableDescriptor(TABLE_2);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[][]{new byte[]{42}});
-    HTable ht2 = new HTable(TEST_UTIL.getConfiguration(), TABLE_2);
+    HTable ht2 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_2);
     regions = ht2.getRegionLocations();
     assertEquals("Table should have only 2 region", 2, regions.size());
     ht2.close();
@@ -603,7 +603,7 @@ public class TestAdmin1 {
     desc = new HTableDescriptor(TABLE_3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, "a".getBytes(), "z".getBytes(), 3);
-    HTable ht3 = new HTable(TEST_UTIL.getConfiguration(), TABLE_3);
+    HTable ht3 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_3);
     regions = ht3.getRegionLocations();
     assertEquals("Table should have only 3 region", 3, regions.size());
     ht3.close();
@@ -622,7 +622,7 @@ public class TestAdmin1 {
     desc = new HTableDescriptor(TABLE_5);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[] {1}, new byte[] {127}, 16);
-    HTable ht5 = new HTable(TEST_UTIL.getConfiguration(), TABLE_5);
+    HTable ht5 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_5);
     regions = ht5.getRegionLocations();
     assertEquals("Table should have 16 region", 16, regions.size());
     ht5.close();
@@ -653,7 +653,7 @@ public class TestAdmin1 {
     boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys);
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    HTable ht = (HTable) TEST_UTIL.getConnection().getTable(tableName);
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + regions.size(),
@@ -710,10 +710,10 @@ public class TestAdmin1 {
 
     desc = new HTableDescriptor(TABLE_2);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
-    HTable ht2 = new HTable(TEST_UTIL.getConfiguration(), TABLE_2);
+    HTable ht2 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_2);
     regions = ht2.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + regions.size(),
@@ -766,11 +766,11 @@ public class TestAdmin1 {
 
     desc = new HTableDescriptor(TABLE_3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
 
-    HTable ht3 = new HTable(TEST_UTIL.getConfiguration(), TABLE_3);
+    HTable ht3 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_3);
     regions = ht3.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions " +
         "but only found " + regions.size(),
@@ -792,15 +792,13 @@ public class TestAdmin1 {
     TableName TABLE_4 = TableName.valueOf(tableName.getNameAsString() + "_4");
     desc = new HTableDescriptor(TABLE_4);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    Admin ladmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     try {
-      ladmin.createTable(desc, splitKeys);
+      admin.createTable(desc, splitKeys);
       assertTrue("Should not be able to create this table because of " +
           "duplicate split keys", false);
     } catch(IllegalArgumentException iae) {
       // Expected
     }
-    ladmin.close();
   }
 
   @Test (timeout=300000)
@@ -893,7 +891,7 @@ public class TestAdmin1 {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    HTable ht = (HTable) TEST_UTIL.getConnection().getTable(tableName);
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions "
         + "but only found " + regions.size(), expectedRegions, regions.size());
@@ -1104,7 +1102,7 @@ public class TestAdmin1 {
       Thread.sleep(10);
     } while (oldRegions.size() != 9); //3 regions * 3 replicas
     // write some data to the table
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    HTable ht = (HTable) TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<Put>();
     byte[] qualifier = "c".getBytes();
     Put put = new Put(new byte[]{(byte)'1'});
@@ -1227,7 +1225,7 @@ public class TestAdmin1 {
     }
     this.admin.disableTable(tableName);
     try {
-      new HTable(TEST_UTIL.getConfiguration(), tableName);
+      TEST_UTIL.getConnection().getTable(tableName);
     } catch (org.apache.hadoop.hbase.DoNotRetryIOException e) {
       //expected
     }

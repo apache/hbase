@@ -24,11 +24,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -84,9 +88,13 @@ public class VerifyReplication extends Configured implements Tool {
   public static class Verifier
       extends TableMapper<ImmutableBytesWritable, Put> {
 
+
+
     public static enum Counters {
       GOODROWS, BADROWS, ONLY_IN_SOURCE_TABLE_ROWS, ONLY_IN_PEER_TABLE_ROWS, CONTENT_DIFFERENT_ROWS}
 
+    private Connection connection;
+    private Table replicatedTable;
     private ResultScanner replicatedScanner;
     private Result currentCompareRowInPeerTable;
 
@@ -129,8 +137,8 @@ public class VerifyReplication extends Configured implements Tool {
             ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
 
             TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
-            // TODO: THis HTable doesn't get closed.  Fix!
-            Table replicatedTable = new HTable(peerConf, tableName);
+            connection = ConnectionFactory.createConnection(peerConf);
+            replicatedTable = connection.getTable(tableName);
             scan.setStartRow(value.getRow());
             scan.setStopRow(tableSplit.getEndRow());
             replicatedScanner = replicatedTable.getScanner(scan);
@@ -189,6 +197,20 @@ public class VerifyReplication extends Configured implements Tool {
         } finally {
           replicatedScanner.close();
           replicatedScanner = null;
+        }
+      }
+      if(replicatedTable != null){
+        try{
+          replicatedTable.close();
+        } catch (Exception e) {
+          LOG.error("fail to close table in cleanup", e);
+        }
+      }
+      if(connection != null){
+        try {
+          connection.close();
+        } catch (Exception e) {
+          LOG.error("fail to close connection in cleanup", e);
         }
       }
     }

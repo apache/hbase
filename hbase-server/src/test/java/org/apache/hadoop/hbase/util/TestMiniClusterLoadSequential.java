@@ -152,7 +152,7 @@ public class TestMiniClusterLoadSequential {
     LOG.info("Starting load test: dataBlockEncoding=" + dataBlockEncoding +
         ", isMultiPut=" + isMultiPut);
     numKeys = numKeys();
-    Admin admin = new HBaseAdmin(conf);
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     while (admin.getClusterStatus().getServers().size() < NUM_RS) {
       LOG.info("Sleeping until " + NUM_RS + " RSs are online");
       Threads.sleepWithoutInterrupt(1000);

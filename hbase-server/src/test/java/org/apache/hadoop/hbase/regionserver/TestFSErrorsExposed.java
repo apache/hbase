@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
@@ -190,7 +191,7 @@ public class TestFSErrorsExposed {
       TableName tableName = TableName.valueOf("table");
       byte[] fam = Bytes.toBytes("fam");
 
-      Admin admin = new HBaseAdmin(util.getConfiguration());
+      Admin admin = util.getHBaseAdmin();
       HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(fam)
           .setMaxVersions(1)
@@ -201,7 +202,7 @@ public class TestFSErrorsExposed {
       util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
       // Make a new Configuration so it makes a new connection that has the
       // above configuration on it; else we use the old one w/ 10 as default.
-      HTable table = new HTable(new Configuration(util.getConfiguration()), tableName);
+      Table table = util.getConnection().getTable(tableName);
 
       // Load some data
       util.loadTable(table, fam, false);

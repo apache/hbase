@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -48,7 +49,7 @@ public class TestScanRowPrefix extends FilterTestingCluster {
 
   @Test
   public void testPrefixScanning() throws IOException {
-    String tableName = "prefixScanning";
+    TableName tableName = TableName.valueOf("prefixScanning");
     createTable(tableName,"F");
     Table table = openTable(tableName);
 

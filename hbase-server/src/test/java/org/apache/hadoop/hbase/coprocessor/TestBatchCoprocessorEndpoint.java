@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -86,14 +87,14 @@ public class TestBatchCoprocessorEndpoint {
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         ProtobufCoprocessorService.class.getName());
     util.startMiniCluster(2);
-    Admin admin = new HBaseAdmin(conf);
+    Admin admin = util.getHBaseAdmin();
     HTableDescriptor desc = new HTableDescriptor(TEST_TABLE);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
     util.waitUntilAllRegionsAssigned(TEST_TABLE);
     admin.close();
 
-    Table table = new HTable(conf, TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
       put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
@@ -109,7 +110,7 @@ public class TestBatchCoprocessorEndpoint {
 
   @Test
   public void testAggregationNullResponse() throws Throwable {
-    Table table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     ColumnAggregationWithNullResponseProtos.SumRequest.Builder builder =
         ColumnAggregationWithNullResponseProtos.SumRequest
         .newBuilder();
@@ -162,7 +163,7 @@ public class TestBatchCoprocessorEndpoint {
 
   @Test
   public void testAggregationWithReturnValue() throws Throwable {
-    Table table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     Map<byte[], SumResponse> results = sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[0],
         ROWS[ROWS.length - 1]);
     int sumResult = 0;
@@ -198,7 +199,7 @@ public class TestBatchCoprocessorEndpoint {
 
   @Test
   public void testAggregation() throws Throwable {
-    Table table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     Map<byte[], SumResponse> results = sum(table, TEST_FAMILY, TEST_QUALIFIER,
         ROWS[0], ROWS[ROWS.length - 1]);
     int sumResult = 0;
@@ -231,7 +232,7 @@ public class TestBatchCoprocessorEndpoint {
 
   @Test
   public void testAggregationWithErrors() throws Throwable {
-    Table table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     final Map<byte[], ColumnAggregationWithErrorsProtos.SumResponse> results =
         Collections.synchronizedMap(
             new TreeMap<byte[], ColumnAggregationWithErrorsProtos.SumResponse>(

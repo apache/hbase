@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
@@ -378,7 +380,7 @@ public abstract class TestVisibilityLabels {
     t.join();
     Table table = null;
     try {
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = TEST_UTIL.getConnection().getTable(tableName);
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET));
       ResultScanner scanner = table.getScanner(s);
@@ -472,7 +474,7 @@ public abstract class TestVisibilityLabels {
     SUPERUSER.runAs(action);
     Table ht = null;
     try {
-      ht = new HTable(conf, LABELS_TABLE_NAME);
+      ht = TEST_UTIL.getConnection().getTable(LABELS_TABLE_NAME);
       Scan scan = new Scan();
       scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
       ResultScanner scanner = ht.getScanner(scan);
@@ -581,9 +583,11 @@ public abstract class TestVisibilityLabels {
                 "org.apache.hadoop.hbase.security.visibility.InvalidLabelException: "
                     + "Label 'public' is not set for the user testUser"));
         assertTrue(resultList.get(2).getException().getValue().isEmpty());
+        Connection connection = null;
         Table ht = null;
         try {
-          ht = new HTable(conf, LABELS_TABLE_NAME);
+          connection = ConnectionFactory.createConnection(conf);
+          ht = connection.getTable(LABELS_TABLE_NAME);
           ResultScanner scanner = ht.getScanner(new Scan());
           Result result = null;
           List<Result> results = new ArrayList<Result>();
@@ -596,6 +600,9 @@ public abstract class TestVisibilityLabels {
         } finally {
           if (ht != null) {
             ht.close();
+          }
+          if (connection != null){
+            connection.close();
           }
         }
 
@@ -774,7 +781,7 @@ public abstract class TestVisibilityLabels {
     TEST_UTIL.getHBaseAdmin().createTable(desc);
     Table table = null;
     try {
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(r1);
       put.add(fam, qual, 3l, v1);
       put.add(fam, qual2, 3l, v1);
@@ -862,7 +869,7 @@ public abstract class TestVisibilityLabels {
     HColumnDescriptor col = new HColumnDescriptor(fam);
     desc.addFamily(col);
     TEST_UTIL.getHBaseAdmin().createTable(desc);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     try {
       Put p1 = new Put(row1);
       p1.add(fam, qual, value);

@@ -259,7 +259,7 @@ public class TestRegionObserverScannerOpenHook {
     Admin admin = UTIL.getHBaseAdmin();
     admin.createTable(desc);
 
-    Table table = new HTable(conf, desc.getTableName());
+    Table table = UTIL.getConnection().getTable(desc.getTableName());
 
     // put a row and flush it to disk
     Put put = new Put(ROW);

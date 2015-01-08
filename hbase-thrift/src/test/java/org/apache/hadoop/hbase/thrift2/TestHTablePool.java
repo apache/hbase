@@ -254,7 +254,7 @@ public class TestHTablePool {
     public void testCloseTablePool() throws IOException {
       HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 4,
           getPoolType());
-      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
       if (admin.tableExists(TABLENAME)) {
         admin.disableTable(TABLENAME);
@@ -330,7 +330,7 @@ public class TestHTablePool {
     public void testCloseTablePool() throws IOException {
       HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(), 4,
           getPoolType());
-      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
       if (admin.tableExists(TABLENAME)) {
         admin.disableTable(TABLENAME);

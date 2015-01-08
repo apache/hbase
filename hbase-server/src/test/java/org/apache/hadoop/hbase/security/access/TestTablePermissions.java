@@ -288,7 +288,7 @@ public class TestTablePermissions {
     ListMultimap<String,TablePermission> preperms =
         AccessControlLists.getTablePermissions(conf, TEST_TABLE);
 
-    Table table = new HTable(conf, TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
     table.put(new Put(Bytes.toBytes("row1"))
         .add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v1")));
     table.put(new Put(Bytes.toBytes("row2"))

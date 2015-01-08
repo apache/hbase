@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -135,7 +137,7 @@ public class TestVisibilityWithCheckAuths {
         public Void run() throws Exception {
           Table table = null;
           try {
-            table = new HTable(conf, tableName);
+            table = TEST_UTIL.getConnection().getTable(tableName);
             Put p = new Put(row1);
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
             p.add(fam, qual, 125l, value);
@@ -179,15 +181,17 @@ public class TestVisibilityWithCheckAuths {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
+          Connection connection = ConnectionFactory.createConnection(conf);
           Table table = null;
           try {
-            table = new HTable(conf, tableName);
+            table = connection.getTable(tableName);
             Put put = new Put(row1);
             put.add(fam, qual, HConstants.LATEST_TIMESTAMP, val);
             put.setCellVisibility(new CellVisibility(TOPSECRET));
             table.put(put);
           } finally {
             table.close();
+            connection.close();
           }
           return null;
         }
@@ -196,14 +200,16 @@ public class TestVisibilityWithCheckAuths {
       actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
+          Connection connection = ConnectionFactory.createConnection(conf);
           Table table = null;
           try {
-            table = new HTable(conf, tableName);
+            table = TEST_UTIL.getConnection().getTable(tableName);
             Append append = new Append(row1);
             append.add(fam, qual, Bytes.toBytes("b"));
             table.append(append);
           } finally {
             table.close();
+            connection.close();
           }
           return null;
         }
@@ -213,8 +219,10 @@ public class TestVisibilityWithCheckAuths {
         @Override
         public Void run() throws Exception {
           Table table = null;
+          Connection connection = null;
           try {
-            table = new HTable(conf, tableName);
+            connection = ConnectionFactory.createConnection(conf);
+            table = connection.getTable(tableName);
             Append append = new Append(row1);
             append.add(fam, qual, Bytes.toBytes("c"));
             append.setCellVisibility(new CellVisibility(PUBLIC));
@@ -223,7 +231,12 @@ public class TestVisibilityWithCheckAuths {
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
           } finally {
-            table.close();
+            if (table != null) {
+              table.close();
+            }
+            if (connection != null) {
+              connection.close();
+            }
           }
           return null;
         }

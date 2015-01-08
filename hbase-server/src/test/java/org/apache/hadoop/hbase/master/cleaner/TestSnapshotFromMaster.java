@@ -290,10 +290,10 @@ public class TestSnapshotFromMaster {
     htd.setCompactionEnabled(false);
     UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
     // load the table (creates 4 hfiles)
-    UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE_NAME), TEST_FAM);
+    UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
     UTIL.flush(TABLE_NAME);
     // Put some more data into the table so for sure we get more storefiles.
-    UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE_NAME), TEST_FAM);
+    UTIL.loadTable((HTable) UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
 
     // disable the table so we can take a snapshot
     admin.disableTable(TABLE_NAME);

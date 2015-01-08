@@ -89,7 +89,7 @@ public class TestCompactionState {
     Table ht = null;
     try {
       ht = TEST_UTIL.createTable(table, family);
-      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
       try {
         admin.compact(table, fakecf);
       } catch (IOException ioe) {
@@ -137,7 +137,7 @@ public class TestCompactionState {
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countBefore > 0); // there should be some data files
-      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
       if (expectedState == CompactionState.MINOR) {
         if (singleFamily) {
           admin.compact(table.getName(), family);
@@ -154,10 +154,10 @@ public class TestCompactionState {
       long curt = System.currentTimeMillis();
       long waitTime = 5000;
       long endt = curt + waitTime;
-      CompactionState state = admin.getCompactionState(table.getName());
+      CompactionState state = admin.getCompactionState(table);
       while (state == CompactionState.NONE && curt < endt) {
         Thread.sleep(10);
-        state = admin.getCompactionState(table.getName());
+        state = admin.getCompactionState(table);
         curt = System.currentTimeMillis();
       }
       // Now, should have the right compaction state,
@@ -169,10 +169,10 @@ public class TestCompactionState {
         }
       } else {
         // Wait until the compaction is done
-        state = admin.getCompactionState(table.getName());
+        state = admin.getCompactionState(table);
         while (state != CompactionState.NONE && curt < endt) {
           Thread.sleep(10);
-          state = admin.getCompactionState(table.getName());
+          state = admin.getCompactionState(table);
         }
         // Now, compaction should be done.
         assertEquals(CompactionState.NONE, state);

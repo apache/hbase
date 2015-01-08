@@ -71,7 +71,7 @@ public abstract class TestTableMapReduceBase {
   /**
    * Handles API-specifics for setting up and executing the job.
    */
-  protected abstract void runTestOnTable(HTable table) throws IOException;
+  protected abstract void runTestOnTable(Table table) throws IOException;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -95,7 +95,7 @@ public abstract class TestTableMapReduceBase {
    */
   @Test
   public void testMultiRegionTable() throws IOException {
-    runTestOnTable(new HTable(UTIL.getConfiguration(), MULTI_REGION_TABLE_NAME));
+    runTestOnTable(UTIL.getConnection().getTable(MULTI_REGION_TABLE_NAME));
   }
 
   @Test
@@ -103,7 +103,7 @@ public abstract class TestTableMapReduceBase {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     // force use of combiner for testing purposes
     conf.setInt("mapreduce.map.combine.minspills", 1);
-    runTestOnTable(new HTable(conf, MULTI_REGION_TABLE_NAME));
+    runTestOnTable(UTIL.getConnection().getTable(MULTI_REGION_TABLE_NAME));
   }
 
   /**
@@ -134,7 +134,7 @@ public abstract class TestTableMapReduceBase {
   }
 
   protected void verify(TableName tableName) throws IOException {
-    Table table = new HTable(UTIL.getConfiguration(), tableName);
+    Table table = UTIL.getConnection().getTable(tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
     int numRetries = UTIL.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);

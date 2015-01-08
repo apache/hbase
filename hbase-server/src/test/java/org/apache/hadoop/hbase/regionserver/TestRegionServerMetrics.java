@@ -109,10 +109,10 @@ public class TestRegionServerMetrics {
 
     TEST_UTIL.createTable(tName, cfName);
 
-    new HTable(conf, tName).close(); //wait for the table to come up.
+    TEST_UTIL.getConnection().getTable(tName).close(); //wait for the table to come up.
 
     // Do a first put to be sure that the connection is established, meta is there and so on.
-    HTable table = new HTable(conf, tName);
+    HTable table = (HTable) TEST_UTIL.getConnection().getTable(tName);
     Put p = new Put(row);
     p.add(cfName, qualifier, initValue);
     table.put(p);
@@ -189,9 +189,7 @@ public class TestRegionServerMetrics {
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
 
-    TEST_UTIL.createTable(tableName, cf);
-
-    Table t = new HTable(conf, tableName);
+    Table t = TEST_UTIL.createTable(tableName, cf);
 
     Put p = new Put(row);
     p.add(cf, qualifier, val);
@@ -219,10 +217,8 @@ public class TestRegionServerMetrics {
     long stores = metricsHelper.getGaugeLong("storeCount", serverSource);
     long storeFiles = metricsHelper.getGaugeLong("storeFileCount", serverSource);
 
-    TEST_UTIL.createTable(tableName, cf);
-
     //Force a hfile.
-    Table t = new HTable(conf, tableName);
+    Table t = TEST_UTIL.createTable(tableName, cf);
     Put p = new Put(row);
     p.add(cf, qualifier, val);
     t.put(p);
@@ -246,8 +242,7 @@ public class TestRegionServerMetrics {
     byte[] valTwo = Bytes.toBytes("ValueTwo");
     byte[] valThree = Bytes.toBytes("ValueThree");
 
-    TEST_UTIL.createTable(tableName, cf);
-    Table t = new HTable(conf, tableName);
+    Table t = TEST_UTIL.createTable(tableName, cf);
     Put p = new Put(row);
     p.add(cf, qualifier, valOne);
     t.put(p);
@@ -277,9 +272,7 @@ public class TestRegionServerMetrics {
     byte[] val = Bytes.toBytes(0l);
 
 
-    TEST_UTIL.createTable(tableName, cf);
-    Table t = new HTable(conf, tableName);
-
+    Table t = TEST_UTIL.createTable(tableName, cf);
     Put p = new Put(row);
     p.add(cf, qualifier, val);
     t.put(p);
@@ -306,9 +299,7 @@ public class TestRegionServerMetrics {
     byte[] val = Bytes.toBytes("One");
 
 
-    TEST_UTIL.createTable(tableName, cf);
-    Table t = new HTable(conf, tableName);
-
+    Table t = TEST_UTIL.createTable(tableName, cf);
     Put p = new Put(row);
     p.add(cf, qualifier, val);
     t.put(p);
@@ -334,8 +325,7 @@ public class TestRegionServerMetrics {
     byte[] val = Bytes.toBytes("One");
 
 
-    TEST_UTIL.createTable(tableName, cf);
-    HTable t = new HTable(conf, tableName);
+    HTable t = TEST_UTIL.createTable(tableName, cf);
     t.setAutoFlushTo(false);
     for (int insertCount =0; insertCount < 100; insertCount++) {
       Put p = new Put(Bytes.toBytes("" + insertCount + "row"));

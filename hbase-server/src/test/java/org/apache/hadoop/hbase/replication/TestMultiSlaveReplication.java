@@ -131,14 +131,14 @@ public class TestMultiSlaveReplication {
     utility3.startMiniCluster();
     ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
 
-    new HBaseAdmin(conf1).createTable(table);
-    new HBaseAdmin(conf2).createTable(table);
-    new HBaseAdmin(conf3).createTable(table);
-    Table htable1 = new HTable(conf1, tableName);
+    utility1.getHBaseAdmin().createTable(table);
+    utility2.getHBaseAdmin().createTable(table);
+    utility3.getHBaseAdmin().createTable(table);
+    Table htable1 = utility1.getConnection().getTable(tableName);
     htable1.setWriteBufferSize(1024);
-    Table htable2 = new HTable(conf2, tableName);
+    Table htable2 = utility2.getConnection().getTable(tableName);
     htable2.setWriteBufferSize(1024);
-    Table htable3 = new HTable(conf3, tableName);
+    Table htable3 = utility3.getConnection().getTable(tableName);
     htable3.setWriteBufferSize(1024);
     
     admin1.addPeer("1", utility2.getClusterKey());

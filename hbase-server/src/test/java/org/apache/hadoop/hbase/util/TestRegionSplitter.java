@@ -310,9 +310,8 @@ public class TestRegionSplitter {
     private void verifyBounds(List<byte[]> expectedBounds, TableName tableName)
             throws Exception {
         // Get region boundaries from the cluster and verify their endpoints
-        final Configuration conf = UTIL.getConfiguration();
         final int numRegions = expectedBounds.size()-1;
-        final HTable hTable = new HTable(conf, tableName);
+        final HTable hTable = (HTable) UTIL.getConnection().getTable(tableName);
         final Map<HRegionInfo, ServerName> regionInfoMap = hTable.getRegionLocations();
         assertEquals(numRegions, regionInfoMap.size());
         for (Map.Entry<HRegionInfo, ServerName> entry: regionInfoMap.entrySet()) {

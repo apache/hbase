@@ -172,7 +172,7 @@ public class TestLogRolling  {
 
   private void startAndWriteData() throws IOException, InterruptedException {
     // When the hbase:meta table can be opened, the region servers are running
-    new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
+    TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
 
     Table table = createTestTable(this.tableName);
@@ -311,7 +311,7 @@ public class TestLogRolling  {
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     admin.createTable(desc);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     assertTrue(table.isAutoFlush());
 
     server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
@@ -420,7 +420,7 @@ public class TestLogRolling  {
     LOG.info("Replication=" +
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     // When the hbase:meta table can be opened, the region servers are running
-    Table t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
+    Table t = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     try {
       this.server = cluster.getRegionServer(0);
 
@@ -429,7 +429,7 @@ public class TestLogRolling  {
       desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
       admin.createTable(desc);
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
+      Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
 
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
       final WAL log = server.getWAL(null);
@@ -569,7 +569,7 @@ public class TestLogRolling  {
     Table table2 = null;
 
     // When the hbase:meta table can be opened, the region servers are running
-    Table t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
+    Table t = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     try {
       table = createTestTable(getName());
       table2 = createTestTable(getName() + "1");
@@ -635,7 +635,7 @@ public class TestLogRolling  {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
-    return new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
+    return TEST_UTIL.getConnection().getTable(desc.getTableName());
   }
 }
 

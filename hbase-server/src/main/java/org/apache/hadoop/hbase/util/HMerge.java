@@ -37,12 +37,13 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -245,7 +246,8 @@ class HMerge {
     throws IOException {
       super(conf, fs, tableName);
       this.tableName = tableName;
-      this.table = new HTable(conf, TableName.META_TABLE_NAME);
+      Connection connection = ConnectionFactory.createConnection(conf);
+      this.table = connection.getTable(TableName.META_TABLE_NAME);
       this.metaScanner = table.getScanner(HConstants.CATALOG_FAMILY,
           HConstants.REGIONINFO_QUALIFIER);
       this.latestRegion = null;

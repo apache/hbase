@@ -101,7 +101,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
             int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[2]);
             int mod = ((int) keyToRead % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
-              localTable = new HTable(conf, tableName);
+              localTable = connection.getTable(tableName);
               userVsTable.put(userNames[mod], localTable);
               result = localTable.get(get);
             } else {

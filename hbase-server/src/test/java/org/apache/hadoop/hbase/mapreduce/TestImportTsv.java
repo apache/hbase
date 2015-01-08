@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -346,7 +348,8 @@ public class TestImportTsv implements Configurable {
       String family, int valueMultiplier) throws IOException {
 
     LOG.debug("Validating table.");
-    Table table = new HTable(conf, tableName);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
@@ -378,6 +381,7 @@ public class TestImportTsv implements Configurable {
       }
     }
     table.close();
+    connection.close();
     assertTrue(verified);
   }
 

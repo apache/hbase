@@ -331,7 +331,7 @@ public class TestEndToEndSplitTransaction {
       HTable table = null;
       try {
         //HTable.getStartEndKeys()
-        table = new HTable(conf, tableName);
+        table = (HTable) connection.getTable(tableName);
         Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
         verifyStartEndKeys(keys);
 
@@ -433,7 +433,8 @@ public class TestEndToEndSplitTransaction {
     long start = System.currentTimeMillis();
     log("blocking until region is split:" +  Bytes.toStringBinary(regionName));
     HRegionInfo daughterA = null, daughterB = null;
-    Table metaTable = new HTable(conf, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table metaTable = connection.getTable(TableName.META_TABLE_NAME);
 
     try {
       Result result = null;
@@ -476,6 +477,7 @@ public class TestEndToEndSplitTransaction {
       }
     } finally {
       IOUtils.closeQuietly(metaTable);
+      IOUtils.closeQuietly(connection);
     }
   }
 
@@ -505,7 +507,8 @@ public class TestEndToEndSplitTransaction {
       throws IOException, InterruptedException {
     log("blocking until region is opened for reading:" + hri.getRegionNameAsString());
     long start = System.currentTimeMillis();
-    Table table = new HTable(conf, hri.getTable());
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(hri.getTable());
 
     try {
       byte [] row = hri.getStartKey();
@@ -523,7 +526,7 @@ public class TestEndToEndSplitTransaction {
       }
     } finally {
       IOUtils.closeQuietly(table);
+      IOUtils.closeQuietly(connection);
     }
   }
 }
-

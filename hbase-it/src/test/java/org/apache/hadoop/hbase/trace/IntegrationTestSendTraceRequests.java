@@ -124,7 +124,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
             ResultScanner rs = null;
             try {
               innerScope = Trace.startSpan("Scan", Sampler.ALWAYS);
-              Table ht = new HTable(util.getConfiguration(), tableName);
+              Table ht = util.getConnection().getTable(tableName);
               Scan s = new Scan();
               s.setStartRow(Bytes.toBytes(rowKeyQueue.take()));
               s.setBatch(7);
@@ -174,7 +174,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
           Table ht = null;
           try {
-            ht = new HTable(util.getConfiguration(), tableName);
+            ht = util.getConnection().getTable(tableName);
           } catch (IOException e) {
             e.printStackTrace();
           }
@@ -234,7 +234,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
   private LinkedBlockingQueue<Long> insertData() throws IOException, InterruptedException {
     LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<Long>(25000);
-    HTable ht = new HTable(util.getConfiguration(), this.tableName);
+    Table ht = util.getConnection().getTable(this.tableName);
     byte[] value = new byte[300];
     for (int x = 0; x < 5000; x++) {
       TraceScope traceScope = Trace.startSpan("insertData", Sampler.ALWAYS);

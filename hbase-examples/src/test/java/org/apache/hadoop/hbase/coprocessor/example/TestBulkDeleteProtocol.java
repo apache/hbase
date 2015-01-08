@@ -125,7 +125,7 @@ public class TestBulkDeleteProtocol {
 
   private long invokeBulkDeleteProtocol(TableName tableName, final Scan scan, final int rowBatchSize,
       final DeleteType deleteType, final Long timeStamp) throws Throwable {
-    Table ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table ht = TEST_UTIL.getConnection().getTable(tableName);
     long noOfDeletedRows = 0L;
     Batch.Call<BulkDeleteService, BulkDeleteResponse> callable =
       new Batch.Call<BulkDeleteService, BulkDeleteResponse>() {
@@ -220,7 +220,7 @@ public class TestBulkDeleteProtocol {
     htd.addFamily(new HColumnDescriptor(FAMILY1));
     htd.addFamily(new HColumnDescriptor(FAMILY2));
     TEST_UTIL.getHBaseAdmin().createTable(htd, Bytes.toBytes(0), Bytes.toBytes(120), 5);
-    Table ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table ht = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       Put put = new Put(Bytes.toBytes(j));
@@ -430,7 +430,7 @@ public class TestBulkDeleteProtocol {
     hcd.setMaxVersions(10);// Just setting 10 as I am not testing with more than 10 versions here
     htd.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(htd, Bytes.toBytes(0), Bytes.toBytes(120), 5);
-    Table ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table ht = TEST_UTIL.getConnection().getTable(tableName);
     return ht;
   }
 

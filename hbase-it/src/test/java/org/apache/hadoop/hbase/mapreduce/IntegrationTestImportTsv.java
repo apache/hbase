@@ -144,7 +144,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       setCaching(1000);
     }};
     try {
-      table = new HTable(getConf(), tableName);
+      table = util.getConnection().getTable(tableName);
       Iterator<Result> resultsIt = table.getScanner(scan).iterator();
       Iterator<KeyValue> expectedIt = simple_expected.iterator();
       while (resultsIt.hasNext() && expectedIt.hasNext()) {

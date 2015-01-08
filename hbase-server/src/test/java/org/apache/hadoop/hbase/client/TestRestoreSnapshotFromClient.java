@@ -111,7 +111,7 @@ public class TestRestoreSnapshotFromClient {
     // take an empty snapshot
     admin.snapshot(emptySnapshot, tableName);
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     // enable table and insert data
     admin.enableTable(tableName);
     SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
@@ -175,7 +175,7 @@ public class TestRestoreSnapshotFromClient {
   public void testRestoreSchemaChange() throws Exception {
     byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
 
     // Add one column family and put some data in it
     admin.disableTable(tableName);

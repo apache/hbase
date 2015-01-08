@@ -73,7 +73,7 @@ public class TestRegionServerCoprocessorEndpoint {
         new BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse>();
     DummyRegionServerEndpointProtos.DummyService service =
         ProtobufUtil.newServiceStub(DummyRegionServerEndpointProtos.DummyService.class,
-          new HBaseAdmin(CONF).coprocessorService(serverName));
+          TEST_UTIL.getHBaseAdmin().coprocessorService(serverName));
     service.dummyCall(controller,
       DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(), rpcCallback);
     assertEquals(DUMMY_VALUE, rpcCallback.get().getValue());

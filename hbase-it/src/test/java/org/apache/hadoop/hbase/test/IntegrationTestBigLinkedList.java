@@ -18,18 +18,7 @@
 
 package org.apache.hadoop.hbase.test;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import com.google.common.collect.Sets;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -48,26 +37,27 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -97,7 +87,17 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Sets;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This is an integration test borrowed from goraci, written by Keith Turner,
@@ -340,7 +340,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       byte[] id;
       long count = 0;
       int i;
-      HTable table;
+      Table table;
+      Connection connection;
       long numNodes;
       long wrap;
       int width;
@@ -348,8 +349,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       @Override
       protected void setup(Context context) throws IOException, InterruptedException {
         id = Bytes.toBytes("Job: "+context.getJobID() + " Task: " + context.getTaskAttemptID());
-        Configuration conf = context.getConfiguration();
-        instantiateHTable(conf);
+        this.connection = ConnectionFactory.createConnection(context.getConfiguration());
+        instantiateHTable();
         this.width = context.getConfiguration().getInt(GENERATOR_WIDTH_KEY, WIDTH_DEFAULT);
         current = new byte[this.width][];
         int wrapMultiplier = context.getConfiguration().getInt(GENERATOR_WRAP_KEY, WRAP_DEFAULT);
@@ -361,8 +362,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         }
       }
 
-      protected void instantiateHTable(Configuration conf) throws IOException {
-        table = new HTable(conf, getTableName(conf));
+      protected void instantiateHTable() throws IOException {
+        table = connection.getTable(getTableName(connection.getConfiguration()));
         table.setAutoFlushTo(false);
         table.setWriteBufferSize(4 * 1024 * 1024);
       }
@@ -370,6 +371,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       @Override
       protected void cleanup(Context context) throws IOException ,InterruptedException {
         table.close();
+        connection.close();
       }
 
       @Override
@@ -876,7 +878,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         System.exit(-1);
       }
 
-      Table table = new HTable(getConf(), getTableName(getConf()));
+      Connection connection = ConnectionFactory.createConnection(getConf());
+      Table table = connection.getTable(getTableName(getConf()));
 
       Scan scan = new Scan();
       scan.setBatch(10000);
@@ -906,6 +909,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
       scanner.close();
       table.close();
+      connection.close();
 
       return 0;
     }
@@ -926,9 +930,10 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       org.apache.hadoop.hbase.client.Delete delete
         = new org.apache.hadoop.hbase.client.Delete(val);
 
-      Table table = new HTable(getConf(), getTableName(getConf()));
-      table.delete(delete);
-      table.close();
+      try (Connection connection = ConnectionFactory.createConnection(getConf());
+          Table table = connection.getTable(getTableName(getConf()))) {
+        table.delete(delete);
+      }
 
       System.out.println("Delete successful");
       return 0;
@@ -970,7 +975,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       byte[] startKey = isSpecificStart ? Bytes.toBytesBinary(cmd.getOptionValue('s')) : null;
       int logEvery = cmd.hasOption('l') ? Integer.parseInt(cmd.getOptionValue('l')) : 1;
 
-      Table table = new HTable(getConf(), getTableName(getConf()));
+      Connection connection = ConnectionFactory.createConnection(getConf());
+      Table table = connection.getTable(getTableName(getConf()));
       long numQueries = 0;
       // If isSpecificStart is set, only walk one list from that particular node.
       // Note that in case of circular (or P-shaped) list it will walk forever, as is
@@ -1003,6 +1009,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       table.close();
+      connection.close();
       return 0;
     }
 

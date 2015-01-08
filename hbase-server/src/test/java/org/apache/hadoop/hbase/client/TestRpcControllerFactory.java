@@ -131,7 +131,8 @@ public class TestRpcControllerFactory {
     // change one of the connection properties so we get a new HConnection with our configuration
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT + 1);
 
-    Table table = new HTable(conf, name);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(name);
     table.setAutoFlushTo(false);
     byte[] row = Bytes.toBytes("row");
     Put p = new Put(row);
@@ -187,6 +188,7 @@ public class TestRpcControllerFactory {
     counter = doScan(table, scanInfo, counter);
 
     table.close();
+    connection.close();
   }
 
   int doScan(Table table, Scan scan, int expectedCount) throws IOException {

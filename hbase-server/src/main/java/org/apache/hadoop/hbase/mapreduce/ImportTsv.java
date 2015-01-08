@@ -477,7 +477,7 @@ public class ImportTsv extends Configured implements Tool {
           job.setInputFormatClass(TextInputFormat.class);
           job.setMapperClass(mapperClass);
           String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
-          String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
+          String[] columns = conf.getStrings(COLUMNS_CONF_KEY);
           if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
             String fileLoc = conf.get(CREDENTIALS_LOCATION);
             Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
@@ -662,7 +662,7 @@ public class ImportTsv extends Configured implements Tool {
     // TODO: validation for TsvImporterMapper, not this tool. Move elsewhere.
     if (null == getConf().get(MAPPER_CONF_KEY)) {
       // Make sure columns are specified
-      String columns[] = getConf().getStrings(COLUMNS_CONF_KEY);
+      String[] columns = getConf().getStrings(COLUMNS_CONF_KEY);
       if (columns == null) {
         usage("No columns specified. Please specify with -D" +
             COLUMNS_CONF_KEY+"=...");

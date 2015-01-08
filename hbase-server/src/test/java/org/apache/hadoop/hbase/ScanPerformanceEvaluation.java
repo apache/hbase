@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -149,7 +151,8 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     Stopwatch scanTimer = new Stopwatch();
 
     tableOpenTimer.start();
-    Table table = new HTable(getConf(), TableName.valueOf(tablename));
+    Connection connection = ConnectionFactory.createConnection(getConf());
+    Table table = connection.getTable(TableName.valueOf(tablename));
     tableOpenTimer.stop();
 
     Scan scan = getScan();
@@ -172,6 +175,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     scanTimer.stop();
     scanner.close();
     table.close();
+    connection.close();
 
     ScanMetrics metrics = ProtobufUtil.toScanMetrics(scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA));
     long totalBytes = metrics.countOfBytesInResults.get();

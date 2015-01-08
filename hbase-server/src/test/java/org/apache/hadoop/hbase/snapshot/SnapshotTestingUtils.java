@@ -673,10 +673,10 @@ public class SnapshotTestingUtils {
 
   public static void loadData(final HBaseTestingUtility util, final TableName tableName, int rows,
       byte[]... families) throws IOException, InterruptedException {
-    loadData(util, new HTable(util.getConfiguration(), tableName), rows, families);
+    loadData(util, util.getConnection().getTable(tableName), rows, families);
   }
 
-  public static void loadData(final HBaseTestingUtility util, final HTable table, int rows,
+  public static void loadData(final HBaseTestingUtility util, final Table table, int rows,
       byte[]... families) throws IOException, InterruptedException {
     table.setAutoFlushTo(false);
 
@@ -731,7 +731,7 @@ public class SnapshotTestingUtils {
 
   public static void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
       long expectedRows) throws IOException {
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       assertEquals(expectedRows, util.countRows(table));
     } finally {

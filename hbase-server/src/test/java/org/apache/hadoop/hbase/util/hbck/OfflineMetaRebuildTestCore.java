@@ -215,7 +215,7 @@ public class OfflineMetaRebuildTestCore {
 
   protected HRegionInfo createRegion(Configuration conf, final Table htbl,
       byte[] startKey, byte[] endKey) throws IOException {
-    Table meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     HTableDescriptor htd = htbl.getTableDescriptor();
     HRegionInfo hri = new HRegionInfo(htbl.getName(), startKey, endKey);
 
@@ -240,7 +240,7 @@ public class OfflineMetaRebuildTestCore {
     // Mess it up by blowing up meta.
     Admin admin = TEST_UTIL.getHBaseAdmin();
     Scan s = new Scan();
-    Table meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = meta.getScanner(s);
     List<Delete> dels = new ArrayList<Delete>();
     for (Result r : scanner) {
@@ -266,7 +266,7 @@ public class OfflineMetaRebuildTestCore {
    */
   protected int tableRowCount(Configuration conf, TableName table)
       throws IOException {
-    Table t = new HTable(conf, table);
+    Table t = TEST_UTIL.getConnection().getTable(table);
     Scan st = new Scan();
 
     ResultScanner rst = t.getScanner(st);
@@ -286,9 +286,9 @@ public class OfflineMetaRebuildTestCore {
    */
   protected int scanMeta() throws IOException {
     int count = 0;
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = meta.getScanner(new Scan());
-    LOG.info("Table: " + Bytes.toString(meta.getTableName()));
+    LOG.info("Table: " + meta.getName());
     for (Result res : scanner) {
       LOG.info(Bytes.toString(res.getRow()));
       count++;

@@ -37,6 +37,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ScannerCallable;
@@ -58,13 +61,13 @@ import org.junit.experimental.categories.Category;
 @Category({FilterTests.class, MediumTests.class})
 public class FilterTestingCluster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Configuration conf = null;
-  private static HBaseAdmin admin = null;
-  private static List<String> createdTables = new ArrayList<>();
+  private static Connection connection;
+  private static Admin admin = null;
+  private static List<TableName> createdTables = new ArrayList<>();
 
-  protected static void createTable(String tableName, String columnFamilyName) {
+  protected static void createTable(TableName tableName, String columnFamilyName) {
     assertNotNull("HBaseAdmin is not initialized successfully.", admin);
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor colDef = new HColumnDescriptor(Bytes.toBytes(columnFamilyName));
     desc.addFamily(colDef);
 
@@ -77,15 +80,15 @@ public class FilterTestingCluster {
     }
   }
 
-  protected static Table openTable(String tableName) throws IOException {
-    Table table = new HTable(conf, tableName);
+  protected static Table openTable(TableName tableName) throws IOException {
+    Table table = connection.getTable(tableName);
     assertTrue("Fail to create the table", admin.tableExists(tableName));
     return table;
   }
 
   private static void deleteTables() {
     if (admin != null) {
-      for (String tableName: createdTables){
+      for (TableName tableName: createdTables){
         try {
           if (admin.tableExists(tableName)) {
             admin.disableTable(tableName);
@@ -99,10 +102,11 @@ public class FilterTestingCluster {
   }
 
   private static void initialize(Configuration conf) {
-    FilterTestingCluster.conf = HBaseConfiguration.create(conf);
-    FilterTestingCluster.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    conf = HBaseConfiguration.create(conf);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     try {
-      admin = new HBaseAdmin(conf);
+      connection = ConnectionFactory.createConnection(conf);
+      admin = connection.getAdmin();
     } catch (MasterNotRunningException e) {
       assertNull("Master is not running", e);
     } catch (ZooKeeperConnectionException e) {
@@ -124,7 +128,7 @@ public class FilterTestingCluster {
   @AfterClass
   public static void tearDown() throws Exception {
     deleteTables();
+    connection.close();
     TEST_UTIL.shutdownMiniCluster();
   }
-
 }

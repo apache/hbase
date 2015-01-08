@@ -252,7 +252,7 @@ public class TestNamespace {
     }
 
     //sanity check try to write and read from table
-    Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     Put p = new Put(Bytes.toBytes("row1"));
     p.add(Bytes.toBytes("my_cf"),Bytes.toBytes("my_col"),Bytes.toBytes("value1"));
     table.put(p);

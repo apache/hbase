@@ -186,7 +186,7 @@ public class TestWALReplay {
     byte[] value = Bytes.toBytes("testV");
     byte[][] familys = { family1, family2 };
     TEST_UTIL.createTable(tableName, familys);
-    Table htable = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table htable = TEST_UTIL.getConnection().getTable(tableName);
     Put put = new Put(Bytes.toBytes("r1"));
     put.add(family1, qualifier, value);
     htable.put(put);

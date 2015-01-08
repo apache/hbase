@@ -67,7 +67,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
+    UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port +
         "/index.html"), "master-status");
@@ -87,7 +87,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersStatusPages() throws Exception {
     // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
+    UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port +
         "/master-status"), "meta");
@@ -102,7 +102,7 @@ public class TestInfoServers {
     TableName tableName = TableName.valueOf("testMasterServerReadOnly");
     byte[] cf = Bytes.toBytes("d");
     UTIL.createTable(tableName, cf);
-    new HTable(UTIL.getConfiguration(), tableName).close();
+    UTIL.getConnection().getTable(tableName).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertDoesNotContainContent(
       new URL("http://localhost:" + port + "/table.jsp?name=" + tableName + "&action=split&key="),

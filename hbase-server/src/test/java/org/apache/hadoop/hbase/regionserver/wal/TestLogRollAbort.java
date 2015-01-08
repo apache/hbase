@@ -128,8 +128,7 @@ public class TestLogRollAbort {
     LOG.info("Starting testRSAbortWithUnflushedEdits()");
 
     // When the hbase:meta table can be opened, the region servers are running
-    new HTable(TEST_UTIL.getConfiguration(),
-      TableName.META_TABLE_NAME).close();
+    TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
 
     // Create the test table and open it
     TableName tableName = TableName.valueOf(this.getClass().getSimpleName());
@@ -137,9 +136,8 @@ public class TestLogRollAbort {
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     admin.createTable(desc);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     try {
-
       HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       WAL log = server.getWAL(null);
 

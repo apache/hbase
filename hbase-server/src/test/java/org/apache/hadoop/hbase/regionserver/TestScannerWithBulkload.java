@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -72,17 +73,17 @@ public class TestScannerWithBulkload {
   public void testBulkLoad() throws Exception {
     TableName tableName = TableName.valueOf("testBulkLoad");
     long l = System.currentTimeMillis();
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
-    final HTable table = init(admin, l, scan, tableName);
+    final Table table = init(admin, l, scan, tableName);
     // use bulkload
     final Path hfilePath = writeToHFile(l, "/temp/testBulkLoad/", "/temp/testBulkLoad/col/file",
       false);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-    bulkload.doBulkLoad(hfilePath, table);
+    bulkload.doBulkLoad(hfilePath, (HTable) table);
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     result = scanAfterBulkLoad(scanner, result, "version2");
@@ -165,8 +166,8 @@ public class TestScannerWithBulkload {
     return hfilePath;
   }
 
-  private HTable init(HBaseAdmin admin, long l, Scan scan, TableName tableName) throws Exception {
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+  private Table init(HBaseAdmin admin, long l, Scan scan, TableName tableName) throws Exception {
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     Put put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version0")));
@@ -200,10 +201,10 @@ public class TestScannerWithBulkload {
   public void testBulkLoadWithParallelScan() throws Exception {
     TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
       final long l = System.currentTimeMillis();
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
-    final HTable table = init(admin, l, scan, tableName);
+    final Table table = init(admin, l, scan, tableName);
     // use bulkload
     final Path hfilePath = writeToHFile(l, "/temp/testBulkLoadWithParallelScan/",
         "/temp/testBulkLoadWithParallelScan/col/file", false);
@@ -221,7 +222,7 @@ public class TestScannerWithBulkload {
               Bytes.toBytes("version0")));
           table.put(put1);
           table.flushCommits();
-          bulkload.doBulkLoad(hfilePath, table);
+          bulkload.doBulkLoad(hfilePath, (HTable) table);
           latch.countDown();
         } catch (TableNotFoundException e) {
         } catch (IOException e) {
@@ -242,17 +243,17 @@ public class TestScannerWithBulkload {
   public void testBulkLoadNativeHFile() throws Exception {
     TableName tableName = TableName.valueOf("testBulkLoadNativeHFile");
     long l = System.currentTimeMillis();
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
-    final HTable table = init(admin, l, scan, tableName);
+    final Table table = init(admin, l, scan, tableName);
     // use bulkload
     final Path hfilePath = writeToHFile(l, "/temp/testBulkLoadNativeHFile/",
       "/temp/testBulkLoadNativeHFile/col/file", true);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-    bulkload.doBulkLoad(hfilePath, table);
+    bulkload.doBulkLoad(hfilePath, (HTable) table);
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     // We had 'version0', 'version1' for 'row1,col:q' in the table.

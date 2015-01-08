@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
@@ -114,14 +115,15 @@ public class TestMergeTable {
       LOG.info("Starting mini hbase cluster");
       UTIL.startMiniHBaseCluster(1, 1);
       Configuration c = new Configuration(UTIL.getConfiguration());
-      Connection connection = HConnectionManager.getConnection(c);
+      Connection connection = UTIL.getConnection();
 
       List<HRegionInfo> originalTableRegions =
         MetaTableAccessor.getTableRegions(connection, desc.getTableName());
       LOG.info("originalTableRegions size=" + originalTableRegions.size() +
         "; " + originalTableRegions);
-      Admin admin = new HBaseAdmin(c);
+      Admin admin = connection.getAdmin();
       admin.disableTable(desc.getTableName());
+      admin.close();
       HMerge.merge(c, FileSystem.get(c), desc.getTableName());
       List<HRegionInfo> postMergeTableRegions =
         MetaTableAccessor.getTableRegions(connection, desc.getTableName());

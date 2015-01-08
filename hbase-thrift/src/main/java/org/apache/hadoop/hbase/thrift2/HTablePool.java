@@ -29,7 +29,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTableFactory;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.HTableInterfaceFactory;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -220,8 +233,7 @@ public class HTablePool implements Closeable {
    * @param tableName
    *          table name
    * @return a reference to the specified table
-   * @throws RuntimeException
-   *           if there is a problem instantiating the HTable
+   * @throws RuntimeException if there is a problem instantiating the HTable
    */
   public HTableInterface getTable(byte[] tableName) {
     return getTable(Bytes.toString(tableName));
@@ -645,7 +657,7 @@ public class HTablePool implements Closeable {
 
     private void checkState() {
       if (!isOpen()) {
-        throw new IllegalStateException("Table=" + new String(table.getTableName())
+        throw new IllegalStateException("Table=" + table.getName()
                 + " already closed");
       }
     }

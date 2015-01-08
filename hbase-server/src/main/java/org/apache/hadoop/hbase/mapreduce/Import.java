@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
@@ -512,17 +513,22 @@ public class Import extends Configured implements Tool {
   public static void flushRegionsIfNecessary(Configuration conf) throws IOException,
       InterruptedException {
     String tableName = conf.get(TABLE_NAME);
-    HBaseAdmin hAdmin = null;
+    Admin hAdmin = null;
+    Connection connection = null;
     String durability = conf.get(WAL_DURABILITY);
     // Need to flush if the data is written to hbase and skip wal is enabled.
     if (conf.get(BULK_OUTPUT_CONF_KEY) == null && durability != null
         && Durability.SKIP_WAL.name().equalsIgnoreCase(durability)) {
       try {
-        hAdmin = new HBaseAdmin(conf);
-        hAdmin.flush(tableName);
+        connection = ConnectionFactory.createConnection(conf);
+        hAdmin = connection.getAdmin();
+        hAdmin.flush(TableName.valueOf(tableName));
       } finally {
         if (hAdmin != null) {
           hAdmin.close();
+        }
+        if (connection != null) {
+          connection.close();
         }
       }
     }

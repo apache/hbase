@@ -76,7 +76,7 @@ public class TestHRegionOnCluster {
 
       // Put data: r1->v1
       Log.info("Loading r1 to v1 into " + TABLENAME);
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
+      HTable table = (HTable) TEST_UTIL.getConnection().getTable(TABLENAME);
       putDataAndVerify(table, "r1", FAMILY, "v1", 1);
 
       TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());

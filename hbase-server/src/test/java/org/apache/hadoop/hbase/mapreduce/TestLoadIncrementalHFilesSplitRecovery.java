@@ -242,7 +242,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     assertEquals(htds.length, 1);
     Table t = null;
     try {
-      t = new HTable(util.getConfiguration(), table);
+      t = util.getConnection().getTable(table);
       Scan s = new Scan();
       ResultScanner sr = t.getScanner(s);
       int i = 0;

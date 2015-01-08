@@ -34,10 +34,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -156,8 +156,9 @@ public class CopyTable extends Configured implements Tool {
       System.out.println("HFiles will be stored at " + this.bulkloadDir);
       HFileOutputFormat2.setOutputPath(job, bulkloadDir);
       try (Connection conn = ConnectionFactory.createConnection(getConf());
-          Table htable = conn.getTable(TableName.valueOf(dstTableName))) {
-        HFileOutputFormat2.configureIncrementalLoadMap(job, htable);
+          Admin admin = conn.getAdmin()) {
+        HFileOutputFormat2.configureIncrementalLoadMap(job,
+            admin.getTableDescriptor((TableName.valueOf(dstTableName))));
       }
     } else {
       TableMapReduceUtil.initTableMapperJob(tableName, scan,
@@ -192,7 +193,8 @@ public class CopyTable extends Configured implements Tool {
     System.err.println(" versions     number of cell versions to copy");
     System.err.println(" new.name     new table's name");
     System.err.println(" peer.adr     Address of the peer cluster given in the format");
-    System.err.println("              hbase.zookeeer.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent");
+    System.err.println("              hbase.zookeeper.quorum:hbase.zookeeper.client"
+        + ".port:zookeeper.znode.parent");
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println("              To copy from cf1 to cf2, give sourceCfName:destCfName. ");
     System.err.println("              To keep the same name, just give \"cfName\"");
@@ -298,7 +300,7 @@ public class CopyTable extends Configured implements Tool {
         if (i == args.length-1) {
           tableName = cmd;
         } else {
-          printUsage("Invalid argument '" + cmd + "'" );
+          printUsage("Invalid argument '" + cmd + "'");
           return false;
         }
       }

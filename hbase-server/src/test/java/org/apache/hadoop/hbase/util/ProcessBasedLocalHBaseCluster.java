@@ -173,7 +173,7 @@ public class ProcessBasedLocalHBaseCluster {
     int attemptsLeft = 10;
     while (attemptsLeft-- > 0) {
       try {
-        new HTable(conf, TableName.META_TABLE_NAME);
+        testUtil.getConnection().getTable(TableName.META_TABLE_NAME);
       } catch (Exception e) {
         LOG.info("Waiting for HBase to startup. Retries left: " + attemptsLeft,
             e);

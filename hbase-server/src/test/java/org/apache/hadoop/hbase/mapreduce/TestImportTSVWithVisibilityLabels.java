@@ -122,7 +122,6 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     // Wait for the labels table to become available
     util.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
     createLabels();
-    Admin admin = new HBaseAdmin(util.getConfiguration());
     util.startMiniMapReduceCluster();
   }
 
@@ -185,7 +184,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   private void issueDeleteAndVerifyData(TableName tableName) throws IOException {
     LOG.debug("Validating table after delete.");
-    Table table = new HTable(conf, tableName);
+    Table table = util.getConnection().getTable(tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
@@ -370,7 +369,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
       int valueMultiplier) throws IOException {
 
     LOG.debug("Validating table.");
-    Table table = new HTable(conf, tableName);
+    Table table = util.getConnection().getTable(tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);

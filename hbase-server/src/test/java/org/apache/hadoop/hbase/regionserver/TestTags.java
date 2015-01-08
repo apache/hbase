@@ -119,7 +119,7 @@ public class TestTags {
       Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
       byte[] value = Bytes.toBytes("value");
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row);
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setAttribute("visibility", Bytes.toBytes("myTag"));
@@ -185,7 +185,7 @@ public class TestTags {
       Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
 
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row);
       byte[] value = Bytes.toBytes("value");
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
@@ -275,7 +275,7 @@ public class TestTags {
       Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
       try {
-        table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+        table = TEST_UTIL.getConnection().getTable(tableName);
         Put put = new Put(row);
         byte[] value = Bytes.toBytes("value");
         put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
@@ -388,7 +388,7 @@ public class TestTags {
 
     Table table = null;
     try {
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row1);
       byte[] v = Bytes.toBytes(2L);
       put.add(f, q, v);

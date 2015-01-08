@@ -76,7 +76,7 @@ public class TestRegionServerObserver {
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    Admin admin = new HBaseAdmin(conf);
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     try {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       HRegionServer regionServer = cluster.getRegionServer(0);

@@ -87,7 +87,7 @@ public class TestTableResource {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
     admin.createTable(htd);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+    HTable table = (HTable) TEST_UTIL.getConnection().getTable(TABLE);
     byte[] k = new byte[3];
     byte [][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(COLUMN));
     for (byte b1 = 'a'; b1 < 'z'; b1++) {

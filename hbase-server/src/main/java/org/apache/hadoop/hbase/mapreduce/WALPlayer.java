@@ -115,7 +115,7 @@ public class WALPlayer extends Configured implements Tool {
     @Override
     public void setup(Context context) throws IOException {
       // only a single table is supported when HFiles are generated with HFileOutputFormat
-      String tables[] = context.getConfiguration().getStrings(TABLES_KEY);
+      String[] tables = context.getConfiguration().getStrings(TABLES_KEY);
       if (tables == null || tables.length != 1) {
         // this can only happen when WALMapper is used directly by a class other than WALPlayer
         throw new IOException("Exactly one table must be specified for bulk HFile case.");

@@ -145,7 +145,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     Configuration localConfig = HBaseConfiguration.create(this.conf);
     // This override mocks up our exists/get call to throw a RegionServerStoppedException.
     localConfig.set("hbase.client.connection.impl", RpcTimeoutConnection.class.getName());
-    Table table = new HTable(localConfig, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(localConfig);
+    Table table = connection.getTable(TableName.META_TABLE_NAME);
     Throwable t = null;
     LOG.info("Start");
     try {
@@ -161,6 +162,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     } finally {
       table.close();
     }
+    connection.close();
     LOG.info("Stop");
     assertTrue(t != null);
   }
@@ -182,7 +184,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     // and it has expired.  Otherwise, if this functionality is broke, all retries will be run --
     // all ten of them -- and we'll get the RetriesExhaustedException exception.
     localConfig.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, pause - 1);
-    Table table = new HTable(localConfig, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(localConfig);
+    Table table = connection.getTable(TableName.META_TABLE_NAME);
     Throwable t = null;
     try {
       // An exists call turns into a get w/ a flag.
@@ -196,6 +199,7 @@ public class TestClientNoCluster extends Configured implements Tool {
       fail();
     } finally {
       table.close();
+      connection.close();
     }
     assertTrue(t != null);
   }
@@ -216,7 +220,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Go against meta else we will try to find first region for the table on construction which
     // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
     // good for a bit of testing.
-    Table table = new HTable(this.conf, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(this.conf);
+    Table table = connection.getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = table.getScanner(HConstants.CATALOG_FAMILY);
     try {
       Result result = null;
@@ -226,6 +231,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     } finally {
       scanner.close();
       table.close();
+      connection.close();
     }
   }
 
@@ -236,7 +242,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Go against meta else we will try to find first region for the table on construction which
     // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
     // good for a bit of testing.
-    Table table = new HTable(this.conf, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = table.getScanner(HConstants.CATALOG_FAMILY);
     try {
       Result result = null;
@@ -246,6 +253,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     } finally {
       scanner.close();
       table.close();
+      connection.close();
     }
   }
 

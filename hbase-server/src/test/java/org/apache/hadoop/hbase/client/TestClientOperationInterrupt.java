@@ -82,9 +82,8 @@ public class TestClientOperationInterrupt {
       }
       admin.deleteTable(tableName);
     }
-    util.createTable(tableName, new byte[][]{dummy, test});
+    Table ht = util.createTable(tableName, new byte[][]{dummy, test});
 
-    Table ht = new HTable(conf, tableName);
     Put p = new Put(row1);
     p.add(dummy, dummy, dummy);
     ht.put(p);
@@ -106,7 +105,7 @@ public class TestClientOperationInterrupt {
         @Override
         public void run() {
           try {
-            Table ht = new HTable(conf, tableName);
+            Table ht = util.getConnection().getTable(tableName);
             Result r = ht.get(new Get(row1));
             noEx.incrementAndGet();
           } catch (IOException e) {
@@ -155,7 +154,7 @@ public class TestClientOperationInterrupt {
       Thread.sleep(1);
     }
 
-    Table ht = new HTable(conf, tableName);
+    Table ht = util.getConnection().getTable(tableName);
     Result r = ht.get(new Get(row1));
     Assert.assertFalse(r.isEmpty());
   }

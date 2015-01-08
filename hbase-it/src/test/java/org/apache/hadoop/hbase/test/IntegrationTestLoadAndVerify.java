@@ -40,6 +40,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -164,13 +167,14 @@ public void cleanUpCluster() throws Exception {
       extends Mapper<NullWritable, NullWritable, NullWritable, NullWritable>
   {
     protected long recordsToWrite;
-    protected HTable table;
+    protected Connection connection;
+    protected Table table;
     protected Configuration conf;
     protected int numBackReferencesPerRow;
+
     protected String shortTaskId;
 
     protected Random rand = new Random();
-
     protected Counter rowsWritten, refsWritten;
 
     @Override
@@ -179,7 +183,8 @@ public void cleanUpCluster() throws Exception {
       recordsToWrite = conf.getLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT);
       String tableName = conf.get(TABLE_NAME_KEY, TABLE_NAME_DEFAULT);
       numBackReferencesPerRow = conf.getInt(NUM_BACKREFS_KEY, NUM_BACKREFS_DEFAULT);
-      table = new HTable(conf, TableName.valueOf(tableName));
+      this.connection = ConnectionFactory.createConnection(conf);
+      table = connection.getTable(TableName.valueOf(tableName));
       table.setWriteBufferSize(4*1024*1024);
       table.setAutoFlushTo(false);
 
@@ -198,6 +203,7 @@ public void cleanUpCluster() throws Exception {
     public void cleanup(Context context) throws IOException {
       table.flushCommits();
       table.close();
+      connection.close();
     }
 
     @Override

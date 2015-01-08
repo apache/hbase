@@ -137,7 +137,7 @@ public class TestSplitTransactionOnCluster {
 
   @Before public void setup() throws IOException {
     TESTING_UTIL.ensureSomeNonStoppedRegionServersAvailable(NB_SERVERS);
-    this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
+    this.admin = TESTING_UTIL.getHBaseAdmin();
     this.cluster = TESTING_UTIL.getMiniHBaseCluster();
   }
 
@@ -224,8 +224,6 @@ public class TestSplitTransactionOnCluster {
   @Test(timeout = 60000)
   public void testSplitFailedCompactionAndSplit() throws Exception {
     final TableName tableName = TableName.valueOf("testSplitFailedCompactionAndSplit");
-    Configuration conf = TESTING_UTIL.getConfiguration();
-    HBaseAdmin admin = new HBaseAdmin(conf);
     // Create table then get the single region for our new table.
     HTableDescriptor htd = new HTableDescriptor(tableName);
     byte[] cf = Bytes.toBytes("cf");
@@ -242,7 +240,7 @@ public class TestSplitTransactionOnCluster {
     int regionServerIndex = cluster.getServerWith(region.getRegionName());
     HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
 
-    Table t  = new HTable(conf, tableName);
+    Table t = TESTING_UTIL.getConnection().getTable(tableName);
     // insert data
     insertData(tableName, admin, t);
     insertData(tableName, admin, t);
@@ -480,7 +478,7 @@ public class TestSplitTransactionOnCluster {
     HColumnDescriptor hcd = new HColumnDescriptor("col");
     htd.addFamily(hcd);
     admin.createTable(htd);
-    Table table = new HTable(conf, userTableName);
+    Table table = TESTING_UTIL.getConnection().getTable(userTableName);
     try {
       for (int i = 0; i <= 5; i++) {
         String row = "row" + i;
@@ -590,7 +588,7 @@ public class TestSplitTransactionOnCluster {
 
       HMaster master = abortAndWaitForMaster();
 
-      this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
+      this.admin = TESTING_UTIL.getHBaseAdmin();
 
       // Update the region to be offline and split, so that HRegionInfo#equals
       // returns true in checking rebuilt region states map.
@@ -927,8 +925,8 @@ public class TestSplitTransactionOnCluster {
     Table table1 = null;
     Table table2 = null;
     try {
-      table1 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
-      table2 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
+      table1 = TESTING_UTIL.getConnection().getTable(firstTable);
+      table2 = TESTING_UTIL.getConnection().getTable(firstTable);
       insertData(firstTable, admin, table1);
       insertData(secondTable, admin, table2);
       admin.split(firstTable, "row2".getBytes());

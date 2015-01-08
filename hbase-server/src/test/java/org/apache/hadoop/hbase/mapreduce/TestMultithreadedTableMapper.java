@@ -126,11 +126,10 @@ public class TestMultithreadedTableMapper {
   @Test
   public void testMultithreadedTableMapper()
       throws IOException, InterruptedException, ClassNotFoundException {
-    runTestOnTable(new HTable(new Configuration(UTIL.getConfiguration()),
-        MULTI_REGION_TABLE_NAME));
+    runTestOnTable(UTIL.getConnection().getTable(MULTI_REGION_TABLE_NAME));
   }
 
-  private void runTestOnTable(HTable table)
+  private void runTestOnTable(Table table)
       throws IOException, InterruptedException, ClassNotFoundException {
     Job job = null;
     try {
@@ -140,16 +139,16 @@ public class TestMultithreadedTableMapper {
       Scan scan = new Scan();
       scan.addFamily(INPUT_FAMILY);
       TableMapReduceUtil.initTableMapperJob(
-          table.getTableName(), scan,
+          table.getName(), scan,
           MultithreadedTableMapper.class, ImmutableBytesWritable.class,
           Put.class, job);
       MultithreadedTableMapper.setMapperClass(job, ProcessContentsMapper.class);
       MultithreadedTableMapper.setNumberOfThreads(job, NUMBER_OF_THREADS);
       TableMapReduceUtil.initTableReducerJob(
-          Bytes.toString(table.getTableName()),
+          table.getName().getNameAsString(),
           IdentityTableReducer.class, job);
       FileOutputFormat.setOutputPath(job, new Path("test"));
-      LOG.info("Started " + table.getTableName());
+      LOG.info("Started " + table.getName());
       assertTrue(job.waitForCompletion(true));
       LOG.info("After map/reduce completion");
       // verify map-reduce results
@@ -164,7 +163,7 @@ public class TestMultithreadedTableMapper {
   }
 
   private void verify(TableName tableName) throws IOException {
-    Table table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
+    Table table = UTIL.getConnection().getTable(tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
     int numRetries = UTIL.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);

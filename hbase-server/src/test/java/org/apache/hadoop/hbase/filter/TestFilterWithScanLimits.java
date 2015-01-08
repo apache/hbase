@@ -30,6 +30,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -50,7 +51,7 @@ public class TestFilterWithScanLimits extends FilterTestingCluster {
   private static final Log LOG = LogFactory
       .getLog(TestFilterWithScanLimits.class);
 
-  private static final String tableName = "scanWithLimit";
+  private static final TableName tableName = TableName.valueOf("scanWithLimit");
   private static final String columnFamily = "f1";
 
   @Test

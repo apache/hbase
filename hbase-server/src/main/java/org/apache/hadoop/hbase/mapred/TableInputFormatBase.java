@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.InputFormat;
@@ -158,7 +159,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   /**
    * Allows subclasses to get the {@link HTable}.
    */
-  protected HTable getHTable() {
+  protected Table getHTable() {
     return this.table;
   }
 

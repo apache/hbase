@@ -24,6 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HRegionLocator;
 import org.apache.hadoop.hbase.client.HTable;
@@ -378,7 +380,7 @@ public class TestHFileOutputFormat  {
     try {
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
-      admin = new HBaseAdmin(conf);
+      admin = util.getHBaseAdmin();
       HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table",
           0, util.countRows(table));
@@ -408,7 +410,7 @@ public class TestHFileOutputFormat  {
       // handle the split case
       if (shouldChangeRegions) {
         LOG.info("Changing regions in table");
-        admin.disableTable(table.getTableName());
+        admin.disableTable(table.getName());
         while(util.getMiniHBaseCluster().getMaster().getAssignmentManager().
             getRegionStates().isRegionsInTransition()) {
           Threads.sleep(200);
@@ -417,9 +419,9 @@ public class TestHFileOutputFormat  {
         byte[][] newStartKeys = generateRandomStartKeys(15);
         util.createMultiRegions(
             util.getConfiguration(), table, FAMILIES[0], newStartKeys);
-        admin.enableTable(table.getTableName());
+        admin.enableTable(table.getName());
         while (table.getRegionLocations().size() != 15 ||
-            !admin.isTableAvailable(table.getTableName())) {
+            !admin.isTableAvailable(table.getName())) {
           Thread.sleep(200);
           LOG.info("Waiting for new region assignment to happen");
         }
@@ -967,7 +969,7 @@ public class TestHFileOutputFormat  {
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testExcludeMinorCompaction");
       final FileSystem fs = util.getDFSCluster().getFileSystem();
-      HBaseAdmin admin = new HBaseAdmin(conf);
+      Admin admin = util.getHBaseAdmin();
       HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table", 0, util.countRows(table));
 
@@ -982,7 +984,7 @@ public class TestHFileOutputFormat  {
       Put p = new Put(Bytes.toBytes("test"));
       p.add(FAMILIES[0], Bytes.toBytes("1"), Bytes.toBytes("1"));
       table.put(p);
-      admin.flush(TABLE_NAME.getName());
+      admin.flush(TABLE_NAME);
       assertEquals(1, util.countRows(table));
       quickPoll(new Callable<Boolean>() {
         public Boolean call() throws Exception {
@@ -1008,7 +1010,7 @@ public class TestHFileOutputFormat  {
       assertEquals(2, fs.listStatus(storePath).length);
 
       // minor compactions shouldn't get rid of the file
-      admin.compact(TABLE_NAME.getName());
+      admin.compact(TABLE_NAME);
       try {
         quickPoll(new Callable<Boolean>() {
           public Boolean call() throws Exception {
@@ -1021,7 +1023,7 @@ public class TestHFileOutputFormat  {
       }
 
       // a major compaction should work though
-      admin.majorCompact(TABLE_NAME.getName());
+      admin.majorCompact(TABLE_NAME);
       quickPoll(new Callable<Boolean>() {
         public Boolean call() throws Exception {
           return fs.listStatus(storePath).length == 1;
@@ -1063,7 +1065,7 @@ public class TestHFileOutputFormat  {
       admin.enableTable(tname);
     } else if ("incremental".equals(args[0])) {
       TableName tname = TableName.valueOf(args[1]);
-      HTable table = new HTable(conf, tname);
+      HTable table = (HTable) util.getConnection().getTable(tname);
       Path outDir = new Path("incremental-out");
       runIncrementalPELoad(conf, table, outDir);
     } else {

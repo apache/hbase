@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -146,13 +148,18 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     List<Cell> cells = null;
     if (labelsRegion == null) {
       Table table = null;
+      Connection connection = null;
       try {
-        table = new HTable(conf, VisibilityConstants.LABELS_TABLE_NAME);
+        connection = ConnectionFactory.createConnection(conf);
+        table = connection.getTable(VisibilityConstants.LABELS_TABLE_NAME);
         Result result = table.get(get);
         cells = result.listCells();
       } finally {
         if (table != null) {
           table.close();
+        }
+        if (connection != null){
+          connection.close();
         }
       }
     } else {

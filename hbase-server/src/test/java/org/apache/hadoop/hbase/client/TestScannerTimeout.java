@@ -101,8 +101,7 @@ public class TestScannerTimeout {
     LOG.info("START ************ test2481");
     Scan scan = new Scan();
     scan.setCaching(1);
-    Table table =
-      new HTable(new Configuration(TEST_UTIL.getConfiguration()), TABLE_NAME);
+    Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
     ResultScanner r = table.getScanner(scan);
     int count = 0;
     try {
@@ -141,7 +140,9 @@ public class TestScannerTimeout {
     // this new table
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT * 100);
-    Table higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
+
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table higherScanTimeoutTable = connection.getTable(TABLE_NAME);
     ResultScanner r = higherScanTimeoutTable.getScanner(scan);
     // This takes way less than SCANNER_TIMEOUT*100
     rs.abort("die!");
@@ -149,6 +150,7 @@ public class TestScannerTimeout {
     assertEquals(NB_ROWS, results.length);
     r.close();
     higherScanTimeoutTable.close();
+    connection.close();
     LOG.info("END ************ test2772");
 
   }
@@ -175,7 +177,8 @@ public class TestScannerTimeout {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(
         HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT*100);
-    Table table = new HTable(conf, TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(TABLE_NAME);
     LOG.info("START ************ TEST3686A---22");
 
     ResultScanner r = table.getScanner(scan);
@@ -193,6 +196,7 @@ public class TestScannerTimeout {
     assertEquals(NB_ROWS, count);
     r.close();
     table.close();
+    connection.close();
     LOG.info("************ END TEST3686A");
   }
 
@@ -214,7 +218,8 @@ public class TestScannerTimeout {
     // this new table
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT * 100);
-    Table higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table higherScanTimeoutTable = connection.getTable(TABLE_NAME);
     ResultScanner r = higherScanTimeoutTable.getScanner(scan);
     int count = 1;
     r.next();
@@ -226,6 +231,7 @@ public class TestScannerTimeout {
     assertEquals(NB_ROWS, count);
     r.close();
     higherScanTimeoutTable.close();
+    connection.close();
     LOG.info("END ************ END test3686b");
 
   }

@@ -29,11 +29,13 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -73,7 +75,8 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
   protected static class MultiTableRecordWriter extends
       RecordWriter<ImmutableBytesWritable, Mutation> {
     private static final Log LOG = LogFactory.getLog(MultiTableRecordWriter.class);
-    Map<ImmutableBytesWritable, HTable> tables;
+    Connection connection;
+    Map<ImmutableBytesWritable, Table> tables;
     Configuration conf;
     boolean useWriteAheadLogging;
 
@@ -85,10 +88,10 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
      *          <tt>false</tt>) to improve performance when bulk loading data.
      */
     public MultiTableRecordWriter(Configuration conf,
-        boolean useWriteAheadLogging) {
+        boolean useWriteAheadLogging) throws IOException {
       LOG.debug("Created new MultiTableRecordReader with WAL "
           + (useWriteAheadLogging ? "on" : "off"));
-      this.tables = new HashMap<ImmutableBytesWritable, HTable>();
+      this.tables = new HashMap<ImmutableBytesWritable, Table>();
       this.conf = conf;
       this.useWriteAheadLogging = useWriteAheadLogging;
     }
@@ -100,10 +103,14 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
      * @throws IOException
      *           if there is a problem opening a table
      */
-    HTable getTable(ImmutableBytesWritable tableName) throws IOException {
+    Table getTable(ImmutableBytesWritable tableName) throws IOException {
+      if(this.connection == null){
+        this.connection = ConnectionFactory.createConnection(conf);
+      }
       if (!tables.containsKey(tableName)) {
         LOG.debug("Opening HTable \"" + Bytes.toString(tableName.get())+ "\" for writing");
-        HTable table = new HTable(conf, TableName.valueOf(tableName.get()));
+
+        Table table = connection.getTable(TableName.valueOf(tableName.get()));
         table.setAutoFlushTo(false);
         tables.put(tableName, table);
       }
@@ -112,8 +119,11 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
 
     @Override
     public void close(TaskAttemptContext context) throws IOException {
-      for (HTable table : tables.values()) {
+      for (Table table : tables.values()) {
         table.flushCommits();
+      }
+      if(connection != null){
+        connection.close();
       }
     }
 
@@ -129,7 +139,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
      */
     @Override
     public void write(ImmutableBytesWritable tableName, Mutation action) throws IOException {
-      HTable table = getTable(tableName);
+      Table table = getTable(tableName);
       // The actions are not immutable, so we defensively copy them
       if (action instanceof Put) {
         Put put = new Put((Put) action);

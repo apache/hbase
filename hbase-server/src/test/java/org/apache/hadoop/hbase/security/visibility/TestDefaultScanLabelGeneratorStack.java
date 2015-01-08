@@ -106,6 +106,7 @@ public class TestDefaultScanLabelGeneratorStack {
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
+        Connection connection = ConnectionFactory.createConnection(conf);
         Table table = TEST_UTIL.createTable(tableName, CF);
         try {
           Put put = new Put(ROW_1);
@@ -122,6 +123,7 @@ public class TestDefaultScanLabelGeneratorStack {
           return null;
         } finally {
           table.close();
+          connection.close();
         }
       }
     });
@@ -168,7 +170,8 @@ public class TestDefaultScanLabelGeneratorStack {
 
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        Table table = new HTable(conf, tableName);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table table = connection.getTable(tableName);
         try {
           // Test scan with no auth attribute
           Scan s = new Scan();
@@ -238,6 +241,7 @@ public class TestDefaultScanLabelGeneratorStack {
           return null;
         } finally {
           table.close();
+          connection.close();
         }
       }
     });

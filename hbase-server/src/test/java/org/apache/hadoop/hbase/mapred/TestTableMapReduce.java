@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.client.HTable;
@@ -73,7 +74,7 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
   }
 
   @Override
-  protected void runTestOnTable(HTable table) throws IOException {
+  protected void runTestOnTable(Table table) throws IOException {
     JobConf jobConf = null;
     try {
       LOG.info("Before map/reduce startup");

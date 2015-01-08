@@ -98,12 +98,11 @@ public class TestClientTimeouts {
         // Ensure the HBaseAdmin uses a new connection by changing Configuration.
         Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
         conf.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
-        HBaseAdmin admin = null;
+        Admin admin = null;
+        Connection connection = null;
         try {
-          admin = new HBaseAdmin(conf);
-          Connection connection = admin.getConnection();
-          assertFalse(connection == lastConnection);
-          lastConnection = connection;
+          connection = ConnectionFactory.createConnection(conf);
+          admin = connection.getAdmin();
           // run some admin commands
           HBaseAdmin.checkHBaseAvailable(conf);
           admin.setBalancerRunning(false, false);
@@ -112,10 +111,15 @@ public class TestClientTimeouts {
           // a MasterNotRunningException.  It's a bug if we get other exceptions.
           lastFailed = true;
         } finally {
-          admin.close();
-          if (admin.getConnection().isClosed()) {
-            rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
-                .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+          if(admin != null) {
+            admin.close();
+            if (admin.getConnection().isClosed()) {
+              rpcClient = (RandomTimeoutRpcClient) RpcClientFactory
+                  .createClient(TEST_UTIL.getConfiguration(), TEST_UTIL.getClusterKey());
+            }
+          }
+          if(connection != null) {
+            connection.close();
           }
         }
       }

@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTableWrapper;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -325,7 +324,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     final ClassLoader systemClassLoader = this.getClass().getClassLoader();
     for (E env : coprocessors) {
       ClassLoader cl = env.getInstance().getClass().getClassLoader();
-      if (cl != systemClassLoader ){
+      if (cl != systemClassLoader){
         //do not include system classloader
         externalClassLoaders.add(cl);
       }
@@ -434,7 +433,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         } catch (IOException e) {
           // nothing can be done here
           LOG.warn("Failed to close " +
-              Bytes.toStringBinary(table.getTableName()), e);
+              table.getName(), e);
         }
       }
     }

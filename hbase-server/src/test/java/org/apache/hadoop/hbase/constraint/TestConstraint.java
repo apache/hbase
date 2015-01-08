@@ -82,7 +82,7 @@ public class TestConstraint {
     Constraints.add(desc, CheckWasRunConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail on a valid put
       Put put = new Put(row1);
@@ -114,7 +114,7 @@ public class TestConstraint {
     Constraints.add(desc, AllFailConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
     Put put = new Put(row1);
@@ -157,7 +157,7 @@ public class TestConstraint {
     Constraints.disableConstraint(desc, AllFailConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail because its disabled
       Put put = new Put(row1);
@@ -189,7 +189,7 @@ public class TestConstraint {
     Constraints.disable(desc);
 
     util.getHBaseAdmin().createTable(desc);
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       // test that we do fail on violation
       Put put = new Put(row1);
@@ -221,7 +221,7 @@ public class TestConstraint {
     CheckWasRunConstraint.wasRun = false;
 
     util.getHBaseAdmin().createTable(desc);
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
     Put put = new Put(row1);

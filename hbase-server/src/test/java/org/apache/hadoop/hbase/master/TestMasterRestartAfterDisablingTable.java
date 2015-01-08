@@ -99,7 +99,7 @@ public class TestMasterRestartAfterDisablingTable {
         TableState.State.DISABLING));
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
-    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     admin.enableTable(table);
     admin.close();
     log("Waiting for no more RIT\n");

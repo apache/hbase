@@ -76,7 +76,7 @@ public class TestZooKeeperScanPolicyObserver {
     .setTimeToLive(1);
     desc.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(desc);
-    Table t = new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
+    Table t = TEST_UTIL.getConnection().getTable(tableName);
     long now = EnvironmentEdgeManager.currentTime();
 
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(), "test", null);

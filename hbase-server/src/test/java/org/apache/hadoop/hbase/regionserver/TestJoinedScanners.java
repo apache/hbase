@@ -101,7 +101,7 @@ public class TestJoinedScanners {
         desc.addFamily(hcd);
       }
       htu.getHBaseAdmin().createTable(desc);
-      Table ht = new HTable(htu.getConfiguration(), tableName);
+      Table ht = htu.getConnection().getTable(tableName);
 
       long rows_to_insert = 1000;
       int insert_batch = 20;

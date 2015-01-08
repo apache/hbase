@@ -116,7 +116,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final byte[] v1 = Bytes.toBytes("v1");
     final byte[] v2 = Bytes.toBytes("v2");
     final byte[] v3 = Bytes.toBytes("v3");
-    htable1 = new HTable(conf1, tableName);
+    htable1 = utility1.getConnection().getTable(tableName);
 
     long t = EnvironmentEdgeManager.currentTime();
     // create three versions for "row"
@@ -203,7 +203,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     Put put = new Put(row);
     put.add(famName, row, row);
 
-    htable1 = new HTable(conf1, tableName);
+    htable1 = utility1.getConnection().getTable(tableName);
     htable1.put(put);
 
     Get get = new Get(row);
@@ -519,7 +519,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final String colFam = "cf1";
     final int numOfTables = 3;
 
-    HBaseAdmin hadmin = new HBaseAdmin(conf1);
+    HBaseAdmin hadmin = utility1.getHBaseAdmin();
 
     // Create Tables
     for (int i = 0; i < numOfTables; i++) {

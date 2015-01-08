@@ -255,7 +255,7 @@ public class TestLoadIncrementalHFiles {
     String [] args= {dir.toString(), tableName.toString()};
     loader.run(args);
 
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       assertEquals(expectedRows, util.countRows(table));
     } finally {

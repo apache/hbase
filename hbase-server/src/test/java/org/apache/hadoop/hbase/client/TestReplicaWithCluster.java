@@ -214,7 +214,7 @@ public class TestReplicaWithCluster {
     }
 
     HTU.getHBaseCluster().stopMaster(0);
-    Admin admin = new HBaseAdmin(HTU.getConfiguration());
+    Admin admin = HTU.getHBaseAdmin();
     nHdt =admin.getTableDescriptor(hdt.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilies().length + 1, nHdt.getColumnFamilies().length);
@@ -255,7 +255,7 @@ public class TestReplicaWithCluster {
 
     Put p = new Put(row);
     p.add(row, row, row);
-    final Table table = new HTable(HTU.getConfiguration(), hdt.getTableName());
+    final Table table = HTU.getConnection().getTable(hdt.getTableName());
     table.put(p);
 
     HTU.getHBaseAdmin().flush(table.getName());
@@ -279,7 +279,7 @@ public class TestReplicaWithCluster {
     table.close();
     LOG.info("stale get on the first cluster done. Now for the second.");
 
-    final Table table2 = new HTable(HTU.getConfiguration(), hdt.getTableName());
+    final Table table2 = HTU.getConnection().getTable(hdt.getTableName());
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -90,7 +91,7 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
     }
   }
 
-  protected void runTestOnTable(HTable table) throws IOException {
+  protected void runTestOnTable(Table table) throws IOException {
     Job job = null;
     try {
       LOG.info("Before map/reduce startup");
@@ -99,14 +100,14 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
       Scan scan = new Scan();
       scan.addFamily(INPUT_FAMILY);
       TableMapReduceUtil.initTableMapperJob(
-        Bytes.toString(table.getTableName()), scan,
+        table.getName().getNameAsString(), scan,
         ProcessContentsMapper.class, ImmutableBytesWritable.class,
         Put.class, job);
       TableMapReduceUtil.initTableReducerJob(
-        Bytes.toString(table.getTableName()),
+          table.getName().getNameAsString(),
         IdentityTableReducer.class, job);
       FileOutputFormat.setOutputPath(job, new Path("test"));
-      LOG.info("Started " + Bytes.toString(table.getTableName()));
+      LOG.info("Started " + table.getName().getNameAsString());
       assertTrue(job.waitForCompletion(true));
       LOG.info("After map/reduce completion");
 

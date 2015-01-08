@@ -126,7 +126,7 @@ public class TestFromClientSide3 {
       int sfCount = sf.size();
 
       // TODO: replace this api with a synchronous flush after HBASE-2949
-      admin.flush(table.getTableName());
+      admin.flush(table.getName());
 
       // synchronously poll wait for a new storefile to appear (flush happened)
       while (ProtobufUtil.getStoreFiles(
@@ -408,7 +408,7 @@ public class TestFromClientSide3 {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
 
     Put put = new Put(ROW_BYTES);
     put.add(FAMILY, COL_QUAL, VAL_BYTES);

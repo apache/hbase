@@ -137,7 +137,7 @@ public class TestScannersWithFilters {
       htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
       htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
       admin.createTable(htd);
-      Table table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+      Table table = TEST_UTIL.getConnection().getTable(TABLE);
       // Insert first half
       for(byte [] ROW : ROWS_ONE) {
         Put p = new Put(ROW);

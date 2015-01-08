@@ -77,7 +77,7 @@ public class TestLogRollPeriod {
     TableName tableName = TableName.valueOf("TestLogRollPeriodNoEdits");
     TEST_UTIL.createTable(tableName, "cf");
     try {
-      Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      Table table = TEST_UTIL.getConnection().getTable(tableName);
       try {
         HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(tableName);
         WAL log = server.getWAL(null);
@@ -102,7 +102,7 @@ public class TestLogRollPeriod {
     try {
       HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       WAL log = server.getWAL(null);
-      final Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      final Table table = TEST_UTIL.getConnection().getTable(tableName);
 
       Thread writerThread = new Thread("writer") {
         @Override

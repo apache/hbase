@@ -17,34 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
@@ -90,7 +62,6 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -103,6 +74,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -117,6 +89,34 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -976,7 +976,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     this.hbaseCluster =
         new MiniHBaseCluster(c, numMasters, numSlaves, masterClass, regionserverClass);
     // Don't leave here till we've done a successful scan of the hbase:meta
-    Table t = new HTable(c, TableName.META_TABLE_NAME);
+    Table t = getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
       continue;
@@ -996,6 +996,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public void restartHBaseCluster(int servers) throws IOException, InterruptedException {
+    if(connection != null){
+      connection.close();
+      connection = null;
+    }
     this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
     // Don't leave here till we've done a successful scan of the hbase:meta
     Table t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
@@ -1276,7 +1280,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc, startKey, endKey, numRegions);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(getConfiguration(), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
@@ -1315,7 +1319,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(htd, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
-    return new HTable(getConfiguration(), htd.getTableName());
+    return (HTable) getConnection().getTable(htd.getTableName());
   }
 
   /**
@@ -1353,7 +1357,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
-    return new HTable(c, desc.getTableName());
+    return (HTable) getConnection().getTable(desc.getTableName());
   }
 
   /**
@@ -1377,7 +1381,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(c, tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
@@ -1399,7 +1403,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
-    return new HTable(c, desc.getTableName());
+    return (HTable) getConnection().getTable(desc.getTableName());
   }
 
   /**
@@ -1461,7 +1465,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(new Configuration(getConfiguration()), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
@@ -1498,7 +1502,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(new Configuration(getConfiguration()), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
@@ -1537,7 +1541,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(new Configuration(getConfiguration()), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
@@ -1569,7 +1573,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
-    return new HTable(getConfiguration(), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
@@ -1590,7 +1594,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().createTable(desc, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(desc.getTableName());
-    return new HTable(getConfiguration(), desc.getTableName());
+    return (HTable) getConnection().getTable(desc.getTableName());
   }
 
   /**
@@ -1809,7 +1813,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException
    */
   public HTable deleteTableData(TableName tableName) throws IOException {
-    HTable table = new HTable(getConfiguration(), tableName);
+    HTable table = (HTable) getConnection().getTable(tableName);
     Scan scan = new Scan();
     ResultScanner resScan = table.getScanner(scan);
     for(Result res : resScan) {
@@ -1831,7 +1835,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable truncateTable(final TableName tableName, final boolean preserveRegions) throws IOException {
     Admin admin = getHBaseAdmin();
     admin.truncateTable(tableName, preserveRegions);
-    return new HTable(getConfiguration(), tableName);
+    return (HTable) getConnection().getTable(tableName);
   }
 
   /**
@@ -2271,7 +2275,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public List<HRegionInfo> createMultiRegionsInMeta(final Configuration conf,
       final HTableDescriptor htd, byte [][] startKeys)
   throws IOException {
-    Table meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = (HTable) getConnection().getTable(TableName.META_TABLE_NAME);
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
     // add custom ones
@@ -2294,7 +2298,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public List<byte[]> getMetaTableRows() throws IOException {
     // TODO: Redo using MetaTableAccessor class
-    Table t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
+    Table t = (HTable) getConnection().getTable(TableName.META_TABLE_NAME);
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
@@ -2314,7 +2318,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public List<byte[]> getMetaTableRows(TableName tableName) throws IOException {
     // TODO: Redo using MetaTableAccessor.
-    Table t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
+    Table t = getConnection().getTable(TableName.META_TABLE_NAME);
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
@@ -2631,7 +2635,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     monitor.close();
 
     if (checkStatus) {
-      new HTable(new Configuration(conf), TableName.META_TABLE_NAME).close();
+      getConnection().getTable(TableName.META_TABLE_NAME).close();
     }
   }
 
@@ -3140,7 +3144,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void waitUntilAllRegionsAssigned(final TableName tableName, final long timeout)
       throws IOException {
-    final Table meta = new HTable(getConfiguration(), TableName.META_TABLE_NAME);
+    final Table meta = getConnection().getTable(TableName.META_TABLE_NAME);
     try {
       waitFor(timeout, 200, true, new Predicate<IOException>() {
         @Override
@@ -3548,9 +3552,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return totalNumberOfRegions;
   }
 
-  public static int getMetaRSPort(Configuration conf) throws IOException {
-    try (Connection c = ConnectionFactory.createConnection();
-        RegionLocator locator = c.getRegionLocator(TableName.META_TABLE_NAME)) {
+  public static int getMetaRSPort(Connection connection) throws IOException {
+    try (RegionLocator locator = connection.getRegionLocator(TableName.META_TABLE_NAME)) {
       return locator.getRegionLocation(Bytes.toBytes("")).getPort();
     }
   }

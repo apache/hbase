@@ -119,7 +119,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     Put put = new Put(row);
     put.add(famName, row, row);
 
-    htable1 = new HTable(conf1, tableName);
+    htable1 = utility1.getConnection().getTable(tableName);
     htable1.put(put);
 
     Get get = new Get(row);
@@ -136,7 +136,5 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
         break;
       }
     }
-
   }
-
 }

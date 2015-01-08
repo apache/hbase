@@ -38,10 +38,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -137,7 +140,7 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     TEST_UTIL1.startMiniCluster(1);
     HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+    HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor desc = new HColumnDescriptor(fam);
     desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(desc);
@@ -171,11 +174,13 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
       final boolean nullExpected, final String... auths) throws IOException,
       InterruptedException {
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
-      HTable table2 = null;
+      Table table2 = null;
 
       public Void run() throws Exception {
+        Connection connection = null;
         try {
-          table2 = new HTable(conf1, TABLE_NAME_BYTES);
+          connection = ConnectionFactory.createConnection(conf1);
+          table2 = connection.getTable(TABLE_NAME);
           CellScanner cellScanner;
           Cell current;
           Get get = new Get(row);
@@ -204,6 +209,9 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
         } finally {
           if (table2 != null) {
             table2.close();
+          }
+          if(connection != null){
+            connection.close();
           }
         }
       }

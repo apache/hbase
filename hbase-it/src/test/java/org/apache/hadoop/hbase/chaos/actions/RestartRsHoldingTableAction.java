@@ -20,40 +20,35 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 
 /**
 * Action that restarts an HRegionServer holding one of the regions of the table.
 */
 public class RestartRsHoldingTableAction extends RestartActionBaseAction {
 
-  private final String tableName;
+  private final RegionLocator locator;
 
-  public RestartRsHoldingTableAction(long sleepTime, String tableName) {
+  public RestartRsHoldingTableAction(long sleepTime, RegionLocator locator) {
     super(sleepTime);
-    this.tableName = tableName;
+    this.locator = locator;
   }
 
   @Override
   public void perform() throws Exception {
-    HTable table = null;
-    try {
-      LOG.info("Performing action: Restart random RS holding table " + this.tableName);
-      Configuration conf = context.getHBaseIntegrationTestingUtility().getConfiguration();
-      table = new HTable(conf, TableName.valueOf(tableName));
-    } catch (IOException e) {
-      LOG.debug("Error creating HTable used to get list of region locations.", e);
-      return;
-    }
+    LOG.info("Performing action: Restart random RS holding table " + this.locator.getName());
 
-    Collection<ServerName> serverNames = table.getRegionLocations().values();
-    ServerName[] nameArray = serverNames.toArray(new ServerName[serverNames.size()]);
-
-    restartRs(nameArray[RandomUtils.nextInt(nameArray.length)], sleepTime);
+    List<HRegionLocation> locations = locator.getAllRegionLocations();
+    restartRs(locations.get(RandomUtils.nextInt(locations.size())).getServerName(), sleepTime);
   }
 }

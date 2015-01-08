@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -182,9 +184,9 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       }
 
       @Override
-      protected void instantiateHTable(Configuration conf) throws IOException {
+      protected void instantiateHTable() throws IOException {
         for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
-          HTable table = new HTable(conf, getTableName(i));
+          Table table = connection.getTable(getTableName(i));
           table.setAutoFlushTo(true);
           //table.setWriteBufferSize(4 * 1024 * 1024);
           this.tables[i] = table;

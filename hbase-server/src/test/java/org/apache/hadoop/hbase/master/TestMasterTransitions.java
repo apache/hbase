@@ -65,7 +65,7 @@ public class TestMasterTransitions {
     TEST_UTIL.startMiniCluster(2);
     // Create a table of three families.  This will assign a region.
     TEST_UTIL.createTable(TABLENAME, FAMILIES);
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
+    HTable t = (HTable) TEST_UTIL.getConnection().getTable(TABLENAME);
     int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
     addToEachStartKey(countOfRegions);
@@ -480,9 +480,8 @@ public class TestMasterTransitions {
    * @throws IOException
    */
   private static int addToEachStartKey(final int expected) throws IOException {
-    Table t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    Table meta = new HTable(TEST_UTIL.getConfiguration(),
-        TableName.META_TABLE_NAME);
+    Table t = TEST_UTIL.getConnection().getTable(TABLENAME);
+    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     int rows = 0;
     Scan scan = new Scan();
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);

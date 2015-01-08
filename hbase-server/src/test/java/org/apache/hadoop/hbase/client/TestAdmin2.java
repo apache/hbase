@@ -176,7 +176,7 @@ public class TestAdmin2 {
     admin.createTable(htd1);
     admin.createTable(htd2);
     // Before fix, below would fail throwing a NoServerForRegionException.
-    new HTable(TEST_UTIL.getConfiguration(), htd2.getTableName()).close();
+    TEST_UTIL.getConnection().getTable(htd2.getTableName()).close();
   }
 
   /***
@@ -197,11 +197,10 @@ public class TestAdmin2 {
       // Use 80 bit numbers to make sure we aren't limited
       byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
       byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
-      Admin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      Admin hbaseadmin = TEST_UTIL.getHBaseAdmin();
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
       hbaseadmin.createTable(htd, startKey, endKey, expectedRegions);
-      hbaseadmin.close();
     } finally {
       TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, oldTimeout);
     }
@@ -299,7 +298,7 @@ public class TestAdmin2 {
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
     TableName tableName = TableName
         .valueOf("testTableNotFoundExceptionWithoutAnyTables");
-    Table ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table ht = TEST_UTIL.getConnection().getTable(tableName);
     ht.get(new Get("e".getBytes()));
   }
 
@@ -466,9 +465,7 @@ public class TestAdmin2 {
   }
 
   private HBaseAdmin createTable(byte[] TABLENAME) throws IOException {
-
-    Configuration config = TEST_UTIL.getConfiguration();
-    HBaseAdmin admin = new HBaseAdmin(config);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
 
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLENAME));
     HColumnDescriptor hcd = new HColumnDescriptor("value");
@@ -608,14 +605,13 @@ public class TestAdmin2 {
   private HRegionServer startAndWriteData(TableName tableName, byte[] value)
   throws IOException, InterruptedException {
     // When the hbase:meta table can be opened, the region servers are running
-    new HTable(
-      TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
+    TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
 
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
 
     HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
@@ -716,7 +712,7 @@ public class TestAdmin2 {
   public void testGetRegion() throws Exception {
     // We use actual HBaseAdmin instance instead of going via Admin interface in
     // here because makes use of an internal HBA method (TODO: Fix.).
-    HBaseAdmin rawAdmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin rawAdmin = TEST_UTIL.getHBaseAdmin();
 
     final TableName tableName = TableName.valueOf("testGetRegion");
     LOG.info("Started " + tableName);

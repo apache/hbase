@@ -127,7 +127,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
       public Object run() throws Exception {
         try {
           if (table == null) {
-            table = new HTable(conf, tableName);
+            table = connection.getTable(tableName);
           }
           table.put(put);
         } catch (IOException e) {

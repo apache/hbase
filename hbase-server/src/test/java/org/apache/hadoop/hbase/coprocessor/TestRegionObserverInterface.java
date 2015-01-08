@@ -340,7 +340,7 @@ public class TestRegionObserverInterface {
         new Boolean[] {false, false, false, false}
     );
 
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     Put put = new Put(ROW);
     put.add(A, A, A);
     table.put(put);
@@ -390,7 +390,7 @@ public class TestRegionObserverInterface {
         new Boolean[] {false, false}
     );
 
-    Table table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     Put put = new Put(ROW);
     put.add(A, A, A);
     table.put(put);
@@ -497,7 +497,7 @@ public class TestRegionObserverInterface {
     htd.addCoprocessor(EvenOnlyCompactor.class.getName());
     admin.createTable(htd);
 
-    Table table = new HTable(util.getConfiguration(), compactTable);
+    Table table = util.getConnection().getTable(compactTable);
     for (long i=1; i<=10; i++) {
       byte[] iBytes = Bytes.toBytes(i);
       Put put = new Put(iBytes);

@@ -92,7 +92,7 @@ public class TestTableSnapshotScanner {
     Admin admin = util.getHBaseAdmin();
 
     // put some stuff in the table
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     util.loadTable(table, FAMILIES);
 
     Path rootDir = FSUtils.getRootDir(util.getConfiguration());

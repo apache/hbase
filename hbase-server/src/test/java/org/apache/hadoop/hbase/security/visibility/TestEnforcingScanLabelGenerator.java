@@ -143,7 +143,8 @@ public class TestEnforcingScanLabelGenerator {
 
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        Table table = new HTable(conf, tableName);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table table = connection.getTable(tableName);
         try {
           // Test that we enforce the defined set
           Get get = new Get(ROW_1);
@@ -161,6 +162,7 @@ public class TestEnforcingScanLabelGenerator {
           return null;
         } finally {
           table.close();
+          connection.close();
         }
       }
     });

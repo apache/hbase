@@ -1020,7 +1020,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (!opts.oneCon) {
         this.connection = ConnectionFactory.createConnection(conf);
       }
-      this.table = new HTable(TableName.valueOf(opts.tableName), connection);
+      this.table = connection.getTable(TableName.valueOf(opts.tableName));
       this.table.setAutoFlushTo(opts.autoFlush);
       latency = YammerHistogramUtils.newHistogram(new UniformSample(1024 * 500));
       valueSize = YammerHistogramUtils.newHistogram(new UniformSample(1024 * 500));
@@ -1568,11 +1568,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // the TestOptions introspection for us and dump the output in a readable format.
     LOG.info(cmd.getSimpleName() + " test run options=" + MAPPER.writeValueAsString(opts));
     Admin admin = null;
+    Connection connection = null;
     try {
-      admin = new HBaseAdmin(getConf());
+      connection = ConnectionFactory.createConnection(getConf());
+      admin = connection.getAdmin();
       checkTable(admin, opts);
     } finally {
       if (admin != null) admin.close();
+      if (connection != null) connection.close();
     }
     if (opts.nomapred) {
       doLocalClients(opts, getConf());

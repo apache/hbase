@@ -103,7 +103,7 @@ public class TestHBaseFsckEncryption {
   @Test
   public void testFsckWithEncryption() throws Exception {
     // Populate the table with some data
-    Table table = new HTable(conf, htd.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     try {
       byte[] values = { 'A', 'B', 'C', 'D' };
       for (int i = 0; i < values.length; i++) {

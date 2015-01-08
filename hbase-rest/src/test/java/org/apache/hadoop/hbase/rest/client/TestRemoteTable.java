@@ -101,7 +101,7 @@ public class TestRemoteTable {
     admin.createTable(htd);
     Table table = null;
     try {
-      table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+      table = TEST_UTIL.getConnection().getTable(TABLE);
       Put put = new Put(ROW_1);
       put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
       table.put(put);
@@ -135,7 +135,7 @@ public class TestRemoteTable {
   public void testGetTableDescriptor() throws IOException {
     Table table = null;
     try {
-      table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+      table = TEST_UTIL.getConnection().getTable(TABLE);
       HTableDescriptor local = table.getTableDescriptor();
       assertEquals(remoteTable.getTableDescriptor(), local);
     } finally {

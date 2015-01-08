@@ -29,6 +29,8 @@ import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
@@ -123,7 +125,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        Table t = new HTable(conf, TABLE);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TABLE);
         try {
           ResultScanner rs = t.getScanner(new Scan());
           int rowcnt = 0;
@@ -139,6 +142,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     });
@@ -149,7 +153,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        Table t = new HTable(conf, TABLE);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TABLE);
         try {
           ResultScanner rs = t.getScanner(new Scan());
           int rowcnt = 0;
@@ -164,6 +169,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     });
@@ -174,7 +180,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        Table t = new HTable(conf, TABLE);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TABLE);
         try {
           ResultScanner rs = t.getScanner(new Scan());
           int rowcnt = 0;
@@ -189,6 +196,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     });

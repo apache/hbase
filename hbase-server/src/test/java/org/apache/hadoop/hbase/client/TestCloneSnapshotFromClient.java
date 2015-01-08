@@ -100,7 +100,7 @@ public class TestCloneSnapshotFromClient {
     // take an empty snapshot
     admin.snapshot(emptySnapshot, tableName);
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     try {
       // enable table and insert data
       admin.enableTable(tableName);

@@ -31,6 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -124,7 +126,8 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Scan s = new Scan();
         s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        Table t = new HTable(conf, table.getName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(table.getName());
         try {
           ResultScanner scanner = t.getScanner(s);
           Result result = scanner.next();
@@ -134,6 +137,7 @@ public class TestVisibilityLabelsWithACL {
           assertNull(result);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -153,7 +157,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Scan s = new Scan();
         s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        Table t = new HTable(conf, table.getName());
+        Table t = TEST_UTIL.getConnection().getTable(table.getName());
         try {
           ResultScanner scanner = t.getScanner(s);
           Result[] result = scanner.next(5);
@@ -179,7 +183,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        Table t = new HTable(conf, table.getName());
+        Table t = TEST_UTIL.getConnection().getTable(table.getName());
         try {
           Result result = t.get(g);
           assertTrue(!result.isEmpty());
@@ -208,12 +212,14 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        Table t = new HTable(conf, table.getName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(table.getName());
         try {
           Result result = t.get(g);
           assertTrue(result.isEmpty());
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }

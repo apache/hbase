@@ -17,28 +17,32 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertEquals;
 
 @Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationSyncUpTool extends TestReplicationBase {
@@ -179,26 +183,29 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
     ReplicationAdmin admin2 = new ReplicationAdmin(conf2);
 
-    Admin ha = new HBaseAdmin(conf1);
+    Admin ha = utility1.getHBaseAdmin();
     ha.createTable(t1_syncupSource);
     ha.createTable(t2_syncupSource);
     ha.close();
 
-    ha = new HBaseAdmin(conf2);
+    ha = utility2.getHBaseAdmin();
     ha.createTable(t1_syncupTarget);
     ha.createTable(t2_syncupTarget);
     ha.close();
 
+    Connection connection1 = ConnectionFactory.createConnection(utility1.getConfiguration());
+    Connection connection2 = ConnectionFactory.createConnection(utility2.getConfiguration());
+
     // Get HTable from Master
-    ht1Source = new HTable(conf1, t1_su);
+    ht1Source = connection1.getTable(t1_su);
     ht1Source.setWriteBufferSize(1024);
-    ht2Source = new HTable(conf1, t2_su);
+    ht2Source = connection1.getTable(t2_su);
     ht1Source.setWriteBufferSize(1024);
 
     // Get HTable from Peer1
-    ht1TargetAtPeer1 = new HTable(conf2, t1_su);
+    ht1TargetAtPeer1 = connection2.getTable(t1_su);
     ht1TargetAtPeer1.setWriteBufferSize(1024);
-    ht2TargetAtPeer1 = new HTable(conf2, t2_su);
+    ht2TargetAtPeer1 = connection2.getTable(t2_su);
     ht2TargetAtPeer1.setWriteBufferSize(1024);
 
     /**

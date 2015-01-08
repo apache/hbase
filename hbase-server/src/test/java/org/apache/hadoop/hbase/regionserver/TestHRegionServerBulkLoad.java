@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -206,7 +207,7 @@ public class TestHRegionServerBulkLoad {
    */
   public static class AtomicScanReader extends RepeatingTestThread {
     byte targetFamilies[][];
-    HTable table;
+    Table table;
     AtomicLong numScans = new AtomicLong();
     AtomicLong numRowsScanned = new AtomicLong();
     TableName TABLE_NAME;
@@ -216,7 +217,7 @@ public class TestHRegionServerBulkLoad {
       super(ctx);
       this.TABLE_NAME = TABLE_NAME;
       this.targetFamilies = targetFamilies;
-      table = new HTable(conf, TABLE_NAME);
+      table = UTIL.getConnection().getTable(TABLE_NAME);
     }
 
     public void doAnAction() throws Exception {

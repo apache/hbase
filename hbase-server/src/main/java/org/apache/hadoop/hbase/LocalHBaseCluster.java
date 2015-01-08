@@ -30,7 +30,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -461,7 +462,8 @@ public class LocalHBaseCluster {
     Configuration conf = HBaseConfiguration.create();
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
-    Admin admin = new HBaseAdmin(conf);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Admin admin = connection.getAdmin();
     try {
       HTableDescriptor htd =
         new HTableDescriptor(TableName.valueOf(cluster.getClass().getName()));
@@ -469,6 +471,7 @@ public class LocalHBaseCluster {
     } finally {
       admin.close();
     }
+    connection.close();
     cluster.shutdown();
   }
 }

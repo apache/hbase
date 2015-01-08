@@ -255,7 +255,7 @@ public class TestImportExport {
         .setMaxVersions(1)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    Table t = new HTable(UTIL.getConfiguration(), desc.getTableName());
+     Table t = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
@@ -286,7 +286,7 @@ public class TestImportExport {
         .setKeepDeletedCells(true)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    Table t = new HTable(UTIL.getConfiguration(), desc.getTableName());
+    Table t = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
@@ -318,7 +318,7 @@ public class TestImportExport {
     );
     UTIL.getHBaseAdmin().createTable(desc);
     t.close();
-    t = new HTable(UTIL.getConfiguration(), desc.getTableName());
+    t = UTIL.getConnection().getTable(desc.getTableName());
     args = new String[] {
         IMPORT_TABLE,
         FQ_OUTPUT_DIR
@@ -344,14 +344,16 @@ public class TestImportExport {
   
   @Test
   public void testWithMultipleDeleteFamilyMarkersOfSameRowSameFamily() throws Exception {
-    String EXPORT_TABLE = "exportWithMultipleDeleteFamilyMarkersOfSameRowSameFamily";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(EXPORT_TABLE));
+    TableName EXPORT_TABLE =
+        TableName.valueOf("exportWithMultipleDeleteFamilyMarkersOfSameRowSameFamily");
+    HTableDescriptor desc = new HTableDescriptor(EXPORT_TABLE);
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
         .setKeepDeletedCells(true)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    HTable exportT = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
+
+    Table exportT = UTIL.getConnection().getTable(EXPORT_TABLE);
 
     //Add first version of QUAL
     Put p = new Put(ROW1);
@@ -373,8 +375,7 @@ public class TestImportExport {
     
     
     String[] args = new String[] {
-        "-D" + Export.RAW_SCAN + "=true",
-        EXPORT_TABLE,
+        "-D" + Export.RAW_SCAN + "=true", EXPORT_TABLE.getNameAsString(),
         FQ_OUTPUT_DIR,
         "1000", // max number of key versions per key to export
     };
@@ -387,8 +388,8 @@ public class TestImportExport {
         .setKeepDeletedCells(true)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    
-    HTable importT = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
+
+    Table importT = UTIL.getConnection().getTable(TableName.valueOf(IMPORT_TABLE));
     args = new String[] {
         IMPORT_TABLE,
         FQ_OUTPUT_DIR
@@ -429,7 +430,7 @@ public class TestImportExport {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(EXPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
     UTIL.getHBaseAdmin().createTable(desc);
-    Table exportTable = new HTable(UTIL.getConfiguration(), desc.getTableName());
+    Table exportTable = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p1 = new Put(ROW1);
     p1.add(FAMILYA, QUAL, now, QUAL);
@@ -454,7 +455,7 @@ public class TestImportExport {
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
     UTIL.getHBaseAdmin().createTable(desc);
 
-    Table importTable = new HTable(UTIL.getConfiguration(), desc.getTableName());
+    Table importTable = UTIL.getConnection().getTable(desc.getTableName());
     args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + PrefixFilter.class.getName(),
         "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1), IMPORT_TABLE, FQ_OUTPUT_DIR,
         "1000" };

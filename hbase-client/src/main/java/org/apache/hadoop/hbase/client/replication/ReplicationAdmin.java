@@ -41,9 +41,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -91,7 +90,7 @@ public class ReplicationAdmin implements Closeable {
   public static final String REPLICATIONGLOBAL = Integer
       .toString(HConstants.REPLICATION_SCOPE_GLOBAL);
 
-  private final HConnection connection;
+  private final Connection connection;
   // TODO: replication should be managed by master. All the classes except ReplicationAdmin should
   // be moved to hbase-server. Resolve it in HBASE-11392.
   private final ReplicationQueuesClient replicationQueuesClient;
@@ -109,7 +108,7 @@ public class ReplicationAdmin implements Closeable {
       throw new RuntimeException("hbase.replication isn't true, please " +
           "enable it in order to use replication");
     }
-    this.connection = HConnectionManager.getConnection(conf);
+    this.connection = ConnectionFactory.createConnection(conf);
     ZooKeeperWatcher zkw = createZooKeeperWatcher();
     try {
       this.replicationPeers = ReplicationFactory.getReplicationPeers(zkw, conf, this.connection);
@@ -323,7 +322,7 @@ public class ReplicationAdmin implements Closeable {
    * Append the replicable table-cf config of the specified peer
    * @param id a short that identifies the cluster
    * @param tableCfs table-cfs config str
-   * @throws KeeperException
+   * @throws ReplicationException
    */
   public void appendPeerTableCFs(String id, String tableCfs) throws ReplicationException {
     appendPeerTableCFs(id, parseTableCFsFromConfig(tableCfs));
@@ -333,7 +332,7 @@ public class ReplicationAdmin implements Closeable {
    * Append the replicable table-cf config of the specified peer
    * @param id a short that identifies the cluster
    * @param tableCfs A map from tableName to column family names
-   * @throws KeeperException
+   * @throws ReplicationException
    */
   public void appendPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
       throws ReplicationException {
@@ -469,7 +468,7 @@ public class ReplicationAdmin implements Closeable {
   public List<HashMap<String, String>> listReplicated() throws IOException {
     List<HashMap<String, String>> replicationColFams = new ArrayList<HashMap<String, String>>();
 
-    Admin admin = new HBaseAdmin(this.connection.getConfiguration());
+    Admin admin = connection.getAdmin();
     HTableDescriptor[] tables;
     try {
       tables = admin.listTables();

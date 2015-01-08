@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
@@ -932,7 +933,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     Path hfofDir = new Path(dirPath);
-    HTable table = new HTable(getConf(), tableName);
+    Connection connection = ConnectionFactory.createConnection(getConf());
+    HTable table = (HTable) connection.getTable(tableName);
 
     doBulkLoad(hfofDir, table);
     return 0;

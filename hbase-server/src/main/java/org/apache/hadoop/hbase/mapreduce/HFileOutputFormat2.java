@@ -449,7 +449,8 @@ public class HFileOutputFormat2
     LOG.info("Incremental table " + regionLocator.getName() + " output configured.");
   }
   
-  public static void configureIncrementalLoadMap(Job job, Table table) throws IOException {
+  public static void configureIncrementalLoadMap(Job job, HTableDescriptor tableDescriptor) throws
+      IOException {
     Configuration conf = job.getConfiguration();
 
     job.setOutputKeyClass(ImmutableBytesWritable.class);
@@ -457,15 +458,14 @@ public class HFileOutputFormat2
     job.setOutputFormatClass(HFileOutputFormat2.class);
 
     // Set compression algorithms based on column families
-    configureCompression(conf, table.getTableDescriptor());
-    configureBloomType(table.getTableDescriptor(), conf);
-    configureBlockSize(table.getTableDescriptor(), conf);
-    HTableDescriptor tableDescriptor = table.getTableDescriptor();
+    configureCompression(conf, tableDescriptor);
+    configureBloomType(tableDescriptor, conf);
+    configureBlockSize(tableDescriptor, conf);
     configureDataBlockEncoding(tableDescriptor, conf);
 
     TableMapReduceUtil.addDependencyJars(job);
     TableMapReduceUtil.initCredentials(job);
-    LOG.info("Incremental table " + table.getName() + " output configured.");
+    LOG.info("Incremental table " + tableDescriptor.getTableName() + " output configured.");
   }
 
   /**
@@ -483,8 +483,7 @@ public class HFileOutputFormat2
     Map<byte[], Algorithm> compressionMap = new TreeMap<byte[],
         Algorithm>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
-      Algorithm algorithm = AbstractHFileWriter.compressionByName
-          (e.getValue());
+      Algorithm algorithm = AbstractHFileWriter.compressionByName(e.getValue());
       compressionMap.put(e.getKey(), algorithm);
     }
     return compressionMap;
@@ -602,7 +601,7 @@ public class HFileOutputFormat2
    * Serialize column family to compression algorithm map to configuration.
    * Invoked while configuring the MR job for incremental load.
    *
-   * @param table to read the properties from
+   * @param tableDescriptor to read the properties from
    * @param conf to persist serialized values into
    * @throws IOException
    *           on failure to read column family descriptors
@@ -705,7 +704,7 @@ public class HFileOutputFormat2
    * Serialize column family to data block encoding map to configuration.
    * Invoked while configuring the MR job for incremental load.
    *
-   * @param table to read the properties from
+   * @param tableDescriptor to read the properties from
    * @param conf to persist serialized values into
    * @throws IOException
    *           on failure to read column family descriptors

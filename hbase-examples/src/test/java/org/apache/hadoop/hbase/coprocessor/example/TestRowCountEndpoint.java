@@ -71,7 +71,7 @@ public class TestRowCountEndpoint {
 
   // @Ignore @Test
   public void testEndpoint() throws Throwable {
-    Table table = new HTable(CONF, TEST_TABLE);
+    Table table = TEST_UTIL.getConnection().getTable(TEST_TABLE);
 
     // insert some test rows
     for (int i=0; i<5; i++) {
