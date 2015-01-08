@@ -115,6 +115,7 @@ public class PrefixTreeArrayReversibleScanner extends PrefixTreeArrayScanner imp
         }
       }
       if (currentRowNode.hasOccurrences()) {// escape clause
+        currentRowNode.resetFanIndex();
         return true;// found some values
       }
     }

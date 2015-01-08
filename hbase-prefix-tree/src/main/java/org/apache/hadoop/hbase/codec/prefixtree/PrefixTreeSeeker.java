@@ -130,14 +130,9 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
   @Override
   public boolean next() {
-    boolean advance = ptSearcher.advance();
-    if (ptSearcher.hasMovedToPreviousAsPartOfSeek()) {
-      ptSearcher.setMovedToPreviousAsPartOfSeek(false);
-    }
-    return advance;
+    return ptSearcher.advance();
   }
 
-//  @Override
   public boolean advance() {
     return ptSearcher.advance();
   }
@@ -222,7 +217,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
     if (CellScannerPosition.AT == position) {
       if (seekBefore) {
-        // We need not set movedToPrevious because the intention is to seekBefore
         ptSearcher.previous();
         return 1;
       }
@@ -233,7 +227,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     if (CellScannerPosition.AFTER == position) {
       if (!ptSearcher.isBeforeFirst()) {
         ptSearcher.previous();
-        ptSearcher.setMovedToPreviousAsPartOfSeek(true);
       }
       return 1;
     }
