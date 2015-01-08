@@ -61,7 +61,6 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected boolean nubCellsRemain;
   protected int currentCellIndex;
-  protected boolean movedToPrevious;
 
 
   /*********************** construct ******************************/
@@ -262,12 +261,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
           return true;
         }
       } else {
-        if (movedToPrevious && currentRowNode.hasOccurrences()
-            && currentRowNode.getFanIndex() == getNextFanIndex()) {
-          followFan(getNextFanIndex());
-        } else {
-          discardCurrentRowNode(true);
-        }
+        discardCurrentRowNode(true);
       }
     }
     return false;// went past the end
@@ -302,10 +296,6 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   protected void followCurrentFan() {
     int currentFanPosition = currentRowNode.getFanIndex();
     followFan(currentFanPosition);
-  }
-
-  protected int getNextFanIndex() {
-    return rowNodes[rowNodeStackIndex + 1].getFanIndex();
   }
 
   protected void followNextFan() {
@@ -538,13 +528,4 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   public int getTagBufferLength() {
     return tagsBuffer.length;
   }
-
-  public void setMovedToPreviousAsPartOfSeek(boolean movedToPrevious) {
-    this.movedToPrevious = movedToPrevious;
-  }
-
-  public boolean hasMovedToPreviousAsPartOfSeek() {
-    return this.movedToPrevious;
-  }
-
 }
