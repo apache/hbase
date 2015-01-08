@@ -3668,7 +3668,7 @@ public final class RPCProtos {
      * <code>optional uint32 priority = 6;</code>
      *
      * <pre>
-     * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
+     * 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
      * See HConstants.
      * </pre>
      */
@@ -3677,7 +3677,7 @@ public final class RPCProtos {
      * <code>optional uint32 priority = 6;</code>
      *
      * <pre>
-     * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
+     * 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
      * See HConstants.
      * </pre>
      */
@@ -3978,7 +3978,7 @@ public final class RPCProtos {
      * <code>optional uint32 priority = 6;</code>
      *
      * <pre>
-     * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
+     * 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
      * See HConstants.
      * </pre>
      */
@@ -3989,7 +3989,7 @@ public final class RPCProtos {
      * <code>optional uint32 priority = 6;</code>
      *
      * <pre>
-     * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
+     * 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
      * See HConstants.
      * </pre>
      */
@@ -4864,7 +4864,7 @@ public final class RPCProtos {
        * <code>optional uint32 priority = 6;</code>
        *
        * <pre>
-       * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
+       * 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
        * See HConstants.
        * </pre>
        */
@@ -4875,7 +4875,7 @@ public final class RPCProtos {
        * <code>optional uint32 priority = 6;</code>
        *
        * <pre>
-       * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
+       * 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
        * See HConstants.
        * </pre>
        */
@@ -4886,7 +4886,7 @@ public final class RPCProtos {
        * <code>optional uint32 priority = 6;</code>
        *
        * <pre>
-       * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
+       * 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
        * See HConstants.
        * </pre>
        */
@@ -4900,7 +4900,7 @@ public final class RPCProtos {
        * <code>optional uint32 priority = 6;</code>
        *
        * <pre>
-       * 0 is NORMAL priority.  100 is HIGH.  If no priority, treat it as NORMAL.
+       * 0 is NORMAL priority.  200 is HIGH.  If no priority, treat it as NORMAL.
        * See HConstants.
        * </pre>
        */

@@ -87,7 +87,8 @@ public class PayloadCarryingRpcController
    * @param tn Set priority based off the table we are going against.
    */
   public void setPriority(final TableName tn) {
-    this.priority = tn != null && tn.isSystemTable()? HConstants.HIGH_QOS: HConstants.NORMAL_QOS;
+    this.priority =
+        (tn != null && tn.isSystemTable())? HConstants.SYSTEMTABLE_QOS: HConstants.NORMAL_QOS;
   }
 
   /**

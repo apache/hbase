@@ -911,7 +911,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
   @Retention(RetentionPolicy.RUNTIME)
   protected @interface QosPriority {
-    int priority() default 0;
+    int priority() default HConstants.NORMAL_QOS;
   }
 
   public InetSocketAddress getSocketAddress() {
@@ -963,7 +963,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public CloseRegionResponse closeRegion(final RpcController controller,
       final CloseRegionRequest request) throws ServiceException {
     final ServerName sn = (request.hasDestinationServer() ?
@@ -1006,7 +1006,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public CompactRegionResponse compactRegion(final RpcController controller,
       final CompactRegionRequest request) throws ServiceException {
     try {
@@ -1064,7 +1064,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public FlushRegionResponse flushRegion(final RpcController controller,
       final FlushRegionRequest request) throws ServiceException {
     try {
@@ -1106,7 +1106,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetOnlineRegionResponse getOnlineRegion(final RpcController controller,
       final GetOnlineRegionRequest request) throws ServiceException {
     try {
@@ -1125,7 +1125,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetRegionInfoResponse getRegionInfo(final RpcController controller,
       final GetRegionInfoRequest request) throws ServiceException {
     try {
@@ -1153,6 +1153,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetServerInfoResponse getServerInfo(final RpcController controller,
       final GetServerInfoRequest request) throws ServiceException {
     try {
@@ -1166,6 +1167,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetStoreFileResponse getStoreFile(final RpcController controller,
       final GetStoreFileRequest request) throws ServiceException {
     try {
@@ -1201,7 +1203,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority = HConstants.HIGH_QOS)
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public MergeRegionsResponse mergeRegions(final RpcController controller,
       final MergeRegionsRequest request) throws ServiceException {
     try {
@@ -1261,7 +1263,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public OpenRegionResponse openRegion(final RpcController controller,
       final OpenRegionRequest request) throws ServiceException {
     requestCount.increment();
@@ -1552,7 +1554,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @QosPriority(priority=HConstants.HIGH_QOS)
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public SplitRegionResponse splitRegion(final RpcController controller,
       final SplitRegionRequest request) throws ServiceException {
     try {
@@ -1591,6 +1593,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public StopServerResponse stopServer(final RpcController controller,
       final StopServerRequest request) throws ServiceException {
     requestCount.increment();

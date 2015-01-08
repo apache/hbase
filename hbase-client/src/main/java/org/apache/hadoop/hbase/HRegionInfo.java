@@ -713,6 +713,13 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
+   * @return true if this region is from a system table
+   */
+  public boolean isSystemTable() {
+    return tableName.isSystemTable();
+  }
+
+  /**
    * @return True if has been split and has daughters.
    */
   public boolean isSplit() {
