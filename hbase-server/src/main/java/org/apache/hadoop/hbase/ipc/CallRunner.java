@@ -48,8 +48,6 @@ public class CallRunner {
    * On construction, adds the size of this call to the running count of outstanding call sizes.
    * Presumption is that we are put on a queue while we wait on an executor to run us.  During this
    * time we occupy heap.
-   * @param call The call to run.
-   * @param rpcServer
    */
   // The constructor is shutdown so only RpcServer in this class can make one of these.
   CallRunner(final RpcServerInterface rpcServer, final Call call, UserProvider userProvider) {
@@ -97,7 +95,8 @@ public class CallRunner {
       TraceScope traceScope = null;
       try {
         if (!this.rpcServer.isStarted()) {
-          throw new ServerNotRunningYetException("Server is not running yet");
+          throw new ServerNotRunningYetException("Server " + rpcServer.getListenerAddress()
+              + " is not running yet");
         }
         if (call.tinfo != null) {
           traceScope = Trace.startSpan(call.toTraceString(), call.tinfo);
@@ -142,7 +141,7 @@ public class CallRunner {
       }
     } catch (ClosedChannelException cce) {
       RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
-          "this means that the server was processing a " +
+          "this means that the server " + rpcServer.getListenerAddress() + " was processing a " +
           "request but the client went away. The error message was: " +
           cce.getMessage());
     } catch (Exception e) {
