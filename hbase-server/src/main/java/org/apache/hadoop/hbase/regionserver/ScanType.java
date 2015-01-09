@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Enum to distinguish general scan types.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceStability.Evolving
 public enum ScanType {
   COMPACT_DROP_DELETES,
   COMPACT_RETAIN_DELETES,
