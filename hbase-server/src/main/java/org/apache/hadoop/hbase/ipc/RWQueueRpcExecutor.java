@@ -26,9 +26,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
@@ -56,24 +58,32 @@ public class RWQueueRpcExecutor extends RpcExecutor {
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final float readShare, final int maxQueueLength) {
-    this(name, handlerCount, numQueues, readShare, maxQueueLength,
+    this(name, handlerCount, numQueues, readShare, maxQueueLength, null, null);
+  }
+
+  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
+      final float readShare, final int maxQueueLength, final Configuration conf, final Abortable abortable) {
+    this(name, handlerCount, numQueues, readShare, maxQueueLength, conf, abortable, 
       LinkedBlockingQueue.class);
   }
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final float readShare, final int maxQueueLength,
+      final Configuration conf, final Abortable abortable,
       final Class<? extends BlockingQueue> readQueueClass, Object... readQueueInitArgs) {
     this(name, calcNumWriters(handlerCount, readShare), calcNumReaders(handlerCount, readShare),
       calcNumWriters(numQueues, readShare), calcNumReaders(numQueues, readShare),
+      conf, abortable,
       LinkedBlockingQueue.class, new Object[] {maxQueueLength},
       readQueueClass, ArrayUtils.addAll(new Object[] {maxQueueLength}, readQueueInitArgs));
   }
 
   public RWQueueRpcExecutor(final String name, final int writeHandlers, final int readHandlers,
       final int numWriteQueues, final int numReadQueues,
+      final Configuration conf, final Abortable abortable,
       final Class<? extends BlockingQueue> writeQueueClass, Object[] writeQueueInitArgs,
       final Class<? extends BlockingQueue> readQueueClass, Object[] readQueueInitArgs) {
-    super(name, Math.max(writeHandlers + readHandlers, numWriteQueues + numReadQueues));
+    super(name, Math.max(writeHandlers + readHandlers, numWriteQueues + numReadQueues), conf, abortable);
 
     this.writeHandlersCount = Math.max(writeHandlers, numWriteQueues);
     this.readHandlersCount = Math.max(readHandlers, numReadQueues);

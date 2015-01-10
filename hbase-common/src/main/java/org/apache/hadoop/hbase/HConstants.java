@@ -850,6 +850,17 @@ public final class HConstants {
   public static final String REGION_SERVER_HANDLER_COUNT = "hbase.regionserver.handler.count";
   public static final int DEFAULT_REGION_SERVER_HANDLER_COUNT = 30;
 
+  /*
+   * REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT:
+   * -1  => Disable aborting
+   * 0   => Abort if even a single handler has died
+   * 0.x => Abort only when this percent of handlers have died
+   * 1   => Abort only all of the handers have died
+   */
+  public static final String REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT =
+      "hbase.regionserver.handler.abort.on.error.percent";
+  public static final double DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT = -1;
+  
   public static final String REGION_SERVER_META_HANDLER_COUNT =
       "hbase.regionserver.metahandler.count";
   public static final int DEFAULT_REGION_SERVER_META_HANDLER_COUNT = 10;

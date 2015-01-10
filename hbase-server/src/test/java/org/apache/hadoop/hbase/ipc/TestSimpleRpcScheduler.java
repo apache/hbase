@@ -68,7 +68,7 @@ public class TestSimpleRpcScheduler {
   public void testBasic() throws IOException, InterruptedException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
     RpcScheduler scheduler = new SimpleRpcScheduler(
-        conf, 10, 0, 0, qosFunction, 0);
+      conf, 10, 0, 0, qosFunction, null, 0);
     scheduler.init(CONTEXT);
     scheduler.start();
     CallRunner task = createMockTask();
@@ -110,7 +110,7 @@ public class TestSimpleRpcScheduler {
     }
 
     RpcScheduler scheduler = new SimpleRpcScheduler(
-        conf, 1, 1 ,1, qosFunction, HConstants.HIGH_QOS);
+      conf, 1, 1 ,1, qosFunction, null, HConstants.HIGH_QOS);
     scheduler.init(CONTEXT);
     scheduler.start();
     for (CallRunner task : tasks) {

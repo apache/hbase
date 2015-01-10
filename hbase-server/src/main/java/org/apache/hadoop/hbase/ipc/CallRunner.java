@@ -111,6 +111,9 @@ public class CallRunner {
         RpcServer.LOG.debug(Thread.currentThread().getName() + ": " + call.toShortString(), e);
         errorThrowable = e;
         error = StringUtils.stringifyException(e);
+        if (e instanceof Error) {
+          throw (Error)e;
+        } 
       } finally {
         if (traceScope != null) {
           traceScope.close();

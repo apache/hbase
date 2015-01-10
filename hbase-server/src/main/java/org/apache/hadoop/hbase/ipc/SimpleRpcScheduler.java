@@ -19,11 +19,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A scheduler that maintains isolated handler pools for general, high-priority and replication
@@ -49,6 +50,8 @@ public class SimpleRpcScheduler extends RpcScheduler {
 
   /** What level a high priority call is at. */
   private final int highPriorityLevel;
+  
+  private final Abortable abortable;
 
   /**
    * @param conf
@@ -64,12 +67,14 @@ public class SimpleRpcScheduler extends RpcScheduler {
       int priorityHandlerCount,
       int replicationHandlerCount,
       PriorityFunction priority,
+      Abortable abortable,
       int highPriorityLevel) {
     int maxQueueLength = conf.getInt(CALL_QUEUE_MAX_LENGTH_CONF_KEY,
       conf.getInt("ipc.server.max.callqueue.length",
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER));
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
+    this.abortable = abortable;
 
     float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY,
       conf.getFloat("ipc.server.callqueue.read.share", 0));
@@ -83,19 +88,19 @@ public class SimpleRpcScheduler extends RpcScheduler {
     if (numCallQueues > 1 && callqReadShare > 0) {
       // multiple read/write queues
       callExecutor = new RWQueueRpcExecutor("RW.Default", handlerCount, numCallQueues,
-          callqReadShare, maxQueueLength);
+        callqReadShare, maxQueueLength, conf, abortable);
     } else {
       // multiple queues
       callExecutor = new BalancedQueueRpcExecutor("B.Default", handlerCount,
-          numCallQueues, maxQueueLength);
+        numCallQueues, maxQueueLength, conf, abortable);
     }
 
-   this.priorityExecutor =
-     priorityHandlerCount > 0 ? new BalancedQueueRpcExecutor("Priority", priorityHandlerCount,
-       1, maxQueueLength) : null;
-   this.replicationExecutor =
-     replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("Replication",
-       replicationHandlerCount, 1, maxQueueLength) : null;
+    this.priorityExecutor =
+        priorityHandlerCount > 0 ? new BalancedQueueRpcExecutor("Priority", priorityHandlerCount,
+          1, maxQueueLength, conf, abortable) : null;
+    this.replicationExecutor =
+       replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("Replication",
+         replicationHandlerCount, 1, maxQueueLength, conf, abortable) : null;
   }
 
   @Override
