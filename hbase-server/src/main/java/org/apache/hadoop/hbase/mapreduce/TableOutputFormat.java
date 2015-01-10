@@ -78,15 +78,26 @@ implements Configurable {
   /** The configuration. */
   private Configuration conf = null;
 
-  private Table table;
-  private Connection connection;
-
   /**
    * Writes the reducer output to an HBase table.
    */
   protected class TableRecordWriter
   extends RecordWriter<KEY, Mutation> {
 
+    private Connection connection;
+    private Table table;
+
+    /**
+     * @throws IOException 
+     * 
+     */
+    public TableRecordWriter() throws IOException {
+      String tableName = conf.get(OUTPUT_TABLE);
+      this.connection = ConnectionFactory.createConnection(conf);
+      this.table = connection.getTable(TableName.valueOf(tableName));
+      this.table.setAutoFlushTo(false);
+      LOG.info("Created table instance for "  + tableName);
+    }
     /**
      * Closes the writer, in this case flush table commits.
      *
@@ -164,6 +175,7 @@ implements Configurable {
     return new TableOutputCommitter();
   }
 
+  @Override
   public Configuration getConf() {
     return conf;
   }
@@ -192,10 +204,6 @@ implements Configurable {
       if (zkClientPort != 0) {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
-      this.connection = ConnectionFactory.createConnection(this.conf);
-      this.table = connection.getTable(TableName.valueOf(tableName));
-      this.table.setAutoFlushTo(false);
-      LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {
       LOG.error(e);
       throw new RuntimeException(e);
