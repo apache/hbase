@@ -119,7 +119,7 @@ public abstract class RpcExecutor {
   protected void consumerLoop(final BlockingQueue<CallRunner> myQueue) {
     boolean interrupted = false;
     double handlerFailureThreshhold =
-        conf == null ? 1.0 : conf.getDouble(HConstants.REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT,
+        conf == null ? 1.0 : conf.getFloat(HConstants.REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT,
           HConstants.DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT);
     try {
       while (running) {

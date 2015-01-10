@@ -859,7 +859,7 @@ public final class HConstants {
    */
   public static final String REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT =
       "hbase.regionserver.handler.abort.on.error.percent";
-  public static final double DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT = -1;
+  public static final float DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT = -1;
   
   public static final String REGION_SERVER_META_HANDLER_COUNT =
       "hbase.regionserver.metahandler.count";
