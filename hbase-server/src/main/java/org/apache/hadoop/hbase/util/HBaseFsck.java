@@ -53,7 +53,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -85,8 +84,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -134,7 +131,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -1996,6 +1992,43 @@ public class HBaseFsck extends Configured implements Closeable {
           return;
         }
 
+        HRegionInfo hri = hbi.getHdfsHRI();
+        TableInfo tableInfo = tablesInfo.get(hri.getTable());
+        if (tableInfo.regionsFromMeta.isEmpty()) {
+          for (HbckInfo h : regionInfoMap.values()) {
+            if (h.getTableName().equals(hri.getTable())) {
+              if (h.metaEntry != null) tableInfo.regionsFromMeta
+                  .add((HRegionInfo) h.metaEntry);
+            }
+          }
+          Collections.sort(tableInfo.regionsFromMeta);
+        }
+        for (HRegionInfo region : tableInfo.regionsFromMeta) {
+          if (Bytes.compareTo(region.getStartKey(), hri.getStartKey()) <= 0
+              && (region.getEndKey().length == 0 || Bytes.compareTo(region.getEndKey(),
+                hri.getEndKey()) >= 0)
+              && Bytes.compareTo(region.getStartKey(), hri.getEndKey()) <= 0) {
+            if(region.isSplit() || region.isOffline()) continue;
+            Path regionDir = hbi.getHdfsRegionDir();
+            FileSystem fs = regionDir.getFileSystem(getConf());
+            List<Path> familyDirs = FSUtils.getFamilyDirs(fs, regionDir);
+            for (Path familyDir : familyDirs) {
+              List<Path> referenceFilePaths = FSUtils.getReferenceFilePaths(fs, familyDir);
+              for (Path referenceFilePath : referenceFilePaths) {
+                Path parentRegionDir =
+                    StoreFileInfo.getReferredToFile(referenceFilePath).getParent().getParent();
+                if (parentRegionDir.toString().endsWith(region.getEncodedName())) {
+                  LOG.warn(hri + " start and stop keys are in the range of " + region
+                      + ". The region might not be cleaned up from hdfs when region " + region
+                      + " split failed. Hence deleting from hdfs.");
+                  HRegionFileSystem.deleteRegionFromFileSystem(getConf(), fs,
+                    regionDir.getParent(), hri);
+                  return;
+                }
+              }
+            }
+          }
+        }
         LOG.info("Patching hbase:meta with .regioninfo: " + hbi.getHdfsHRI());
         int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
         HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
@@ -2324,6 +2357,9 @@ public class HBaseFsck extends Configured implements Closeable {
     // key = start split, values = set of splits in problem group
     final Multimap<byte[], HbckInfo> overlapGroups =
       TreeMultimap.create(RegionSplitCalculator.BYTES_COMPARATOR, cmp);
+
+    // list of regions derived from meta entries.
+    final List<HRegionInfo> regionsFromMeta = new ArrayList<HRegionInfo>();
 
     TableInfo(TableName name) {
       this.tableName = name;

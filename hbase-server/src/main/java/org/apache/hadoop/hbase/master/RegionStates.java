@@ -31,6 +31,7 @@ import java.util.TreeMap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -568,10 +570,6 @@ public class RegionStates {
       }
     }
 
-    for (HRegionInfo hri : regionsToOffline) {
-      regionOffline(hri);
-    }
-
     for (RegionState state : regionsInTransition.values()) {
       HRegionInfo hri = state.getRegion();
       if (assignedRegions.contains(hri)) {
@@ -591,10 +589,25 @@ public class RegionStates {
             State.FAILED_OPEN, State.FAILED_CLOSE, State.OFFLINE)) {
           LOG.info("Found region in " + state + " to be reassigned by SSH for " + sn);
           rits.add(hri);
+        } else if (isOneOfStates(state, State.SPLITTING_NEW)) {
+          try {
+            if (MetaTableAccessor.getRegion(server.getConnection(), state.getRegion()
+                .getEncodedNameAsBytes()) == null) {
+              regionsToOffline.add(state.getRegion());
+              FSUtils.deleteRegionDir(server.getConfiguration(), state.getRegion());
+            }
+          } catch (IOException e) {
+            LOG.warn("Got exception while deleting " + state.getRegion()
+                + " directories from file system.", e);
+          }
         } else {
           LOG.warn("THIS SHOULD NOT HAPPEN: unexpected " + state);
         }
       }
+    }
+
+    for (HRegionInfo hri : regionsToOffline) {
+      regionOffline(hri);
     }
 
     this.notifyAll();
