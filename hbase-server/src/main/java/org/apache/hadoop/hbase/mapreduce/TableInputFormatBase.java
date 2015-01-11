@@ -66,12 +66,10 @@ import org.apache.hadoop.util.StringUtils;
  * <pre>
  *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
  *
+ *     private JobConf job;
+ *
  *     public void configure(JobConf job) {
- *       Connection connection =
- *          ConnectionFactory.createConnection(HBaseConfiguration.create(job));
- *       TableName tableName = TableName.valueOf("exampleTable");
- *       // mandatory
- *       initializeTable(connection, tableName);
+ *       this.job = job;
  *       Text[] inputColumns = new byte [][] { Bytes.toBytes("cf1:columnA"),
  *         Bytes.toBytes("cf2") };
  *       // mandatory
@@ -80,6 +78,14 @@ import org.apache.hadoop.util.StringUtils;
  *       // optional
  *       setRowFilter(exampleFilter);
  *     }
+ *     
+ *     protected void initialize() {
+ *       Connection connection =
+ *          ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+ *       TableName tableName = TableName.valueOf("exampleTable");
+ *       // mandatory
+ *       initializeTable(connection, tableName);
+ *    }
  *
  *     public void validateInput(JobConf job) throws IOException {
  *     }
@@ -105,12 +111,13 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   private RegionLocator regionLocator;
   /** The reader scanning the table, can be a custom one. */
   private TableRecordReader tableRecordReader = null;
+  /** The underlying {@link Connection} of the table. */
+  private Connection connection;
+
   
   /** The reverse DNS lookup cache mapping: IPAddress => HostName */
   private HashMap<InetAddress, String> reverseDNSCacheMap =
     new HashMap<InetAddress, String>();
-
-  private Connection connection;
 
   /**
    * Builds a {@link TableRecordReader}. If no {@link TableRecordReader} was provided, uses
@@ -129,6 +136,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       InputSplit split, TaskAttemptContext context)
   throws IOException {
     if (table == null) {
+      initialize();
+    }
+    if (getTable() == null) {
+      // initialize() must not have been implemented in the subclass.
       throw new IOException("Cannot create a record reader because of a" +
           " previous error. Please look at the previous logs lines from" +
           " the task's full log for more details.");
@@ -141,19 +152,13 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     sc.setStartRow(tSplit.getStartRow());
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
-    trr.setTable(table);
+    trr.setTable(getTable());
     return new RecordReader<ImmutableBytesWritable, Result>() {
 
       @Override
       public void close() throws IOException {
         trr.close();
-        close(admin, table, regionLocator, connection);
-      }
-
-      private void close(Closeable... closables) throws IOException {
-        for (Closeable c : closables) {
-          if(c != null) { c.close(); }
-        }
+        closeTable();
       }
 
       @Override
@@ -185,7 +190,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   }
 
   protected Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
-    return regionLocator.getStartEndKeys();
+    return getRegionLocator().getStartEndKeys();
   }
 
   /**
@@ -200,10 +205,18 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException {
+    boolean closeOnFinish = false;
+
     if (table == null) {
+      initialize();
+      closeOnFinish = true;
+    }
+    if (table == null) {
+      // initialize() wasn't implemented, so the table is null.
       throw new IOException("No table was provided.");
     }
 
+    try {
     RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(regionLocator, admin);
 
     Pair<byte[][], byte[][]> keys = getStartEndKeys();
@@ -267,6 +280,11 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       }
     }
     return splits;
+    } finally {
+      if (closeOnFinish) {
+        closeTable();
+      }
+    }
   }
 
   public String reverseDNS(InetAddress ipAddress) throws NamingException, UnknownHostException {
@@ -321,13 +339,16 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   @Deprecated
   protected HTable getHTable() {
-    return (HTable) this.table;
+    return (HTable) this.getTable();
   }
 
   /**
    * Allows subclasses to get the {@link RegionLocator}.
    */
   protected RegionLocator getRegionLocator() {
+    if (regionLocator == null) {
+      initialize();
+    }
     return regionLocator;
   }
   
@@ -335,6 +356,9 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * Allows subclasses to get the {@link Table}.
    */
   protected Table getTable() {
+    if (table == null) {
+      initialize();
+    }
     return table;
   }
 
@@ -342,6 +366,9 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * Allows subclasses to get the {@link Admin}.
    */
   protected Admin getAdmin() {
+    if (admin == null) {
+      initialize();
+    }
     return admin;
   }
 
@@ -356,7 +383,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   protected void setHTable(HTable table) throws IOException {
     this.table = table;
     this.regionLocator = table.getRegionLocator();
-    this.admin = table.getConnection().getAdmin();
+    this.connection = table.getConnection();
+    this.admin = this.connection.getAdmin();
   }
 
   /**
@@ -401,4 +429,34 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   protected void setTableRecordReader(TableRecordReader tableRecordReader) {
     this.tableRecordReader = tableRecordReader;
   }
+  
+  /**
+   * This method will be called when any of the following are referenced, but not yet initialized:
+   * admin, regionLocator, table. Subclasses will have the opportunity to call
+   * {@link #initializeTable(Connection, TableName)}
+   */
+  protected void initialize() {
+   
+  }
+
+  /**
+   * Close the Table and related objects that were initialized via
+   * {@link #initializeTable(Connection, TableName)}.
+   *
+   * @throws IOException
+   */
+  protected void closeTable() throws IOException {
+    close(admin, table, regionLocator, connection);
+    admin = null;
+    table = null;
+    regionLocator = null;
+    connection = null;
+  }
+
+  private void close(Closeable... closables) throws IOException {
+    for (Closeable c : closables) {
+      if(c != null) { c.close(); }
+    }
+  }
+
 }

@@ -49,6 +49,7 @@ import org.apache.hadoop.util.StringUtils;
 public class TableInputFormat extends TableInputFormatBase
 implements Configurable {
 
+  @SuppressWarnings("hiding")
   private static final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /** Job parameter that specifies the input table. */
@@ -112,13 +113,6 @@ implements Configurable {
   @Override
   public void setConf(Configuration configuration) {
     this.conf = configuration;
-    TableName tableName = TableName.valueOf(conf.get(INPUT_TABLE));
-    try {
-      // NOTE: This connection doesn't currently get closed explicit1ly.
-      initializeTable(ConnectionFactory.createConnection(new Configuration(conf)), tableName);
-    } catch (Exception e) {
-      LOG.error(StringUtils.stringifyException(e));
-    }
 
     Scan scan = null;
 
@@ -178,6 +172,16 @@ implements Configurable {
     }
 
     setScan(scan);
+  }
+
+  @Override
+  protected void initialize() {
+    TableName tableName = TableName.valueOf(conf.get(INPUT_TABLE));
+    try {
+      initializeTable(ConnectionFactory.createConnection(new Configuration(conf)), tableName);
+    } catch (Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+    }
   }
 
   /**
