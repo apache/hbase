@@ -181,6 +181,21 @@ public abstract class FSUtils {
   }
 
   /**
+   * Delete the region directory if exists.
+   * @param conf
+   * @param hri
+   * @return True if deleted the region directory.
+   * @throws IOException
+   */
+  public static boolean deleteRegionDir(final Configuration conf, final HRegionInfo hri)
+  throws IOException {
+    Path rootDir = getRootDir(conf);
+    FileSystem fs = rootDir.getFileSystem(conf);
+    return deleteDirectory(fs,
+      new Path(getTableDir(rootDir, hri.getTable()), hri.getEncodedName()));
+  }
+
+  /**
    * Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time.
    *

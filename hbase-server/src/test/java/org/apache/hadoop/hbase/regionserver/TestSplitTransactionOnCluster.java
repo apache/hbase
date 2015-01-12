@@ -1247,6 +1247,46 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
+  @Test (timeout=300000)
+  public void testSSHCleanupDaugtherRegionsOfAbortedSplit() throws Exception {
+    TableName table = TableName.valueOf("testSSHCleanupDaugtherRegionsOfAbortedSplit");
+    try {
+      HTableDescriptor desc = new HTableDescriptor(table);
+      desc.addFamily(new HColumnDescriptor(Bytes.toBytes("f")));
+      admin.createTable(desc);
+      HTable hTable = new HTable(cluster.getConfiguration(), desc.getTableName());
+      for(int i = 1; i < 5; i++) {
+        Put p1 = new Put(("r"+i).getBytes());
+        p1.add(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());
+        hTable.put(p1);
+      }
+      admin.flush(desc.getTableName());
+      List<HRegion> regions = cluster.getRegions(desc.getTableName());
+      int serverWith = cluster.getServerWith(regions.get(0).getRegionName());
+      HRegionServer regionServer = cluster.getRegionServer(serverWith);
+      cluster.getServerWith(regions.get(0).getRegionName());
+      SplitTransaction st = new SplitTransaction(regions.get(0), Bytes.toBytes("r3"));
+      st.prepare();
+      st.stepsBeforePONR(regionServer, regionServer, false);
+      Path tableDir =
+          FSUtils.getTableDir(cluster.getMaster().getMasterFileSystem().getRootDir(),
+            desc.getTableName());
+      tableDir.getFileSystem(cluster.getConfiguration());
+      List<Path> regionDirs =
+          FSUtils.getRegionDirs(tableDir.getFileSystem(cluster.getConfiguration()), tableDir);
+      assertEquals(3,regionDirs.size());
+      AssignmentManager am = cluster.getMaster().getAssignmentManager();
+      am.processServerShutdown(regionServer.getServerName());
+      assertEquals(am.getRegionStates().getRegionsInTransition().toString(), 0, am
+          .getRegionStates().getRegionsInTransition().size());
+      regionDirs =
+          FSUtils.getRegionDirs(tableDir.getFileSystem(cluster.getConfiguration()), tableDir);
+      assertEquals(1,regionDirs.size());
+    } finally {
+      TESTING_UTIL.deleteTable(table);
+    }
+  }
+
     public static class MockedCoordinatedStateManager extends ZkCoordinatedStateManager {
 
         public void initialize(Server server, HRegion region) {
