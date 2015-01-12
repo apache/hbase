@@ -1824,7 +1824,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               responseBuilder.addRegionActionResult(RegionActionResult.newBuilder()
                   .addResultOrException(ResultOrException.newBuilder().setLoadStats(stats)));
             }
-            mutateRows(region, regionAction.getActionList(), cellScanner);
             processed = Boolean.TRUE;
           }
         } catch (IOException e) {
