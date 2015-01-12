@@ -362,6 +362,10 @@ module Hbase
       @admin.getTableDescriptor(TableName.valueOf(table_name)).getColumnFamilies()
     end
 
+    def get_table_attributes(table_name)
+      @admin.getTableDescriptor(TableName.valueOf(table_name)).toStringTableAttributes
+    end
+
     #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name, conf = @conf)

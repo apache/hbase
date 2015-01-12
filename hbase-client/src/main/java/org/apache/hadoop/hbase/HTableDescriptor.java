@@ -860,6 +860,13 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     return s.toString();
   }
 
+  /**
+   * @return map of all table attributes formatted into string.
+   */
+  public String toStringTableAttributes() {
+   return getValues(true).toString();
+  }
+
   private StringBuilder getValues(boolean printDefaults) {
     StringBuilder s = new StringBuilder();
 
