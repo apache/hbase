@@ -24,10 +24,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -90,8 +92,6 @@ public class TestAssignmentManager {
     new ServerName("example.org", 1234, 5678);
   private static final ServerName SERVERNAME_B =
     new ServerName("example.org", 0, 5678);
-  private static final ServerName SERVERNAME_C =
-      new ServerName("example.org", 123, 5678);
   private static final HRegionInfo REGIONINFO =
     new HRegionInfo(Bytes.toBytes("t"),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
@@ -134,23 +134,24 @@ public class TestAssignmentManager {
 
     // Mock a ServerManager.  Say server SERVERNAME_{A,B} are online.  Also
     // make it so if close or open, we return 'success'.
-    this.serverManager = mockManager(SERVERNAME_A, SERVERNAME_B);
-  }
-
-  private ServerManager mockManager(ServerName... servers) throws IOException {
-    ServerManager serverManager = Mockito.mock(ServerManager.class);
+    this.serverManager = Mockito.mock(ServerManager.class);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(true);
     final Map<ServerName, HServerLoad> onlineServers = new HashMap<ServerName, HServerLoad>();
-    for (ServerName server : servers) {
-      Mockito.when(serverManager.isServerOnline(server)).thenReturn(true);
-      onlineServers.put(server, new HServerLoad());
-      Mockito.when(serverManager.sendRegionClose(server, REGIONINFO, -1)).thenReturn(true);
-      Mockito.when(serverManager.sendRegionOpen(server, REGIONINFO, -1)).
-          thenReturn(RegionOpeningState.OPENED);
-    }
-    Mockito.when(serverManager.getOnlineServersList()).thenReturn(
+    onlineServers.put(SERVERNAME_B, new HServerLoad());
+    onlineServers.put(SERVERNAME_A, new HServerLoad());
+    Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(
         new ArrayList<ServerName>(onlineServers.keySet()));
-    Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
-    return serverManager;
+    Mockito.when(this.serverManager.getOnlineServers()).thenReturn(onlineServers);
+    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, REGIONINFO, -1)).
+      thenReturn(true);
+    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_B, REGIONINFO, -1)).
+      thenReturn(true);
+    // Ditto on open.
+    Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_A, REGIONINFO, -1)).
+      thenReturn(RegionOpeningState.OPENED);
+    Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_B, REGIONINFO, -1)).
+    thenReturn(RegionOpeningState.OPENED);
   }
 
   @After
@@ -393,35 +394,6 @@ public class TestAssignmentManager {
       am.shutdown();
       // Clean up all znodes
       ZKAssign.deleteAllNodes(this.watcher);
-    }
-  }
-
-  @Test
-  public void testGettingAssignmentsExcludesDrainingServers() throws Exception {
-    List<ServerName> availableServers =
-        Lists.newArrayList(SERVERNAME_A, SERVERNAME_B, SERVERNAME_C);
-    ServerManager serverManager = mockManager(availableServers.toArray(new ServerName[0]));
-
-
-    ExecutorService executor = startupMasterExecutor("testAssignmentsWithRSInDraining");
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
-
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
-
-    Mockito.when(serverManager.getDrainingServersList()).thenReturn(
-        Lists.newArrayList(SERVERNAME_C));
-    AssignmentManager am = new AssignmentManager(this.server, serverManager, ct, balancer, executor);
-
-    for (ServerName availableServer : availableServers) {
-      HRegionInfo info = Mockito.mock(HRegionInfo.class);
-      Mockito.when(info.getEncodedName()).thenReturn(UUID.randomUUID().toString());
-      am.regionOnline(info, availableServer);
-    }
-
-    Map<String, Map<ServerName, List<HRegionInfo>>> result = am.getAssignmentsByTable();
-    for (Map<ServerName, List<HRegionInfo>> map : result.values()) {
-      System.out.println(map.keySet());
-      assertFalse(map.containsKey(SERVERNAME_C));
     }
   }
 

@@ -3431,7 +3431,6 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
     Map<ServerName, HServerLoad> onlineSvrs = this.serverManager.getOnlineServers();
-    List<ServerName> drainingServers = this.serverManager.getDrainingServersList();
     // Take care of servers w/o assignments.
     for (Map<ServerName,List<HRegionInfo>> map : result.values()) {
       for (Map.Entry<ServerName, HServerLoad> svrEntry: onlineSvrs.entrySet()) {
@@ -3439,7 +3438,6 @@ public class AssignmentManager extends ZooKeeperListener {
           map.put(svrEntry.getKey(), new ArrayList<HRegionInfo>());
         }
       }
-      map.keySet().removeAll(drainingServers);
     }
     return result;
   }
