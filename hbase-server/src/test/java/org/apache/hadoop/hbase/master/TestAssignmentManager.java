@@ -24,7 +24,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.CellScannable;
@@ -102,8 +105,6 @@ public class TestAssignmentManager {
       ServerName.valueOf("example.org", 1234, 5678);
   private static final ServerName SERVERNAME_B =
       ServerName.valueOf("example.org", 0, 5678);
-  private static final ServerName SERVERNAME_C =
-      ServerName.valueOf("example.org", 4321, 5678);
   private static final HRegionInfo REGIONINFO =
     new HRegionInfo(TableName.valueOf("t"),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
@@ -151,12 +152,10 @@ public class TestAssignmentManager {
     this.serverManager = Mockito.mock(ServerManager.class);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(true);
-    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_C)).thenReturn(true);
     Mockito.when(this.serverManager.getDeadServers()).thenReturn(new DeadServer());
     final Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
     onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
     onlineServers.put(SERVERNAME_A, ServerLoad.EMPTY_SERVERLOAD);
-    onlineServers.put(SERVERNAME_C, ServerLoad.EMPTY_SERVERLOAD);
     Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(
         new ArrayList<ServerName>(onlineServers.keySet()));
     Mockito.when(this.serverManager.getOnlineServers()).thenReturn(onlineServers);
@@ -170,18 +169,11 @@ public class TestAssignmentManager {
       thenReturn(true);
     Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_B, REGIONINFO, -1)).
       thenReturn(true);
-    Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_C, REGIONINFO, -1)).
-        thenReturn(true);
     // Ditto on open.
     Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_A, REGIONINFO, -1, null)).
       thenReturn(RegionOpeningState.OPENED);
     Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_B, REGIONINFO, -1, null)).
       thenReturn(RegionOpeningState.OPENED);
-    Mockito.when(this.serverManager.sendRegionOpen(SERVERNAME_C, REGIONINFO, -1, null)).
-        thenReturn(RegionOpeningState.OPENED);
-    // lets add one server to draining state
-    Mockito.when(this.serverManager.getDrainingServersList())
-        .thenReturn(Arrays.asList(SERVERNAME_C));
     this.master = Mockito.mock(HMaster.class);
 
     Mockito.when(this.master.getServerManager()).thenReturn(serverManager);
@@ -298,19 +290,6 @@ public class TestAssignmentManager {
     } finally {
       am.getExecutorService().shutdown();
       am.shutdown();
-    }
-  }
-
-  @Test(timeout = 60000)
-  public void testGettingAssignmentsExcludesDrainingServers() throws Exception {
-    AssignmentManagerWithExtrasForTesting am =
-        setUpMockedAssignmentManager(this.server, this.serverManager);
-
-    Map<TableName, Map<ServerName, List<HRegionInfo>>>
-        result = am.getRegionStates().getAssignmentsByTable();
-    for (Map<ServerName, List<HRegionInfo>> map : result.values()) {
-      System.out.println(map.keySet());
-      assertFalse(map.containsKey(SERVERNAME_C));
     }
   }
 
