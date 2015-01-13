@@ -925,7 +925,7 @@ stopping hbase...............</screen>
       <!--presumes the pre-site target has put the hbase-default.xml at this location-->
       <xi:include
         xmlns:xi="http://www.w3.org/2001/XInclude"
-        href="hbase-default.xml">
+        href="../../../target/docbkx/hbase-default.xml">
 	<xi:fallback>
           <section
             xml:id="hbase_default_configurations">

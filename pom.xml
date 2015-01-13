@@ -955,6 +955,24 @@
               </resources>
             </configuration>
           </execution>
+          <execution>
+            <id>copy-htaccess</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>post-site</phase>
+            <configuration>
+              <outputDirectory>${basedir}/target/site</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/hbase-common/src/main/resources/</directory>
+                  <includes>
+                    <include>.htaccess</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
         </executions>
         <configuration>
           <escapeString>\</escapeString>
