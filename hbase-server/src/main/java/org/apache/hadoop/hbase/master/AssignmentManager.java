@@ -569,8 +569,9 @@ public class AssignmentManager extends ZooKeeperListener {
       if (!regionsInTransition.isEmpty()) {
         Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
         for (RegionState regionState : regionsInTransition.values()) {
+          ServerName serverName = regionState.getServerName();
           if (!regionState.getRegion().isMetaRegion()
-              && onlineServers.contains(regionState.getServerName())) {
+              && serverName != null && onlineServers.contains(serverName)) {
             LOG.debug("Found " + regionState + " in RITs");
             failover = true;
             break;
@@ -2995,20 +2996,31 @@ public class AssignmentManager extends ZooKeeperListener {
     // to the region if the master dies right after the RPC call is out.
     Map<String, RegionState> rits = regionStates.getRegionsInTransition();
     for (RegionState regionState : rits.values()) {
-      if (!serverManager.isServerOnline(regionState.getServerName())) {
-        continue; // SSH will handle it
-      }
-      State state = regionState.getState();
       LOG.info("Processing " + regionState);
+      ServerName serverName = regionState.getServerName();
+      // Server could be null in case of FAILED_OPEN when master cannot find a region plan. In that
+      // case, try assigning it here.
+      if (serverName != null
+          && !serverManager.getOnlineServers().containsKey(serverName)) {
+        LOG.info("Server " + serverName + " isn't online. SSH will handle this");
+        continue; 
+      }
+      HRegionInfo regionInfo = regionState.getRegion();
+      State state = regionState.getState();
+      
       switch (state) {
       case CLOSED:
-        invokeAssign(regionState.getRegion());
+        invokeAssign(regionInfo);
         break;
       case PENDING_OPEN:
         retrySendRegionOpen(regionState);
         break;
       case PENDING_CLOSE:
         retrySendRegionClose(regionState);
+        break;
+      case FAILED_CLOSE:
+      case FAILED_OPEN:  
+        invokeUnassign(regionInfo);
         break;
       default:
         // No process for other states

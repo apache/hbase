@@ -1053,8 +1053,8 @@ public class TestMasterFailover {
     RegionState newState = regionStates.getRegionState(hri);
     assertTrue(newState.isOpened());
   }
-
-  /**
+  
+ /**
    * Simple test of master failover.
    * <p>
    * Starts with three masters.  Kills a backup master.  Then kills the active
@@ -1165,7 +1165,7 @@ public class TestMasterFailover {
   }
 
   /**
-   * Test region in pending_open/close when master failover
+   * Test region in pending_open/close and failed_open/close when master failover
    */
   @Test (timeout=180000)
   public void testPendingOpenOrCloseWhenMasterFailover() throws Exception {
@@ -1230,6 +1230,37 @@ public class TestMasterFailover {
     oldState = new RegionState(hriOffline, State.OFFLINE);
     newState = new RegionState(hriOffline, State.PENDING_OPEN, newState.getServerName());
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+    
+    HRegionInfo failedClose = new HRegionInfo(offlineTable.getTableName(), null, null);
+    createRegion(failedClose, rootdir, conf, offlineTable);
+    MetaEditor.addRegionToMeta(master.getCatalogTracker(), failedClose);
+    
+    oldState = new RegionState(failedClose, State.PENDING_CLOSE);
+    newState = new RegionState(failedClose, State.FAILED_CLOSE, newState.getServerName());
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+    
+   
+    HRegionInfo failedOpen = new HRegionInfo(offlineTable.getTableName(), null, null);
+    createRegion(failedOpen, rootdir, conf, offlineTable);
+    MetaEditor.addRegionToMeta(master.getCatalogTracker(), failedOpen);
+    
+    // Simulate a region transitioning to failed open when the region server reports the
+    // transition as FAILED_OPEN
+    oldState = new RegionState(failedOpen, State.PENDING_OPEN);
+    newState = new RegionState(failedOpen, State.FAILED_OPEN, newState.getServerName());
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+    
+    HRegionInfo failedOpenNullServer = new HRegionInfo(offlineTable.getTableName(), null, null);
+    createRegion(failedOpenNullServer, rootdir, conf, offlineTable);
+    MetaEditor.addRegionToMeta(master.getCatalogTracker(), failedOpenNullServer);
+    
+    // Simulate a region transitioning to failed open when the master couldn't find a plan for
+    // the region
+    oldState = new RegionState(failedOpenNullServer, State.OFFLINE);
+    newState = new RegionState(failedOpenNullServer, State.FAILED_OPEN, null);
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+    
+    
 
     // Stop the master
     log("Aborting master");
@@ -1253,7 +1284,10 @@ public class TestMasterFailover {
     // Both pending_open (RPC sent/not yet) regions should be online
     assertTrue(regionStates.isRegionOnline(hriOffline));
     assertTrue(regionStates.isRegionOnline(hriOnline));
-
+    assertTrue(regionStates.isRegionOnline(failedClose));
+    assertTrue(regionStates.isRegionOnline(failedOpenNullServer));
+    assertTrue(regionStates.isRegionOnline(failedOpen));
+    
     log("Done with verification, shutting down cluster");
 
     // Done, shutdown the cluster
