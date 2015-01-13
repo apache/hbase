@@ -99,7 +99,8 @@ public class TestScannerSelectionUsingKeyRange {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(TABLE);
-    HRegion region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), conf, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
+        htd);
 
     for (int iFile = 0; iFile < NUM_FILES; ++iFile) {
       for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
@@ -126,6 +127,6 @@ public class TestScannerSelectionUsingKeyRange {
     assertEquals(0, results.size());
     Set<String> accessedFiles = cache.getCachedFileNamesForTest();
     assertEquals(expectedCount, accessedFiles.size());
-    region.close();
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 }

@@ -53,6 +53,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -111,6 +112,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.Block
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
@@ -119,6 +122,8 @@ import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -1214,17 +1219,26 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * This borrows code from MasterFileSystem.bootstrap()
+   * This borrows code from MasterFileSystem.bootstrap(). Explicitly creates it's own WAL, so be
+   * sure to close it as well as the region when you're finished.
    *
    * @return an open hbase:meta HRegion
    */
   private HRegion createNewMeta() throws IOException {
-      Path rootdir = FSUtils.getRootDir(getConf());
+    Path rootdir = FSUtils.getRootDir(getConf());
     Configuration c = getConf();
     HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
     HTableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
     MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, false);
-    HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor);
+    // The WAL subsystem will use the default rootDir rather than the passed in rootDir
+    // unless I pass along via the conf.
+    Configuration confForWAL = new Configuration(c);
+    confForWAL.set(HConstants.HBASE_DIR, rootdir.toString());
+    WAL wal = (new WALFactory(confForWAL,
+        Collections.<WALActionsListener>singletonList(new MetricsWAL()),
+        "hbck-meta-recovery-" + RandomStringUtils.randomNumeric(8))).
+        getWAL(metaHRI.getEncodedNameAsBytes());
+    HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor, wal);
     MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, true);
     return meta;
   }
@@ -1282,8 +1296,8 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
-   * Rebuilds meta from information in hdfs/fs.  Depends on configuration
-   * settings passed into hbck constructor to point to a particular fs/dir.
+   * Rebuilds meta from information in hdfs/fs.  Depends on configuration settings passed into
+   * hbck constructor to point to a particular fs/dir. Assumes HBase is OFFLINE.
    *
    * @param fix flag that determines if method should attempt to fix holes
    * @return true if successful, false if attempt failed.
@@ -1339,7 +1353,10 @@ public class HBaseFsck extends Configured implements Closeable {
       return false;
     }
     meta.batchMutate(puts.toArray(new Put[puts.size()]));
-    HRegion.closeHRegion(meta);
+    meta.close();
+    if (meta.getWAL() != null) {
+      meta.getWAL().close();
+    }
     LOG.info("Success! hbase:meta table rebuilt.");
     LOG.info("Old hbase:meta is moved into " + backupDir);
     return true;

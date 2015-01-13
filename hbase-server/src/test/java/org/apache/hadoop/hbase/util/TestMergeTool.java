@@ -156,7 +156,8 @@ public class TestMergeTool extends HBaseTestCase {
        */
       for (int i = 0; i < sourceRegions.length; i++) {
         regions[i] =
-          HRegion.createHRegion(this.sourceRegions[i], testDir, this.conf, this.desc);
+          HBaseTestingUtility.createRegionAndWAL(this.sourceRegions[i], testDir, this.conf,
+              this.desc);
         /*
          * Insert data
          */
@@ -183,7 +184,7 @@ public class TestMergeTool extends HBaseTestCase {
     for (int i = 0; i < sourceRegions.length; i++) {
       HRegion r = regions[i];
       if (r != null) {
-        HRegion.closeHRegion(r);
+        HBaseTestingUtility.closeRegionAndWAL(r);
       }
     }
     wals.close();
@@ -272,7 +273,7 @@ public class TestMergeTool extends HBaseTestCase {
         assertTrue(Bytes.equals(bytes, rows[i][j]));
       }
       // Close the region and delete the log
-      HRegion.closeHRegion(regions[i]);
+      HBaseTestingUtility.closeRegionAndWAL(regions[i]);
     }
     WAL log = wals.getWAL(new byte[]{});
      // Merge Region 0 and Region 1

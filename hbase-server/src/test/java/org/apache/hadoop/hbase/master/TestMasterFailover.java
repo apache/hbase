@@ -64,13 +64,13 @@ public class TestMasterFailover {
   HRegion createRegion(final HRegionInfo  hri, final Path rootdir, final Configuration c,
       final HTableDescriptor htd)
   throws IOException {
-    HRegion r = HRegion.createHRegion(hri, rootdir, c, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, rootdir, c, htd);
     // The above call to create a region will create an wal file.  Each
     // log file create will also create a running thread to do syncing.  We need
     // to close out this log else we will have a running thread trying to sync
     // the file system continuously which is ugly when dfs is taken away at the
     // end of the test.
-    HRegion.closeHRegion(r);
+    HBaseTestingUtility.closeRegionAndWAL(r);
     return r;
   }
 

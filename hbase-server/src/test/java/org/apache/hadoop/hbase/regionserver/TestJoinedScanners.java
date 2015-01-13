@@ -31,12 +31,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -174,26 +170,6 @@ public class TestJoinedScanners {
     result_scanner.close();
     LOG.info((slow ? "Slow" : "Joined") + " scanner finished in " + Double.toString(timeSec)
       + " seconds, got " + Long.toString(rows_count/2) + " rows");
-  }
-
-  private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, byte[]... families)
-      throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-    for(byte [] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
-      htd.addFamily(hcd);
-    }
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false);
-    Path path = new Path(DIR + callingMethod);
-    FileSystem fs = FileSystem.get(conf);
-    if (fs.exists(path)) {
-      if (!fs.delete(path, true)) {
-        throw new IOException("Failed delete of " + path);
-      }
-    }
-    return HRegion.createHRegion(info, path, conf, htd);
   }
 
   private static Options options = new Options();

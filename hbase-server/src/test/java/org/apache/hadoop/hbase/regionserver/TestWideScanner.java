@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -138,7 +139,7 @@ public class TestWideScanner extends HBaseTestCase {
 
       s.close();
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 

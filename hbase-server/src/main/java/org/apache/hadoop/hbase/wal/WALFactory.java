@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
  *                           server.</li>
  * </ul>
  *
- * Alternatively, you may provide a custome implementation of {@link WALProvider} by class name.
+ * Alternatively, you may provide a custom implementation of {@link WALProvider} by class name.
  */
 @InterfaceAudience.Private
 public class WALFactory {

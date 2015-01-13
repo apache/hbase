@@ -61,7 +61,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -135,8 +134,6 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescripto
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -3383,13 +3380,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * <b>not</b> check the families for validity.
    *
    * @param familyMap Map of kvs per family
-   * @param localizedWriteEntry The WriteEntry of the MVCC for this transaction.
-   *        If null, then this method internally creates a mvcc transaction.
-   * @param output newly added KVs into memstore
+   * @param mvccNum The MVCC for this transaction.
    * @param isInReplay true when adding replayed KVs into memstore
    * @return the additional memory usage of the memstore caused by the
    * new entries.
-   * @throws IOException
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<Cell>> familyMap,
     long mvccNum, List<Cell> memstoreCells, boolean isInReplay) throws IOException {
@@ -4673,55 +4667,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
   }
 
   /**
-   * Convenience method creating new HRegions. Used by createTable and by the
-   * bootstrap code in the HMaster constructor.
-   * Note, this method creates an {@link WAL} for the created region. It
-   * needs to be closed explicitly.  Use {@link HRegion#getWAL()} to get
-   * access.  <b>When done with a region created using this method, you will
-   * need to explicitly close the {@link WAL} it created too; it will not be
-   * done for you.  Not closing the wal will leave at least a daemon thread
-   * running.</b>  Call {@link #closeHRegion(HRegion)} and it will do
-   * necessary cleanup for you.
-   * @param info Info for region to create.
-   * @param rootDir Root directory for HBase instance
-   * @return new HRegion
-   *
-   * @throws IOException
-   */
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-      final Configuration conf, final HTableDescriptor hTableDescriptor)
-  throws IOException {
-    return createHRegion(info, rootDir, conf, hTableDescriptor, null);
-  }
-
-  /**
-   * This will do the necessary cleanup a call to
-   * {@link #createHRegion(HRegionInfo, Path, Configuration, HTableDescriptor)}
-   * requires.  This method will close the region and then close its
-   * associated {@link WAL} file.  You can still use it if you call the other createHRegion,
-   * the one that takes an {@link WAL} instance but don't be surprised by the
-   * call to the {@link WAL#close()} on the {@link WAL} the
-   * HRegion was carrying.
-   * @throws IOException
-   */
-  public static void closeHRegion(final HRegion r) throws IOException {
-    if (r == null) return;
-    r.close();
-    if (r.getWAL() == null) return;
-    r.getWAL().close();
-  }
-
-  /**
    * Convenience method creating new HRegions. Used by createTable.
-   * The {@link WAL} for the created region needs to be closed explicitly.
-   * Use {@link HRegion#getWAL()} to get access.
    *
    * @param info Info for region to create.
    * @param rootDir Root directory for HBase instance
    * @param wal shared WAL
    * @param initialize - true to initialize the region
    * @return new HRegion
-   *
    * @throws IOException
    */
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
@@ -4730,75 +4682,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
                                       final WAL wal,
                                       final boolean initialize)
       throws IOException {
-    return createHRegion(info, rootDir, conf, hTableDescriptor,
-        wal, initialize, false);
-  }
-
-  /**
-   * Convenience method creating new HRegions. Used by createTable.
-   * The {@link WAL} for the created region needs to be closed
-   * explicitly, if it is not null.
-   * Use {@link HRegion#getWAL()} to get access.
-   *
-   * @param info Info for region to create.
-   * @param rootDir Root directory for HBase instance
-   * @param wal shared WAL
-   * @param initialize - true to initialize the region
-   * @param ignoreWAL - true to skip generate new wal if it is null, mostly for createTable
-   * @return new HRegion
-   * @throws IOException
-   */
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-                                      final Configuration conf,
-                                      final HTableDescriptor hTableDescriptor,
-                                      final WAL wal,
-                                      final boolean initialize, final boolean ignoreWAL)
-      throws IOException {
-      Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
-      return createHRegion(info, rootDir, tableDir, conf, hTableDescriptor, wal, initialize,
-          ignoreWAL);
-  }
-
-  /**
-   * Convenience method creating new HRegions. Used by createTable.
-   * The {@link WAL} for the created region needs to be closed
-   * explicitly, if it is not null.
-   * Use {@link HRegion#getWAL()} to get access.
-   *
-   * @param info Info for region to create.
-   * @param rootDir Root directory for HBase instance
-   * @param tableDir table directory
-   * @param wal shared WAL
-   * @param initialize - true to initialize the region
-   * @param ignoreWAL - true to skip generate new wal if it is null, mostly for createTable
-   * @return new HRegion
-   * @throws IOException
-   */
-  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir, final Path tableDir,
-                                      final Configuration conf,
-                                      final HTableDescriptor hTableDescriptor,
-                                      final WAL wal,
-                                      final boolean initialize, final boolean ignoreWAL)
-      throws IOException {
     LOG.info("creating HRegion " + info.getTable().getNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
         " Table name == " + info.getTable().getNameAsString());
     FileSystem fs = FileSystem.get(conf);
+    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
     HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, info);
-    WAL effectiveWAL = wal;
-    if (wal == null && !ignoreWAL) {
-      // TODO HBASE-11983 There'll be no roller for this wal?
-      // The WAL subsystem will use the default rootDir rather than the passed in rootDir
-      // unless I pass along via the conf.
-      Configuration confForWAL = new Configuration(conf);
-      confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-      effectiveWAL = (new WALFactory(confForWAL,
-          Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-          "hregion-" + RandomStringUtils.randomNumeric(8))).
-            getWAL(info.getEncodedNameAsBytes());
-    }
     HRegion region = HRegion.newHRegion(tableDir,
-        effectiveWAL, fs, conf, info, hTableDescriptor, null);
+        wal, fs, conf, info, hTableDescriptor, null);
     if (initialize) {
       // If initializing, set the sequenceId. It is also required by WALPerformanceEvaluation when
       // verifying the WALEdits.

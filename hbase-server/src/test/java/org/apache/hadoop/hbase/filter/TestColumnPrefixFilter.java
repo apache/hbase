@@ -51,8 +51,8 @@ public class TestColumnPrefixFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestColumnPrefixFilter"));
     htd.addFamily((new HColumnDescriptor(family)).setMaxVersions(3));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HRegion.createHRegion(info, TEST_UTIL.
-      getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
     try {
       List<String> rows = generateRandomWords(100, "row");
       List<String> columns = generateRandomWords(10000, "column");
@@ -101,10 +101,10 @@ public class TestColumnPrefixFilter {
         assertEquals(prefixMap.get(s).size(), results.size());
       }
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @Test
@@ -113,8 +113,8 @@ public class TestColumnPrefixFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestColumnPrefixFilter"));
     htd.addFamily((new HColumnDescriptor(family)).setMaxVersions(3));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HRegion.createHRegion(info, TEST_UTIL.
-      getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
     try {
       List<String> rows = generateRandomWords(100, "row");
       List<String> columns = generateRandomWords(10000, "column");
@@ -166,10 +166,10 @@ public class TestColumnPrefixFilter {
         assertEquals(prefixMap.get(s).size(), results.size());
       }
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

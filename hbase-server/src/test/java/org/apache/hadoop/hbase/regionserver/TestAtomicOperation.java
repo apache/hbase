@@ -538,8 +538,9 @@ public class TestAtomicOperation {
     final String tableName = "testPutAndCheckAndPut";
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setClass(HConstants.REGION_IMPL, MockHRegion.class, HeapSize.class);
-    final MockHRegion region = (MockHRegion) TEST_UTIL.createLocalHRegion(Bytes.toBytes(tableName),
-        null, null, tableName, conf, false, Durability.SYNC_WAL, null, Bytes.toBytes(family));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName))
+        .addFamily(new HColumnDescriptor(family));
+    final MockHRegion region = (MockHRegion) TEST_UTIL.createLocalHRegion(htd, null, null);
 
     Put[] puts = new Put[1];
     Put put = new Put(Bytes.toBytes("r1"));

@@ -81,14 +81,14 @@ public class TestDependentColumnFilter {
     hcd1.setMaxVersions(3);
     htd.addFamily(hcd1);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
-      TEST_UTIL.getConfiguration(), htd);
+    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
     addData();
   }
 
   @After
   public void tearDown() throws Exception {
-    HRegion.closeHRegion(this.region);
+    HBaseTestingUtility.closeRegionAndWAL(this.region);
   }
 
   private void addData() throws IOException {

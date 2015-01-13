@@ -102,7 +102,7 @@ public class TestRegionObserverStacking extends TestCase {
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
@@ -139,6 +139,7 @@ public class TestRegionObserverStacking extends TestCase {
 
     assertTrue(idA < idB);
     assertTrue(idB < idC);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
 }

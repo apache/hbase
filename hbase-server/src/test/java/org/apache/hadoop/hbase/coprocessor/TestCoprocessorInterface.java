@@ -350,6 +350,7 @@ public class TestCoprocessorInterface {
     // hence the old entry was indeed removed by the GC and new one has been created
     Object o3 = ((CoprocessorII)c2).getSharedData().get("test2");
     assertFalse(o3 == o2);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @Test
@@ -374,7 +375,7 @@ public class TestCoprocessorInterface {
     for (int i = 0; i < regions.length; i++) {
       regions[i] = reopenRegion(regions[i], CoprocessorImpl.class);
     }
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
     Coprocessor c = region.getCoprocessorHost().
       findCoprocessor(CoprocessorImpl.class.getName());
 
@@ -394,7 +395,7 @@ public class TestCoprocessorInterface {
     assertTrue(((CoprocessorImpl)c).wasSplit());
 
     for (int i = 0; i < regions.length; i++) {
-      HRegion.closeHRegion(regions[i]);
+      HBaseTestingUtility.closeRegionAndWAL(regions[i]);
       c = region.getCoprocessorHost()
             .findCoprocessor(CoprocessorImpl.class.getName());
       assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
@@ -441,7 +442,7 @@ public class TestCoprocessorInterface {
     }
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
 
     // this following piece is a hack.
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);

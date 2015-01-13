@@ -60,8 +60,8 @@ public class TestIntraRowPagination {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
     }
-    HRegion region =
-        HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
     try {
       Put put;
       Scan scan;
@@ -101,7 +101,7 @@ public class TestIntraRowPagination {
       TestScannersFromClientSide.verifyResult(result, kvListExp, toLog,
           "Testing scan with storeOffset and storeLimit");
     } finally {
-      region.close();
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 

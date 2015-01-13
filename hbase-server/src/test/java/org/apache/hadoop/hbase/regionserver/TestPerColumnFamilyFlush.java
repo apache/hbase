@@ -65,8 +65,6 @@ import com.google.common.hash.Hashing;
 public class TestPerColumnFamilyFlush {
   private static final Log LOG = LogFactory.getLog(TestPerColumnFamilyFlush.class);
 
-  HRegion region = null;
-
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static final Path DIR = TEST_UTIL.getDataTestDir("TestHRegion");
@@ -82,14 +80,14 @@ public class TestPerColumnFamilyFlush {
 
   public static final byte[] FAMILY3 = families[2];
 
-  private void initHRegion(String callingMethod, Configuration conf) throws IOException {
+  private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
     for (byte[] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
     Path path = new Path(DIR, callingMethod);
-    region = HRegion.createHRegion(info, path, conf, htd);
+    return HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
   }
 
   // A helper function to create puts.
@@ -129,7 +127,7 @@ public class TestPerColumnFamilyFlush {
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushLargeStoresPolicy.class.getName());
     conf.setLong(FlushLargeStoresPolicy.HREGION_COLUMNFAMILY_FLUSH_SIZE_LOWER_BOUND, 100 * 1024);
     // Intialize the HRegion
-    initHRegion("testSelectiveFlushWhenEnabled", conf);
+    HRegion region = initHRegion("testSelectiveFlushWhenEnabled", conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));
@@ -257,6 +255,7 @@ public class TestPerColumnFamilyFlush {
     // Since we won't find any CF above the threshold, and hence no specific
     // store to flush, we should flush all the memstores.
     assertEquals(0, region.getMemstoreSize().get());
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @Test (timeout=180000)
@@ -267,7 +266,7 @@ public class TestPerColumnFamilyFlush {
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY, FlushAllStoresPolicy.class.getName());
 
     // Intialize the HRegion
-    initHRegion("testSelectiveFlushWhenNotEnabled", conf);
+    HRegion region = initHRegion("testSelectiveFlushWhenNotEnabled", conf);
     // Add 1200 entries for CF1, 100 for CF2 and 50 for CF3
     for (int i = 1; i <= 1200; i++) {
       region.put(createPut(1, i));
@@ -312,6 +311,7 @@ public class TestPerColumnFamilyFlush {
     assertEquals(DefaultMemStore.DEEP_OVERHEAD, cf3MemstoreSize);
     assertEquals(0, totalMemstoreSize);
     assertEquals(HConstants.NO_SEQNUM, smallestSeqInRegionCurrentMemstore);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   // Find the (first) region which has the specified name.
@@ -585,7 +585,7 @@ public class TestPerColumnFamilyFlush {
       table.close();
       conn.close();
 
-      region = getRegionWithName(TABLENAME).getFirst();
+      HRegion region = getRegionWithName(TABLENAME).getFirst();
       cf1StoreFileCount1 = region.getStore(FAMILY1).getStorefilesCount();
       cf2StoreFileCount1 = region.getStore(FAMILY2).getStorefilesCount();
       cf3StoreFileCount1 = region.getStore(FAMILY3).getStorefilesCount();

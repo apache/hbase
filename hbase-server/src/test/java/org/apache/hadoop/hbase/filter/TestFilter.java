@@ -142,8 +142,8 @@ public class TestFilter {
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[1]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
-            TEST_UTIL.getConfiguration(), htd);
+    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
 
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {
@@ -217,9 +217,7 @@ public class TestFilter {
 
   @After
   public void tearDown() throws Exception {
-    WAL wal = region.getWAL();
-    region.close();
-    wal.close();
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @Test
@@ -656,8 +654,7 @@ public class TestFilter {
 
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
-   * {@link Filter} that uses the
-   * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)} method.
+   * {@link Filter} that uses the {@link Filter#filterKeyValue(Cell)} method.
    *
    * See HBASE-2258.
    *
@@ -1453,7 +1450,7 @@ public class TestFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion testRegion = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
+    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);
 
     for(int i=0; i<5; i++) {
@@ -2007,13 +2004,14 @@ public class TestFilter {
     }
   }
 
+  // TODO: intentionally disabled?
   public void testNestedFilterListWithSCVF() throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testNestedFilterListWithSCVF"));
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion testRegion = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
-      TEST_UTIL.getConfiguration(), htd);
+    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
     for(int i=0; i<10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
       p.setDurability(Durability.SKIP_WAL);

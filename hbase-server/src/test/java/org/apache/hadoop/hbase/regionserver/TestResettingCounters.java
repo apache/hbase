@@ -69,7 +69,7 @@ public class TestResettingCounters {
         throw new IOException("Failed delete of " + path);
       }
     }
-    HRegion region = HRegion.createHRegion(hri, path, conf, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, path, conf, htd);
     try {
       Increment odd = new Increment(rows[0]);
       odd.setDurability(Durability.SKIP_WAL);
@@ -100,9 +100,9 @@ public class TestResettingCounters {
         assertEquals(6, Bytes.toLong(CellUtil.cloneValue(kvs[i])));
       }
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
 }

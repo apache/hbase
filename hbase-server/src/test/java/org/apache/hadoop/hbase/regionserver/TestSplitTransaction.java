@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -248,7 +247,7 @@ public class TestSplitTransaction {
         assertTrue(count > 0 && count != rowcount);
         daughtersRowCount += count;
       } finally {
-        HRegion.closeHRegion(openRegion);
+        HBaseTestingUtility.closeRegionAndWAL(openRegion);
       }
     }
     assertEquals(rowcount, daughtersRowCount);
@@ -332,7 +331,7 @@ public class TestSplitTransaction {
         assertTrue(count > 0 && count != rowcount);
         daughtersRowCount += count;
       } finally {
-        HRegion.closeHRegion(openRegion);
+        HBaseTestingUtility.closeRegionAndWAL(openRegion);
       }
     }
     assertEquals(rowcount, daughtersRowCount);
@@ -376,8 +375,9 @@ public class TestSplitTransaction {
     HColumnDescriptor hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), STARTROW, ENDROW);
-    HRegion r = HRegion.createHRegion(hri, testdir, TEST_UTIL.getConfiguration(), htd);
-    HRegion.closeHRegion(r);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, testdir, TEST_UTIL.getConfiguration(),
+        htd);
+    HBaseTestingUtility.closeRegionAndWAL(r);
     return HRegion.openHRegion(testdir, hri, htd, wals.getWAL(hri.getEncodedNameAsBytes()),
       TEST_UTIL.getConfiguration());
   }

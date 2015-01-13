@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -273,7 +272,7 @@ public class TestWALReplay {
   /**
    * Tests for hbase-2727.
    * @throws Exception
-   * @see https://issues.apache.org/jira/browse/HBASE-2727
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-2727">HBASE-2727</a>
    */
   @Test
   public void test2727() throws Exception {
@@ -286,9 +285,8 @@ public class TestWALReplay {
     deleteDir(basedir);
 
     HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region2 = HRegion.createHRegion(hri,
-        hbaseRootDir, this.conf, htd);
-    HRegion.closeHRegion(region2);
+    HRegion region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region2);
     final byte [] rowName = tableName.getName();
 
     WAL wal1 = createWAL(this.conf);
@@ -348,9 +346,8 @@ public class TestWALReplay {
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region2 = HRegion.createHRegion(hri,
-        hbaseRootDir, this.conf, htd);
-    HRegion.closeHRegion(region2);
+    HRegion region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region2);
     WAL wal = createWAL(this.conf);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
 
@@ -415,9 +412,8 @@ public class TestWALReplay {
     final Path basedir = new Path(this.hbaseRootDir, tableName.getNameAsString());
     deleteDir(basedir);
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region2 = HRegion.createHRegion(hri,
-        hbaseRootDir, this.conf, htd);
-    HRegion.closeHRegion(region2);
+    HRegion region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region2);
     WAL wal = createWAL(this.conf);
     HRegion region = HRegion.openHRegion(hri, htd, wal, this.conf);
 
@@ -488,9 +484,8 @@ public class TestWALReplay {
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region3 = HRegion.createHRegion(hri,
-            hbaseRootDir, this.conf, htd);
-    HRegion.closeHRegion(region3);
+    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families.  Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -598,9 +593,8 @@ public class TestWALReplay {
     final byte[] rowName = tableName.getName();
     final int countPerFamily = 10;
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region3 = HRegion.createHRegion(hri,
-            hbaseRootDir, this.conf, htd);
-    HRegion.closeHRegion(region3);
+    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families.  Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -681,9 +675,8 @@ public class TestWALReplay {
     final Path basedir = FSUtils.getTableDir(this.hbaseRootDir, tableName);
     deleteDir(basedir);
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region3 = HRegion.createHRegion(hri, hbaseRootDir, this.conf, htd);
-    region3.close();
-    region3.getWAL().close();
+    HRegion region3 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region3);
     // Write countPerFamily edits into the three families. Do a flush on one
     // of the families during the load of edits so its seqid is not same as
     // others to test we do right thing when different seqids.
@@ -780,9 +773,8 @@ public class TestWALReplay {
     deleteDir(basedir);
 
     final HTableDescriptor htd = createBasic3FamilyHTD(tableName);
-    HRegion region2 = HRegion.createHRegion(hri,
-            hbaseRootDir, this.conf, htd);
-    HRegion.closeHRegion(region2);
+    HRegion region2 = HBaseTestingUtility.createRegionAndWAL(hri, hbaseRootDir, this.conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region2);
     final WAL wal = createWAL(this.conf);
     final byte[] rowName = tableName.getName();
     final byte[] regionName = hri.getEncodedNameAsBytes();

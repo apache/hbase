@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -73,8 +74,8 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     // Up flush size else we bind up when we use default catalog flush of 16k.
     fsTableDescriptors.get(TableName.META_TABLE_NAME).setMemStoreFlushSize(64 * 1024 * 1024);
 
-    HRegion mr = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-      rootdir, this.conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
+    HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
+        rootdir, this.conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
     try {
     // Write rows for three tables 'A', 'B', and 'C'.
     for (char c = 'A'; c < 'D'; c++) {
@@ -136,14 +137,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     findRow(mr, 'C', 46, -1);
     findRow(mr, 'C', 43, -1);
     } finally {
-      if (mr != null) {
-        try {
-          mr.close();
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-        mr.getWAL().close();
-      }
+      HBaseTestingUtility.closeRegionAndWAL(mr);
     }
   }
 

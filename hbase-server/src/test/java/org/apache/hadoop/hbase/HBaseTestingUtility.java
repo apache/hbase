@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
@@ -62,6 +63,8 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,6 +78,7 @@ import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -124,7 +128,7 @@ import static org.junit.Assert.fail;
  * Create an instance and keep it around testing HBase.  This class is
  * meant to be your one-stop shop for anything you might need testing.  Manages
  * one cluster at a time only. Managed cluster can be an in-process
- * {@link MiniHBaseCluster}, or a deployed cluster of type {@link DistributedHBaseCluster}.
+ * {@link MiniHBaseCluster}, or a deployed cluster of type {@code DistributedHBaseCluster}.
  * Not all methods work with the real cluster.
  * Depends on log4j being on classpath and
  * hbase-site.xml for logging and test-run configuration.  It does not set
@@ -274,6 +278,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     htu.getConfiguration().set(HConstants.HBASE_DIR, dataTestDir);
     LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
     return htu;
+  }
+
+  /**
+   * Close both the HRegion {@code r} and it's underlying WAL. For use in tests.
+   */
+  public static void closeRegionAndWAL(final HRegion r) throws IOException {
+    if (r == null) return;
+    r.close();
+    if (r.getWAL() == null) return;
+    r.getWAL().close();
   }
 
   /**
@@ -1692,13 +1706,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public static final byte [] START_KEY_BYTES = {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
   public static final String START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_CHARSET);
 
-  /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
-   * families.
-   * @param name Name to give table.
-   * @param versions How many versions to allow per column.
-   * @return Column descriptor.
-   */
   public HTableDescriptor createTableDescriptor(final String name,
       final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
@@ -1715,8 +1722,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Create a table of name <code>name</code> with {@link COLUMNS} for
-   * families.
+   * Create a table of name <code>name</code>.
    * @param name Name to give table.
    * @return Column descriptor.
    */
@@ -1741,14 +1747,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Create an HRegion that writes to the local tmp dirs
-   * @param info
-   * @param desc
-   * @return
-   * @throws IOException
+   * Create an HRegion that writes to the local tmp dirs. Creates the WAL for you. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when you're finished with it.
    */
   public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc) throws IOException {
-    return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc);
+    return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), desc);
   }
 
   /**
@@ -1774,7 +1777,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param families
    * @throws IOException
    * @return A region on which you must call
-   *         {@link HRegion#closeHRegion(HRegion)} when done.
+             {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
   public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
@@ -2108,6 +2111,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Return an md5 digest of the entire contents of a table.
    */
   public String checksumRows(final Table table) throws Exception {
+
     Scan scan = new Scan();
     ResultScanner results = table.getScanner(scan);
     MessageDigest digest = MessageDigest.getInstance("MD5");
@@ -2289,6 +2293,41 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     meta.close();
     return newRegions;
+  }
+
+  /**
+   * Create an unmanaged WAL. Be sure to close it when you're through.
+   */
+  public static WAL createWal(final Configuration conf, final Path rootDir, final HRegionInfo hri)
+      throws IOException {
+    // The WAL subsystem will use the default rootDir rather than the passed in rootDir
+    // unless I pass along via the conf.
+    Configuration confForWAL = new Configuration(conf);
+    confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
+    return (new WALFactory(confForWAL,
+        Collections.<WALActionsListener>singletonList(new MetricsWAL()),
+        "hregion-" + RandomStringUtils.randomNumeric(8))).
+        getWAL(hri.getEncodedNameAsBytes());
+  }
+
+  /**
+   * Create a region with it's own WAL. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   */
+  public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
+      final Configuration conf, final HTableDescriptor htd) throws IOException {
+    return createRegionAndWAL(info, rootDir, conf, htd, true);
+  }
+
+  /**
+   * Create a region with it's own WAL. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   */
+  public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
+      final Configuration conf, final HTableDescriptor htd, boolean initialize)
+      throws IOException {
+    WAL wal = createWal(conf, rootDir, info);
+    return HRegion.createHRegion(info, rootDir, conf, htd, wal, initialize);
   }
 
   /**
@@ -2888,7 +2927,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Waits for a table to be 'enabled'.  Enabled means that table is set as 'enabled' and the
    * regions have been all assigned.  Will timeout after default period (30 seconds)
-   * @see #waitTableAvailable(byte[])
    * @param table Table to wait on.
    * @param table
    * @throws InterruptedException
@@ -2907,7 +2945,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Waits for a table to be 'enabled'.  Enabled means that table is set as 'enabled' and the
    * regions have been all assigned.
-   * @see #waitTableAvailable(byte[])
+   * @see #waitTableEnabled(Admin, byte[], long)
    * @param table Table to wait on.
    * @param timeoutMillis Time to wait on it being marked enabled.
    * @throws InterruptedException
@@ -2960,7 +2998,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Waits for a table to be 'disabled'.  Disabled means that table is set as 'disabled'
-   * @see #waitTableAvailable(byte[])
    * @param table Table to wait on.
    * @param timeoutMillis Time to wait on it being marked disabled.
    * @throws InterruptedException
@@ -3619,9 +3656,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     htd.addFamily(hcd);
     HRegionInfo info =
         new HRegionInfo(TableName.valueOf(tableName), null, null, false);
-    HRegion region =
-        HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), htd);
-    return region;
+    return createRegionAndWAL(info, getDataTestDir(), getConfiguration(), htd);
   }
 
   public void setFileSystemURI(String fsURI) {

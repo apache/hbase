@@ -50,6 +50,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -127,8 +128,10 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescripto
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.HRegion.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestStore.FaultyFileSystem;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
@@ -253,7 +256,7 @@ public class TestHRegion {
     // Close with something in memstore and something in the snapshot.  Make sure all is cleared.
     region.close();
     assertEquals(0, region.getMemstoreSize().get());
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /*
@@ -305,7 +308,24 @@ public class TestHRegion {
     }
     long sz = store.getFlushableSize();
     assertTrue("flushable size should be zero, but it is " + sz, sz == 0);
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
+  }
+
+  /**
+   * Create a WAL outside of the usual helper in
+   * {@link HBaseTestingUtility#createWal(Configuration, Path, HRegionInfo)} because that method
+   * doesn't play nicely with FaultyFileSystem. Call this method before overriding
+   * {@code fs.file.impl}.
+   * @param callingMethod a unique component for the path, probably the name of the test method.
+   */
+  private static WAL createWALCompatibleWithFaultyFileSystem(String callingMethod,
+      Configuration conf, byte[] tableName) throws IOException {
+    final Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
+    final Configuration walConf = new Configuration(conf);
+    FSUtils.setRootDir(walConf, logDir);
+    return (new WALFactory(walConf,
+        Collections.<WALActionsListener>singletonList(new MetricsWAL()), callingMethod))
+        .getWAL(tableName);
   }
 
   /**
@@ -326,6 +346,8 @@ public class TestHRegion {
   @Test (timeout=60000)
   public void testFlushSizeAccounting() throws Exception {
     final Configuration conf = HBaseConfiguration.create(CONF);
+    final String callingMethod = name.getMethodName();
+    final WAL wal = createWALCompatibleWithFaultyFileSystem(callingMethod, conf, tableName);
     // Only retry once.
     conf.setInt("hbase.hstore.flush.retries.number", 1);
     final User user =
@@ -342,7 +364,8 @@ public class TestHRegion {
         HRegion region = null;
         try {
           // Initialize region
-          region = initHRegion(tableName, name.getMethodName(), conf, COLUMN_FAMILY_BYTES);
+          region = initHRegion(tableName, null, null, callingMethod, conf, false,
+              Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
           long size = region.getMemstoreSize().get();
           Assert.assertEquals(0, size);
           // Put one item into memstore.  Measure the size of one item in memstore.
@@ -376,7 +399,7 @@ public class TestHRegion {
           // Make sure our memory accounting is right.
           Assert.assertEquals(sizeOfOnePut * 2, region.getMemstoreSize().get());
         } finally {
-          HRegion.closeHRegion(region);
+          HBaseTestingUtility.closeRegionAndWAL(region);
         }
         return null;
       }
@@ -387,6 +410,8 @@ public class TestHRegion {
   @Test (timeout=60000)
   public void testCloseWithFailingFlush() throws Exception {
     final Configuration conf = HBaseConfiguration.create(CONF);
+    final String callingMethod = name.getMethodName();
+    final WAL wal = createWALCompatibleWithFaultyFileSystem(callingMethod, conf, tableName);
     // Only retry once.
     conf.setInt("hbase.hstore.flush.retries.number", 1);
     final User user =
@@ -403,7 +428,8 @@ public class TestHRegion {
         HRegion region = null;
         try {
           // Initialize region
-          region = initHRegion(tableName, name.getMethodName(), conf, COLUMN_FAMILY_BYTES);
+          region = initHRegion(tableName, null, null, callingMethod, conf, false,
+              Durability.SYNC_WAL, wal, COLUMN_FAMILY_BYTES);
           long size = region.getMemstoreSize().get();
           Assert.assertEquals(0, size);
           // Put one item into memstore.  Measure the size of one item in memstore.
@@ -428,7 +454,7 @@ public class TestHRegion {
         } finally {
           // Make it so all writes succeed from here on out so can close clean
           ffs.fault.set(false);
-          HRegion.closeHRegion(region);
+          HBaseTestingUtility.closeRegionAndWAL(region);
         }
         return null;
       }
@@ -561,7 +587,7 @@ public class TestHRegion {
         assertArrayEquals(Bytes.toBytes(i), CellUtil.cloneValue(kvs.get(0)));
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
       wals.close();
     }
@@ -619,7 +645,7 @@ public class TestHRegion {
         }
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
       wals.close();
     }
@@ -652,7 +678,7 @@ public class TestHRegion {
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, null);
       assertEquals(minSeqId, seqId);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -717,7 +743,7 @@ public class TestHRegion {
         region.getStores().keySet().toArray(new byte[0][])).size());
 
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
       wals.close();
     }
@@ -812,7 +838,7 @@ public class TestHRegion {
         assertArrayEquals(Bytes.toBytes(i), value);
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
       wals.close();
     }
@@ -931,7 +957,7 @@ public class TestHRegion {
         assertArrayEquals(Bytes.toBytes(i), value);
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
       wals.close();
     }
@@ -1051,7 +1077,7 @@ public class TestHRegion {
       }
 
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1092,7 +1118,7 @@ public class TestHRegion {
         }
       } finally {
         if (this.region != null) {
-          HRegion.closeHRegion(this.region);
+          HBaseTestingUtility.closeRegionAndWAL(this.region);
         }
       }
       done.set(true);
@@ -1108,7 +1134,7 @@ public class TestHRegion {
         }
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1185,7 +1211,7 @@ public class TestHRegion {
       assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3, 0,
           getNumberOfRows(keyPrefix3, value2, this.region));
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1204,7 +1230,7 @@ public class TestHRegion {
     } catch (IOException e) {
       exceptionCaught = true;
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
     assertTrue(exceptionCaught == true);
@@ -1223,7 +1249,7 @@ public class TestHRegion {
     } catch (IOException e) {
       exceptionCaught = true;
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
     assertTrue(exceptionCaught == true);
@@ -1319,7 +1345,7 @@ public class TestHRegion {
       }
       assertTrue(exception);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1360,7 +1386,7 @@ public class TestHRegion {
 
       metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 2, source);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1412,7 +1438,7 @@ public class TestHRegion {
         @Override
         public void run() {
           try {
-            HRegion.closeHRegion(region);
+            HBaseTestingUtility.closeRegionAndWAL(region);
           } catch (IOException e) {
             throw new RuntimeException(e);
           }
@@ -1448,7 +1474,7 @@ public class TestHRegion {
             codes[i].getOperationStatusCode());
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1496,7 +1522,7 @@ public class TestHRegion {
       metricsAssertHelper.assertCounter("syncTimeNumOps", syncs, source);
 
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
 
@@ -1575,7 +1601,7 @@ public class TestHRegion {
           .checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new NullComparator(), put, true);
       assertTrue(res);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1609,7 +1635,7 @@ public class TestHRegion {
           put, true);
       assertEquals(false, res);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1642,7 +1668,7 @@ public class TestHRegion {
           delete, true);
       assertEquals(true, res);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1737,7 +1763,7 @@ public class TestHRegion {
           new BinaryComparator(val3), put, true);
       assertEquals(true, res);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1784,7 +1810,7 @@ public class TestHRegion {
         assertEquals(expected[i], actual[i]);
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1804,7 +1830,7 @@ public class TestHRegion {
         // expected exception.
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1881,7 +1907,7 @@ public class TestHRegion {
       r = region.get(get);
       assertEquals(0, r.size());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1916,7 +1942,7 @@ public class TestHRegion {
       Result r = region.get(get);
       assertEquals(0, r.size());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -1960,7 +1986,7 @@ public class TestHRegion {
       }
       assertEquals("Family " + new String(family) + " does exist", true, ok);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2028,7 +2054,7 @@ public class TestHRegion {
       result = region.get(get);
       assertEquals(1, result.size());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2067,7 +2093,7 @@ public class TestHRegion {
       result = region.get(get);
       assertEquals(0, result.size());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2117,7 +2143,7 @@ public class TestHRegion {
       assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
           kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
 
@@ -2152,7 +2178,7 @@ public class TestHRegion {
       }
       assertTrue("Should catch FailedSanityCheckException", caughtExcep);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2194,7 +2220,7 @@ public class TestHRegion {
       s.next(results);
       assertTrue(CellUtil.matchingRow(results.get(0), rowB));
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2253,7 +2279,7 @@ public class TestHRegion {
       assertArrayEquals(qual1, CellUtil.cloneQualifier(kv));
       assertArrayEquals(row, CellUtil.cloneRow(kv));
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2293,7 +2319,7 @@ public class TestHRegion {
         now = cell.getTimestamp();
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2324,7 +2350,7 @@ public class TestHRegion {
       }
       assertFalse(true);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2376,7 +2402,7 @@ public class TestHRegion {
       res = region.get(g);
       assertEquals(count, res.size());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2395,7 +2421,7 @@ public class TestHRegion {
 
       assertTrue(r.isEmpty());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2438,14 +2464,14 @@ public class TestHRegion {
       } finally {
         for (int i = 0; i < subregions.length; i++) {
           try {
-            HRegion.closeHRegion(subregions[i]);
+            HBaseTestingUtility.closeRegionAndWAL(subregions[i]);
           } catch (IOException e) {
             // Ignore.
           }
         }
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2511,7 +2537,7 @@ public class TestHRegion {
         assertTrue("Families could not be found in Region", false);
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2537,7 +2563,7 @@ public class TestHRegion {
       }
       assertTrue("Families could not be found in Region", ok);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2581,7 +2607,7 @@ public class TestHRegion {
       is = (RegionScannerImpl) region.getScanner(scan);
       assertEquals(families.length - 1, ((RegionScannerImpl) is).storeHeap.getHeap().size());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2618,7 +2644,7 @@ public class TestHRegion {
             + e.getMessage());
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2684,7 +2710,7 @@ public class TestHRegion {
         assertTrue(CellComparator.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2743,7 +2769,7 @@ public class TestHRegion {
         assertEquals(expected.get(i), actual.get(i));
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2806,7 +2832,7 @@ public class TestHRegion {
         assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2888,7 +2914,7 @@ public class TestHRegion {
         assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -2949,7 +2975,7 @@ public class TestHRegion {
         assertEquals(expected.get(i), actual.get(i));
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3010,7 +3036,7 @@ public class TestHRegion {
         assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3058,7 +3084,7 @@ public class TestHRegion {
       assertEquals(false, s.next(results));
       assertEquals(0, results.size());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3137,7 +3163,7 @@ public class TestHRegion {
         assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3206,7 +3232,7 @@ public class TestHRegion {
       assertFalse(s.next(results));
       assertEquals(results.size(), 0);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3301,7 +3327,7 @@ public class TestHRegion {
           break;
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3395,7 +3421,7 @@ public class TestHRegion {
         }
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3434,7 +3460,7 @@ public class TestHRegion {
       verifyData(regions[1], splitRow, numRows, qualifier, families);
 
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3502,7 +3528,7 @@ public class TestHRegion {
       verifyData(regions[1], splitRow, numRows, qualifier, families);
 
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3574,7 +3600,7 @@ public class TestHRegion {
       flushThread.join();
       flushThread.checkNoError();
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3708,7 +3734,7 @@ public class TestHRegion {
       flushThread.checkNoError();
     } finally {
       try {
-        HRegion.closeHRegion(this.region);
+        HBaseTestingUtility.closeRegionAndWAL(this.region);
       } catch (DroppedSnapshotException dse) {
         // We could get this on way out because we interrupt the background flusher and it could
         // fail anywhere causing a DSE over in the background flusher... only it is not properly
@@ -3735,11 +3761,11 @@ public class TestHRegion {
     }
 
     /**
-     * Block until this thread has put at least one row.
+     * Block calling thread until this instance of PutThread has put at least one row.
      */
     public void waitForFirstPut() throws InterruptedException {
       // wait until put thread actually puts some data
-      while (numPutsFinished == 0) {
+      while (isAlive() && numPutsFinished == 0) {
         checkNoError();
         Thread.sleep(50);
       }
@@ -3909,7 +3935,7 @@ public class TestHRegion {
       }
 
       ctx.stop();
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3932,7 +3958,7 @@ public class TestHRegion {
       g = new Get(row);
       region.get(g);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -3971,7 +3997,7 @@ public class TestHRegion {
         ;
       assertEquals(1L, res.size());
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -4032,7 +4058,7 @@ public class TestHRegion {
         assertEquals(num_unique_rows, reader.getFilterEntries());
       }
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -4075,7 +4101,7 @@ public class TestHRegion {
       checkOneCell(kvs[2], FAMILY, 0, 0, 2);
       checkOneCell(kvs[3], FAMILY, 0, 0, 1);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -4118,7 +4144,7 @@ public class TestHRegion {
       Cell[] keyValues = region.get(get).rawCells();
       assertTrue(keyValues.length == 0);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -4228,7 +4254,7 @@ public class TestHRegion {
         }
       }
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -4246,11 +4272,10 @@ public class TestHRegion {
     HRegionInfo hri = new HRegionInfo(htd.getTableName());
 
     // Create a region and skip the initialization (like CreateTableHandler)
-    HRegion region = HRegion.createHRegion(hri, rootDir, CONF, htd, null, false, true);
-//    HRegion region = TEST_UTIL.createLocalHRegion(hri, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(hri, rootDir, CONF, htd, false);
     Path regionDir = region.getRegionFileSystem().getRegionDir();
     FileSystem fs = region.getRegionFileSystem().getFileSystem();
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
 
     Path regionInfoFile = new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE);
 
@@ -4261,7 +4286,7 @@ public class TestHRegion {
     // Try to open the region
     region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
     assertEquals(regionDir, region.getRegionFileSystem().getRegionDir());
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
 
     // Verify that the .regioninfo file is still there
     assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
@@ -4275,7 +4300,7 @@ public class TestHRegion {
     region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
 //    region = TEST_UTIL.openHRegion(hri, htd);
     assertEquals(regionDir, region.getRegionFileSystem().getRegionDir());
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
 
     // Verify that the .regioninfo file is still there
     assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
@@ -4621,7 +4646,7 @@ public class TestHRegion {
       verify(wal, never()).sync();
     }
 
-    HRegion.closeHRegion(this.region);
+    HBaseTestingUtility.closeRegionAndWAL(this.region);
     this.region = null;
   }
 
@@ -4652,8 +4677,8 @@ public class TestHRegion {
     HRegion primaryRegion = null, secondaryRegion = null;
 
     try {
-      primaryRegion = HRegion.createHRegion(primaryHri,
-        rootDir, TEST_UTIL.getConfiguration(), htd);
+      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
+          rootDir, TEST_UTIL.getConfiguration(), htd);
 
       // load some data
       putData(primaryRegion, 0, 1000, cq, families);
@@ -4667,10 +4692,10 @@ public class TestHRegion {
       verifyData(secondaryRegion, 0, 1000, cq, families);
     } finally {
       if (primaryRegion != null) {
-        HRegion.closeHRegion(primaryRegion);
+        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
       }
       if (secondaryRegion != null) {
-        HRegion.closeHRegion(secondaryRegion);
+        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
       }
     }
   }
@@ -4702,8 +4727,8 @@ public class TestHRegion {
     HRegion primaryRegion = null, secondaryRegion = null;
 
     try {
-      primaryRegion = HRegion.createHRegion(primaryHri,
-        rootDir, TEST_UTIL.getConfiguration(), htd);
+      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
+          rootDir, TEST_UTIL.getConfiguration(), htd);
 
       // load some data
       putData(primaryRegion, 0, 1000, cq, families);
@@ -4722,10 +4747,10 @@ public class TestHRegion {
       }
     } finally {
       if (primaryRegion != null) {
-        HRegion.closeHRegion(primaryRegion);
+        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
       }
       if (secondaryRegion != null) {
-        HRegion.closeHRegion(secondaryRegion);
+        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
       }
     }
   }
@@ -4755,8 +4780,8 @@ public class TestHRegion {
     HRegion primaryRegion = null, secondaryRegion = null;
 
     try {
-      primaryRegion = HRegion.createHRegion(primaryHri,
-        rootDir, TEST_UTIL.getConfiguration(), htd);
+      primaryRegion = HBaseTestingUtility.createRegionAndWAL(primaryHri,
+          rootDir, TEST_UTIL.getConfiguration(), htd);
 
       // load some data
       putData(primaryRegion, 0, 1000, cq, families);
@@ -4776,10 +4801,10 @@ public class TestHRegion {
       verifyData(secondaryRegion, 0, 1000, cq, families);
     } finally {
       if (primaryRegion != null) {
-        HRegion.closeHRegion(primaryRegion);
+        HBaseTestingUtility.closeRegionAndWAL(primaryRegion);
       }
       if (secondaryRegion != null) {
-        HRegion.closeHRegion(secondaryRegion);
+        HBaseTestingUtility.closeRegionAndWAL(secondaryRegion);
       }
     }
   }
@@ -4930,9 +4955,9 @@ public class TestHRegion {
    * @param families
    * @throws IOException
    * @return A region on which you must call
-   *         {@link HRegion#closeHRegion(HRegion)} when done.
+   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
-  public static HRegion initHRegion(TableName tableName, String callingMethod, Configuration conf,
+  private static HRegion initHRegion(TableName tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
     return initHRegion(tableName.getName(), null, null, callingMethod, conf, false, families);
   }
@@ -4944,9 +4969,9 @@ public class TestHRegion {
    * @param families
    * @throws IOException
    * @return A region on which you must call
-   *         {@link HRegion#closeHRegion(HRegion)} when done.
+   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
-  public static HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
+  private static HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
     return initHRegion(tableName, null, null, callingMethod, conf, false, families);
   }
@@ -4959,9 +4984,9 @@ public class TestHRegion {
    * @param families
    * @throws IOException
    * @return A region on which you must call
-   *         {@link HRegion#closeHRegion(HRegion)} when done.
+   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
-  public static HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
+  private static HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       boolean isReadOnly, byte[]... families) throws IOException {
     return initHRegion(tableName, null, null, callingMethod, conf, isReadOnly, families);
   }
@@ -4969,8 +4994,11 @@ public class TestHRegion {
   private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
       throws IOException {
+    Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf(tableName), startKey, stopKey);
+    final WAL wal = HBaseTestingUtility.createWal(conf, logDir, hri);
     return initHRegion(tableName, startKey, stopKey, callingMethod, conf, isReadOnly,
-        Durability.SYNC_WAL, null, families);
+        Durability.SYNC_WAL, wal, families);
   }
 
   /**
@@ -4983,7 +5011,7 @@ public class TestHRegion {
    * @param families
    * @throws IOException
    * @return A region on which you must call
-   *         {@link HRegion#closeHRegion(HRegion)} when done.
+   *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
   private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
@@ -5060,7 +5088,7 @@ public class TestHRegion {
       assertFalse(hasNext);
       scanner.close();
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -5117,7 +5145,7 @@ public class TestHRegion {
       assertFalse(hasNext);
       scanner.close();
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -5171,7 +5199,7 @@ public class TestHRegion {
       assertFalse(hasNext);
       scanner.close();
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -5249,7 +5277,7 @@ public class TestHRegion {
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
       scanner.close();
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -5329,7 +5357,7 @@ public class TestHRegion {
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
       scanner.close();
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -5490,7 +5518,7 @@ public class TestHRegion {
 
       scanner.close();
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -5564,7 +5592,7 @@ public class TestHRegion {
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row1));
       assertFalse(hasNext);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -5659,7 +5687,7 @@ public class TestHRegion {
       assertEquals(verify, startRow - 1);
       scanner.close();
     } finally {
-      HRegion.closeHRegion(this.region);
+      this.region.close();
       this.region = null;
     }
   }
@@ -5686,7 +5714,7 @@ public class TestHRegion {
     region.delete(new Delete(row));
     Assert.assertEquals(4L, region.getWriteRequestsCount());
 
-    HRegion.closeHRegion(this.region);
+    HBaseTestingUtility.closeRegionAndWAL(this.region);
     this.region = null;
   }
 
@@ -5706,14 +5734,14 @@ public class TestHRegion {
 
     // open the region w/o rss and wal and flush some files
     HRegion region =
-         HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL
-            .getConfiguration(), htd);
+         HBaseTestingUtility.createRegionAndWAL(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL
+             .getConfiguration(), htd);
     assertNotNull(region);
 
     // create a file in fam1 for the region before opening in OpenRegionHandler
     region.put(new Put(Bytes.toBytes("a")).add(fam1, fam1, fam1));
     region.flushcache();
-    region.close();
+    HBaseTestingUtility.closeRegionAndWAL(region);
 
     ArgumentCaptor<WALEdit> editCaptor = ArgumentCaptor.forClass(WALEdit.class);
 
@@ -5757,7 +5785,7 @@ public class TestHRegion {
       assertEquals(0, store.getStoreFileCount()); // no store files
 
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -5867,7 +5895,7 @@ public class TestHRegion {
       } catch (Throwable e) {
       }
 
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
       region = null;
       CONF.setLong("hbase.busy.wait.duration", defaultBusyWaitDuration);
     }
@@ -5892,9 +5920,9 @@ public class TestHRegion {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
 
-    HRegion region = HRegion.createHRegion(new HRegionInfo(htd.getTableName(),
-        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
-      TEST_UTIL.getDataTestDir(), conf, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(new HRegionInfo(htd.getTableName(),
+            HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
+        TEST_UTIL.getDataTestDir(), conf, htd);
     assertNotNull(region);
     try {
       long now = EnvironmentEdgeManager.currentTime();
@@ -5996,7 +6024,7 @@ public class TestHRegion {
       assertNull(r.getValue(fam1, q1));
 
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 

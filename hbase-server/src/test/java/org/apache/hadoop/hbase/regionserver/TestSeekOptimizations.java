@@ -439,7 +439,7 @@ public class TestSeekOptimizations {
   @After
   public void tearDown() throws IOException {
     if (region != null) {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
 
     // We have to re-set the lazy seek flag back to the default so that other

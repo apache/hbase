@@ -513,9 +513,9 @@ public class MasterFileSystem {
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
       HTableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
       setInfoFamilyCachingForMeta(metaDescriptor, false);
-      HRegion meta = HRegion.createHRegion(metaHRI, rd, c, metaDescriptor);
+      HRegion meta = HRegion.createHRegion(metaHRI, rd, c, metaDescriptor, null);
       setInfoFamilyCachingForMeta(metaDescriptor, true);
-      HRegion.closeHRegion(meta);
+      meta.close();
     } catch (IOException e) {
         e = e instanceof RemoteException ?
                 ((RemoteException)e).unwrapRemoteException() : e;

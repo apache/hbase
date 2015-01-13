@@ -105,7 +105,7 @@ public class TestMinVersions {
       r = region.getClosestRowBefore(T2, c0);
       checkResult(r, c0, T4);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -162,7 +162,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3,T2,T1);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -221,7 +221,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -296,7 +296,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T5,T4);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -388,7 +388,7 @@ public class TestMinVersions {
       r = region.get(g);
       assertTrue(r.isEmpty());
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -463,7 +463,7 @@ public class TestMinVersions {
       r = region.get(g);
       checkResult(r, c0, T2);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 

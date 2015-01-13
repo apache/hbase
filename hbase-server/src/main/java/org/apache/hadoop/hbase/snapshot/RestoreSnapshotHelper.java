@@ -506,7 +506,7 @@ public class RestoreSnapshotHelper {
     }
 
     // create the regions on disk
-    ModifyRegionUtils.createRegions(exec, conf, rootDir, tableDir,
+    ModifyRegionUtils.createRegions(exec, conf, rootDir,
       tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
         @Override
         public void fillRegion(final HRegion region) throws IOException {
@@ -552,7 +552,7 @@ public class RestoreSnapshotHelper {
    * </ul>
    * @param familyDir destination directory for the store file
    * @param regionInfo destination region info for the table
-   * @param hfileName store file name (can be a Reference, HFileLink or simple HFile)
+   * @param storeFile store file name (can be a Reference, HFileLink or simple HFile)
    */
   private void restoreStoreFile(final Path familyDir, final HRegionInfo regionInfo,
       final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
@@ -582,7 +582,7 @@ public class RestoreSnapshotHelper {
    * </pre></blockquote>
    * @param familyDir destination directory for the store file
    * @param regionInfo destination region info for the table
-   * @param hfileName reference file name
+   * @param storeFile reference file name
    */
   private void restoreReferenceFile(final Path familyDir, final HRegionInfo regionInfo,
       final SnapshotRegionManifest.StoreFile storeFile) throws IOException {

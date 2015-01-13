@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -68,10 +67,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -395,7 +390,7 @@ public class TestFSHLog {
    * flush.  The addition of the sync over HRegion in flush should fix an issue where flush was
    * returning before all of its appends had made it out to the WAL (HBASE-11109).
    * @throws IOException
-   * @see HBASE-11109
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-11109">HBASE-11109</a>
    */
   @Test
   public void testFlushSequenceIdIsGreaterThanAllEditsInHFile() throws IOException {
@@ -405,9 +400,9 @@ public class TestFSHLog {
     final byte[] rowName = tableName.getName();
     final HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("f"));
-    HRegion r = HRegion.createHRegion(hri, TEST_UTIL.getDefaultRootDirPath(),
-      TEST_UTIL.getConfiguration(), htd);
-    HRegion.closeHRegion(r);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, TEST_UTIL.getDefaultRootDirPath(),
+        TEST_UTIL.getConfiguration(), htd);
+    HBaseTestingUtility.closeRegionAndWAL(r);
     final int countPerFamily = 10;
     final MutableBoolean goslow = new MutableBoolean(false);
     // subclass and doctor a method.

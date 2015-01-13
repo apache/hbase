@@ -68,7 +68,7 @@ public class TestInvocationRecordFilter {
         TableName.valueOf(TABLE_NAME_BYTES));
     htd.addFamily(new HColumnDescriptor(FAMILY_NAME_BYTES));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
+    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);
 
     Put put = new Put(ROW_BYTES);

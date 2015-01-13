@@ -162,7 +162,7 @@ public class TestScanner {
       assertTrue(count > 10);
       s.close();
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -215,7 +215,7 @@ public class TestScanner {
       rowInclusiveStopFilter(scan, stopRow);
 
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -242,7 +242,7 @@ public class TestScanner {
         return;
       }
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -355,7 +355,7 @@ public class TestScanner {
 
     } finally {
       // clean up
-      HRegion.closeHRegion(r);
+      HBaseTestingUtility.closeRegionAndWAL(r);
     }
   }
 
@@ -475,7 +475,7 @@ public class TestScanner {
       LOG.error("Failed", e);
       throw e;
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -498,7 +498,7 @@ public class TestScanner {
       LOG.error("Failed", e);
       throw e;
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -555,7 +555,7 @@ public class TestScanner {
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 

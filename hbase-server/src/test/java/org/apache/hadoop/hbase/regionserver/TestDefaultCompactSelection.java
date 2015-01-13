@@ -97,8 +97,8 @@ public class TestDefaultCompactSelection extends TestCase {
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
     wals = new WALFactory(walConf, null, id);
-    region = HRegion.createHRegion(info, basedir, conf, htd);
-    HRegion.closeHRegion(region);
+    region = HBaseTestingUtility.createRegionAndWAL(info, basedir, conf, htd);
+    HBaseTestingUtility.closeRegionAndWAL(region);
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
     region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes()), fs, conf, info, htd,
         null);

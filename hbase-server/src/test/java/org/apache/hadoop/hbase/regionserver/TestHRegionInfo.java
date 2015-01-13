@@ -65,11 +65,11 @@ public class TestHRegionInfo {
     Path basedir = htu.getDataTestDir();
     // Create a region.  That'll write the .regioninfo file.
     FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(htu.getConfiguration());
-    HRegion r = HRegion.createHRegion(hri, basedir, htu.getConfiguration(),
-      fsTableDescriptors.get(TableName.META_TABLE_NAME));
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, basedir, htu.getConfiguration(),
+        fsTableDescriptors.get(TableName.META_TABLE_NAME));
     // Get modtime on the file.
     long modtime = getModTime(r);
-    HRegion.closeHRegion(r);
+    HBaseTestingUtility.closeRegionAndWAL(r);
     Thread.sleep(1001);
     r = HRegion.openHRegion(basedir, hri, fsTableDescriptors.get(TableName.META_TABLE_NAME),
         null, htu.getConfiguration());
@@ -80,6 +80,7 @@ public class TestHRegionInfo {
     HRegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
         r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
     assertTrue(hri.equals(deserializedHri));
+    HBaseTestingUtility.closeRegionAndWAL(r);
   }
 
   long getModTime(final HRegion r) throws IOException {

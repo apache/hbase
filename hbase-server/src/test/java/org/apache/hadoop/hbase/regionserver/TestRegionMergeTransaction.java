@@ -248,7 +248,7 @@ public class TestRegionMergeTransaction {
       assertEquals((rowCountOfRegionA + rowCountOfRegionB),
           mergedRegionRowCount);
     } finally {
-      HRegion.closeHRegion(mergedRegion);
+      HBaseTestingUtility.closeRegionAndWAL(mergedRegion);
     }
     // Assert the write lock is no longer held on region_a and region_b
     assertTrue(!this.region_a.lock.writeLock().isHeldByCurrentThread());
@@ -308,7 +308,7 @@ public class TestRegionMergeTransaction {
       assertEquals((rowCountOfRegionA + rowCountOfRegionB),
           mergedRegionRowCount);
     } finally {
-      HRegion.closeHRegion(mergedRegion);
+      HBaseTestingUtility.closeRegionAndWAL(mergedRegion);
     }
     // Assert the write lock is no longer held on region_a and region_b
     assertTrue(!this.region_a.lock.writeLock().isHeldByCurrentThread());
@@ -412,9 +412,9 @@ public class TestRegionMergeTransaction {
     HColumnDescriptor hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), startrow, endrow);
-    HRegion a = HRegion.createHRegion(hri, testdir,
+    HRegion a = HBaseTestingUtility.createRegionAndWAL(hri, testdir,
         TEST_UTIL.getConfiguration(), htd);
-    HRegion.closeHRegion(a);
+    HBaseTestingUtility.closeRegionAndWAL(a);
     return HRegion.openHRegion(testdir, hri, htd, wals.getWAL(hri.getEncodedNameAsBytes()),
         TEST_UTIL.getConfiguration());
   }

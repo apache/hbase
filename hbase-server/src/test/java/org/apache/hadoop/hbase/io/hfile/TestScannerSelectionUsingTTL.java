@@ -107,7 +107,8 @@ public class TestScannerSelectionUsingTTL {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(TABLE);
     HRegion region =
-        HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(info.getEncodedName()),
+        HBaseTestingUtility.createRegionAndWAL(info,
+            TEST_UTIL.getDataTestDir(info.getEncodedName()),
             conf, htd);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -157,6 +158,6 @@ public class TestScannerSelectionUsingTTL {
       region.compactStores();
     }
 
-    region.close();
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 }

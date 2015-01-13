@@ -74,12 +74,12 @@ public class TestPrefixTree {
     htd.addFamily(new HColumnDescriptor(fam).setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE));
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Path path = testUtil.getDataTestDir(getClass().getSimpleName());
-    region = HRegion.createHRegion(info, path, testUtil.getConfiguration(), htd);
+    region = HBaseTestingUtility.createRegionAndWAL(info, path, testUtil.getConfiguration(), htd);
   }
 
   @After
   public void tearDown() throws Exception {
-    region.close(true);
+    HBaseTestingUtility.closeRegionAndWAL(region);
     testUtil.cleanupTestDir();
   }
 

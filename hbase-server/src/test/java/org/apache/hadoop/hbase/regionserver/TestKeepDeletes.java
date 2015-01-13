@@ -179,7 +179,7 @@ public class TestKeepDeletes {
     checkResult(r, c0, c0, T1);
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -229,7 +229,7 @@ public class TestKeepDeletes {
     scan.next(kvs);
     assertTrue(kvs.isEmpty());
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -274,7 +274,7 @@ public class TestKeepDeletes {
     // major compaction deleted it
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -298,7 +298,7 @@ public class TestKeepDeletes {
       // ok!
     }
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -388,7 +388,7 @@ public class TestKeepDeletes {
     assertTrue(CellUtil.isDelete(kvs.get(1)));
 
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -431,7 +431,7 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -494,7 +494,7 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -572,7 +572,7 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(1, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -652,7 +652,7 @@ public class TestKeepDeletes {
     checkGet(region, T2, c1, c0, ts+3, T2, T1);
     checkGet(region, T2, c1, c1, ts+3, T2, T1);
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -747,7 +747,7 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(1, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -797,7 +797,7 @@ public class TestKeepDeletes {
     assertEquals(4, kvs.size());
     scanner.close();
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -876,7 +876,7 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -921,7 +921,7 @@ public class TestKeepDeletes {
     // all delete marker gone
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   private void checkGet(HRegion region, byte[] row, byte[] fam, byte[] col,

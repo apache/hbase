@@ -90,7 +90,7 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   /**
-   * Callers must afterward call {@link HRegion#closeHRegion(HRegion)}
+   * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
    * @param tableName
    * @param callingMethod
    * @param conf
@@ -112,7 +112,7 @@ public class TestBlocksRead extends HBaseTestCase {
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
     blockCache = new CacheConfig(conf).getBlockCache();
     return r;
   }
@@ -265,7 +265,7 @@ public class TestBlocksRead extends HBaseTestCase {
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col5", 5);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -374,7 +374,7 @@ public class TestBlocksRead extends HBaseTestCase {
       verifyData(kvs[1], "row", "col2", 12);
       verifyData(kvs[2], "row", "col3", 13);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -423,7 +423,7 @@ public class TestBlocksRead extends HBaseTestCase {
     
       assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -450,7 +450,7 @@ public class TestBlocksRead extends HBaseTestCase {
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col99", 201);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }

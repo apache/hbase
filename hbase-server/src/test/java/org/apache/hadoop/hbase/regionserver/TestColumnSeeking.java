@@ -158,10 +158,10 @@ public class TestColumnSeeking {
         assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
       }
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @SuppressWarnings("unchecked")
@@ -270,7 +270,7 @@ public class TestColumnSeeking {
       assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
     }
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {
