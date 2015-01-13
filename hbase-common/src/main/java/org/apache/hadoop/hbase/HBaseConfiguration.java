@@ -91,6 +91,10 @@ public class HBaseConfiguration extends Configuration {
    */
   public static Configuration create() {
     Configuration conf = new Configuration();
+    // In case HBaseConfiguration is loaded from a different classloader than
+    // Configuration, conf needs to be set with appropriate class loader to resolve
+    // HBase resources.
+    conf.setClassLoader(HBaseConfiguration.class.getClassLoader());
     return addHbaseResources(conf);
   }
 
