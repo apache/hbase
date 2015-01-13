@@ -32,8 +32,8 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
@@ -52,6 +52,8 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.MultiRowRangeFilter;
+import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
 import org.apache.hadoop.hbase.filter.MultipleColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PageFilter;
@@ -212,6 +214,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     @XmlAttribute public Boolean dropDependentColumn;
     @XmlAttribute public Float chance;
     @XmlElement public List<String> prefixes;
+    @XmlElement private List<RowRange> ranges;
     @XmlElement public List<Long> timestamps;
 
     static enum FilterType {
@@ -226,6 +229,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
       InclusiveStopFilter,
       KeyOnlyFilter,
       MultipleColumnPrefixFilter,
+      MultiRowRangeFilter,
       PageFilter,
       PrefixFilter,
       QualifierFilter,
@@ -291,6 +295,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           this.prefixes = new ArrayList<String>();
           for (byte[] prefix: ((MultipleColumnPrefixFilter)filter).getPrefix()) {
             this.prefixes.add(Base64.encodeBytes(prefix));
+          }
+          break;
+        case MultiRowRangeFilter:
+          this.ranges = new ArrayList<RowRange>();
+          for(RowRange range : ((MultiRowRangeFilter)filter).getRowRanges()) {
+            this.ranges.add(new RowRange(range.getStartRow(), range.isStartRowInclusive(),
+                range.getStopRow(), range.isStopRowInclusive()));
           }
           break;
         case PageFilter:
@@ -393,6 +404,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
           values[i] = Base64.decode(prefixes.get(i));
         }
         filter = new MultipleColumnPrefixFilter(values);
+      } break;
+      case MultiRowRangeFilter: {
+        try {
+          filter = new MultiRowRangeFilter(ranges);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       } break;
       case PageFilter:
         filter = new PageFilter(Long.valueOf(value));
