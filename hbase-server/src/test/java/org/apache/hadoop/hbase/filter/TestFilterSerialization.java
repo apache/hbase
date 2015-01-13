@@ -21,10 +21,13 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -319,4 +322,16 @@ public class TestFilterSerialization {
       ProtobufUtil.toFilter(ProtobufUtil.toFilter(whileMatchFilter))));
   }
 
+  @Test
+  public void testMultiRowRangeFilter() throws Exception {
+    List<RowRange> ranges = new ArrayList<RowRange>();
+    ranges.add(new RowRange(Bytes.toBytes(30), true, Bytes.toBytes(40), false));
+    ranges.add(new RowRange(Bytes.toBytes(10), true, Bytes.toBytes(20), false));
+    ranges.add(new RowRange(Bytes.toBytes(60), true, Bytes.toBytes(70), false));
+
+    MultiRowRangeFilter multiRowRangeFilter =
+      new MultiRowRangeFilter(ranges);
+    assertTrue(multiRowRangeFilter.areSerializedFieldsEqual(
+      ProtobufUtil.toFilter(ProtobufUtil.toFilter(multiRowRangeFilter))));
+  }
 }
