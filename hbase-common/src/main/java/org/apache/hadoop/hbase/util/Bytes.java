@@ -1785,6 +1785,18 @@ public class Bytes {
   }
 
   /**
+   * @param t operands
+   * @return Array of binary byte arrays made from passed array of binary strings
+   */
+  public static byte[][] toBinaryByteArrays(final String[] t) {
+    byte[][] result = new byte[t.length][];
+    for (int i = 0; i < t.length; i++) {
+      result[i] = Bytes.toBytesBinary(t[i]);
+    }
+    return result;
+  }
+
+  /**
    * @param column operand
    * @return A byte array of a byte array where first and only entry is
    * <code>column</code>
