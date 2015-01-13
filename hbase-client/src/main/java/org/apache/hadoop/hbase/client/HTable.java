@@ -179,7 +179,7 @@ public class HTable implements HTableInterface {
       this.connection = null;
       return;
     }
-    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
+    this.connection = ConnectionManager.getConnectionInternal(conf);
     this.configuration = conf;
 
     this.pool = getDefaultExecutor(conf);
@@ -251,7 +251,7 @@ public class HTable implements HTableInterface {
   @Deprecated
   public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
       throws IOException {
-    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
+    this.connection = ConnectionManager.getConnectionInternal(conf);
     this.configuration = conf;
     this.pool = pool;
     if (pool == null) {
