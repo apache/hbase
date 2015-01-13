@@ -2168,7 +2168,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       HConnection conn = table.getConnection();
       conn.clearRegionCache();
       // assign all the new regions IF table is enabled.
-      Admin admin = conn.getAdmin();
+      Admin admin = getHBaseAdmin();
       if (admin.isTableEnabled(table.getName())) {
         for(HRegionInfo hri : newRegions) {
           admin.assign(hri.getRegionName());
