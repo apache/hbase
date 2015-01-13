@@ -933,10 +933,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     Path hfofDir = new Path(dirPath);
-    Connection connection = ConnectionFactory.createConnection(getConf());
-    HTable table = (HTable) connection.getTable(tableName);
 
-    doBulkLoad(hfofDir, table);
+    try (Connection connection = ConnectionFactory.createConnection(getConf());
+        HTable table = (HTable) connection.getTable(tableName);) {
+      doBulkLoad(hfofDir, table);
+    }
+    
     return 0;
   }
 
