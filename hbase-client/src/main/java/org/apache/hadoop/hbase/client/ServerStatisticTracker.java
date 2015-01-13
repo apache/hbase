@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @InterfaceAudience.Private
 public class ServerStatisticTracker {
 
-  private final Map<ServerName, ServerStatistics> stats =
+  private final ConcurrentHashMap<ServerName, ServerStatistics> stats =
       new ConcurrentHashMap<ServerName, ServerStatistics>();
 
   public void updateRegionStats(ServerName server, byte[] region, ClientProtos.RegionLoadStats
@@ -42,14 +42,15 @@ public class ServerStatisticTracker {
     ServerStatistics stat = stats.get(server);
 
     if (stat == null) {
-      // create a stats object and update the stats
-      synchronized (this) {
-        stat = stats.get(server);
-        // we don't have stats for that server yet, so we need to make some
-        if (stat == null) {
-          stat = new ServerStatistics();
-          stats.put(server, stat);
-        }
+      stat = stats.get(server);
+      // We don't have stats for that server yet, so we need to make an entry.
+      // If we race with another thread it's a harmless unnecessary allocation.
+      if (stat == null) {
+        stat = new ServerStatistics();
+        ServerStatistics old = stats.putIfAbsent(server, stat);
+        if (old != null) {
+          stat = old;
+	}
       }
     }
     stat.update(region, currentStats);
