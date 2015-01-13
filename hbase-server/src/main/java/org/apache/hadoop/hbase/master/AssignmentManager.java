@@ -450,8 +450,9 @@ public class AssignmentManager {
         Map<String, RegionState> regionsInTransition = regionStates.getRegionsInTransition();
         if (!regionsInTransition.isEmpty()) {
           for (RegionState regionState: regionsInTransition.values()) {
+            ServerName serverName = regionState.getServerName();
             if (!regionState.getRegion().isMetaRegion()
-                && onlineServers.contains(regionState.getServerName())) {
+                && serverName != null && onlineServers.contains(serverName)) {
               LOG.debug("Found " + regionState + " in RITs");
               failover = true;
               break;
@@ -1694,18 +1695,23 @@ public class AssignmentManager {
   /**
    * Processes list of regions in transition at startup
    */
-  void processRegionsInTransition(Collection<RegionState> regionStates) {
+  void processRegionsInTransition(Collection<RegionState> regionsInTransition) {
     // We need to send RPC call again for PENDING_OPEN/PENDING_CLOSE regions
     // in case the RPC call is not sent out yet before the master was shut down
     // since we update the state before we send the RPC call. We can't update
     // the state after the RPC call. Otherwise, we don't know what's happened
     // to the region if the master dies right after the RPC call is out.
-    for (RegionState regionState: regionStates) {
-      if (!serverManager.isServerOnline(regionState.getServerName())) {
+    for (RegionState regionState: regionsInTransition) {
+      LOG.info("Processing " + regionState);
+      ServerName serverName = regionState.getServerName();
+      // Server could be null in case of FAILED_OPEN when master cannot find a region plan. In that
+      // case, try assigning it here.
+      if (serverName != null && !serverManager.getOnlineServers().containsKey(serverName)) {
+        LOG.info("Server " + serverName + " isn't online. SSH will handle this");
         continue; // SSH will handle it
       }
+      HRegionInfo regionInfo = regionState.getRegion();
       RegionState.State state = regionState.getState();
-      LOG.info("Processing " + regionState);
       switch (state) {
       case CLOSED:
         invokeAssign(regionState.getRegion());
@@ -1715,6 +1721,10 @@ public class AssignmentManager {
         break;
       case PENDING_CLOSE:
         retrySendRegionClose(regionState);
+        break;
+      case FAILED_CLOSE:
+      case FAILED_OPEN:
+        invokeUnAssign(regionInfo);
         break;
       default:
         // No process for other states
