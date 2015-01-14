@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
@@ -98,6 +97,8 @@ public class TestAssignmentManagerOnCluster {
       MyRegionObserver.class, RegionObserver.class);
     // Reduce the maximum attempts to speed up the test
     conf.setInt("hbase.assignment.maximum.attempts", 3);
+    conf.setInt("hbase.master.maximum.ping.server.attempts", 3);
+    conf.setInt("hbase.master.ping.server.retry.sleep.interval", 1);
 
     TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, MyRegionServer.class);
     admin = TEST_UTIL.getHBaseAdmin();
@@ -205,7 +206,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-  
+
   /**
    * This tests region assignment on a simulated restarted server
    */
@@ -1087,7 +1088,7 @@ public class TestAssignmentManagerOnCluster {
       cluster.startRegionServer();
     }
   }
-  
+
   /**
    * Test that region state transition call is idempotent
    */
@@ -1121,7 +1122,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-  
+
   /**
    * Test concurrent updates to meta when meta is not on master
    * @throws Exception
@@ -1177,7 +1178,7 @@ public class TestAssignmentManagerOnCluster {
     assertTrue(count == 100);
     rss.stop();
   }
-  
+
   static class MyLoadBalancer extends StochasticLoadBalancer {
     // For this region, if specified, always assign to nowhere
     static volatile String controledRegion = null;
