@@ -1161,8 +1161,17 @@ public class TestSplitTransactionOnCluster {
       List<Path> regionDirs =
           FSUtils.getRegionDirs(tableDir.getFileSystem(cluster.getConfiguration()), tableDir);
       assertEquals(3,regionDirs.size());
+      cluster.startRegionServer();
+      regionServer.kill();
+      cluster.getRegionServerThreads().get(serverWith).join();
+      // Wait until finish processing of shutdown
+      while (cluster.getMaster().getServerManager().areDeadServersInProgress()) {
+        Thread.sleep(10);
+      }
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      am.processServerShutdown(regionServer.getServerName());
+      while(am.getRegionStates().isRegionsInTransition()){
+        Thread.sleep(10);
+      }
       assertEquals(am.getRegionStates().getRegionsInTransition().toString(), am.getRegionStates()
           .getRegionsInTransition().size(), 0);
       regionDirs =
