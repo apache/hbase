@@ -44,8 +44,8 @@
   </bannerLeft>
   <bannerRight>
     <name>Apache HBase Orca</name>
-    <src>images/jumping-orca_rotated_25percent.png</src>
-    <href>http://hbase.apache.org/</href>
+    <src>images/hbasecon2015.30percent.png</src>
+    <href>http://hbasecon.com/</href>
   </bannerRight>
   <body>
     <menu name="Apache HBase Project">
