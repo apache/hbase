@@ -262,4 +262,41 @@ public class TestCopyTable {
     job.waitForCompletion(false);
     return job.isSuccessful();
   }
+
+  /**
+   * Simple end-to-end test
+   * @throws Exception
+   */
+  @Test
+  public void testDeprecatedCopyTable() throws Exception {
+    final byte[] TABLENAME1 = Bytes.toBytes("testCopyTable1");
+    final byte[] TABLENAME2 = Bytes.toBytes("testCopyTable2");
+    final byte[] FAMILY = Bytes.toBytes("family");
+    final byte[] COLUMN1 = Bytes.toBytes("c1");
+    HTable t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+    HTable t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    // put rows into the first table
+    for (int i = 0; i < 10; i++) {
+      Put p = new Put(Bytes.toBytes("row" + i));
+      p.add(FAMILY, COLUMN1, COLUMN1);
+      t1.put(p);
+    }
+    CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
+    assertEquals(
+        0,
+        copy.run(new String[] { "--new.name=" + Bytes.toString(TABLENAME2),
+            Bytes.toString(TABLENAME1) }));
+    // verify the data was copied into table 2
+    for (int i = 0; i < 10; i++) {
+      Get g = new Get(Bytes.toBytes("row" + i));
+      Result r = t2.get(g);
+      assertEquals(1, r.size());
+      assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
+    }
+    t1.close();
+    t2.close();
+    TEST_UTIL.deleteTable(TABLENAME1);
+    TEST_UTIL.deleteTable(TABLENAME2);
+  }
+
 }

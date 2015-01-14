@@ -69,9 +69,180 @@ public class CopyTable extends Configured implements Tool {
 
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
+
+  // The following variables are introduced to preserve the binary compatibility in 0.98.
+  // Please see HBASE-12836 for further details.
+  @Deprecated
+  static long startTime_ = 0;
+  @Deprecated
+  static long endTime_ = 0;
+  @Deprecated
+  static int versions_ = -1;
+  @Deprecated
+  static String tableName_ = null;
+  @Deprecated
+  static String startRow_ = null;
+  @Deprecated
+  static String stopRow_ = null;
+  @Deprecated
+  static String newTableName_ = null;
+  @Deprecated
+  static String peerAddress_ = null;
+  @Deprecated
+  static String families_ = null;
+  @Deprecated
+  static boolean allCells_ = false;
+
   public CopyTable(Configuration conf) {
     super(conf);
   }
+
+  /**
+   * Sets up the actual job.
+   *
+   * @param conf The current configuration.
+   * @param args The command line parameters.
+   * @return The newly created job.
+   * @throws IOException When setting up the job fails.
+   * @deprecated Use {@link #createSubmittableJob(String[])} instead
+   */
+  @Deprecated
+  public static Job createSubmittableJob(Configuration conf, String[] args)
+      throws IOException {
+    if (!deprecatedDoCommandLine(args)) {
+      return null;
+    }
+    Job job = new Job(conf, NAME + "_" + tableName_);
+    job.setJarByClass(CopyTable.class);
+    Scan scan = new Scan();
+    scan.setCacheBlocks(false);
+    if (startTime_ != 0) {
+      scan.setTimeRange(startTime_,
+          endTime_ == 0 ? HConstants.LATEST_TIMESTAMP : endTime_);
+    }
+    if (allCells_) {
+      scan.setRaw(true);
+    }
+    if (versions_ >= 0) {
+      scan.setMaxVersions(versions_);
+    }
+    if (startRow_ != null) {
+      scan.setStartRow(Bytes.toBytes(startRow_));
+    }
+    if (stopRow_ != null) {
+      scan.setStopRow(Bytes.toBytes(stopRow_));
+    }
+    if(families_ != null) {
+      String[] fams = families_.split(",");
+      Map<String,String> cfRenameMap = new HashMap<String,String>();
+      for(String fam : fams) {
+        String sourceCf;
+        if(fam.contains(":")) {
+          // fam looks like "sourceCfName:destCfName"
+          String[] srcAndDest = fam.split(":", 2);
+          sourceCf = srcAndDest[0];
+          String destCf = srcAndDest[1];
+          cfRenameMap.put(sourceCf, destCf);
+        } else {
+         // fam is just "sourceCf"
+          sourceCf = fam;
+        }
+        scan.addFamily(Bytes.toBytes(sourceCf));
+      }
+      Import.configureCfRenaming(job.getConfiguration(), cfRenameMap);
+    }
+    TableMapReduceUtil.initTableMapperJob(tableName_, scan,
+        Import.Importer.class, null, null, job);
+    TableMapReduceUtil.initTableReducerJob(
+        newTableName_ == null ? tableName_ : newTableName_, null, job,
+        null, peerAddress_, null, null);
+    job.setNumReduceTasks(0);
+    return job;
+  }
+
+  private static boolean deprecatedDoCommandLine(final String[] args) {
+   // Process command-line args. TODO: Better cmd-line processing
+   // (but hopefully something not as painful as cli options).
+    if (args.length < 1) {
+      printUsage(null);
+      return false;
+    }
+    try {
+      for (int i = 0; i < args.length; i++) {
+        String cmd = args[i];
+        if (cmd.equals("-h") || cmd.startsWith("--h")) {
+          printUsage(null);
+          return false;
+        }
+        final String startRowArgKey = "--startrow=";
+        if (cmd.startsWith(startRowArgKey)) {
+          startRow_ = cmd.substring(startRowArgKey.length());
+          continue;
+        }
+        final String stopRowArgKey = "--stoprow=";
+        if (cmd.startsWith(stopRowArgKey)) {
+          stopRow_ = cmd.substring(stopRowArgKey.length());
+          continue;
+        }
+        final String startTimeArgKey = "--starttime=";
+        if (cmd.startsWith(startTimeArgKey)) {
+          startTime_ = Long.parseLong(cmd.substring(startTimeArgKey.length()));
+          continue;
+        }
+        final String endTimeArgKey = "--endtime=";
+        if (cmd.startsWith(endTimeArgKey)) {
+          endTime_ = Long.parseLong(cmd.substring(endTimeArgKey.length()));
+          continue;
+        }
+        final String versionsArgKey = "--versions=";
+        if (cmd.startsWith(versionsArgKey)) {
+          versions_ = Integer.parseInt(cmd.substring(versionsArgKey.length()));
+          continue;
+        }
+        final String newNameArgKey = "--new.name=";
+        if (cmd.startsWith(newNameArgKey)) {
+          newTableName_ = cmd.substring(newNameArgKey.length());
+          continue;
+        }
+        final String peerAdrArgKey = "--peer.adr=";
+        if (cmd.startsWith(peerAdrArgKey)) {
+          peerAddress_ = cmd.substring(peerAdrArgKey.length());
+          continue;
+        }
+        final String familiesArgKey = "--families=";
+        if (cmd.startsWith(familiesArgKey)) {
+          families_ = cmd.substring(familiesArgKey.length());
+          continue;
+        }
+        if (cmd.startsWith("--all.cells")) {
+          allCells_ = true;
+          continue;
+        }
+        if (i == args.length-1) {
+          tableName_ = cmd;
+        } else {
+          printUsage("Invalid argument '" + cmd + "'" );
+          return false;
+        }
+      }
+      if (newTableName_ == null && peerAddress_ == null) {
+        printUsage("At least a new table name or a " +
+            "peer address must be specified");
+        return false;
+      }
+      if ((endTime_ != 0) && (startTime_ > endTime_)) {
+        printUsage("Invalid time range filter: starttime=" + startTime_ + " > endtime="
+            + endTime_);
+        return false;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+      printUsage("Can't start because " + e.getMessage());
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Sets up the actual job.
    *
