@@ -18,18 +18,21 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -73,9 +76,11 @@ public class TestGlobalMemStoreSize {
     byte [] table = Bytes.toBytes("TestGlobalMemStoreSize");
     byte [] family = Bytes.toBytes("family");
     LOG.info("Creating table with " + regionNum + " regions");
-    HTable ht = TEST_UTIL.createTable(TableName.valueOf(table), family);
-    int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family,
-        regionNum);
+    HTable ht = TEST_UTIL.createMultiRegionTable(TableName.valueOf(table), family, regionNum);
+    int numRegions = -1;
+    try (RegionLocator r = ht.getRegionLocator()) {
+      numRegions = r.getStartKeys().length;
+    }
     assertEquals(regionNum,numRegions);
     waitForAllRegionsAssigned();
 

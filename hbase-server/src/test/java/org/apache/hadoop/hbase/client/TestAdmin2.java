@@ -716,8 +716,7 @@ public class TestAdmin2 {
 
     final TableName tableName = TableName.valueOf("testGetRegion");
     LOG.info("Started " + tableName);
-    HTable t = TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    TEST_UTIL.createMultiRegions(t, HConstants.CATALOG_FAMILY);
+    HTable t = TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
 
     HRegionLocation regionLocation = t.getRegionLocation("mmm");
     HRegionInfo region = regionLocation.getRegionInfo();

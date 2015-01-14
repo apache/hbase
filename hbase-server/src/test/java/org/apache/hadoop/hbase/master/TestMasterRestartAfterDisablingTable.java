@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -67,9 +67,11 @@ public class TestMasterRestartAfterDisablingTable {
     TableName table = TableName.valueOf("tableRestart");
     byte[] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
-    HTable ht = TEST_UTIL.createTable(table, family);
-    int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family,
-        NUM_REGIONS_TO_CREATE);
+    HTable ht = TEST_UTIL.createMultiRegionTable(table, family, NUM_REGIONS_TO_CREATE);
+    int numRegions = -1;
+    try (RegionLocator r = ht.getRegionLocator()) {
+      numRegions = r.getStartKeys().length;
+    }
     numRegions += 1; // catalogs
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);

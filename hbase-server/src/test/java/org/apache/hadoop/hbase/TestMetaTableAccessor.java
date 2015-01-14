@@ -33,9 +33,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -87,8 +87,11 @@ public class TestMetaTableAccessor {
     final TableName name =
         TableName.valueOf("testRetrying");
     LOG.info("Started " + name);
-    HTable t = UTIL.createTable(name, HConstants.CATALOG_FAMILY);
-    int regionCount = UTIL.createMultiRegions(t, HConstants.CATALOG_FAMILY);
+    HTable t = UTIL.createMultiRegionTable(name, HConstants.CATALOG_FAMILY);
+    int regionCount = -1;
+    try (RegionLocator r = t.getRegionLocator()) {
+      regionCount = r.getStartKeys().length;
+    }
     // Test it works getting a region from just made user table.
     final List<HRegionInfo> regions =
       testGettingTableRegions(connection, name, regionCount);

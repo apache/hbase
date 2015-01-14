@@ -111,7 +111,7 @@ public class TestTableInputFormatScan1 extends TestTableInputFormatScanBase {
    */
   @Test
   public void testGetSplits() throws IOException, InterruptedException, ClassNotFoundException {
-    testNumOfSplits("-1", 50);
+    testNumOfSplits("-1", 52);
     testNumOfSplits("100", 1);
   }
 

@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -83,8 +82,7 @@ public abstract class TestTableInputFormatScanBase {
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
-    table = TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME), INPUT_FAMILY);
-    TEST_UTIL.createMultiRegions(table, INPUT_FAMILY);
+    table = TEST_UTIL.createMultiRegionTable(TableName.valueOf(TABLE_NAME), INPUT_FAMILY);
     TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
     // start MR cluster
     TEST_UTIL.startMiniMapReduceCluster();

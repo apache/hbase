@@ -17,6 +17,34 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -93,34 +121,6 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -1243,6 +1243,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return createTable(tableName, new byte[][]{family});
   }
 
+  /**
+   * Create a table with multiple regions.
+   * @param tableName
+   * @param family
+   * @param numRegions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createMultiRegionTable(TableName tableName, byte[] family, int numRegions)
+      throws IOException {
+    if (numRegions < 3) throw new IOException("Must create at least 3 regions");
+    byte[] startKey = Bytes.toBytes("aaaaa");
+    byte[] endKey = Bytes.toBytes("zzzzz");
+    byte[][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+
+    return createTable(tableName, new byte[][] { family }, splitKeys);
+  }
+
 
   /**
    * Create a table.
@@ -1261,13 +1279,36 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table.
    * @param tableName
    * @param families
-   * @return An HT
-   * able instance for the created table.
+   * @return An HTable instance for the created table.
    * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[][] families)
   throws IOException {
-    return createTable(tableName, families, new Configuration(getConfiguration()));
+    return createTable(tableName, families, (byte[][]) null);
+  }
+
+  /**
+   * Create a table with multiple regions.
+   * @param tableName
+   * @param families
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createMultiRegionTable(TableName tableName, byte[][] families) throws IOException {
+    return createTable(tableName, families, KEYS_FOR_HBA_CREATE_TABLE);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param splitKeys
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[][] families, byte[][] splitKeys)
+      throws IOException {
+    return createTable(tableName, families, splitKeys, new Configuration(getConfiguration()));
   }
 
   public HTable createTable(byte[] tableName, byte[][] families,
@@ -1307,7 +1348,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HTable createTable(HTableDescriptor htd, byte[][] families, Configuration c)
   throws IOException {
-    for(byte[] family : families) {
+    return createTable(htd, families, (byte[][]) null, c);
+  }
+
+  /**
+   * Create a table.
+   * @param htd
+   * @param families
+   * @param splitKeys
+   * @param c Configuration to use
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(HTableDescriptor htd, byte[][] families, byte[][] splitKeys,
+      Configuration c) throws IOException {
+    for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       // Disable blooms (they are on by default as of 0.95) but we disable them here because
       // tests have hard coded counts of what to expect in block cache, etc., and blooms being
@@ -1315,10 +1370,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       hcd.setBloomFilterType(BloomType.NONE);
       htd.addFamily(hcd);
     }
-    getHBaseAdmin().createTable(htd);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
+    getHBaseAdmin().createTable(htd, splitKeys);
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
+    // assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
-    return (HTable)getConnection().getTable(htd.getTableName());
+    return (HTable) getConnection().getTable(htd.getTableName());
   }
 
   /**
@@ -1347,7 +1403,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable createTable(TableName tableName, byte[][] families,
       final Configuration c)
   throws IOException {
-    return createTable(new HTableDescriptor(tableName), families, c);
+    return createTable(tableName, families, (byte[][]) null, c);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param splitKeys
+   * @param c Configuration to use
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[][] families, byte[][] splitKeys,
+      final Configuration c) throws IOException {
+    return createTable(new HTableDescriptor(tableName), families, splitKeys, c);
   }
 
   /**
@@ -1471,15 +1541,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable createTable(TableName tableName, byte[][] families,
       int numVersions)
   throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family).setMaxVersions(numVersions);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
-    waitUntilAllRegionsAssigned(tableName);
-    return (HTable) getConnection().getTable(tableName);
+    return createTable(tableName, families, numVersions, (byte[][]) null);
   }
 
   /**
@@ -1487,6 +1549,42 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param families
    * @param numVersions
+   * @param splitKeys
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(TableName tableName, byte[][] families, int numVersions,
+      byte[][] splitKeys) throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    for (byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family).setMaxVersions(numVersions);
+      desc.addFamily(hcd);
+    }
+    getHBaseAdmin().createTable(desc, splitKeys);
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
+    waitUntilAllRegionsAssigned(tableName);
+    return (HTable) getConnection().getTable(tableName);
+  }
+
+  /**
+   * Create a table with multiple regions.
+   * @param tableName
+   * @param families
+   * @param numVersions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createMultiRegionTable(TableName tableName, byte[][] families, int numVersions)
+      throws IOException {
+    return createTable(tableName, families, numVersions, KEYS_FOR_HBA_CREATE_TABLE);
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param numVersions
+   * @param blockSize
    * @return An HTable instance for the created table.
    * @throws IOException
    */
@@ -1501,6 +1599,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param tableName
    * @param families
    * @param numVersions
+   * @param blockSize
    * @return An HTable instance for the created table.
    * @throws IOException
    */
@@ -1588,6 +1687,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return (HTable) getConnection().getTable(tableName);
+  }
+
+  /**
+   * Create a table with multiple regions.
+   * @param tableName
+   * @param family
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createMultiRegionTable(TableName tableName, byte[] family) throws IOException {
+    return createTable(tableName, family, KEYS_FOR_HBA_CREATE_TABLE);
   }
 
   /**
@@ -2122,19 +2232,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return digest.toString();
   }
 
-  /**
-   * Creates many regions names "aaa" to "zzz".
-   *
-   * @param table  The table to use for the data.
-   * @param columnFamily  The family to insert the data into.
-   * @return count of regions created.
-   * @throws IOException When creating the regions fails.
-   */
-  public int createMultiRegions(HTable table, byte[] columnFamily)
-  throws IOException {
-    return createMultiRegions(getConfiguration(), table, columnFamily);
-  }
-
   /** All the row values for the data loaded by {@link #loadTable(HTable, byte[])} */
   public static final byte[][] ROWS = new byte[(int) Math.pow('z' - 'a' + 1, 3)][3]; // ~52KB
   static {
@@ -2174,97 +2271,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("www"),
       Bytes.toBytes("xxx"), Bytes.toBytes("yyy"), Bytes.toBytes("zzz")
   };
-
-  /**
-   * Creates many regions names "aaa" to "zzz".
-   * @param c Configuration to use.
-   * @param table  The table to use for the data.
-   * @param columnFamily  The family to insert the data into.
-   * @return count of regions created.
-   * @throws IOException When creating the regions fails.
-   */
-  public int createMultiRegions(final Configuration c, final HTable table,
-      final byte[] columnFamily)
-  throws IOException {
-    return createMultiRegions(c, table, columnFamily, KEYS);
-  }
-
-  /**
-   * Creates the specified number of regions in the specified table.
-   * @param c
-   * @param table
-   * @param family
-   * @param numRegions
-   * @return
-   * @throws IOException
-   */
-  public int createMultiRegions(final Configuration c, final HTable table,
-      final byte [] family, int numRegions)
-  throws IOException {
-    if (numRegions < 3) throw new IOException("Must create at least 3 regions");
-    byte [] startKey = Bytes.toBytes("aaaaa");
-    byte [] endKey = Bytes.toBytes("zzzzz");
-    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
-    byte [][] regionStartKeys = new byte[splitKeys.length+1][];
-    System.arraycopy(splitKeys, 0, regionStartKeys, 1, splitKeys.length);
-    regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
-    return createMultiRegions(c, table, family, regionStartKeys);
-  }
-
-  public int createMultiRegions(final Configuration c, final HTable table,
-      final byte[] columnFamily, byte [][] startKeys)
-  throws IOException {
-    Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
-    try (Table meta = new HTable(c, TableName.META_TABLE_NAME)) {
-      HTableDescriptor htd = table.getTableDescriptor();
-      if(!htd.hasFamily(columnFamily)) {
-        HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
-        htd.addFamily(hcd);
-      }
-      // remove empty region - this is tricky as the mini cluster during the test
-      // setup already has the "<tablename>,,123456789" row with an empty start
-      // and end key. Adding the custom regions below adds those blindly,
-      // including the new start region from empty to "bbb". lg
-      List<byte[]> rows = getMetaTableRows(htd.getTableName());
-      String regionToDeleteInFS = table
-          .getRegionsInRange(Bytes.toBytes(""), Bytes.toBytes("")).get(0)
-          .getRegionInfo().getEncodedName();
-      List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
-      // add custom ones
-      int count = 0;
-      for (int i = 0; i < startKeys.length; i++) {
-        int j = (i + 1) % startKeys.length;
-        HRegionInfo hri = new HRegionInfo(table.getName(),
-          startKeys[i], startKeys[j]);
-        MetaTableAccessor.addRegionToMeta(meta, hri);
-        newRegions.add(hri);
-        count++;
-      }
-      // see comment above, remove "old" (or previous) single region
-      for (byte[] row : rows) {
-        LOG.info("createMultiRegions: deleting meta row -> " +
-          Bytes.toStringBinary(row));
-        meta.delete(new Delete(row));
-      }
-      // remove the "old" region from FS
-      Path tableDir = new Path(getDefaultRootDirPath().toString()
-          + System.getProperty("file.separator") + htd.getTableName()
-          + System.getProperty("file.separator") + regionToDeleteInFS);
-      FileSystem.get(c).delete(tableDir, true);
-      // flush cache of regions
-      HConnection conn = table.getConnection();
-      conn.clearRegionCache();
-      // assign all the new regions IF table is enabled.
-      Admin admin = conn.getAdmin();
-      if (admin.isTableEnabled(table.getName())) {
-        for(HRegionInfo hri : newRegions) {
-          admin.assign(hri.getRegionName());
-        }
-      }
-
-      return count;
-    }
-  }
 
   /**
    * Create rows in hbase:meta for regions of the specified table with the specified

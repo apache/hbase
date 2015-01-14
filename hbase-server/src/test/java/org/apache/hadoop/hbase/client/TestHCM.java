@@ -52,8 +52,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.FlakeyTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -71,6 +69,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -601,13 +601,12 @@ public class TestHCM {
    */
   @Test
   public void testRegionCaching() throws Exception{
-    TEST_UTIL.createTable(TABLE_NAME, FAM_NAM).close();
+    TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAM_NAM).close();
     Configuration conf =  new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     Connection connection = ConnectionFactory.createConnection(conf);
     final HTable table = (HTable) connection.getTable(TABLE_NAME);
 
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
     TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
@@ -809,8 +808,7 @@ public class TestHCM {
    */
   @Test(timeout = 60000)
   public void testCacheSeqNums() throws Exception{
-    HTable table = TEST_UTIL.createTable(TABLE_NAME2, FAM_NAM);
-    TEST_UTIL.createMultiRegions(table, FAM_NAM);
+    HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME2, FAM_NAM);
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
@@ -1023,9 +1021,8 @@ public class TestHCM {
 
   @Test (timeout=30000)
   public void testMulti() throws Exception {
-    HTable table = TEST_UTIL.createTable(TABLE_NAME3, FAM_NAM);
+    HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME3, FAM_NAM);
      try {
-       TEST_UTIL.createMultiRegions(table, FAM_NAM);
        ConnectionManager.HConnectionImplementation conn =
            ( ConnectionManager.HConnectionImplementation)table.getConnection();
 

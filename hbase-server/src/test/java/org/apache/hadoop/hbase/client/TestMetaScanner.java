@@ -32,13 +32,12 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -73,14 +72,11 @@ public class TestMetaScanner {
     setUp();
     final TableName TABLENAME = TableName.valueOf("testMetaScanner");
     final byte[] FAMILY = Bytes.toBytes("family");
-    TEST_UTIL.createTable(TABLENAME, FAMILY);
-    Configuration conf = TEST_UTIL.getConfiguration();
+    final byte[][] SPLIT_KEYS =
+        new byte[][] { Bytes.toBytes("region_a"), Bytes.toBytes("region_b") };
+
+    TEST_UTIL.createTable(TABLENAME, FAMILY, SPLIT_KEYS);
     HTable table = (HTable) connection.getTable(TABLENAME);
-    TEST_UTIL.createMultiRegions(conf, table, FAMILY,
-        new byte[][]{
-          HConstants.EMPTY_START_ROW,
-          Bytes.toBytes("region_a"),
-          Bytes.toBytes("region_b")});
     // Make sure all the regions are deployed
     TEST_UTIL.countRows(table);
 

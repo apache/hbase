@@ -75,8 +75,7 @@ public class TestMultiParallel {
     //((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
     //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     UTIL.startMiniCluster(slaves);
-    HTable t = UTIL.createTable(TEST_TABLE, Bytes.toBytes(FAMILY));
-    UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
+    HTable t = UTIL.createMultiRegionTable(TEST_TABLE, Bytes.toBytes(FAMILY));
     UTIL.waitTableEnabled(TEST_TABLE);
     t.close();
     CONNECTION = ConnectionFactory.createConnection(UTIL.getConfiguration());
