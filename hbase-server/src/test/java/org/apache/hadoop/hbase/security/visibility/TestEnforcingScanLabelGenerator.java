@@ -117,6 +117,24 @@ public class TestEnforcingScanLabelGenerator {
       }
     });
 
+    // Test that super user can see all the cells.
+    SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
+      public Void run() throws Exception {
+        HTable table = new HTable(conf, tableName);
+        try {
+          // Test that super user can see all the cells.
+          Get get = new Get(ROW_1);
+          Result result = table.get(get);
+          assertTrue("Missing authorization", result.containsColumn(CF, Q1));
+          assertTrue("Missing authorization", result.containsColumn(CF, Q2));
+          assertTrue("Missing authorization", result.containsColumn(CF, Q3));
+          return null;
+        } finally {
+          table.close();
+        }
+      }
+    });
+
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         HTable table = new HTable(conf, tableName);

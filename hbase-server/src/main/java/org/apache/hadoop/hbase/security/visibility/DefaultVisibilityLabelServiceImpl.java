@@ -79,6 +79,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private HRegion labelsRegion;
   private VisibilityLabelsCache labelsCache;
   private List<ScanLabelGenerator> scanLabelGenerators;
+  private List<String> superUsers;
 
   static {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -115,6 +116,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       throw ioe;
     }
     this.scanLabelGenerators = VisibilityUtils.getScanLabelGenerators(this.conf);
+    this.superUsers = getSystemAndSuperUsers();
     if (e.getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = e.getRegion();
       Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths =
@@ -195,22 +197,8 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     if (!labels.containsKey(SYSTEM_LABEL)) {
       Put p = new Put(Bytes.toBytes(SYSTEM_LABEL_ORDINAL));
       p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, Bytes.toBytes(SYSTEM_LABEL));
-      // Set auth for "system" label for all super users.
-      List<String> superUsers = getSystemAndSuperUsers();
-      for (String superUser : superUsers) {
-        p.addImmutable(LABELS_TABLE_FAMILY, Bytes.toBytes(superUser), DUMMY_VALUE,
-            LABELS_TABLE_TAGS);
-      }
       region.put(p);
       labels.put(SYSTEM_LABEL, SYSTEM_LABEL_ORDINAL);
-      for (String superUser : superUsers) {
-        List<Integer> auths = userAuths.get(superUser);
-        if (auths == null) {
-          auths = new ArrayList<Integer>(1);
-          userAuths.put(superUser, auths);
-        }
-        auths.add(SYSTEM_LABEL_ORDINAL);
-      }
     }
   }
 
@@ -421,7 +409,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       throws IOException {
     // If a super user issues a get/scan, he should be able to scan the cells
     // irrespective of the Visibility labels
-    if (isReadFromSuperUser()) {
+    if (isReadFromSystemAuthUser()) {
       return new VisibilityExpEvaluator() {
         @Override
         public boolean evaluate(Cell cell) throws IOException {
@@ -500,18 +488,27 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     };
   }
 
-  protected boolean isReadFromSuperUser() throws IOException {
+  protected boolean isReadFromSystemAuthUser() throws IOException {
     byte[] user = Bytes.toBytes(VisibilityUtils.getActiveUser().getShortName());
     return havingSystemAuth(user);
   }
 
   @Override
   public boolean havingSystemAuth(byte[] user) throws IOException {
+    // A super user has 'system' auth.
+    if (isSystemOrSuperUser(user)) {
+      return true;
+    }
+    // A user can also be explicitly granted 'system' auth.
     List<String> auths = this.getAuths(user, true);
     if (LOG.isTraceEnabled()) {
       LOG.trace("The auths for user " + Bytes.toString(user) + " are " + auths);
     }
     return auths.contains(SYSTEM_LABEL);
+  }
+
+  protected boolean isSystemOrSuperUser(byte[] user) throws IOException {
+    return this.superUsers.contains(Bytes.toString(user));
   }
 
   @Override

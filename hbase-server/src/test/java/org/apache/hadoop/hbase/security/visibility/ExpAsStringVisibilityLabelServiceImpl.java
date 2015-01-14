@@ -78,6 +78,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   private Configuration conf;
   private HRegion labelsRegion;
   private List<ScanLabelGenerator> scanLabelGenerators;
+  private List<String> superUsers;
 
   @Override
   public OperationStatus[] addLabels(List<byte[]> labels) throws IOException {
@@ -202,7 +203,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
       throws IOException {
     // If a super user issues a get/scan, he should be able to scan the cells
     // irrespective of the Visibility labels
-    if (isReadFromSuperUser()) {
+    if (isReadFromSystemAuthUser()) {
       return new VisibilityExpEvaluator() {
         @Override
         public boolean evaluate(Cell cell) throws IOException {
@@ -272,7 +273,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     };
   }
 
-  protected boolean isReadFromSuperUser() throws IOException {
+  protected boolean isReadFromSystemAuthUser() throws IOException {
     byte[] user = Bytes.toBytes(VisibilityUtils.getActiveUser().getShortName());
     return havingSystemAuth(user);
   }
@@ -338,19 +339,9 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   @Override
   public void init(RegionCoprocessorEnvironment e) throws IOException {
     this.scanLabelGenerators = VisibilityUtils.getScanLabelGenerators(this.conf);
+    this.superUsers = getSystemAndSuperUsers();
     if (e.getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = e.getRegion();
-      // Set auth for "system" label for all super users.
-      List<String> superUsers = getSystemAndSuperUsers();
-      for (String superUser : superUsers) {
-        byte[] user = Bytes.toBytes(superUser);
-        List<String> auths = this.getAuths(user, true);
-        if (auths == null || auths.isEmpty()) {
-          Put p = new Put(user);
-          p.addImmutable(LABELS_TABLE_FAMILY, Bytes.toBytes(SYSTEM_LABEL), DUMMY_VALUE);
-          labelsRegion.put(p);
-        }
-      }
     }
   }
 
@@ -369,8 +360,15 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     return superUsers;
   }
 
+  protected boolean isSystemOrSuperUser(byte[] user) throws IOException {
+    return this.superUsers.contains(Bytes.toString(user));
+  }
+
   @Override
   public boolean havingSystemAuth(byte[] user) throws IOException {
+    if (isSystemOrSuperUser(user)) {
+      return true;
+    }
     List<String> auths = this.getAuths(user, true);
     return auths.contains(SYSTEM_LABEL);
   }
