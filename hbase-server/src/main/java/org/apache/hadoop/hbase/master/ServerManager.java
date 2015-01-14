@@ -63,6 +63,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -141,6 +144,8 @@ public class ServerManager {
   private final long maxSkew;
   private final long warningSkew;
 
+  private final RetryCounterFactory pingRetryCounterFactory;
+
   /**
    * Set of region servers which are dead but not processed immediately. If one
    * server died before master enables ServerShutdownHandler, the server will be
@@ -199,6 +204,11 @@ public class ServerManager {
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     this.connection = connect ? (ClusterConnection)ConnectionFactory.createConnection(c) : null;
+    int pingMaxAttempts = Math.max(1, master.getConfiguration().getInt(
+      "hbase.master.maximum.ping.server.attempts", 10));
+    int pingSleepInterval = Math.max(1, master.getConfiguration().getInt(
+      "hbase.master.ping.server.retry.sleep.interval", 100));
+    this.pingRetryCounterFactory = new RetryCounterFactory(pingMaxAttempts, pingSleepInterval);
   }
 
   /**
@@ -801,9 +811,9 @@ public class ServerManager {
    */
   public boolean isServerReachable(ServerName server) {
     if (server == null) throw new NullPointerException("Passed server is null");
-    int maximumAttempts = Math.max(1, master.getConfiguration().getInt(
-      "hbase.master.maximum.ping.server.attempts", 10));
-    for (int i = 0; i < maximumAttempts; i++) {
+
+    RetryCounter retryCounter = pingRetryCounterFactory.create();
+    while (retryCounter.shouldRetry()) {
       try {
         AdminService.BlockingInterface admin = getRsAdmin(server);
         if (admin != null) {
@@ -812,8 +822,13 @@ public class ServerManager {
             && server.getStartcode() == info.getServerName().getStartCode();
         }
       } catch (IOException ioe) {
-        LOG.debug("Couldn't reach " + server + ", try=" + i
-          + " of " + maximumAttempts, ioe);
+        LOG.debug("Couldn't reach " + server + ", try=" + retryCounter.getAttemptTimes()
+          + " of " + retryCounter.getMaxAttempts(), ioe);
+        try {
+          retryCounter.sleepUntilNextRetry();
+        } catch(InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
       }
     }
     return false;

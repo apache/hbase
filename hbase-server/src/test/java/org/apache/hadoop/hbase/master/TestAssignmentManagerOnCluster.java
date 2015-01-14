@@ -105,6 +105,8 @@ public class TestAssignmentManagerOnCluster {
     conf.setInt("hbase.assignment.maximum.attempts", 3);
     // Put meta on master to avoid meta server shutdown handling
     conf.set("hbase.balancer.tablesOnMaster", "hbase:meta");
+    conf.setInt("hbase.master.maximum.ping.server.attempts", 3);
+    conf.setInt("hbase.master.ping.server.retry.sleep.interval", 1);
 
     TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, MyRegionServer.class);
     admin = TEST_UTIL.getHBaseAdmin();
@@ -1219,7 +1221,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-  
+
   /**
    * Test concurrent updates to meta when meta is not on master
    * @throws Exception
@@ -1279,7 +1281,7 @@ public class TestAssignmentManagerOnCluster {
     assertTrue(count == 100);
     rss.stop();
   }
-  
+
   static class MyLoadBalancer extends StochasticLoadBalancer {
     // For this region, if specified, always assign to nowhere
     static volatile String controledRegion = null;
