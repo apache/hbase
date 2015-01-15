@@ -70,8 +70,12 @@ public class ByteBufferOutputStream extends OutputStream {
       int newSize = (int)Math.min((((long)buf.capacity()) * 2),
           (long)(Integer.MAX_VALUE));
       newSize = Math.max(newSize, buf.position() + extra);
-
-      ByteBuffer newBuf = ByteBuffer.allocate(newSize);
+      ByteBuffer newBuf = null;
+      if (buf.isDirect()) {
+        newBuf = ByteBuffer.allocateDirect(newSize);
+      } else {
+        newBuf = ByteBuffer.allocate(newSize);
+      }
       buf.flip();
       newBuf.put(buf);
       buf = newBuf;
