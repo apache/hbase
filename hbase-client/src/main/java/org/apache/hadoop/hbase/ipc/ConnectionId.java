@@ -28,10 +28,10 @@ import java.net.InetSocketAddress;
  */
 @InterfaceAudience.Private
 public class ConnectionId {
-  final InetSocketAddress address;
-  final User ticket;
   private static final int PRIME = 16777619;
+  final User ticket;
   final String serviceName;
+  final InetSocketAddress address;
 
   public ConnectionId(User ticket, String serviceName, InetSocketAddress address) {
     this.address = address;
@@ -70,9 +70,12 @@ public class ConnectionId {
 
   @Override  // simply use the default Object#hashcode() ?
   public int hashCode() {
-    int hashcode = (address.hashCode() +
-      PRIME * (PRIME * this.serviceName.hashCode() ^
-      (ticket == null ? 0 : ticket.hashCode())));
-    return hashcode;
+    return hashCode(ticket,serviceName,address);
+  }
+
+  public static int hashCode(User ticket, String serviceName, InetSocketAddress address){
+    return (address.hashCode() +
+        PRIME * (PRIME * serviceName.hashCode() ^
+            (ticket == null ? 0 : ticket.hashCode())));
   }
 }

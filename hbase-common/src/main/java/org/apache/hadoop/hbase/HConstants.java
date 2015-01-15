@@ -62,7 +62,7 @@ public final class HConstants {
   /**
    * The first four bytes of Hadoop RPC connections
    */
-  public static final ByteBuffer RPC_HEADER = ByteBuffer.wrap("HBas".getBytes());
+  public static final byte[] RPC_HEADER = new byte[] { 'H', 'B', 'a', 's' };
   public static final byte RPC_CURRENT_VERSION = 0;
 
   // HFileBlock constants.

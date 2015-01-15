@@ -70,6 +70,15 @@ public class JVM {
     }
     return (ibmvendor ? linux : true);
   }
+
+  /**
+   * Check if the OS is linux.
+   *
+   * @return whether this is linux or not.
+   */
+  public static boolean isLinux() {
+    return linux;
+  }
   
   /**
    * Check if the finish() method of GZIPOutputStream is broken

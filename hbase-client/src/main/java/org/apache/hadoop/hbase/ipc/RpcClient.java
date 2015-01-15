@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.security.User;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 /**
  * Interface for RpcClient implementations so ConnectionManager can handle it.
@@ -56,9 +57,15 @@ import java.io.Closeable;
    * Creates a "channel" that can be used by a blocking protobuf service.  Useful setting up
    * protobuf blocking stubs.
    *
+   * @param sn server name describing location of server
+   * @param user which is to use the connection
+   * @param rpcTimeout default rpc operation timeout
+   *
    * @return A blocking rpc channel that goes via this rpc client instance.
+   * @throws IOException when channel could not be created
    */
-  public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout);
+  public BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user,
+      int rpcTimeout) throws IOException;
 
   /**
    * Interrupt the connections to the given server. This should be called if the server
@@ -67,6 +74,7 @@ import java.io.Closeable;
    * for example at startup. In any case, they're likely to get connection refused (if the
    * process died) or no route to host: i.e. their next retries should be faster and with a
    * safe exception.
+   * @param sn server location to cancel connections of
    */
   public void cancelConnections(ServerName sn);
 

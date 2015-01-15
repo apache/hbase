@@ -187,40 +187,32 @@ public abstract class AbstractRpcClient implements RpcClient {
     return config.getInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, 1);
   }
 
-
   /**
    * Make a blocking call. Throws exceptions if there are network problems or if the remote code
    * threw an exception.
+   *
    * @param ticket Be careful which ticket you pass. A new user will mean a new Connection.
-   *          {@link UserProvider#getCurrent()} makes a new instance of User each time so will be a
-   *          new Connection each time.
+   *               {@link UserProvider#getCurrent()} makes a new instance of User each time so
+   *               will be a
+   *               new Connection each time.
    * @return A pair with the Message response and the Cell data (if any).
    */
   Message callBlockingMethod(Descriptors.MethodDescriptor md, PayloadCarryingRpcController pcrc,
       Message param, Message returnType, final User ticket, final InetSocketAddress isa)
       throws ServiceException {
+    if (pcrc == null) {
+      pcrc = new PayloadCarryingRpcController();
+    }
+
     long startTime = 0;
     if (LOG.isTraceEnabled()) {
       startTime = EnvironmentEdgeManager.currentTime();
     }
-    int callTimeout = 0;
-    CellScanner cells = null;
-    if (pcrc != null) {
-      callTimeout = pcrc.getCallTimeout();
-      cells = pcrc.cellScanner();
-      // Clear it here so we don't by mistake try and these cells processing results.
-      pcrc.setCellScanner(null);
-    }
     Pair<Message, CellScanner> val;
     try {
-      val = call(pcrc, md, param, cells, returnType, ticket, isa, callTimeout,
-          pcrc != null? pcrc.getPriority(): HConstants.NORMAL_QOS);
-      if (pcrc != null) {
-        // Shove the results into controller so can be carried across the proxy/pb service void.
-        if (val.getSecond() != null) pcrc.setCellScanner(val.getSecond());
-      } else if (val.getSecond() != null) {
-        throw new ServiceException("Client dropping data on the floor!");
-      }
+      val = call(pcrc, md, param, returnType, ticket, isa);
+      // Shove the results into controller so can be carried across the proxy/pb service void.
+      pcrc.setCellScanner(val.getSecond());
 
       if (LOG.isTraceEnabled()) {
         long callTime = EnvironmentEdgeManager.currentTime() - startTime;
@@ -238,26 +230,22 @@ public abstract class AbstractRpcClient implements RpcClient {
    * with the <code>ticket</code> credentials, returning the value.
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception.
+   *
    * @param ticket Be careful which ticket you pass. A new user will mean a new Connection.
-   *          {@link UserProvider#getCurrent()} makes a new instance of User each time so will be a
-   *          new Connection each time.
+   *               {@link UserProvider#getCurrent()} makes a new instance of User each time so
+   *               will be a
+   *               new Connection each time.
    * @return A pair with the Message response and the Cell data (if any).
    * @throws InterruptedException
    * @throws java.io.IOException
    */
   protected abstract Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
-      Descriptors.MethodDescriptor md, Message param, CellScanner cells,
-      Message returnType, User ticket, InetSocketAddress addr, int callTimeout, int priority) throws
-      IOException, InterruptedException;
+      Descriptors.MethodDescriptor md, Message param, Message returnType, User ticket,
+      InetSocketAddress isa) throws IOException, InterruptedException;
 
-  /**
-   * Creates a "channel" that can be used by a blocking protobuf service.  Useful setting up
-   * protobuf blocking stubs.
-   * @return A blocking rpc channel that goes via this rpc client instance.
-   */
   @Override
-  public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn,
-      final User ticket, int defaultOperationTimeout) {
+  public BlockingRpcChannel createBlockingRpcChannel(final ServerName sn, final User ticket,
+      int defaultOperationTimeout) {
     return new BlockingRpcChannelImplementation(this, sn, ticket, defaultOperationTimeout);
   }
 
@@ -269,18 +257,17 @@ public abstract class AbstractRpcClient implements RpcClient {
     private final InetSocketAddress isa;
     private final AbstractRpcClient rpcClient;
     private final User ticket;
-    private final int defaultOperationTimeout;
+    private final int channelOperationTimeout;
 
     /**
-     * @param defaultOperationTimeout - the default timeout when no timeout is given
-     *                                   by the caller.
+     * @param channelOperationTimeout - the default timeout when no timeout is given
      */
     protected BlockingRpcChannelImplementation(final AbstractRpcClient rpcClient,
-        final ServerName sn, final User ticket, int defaultOperationTimeout) {
+        final ServerName sn, final User ticket, int channelOperationTimeout) {
       this.isa = new InetSocketAddress(sn.getHostname(), sn.getPort());
       this.rpcClient = rpcClient;
       this.ticket = ticket;
-      this.defaultOperationTimeout = defaultOperationTimeout;
+      this.channelOperationTimeout = channelOperationTimeout;
     }
 
     @Override
@@ -289,12 +276,12 @@ public abstract class AbstractRpcClient implements RpcClient {
       PayloadCarryingRpcController pcrc;
       if (controller != null) {
         pcrc = (PayloadCarryingRpcController) controller;
-        if (!pcrc.hasCallTimeout()){
-          pcrc.setCallTimeout(defaultOperationTimeout);
+        if (!pcrc.hasCallTimeout()) {
+          pcrc.setCallTimeout(channelOperationTimeout);
         }
       } else {
-        pcrc =  new PayloadCarryingRpcController();
-        pcrc.setCallTimeout(defaultOperationTimeout);
+        pcrc = new PayloadCarryingRpcController();
+        pcrc.setCallTimeout(channelOperationTimeout);
       }
 
       return this.rpcClient.callBlockingMethod(md, pcrc, param, returnType, this.ticket, this.isa);

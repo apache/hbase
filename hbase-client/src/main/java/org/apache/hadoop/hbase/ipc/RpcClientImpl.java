@@ -787,9 +787,9 @@ public class RpcClientImpl extends AbstractRpcClient {
       // up the reading on occasion (the passed in stream is not buffered yet).
 
       // Preamble is six bytes -- 'HBas' + VERSION + AUTH_CODE
-      int rpcHeaderLen = HConstants.RPC_HEADER.array().length;
+      int rpcHeaderLen = HConstants.RPC_HEADER.length;
       byte [] preamble = new byte [rpcHeaderLen + 2];
-      System.arraycopy(HConstants.RPC_HEADER.array(), 0, preamble, 0, rpcHeaderLen);
+      System.arraycopy(HConstants.RPC_HEADER, 0, preamble, 0, rpcHeaderLen);
       preamble[rpcHeaderLen] = HConstants.RPC_CURRENT_VERSION;
       preamble[rpcHeaderLen + 1] = authMethod.code;
       outStream.write(preamble);
@@ -1120,14 +1120,6 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
   }
 
-  Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
-                                  MethodDescriptor md, Message param, CellScanner cells,
-      Message returnType, User ticket, InetSocketAddress addr, int rpcTimeout)
-  throws InterruptedException, IOException {
-    return
-        call(pcrc, md, param, cells, returnType, ticket, addr, rpcTimeout, HConstants.NORMAL_QOS);
-  }
-
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code> which is servicing the <code>protocol</code> protocol,
    * with the <code>ticket</code> credentials, returning the value.
@@ -1140,21 +1132,22 @@ public class RpcClientImpl extends AbstractRpcClient {
    * @throws InterruptedException
    * @throws IOException
    */
-  @Override
   protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc, MethodDescriptor md,
-                                  Message param, CellScanner cells,
-      Message returnType, User ticket, InetSocketAddress addr, int callTimeout, int priority)
+      Message param, Message returnType, User ticket, InetSocketAddress addr)
       throws IOException, InterruptedException {
-    final Call call = new Call(
-        this.callIdCnt.getAndIncrement(),
-        md, param, cells, returnType, callTimeout);
+    if (pcrc == null) {
+      pcrc = new PayloadCarryingRpcController();
+    }
+    CellScanner cells = pcrc.cellScanner();
 
-    final Connection connection = getConnection(ticket, call, addr, this.codec, this.compressor);
+    final Call call = new Call(this.callIdCnt.getAndIncrement(), md, param, cells, returnType,
+        pcrc.getCallTimeout());
+
+    final Connection connection = getConnection(ticket, call, addr);
 
     final CallFuture cts;
     if (connection.callSender != null) {
-      cts = connection.callSender.sendCall(call, priority, Trace.currentSpan());
-      if (pcrc != null) {
+      cts = connection.callSender.sendCall(call, pcrc.getPriority(), Trace.currentSpan());
         pcrc.notifyOnCancel(new RpcCallback<Object>() {
           @Override
           public void run(Object parameter) {
@@ -1166,11 +1159,9 @@ public class RpcClientImpl extends AbstractRpcClient {
           call.callComplete();
           return new Pair<Message, CellScanner>(call.response, call.cells);
         }
-      }
-
     } else {
       cts = null;
-      connection.tracedWriteRequest(call, priority, Trace.currentSpan());
+      connection.tracedWriteRequest(call, pcrc.getPriority(), Trace.currentSpan());
     }
 
     while (!call.done) {
@@ -1265,8 +1256,7 @@ public class RpcClientImpl extends AbstractRpcClient {
    *  Get a connection from the pool, or create a new one and add it to the
    * pool. Connections to a given host/port are reused.
    */
-  protected Connection getConnection(User ticket, Call call, InetSocketAddress addr,
-                                     final Codec codec, final CompressionCodec compressor)
+  protected Connection getConnection(User ticket, Call call, InetSocketAddress addr)
   throws IOException {
     if (!running.get()) throw new StoppedRpcClientException();
     Connection connection;
