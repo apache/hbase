@@ -216,11 +216,11 @@ public class HFileBlock implements Cacheable {
     this.uncompressedSizeWithoutHeader = uncompressedSizeWithoutHeader;
     this.prevBlockOffset = prevBlockOffset;
     this.buf = buf;
-    if (fillHeader)
-      overwriteHeader();
     this.offset = offset;
     this.onDiskDataSizeWithHeader = onDiskDataSizeWithHeader;
     this.fileContext = fileContext;
+    if (fillHeader)
+      overwriteHeader();
     this.buf.rewind();
   }
 
@@ -322,6 +322,11 @@ public class HFileBlock implements Cacheable {
     buf.putInt(onDiskSizeWithoutHeader);
     buf.putInt(uncompressedSizeWithoutHeader);
     buf.putLong(prevBlockOffset);
+    if (this.fileContext.isUseHBaseChecksum()) {
+      buf.put(fileContext.getChecksumType().getCode());
+      buf.putInt(fileContext.getBytesPerChecksum());
+      buf.putInt(onDiskDataSizeWithHeader);
+    }
   }
 
   /**
@@ -1124,7 +1129,7 @@ public class HFileBlock implements Cacheable {
           cacheConf.shouldCacheCompressed(blockType.getCategory()) ?
             getOnDiskBufferWithHeader() :
             getUncompressedBufferWithHeader(),
-          DONT_FILL_HEADER, startOffset,
+          FILL_HEADER, startOffset,
           onDiskBytesWithHeader.length + onDiskChecksum.length, newContext);
     }
   }
