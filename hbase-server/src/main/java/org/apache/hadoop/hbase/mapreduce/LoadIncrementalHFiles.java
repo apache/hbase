@@ -206,8 +206,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
       Path familyDir = stat.getPath();
       byte[] family = familyDir.getName().getBytes();
-      Path[] hfiles = FileUtil.stat2Paths(fs.listStatus(familyDir));
-      for (Path hfile : hfiles) {
+      FileStatus[] hfileStatuses = fs.listStatus(familyDir);
+      for (FileStatus hfileStatus : hfileStatuses) {
+        long length = hfileStatus.getLen();
+        Path hfile = hfileStatus.getPath();
         // Skip "_", reference, HFileLink
         String fileName = hfile.getName();
         if (fileName.startsWith("_")) continue;
@@ -218,6 +220,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         if (HFileLink.isHFileLink(fileName)) {
           LOG.warn("Skipping HFileLink " + fileName);
           continue;
+        }
+        if(length > getConf().getLong(HConstants.HREGION_MAX_FILESIZE,
+            HConstants.DEFAULT_MAX_FILE_SIZE)) {
+          LOG.warn("Trying to bulk load hfile " + hfofDir.toString() + " with size: " +
+              length + " bytes can be problematic as it may lead to oversplitting.");
         }
         ret.add(new LoadQueueItem(family, hfile));
       }

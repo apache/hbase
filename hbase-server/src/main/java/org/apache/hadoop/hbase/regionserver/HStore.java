@@ -709,6 +709,12 @@ public class HStore implements Store {
             + this.getRegionInfo().getRegionNameAsString());
       }
 
+      if(reader.length() > conf.getLong(HConstants.HREGION_MAX_FILESIZE,
+          HConstants.DEFAULT_MAX_FILE_SIZE)) {
+        LOG.warn("Trying to bulk load hfile " + srcPath.toString() + " with size: " +
+            reader.length() + " bytes can be problematic as it may lead to oversplitting.");
+      }
+
       if (verifyBulkLoads) {
         long verificationStartTime = EnvironmentEdgeManager.currentTime();
         LOG.info("Full verification started for bulk load hfile: " + srcPath.toString());
