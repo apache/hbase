@@ -140,6 +140,7 @@ public class TestHBaseFsck {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.handler.count", 2);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.metahandler.count", 2);
+    TEST_UTIL.getConfiguration().setInt("hbase.hbck.close.timeout", 2 * REGION_ONLINE_TIMEOUT);
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.setHDFSClientRetry(0);
 
