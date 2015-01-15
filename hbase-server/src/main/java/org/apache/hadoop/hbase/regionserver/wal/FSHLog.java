@@ -492,6 +492,8 @@ public class FSHLog implements WAL {
       throw new IllegalArgumentException("wal suffix must start with '" + WAL_FILE_NAME_DELIMITER +
           "' but instead was '" + suffix + "'");
     }
+    FSUtils.setStoragePolicy(fs, conf, this.fullPathLogDir, HConstants.WAL_STORAGE_POLICY,
+      HConstants.DEFAULT_WAL_STORAGE_POLICY);
     this.logFileSuffix = (suffix == null) ? "" : URLEncoder.encode(suffix, "UTF8");
     this.prefixPathStr = new Path(fullPathLogDir,
         logFilePrefix + WAL_FILE_NAME_DELIMITER).toString();
