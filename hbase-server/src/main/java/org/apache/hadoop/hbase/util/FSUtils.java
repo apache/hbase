@@ -102,6 +102,45 @@ public abstract class FSUtils {
     super();
   }
 
+  /*
+   * Sets storage policy for given path according to config setting
+   * @param fs
+   * @param conf
+   * @param path the Path whose storage policy is to be set
+   * @param policyKey
+   * @param defaultPolicy
+   */
+  public static void setStoragePolicy(final FileSystem fs, final Configuration conf,
+      final Path path, final String policyKey, final String defaultPolicy) {
+    String storagePolicy = conf.get(policyKey, defaultPolicy).toUpperCase();
+    if (!storagePolicy.equals(defaultPolicy) &&
+        fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs = (DistributedFileSystem)fs;
+      Class<? extends DistributedFileSystem> dfsClass = dfs.getClass();
+      Method m = null;
+      try {
+        m = dfsClass.getDeclaredMethod("setStoragePolicy",
+            new Class<?>[] { Path.class, String.class });
+        m.setAccessible(true);
+      } catch (NoSuchMethodException e) {
+        LOG.info("FileSystem doesn't support"
+            + " setStoragePolicy; --HDFS-7228 not available");
+      } catch (SecurityException e) {
+        LOG.info("Doesn't have access to setStoragePolicy on "
+            + "FileSystems --HDFS-7228 not available", e);
+        m = null; // could happen on setAccessible()
+      }
+      if (m != null) {
+        try {
+          m.invoke(dfs, path, storagePolicy);
+          LOG.info("set " + storagePolicy + " for " + path);
+        } catch (Exception e) {
+          LOG.warn("Unable to set " + storagePolicy + " for " + path, e);
+        }
+      }
+    }
+  }
+
   /**
    * Compare of path component. Does not consider schema; i.e. if schemas different but <code>path
    * <code> starts with <code>rootPath<code>, then the function returns true
