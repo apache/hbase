@@ -179,7 +179,7 @@ For example, to give the Thrift API principal, [code]+thrift_server+, administra
 grant 'thrift_server', 'RWCA'
 ----
 
-For more information about ACLs, please see the link:[Access Control] section 
+For more information about ACLs, please see the <<hbase.accesscontrol.configuration>> section 
 
 The Thrift gateway will authenticate with HBase using the supplied credential.
 No authentication will be performed by the Thrift gateway itself.
@@ -285,7 +285,7 @@ For example, to give the REST API principal, [code]+rest_server+, administrative
 grant 'rest_server', 'RWCA'
 ----
 
-For more information about ACLs, please see the link:[Access Control] section 
+For more information about ACLs, please see the <<hbase.accesscontrol.configuration>> section 
 
 It should be possible for clients to authenticate with the HBase cluster through the REST gateway in a pass-through manner via SPEGNO HTTP authentication.
 This is future work. 
@@ -308,7 +308,6 @@ To allow proxy users, add the following to the [code]+hbase-site.xml+ file for e
 
 [source,xml]
 ----
-
 <property>
   <name>hadoop.security.authorization</name>
   <value>true</value>
@@ -329,7 +328,6 @@ To enable REST gateway impersonation, add the following to the [code]+hbase-site
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.rest.authentication.type</name>
   <value>kerberos</value>
@@ -366,17 +364,16 @@ This method is not used to prevent malicious or hacking attempts.
 To make HBase secure against these types of attacks, you must configure HBase for secure operation.
 Refer to the section link:[Secure Client Access to HBase] and complete all of the steps described there. 
 
-==== Prerequisites
+=== Prerequisites
 
 None 
 
-===== Server-side Configuration for Simple User Access Operation
+=== Server-side Configuration for Simple User Access Operation
 
 Add the following to the [code]+hbase-site.xml+ file on every server machine in the cluster: 
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.security.authentication</name>
   <value>simple</value>
@@ -403,7 +400,6 @@ For 0.94, add the following to the [code]+hbase-site.xml+ file on every server m
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.rpc.engine</name>
   <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
@@ -420,13 +416,12 @@ For 0.94, add the following to the [code]+hbase-site.xml+ file on every server m
 
 A full shutdown and restart of HBase service is required when deploying these configuration changes. 
 
-===== Client-side Configuration for Simple User Access Operation
+=== Client-side Configuration for Simple User Access Operation
 
 Add the following to the [code]+hbase-site.xml+ file on every client: 
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.security.authentication</name>
   <value>simple</value>
@@ -437,7 +432,6 @@ For 0.94, add the following to the [code]+hbase-site.xml+ file on every server m
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.rpc.engine</name>
   <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
@@ -446,7 +440,7 @@ For 0.94, add the following to the [code]+hbase-site.xml+ file on every server m
 
 Be advised that if the [code]+hbase.security.authentication+ in the client- and server-side site files do not match, the client will not be able to communicate with the cluster. 
 
-===== Client-side Configuration for Simple User Access Operation - Thrift Gateway
+==== Client-side Configuration for Simple User Access Operation - Thrift Gateway
 
 The Thrift gateway user will need access.
 For example, to give the Thrift API user, [code]+thrift_server+, administrative access, a command such as this one will suffice: 
@@ -463,7 +457,7 @@ The Thrift gateway will authenticate with HBase using the supplied credential.
 No authentication will be performed by the Thrift gateway itself.
 All client access via the Thrift gateway will use the Thrift gateway's credential and have its privilege. 
 
-===== Client-side Configuration for Simple User Access Operation - REST Gateway
+==== Client-side Configuration for Simple User Access Operation - REST Gateway
 
 The REST gateway will authenticate with HBase using the supplied credential.
 No authentication will be performed by the REST gateway itself.
@@ -513,11 +507,9 @@ When copying keys, configuration files, or other files containing sensitive stri
 
 .Procedure: Basic Server-Side Configuration
 . Enable HFile v3, by setting +hfile.format.version +to 3 in [path]_hbase-site.xml_.
-  This is the default for HBase 1.0 and newer.
-+
+  This is the default for HBase 1.0 and newer. +
 [source,xml]
 ----
-
 <property>
   <name>hfile.format.version</name>
   <value>3</value>
@@ -698,7 +690,6 @@ For an example of using both together, see <<security.example.config,security.ex
 +
 [source,xml]
 ----
-
 <property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController, org.apache.hadoop.hbase.security.token.TokenProvider</value>
@@ -727,7 +718,6 @@ This requires HBase 0.98.4 or newer.
 +
 [source,xml]
 ----
-
 <property>
   <name>hadoop.security.group.mapping</name>
   <value>org.apache.hadoop.security.LdapGroupsMapping</value>
@@ -773,7 +763,6 @@ This requires HBase 0.98.4 or newer.
   <value>cn</value>
 </property>
 ----
-
 . Optionally, enable the early-out evaluation strategy.
   Prior to HBase 0.98.0, if a user was not granted access to a column family, or at least a column qualifier, an AccessDeniedException would be thrown.
   HBase 0.98.0 removed this exception in order to allow cell-level exceptional grants.
@@ -784,7 +773,6 @@ This requires HBase 0.98.4 or newer.
   In this example, the user is reported as being a member of the [code]+services+                group.
 +
 ----
-
 hbase> whoami
 service (auth:KERBEROS)
     groups: services
@@ -902,7 +890,6 @@ The following example shows how to grant access at the table level.
 
 [source,java]
 ----
-
 public static void grantOnTable(final HBaseTestingUtility util, final String user,
     final TableName table, final byte[] family, final byte[] qualifier,
     final Permission.Action... actions) throws Exception {
@@ -928,7 +915,6 @@ To grant permissions at the cell level, you can use the [code]+Mutation.setACL+ 
 
 [source,java]
 ----
-
 Mutation.setACL(String user, Permission perms)
 Mutation.setACL(Map<String, Permission> perms)
 ----
@@ -937,7 +923,6 @@ Specifically, this example provides read permission to a user called [literal]+u
 
 [source,java]
 ----
-
 put.setACL(“user1”, new Permission(Permission.Action.READ))
 ----
 ====
@@ -955,7 +940,6 @@ The correct way to apply cell-level permissions is to do so in the application c
 ====
 [source,java]
 ----
-
 public static void revokeFromTable(final HBaseTestingUtility util, final String user,
     final TableName table, final byte[] family, final byte[] qualifier,
     final Permission.Action... actions) throws Exception {
@@ -984,27 +968,22 @@ public static void revokeFromTable(final HBaseTestingUtility util, final String 
 ====
 ----
 hbase> user_permission 'user'
-----
 
-----
 hbase> user_permission '.*'
-----
 
-----
 hbase> user_permission JAVA_REGEX
 ----
 ====
-+
+
 .API
 ====
 [source,java]
 ----
-
 public static void verifyAllowed(User user, AccessTestAction action, int count) throws Exception {
   try {
     Object obj = user.runAs(action);
-    if (obj != null && obj instanceof List<?>) {
-      List<?> results = (List<?>) obj;
+    if (obj != null && obj instanceof List&lt;?&gt;) {
+      List&lt;?&gt; results = (List&lt;?&gt;) obj;
       if (results != null && results.isEmpty()) {
         fail("Empty non null results from action for user '" + user.getShortName() + "'");
       }
@@ -1286,6 +1265,18 @@ Interpreting the labels authenticated for a given get/scan request is a pluggabl
 You can specify a custom plugin by using the property [code]+hbase.regionserver.scan.visibility.label.generator.class+.
 The default implementation class is [code]+org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator+.
 You can also configure a set of [code]+ScanLabelGenerators+ to be used by the system, as a comma-separated list.
+
+==== Replicating Visibility Tags as Strings
+
+As mentioned in the above sections, the interface `VisibilityLabelService` could be used to implement a different way of storing the visibility expressions in the cells. Clusters with replication enabled also must replicate the visibility expressions to the peer cluster. If `DefaultVisibilityLabelServiceImpl` is used as the implementation for `VisibilityLabelService`, all the visibility expression are converted to the corresponding expression based on the ordinals for each visibility label stored in the labels table. During replication, visible cellsare also replicated with the ordinal-based expression intact.  The peer cluster may not have the same `labels` table with the same ordinal mapping for the visibility labels. In that case, replicating the ordinals makes no sense. It would be better if the replication occurred with the visibility expressions transmitted as strings. To replicate the visibility expression as strings to the peer cluster, create a `RegionServerObserver` configuration which works based on the implementation of the `VisibilityLabelService` interface. The configuration below enables replication of visibility expressions to peer clusters as strings. See link:https://issues.apache.org/jira/browse/HBASE-11639[HBASE-11639] for more details.
+
+[source,xml]
+----
+<property>
+  <name>hbase.coprocessor.regionserver.classes</name>
+  <value>org.apache.hadoop.hbase.security.visibility.VisibilityController$VisibilityReplication</value>
+</property>
+----
 
 [[hbase.encryption.server]]
 === Transparent Encryption of Data At Rest
