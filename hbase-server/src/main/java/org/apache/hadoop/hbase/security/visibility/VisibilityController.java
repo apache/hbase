@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -99,7 +101,6 @@ import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -121,6 +122,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     VisibilityLabelsService.Interface, CoprocessorService {
 
   private static final Log LOG = LogFactory.getLog(VisibilityController.class);
+  private static final Log AUDITLOG = LogFactory.getLog("SecurityLogger."
+      + VisibilityController.class.getName());
   // flags if we are running on a region of the 'labels' table
   private boolean labelsRegion = false;
   // Flag denoting whether AcessController is available or not.
@@ -745,9 +748,9 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         new VisibilityControllerNotReadyException("VisibilityController not yet initialized!"),
         response);
     } else {
+      List<byte[]> labels = new ArrayList<byte[]>(visLabels.size());
       try {
         checkCallingUserAuth();
-        List<byte[]> labels = new ArrayList<byte[]>(visLabels.size());
         RegionActionResult successResult = RegionActionResult.newBuilder().build();
         for (VisibilityLabel visLabel : visLabels) {
           byte[] label = visLabel.getLabel().toByteArray();
@@ -758,6 +761,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         }
         if (!labels.isEmpty()) {
           OperationStatus[] opStatus = this.visibilityLabelService.addLabels(labels);
+          logResult(true, "addLabels", "Adding labels allowed", null, labels, null);
           int i = 0;
           for (OperationStatus status : opStatus) {
             while (response.getResult(i) != successResult)
@@ -771,6 +775,10 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
             i++;
           }
         }
+      } catch (AccessDeniedException e) {
+        logResult(false, "addLabels", e.getMessage(), null, labels, null);
+        LOG.error("User is not having required permissions to add labels", e);
+        setExceptionResults(visLabels.size(), e, response);
       } catch (IOException e) {
         LOG.error(e);
         setExceptionResults(visLabels.size(), e, response);
@@ -799,14 +807,17 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         new VisibilityControllerNotReadyException("VisibilityController not yet initialized!"),
         response);
     } else {
+      byte[] user = request.getUser().toByteArray();
+      List<byte[]> labelAuths = new ArrayList<byte[]>(auths.size());
       try {
         checkCallingUserAuth();
-        List<byte[]> labelAuths = new ArrayList<byte[]>(auths.size());
+
         for (ByteString authBS : auths) {
           labelAuths.add(authBS.toByteArray());
         }
-        OperationStatus[] opStatus = this.visibilityLabelService.setAuths(request.getUser()
-            .toByteArray(), labelAuths);
+        OperationStatus[] opStatus = this.visibilityLabelService.setAuths(user, labelAuths);
+        logResult(true, "setAuths", "Setting authorization for labels allowed", user, labelAuths,
+          null);
         RegionActionResult successResult = RegionActionResult.newBuilder().build();
         for (OperationStatus status : opStatus) {
           if (status.getOperationStatusCode() == SUCCESS) {
@@ -818,12 +829,49 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
             response.addResult(failureResultBuilder.build());
           }
         }
+      } catch (AccessDeniedException e) {
+        logResult(false, "setAuths", e.getMessage(), user, labelAuths, null);
+        LOG.error("User is not having required permissions to set authorization", e);
+        setExceptionResults(auths.size(), e, response);
       } catch (IOException e) {
         LOG.error(e);
         setExceptionResults(auths.size(), e, response);
       }
     }
     done.run(response.build());
+  }
+
+  private void logResult(boolean isAllowed, String request, String reason, byte[] user,
+      List<byte[]> labelAuths, String regex) {
+    if (AUDITLOG.isTraceEnabled()) {
+      RequestContext ctx = RequestContext.get();
+      InetAddress remoteAddr = null;
+      if (ctx != null) {
+        remoteAddr = ctx.getRemoteAddress();
+      }
+
+      List<String> labelAuthsStr = new ArrayList<String>();
+      if (labelAuths != null) {
+        int labelAuthsSize = labelAuths.size();
+        labelAuthsStr = new ArrayList<String>(labelAuthsSize);
+        for (int i = 0; i < labelAuthsSize; i++) {
+          labelAuthsStr.add(Bytes.toString(labelAuths.get(i)));
+        }
+      }
+
+      User requestingUser = null;
+      try {
+        requestingUser = VisibilityUtils.getActiveUser();
+      } catch (IOException e) {
+        LOG.warn("Failed to get active system user.");
+        LOG.debug("Details on failure to get active system user.", e);
+      }
+      AUDITLOG.trace("Access " + (isAllowed ? "allowed" : "denied") + " for user "
+          + (requestingUser != null ? requestingUser.getShortName() : "UNKNOWN") + "; reason: "
+          + reason + "; remote address: " + (remoteAddr != null ? remoteAddr : "") + "; request: "
+          + request + "; user: " + (user != null ? Bytes.toShort(user) : "null") + "; labels: "
+          + labelAuthsStr + "; regex: " + regex);
+    }
   }
 
   @Override
@@ -862,6 +910,10 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         else {
           labels = this.visibilityLabelService.getAuths(user, false);
         }
+        logResult(true, "getAuths", "Get authorizations for user allowed", user, null, null);
+      } catch (AccessDeniedException e) {
+        logResult(false, "getAuths", e.getMessage(), user, null, null);
+        ResponseConverter.setControllerException(controller, e);
       } catch (IOException e) {
         ResponseConverter.setControllerException(controller, e);
       }
@@ -884,6 +936,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       setExceptionResults(auths.size(), new CoprocessorException(
           "VisibilityController not yet initialized"), response);
     } else {
+      byte[] requestUser = request.getUser().toByteArray();
+      List<byte[]> labelAuths = new ArrayList<byte[]>(auths.size());
       try {
         // When AC is ON, do AC based user auth check
         if (this.acOn && !isSystemOrSuperUser()) {
@@ -893,12 +947,14 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
         }
         checkCallingUserAuth(); // When AC is not in place the calling user should have SYSTEM_LABEL
                                 // auth to do this action.
-        List<byte[]> labelAuths = new ArrayList<byte[]>(auths.size());
         for (ByteString authBS : auths) {
           labelAuths.add(authBS.toByteArray());
         }
-        OperationStatus[] opStatus = this.visibilityLabelService.clearAuths(request.getUser()
-            .toByteArray(), labelAuths);
+
+        OperationStatus[] opStatus =
+            this.visibilityLabelService.clearAuths(requestUser, labelAuths);
+        logResult(true, "clearAuths", "Removing authorization for labels allowed", requestUser,
+          labelAuths, null);
         RegionActionResult successResult = RegionActionResult.newBuilder().build();
         for (OperationStatus status : opStatus) {
           if (status.getOperationStatusCode() == SUCCESS) {
@@ -910,6 +966,10 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
             response.addResult(failureResultBuilder.build());
           }
         }
+      } catch (AccessDeniedException e) {
+        logResult(false, "clearAuths", e.getMessage(), requestUser, labelAuths, null);
+        LOG.error("User is not having required permissions to clear authorization", e);
+        setExceptionResults(auths.size(), e, response);
       } catch (IOException e) {
         LOG.error(e);
         setExceptionResults(auths.size(), e, response);
@@ -926,6 +986,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       controller.setFailed("VisibilityController not yet initialized");
     } else {
       List<String> labels = null;
+      String regex = request.hasRegex() ? request.getRegex() : null;
       try {
         // We do ACL check here as we create scanner directly on region. It will not make calls to
         // AccessController CP methods.
@@ -935,8 +996,11 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
               + (requestingUser != null ? requestingUser.getShortName() : "null")
               + "' is not authorized to perform this action.");
         }
-        String regex = request.hasRegex() ? request.getRegex() : null;
         labels = this.visibilityLabelService.listLabels(regex);
+        logResult(false, "listLabels", "Listing labels allowed", null, null, regex);
+      } catch (AccessDeniedException e) {
+        logResult(false, "listLabels", e.getMessage(), null, null, regex);
+        ResponseConverter.setControllerException(controller, e);
       } catch (IOException e) {
         ResponseConverter.setControllerException(controller, e);
       }
