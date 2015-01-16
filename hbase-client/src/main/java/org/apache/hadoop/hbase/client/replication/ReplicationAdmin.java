@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -93,11 +93,16 @@ public class ReplicationAdmin implements Closeable {
   public static final String REPLICATIONGLOBAL = Integer
       .toString(HConstants.REPLICATION_SCOPE_GLOBAL);
 
-  private final HConnection connection;
+  private final Connection connection;
   // TODO: replication should be managed by master. All the classes except ReplicationAdmin should
   // be moved to hbase-server. Resolve it in HBASE-11392.
   private final ReplicationQueuesClient replicationQueuesClient;
   private final ReplicationPeers replicationPeers;
+  /**
+   * A watcher used by replicationPeers and replicationQueuesClient. Keep reference so can dispose
+   * on {@link #close()}.
+   */
+  private final ZooKeeperWatcher zkw;
 
   /**
    * Constructor that creates a connection to the local ZooKeeper ensemble.
@@ -111,8 +116,8 @@ public class ReplicationAdmin implements Closeable {
       throw new RuntimeException("hbase.replication isn't true, please " +
           "enable it in order to use replication");
     }
-    this.connection = HConnectionManager.getConnection(conf);
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    this.connection = ConnectionFactory.createConnection(conf);
+    zkw = createZooKeeperWatcher();
     try {
       this.replicationPeers = ReplicationFactory.getReplicationPeers(zkw, conf, this.connection);
       this.replicationPeers.init();
@@ -126,19 +131,19 @@ public class ReplicationAdmin implements Closeable {
   }
 
   private ZooKeeperWatcher createZooKeeperWatcher() throws IOException {
-    return new ZooKeeperWatcher(connection.getConfiguration(),
-      "Replication Admin", new Abortable() {
+    // This Abortable doesn't 'abort'... it just logs.
+    return new ZooKeeperWatcher(connection.getConfiguration(), "ReplicationAdmin", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         LOG.error(why, e);
-        System.exit(1);
+        // We used to call system.exit here but this script can be embedded by other programs that
+        // want to do replication stuff... so inappropriate calling System.exit. Just log for now.
       }
 
       @Override
       public boolean isAborted() {
         return false;
       }
-
     });
   }
 
@@ -451,6 +456,9 @@ public class ReplicationAdmin implements Closeable {
 
   @Override
   public void close() throws IOException {
+    if (this.zkw != null) {
+      this.zkw.close();
+    }
     if (this.connection != null) {
       this.connection.close();
     }
@@ -471,7 +479,7 @@ public class ReplicationAdmin implements Closeable {
   public List<HashMap<String, String>> listReplicated() throws IOException {
     List<HashMap<String, String>> replicationColFams = new ArrayList<HashMap<String, String>>();
 
-    Admin admin = new HBaseAdmin(this.connection.getConfiguration());
+    Admin admin = connection.getAdmin();
     HTableDescriptor[] tables;
     try {
       tables = admin.listTables();
