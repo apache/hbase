@@ -56,7 +56,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
   final AtomicBoolean clusterShutDown = new AtomicBoolean(false);
 
   private final ServerName sn;
-  private final int infoPort;
+  private int infoPort;
   private final Server master;
 
   /**
@@ -64,12 +64,16 @@ public class ActiveMasterManager extends ZooKeeperListener {
    * @param sn ServerName
    * @param master In an instance of a Master.
    */
-  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, int infoPort, Server master) {
+  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master) {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;
-    this.infoPort = infoPort;
     this.master = master;
+  }
+
+  // will be set after jetty server is started
+  public void setInfoPort(int infoPort) {
+    this.infoPort = infoPort;
   }
 
   @Override
