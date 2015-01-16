@@ -30,11 +30,17 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Map.Entry;
+import java.util.NavigableMap;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -62,6 +68,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -76,9 +83,12 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
@@ -302,7 +312,7 @@ public class TestHBaseFsck {
   private void deleteRegion(Configuration conf, final HTableDescriptor htd,
       byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
       boolean hdfs) throws IOException, InterruptedException {
-    deleteRegion(conf, htd, startKey, endKey, unassign, metaRow, hdfs, false);
+    deleteRegion(conf, htd, startKey, endKey, unassign, metaRow, hdfs, false, HRegionInfo.DEFAULT_REPLICA_ID);
   }
 
   /**
@@ -311,10 +321,12 @@ public class TestHBaseFsck {
    * @param metaRow  if true remove region's row from META
    * @param hdfs if true remove region's dir in HDFS
    * @param regionInfoOnly if true remove a region dir's .regioninfo file
+   * @param replicaId replica id
    */
   private void deleteRegion(Configuration conf, final HTableDescriptor htd,
       byte[] startKey, byte[] endKey, boolean unassign, boolean metaRow,
-      boolean hdfs, boolean regionInfoOnly) throws IOException, InterruptedException {
+      boolean hdfs, boolean regionInfoOnly, int replicaId)
+          throws IOException, InterruptedException {
     LOG.info("** Before delete:");
     dumpMeta(htd.getTableName());
 
@@ -323,7 +335,8 @@ public class TestHBaseFsck {
       HRegionInfo hri = location.getRegionInfo();
       ServerName hsa = location.getServerName();
       if (Bytes.compareTo(hri.getStartKey(), startKey) == 0
-          && Bytes.compareTo(hri.getEndKey(), endKey) == 0) {
+          && Bytes.compareTo(hri.getEndKey(), endKey) == 0
+          && hri.getReplicaId() == replicaId) {
 
         LOG.info("RegionName: " +hri.getRegionNameAsString());
         byte[] deleteRow = hri.getRegionName();
@@ -624,16 +637,99 @@ public class TestHBaseFsck {
   @Test (timeout=180000)
   public void testHbckWithRegionReplica() throws Exception {
     TableName table =
-        TableName.valueOf("tableWithReplica");
+        TableName.valueOf("testHbckWithRegionReplica");
     try {
       setupTableWithRegionReplica(table, 2);
+      TEST_UTIL.getHBaseAdmin().flush(table.getName());
       assertNoErrors(doFsck(conf, false));
-      assertEquals(ROWKEYS.length, countRows());
     } finally {
       cleanupTable(table);
     }
   }
 
+  @Test
+  public void testHbckWithFewerReplica() throws Exception {
+    TableName table =
+        TableName.valueOf("testHbckWithFewerReplica");
+    try {
+      setupTableWithRegionReplica(table, 2);
+      TEST_UTIL.getHBaseAdmin().flush(table.getName());
+      assertNoErrors(doFsck(conf, false));
+      assertEquals(ROWKEYS.length, countRows());
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"),
+          Bytes.toBytes("C"), true, false, false, false, 1); // unassign one replica
+      // check that problem exists
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[]{ERROR_CODE.NOT_DEPLOYED});
+      // fix the problem
+      hbck = doFsck(conf, true);
+      // run hbck again to make sure we don't see any errors
+      hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[]{});
+    } finally {
+      cleanupTable(table);
+    }
+  }
+
+  @Test
+  public void testHbckWithExcessReplica() throws Exception {
+    TableName table =
+        TableName.valueOf("testHbckWithExcessReplica");
+    try {
+      setupTableWithRegionReplica(table, 2);
+      TEST_UTIL.getHBaseAdmin().flush(table.getName());
+      assertNoErrors(doFsck(conf, false));
+      assertEquals(ROWKEYS.length, countRows());
+      // the next few lines inject a location in meta for a replica, and then
+      // asks the master to assign the replica (the meta needs to be injected
+      // for the master to treat the request for assignment as valid; the master
+      // checks the region is valid either from its memory or meta)
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      List<HRegionInfo> regions = TEST_UTIL.getHBaseAdmin().getTableRegions(table);
+      byte[] startKey = Bytes.toBytes("B");
+      byte[] endKey = Bytes.toBytes("C");
+      byte[] metaKey = null;
+      HRegionInfo newHri = null;
+      for (HRegionInfo h : regions) {
+        if (Bytes.compareTo(h.getStartKey(), startKey) == 0  &&
+            Bytes.compareTo(h.getEndKey(), endKey) == 0 &&
+            h.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+          metaKey = h.getRegionName();
+          //create a hri with replicaId as 2 (since we already have replicas with replicaid 0 and 1)
+          newHri = RegionReplicaUtil.getRegionInfoForReplica(h, 2);
+          break;
+        }
+      }
+      Put put = new Put(metaKey);
+      ServerName sn = TEST_UTIL.getHBaseAdmin().getClusterStatus().getServers()
+          .toArray(new ServerName[0])[0];
+      //add a location with replicaId as 2 (since we already have replicas with replicaid 0 and 1)
+      MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), 2);
+      meta.put(put);
+      meta.flushCommits();
+      // assign the new replica
+      HBaseFsckRepair.fixUnassigned((HBaseAdmin)TEST_UTIL.getHBaseAdmin(), newHri);
+      HBaseFsckRepair.waitUntilAssigned((HBaseAdmin)TEST_UTIL.getHBaseAdmin(), newHri);
+      // now reset the meta row to its original value
+      Delete delete = new Delete(metaKey);
+      delete.deleteColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(2));
+      delete.deleteColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(2));
+      delete.deleteColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(2));
+      meta.delete(delete);
+      meta.flushCommits();
+      meta.close();
+      // check that problem exists
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[]{ERROR_CODE.NOT_IN_META});
+      // fix the problem
+      hbck = doFsck(conf, true);
+      // run hbck again to make sure we don't see any errors
+      hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[]{});
+    } finally {
+      cleanupTable(table);
+    }
+  }
   /**
    * Get region info from local cluster.
    */
@@ -909,8 +1005,8 @@ public class TestHBaseFsck {
       // Mess it up by creating an overlap in the metadata
       admin.disableTable(table);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
-          Bytes.toBytes("B"), true, true, false, true);
-      admin.enableTable(table);
+          Bytes.toBytes("B"), true, true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
 
       HRegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B"));
@@ -1028,8 +1124,8 @@ public class TestHBaseFsck {
       // Mess it up by leaving a hole in the meta data
       admin.disableTable(table);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"),
-          Bytes.toBytes("C"), true, true, false, true);
-      admin.enableTable(table);
+          Bytes.toBytes("C"), true, true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
 
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] {
@@ -1155,6 +1251,79 @@ public class TestHBaseFsck {
       cleanupTable(table);
     }
   }
+
+  /**
+   * This creates and fixes a bad table with a region that is in meta but has
+   * no deployment or data hdfs. The table has region_replication set to 2.
+   */
+  @Test (timeout=180000)
+  public void testNotInHdfsWithReplicas() throws Exception {
+    TableName table =
+        TableName.valueOf("tableNotInHdfs");
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    try {
+      HRegionInfo[] oldHris = new HRegionInfo[2];
+      setupTableWithRegionReplica(table, 2);
+      assertEquals(ROWKEYS.length, countRows());
+      NavigableMap<HRegionInfo, ServerName> map = MetaScanner.allTableRegions(TEST_UTIL.getConnection(),
+          tbl.getName());
+      int i = 0;
+      // store the HRIs of the regions we will mess up
+      for (Map.Entry<HRegionInfo, ServerName> m : map.entrySet()) {
+        if (m.getKey().getStartKey().length > 0 &&
+            m.getKey().getStartKey()[0] == Bytes.toBytes("B")[0]) {
+          LOG.debug("Initially server hosting " + m.getKey() + " is " + m.getValue());
+          oldHris[i++] = m.getKey();
+        }
+      }
+      // make sure data in regions
+      TEST_UTIL.getHBaseAdmin().flush(table.getName());
+
+      // Mess it up by leaving a hole in the hdfs data
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"),
+          Bytes.toBytes("C"), false, false, true); // don't rm meta
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_HDFS});
+
+      // fix hole
+      doFsck(conf, true);
+
+      // check that hole fixed
+      assertNoErrors(doFsck(conf,false));
+      assertEquals(ROWKEYS.length - 2, countRows());
+
+      // the following code checks whether the old primary/secondary has
+      // been unassigned and the new primary/secondary has been assigned
+      i = 0;
+      HRegionInfo[] newHris = new HRegionInfo[2];
+      // get all table's regions from meta
+      map = MetaScanner.allTableRegions(TEST_UTIL.getConnection(), tbl.getName());
+      // get the HRIs of the new regions (hbck created new regions for fixing the hdfs mess-up)
+      for (Map.Entry<HRegionInfo, ServerName> m : map.entrySet()) {
+        if (m.getKey().getStartKey().length > 0 &&
+            m.getKey().getStartKey()[0] == Bytes.toBytes("B")[0]) {
+          newHris[i++] = m.getKey();
+        }
+      }
+      // get all the online regions in the regionservers
+      Collection<ServerName> servers = admin.getClusterStatus().getServers();
+      Set<HRegionInfo> onlineRegions = new HashSet<HRegionInfo>();
+      for (ServerName s : servers) {
+        List<HRegionInfo> list = admin.getOnlineRegions(s);
+        onlineRegions.addAll(list);
+      }
+      // the new HRIs must be a subset of the online regions
+      assertTrue(onlineRegions.containsAll(Arrays.asList(newHris)));
+      // the old HRIs must not be part of the set (removeAll would return false if
+      // the set didn't change)
+      assertFalse(onlineRegions.removeAll(Arrays.asList(oldHris)));
+    } finally {
+      cleanupTable(table);
+      admin.close();
+    }
+  }
+
 
   /**
    * This creates entries in hbase:meta with no hdfs data.  This should cleanly
@@ -1629,7 +1798,7 @@ public class TestHBaseFsck {
 
       // Mess it up by closing a region
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
-        Bytes.toBytes("B"), true, false, false, false);
+        Bytes.toBytes("B"), true, false, false, false, HRegionInfo.DEFAULT_REPLICA_ID);
 
       // verify there is no other errors
       HBaseFsck hbck = doFsck(conf, false);
@@ -1682,7 +1851,7 @@ public class TestHBaseFsck {
 
       // Mess it up by deleting a region from the metadata
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
-        Bytes.toBytes("B"), false, true, false, false);
+        Bytes.toBytes("B"), false, true, false, false, HRegionInfo.DEFAULT_REPLICA_ID);
 
       // verify there is no other errors
       HBaseFsck hbck = doFsck(conf, false);
@@ -1739,8 +1908,8 @@ public class TestHBaseFsck {
       // Mess it up by creating an overlap in the metadata
       admin.disableTable(table);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("A"),
-        Bytes.toBytes("B"), true, true, false, true);
-      admin.enableTable(table);
+        Bytes.toBytes("B"), true, true, false, true, HRegionInfo.DEFAULT_REPLICA_ID);
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
 
       HRegionInfo hriOverlap =
           createRegion(tbl.getTableDescriptor(), Bytes.toBytes("A2"), Bytes.toBytes("B"));

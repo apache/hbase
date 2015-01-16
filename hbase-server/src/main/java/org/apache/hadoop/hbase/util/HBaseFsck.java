@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -1689,9 +1690,23 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void checkAndFixConsistency()
   throws IOException, KeeperException, InterruptedException {
+	  // Divide the checks in two phases. One for default/primary replicas and another
+	  // for the non-primary ones. Keeps code cleaner this way.
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
-      checkRegionConsistency(e.getKey(), e.getValue());
+      if (e.getValue().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+        checkRegionConsistency(e.getKey(), e.getValue());
+      }
     }
+    boolean prevHdfsCheck = shouldCheckHdfs();
+    setCheckHdfs(false); //replicas don't have any hdfs data
+    // Run a pass over the replicas and fix any assignment issues that exist on the currently
+    // deployed/undeployed replicas.
+    for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
+      if (e.getValue().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        checkRegionConsistency(e.getKey(), e.getValue());
+      }
+    }
+    setCheckHdfs(prevHdfsCheck);
   }
 
   private void preCheckPermission() throws IOException, AccessDeniedException {
@@ -1791,6 +1806,27 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void undeployRegions(HbckInfo hi) throws IOException, InterruptedException {
+    undeployRegionsForHbi(hi);
+    // undeploy replicas of the region (but only if the method is invoked for the primary)
+    if (hi.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+      return;
+    }
+    int numReplicas = admin.getTableDescriptor(hi.getTableName()).getRegionReplication();
+    for (int i = 1; i < numReplicas; i++) {
+      if (hi.getPrimaryHRIForDeployedReplica() == null) continue;
+      HRegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(
+          hi.getPrimaryHRIForDeployedReplica(), i);
+      HbckInfo h = regionInfoMap.get(hri.getEncodedName());
+      if (h != null) {
+        undeployRegionsForHbi(h);
+        //set skip checks; we undeployed it, and we don't want to evaluate this anymore
+        //in consistency checks
+        h.setSkipChecks(true);
+      }
+    }
+  }
+
+  private void undeployRegionsForHbi(HbckInfo hi) throws IOException, InterruptedException {
     for (OnlineEntry rse : hi.deployedEntries) {
       LOG.debug("Undeploy region "  + rse.hri + " from " + rse.hsa);
       try {
@@ -1826,27 +1862,41 @@ public class HBaseFsck extends Configured implements Closeable {
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
     get.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER);
+    // also get the locations of the replicas to close if the primary region is being closed
+    if (hi.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+      int numReplicas = admin.getTableDescriptor(hi.getTableName()).getRegionReplication();
+      for (int i = 0; i < numReplicas; i++) {
+        get.addColumn(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(i));
+        get.addColumn(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(i));
+      }
+    }
     Result r = meta.get(get);
-    ServerName serverName = HRegionInfo.getServerName(r);
-    if (serverName == null) {
-      errors.reportError("Unable to close region "
-          + hi.getRegionNameAsString() +  " because meta does not "
-          + "have handle to reach it.");
+    RegionLocations rl = MetaTableAccessor.getRegionLocations(r);
+    if (rl == null) {
+      LOG.warn("Unable to close region " + hi.getRegionNameAsString() +
+          " since meta does not have handle to reach it");
       return;
     }
-
-    HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
-    if (hri == null) {
-      LOG.warn("Unable to close region " + hi.getRegionNameAsString()
-          + " because hbase:meta had invalid or missing "
-          + HConstants.CATALOG_FAMILY_STR + ":"
-          + Bytes.toString(HConstants.REGIONINFO_QUALIFIER)
-          + " qualifier value.");
-      return;
+    for (HRegionLocation h : rl.getRegionLocations()) {
+      ServerName serverName = h.getServerName();
+      if (serverName == null) {
+        errors.reportError("Unable to close region "
+            + hi.getRegionNameAsString() +  " because meta does not "
+            + "have handle to reach it.");
+        continue;
+      }
+      HRegionInfo hri = h.getRegionInfo();
+      if (hri == null) {
+        LOG.warn("Unable to close region " + hi.getRegionNameAsString()
+            + " because hbase:meta had invalid or missing "
+            + HConstants.CATALOG_FAMILY_STR + ":"
+            + Bytes.toString(HConstants.REGIONINFO_QUALIFIER)
+            + " qualifier value.");
+        continue;
+      }
+      // close the region -- close files and remove assignment
+      HBaseFsckRepair.closeRegionSilentlyAndWait(connection, serverName, hri);
     }
-
-    // close the region -- close files and remove assignment
-    HBaseFsckRepair.closeRegionSilentlyAndWait(connection, serverName, hri);
   }
 
   private void tryAssignmentRepair(HbckInfo hbi, String msg) throws IOException,
@@ -1862,6 +1912,23 @@ public class HBaseFsck extends Configured implements Closeable {
       }
       HBaseFsckRepair.fixUnassigned(admin, hri);
       HBaseFsckRepair.waitUntilAssigned(admin, hri);
+
+      // also assign replicas if needed (do it only when this call operates on a primary replica)
+      if (hbi.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) return;
+      int replicationCount = admin.getTableDescriptor(hri.getTable()).getRegionReplication();
+      for (int i = 1; i < replicationCount; i++) {
+        hri = RegionReplicaUtil.getRegionInfoForReplica(hri, i);
+        HbckInfo h = regionInfoMap.get(hri.getEncodedName());
+        if (h != null) {
+          undeployRegions(h);
+          //set skip checks; we undeploy & deploy it; we don't want to evaluate this hbi anymore
+          //in consistency checks
+          h.setSkipChecks(true);
+        }
+        HBaseFsckRepair.fixUnassigned(admin, hri);
+        HBaseFsckRepair.waitUntilAssigned(admin, hri);
+      }
+
     }
   }
 
@@ -1870,8 +1937,9 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void checkRegionConsistency(final String key, final HbckInfo hbi)
   throws IOException, KeeperException, InterruptedException {
-    String descriptiveName = hbi.toString();
 
+	if (hbi.isSkipChecks()) return;
+	String descriptiveName = hbi.toString();
     boolean inMeta = hbi.metaEntry != null;
     // In case not checking HDFS, assume the region is on HDFS
     boolean inHdfs = !shouldCheckHdfs() || hbi.getHdfsRegionDir() != null;
@@ -1891,7 +1959,6 @@ public class HBaseFsck extends Configured implements Closeable {
     if (hbi.containsOnlyHdfsEdits()) {
       return;
     }
-    if (hbi.isSkipChecks()) return;
     if (inMeta && inHdfs && isDeployed && deploymentMatchesMeta && shouldBeDeployed) {
       return;
     } else if (inMeta && inHdfs && !shouldBeDeployed && !isDeployed) {
@@ -1974,7 +2041,9 @@ public class HBaseFsck extends Configured implements Closeable {
         }
 
         LOG.info("Patching hbase:meta with .regioninfo: " + hbi.getHdfsHRI());
-        HBaseFsckRepair.fixMetaHoleOnline(getConf(), hbi.getHdfsHRI());
+        int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
+        HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
+            admin.getClusterStatus().getServers(), numReplicas);
 
         tryAssignmentRepair(hbi, "Trying to reassign region...");
       }
@@ -1983,15 +2052,25 @@ public class HBaseFsck extends Configured implements Closeable {
       errors.reportError(ERROR_CODE.NOT_IN_META, "Region " + descriptiveName
           + " not in META, but deployed on " + Joiner.on(", ").join(hbi.deployedOn));
       debugLsr(hbi.getHdfsRegionDir());
-      if (shouldFixMeta()) {
+      if (hbi.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+        // for replicas, this means that we should undeploy the region (we would have
+        // gone over the primaries and fixed meta holes in first phase under
+        // checkAndFixConsistency; we shouldn't get the condition !inMeta at
+        // this stage unless unwanted replica)
+        if (shouldFixAssignments()) {
+          undeployRegionsForHbi(hbi);
+        }
+      }
+      if (shouldFixMeta() && hbi.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
         if (!hbi.isHdfsRegioninfoPresent()) {
           LOG.error("This should have been repaired in table integrity repair phase");
           return;
         }
 
         LOG.info("Patching hbase:meta with with .regioninfo: " + hbi.getHdfsHRI());
-        HBaseFsckRepair.fixMetaHoleOnline(getConf(), hbi.getHdfsHRI());
-
+        int numReplicas = admin.getTableDescriptor(hbi.getTableName()).getRegionReplication();
+        HBaseFsckRepair.fixMetaHoleOnlineAndAddReplicas(getConf(), hbi.getHdfsHRI(),
+            admin.getClusterStatus().getServers(), numReplicas);
         tryAssignmentRepair(hbi, "Trying to fix unassigned region...");
       }
 
@@ -2314,7 +2393,8 @@ public class HBaseFsck extends Configured implements Closeable {
     public void addRegionInfo(HbckInfo hir) {
       if (Bytes.equals(hir.getEndKey(), HConstants.EMPTY_END_ROW)) {
         // end key is absolute end key, just add it.
-        sc.add(hir);
+        // ignore replicas other than primary for these checks
+        if (hir.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) sc.add(hir);
         return;
       }
 
@@ -2331,7 +2411,8 @@ public class HBaseFsck extends Configured implements Closeable {
       }
 
       // main case, add to split calculator
-      sc.add(hir);
+      // ignore replicas other than primary for these checks
+      if (hir.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) sc.add(hir);
     }
 
     public void addServer(ServerName server) {
@@ -2706,8 +2787,10 @@ public class HBaseFsck extends Configured implements Closeable {
           ArrayList<HbckInfo> subRange = new ArrayList<HbckInfo>(ranges);
           //  this dumb and n^2 but this shouldn't happen often
           for (HbckInfo r1 : ranges) {
+            if (r1.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) continue;
             subRange.remove(r1);
             for (HbckInfo r2 : subRange) {
+              if (r2.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) continue;
               if (Bytes.compareTo(r1.getStartKey(), r2.getStartKey())==0) {
                 handler.handleDuplicateStartKeys(r1,r2);
               } else {
@@ -3011,33 +3094,49 @@ public class HBaseFsck extends Configured implements Closeable {
 
           // record the latest modification of this META record
           long ts =  Collections.max(result.listCells(), comp).getTimestamp();
-          Pair<HRegionInfo, ServerName> pair = HRegionInfo.getHRegionInfoAndServerName(result);
-          if (pair == null || pair.getFirst() == null) {
+          RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
+          if (rl == null) {
             emptyRegionInfoQualifiers.add(result);
             errors.reportError(ERROR_CODE.EMPTY_META_CELL,
               "Empty REGIONINFO_QUALIFIER found in hbase:meta");
             return true;
           }
           ServerName sn = null;
-          if (pair.getSecond() != null) {
-            sn = pair.getSecond();
+          if (rl.getRegionLocation(HRegionInfo.DEFAULT_REPLICA_ID) == null ||
+              rl.getRegionLocation(HRegionInfo.DEFAULT_REPLICA_ID).getRegionInfo() == null) {
+            emptyRegionInfoQualifiers.add(result);
+            errors.reportError(ERROR_CODE.EMPTY_META_CELL,
+              "Empty REGIONINFO_QUALIFIER found in hbase:meta");
+            return true;
           }
-          HRegionInfo hri = pair.getFirst();
+          HRegionInfo hri = rl.getRegionLocation(HRegionInfo.DEFAULT_REPLICA_ID).getRegionInfo();
           if (!(isTableIncluded(hri.getTable())
               || hri.isMetaRegion())) {
             return true;
           }
           PairOfSameType<HRegionInfo> daughters = HRegionInfo.getDaughterRegions(result);
-          MetaEntry m = new MetaEntry(hri, sn, ts, daughters.getFirst(), daughters.getSecond());
-          HbckInfo previous = regionInfoMap.get(hri.getEncodedName());
-          if (previous == null) {
-            regionInfoMap.put(hri.getEncodedName(), new HbckInfo(m));
-          } else if (previous.metaEntry == null) {
-            previous.metaEntry = m;
-          } else {
-            throw new IOException("Two entries in hbase:meta are same " + previous);
-          }
+          for (HRegionLocation h : rl.getRegionLocations()) {
+            if (h == null || h.getRegionInfo() == null) {
+              continue;
+            }
+            sn = h.getServerName();
+            hri = h.getRegionInfo();
 
+            MetaEntry m = null;
+            if (hri.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+              m = new MetaEntry(hri, sn, ts, daughters.getFirst(), daughters.getSecond());
+            } else {
+              m = new MetaEntry(hri, sn, ts, null, null);
+            }
+            HbckInfo previous = regionInfoMap.get(hri.getEncodedName());
+            if (previous == null) {
+              regionInfoMap.put(hri.getEncodedName(), new HbckInfo(m));
+            } else if (previous.metaEntry == null) {
+              previous.metaEntry = m;
+            } else {
+              throw new IOException("Two entries in hbase:meta are same " + previous);
+            }
+          }
           PairOfSameType<HRegionInfo> mergeRegions = HRegionInfo.getMergeRegions(result);
           for (HRegionInfo mergeRegion : new HRegionInfo[] {
               mergeRegions.getFirst(), mergeRegions.getSecond() }) {
@@ -3155,9 +3254,16 @@ public class HBaseFsck extends Configured implements Closeable {
     private List<ServerName> deployedOn = Lists.newArrayList(); // info on RS's
     private boolean skipChecks = false; // whether to skip further checks to this region info.
     private boolean isMerged = false;// whether this region has already been merged into another one
+    private int deployedReplicaId = HRegionInfo.DEFAULT_REPLICA_ID;
+    private HRegionInfo primaryHRIForDeployedReplica = null;
 
     HbckInfo(MetaEntry metaEntry) {
       this.metaEntry = metaEntry;
+    }
+
+    public int getReplicaId() {
+      if (metaEntry != null) return metaEntry.getReplicaId();
+      return deployedReplicaId;
     }
 
     public synchronized void addServer(HRegionInfo hri, ServerName server) {
@@ -3166,6 +3272,10 @@ public class HBaseFsck extends Configured implements Closeable {
       rse.hsa = server;
       this.deployedEntries.add(rse);
       this.deployedOn.add(server);
+      // save the replicaId that we see deployed in the cluster
+      this.deployedReplicaId = hri.getReplicaId();
+      this.primaryHRIForDeployedReplica =
+          RegionReplicaUtil.getRegionInfoForDefaultReplica(hri);
     }
 
     @Override
@@ -3175,6 +3285,7 @@ public class HBaseFsck extends Configured implements Closeable {
       sb.append((metaEntry != null)? metaEntry.getRegionNameAsString() : "null");
       sb.append( ", hdfs => " + getHdfsRegionDir());
       sb.append( ", deployed => " + Joiner.on(", ").join(deployedEntries));
+      sb.append( ", replicaId => " + getReplicaId());
       sb.append(" }");
       return sb.toString();
     }
@@ -3212,8 +3323,10 @@ public class HBaseFsck extends Configured implements Closeable {
         Path tableDir = this.hdfsEntry.hdfsRegionDir.getParent();
         return FSUtils.getTableName(tableDir);
       } else {
-        // Currently no code exercises this path, but we could add one for
-        // getting table name from OnlineEntry
+        // return the info from the first online/deployed hri
+        for (OnlineEntry e : deployedEntries) {
+          return e.hri.getTable();
+        }
         return null;
       }
     }
@@ -3225,6 +3338,11 @@ public class HBaseFsck extends Configured implements Closeable {
         if (hdfsEntry.hri != null) {
           return hdfsEntry.hri.getRegionNameAsString();
         }
+      } else {
+        // return the info from the first online/deployed hri
+        for (OnlineEntry e : deployedEntries) {
+          return e.hri.getRegionNameAsString();
+        }
       }
       return null;
     }
@@ -3235,8 +3353,16 @@ public class HBaseFsck extends Configured implements Closeable {
       } else if (hdfsEntry != null) {
         return hdfsEntry.hri.getRegionName();
       } else {
+        // return the info from the first online/deployed hri
+        for (OnlineEntry e : deployedEntries) {
+          return e.hri.getRegionName();
+        }
         return null;
       }
+    }
+
+    public HRegionInfo getPrimaryHRIForDeployedReplica() {
+      return primaryHRIForDeployedReplica;
     }
 
     Path getHdfsRegionDir() {
@@ -3567,7 +3693,6 @@ public class HBaseFsck extends Configured implements Closeable {
         // check to see if the existence of this region matches the region in META
         for (HRegionInfo r:regions) {
           HbckInfo hbi = hbck.getOrCreateInfo(r.getEncodedName());
-          if (!RegionReplicaUtil.isDefaultReplica(r)) hbi.setSkipChecks(true);
           hbi.addServer(r, rsinfo);
         }
       } catch (IOException e) {          // unable to connect to the region server.

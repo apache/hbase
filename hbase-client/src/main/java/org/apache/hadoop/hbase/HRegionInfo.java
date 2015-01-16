@@ -143,7 +143,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   public static final byte REPLICA_ID_DELIMITER = (byte)'_';
 
   private static final int MAX_REPLICA_ID = 0xFFFF;
-  static final int DEFAULT_REPLICA_ID = 0;
+  public static final int DEFAULT_REPLICA_ID = 0;
   /**
    * Does region name contain its encoded name?
    * @param regionName region name

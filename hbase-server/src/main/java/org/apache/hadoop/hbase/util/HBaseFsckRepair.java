@@ -18,6 +18,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +41,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -178,13 +185,26 @@ public class HBaseFsckRepair {
   }
 
   /**
-   * Puts the specified HRegionInfo into META.
+   * Puts the specified HRegionInfo into META with replica related columns
    */
-  public static void fixMetaHoleOnline(Configuration conf,
-      HRegionInfo hri) throws IOException {
+  public static void fixMetaHoleOnlineAndAddReplicas(Configuration conf,
+      HRegionInfo hri, Collection<ServerName> servers, int numReplicas) throws IOException {
     Connection conn = ConnectionFactory.createConnection(conf);
     Table meta = conn.getTable(TableName.META_TABLE_NAME);
-    MetaTableAccessor.addRegionToMeta(meta, hri);
+    Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
+    if (numReplicas > 1) {
+      Random r = new Random();
+      ServerName[] serversArr = servers.toArray(new ServerName[servers.size()]);
+      for (int i = 1; i < numReplicas; i++) {
+        ServerName sn = serversArr[r.nextInt(serversArr.length)];
+        // the column added here is just to make sure the master is able to
+        // see the additional replicas when it is asked to assign. The
+        // final value of these columns will be different and will be updated
+        // by the actual regionservers that start hosting the respective replicas
+        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), i);
+      }
+    }
+    meta.put(put);
     meta.close();
     conn.close();
   }
