@@ -40,6 +40,10 @@ module Hbase
       @create_test_name = 'hbase_create_table_test_table'
     end
 
+    def teardown
+      shutdown
+    end
+
     define_test "Revoke should rid access rights appropriately" do
       drop_test_table(@test_name)
       create_test_table(@test_name)

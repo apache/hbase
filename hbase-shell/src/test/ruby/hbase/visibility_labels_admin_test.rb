@@ -38,6 +38,11 @@ module Hbase
       create_test_table(@test_name)
     end
 
+    def teardown
+      @test_table.close
+      shutdown
+    end
+
     define_test "Labels should be created as specified" do
       label = 'TEST_LABELS'
       count = table('hbase:labels')._count_internal

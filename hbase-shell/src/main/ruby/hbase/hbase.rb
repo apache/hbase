@@ -39,15 +39,17 @@ module Hbase
         configuration.setInt("hbase.client.retries.number", 7)
         configuration.setInt("hbase.ipc.client.connect.max.retries", 3)
       end
+      @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(
+          self.configuration)
     end
 
     def admin(formatter)
-      ::Hbase::Admin.new(configuration, formatter)
+      ::Hbase::Admin.new(@connection.getAdmin, formatter)
     end
 
     # Create new one each time
     def table(table, shell)
-      ::Hbase::Table.new(configuration, table, shell)
+      ::Hbase::Table.new(@connection.getTable(table), shell)
     end
 
     def replication_admin(formatter)
@@ -64,6 +66,10 @@ module Hbase
 
     def quotas_admin(formatter)
       ::Hbase::QuotasAdmin.new(configuration, formatter)
+    end
+    
+    def shutdown
+      @connection.close
     end
   end
 end
