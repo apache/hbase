@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -51,6 +53,15 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.exceptions.MergeRegionException;
+import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -58,6 +69,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.protobuf.ServiceException;
 
 /**
  * Class to test HBaseAdmin.
@@ -1091,6 +1104,127 @@ public class TestAdmin1 {
     }
     TEST_UTIL.deleteTable(tableName);
     table.close();
+  }
+
+  @Test
+  public void testSplitAndMergeWithReplicaTable() throws Exception {
+    // The test tries to directly split replica regions and directly merge replica regions. These
+    // are not allowed. The test validates that. Then the test does a valid split/merge of allowed
+    // regions.
+    // Set up a table with 3 regions and replication set to 3
+    TableName tableName = TableName.valueOf("testSplitAndMergeWithReplicaTable");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.setRegionReplication(3);
+    byte[] cf = "f".getBytes();
+    HColumnDescriptor hcd = new HColumnDescriptor(cf);
+    desc.addFamily(hcd);
+    byte[][] splitRows = new byte[2][];
+    splitRows[0] = new byte[]{(byte)'4'};
+    splitRows[1] = new byte[]{(byte)'7'};
+    TEST_UTIL.getHBaseAdmin().createTable(desc, splitRows);
+    List<HRegion> oldRegions;
+    do {
+      oldRegions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
+      Thread.sleep(10);
+    } while (oldRegions.size() != 9); //3 regions * 3 replicas
+    // write some data to the table
+    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    List<Put> puts = new ArrayList<Put>();
+    byte[] qualifier = "c".getBytes();
+    Put put = new Put(new byte[]{(byte)'1'});
+    put.add(cf, qualifier, "100".getBytes());
+    puts.add(put);
+    put = new Put(new byte[]{(byte)'6'});
+    put.add(cf, qualifier, "100".getBytes());
+    puts.add(put);
+    put = new Put(new byte[]{(byte)'8'});
+    put.add(cf, qualifier, "100".getBytes());
+    puts.add(put);
+    ht.put(puts);
+    ht.flushCommits();
+    ht.close();
+    List<Pair<HRegionInfo, ServerName>> regions =
+        MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getZooKeeperWatcher(),
+                          TEST_UTIL.getConnection(), tableName);
+    boolean gotException = false;
+    // the element at index 1 would be a replica (since the metareader gives us ordered
+    // regions). Try splitting that region via the split API . Should fail
+    try {
+      TEST_UTIL.getHBaseAdmin().split(regions.get(1).getFirst().getRegionName());
+    } catch (IllegalArgumentException ex) {
+      gotException = true;
+    }
+    assertTrue(gotException);
+    gotException = false;
+    // the element at index 1 would be a replica (since the metareader gives us ordered
+    // regions). Try splitting that region via a different split API (the difference is
+    // this API goes direct to the regionserver skipping any checks in the admin). Should fail
+    try {
+      TEST_UTIL.getHBaseAdmin().split(regions.get(1).getSecond(), regions.get(1).getFirst(),
+          new byte[]{(byte)'1'});
+    } catch (IOException ex) {
+      gotException = true;
+    }
+    assertTrue(gotException);
+    gotException = false;
+    // Try merging a replica with another. Should fail.
+    try {
+      TEST_UTIL.getHBaseAdmin().mergeRegions(regions.get(1).getFirst().getEncodedNameAsBytes(),
+          regions.get(2).getFirst().getEncodedNameAsBytes(), true);
+    } catch (IllegalArgumentException m) {
+      gotException = true;
+    }
+    assertTrue(gotException);
+    // Try going to the master directly (that will skip the check in admin)
+    try {
+      DispatchMergingRegionsRequest request = RequestConverter
+          .buildDispatchMergingRegionsRequest(regions.get(1).getFirst().getEncodedNameAsBytes(),
+              regions.get(2).getFirst().getEncodedNameAsBytes(), true);
+      TEST_UTIL.getHBaseAdmin().getConnection().getMaster().dispatchMergingRegions(null, request);
+    } catch (ServiceException m) {
+      Throwable t = m.getCause();
+      do {
+        if (t instanceof MergeRegionException) {
+          gotException = true;
+          break;
+        }
+        t = t.getCause();
+      } while (t != null);
+    }
+    assertTrue(gotException);
+    gotException = false;
+    // Try going to the regionservers directly
+    // first move the region to the same regionserver
+    if (!regions.get(2).getSecond().equals(regions.get(1).getSecond())) {
+      moveRegionAndWait(regions.get(2).getFirst(), regions.get(1).getSecond());
+    }
+    try {
+      AdminService.BlockingInterface admin = TEST_UTIL.getHBaseAdmin().getConnection()
+          .getAdmin(regions.get(1).getSecond());
+      ProtobufUtil.mergeRegions(admin, regions.get(1).getFirst(), regions.get(2).getFirst(), true);
+    } catch (MergeRegionException mm) {
+      gotException = true;
+    }
+    assertTrue(gotException);
+  }
+
+  private void moveRegionAndWait(HRegionInfo destRegion, ServerName destServer)
+      throws InterruptedException, MasterNotRunningException,
+      ZooKeeperConnectionException, IOException {
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    TEST_UTIL.getHBaseAdmin().move(
+        destRegion.getEncodedNameAsBytes(),
+        Bytes.toBytes(destServer.getServerName()));
+    while (true) {
+      ServerName serverName = master.getAssignmentManager()
+          .getRegionStates().getRegionServerOfRegion(destRegion);
+      if (serverName != null && serverName.equals(destServer)) {
+        TEST_UTIL.assertRegionOnServer(
+            destRegion, serverName, 200);
+        break;
+      }
+      Thread.sleep(10);
+    }
   }
 
   /**

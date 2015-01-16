@@ -518,6 +518,10 @@ public class MasterRpcServices extends RSRpcServices
 
     HRegionInfo regionInfoA = regionStateA.getRegion();
     HRegionInfo regionInfoB = regionStateB.getRegion();
+    if (regionInfoA.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
+        regionInfoB.getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+      throw new ServiceException(new MergeRegionException("Can't merge non-default replicas"));
+    }
     if (regionInfoA.compareTo(regionInfoB) == 0) {
       throw new ServiceException(new MergeRegionException(
         "Unable to merge a region to itself " + regionInfoA + ", " + regionInfoB));
