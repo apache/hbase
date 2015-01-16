@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
@@ -222,7 +221,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   public static final String MASTER = "master";
 
   // Manager and zk listener for master election
-  private ActiveMasterManager activeMasterManager;
+  private final ActiveMasterManager activeMasterManager;
   // Region server tracker
   RegionServerTracker regionServerTracker;
   // Draining region server tracker
@@ -303,7 +302,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /** jetty server for master to redirect requests to regionserver infoServer */
   private org.mortbay.jetty.Server masterJettyServer;
 
-  private int masterInfoPort;
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302472L;
     private static int regionServerInfoPort;
@@ -380,19 +378,21 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
       }
     }
-    startActiveMasterManager();
-    putUpJettyServer();
+    activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
+    int infoPort = putUpJettyServer();
+    startActiveMasterManager(infoPort);
   }
 
-  private void putUpJettyServer() throws IOException {
+  // return the actual infoPort, -1 means disable info server.
+  private int putUpJettyServer() throws IOException {
     if (!conf.getBoolean("hbase.master.infoserver.redirect", true)) {
-      return;
+      return -1;
     }
     int infoPort = conf.getInt("hbase.master.info.port.orig",
       HConstants.DEFAULT_MASTER_INFOPORT);
     // -1 is for disabling info server, so no redirecting
     if (infoPort < 0 || infoServer == null) {
-      return;
+      return -1;
     }
     String addr = conf.get("hbase.master.info.bindAddress", "0.0.0.0");
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
@@ -418,7 +418,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     } catch (Exception e) {
       throw new IOException("Failed to start redirecting jetty server", e);
     }
-    masterInfoPort = connector.getPort();
+    return connector.getLocalPort();
   }
 
   /**
@@ -1357,7 +1357,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  private void startActiveMasterManager() throws KeeperException {
+  private void startActiveMasterManager(int infoPort) throws KeeperException {
     String backupZNode = ZKUtil.joinZNode(
       zooKeeper.backupMasterAddressesZNode, serverName.toString());
     /*
@@ -1372,12 +1372,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     */
     LOG.info("Adding backup master ZNode " + backupZNode);
     if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode,
-        serverName, masterInfoPort)) {
+        serverName, infoPort)) {
       LOG.warn("Failed create of " + backupZNode + " by " + serverName);
     }
 
-    activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName,
-        masterInfoPort, this);
+    activeMasterManager.setInfoPort(infoPort);
     // Start a thread to try to become the active master, so we won't block here
     Threads.setDaemonThreadRunning(new Thread(new Runnable() {
       @Override
@@ -2203,7 +2202,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
 
-    List<TableName> result = new ArrayList(descriptors.size());
+    List<TableName> result = new ArrayList<TableName>(descriptors.size());
     for (HTableDescriptor htd: descriptors) {
       result.add(htd.getTableName());
     }
