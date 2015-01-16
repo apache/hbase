@@ -260,7 +260,7 @@ public class TestActiveMasterManager {
       clusterStatusTracker.start();
 
       this.activeMasterManager =
-        new ActiveMasterManager(zk, master, 0, this);
+        new ActiveMasterManager(zk, master, this);
       zk.registerListener(activeMasterManager);
     }
 
