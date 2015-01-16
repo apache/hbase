@@ -111,21 +111,15 @@ EOF
     # let external objects read the table name
     attr_reader :name
 
-    def initialize(configuration, table_name, shell)
-      if @@thread_pool then
-        @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(
-          configuration, @@thread_pool)
-        @table = @connection.getTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
-      else
-        @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(
-          configuration)
-        @table = @connection.getTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
-        @@thread_pool = @table.getPool()
-      end
-      
-      @name = table_name
+    def initialize(table, shell)
+      @table = table
+      @name = @table.getName().getNameAsString()
       @shell = shell
       @converters = Hash.new()
+    end
+
+    def close()
+      @table.close()
     end
 
     # Note the below methods are prefixed with '_' to hide them from the average user, as

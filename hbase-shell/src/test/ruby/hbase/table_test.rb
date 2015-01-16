@@ -29,9 +29,13 @@ module Hbase
       setup_hbase
     end
 
+    def teardown
+      shutdown
+    end
+
     define_test "Hbase::Table constructor should not fail for existent tables" do
       assert_nothing_raised do
-        table('hbase:meta')
+        table('hbase:meta').close()
       end
     end
   end
@@ -46,6 +50,11 @@ module Hbase
       @test_name = "hbase_shell_tests_table"
       create_test_table(@test_name)
       @test_table = table(@test_name)
+    end
+
+    def tearDown
+      @test_table.close()
+      shutdown
     end
 
     define_test "is_meta_table? method should return true for the meta table" do
@@ -111,6 +120,11 @@ module Hbase
       
       @test_table.put(105, "x:a", "3")
       @test_table.put(105, "x:a", "4")
+    end
+
+    def teardown
+      @test_table.close
+      shutdown
     end
 
     define_test "put should work without timestamp" do
@@ -203,7 +217,11 @@ module Hbase
       
       @test_table.put(3, "x:a", 21, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
       @test_table.put(3, "x:b", 22, @test_ts, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
+    end
 
+    def teardown
+      @test_table.close
+      shutdown
     end
 
     define_test "count should work w/o a block passed" do
