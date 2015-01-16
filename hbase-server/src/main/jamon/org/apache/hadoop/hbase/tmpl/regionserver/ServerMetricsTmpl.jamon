@@ -40,7 +40,7 @@ java.lang.management.ManagementFactory;
         <li class="active"><a href="#tab_baseStats" data-toggle="tab">Base Stats</a></li>
         <li class=""><a href="#tab_memoryStats" data-toggle="tab">Memory</a></li>
         <li class=""><a href="#tab_requestStats" data-toggle="tab">Requests</a></li>
-        <li class=""><a href="#tab_hlogStats" data-toggle="tab">wals</a></li>
+        <li class=""><a href="#tab_walStats" data-toggle="tab">WALs</a></li>
         <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
         <li class=""><a href="#tab_queueStats" data-toggle="tab">Queues</a></li>
     </ul>
@@ -54,7 +54,7 @@ java.lang.management.ManagementFactory;
         <div class="tab-pane" id="tab_requestStats">
             <& requestStats; mWrap = mWrap &>
         </div>
-        <div class="tab-pane" id="tab_hlogStats">
+        <div class="tab-pane" id="tab_walStats">
             <& walStats; mWrap = mWrap &>
         </div>
         <div class="tab-pane" id="tab_storeStats">
