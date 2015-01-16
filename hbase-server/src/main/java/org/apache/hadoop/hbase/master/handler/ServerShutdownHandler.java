@@ -275,7 +275,8 @@ public class ServerShutdownHandler extends EventHandler {
             } else if (rit != null) {
               if ((rit.isPendingCloseOrClosing() || rit.isOffline())
                   && am.getTableStateManager().isTableState(hri.getTable(),
-                  ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+                  ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+                  am.getReplicasToClose().contains(hri)) {
                 // If the table was partially disabled and the RS went down, we should clear the RIT
                 // and remove the node for the region.
                 // The rit that we use may be stale in case the table was in DISABLING state

@@ -158,6 +158,24 @@ public class StoreFileInfo {
   }
 
   /**
+   * Create a Store File Info from an HFileLink
+   * @param conf
+   * @param fs
+   * @param fileStatus
+   * @param reference
+   * @throws IOException
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+      final Reference reference)
+      throws IOException {
+    this.fs = fs;
+    this.conf = conf;
+    this.initialPath = fileStatus.getPath();
+    this.reference = reference;
+    this.link = null;
+  }
+
+  /**
    * Sets the region coprocessor env.
    * @param coprocessorHost
    */

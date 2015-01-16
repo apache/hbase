@@ -60,7 +60,9 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -69,6 +71,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TestReplicasClient.SlowMeCopro;
 import org.apache.hadoop.hbase.coordination.ZKSplitTransactionCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCloseRegionCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
@@ -966,6 +969,87 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
+  @Test
+  public void testSplitWithRegionReplicas() throws Exception {
+    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TESTING_UTIL);
+    final TableName tableName =
+        TableName.valueOf("foobar");
+    HTableDescriptor htd = TESTING_UTIL.createTableDescriptor("foobar");
+    htd.setRegionReplication(2);
+    htd.addCoprocessor(SlowMeCopro.class.getName());
+    // Create table then get the single region for our new table.
+    HTable t = TESTING_UTIL.createTable(htd, new byte[][]{Bytes.toBytes("cf")},
+        TESTING_UTIL.getConfiguration());
+    int count;
+    List<HRegion> oldRegions;
+    do {
+      oldRegions = cluster.getRegions(tableName);
+      Thread.sleep(10);
+    } while (oldRegions.size() != 2);
+    for (HRegion h : oldRegions) LOG.debug("OLDREGION " + h.getRegionInfo());
+    try {
+      int regionServerIndex = cluster.getServerWith(oldRegions.get(0).getRegionName());
+      HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+      insertData(tableName, admin, t);
+      // Turn off balancer so it doesn't cut in and mess up our placements.
+      admin.setBalancerRunning(false, true);
+      // Turn off the meta scanner so it don't remove parent on us.
+      cluster.getMaster().setCatalogJanitorEnabled(false);
+      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
+          tableName);
+      assertEquals("The specified table should be present.", true, tableExists);
+      final HRegion region = findSplittableRegion(oldRegions);
+      regionServerIndex = cluster.getServerWith(region.getRegionName());
+      regionServer = cluster.getRegionServer(regionServerIndex);
+      assertTrue("not able to find a splittable region", region != null);
+      String node = ZKAssign.getNodeName(regionServer.getZooKeeper(),
+          region.getRegionInfo().getEncodedName());
+      regionServer.getZooKeeper().sync(node);
+      SplitTransaction st = new SplitTransaction(region, Bytes.toBytes("row2"));
+      try {
+        st.prepare();
+        st.execute(regionServer, regionServer);
+      } catch (IOException e) {
+        e.printStackTrace();
+        fail("Split execution should have succeeded with no exceptions thrown " + e);
+      }
+      //TESTING_UTIL.waitUntilAllRegionsAssigned(tableName);
+      List<HRegion> newRegions;
+      do {
+        newRegions = cluster.getRegions(tableName);
+        for (HRegion h : newRegions) LOG.debug("NEWREGION " + h.getRegionInfo());
+        Thread.sleep(1000);
+      } while ((newRegions.contains(oldRegions.get(0)) || newRegions.contains(oldRegions.get(1)))
+          || newRegions.size() != 4);
+      tableExists = MetaTableAccessor.tableExists(regionServer.getConnection(),
+          tableName);
+      assertEquals("The specified table should be present.", true, tableExists);
+      // exists works on stale and we see the put after the flush
+      byte[] b1 = "row1".getBytes();
+      Get g = new Get(b1);
+      g.setConsistency(Consistency.STRONG);
+      // The following GET will make a trip to the meta to get the new location of the 1st daughter
+      // In the process it will also get the location of the replica of the daughter (initially
+      // pointing to the parent's replica)
+      Result r = t.get(g);
+      Assert.assertFalse(r.isStale());
+      LOG.info("exists stale after flush done");
+
+      SlowMeCopro.getCdl().set(new CountDownLatch(1));
+      g = new Get(b1);
+      g.setConsistency(Consistency.TIMELINE);
+      // This will succeed because in the previous GET we get the location of the replica
+      r = t.get(g);
+      Assert.assertTrue(r.isStale());
+      SlowMeCopro.getCdl().get().countDown();
+    } finally {
+      SlowMeCopro.getCdl().get().countDown();
+      admin.setBalancerRunning(true, false);
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+      t.close();
+    }
+  }
+
   private void insertData(final TableName tableName, HBaseAdmin admin, Table t) throws IOException,
       InterruptedException {
     Put p = new Put(Bytes.toBytes("row1"));
@@ -1365,7 +1449,7 @@ public class TestSplitTransactionOnCluster {
   private HRegion findSplittableRegion(final List<HRegion> regions) throws InterruptedException {
     for (int i = 0; i < 5; ++i) {
       for (HRegion r: regions) {
-        if (r.isSplittable()) {
+        if (r.isSplittable() && r.getRegionInfo().getReplicaId() == 0) {
           return(r);
         }
       }

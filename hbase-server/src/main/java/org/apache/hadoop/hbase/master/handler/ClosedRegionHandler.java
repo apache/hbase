@@ -93,7 +93,8 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
     LOG.debug("Handling CLOSED event for " + regionInfo.getEncodedName());
     // Check if this table is being disabled or not
     if (this.assignmentManager.getTableStateManager().isTableState(this.regionInfo.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+        assignmentManager.getReplicasToClose().contains(regionInfo)) {
       assignmentManager.offlineDisabledRegion(regionInfo);
       return;
     }

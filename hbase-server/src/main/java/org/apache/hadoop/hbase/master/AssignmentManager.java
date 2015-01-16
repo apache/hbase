@@ -31,8 +31,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadFactory;
@@ -62,6 +64,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableStateManager;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Result;
@@ -147,6 +150,8 @@ public class AssignmentManager extends ZooKeeperListener {
   private AtomicInteger numRegionsOpened = new AtomicInteger(0);
 
   final private KeyLocker<String> locker = new KeyLocker<String>();
+
+  Set<HRegionInfo> replicasToClose = Collections.synchronizedSet(new HashSet<HRegionInfo>());
 
   /**
    * Map of regions to reopen after the schema of a table is changed. Key -
@@ -633,6 +638,13 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.info("Clean cluster startup. Assigning user regions");
       assignAllUserRegions(allRegions);
     }
+    // unassign replicas of the split parents and the merged regions
+    // the daughter replicas are opened in assignAllUserRegions if it was
+    // not already opened.
+    for (HRegionInfo h : replicasToClose) {
+      unassign(h);
+    }
+    replicasToClose.clear();
     return failover;
   }
 
@@ -816,7 +828,11 @@ public class AssignmentManager extends ZooKeeperListener {
       case RS_ZK_REGION_FAILED_OPEN:
         // Region is closed, insert into RIT and handle it
         regionStates.updateRegionState(regionInfo, State.CLOSED, sn);
-        invokeAssign(regionInfo);
+        if (!replicasToClose.contains(regionInfo)) {
+          invokeAssign(regionInfo);
+        } else {
+          offlineDisabledRegion(regionInfo);
+        }
         break;
 
       case M_ZK_REGION_OFFLINE:
@@ -1519,6 +1535,7 @@ public class AssignmentManager extends ZooKeeperListener {
       deleteNodeInStates(encodedName, "closed", null,
         EventType.RS_ZK_REGION_CLOSED, EventType.M_ZK_REGION_OFFLINE);
     }
+    replicasToClose.remove(regionInfo);
     regionOffline(regionInfo);
   }
 
@@ -2264,7 +2281,7 @@ public class AssignmentManager extends ZooKeeperListener {
   private boolean isDisabledorDisablingRegionInRIT(final HRegionInfo region) {
     if (this.tableStateManager.isTableState(region.getTable(),
         ZooKeeperProtos.Table.State.DISABLED,
-        ZooKeeperProtos.Table.State.DISABLING)) {
+        ZooKeeperProtos.Table.State.DISABLING) || replicasToClose.contains(region)) {
       LOG.info("Table " + region.getTable() + " is disabled or disabling;"
         + " skipping assign of " + region.getRegionNameAsString());
       offlineDisabledRegion(region);
@@ -2530,7 +2547,7 @@ public class AssignmentManager extends ZooKeeperListener {
       lock.unlock();
 
       // Region is expected to be reassigned afterwards
-      if (reassign && regionStates.isRegionOffline(region)) {
+      if (!replicasToClose.contains(region) && reassign && regionStates.isRegionOffline(region)) {
         assign(region, true);
       }
     }
@@ -2843,6 +2860,19 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.debug("null result from meta - ignoring but this is strange.");
         continue;
       }
+      // keep a track of replicas to close. These were the replicas of the originally
+      // unmerged regions. The master might have closed them before but it mightn't
+      // maybe because it crashed.
+      PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(result);
+      if (p.getFirst() != null && p.getSecond() != null) {
+        int numReplicas = ((MasterServices)server).getTableDescriptors().get(p.getFirst().
+            getTable()).getRegionReplication();
+        for (HRegionInfo merge : p) {
+          for (int i = 1; i < numReplicas; i++) {
+            replicasToClose.add(RegionReplicaUtil.getRegionInfoForReplica(merge, i));
+          }
+        }
+      }
       RegionLocations rl =  MetaTableAccessor.getRegionLocations(result);
       if (rl == null) continue;
       HRegionLocation[] locations = rl.getRegionLocations();
@@ -2852,6 +2882,14 @@ public class AssignmentManager extends ZooKeeperListener {
         if (regionInfo == null) continue;
         int replicaId = regionInfo.getReplicaId();
         State state = RegionStateStore.getRegionState(result, replicaId);
+        // keep a track of replicas to close. These were the replicas of the split parents
+        // from the previous life of the master. The master should have closed them before
+        // but it couldn't maybe because it crashed
+        if (replicaId == 0 && state.equals(State.SPLIT)) {
+          for (HRegionLocation h : locations) {
+            replicasToClose.add(h.getRegionInfo());
+          }
+        }
         ServerName lastHost = hrl.getServerName();
         ServerName regionLocation = RegionStateStore.getRegionServer(result, replicaId);
         regionStates.createRegionState(regionInfo, state, regionLocation, lastHost);
@@ -3489,7 +3527,8 @@ public class AssignmentManager extends ZooKeeperListener {
         // When there are more than one region server a new RS is selected as the
         // destination and the same is updated in the region plan. (HBASE-5546)
         if (getTableStateManager().isTableState(hri.getTable(),
-            ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+            ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+            replicasToClose.contains(hri)) {
           offlineDisabledRegion(hri);
           return;
         }
@@ -3529,7 +3568,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private void onRegionClosed(final HRegionInfo hri) {
     if (getTableStateManager().isTableState(hri.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+        replicasToClose.contains(hri)) {
       offlineDisabledRegion(hri);
       return;
     }
@@ -3541,8 +3581,8 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   private String onRegionSplit(ServerName sn, TransitionCode code,
-      HRegionInfo p, HRegionInfo a, HRegionInfo b) {
-    RegionState rs_p = regionStates.getRegionState(p);
+      final HRegionInfo p, final HRegionInfo a, final HRegionInfo b) {
+    final RegionState rs_p = regionStates.getRegionState(p);
     RegionState rs_a = regionStates.getRegionState(a);
     RegionState rs_b = regionStates.getRegionState(b);
     if (!(rs_p.isOpenOrSplittingOnServer(sn)
@@ -3568,6 +3608,15 @@ public class AssignmentManager extends ZooKeeperListener {
           ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
         invokeUnAssign(a);
         invokeUnAssign(b);
+      } else {
+        Callable<Object> splitReplicasCallable = new Callable<Object>() {
+          @Override
+          public Object call() {
+            doSplittingOfReplicas(p, a, b);
+            return null;
+          }
+        };
+        threadPoolExecutorService.submit(splitReplicasCallable);
       }
     } else if (code == TransitionCode.SPLIT_PONR) {
       try {
@@ -3590,7 +3639,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   private String onRegionMerge(ServerName sn, TransitionCode code,
-      HRegionInfo p, HRegionInfo a, HRegionInfo b) {
+      final HRegionInfo p, final HRegionInfo a, final HRegionInfo b) {
     RegionState rs_p = regionStates.getRegionState(p);
     RegionState rs_a = regionStates.getRegionState(a);
     RegionState rs_b = regionStates.getRegionState(b);
@@ -3617,6 +3666,15 @@ public class AssignmentManager extends ZooKeeperListener {
       if (getTableStateManager().isTableState(p.getTable(),
           ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
         invokeUnAssign(p);
+      } else {
+        Callable<Object> mergeReplicasCallable = new Callable<Object>() {
+          @Override
+          public Object call() {
+            doMergingOfReplicas(p, a, b);
+            return null;
+          }
+        };
+        threadPoolExecutorService.submit(mergeReplicasCallable);
       }
     } else if (code == TransitionCode.MERGE_PONR) {
       try {
@@ -3723,6 +3781,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     if (et == EventType.RS_ZK_REGION_MERGED) {
+      doMergingOfReplicas(p, hri_a, hri_b);
       LOG.debug("Handling MERGED event for " + encodedName + "; deleting node");
       // Remove region from ZK
       try {
@@ -3851,6 +3910,8 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     if (et == EventType.RS_ZK_REGION_SPLIT) {
+      // split replicas
+      doSplittingOfReplicas(rs_p.getRegion(), hri_a, hri_b);
       LOG.debug("Handling SPLIT event for " + encodedName + "; deleting node");
       // Remove region from ZK
       try {
@@ -3883,6 +3944,110 @@ public class AssignmentManager extends ZooKeeperListener {
     return true;
   }
 
+  private void doMergingOfReplicas(HRegionInfo mergedHri, final HRegionInfo hri_a,
+      final HRegionInfo hri_b) {
+    // Close replicas for the original unmerged regions. create/assign new replicas
+    // for the merged parent.
+    List<HRegionInfo> unmergedRegions = new ArrayList<HRegionInfo>();
+    unmergedRegions.add(hri_a);
+    unmergedRegions.add(hri_b);
+    Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(unmergedRegions);
+    Collection<List<HRegionInfo>> c = map.values();
+    for (List<HRegionInfo> l : c) {
+      for (HRegionInfo h : l) {
+        if (!RegionReplicaUtil.isDefaultReplica(h)) {
+          LOG.debug("Unassigning un-merged replica " + h);
+          unassign(h);
+        }
+      }
+    }
+    int numReplicas = 1;
+    try {
+      numReplicas = ((MasterServices)server).getTableDescriptors().get(mergedHri.getTable()).
+          getRegionReplication();
+    } catch (IOException e) {
+      LOG.warn("Couldn't get the replication attribute of the table " + mergedHri.getTable() +
+          " due to " + e.getMessage() + ". The assignment of replicas for the merged region " +
+          "will not be done");
+    }
+    List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    for (int i = 1; i < numReplicas; i++) {
+      regions.add(RegionReplicaUtil.getRegionInfoForReplica(mergedHri, i));
+    }
+    try {
+      assign(regions);
+    } catch (IOException ioe) {
+      LOG.warn("Couldn't assign all replica(s) of region " + mergedHri + " because of " +
+                ioe.getMessage());
+    } catch (InterruptedException ie) {
+      LOG.warn("Couldn't assign all replica(s) of region " + mergedHri+ " because of " +
+                ie.getMessage());
+    }
+  }
+
+  private void doSplittingOfReplicas(final HRegionInfo parentHri, final HRegionInfo hri_a,
+      final HRegionInfo hri_b) {
+    // create new regions for the replica, and assign them to match with the
+    // current replica assignments. If replica1 of parent is assigned to RS1,
+    // the replica1s of daughters will be on the same machine
+    int numReplicas = 1;
+    try {
+      numReplicas = ((MasterServices)server).getTableDescriptors().get(parentHri.getTable()).
+          getRegionReplication();
+    } catch (IOException e) {
+      LOG.warn("Couldn't get the replication attribute of the table " + parentHri.getTable() +
+          " due to " + e.getMessage() + ". The assignment of daughter replicas " +
+          "replicas will not be done");
+    }
+    // unassign the old replicas
+    List<HRegionInfo> parentRegion = new ArrayList<HRegionInfo>();
+    parentRegion.add(parentHri);
+    Map<ServerName, List<HRegionInfo>> currentAssign =
+        regionStates.getRegionAssignments(parentRegion);
+    Collection<List<HRegionInfo>> c = currentAssign.values();
+    for (List<HRegionInfo> l : c) {
+      for (HRegionInfo h : l) {
+        if (!RegionReplicaUtil.isDefaultReplica(h)) {
+          LOG.debug("Unassigning parent's replica " + h);
+          unassign(h);
+        }
+      }
+    }
+    // assign daughter replicas
+    Map<HRegionInfo, ServerName> map = new HashMap<HRegionInfo, ServerName>();
+    for (int i = 1; i < numReplicas; i++) {
+      prepareDaughterReplicaForAssignment(hri_a, parentHri, i, map);
+      prepareDaughterReplicaForAssignment(hri_b, parentHri, i, map);
+    }
+    try {
+      assign(map);
+    } catch (IOException e) {
+      LOG.warn("Caught exception " + e + " while trying to assign replica(s) of daughter(s)");
+    } catch (InterruptedException e) {
+      LOG.warn("Caught exception " + e + " while trying to assign replica(s) of daughter(s)");
+    }
+  }
+
+  private void prepareDaughterReplicaForAssignment(HRegionInfo daughterHri, HRegionInfo parentHri,
+      int replicaId, Map<HRegionInfo, ServerName> map) {
+    HRegionInfo parentReplica = RegionReplicaUtil.getRegionInfoForReplica(parentHri, replicaId);
+    HRegionInfo daughterReplica = RegionReplicaUtil.getRegionInfoForReplica(daughterHri,
+        replicaId);
+    LOG.debug("Created replica region for daughter " + daughterReplica);
+    ServerName sn;
+    if ((sn = regionStates.getRegionServerOfRegion(parentReplica)) != null) {
+      map.put(daughterReplica, sn);
+    } else {
+      List<ServerName> servers = serverManager.getOnlineServersList();
+      sn = servers.get((new Random(System.currentTimeMillis())).nextInt(servers.size()));
+      map.put(daughterReplica, sn);
+    }
+  }
+
+  public Set<HRegionInfo> getReplicasToClose() {
+    return replicasToClose;
+  }
+
   /**
    * A region is offline.  The new state should be the specified one,
    * if not null.  If the specified state is null, the new state is Offline.
@@ -3897,6 +4062,25 @@ public class AssignmentManager extends ZooKeeperListener {
 
     // Tell our listeners that a region was closed
     sendRegionClosedNotification(regionInfo);
+    // also note that all the replicas of the primary should be closed
+    if (state != null && state.equals(State.SPLIT)) {
+      Collection<HRegionInfo> c = new ArrayList<HRegionInfo>(1);
+      c.add(regionInfo);
+      Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(c);
+      Collection<List<HRegionInfo>> allReplicas = map.values();
+      for (List<HRegionInfo> list : allReplicas) {
+        replicasToClose.addAll(list);
+      }
+    }
+    else if (state != null && state.equals(State.MERGED)) {
+      Collection<HRegionInfo> c = new ArrayList<HRegionInfo>(1);
+      c.add(regionInfo);
+      Map<ServerName, List<HRegionInfo>> map = regionStates.getRegionAssignments(c);
+      Collection<List<HRegionInfo>> allReplicas = map.values();
+      for (List<HRegionInfo> list : allReplicas) {
+        replicasToClose.addAll(list);
+      }
+    }
   }
 
   private void sendRegionOpenedNotification(final HRegionInfo regionInfo,

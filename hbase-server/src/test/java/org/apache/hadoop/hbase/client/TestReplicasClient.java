@@ -97,7 +97,7 @@ public class TestReplicasClient {
     static final AtomicLong sleepTime = new AtomicLong(0);
     static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
     static final AtomicInteger countOfNext = new AtomicInteger(0);
-    static final AtomicReference<CountDownLatch> cdl =
+    private static final AtomicReference<CountDownLatch> cdl =
         new AtomicReference<CountDownLatch>(new CountDownLatch(0));
     Random r = new Random();
     public SlowMeCopro() {
@@ -134,7 +134,7 @@ public class TestReplicasClient {
 
     private void slowdownCode(final ObserverContext<RegionCoprocessorEnvironment> e) {
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() == 0) {
-        CountDownLatch latch = cdl.get();
+        CountDownLatch latch = getCdl().get();
         try {
           if (sleepTime.get() > 0) {
             LOG.info("Sleeping for " + sleepTime.get() + " ms");
@@ -152,6 +152,10 @@ public class TestReplicasClient {
       } else {
         LOG.info("We're not the primary replicas.");
       }
+    }
+
+    public static AtomicReference<CountDownLatch> getCdl() {
+      return cdl;
     }
   }
 
@@ -288,7 +292,7 @@ public class TestReplicasClient {
   public void testUseRegionWithoutReplica() throws Exception {
     byte[] b1 = "testUseRegionWithoutReplica".getBytes();
     openRegion(hriSecondary);
-    SlowMeCopro.cdl.set(new CountDownLatch(0));
+    SlowMeCopro.getCdl().set(new CountDownLatch(0));
     try {
       Get g = new Get(b1);
       Result r = table.get(g);
@@ -344,14 +348,14 @@ public class TestReplicasClient {
     byte[] b1 = "testGetNoResultStaleRegionWithReplica".getBytes();
     openRegion(hriSecondary);
 
-    SlowMeCopro.cdl.set(new CountDownLatch(1));
+    SlowMeCopro.getCdl().set(new CountDownLatch(1));
     try {
       Get g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       Result r = table.get(g);
       Assert.assertTrue(r.isStale());
     } finally {
-      SlowMeCopro.cdl.get().countDown();
+      SlowMeCopro.getCdl().get().countDown();
       closeRegion(hriSecondary);
     }
   }
@@ -462,13 +466,13 @@ public class TestReplicasClient {
       LOG.info("sleep and is not stale done");
 
       // But if we ask for stale we will get it
-      SlowMeCopro.cdl.set(new CountDownLatch(1));
+      SlowMeCopro.getCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertTrue(r.getColumnCells(f, b1).isEmpty());
-      SlowMeCopro.cdl.get().countDown();
+      SlowMeCopro.getCdl().get().countDown();
 
       LOG.info("stale done");
 
@@ -481,14 +485,14 @@ public class TestReplicasClient {
       LOG.info("exists not stale done");
 
       // exists works on stale but don't see the put
-      SlowMeCopro.cdl.set(new CountDownLatch(1));
+      SlowMeCopro.getCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setCheckExistenceOnly(true);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertFalse("The secondary has stale data", r.getExists());
-      SlowMeCopro.cdl.get().countDown();
+      SlowMeCopro.getCdl().get().countDown();
       LOG.info("exists stale before flush done");
 
       flushRegion(hriPrimary);
@@ -497,28 +501,28 @@ public class TestReplicasClient {
       Thread.sleep(1000 + REFRESH_PERIOD * 2);
 
       // get works and is not stale
-      SlowMeCopro.cdl.set(new CountDownLatch(1));
+      SlowMeCopro.getCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertFalse(r.isEmpty());
-      SlowMeCopro.cdl.get().countDown();
+      SlowMeCopro.getCdl().get().countDown();
       LOG.info("stale done");
 
       // exists works on stale and we see the put after the flush
-      SlowMeCopro.cdl.set(new CountDownLatch(1));
+      SlowMeCopro.getCdl().set(new CountDownLatch(1));
       g = new Get(b1);
       g.setCheckExistenceOnly(true);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
       Assert.assertTrue(r.isStale());
       Assert.assertTrue(r.getExists());
-      SlowMeCopro.cdl.get().countDown();
+      SlowMeCopro.getCdl().get().countDown();
       LOG.info("exists stale after flush done");
 
     } finally {
-      SlowMeCopro.cdl.get().countDown();
+      SlowMeCopro.getCdl().get().countDown();
       SlowMeCopro.sleepTime.set(0);
       Delete d = new Delete(b1);
       table.delete(d);
@@ -632,7 +636,7 @@ public class TestReplicasClient {
       SlowMeCopro.slowDownNext.set(false);
       SlowMeCopro.countOfNext.set(0);
     } finally {
-      SlowMeCopro.cdl.get().countDown();
+      SlowMeCopro.getCdl().get().countDown();
       SlowMeCopro.sleepTime.set(0);
       SlowMeCopro.slowDownNext.set(false);
       SlowMeCopro.countOfNext.set(0);
