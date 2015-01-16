@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.security.Key;
@@ -45,7 +44,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -60,6 +58,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -643,6 +642,12 @@ public class HStore implements Store {
         throw new WrongRegionException(
             "Bulk load file " + srcPath.toString() + " does not fit inside region "
             + this.getRegionInfo().getRegionNameAsString());
+      }
+
+      if(reader.length() > conf.getLong(HConstants.HREGION_MAX_FILESIZE,
+          HConstants.DEFAULT_MAX_FILE_SIZE)) {
+        LOG.warn("Trying to bulk load hfile " + srcPath.toString() + " with size: " +
+            reader.length() + " bytes can be problematic as it may lead to oversplitting.");
       }
 
       if (verifyBulkLoads) {
