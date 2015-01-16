@@ -36,6 +36,10 @@ module Hbase
       create_test_table(@test_name)
     end
 
+    def teardown
+      shutdown
+    end
+
     define_test "exists? should return true when a table exists" do
       assert(admin.exists?('hbase:meta'))
     end
@@ -67,6 +71,10 @@ module Hbase
 
       # Create table test table name
       @create_test_name = 'hbase_create_table_test_table'
+    end
+
+    def teardown
+      shutdown
     end
 
     define_test "list should return a list of tables" do
@@ -241,6 +249,10 @@ module Hbase
       create_test_table(@test_name)
     end
 
+    def teardown
+      shutdown
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "alter should fail with non-string table names" do
@@ -342,6 +354,7 @@ module Hbase
 
       table = table(@test_name)
       assert_not_equal(nil, table)
+      table.close
     end
   end
 end

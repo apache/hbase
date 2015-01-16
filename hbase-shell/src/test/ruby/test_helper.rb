@@ -47,6 +47,10 @@ module Hbase
       hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
       @shell = ::Shell::Shell.new(hbase, formatter)
     end
+    
+    def shutdown
+      @shell.hbase.shutdown
+    end
 
     def table(table)
       @shell.hbase_table(table)
