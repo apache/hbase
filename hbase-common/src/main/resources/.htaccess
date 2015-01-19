@@ -1,8 +1,0 @@
-# Redirect HTML-multi version of the book to HTML-single
-# Rule added 2015-1-12 -- can be removed in 6 months
-Redirect /book/ /book.html
-
-# Redirect replication URL to the right section of the book
-# Rule added 2015-1-12 -- can be removed in 6 months
-Redirect /replication.html /book.html#cluster_replication
-
