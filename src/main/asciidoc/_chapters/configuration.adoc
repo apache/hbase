@@ -92,15 +92,38 @@ to be described later below.
 This section lists required services and some required system configuration. 
 
 .Java
-[cols="2", options="header"]
+[cols="1,1,1,4", options="header"]
 |===
-| HBase Version | Support
-| JDK 6 | Not Supported
-| JDK 7 | Running with JDK 8 will work but is not well tested.
-| JDK 8 | Running with JDK 8 works but is not well tested. Building with JDK 8 would require removal of the deprecated remove() method of the PoolMap class and is under consideration. See ee HBASE-7608 for more information about JDK 8 support.
+|HBase Version
+|JDK 6
+|JDK 7
+|JDK 8
+
+|1.0
+|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
+|yes
+|Running with JDK 8 will work but is not well tested.
+
+|0.98
+|yes
+|yes
+|Running with JDK 8 works but is not well tested. Building with JDK 8 would require removal of the 
+deprecated `remove()` method of the `PoolMap` class and is under consideration. See 
+link:https://issues.apache.org/jira/browse/HBASE-7608[HBASE-7608] for more information about JDK 8 
+support.
+
+|0.96
+|yes
+|yes
+|N/A
+
+|0.94
+|yes
+|yes
+|N/A
 |===
 
-NOTE: In HBase 0.98.5 and newer, you must set [var]+JAVA_HOME+ on each node of your cluster. [path]_hbase-env.sh_ provides a handy mechanism to do this.
+NOTE: In HBase 0.98.5 and newer, you must set `JAVA_HOME` on each node of your cluster. [path]_hbase-env.sh_ provides a handy mechanism to do this.
 
 .Operating System Utilities
 ssh::
