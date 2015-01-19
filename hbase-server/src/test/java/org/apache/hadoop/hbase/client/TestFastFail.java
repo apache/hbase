@@ -84,7 +84,7 @@ public class TestFastFail {
    */
   @Before
   public void setUp() throws Exception {
-    // Nothing to do.
+    MyPreemptiveFastFailInterceptor.numBraveSouls.set(0);
   }
 
   /**
