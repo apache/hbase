@@ -169,7 +169,7 @@ public class TestHFilePerformance extends AbstractHBaseTool {
     startTime();
 
     Path path = new Path(ROOT_DIR, fileType + ".Performance");
-    System.out.println(ROOT_DIR + path.getName());
+    System.out.println(ROOT_DIR + Path.SEPARATOR + path.getName());
     FSDataOutputStream fout =  createFSOutput(path);
 
     if ("HFile".equals(fileType)){
