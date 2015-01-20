@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
@@ -298,10 +299,25 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
             : now - minTimestamp.longValue();
         if (sf.isMajorCompaction() &&
             (cfTtl == HConstants.FOREVER || oldest < cfTtl)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Skipping major compaction of " + this +
-                " because one (major) compacted file only and oldestTime " +
-                oldest + "ms is < ttl=" + cfTtl);
+          float blockLocalityIndex = sf.getHDFSBlockDistribution().getBlockLocalityIndex(
+              RSRpcServices.getHostname(comConf.conf)
+          );
+          if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Major compaction triggered on only store " + this +
+                  "; to make hdfs blocks local, current blockLocalityIndex is " +
+                  blockLocalityIndex + " (min " + comConf.getMinLocalityToForceCompact() +
+                  ")");
+            }
+            result = true;
+          } else {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Skipping major compaction of " + this +
+                  " because one (major) compacted file only, oldestTime " +
+                  oldest + "ms is < ttl=" + cfTtl + " and blockLocalityIndex is " +
+                  blockLocalityIndex + " (min " + comConf.getMinLocalityToForceCompact() +
+                  ")");
+            }
           }
         } else if (cfTtl != HConstants.FOREVER && oldest > cfTtl) {
           LOG.debug("Major compaction triggered on store " + this +
