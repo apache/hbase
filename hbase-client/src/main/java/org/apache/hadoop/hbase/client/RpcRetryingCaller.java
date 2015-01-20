@@ -39,9 +39,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import com.google.protobuf.ServiceException;
 
 /**
- * Runs an rpc'ing {@link RetryingCallable}. Sets into rpc client
- * threadlocal outstanding timeouts as so we don't persist too much.
- * Dynamic rather than static so can set the generic appropriately.
+ * Dynamic rather than static so can set the generic return type appropriately.
  */
 @InterfaceAudience.Private
 @edu.umd.cs.findbugs.annotations.SuppressWarnings

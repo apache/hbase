@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.TableName;
@@ -120,6 +121,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -517,6 +519,7 @@ public class HRegion implements HeapSize { // , Writable{
   private final MetricsRegion metricsRegion;
   private final MetricsRegionWrapperImpl metricsRegionWrapper;
   private final Durability durability;
+  private final boolean regionStatsEnabled;
 
   /**
    * HRegion constructor. This constructor should only be used for testing and
@@ -659,6 +662,12 @@ public class HRegion implements HeapSize { // , Writable{
     this.disallowWritesInRecovering =
         conf.getBoolean(HConstants.DISALLOW_WRITES_IN_RECOVERING,
           HConstants.DEFAULT_DISALLOW_WRITES_IN_RECOVERING_CONFIG);
+
+    // disable stats tracking system tables, but check the config for everything else
+    this.regionStatsEnabled = htd.getTableName().getNamespaceAsString().equals(
+      NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) ? false :
+        conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
+          HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
   }
 
   void setHTableSpecificConf() {
@@ -5010,18 +5019,18 @@ public class HRegion implements HeapSize { // , Writable{
     return results;
   }
 
-  public void mutateRow(RowMutations rm) throws IOException {
+  public ClientProtos.RegionLoadStats mutateRow(RowMutations rm) throws IOException {
     // Don't need nonces here - RowMutations only supports puts and deletes
-    mutateRowsWithLocks(rm.getMutations(), Collections.singleton(rm.getRow()));
+    return mutateRowsWithLocks(rm.getMutations(), Collections.singleton(rm.getRow()));
   }
 
   /**
    * Perform atomic mutations within the region w/o nonces.
    * See {@link #mutateRowsWithLocks(Collection, Collection, long, long)}
    */
-  public void mutateRowsWithLocks(Collection<Mutation> mutations,
+  public ClientProtos.RegionLoadStats mutateRowsWithLocks(Collection<Mutation> mutations,
       Collection<byte[]> rowsToLock) throws IOException {
-    mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    return mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   /**
@@ -5036,10 +5045,24 @@ public class HRegion implements HeapSize { // , Writable{
    * <code>rowsToLock</code> is sorted in order to avoid deadlocks.
    * @throws IOException
    */
-  public void mutateRowsWithLocks(Collection<Mutation> mutations,
+  public ClientProtos.RegionLoadStats mutateRowsWithLocks(Collection<Mutation> mutations,
       Collection<byte[]> rowsToLock, long nonceGroup, long nonce) throws IOException {
     MultiRowMutationProcessor proc = new MultiRowMutationProcessor(mutations, rowsToLock);
     processRowsWithLocks(proc, -1, nonceGroup, nonce);
+    return getRegionStats();
+  }
+
+  /**
+   * @return the current load statistics for the the region
+   */
+  public ClientProtos.RegionLoadStats getRegionStats() {
+    if (!regionStatsEnabled) {
+      return null;
+    }
+    ClientProtos.RegionLoadStats.Builder stats = ClientProtos.RegionLoadStats.newBuilder();
+    stats.setMemstoreLoad((int) (Math.min(100, (this.memstoreSize.get() * 100) / this
+      .memstoreFlushSize)));
+    return stats.build();
   }
 
   /**

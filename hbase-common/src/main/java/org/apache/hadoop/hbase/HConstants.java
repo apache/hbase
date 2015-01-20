@@ -1037,6 +1037,11 @@ public final class HConstants {
   /** Configuration key for setting replication codec class name */
   public static final String REPLICATION_CODEC_CONF_KEY = "hbase.replication.rpc.codec";
 
+  /** Config key for if the server should send backpressure and if the client should listen to
+   * that backpressure from the server */
+  public static final String ENABLE_CLIENT_BACKPRESSURE = "hbase.client.backpressure.enabled";
+  public static final boolean DEFAULT_ENABLE_CLIENT_BACKPRESSURE = false;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

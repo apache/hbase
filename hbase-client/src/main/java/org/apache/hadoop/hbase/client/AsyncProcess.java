@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -281,6 +283,19 @@ class AsyncProcess<CResult> {
    * @param atLeastOne true if we should submit at least a subset.
    */
   public void submit(List<? extends Row> rows, boolean atLeastOne) throws InterruptedIOException {
+    submit(rows, atLeastOne, null);
+  }
+
+  /**
+   * Extract from the rows list what we can submit. The rows we can not submit are kept in the
+   * list.
+   *
+   * @param rows - the submitted row. Modified by the method: we remove the rows we took.
+   * @param atLeastOne true if we should submit at least a subset.
+   * @param batchCallback Batch callback. Only called on success
+   */
+  public void submit(List<? extends Row> rows, boolean atLeastOne,
+      Batch.Callback<CResult> batchCallback) throws InterruptedIOException {
     if (rows.isEmpty()) {
       return;
     }
@@ -331,7 +346,7 @@ class AsyncProcess<CResult> {
     } while (retainedActions.isEmpty() && atLeastOne && !hasError());
 
     HConnectionManager.ServerErrorTracker errorsByServer = createServerErrorTracker();
-    sendMultiAction(retainedActions, actionsByServer, 1, errorsByServer);
+    sendMultiAction(retainedActions, actionsByServer, 1, errorsByServer, batchCallback);
   }
 
   /**
@@ -520,7 +535,7 @@ class AsyncProcess<CResult> {
     }
 
     if (!actionsByServer.isEmpty()) {
-      sendMultiAction(initialActions, actionsByServer, numAttempt, errorsByServer);
+      sendMultiAction(initialActions, actionsByServer, numAttempt, errorsByServer, null);
     }
   }
 
@@ -535,58 +550,138 @@ class AsyncProcess<CResult> {
   public void sendMultiAction(final List<Action<Row>> initialActions,
                               Map<HRegionLocation, MultiAction<Row>> actionsByServer,
                               final int numAttempt,
-                              final HConnectionManager.ServerErrorTracker errorsByServer) {
+                              final HConnectionManager.ServerErrorTracker errorsByServer,
+                              Batch.Callback<CResult> batchCallback) {
     // Send the queries and add them to the inProgress list
     // This iteration is by server (the HRegionLocation comparator is by server portion only).
     for (Map.Entry<HRegionLocation, MultiAction<Row>> e : actionsByServer.entrySet()) {
-      final HRegionLocation loc = e.getKey();
-      final MultiAction<Row> multiAction = e.getValue();
-      incTaskCounters(multiAction.getRegions(), loc.getServerName());
-      Runnable runnable = Trace.wrap("AsyncProcess.sendMultiAction", new Runnable() {
-        @Override
-        public void run() {
-          MultiResponse res;
-          try {
-            MultiServerCallable<Row> callable = createCallable(loc, multiAction);
-            try {
-              res = createCaller(callable).callWithoutRetries(callable, timeout);
-            } catch (IOException e) {
-              // The service itself failed . It may be an error coming from the communication
-              //   layer, but, as well, a functional error raised by the server.
-              receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, e,
-                  errorsByServer);
-              return;
-            } catch (Throwable t) {
-              // This should not happen. Let's log & retry anyway.
-              LOG.error("#" + id + ", Caught throwable while calling. This is unexpected." +
-                  " Retrying. Server is " + loc.getServerName() + ", tableName=" + tableName, t);
-              receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, t,
-                  errorsByServer);
-              return;
-            }
-
-            // Nominal case: we received an answer from the server, and it's not an exception.
-            receiveMultiAction(initialActions, multiAction, loc, res, numAttempt, errorsByServer);
-
-          } finally {
-            decTaskCounters(multiAction.getRegions(), loc.getServerName());
-          }
-        }
-      });
-
-      try {
-        this.pool.submit(runnable);
-      } catch (RejectedExecutionException ree) {
-        // This should never happen. But as the pool is provided by the end user, let's secure
-        //  this a little.
-        decTaskCounters(multiAction.getRegions(), loc.getServerName());
-        LOG.warn("#" + id + ", the task was rejected by the pool. This is unexpected." +
+      HRegionLocation loc = e.getKey();
+      MultiAction<Row> multiAction = e.getValue();
+      Collection<? extends Runnable> runnables = getNewMultiActionRunnable(initialActions, loc,
+        multiAction, numAttempt, errorsByServer, batchCallback);
+      for (Runnable runnable: runnables) {
+        try {
+          incTaskCounters(multiAction.getRegions(), loc.getServerName());
+          this.pool.submit(runnable);
+        } catch (RejectedExecutionException ree) {
+          // This should never happen. But as the pool is provided by the end user, let's secure
+          //  this a little.
+          decTaskCounters(multiAction.getRegions(), loc.getServerName());
+          LOG.warn("#" + id + ", the task was rejected by the pool. This is unexpected." +
             " Server is " + loc.getServerName(), ree);
-        // We're likely to fail again, but this will increment the attempt counter, so it will
-        //  finish.
-        receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, ree, errorsByServer);
+          // We're likely to fail again, but this will increment the attempt counter, so it will
+          //  finish.
+          receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, ree, errorsByServer);
+        }
       }
     }
+  }
+
+  private Runnable getNewSingleServerRunnable(
+      final List<Action<Row>> initialActions,
+      final HRegionLocation loc,
+      final MultiAction<Row> multiAction,
+      final int numAttempt,
+      final HConnectionManager.ServerErrorTracker errorsByServer,
+      final Batch.Callback<CResult> batchCallback) {
+    return new Runnable() {
+      @Override
+      public void run() {
+        MultiResponse res;
+        try {
+          MultiServerCallable<Row> callable = createCallable(loc, multiAction);
+          try {
+            res = createCaller(callable).callWithoutRetries(callable, timeout);
+          } catch (IOException e) {
+            // The service itself failed . It may be an error coming from the communication
+            //   layer, but, as well, a functional error raised by the server.
+            receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, e,
+                errorsByServer);
+            return;
+          } catch (Throwable t) {
+            // This should not happen. Let's log & retry anyway.
+            LOG.error("#" + id + ", Caught throwable while calling. This is unexpected." +
+                " Retrying. Server is " + loc.getServerName() + ", tableName=" + tableName, t);
+            receiveGlobalFailure(initialActions, multiAction, loc, numAttempt, t,
+                errorsByServer);
+            return;
+          }
+
+          // Nominal case: we received an answer from the server, and it's not an exception.
+          receiveMultiAction(initialActions, multiAction, loc, res, numAttempt, errorsByServer,
+            batchCallback);
+
+        } finally {
+          decTaskCounters(multiAction.getRegions(), loc.getServerName());
+        }
+      }
+    };
+  }
+
+  private Collection<? extends Runnable> getNewMultiActionRunnable(
+      final List<Action<Row>> initialActions,
+      final HRegionLocation loc,
+      final MultiAction<Row> multiAction,
+      final int numAttempt,
+      final HConnectionManager.ServerErrorTracker errorsByServer,
+      final Batch.Callback<CResult> batchCallback) {
+    // no stats to manage, just do the standard action
+    if (!(AsyncProcess.this.hConnection instanceof StatisticsHConnection) ||
+        ((StatisticsHConnection)AsyncProcess.this.hConnection).getStatisticsTracker() == null) {
+      List<Runnable> toReturn = new ArrayList<Runnable>(1);
+      toReturn.add(Trace.wrap("AsyncProcess.sendMultiAction", 
+        getNewSingleServerRunnable(initialActions, loc, multiAction, numAttempt,
+          errorsByServer, batchCallback)));
+      return toReturn;
+    } else {
+      // group the actions by the amount of delay
+      Map<Long, DelayingRunner> actions = new HashMap<Long, DelayingRunner>(multiAction
+        .size());
+
+      // split up the actions
+      for (Map.Entry<byte[], List<Action<Row>>> e : multiAction.actions.entrySet()) {
+        Long backoff = getBackoff(loc);
+        DelayingRunner runner = actions.get(backoff);
+        if (runner == null) {
+          actions.put(backoff, new DelayingRunner(backoff, e));
+        } else {
+          runner.add(e);
+        }
+      }
+
+      List<Runnable> toReturn = new ArrayList<Runnable>(actions.size());
+      for (DelayingRunner runner : actions.values()) {
+        String traceText = "AsyncProcess.sendMultiAction";
+        Runnable runnable = getNewSingleServerRunnable(initialActions, loc, runner.getActions(),
+          numAttempt, errorsByServer, batchCallback);
+        // use a delay runner only if we need to sleep for some time
+        if (runner.getSleepTime() > 0) {
+          runner.setRunner(runnable);
+          traceText = "AsyncProcess.clientBackoff.sendMultiAction";
+          runnable = runner;
+        }
+        runnable = Trace.wrap(traceText, runnable);
+        toReturn.add(runnable);
+      }
+      return toReturn;
+    }
+  }
+
+  /**
+   * @param server server location where the target region is hosted
+   * @param regionName name of the region which we are going to write some data
+   * @return the amount of time the client should wait until it submit a request to the
+   * specified server and region
+   */
+  private Long getBackoff(HRegionLocation location) {
+    Preconditions.checkState(AsyncProcess.this.hConnection instanceof StatisticsHConnection,
+      "AsyncProcess connection should be a StatisticsHConnection");
+    ServerStatisticTracker tracker = ((StatisticsHConnection)AsyncProcess.this.hConnection)
+      .getStatisticsTracker();
+    ServerStatistics stats = tracker.getStats(location.getServerName());
+    return ((StatisticsHConnection)AsyncProcess.this.hConnection).getBackoffPolicy()
+      .getBackoffTime(location.getServerName(), location.getRegionInfo().getRegionName(),
+        stats);
   }
 
   /**
@@ -738,7 +833,8 @@ class AsyncProcess<CResult> {
   private void receiveMultiAction(List<Action<Row>> initialActions, MultiAction<Row> multiAction,
                                   HRegionLocation location,
                                   MultiResponse responses, int numAttempt,
-                                  HConnectionManager.ServerErrorTracker errorsByServer) {
+                                  HConnectionManager.ServerErrorTracker errorsByServer,
+                                  Batch.Callback<CResult> batchCallback) {
      assert responses != null;
 
     // Success or partial success
@@ -780,12 +876,17 @@ class AsyncProcess<CResult> {
             toReplay.add(correspondingAction);
           }
         } else { // success
-          if (callback != null) {
+          if (callback != null || batchCallback != null) {
             int index = regionResult.getFirst();
             Action<Row> correspondingAction = initialActions.get(index);
             Row row = correspondingAction.getAction();
-            //noinspection unchecked
-            this.callback.success(index, resultsForRS.getKey(), row, (CResult) result);
+            if (callback != null) {
+              //noinspection unchecked
+              this.callback.success(index, resultsForRS.getKey(), row, (CResult) result);
+            }
+            if (batchCallback != null) {
+              batchCallback.update(resultsForRS.getKey(), row.getRow(), (CResult) result);
+            }
           }
         }
       }

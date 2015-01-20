@@ -214,7 +214,9 @@ public class HBaseAdmin implements Abortable, Closeable {
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.retryLongerMultiplier = this.conf.getInt(
         "hbase.client.retries.longer.multiplier", 10);
-    this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
+    this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf,
+      connection instanceof StatisticsHConnection ?
+        ((StatisticsHConnection)connection).getStatisticsTracker() : null);
   }
 
   /**

@@ -406,14 +406,16 @@ public class HTableMultiplexer {
     private final ScheduledExecutorService executor;
     private final int maxRetryInQueue;
     private final AtomicInteger retryInQueue = new AtomicInteger(0);
-    
+
     public FlushWorker(Configuration conf, HConnection conn, HRegionLocation addr,
         HTableMultiplexer multiplexer, int perRegionServerBufferQueueSize,
         ExecutorService pool, ScheduledExecutorService executor) {
       this.addr = addr;
       this.multiplexer = multiplexer;
       this.queue = new LinkedBlockingQueue<PutStatus>(perRegionServerBufferQueueSize);
-      RpcRetryingCallerFactory rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
+      RpcRetryingCallerFactory rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf,
+        conn instanceof StatisticsHConnection ?
+          ((StatisticsHConnection)conn).getStatisticsTracker() : null);
       RpcControllerFactory rpcControllerFactory = RpcControllerFactory.instantiate(conf);
       this.ap = new AsyncProcess<Object>(conn, null, pool, this, conf, rpcCallerFactory,
               rpcControllerFactory);
@@ -519,7 +521,7 @@ public class HTableMultiplexer {
           try {
             HConnectionManager.ServerErrorTracker errorsByServer =
                 new HConnectionManager.ServerErrorTracker(1, 10);
-            ap.sendMultiAction(retainedActions, actionsByServer, 10, errorsByServer);
+            ap.sendMultiAction(retainedActions, actionsByServer, 10, errorsByServer, null);
             ap.waitUntilDone();
 
             if (ap.hasError()) {

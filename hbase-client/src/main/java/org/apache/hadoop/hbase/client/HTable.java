@@ -379,7 +379,9 @@ public class HTable implements HTableInterface {
     this.scannerCaching = tableConfiguration.getScannerCaching();
 
     if (this.rpcCallerFactory == null) {
-      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration);
+      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration,
+        this.connection instanceof StatisticsHConnection ?
+           ((StatisticsHConnection)this.connection).getStatisticsTracker() : null);
     }
     if (this.rpcControllerFactory == null) {
       this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);

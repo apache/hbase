@@ -107,7 +107,10 @@ public class ClientScanner extends AbstractClientScanner {
      */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
       HConnection connection) throws IOException {
-    this(conf, scan, tableName, connection, RpcRetryingCallerFactory.instantiate(conf),
+    this(conf, scan, tableName, connection,
+      RpcRetryingCallerFactory.instantiate(conf,
+        connection instanceof StatisticsHConnection ? 
+          ((StatisticsHConnection)connection).getStatisticsTracker() : null),
         RpcControllerFactory.instantiate(conf));
   }
 

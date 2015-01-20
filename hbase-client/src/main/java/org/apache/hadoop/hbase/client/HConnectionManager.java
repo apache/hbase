@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -592,7 +594,7 @@ public class HConnectionManager {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
       justification="Access to the conncurrent hash map is under a lock so should be fine.")
-  public static class HConnectionImplementation implements HConnection, Closeable {
+  public static class HConnectionImplementation implements StatisticsHConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final long pause;
     private final int numTries;
@@ -664,6 +666,11 @@ public class HConnectionManager {
 
     private RpcControllerFactory rpcControllerFactory;
 
+    // single tracker per connection
+    private final ServerStatisticTracker stats;
+
+    private final ClientBackoffPolicy backoffPolicy;
+
     /**
      * Cluster registry of basic info such as clusterid and meta region location.
      */
@@ -720,7 +727,7 @@ public class HConnectionManager {
         }
       }
 
-      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
+      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, this.stats);
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     }
 
@@ -760,13 +767,16 @@ public class HConnectionManager {
         this.nonceGenerator = new NoNonceGenerator();
       }
 
+      this.stats = ServerStatisticTracker.create(conf);
       this.usePrefetch = conf.getBoolean(HConstants.HBASE_CLIENT_PREFETCH,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH);
       this.prefetchRegionLimit = conf.getInt(
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
-      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
+      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, this.stats);
+      this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
+      
     }
 
     @Override
@@ -2418,10 +2428,11 @@ public class HConnectionManager {
     // For tests.
     protected <R> AsyncProcess createAsyncProcess(TableName tableName, ExecutorService pool,
            AsyncProcess.AsyncProcessCallback<R> callback, Configuration conf) {
-      return new AsyncProcess<R>(this, tableName, pool, callback, conf,
-          RpcRetryingCallerFactory.instantiate(conf), RpcControllerFactory.instantiate(conf));
+      RpcControllerFactory controllerFactory = RpcControllerFactory.instantiate(conf);
+      RpcRetryingCallerFactory callerFactory = RpcRetryingCallerFactory.instantiate(conf, this.stats);
+      return new AsyncProcess<R>(this, tableName, pool, callback, conf, callerFactory,
+        controllerFactory);
     }
-
 
     /**
      * Fill the result array for the interfaces using it.
@@ -2461,6 +2472,15 @@ public class HConnectionManager {
       }
     }
 
+    @Override
+    public ServerStatisticTracker getStatisticsTracker() {
+      return this.stats;
+    }
+
+    @Override
+    public ClientBackoffPolicy getBackoffPolicy() {
+      return this.backoffPolicy;
+    }
 
     /*
      * Return the number of cached region for a table. It will only be called

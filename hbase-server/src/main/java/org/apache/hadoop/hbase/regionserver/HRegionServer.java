@@ -3542,7 +3542,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             processed = checkAndRowMutate(region, regionAction.getActionList(),
               cellScanner, row, family, qualifier, compareOp, comparator);
           } else {
-            mutateRows(region, regionAction.getActionList(), cellScanner);
+            ClientProtos.RegionLoadStats stats = mutateRows(region, regionAction.getActionList(),
+              cellScanner);
+            // add the stats to the request
+            if (stats != null) {
+              responseBuilder.addRegionActionResult(RegionActionResult.newBuilder()
+                .addResultOrException(ResultOrException.newBuilder().setLoadStats(stats)));
+            }
             processed = Boolean.TRUE;
           }
         } catch (IOException e) {
@@ -4500,7 +4506,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             break;
 
           case SUCCESS:
-            builder.addResultOrException(getResultOrException(ClientProtos.Result.getDefaultInstance(), index));
+            builder.addResultOrException(getResultOrException(
+              ClientProtos.Result.getDefaultInstance(), index, region.getRegionStats()));
             break;
         }
       }
@@ -4517,10 +4524,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       metricsRegionServer.updateDelete(after - before);
     }
   }
+
   private static ResultOrException getResultOrException(final ClientProtos.Result r,
-      final int index) {
-    return getResultOrException(ResponseConverter.buildActionResult(r), index);
+      final int index, final ClientProtos.RegionLoadStats stats) {
+    return getResultOrException(ResponseConverter.buildActionResult(r, stats), index);
   }
+
   private static ResultOrException getResultOrException(final Exception e, final int index) {
     return getResultOrException(ResponseConverter.buildActionResult(e), index);
   }
@@ -4589,9 +4598,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @param cellScanner if non-null, the mutation data -- the Cell content.
    * @throws IOException
    */
-  protected void mutateRows(final HRegion region, final List<ClientProtos.Action> actions,
-      final CellScanner cellScanner)
-  throws IOException {
+  protected ClientProtos.RegionLoadStats mutateRows(final HRegion region,
+      final List<ClientProtos.Action> actions, final CellScanner cellScanner)
+      throws IOException {
     if (!region.getRegionInfo().isMetaTable()) {
       cacheFlusher.reclaimMemStoreMemory();
     }
@@ -4616,7 +4625,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
       }
     }
-    region.mutateRow(rm);
+    return region.mutateRow(rm);
   }
 
   /**

@@ -19,11 +19,13 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * Factory to create an {@link RpcRetryingCaller}
  */
+@InterfaceAudience.Private
 public class RpcRetryingCallerFactory {
 
   /** Configuration key for a custom {@link RpcRetryingCaller} */
@@ -32,31 +34,62 @@ public class RpcRetryingCallerFactory {
   private final long pause;
   private final int retries;
   private final int startLogErrorsCnt;
+  private final boolean enableBackPressure;
+  private ServerStatisticTracker stats;
 
   public RpcRetryingCallerFactory(Configuration conf) {
+    this(conf, null);
+  }
+
+  public RpcRetryingCallerFactory(Configuration conf, ServerStatisticTracker stats) {
     this.conf = conf;
+    this.stats = stats;
     pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     startLogErrorsCnt = conf.getInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY,
         AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
+    enableBackPressure = conf.getBoolean(HConstants.ENABLE_CLIENT_BACKPRESSURE,
+      HConstants.DEFAULT_ENABLE_CLIENT_BACKPRESSURE);
+  }
+
+  /**
+   * Set the tracker that should be used for tracking statistics about the server
+   */
+  public void setStatisticTracker(ServerStatisticTracker statisticTracker) {
+    this.stats = statisticTracker;
   }
 
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
-    return new RpcRetryingCaller<T>(pause, retries, startLogErrorsCnt);
+    RpcRetryingCaller<T> caller;
+    if (enableBackPressure && this.stats != null) {
+      caller = new StatsTrackingRpcRetryingCaller<T>(pause, retries, startLogErrorsCnt,
+        this.stats);
+    } else {
+      caller = new RpcRetryingCaller<T>(pause, retries, startLogErrorsCnt);
+    }
+    return caller;
   }
 
-  public static RpcRetryingCallerFactory instantiate(Configuration configuration) {
+  public static RpcRetryingCallerFactory instantiate(Configuration configuration,
+      ServerStatisticTracker stats) {
     String clazzName = RpcRetryingCallerFactory.class.getName();
     String rpcCallerFactoryClazz =
         configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY, clazzName);
     if (rpcCallerFactoryClazz.equals(clazzName)) {
-      return new RpcRetryingCallerFactory(configuration);
+      return new RpcRetryingCallerFactory(configuration, stats);
     }
-    return ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
-      new Class[] { Configuration.class }, new Object[] { configuration });
+    try {
+      return ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
+        new Class[] { Configuration.class, ServerStatisticTracker.class },
+        new Object[] { configuration, stats });
+    } catch (UnsupportedOperationException e) {
+      return ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
+        new Class[] { Configuration.class },
+        new Object[] { configuration });
+    }
   }
 }

@@ -76,6 +76,23 @@ public final class MultiAction<R> {
     rsActions.add(a);
   }
 
+  /**
+   * Add an list of Actions to this container based on it's regionName. If the regionName
+   * is wrong, the initial execution will fail, but will be automatically
+   * retried after looking up the correct region.
+   *
+   * @param regionName
+   * @param a
+   */
+  public void add(byte[] regionName, List<Action<R>> a) {
+    List<Action<R>> rsActions = actions.get(regionName);
+    if (rsActions == null) {
+      rsActions = new ArrayList<Action<R>>(a.size());
+      actions.put(regionName, rsActions);
+    }
+    rsActions.addAll(a);
+  }
+
   public void setNonceGroup(long nonceGroup) {
     this.nonceGroup = nonceGroup;
   }
