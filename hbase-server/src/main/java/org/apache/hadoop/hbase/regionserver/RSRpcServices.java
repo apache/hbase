@@ -23,6 +23,7 @@ import java.io.InterruptedIOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -758,10 +759,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throw new IllegalArgumentException(e);
     }
     // Server to handle client requests.
-    String hostname = rs.conf.get("hbase.regionserver.ipc.address",
-      Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        rs.conf.get("hbase.regionserver.dns.interface", "default"),
-        rs.conf.get("hbase.regionserver.dns.nameserver", "default"))));
+    String hostname = getHostname(rs.conf);
 
     boolean mode =
         rs.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, HConstants.DEFAULT_CLUSTER_DISTRIBUTED);
@@ -800,6 +798,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     isa = rpcServer.getListenerAddress();
     rpcServer.setErrorHandler(this);
     rs.setName(name);
+  }
+
+  public static String getHostname(Configuration conf) throws UnknownHostException {
+    return conf.get("hbase.regionserver.ipc.address",
+        Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+            conf.get("hbase.regionserver.dns.interface", "default"),
+            conf.get("hbase.regionserver.dns.nameserver", "default"))));
   }
 
   RegionScanner getScanner(long scannerId) {
