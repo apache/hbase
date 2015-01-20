@@ -40,8 +40,10 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 // classes and unit tests only.
 public interface ClusterConnection extends HConnection {
 
-  /** @return - true if the master server is running
-   * @deprecated this has been deprecated without a replacement */
+  /**
+   * @return - true if the master server is running
+   * @deprecated this has been deprecated without a replacement
+   */
   @Override
   @Deprecated
   boolean isMasterRunning()
@@ -194,8 +196,8 @@ public interface ClusterConnection extends HConnection {
   * @return region locations for this row.
   * @throws IOException
   */
- RegionLocations locateRegion(TableName tableName,
-                              byte[] row, boolean useCache, boolean retry, int replicaId) throws IOException;
+ RegionLocations locateRegion(TableName tableName, byte[] row, boolean useCache, boolean retry,
+     int replicaId) throws IOException;
 
   /**
    * Returns a {@link MasterKeepAliveConnection} to the active master
@@ -250,6 +252,7 @@ public interface ClusterConnection extends HConnection {
    * connection.
    * @return The shared instance. Never returns null.
    * @throws MasterNotRunningException
+   * @deprecated Since 0.96.0
    */
   @Override
   @Deprecated

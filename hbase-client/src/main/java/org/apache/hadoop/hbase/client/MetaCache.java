@@ -256,7 +256,8 @@ public class MetaCache {
               if (updatedLocations.isEmpty()) {
                 deletedSomething |= tableLocations.remove(e.getKey(), regionLocations);
               } else {
-                deletedSomething |= tableLocations.replace(e.getKey(), regionLocations, updatedLocations);
+                deletedSomething |= tableLocations.replace(e.getKey(), regionLocations,
+                    updatedLocations);
               }
             }
           }
@@ -389,7 +390,8 @@ public class MetaCache {
         if (updatedLocations.isEmpty()) {
           removed = tableLocations.remove(location.getRegionInfo().getStartKey(), regionLocations);
         } else {
-          removed = tableLocations.replace(location.getRegionInfo().getStartKey(), regionLocations, updatedLocations);
+          removed = tableLocations.replace(location.getRegionInfo().getStartKey(), regionLocations,
+              updatedLocations);
         }
         if (removed && LOG.isTraceEnabled()) {
           LOG.trace("Removed " + location + " from cache");

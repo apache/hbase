@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  * such as an IP address, PID, and composite deterministic ID.
  */
 @InterfaceAudience.Private
-class ClientIdGenerator {
+final class ClientIdGenerator {
   static final Log LOG = LogFactory.getLog(ClientIdGenerator.class);
+
+  private ClientIdGenerator() {}
 
   /**
    * @return a unique ID incorporating IP address, PID, TID and timer. Might be an overkill...

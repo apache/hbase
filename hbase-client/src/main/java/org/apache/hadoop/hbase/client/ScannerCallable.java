@@ -99,7 +99,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    * @param rpcControllerFactory factory to use when creating 
    *        {@link com.google.protobuf.RpcController}
    */
-  public ScannerCallable (ClusterConnection connection, TableName tableName, Scan scan,
+  public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory) {
     this(connection, tableName, scan, scanMetrics, rpcControllerFactory, 0);
   }
@@ -111,7 +111,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    * @param scanMetrics
    * @param id the replicaId
    */
-  public ScannerCallable (ClusterConnection connection, TableName tableName, Scan scan,
+  public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
     super(connection, tableName, scan.getStartRow());
     this.id = id;

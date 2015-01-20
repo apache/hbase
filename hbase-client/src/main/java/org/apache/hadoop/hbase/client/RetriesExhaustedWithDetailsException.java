@@ -88,7 +88,7 @@ extends RetriesExhaustedException {
 
     // If all of the exceptions are DNRIOE not exception
     for (Throwable t : exceptions) {
-      if ( !(t instanceof DoNotRetryIOException)) {
+      if (!(t instanceof DoNotRetryIOException)) {
         res = true;
       }
     }

@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public abstract class HConnectable<T> {
-  public Configuration conf;
+  protected Configuration conf;
 
   protected HConnectable(Configuration conf) {
     this.conf = conf;

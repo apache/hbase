@@ -56,8 +56,11 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 //TODO: merge this to MetaTableAccessor, get rid of it.
-public class MetaScanner {
+public final class MetaScanner {
   private static final Log LOG = LogFactory.getLog(MetaScanner.class);
+
+  private MetaScanner() {}
+
   /**
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
    * start row value as table name.

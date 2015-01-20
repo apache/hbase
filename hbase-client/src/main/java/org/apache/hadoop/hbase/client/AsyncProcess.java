@@ -127,7 +127,7 @@ class AsyncProcess {
 
   /** Return value from a submit that didn't contain any requests. */
   private static final AsyncRequestFuture NO_REQS_RESULT = new AsyncRequestFuture() {
-    public final Object[] result = new Object[0];
+    final Object[] result = new Object[0];
     @Override
     public boolean hasError() { return false; }
     @Override
@@ -243,7 +243,8 @@ class AsyncProcess {
   }
 
   public AsyncProcess(ClusterConnection hc, Configuration conf, ExecutorService pool,
-      RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors, RpcControllerFactory rpcFactory) {
+      RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors,
+      RpcControllerFactory rpcFactory) {
     if (hc == null) {
       throw new IllegalArgumentException("HConnection cannot be null.");
     }
@@ -311,7 +312,7 @@ class AsyncProcess {
   }
 
   /**
-   * See {@link #submit(ExecutorService, TableName, List, boolean, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback, boolean)}.
+   * See {@link #submit(ExecutorService, TableName, List, boolean, Batch.Callback, boolean)}.
    * Uses default ExecutorService for this AP (must have been created with one).
    */
   public <CResult> AsyncRequestFuture submit(TableName tableName, List<? extends Row> rows,
@@ -514,7 +515,7 @@ class AsyncProcess {
   }
 
   /**
-   * See {@link #submitAll(ExecutorService, TableName, List, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback, Object[])}.
+   * See {@link #submitAll(ExecutorService, TableName, List, Batch.Callback, Object[])}.
    * Uses default ExecutorService for this AP (must have been created with one).
    */
   public <CResult> AsyncRequestFuture submitAll(TableName tableName,
@@ -1345,11 +1346,11 @@ class AsyncProcess {
       if (results == null) {
          decActionCounter(index);
          return; // Simple case, no replica requests.
-      } else if ((state = trySetResultSimple(
-          index, action.getAction(), false, result, null, isStale)) == null) {
+      }
+      state = trySetResultSimple(index, action.getAction(), false, result, null, isStale);
+      if (state == null) {
         return; // Simple case, no replica requests.
       }
-      assert state != null;
       // At this point we know that state is set to replica tracking class.
       // It could be that someone else is also looking at it; however, we know there can
       // only be one state object, and only one thread can set callCount to 0. Other threads
@@ -1385,11 +1386,11 @@ class AsyncProcess {
         errors.add(throwable, row, server);
         decActionCounter(index);
         return; // Simple case, no replica requests.
-      } else if ((state = trySetResultSimple(
-          index, row, true, throwable, server, false)) == null) {
+      }
+      state = trySetResultSimple(index, row, true, throwable, server, false);
+      if (state == null) {
         return; // Simple case, no replica requests.
       }
-      assert state != null;
       BatchErrors target = null; // Error will be added to final errors, or temp replica errors.
       boolean isActionDone = false;
       synchronized (state) {
@@ -1455,7 +1456,8 @@ class AsyncProcess {
         results[index] = result;
       } else {
         synchronized (replicaResultLock) {
-          if ((resObj = results[index]) == null) {
+          resObj = results[index];
+          if (resObj == null) {
             if (isFromReplica) {
               throw new AssertionError("Unexpected stale result for " + row);
             }
@@ -1720,7 +1722,8 @@ class AsyncProcess {
   }
 
   /**
-   * For manageError. Only used to make logging more clear, we don't actually care why we don't retry.
+   * For {@link AsyncRequestFutureImpl#manageError(int, Row, Retry, Throwable, ServerName)}. Only
+   * used to make logging more clear, we don't actually care why we don't retry.
    */
   private enum Retry {
     YES,

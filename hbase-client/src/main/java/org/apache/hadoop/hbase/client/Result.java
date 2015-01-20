@@ -57,7 +57,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * To get a mapping of qualifiers to latest values for an individual family use
  * {@link #getFamilyMap(byte[])}.<p>
  *
- * To get the latest value for a specific family and qualifier use {@link #getValue(byte[], byte[])}.
+ * To get the latest value for a specific family and qualifier use
+ * {@link #getValue(byte[], byte[])}.
  *
  * A Result is backed by an array of {@link Cell} objects, each representing
  * an HBase cell defined by the row, family, qualifier, timestamp, and value.<p>
@@ -83,7 +84,8 @@ public class Result implements CellScannable, CellScanner {
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
   // Ditto for familyMap.  It can be composed on fly from passed in kvs.
-  private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
+  private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
+      familyMap = null;
 
   private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<byte[]>();
   private static final int PAD_WIDTH = 128;
@@ -99,9 +101,9 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #rawCells()}.
-   * Use this to represent no results if <code>null</code> won't do or in old 'mapred' as oppposed to 'mapreduce' package
-   * MapReduce where you need to overwrite a Result
-   * instance with a {@link #copyFrom(Result)} call.
+   * Use this to represent no results if {@code null} won't do or in old 'mapred' as opposed
+   * to 'mapreduce' package MapReduce where you need to overwrite a Result instance with a
+   * {@link #copyFrom(Result)} call.
    */
   public Result() {
     super();
@@ -157,7 +159,9 @@ public class Result implements CellScannable, CellScanner {
    */
   public byte [] getRow() {
     if (this.row == null) {
-      this.row = this.cells == null || this.cells.length == 0? null: CellUtil.cloneRow(this.cells[0]);
+      this.row = (this.cells == null || this.cells.length == 0) ?
+          null :
+          CellUtil.cloneRow(this.cells[0]);
     }
     return this.row;
   }
@@ -225,7 +229,7 @@ public class Result implements CellScannable, CellScanner {
       return result; // cant find it
     }
 
-    for (int i = pos ; i < kvs.length ; i++ ) {
+    for (int i = pos; i < kvs.length; i++) {
       if (CellUtil.matchingColumn(kvs[i], family,qualifier)) {
         result.add(kvs[i]);
       } else {
@@ -569,20 +573,18 @@ public class Result implements CellScannable, CellScanner {
     if(isEmpty()) {
       return null;
     }
-    this.familyMap = new TreeMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>(Bytes.BYTES_COMPARATOR);
+    this.familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(Cell kv : this.cells) {
       byte [] family = CellUtil.cloneFamily(kv);
-      NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap =
-        familyMap.get(family);
+      NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap = familyMap.get(family);
       if(columnMap == null) {
-        columnMap = new TreeMap<byte[], NavigableMap<Long, byte[]>>
-          (Bytes.BYTES_COMPARATOR);
+        columnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         familyMap.put(family, columnMap);
       }
       byte [] qualifier = CellUtil.cloneQualifier(kv);
       NavigableMap<Long, byte[]> versionMap = columnMap.get(qualifier);
       if(versionMap == null) {
-        versionMap = new TreeMap<Long, byte[]>(new Comparator<Long>() {
+        versionMap = new TreeMap<>(new Comparator<Long>() {
           @Override
           public int compare(Long l1, Long l2) {
             return l2.compareTo(l1);

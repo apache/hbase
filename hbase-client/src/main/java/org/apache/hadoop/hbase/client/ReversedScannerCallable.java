@@ -72,7 +72,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param replicaId the replica id
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-      ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory, int replicaId) {
+      ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory,
+      int replicaId) {
     super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId);
     this.locateStartRow = locateStartRow;
   }

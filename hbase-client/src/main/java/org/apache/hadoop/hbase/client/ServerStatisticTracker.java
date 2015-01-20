@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -50,7 +49,7 @@ public class ServerStatisticTracker {
         ServerStatistics old = stats.putIfAbsent(server, stat);
         if (old != null) {
           stat = old;
-	}
+        }
       }
     }
     stat.update(region, currentStats);

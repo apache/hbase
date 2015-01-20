@@ -37,7 +37,9 @@ import com.google.common.annotations.VisibleForTesting;
  * Utility used by client connections.
  */
 @InterfaceAudience.Private
-public class ConnectionUtils {
+public final class ConnectionUtils {
+
+  private ConnectionUtils() {}
 
   private static final Random RANDOM = new Random();
   /**

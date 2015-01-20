@@ -100,7 +100,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
       final List<Action<R>> actions = e.getValue();
       regionActionBuilder.clear();
       regionActionBuilder.setRegion(RequestConverter.buildRegionSpecifier(
-        HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName) );
+          HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME, regionName));
 
 
       if (this.cellBlock) {

@@ -47,10 +47,12 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * <p>
  * Based on code from http://www.sixlegs.com/blog/java/exclude-javadoc-tag.html.
  */
-class RootDocProcessor {
+final class RootDocProcessor {
 
   static String stability = StabilityOptions.UNSTABLE_OPTION;
   static boolean treatUnannotatedClassesAsPrivate = false;
+
+  private RootDocProcessor() {}
 
   public static RootDoc process(RootDoc root) {
     return (RootDoc) process(root, RootDoc.class);
@@ -215,7 +217,9 @@ class RootDocProcessor {
     }
 
     private Object unwrap(Object proxy) {
-      if (proxy instanceof Proxy) return ((ExcludeHandler) Proxy.getInvocationHandler(proxy)).target;
+      if (proxy instanceof Proxy) {
+        return ((ExcludeHandler) Proxy.getInvocationHandler(proxy)).target;
+      }
       return proxy;
     }
 

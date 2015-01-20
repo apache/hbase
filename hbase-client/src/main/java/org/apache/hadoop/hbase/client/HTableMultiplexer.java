@@ -157,7 +157,7 @@ public class HTableMultiplexer {
   }
 
   /**
-   * Deprecated. Use {@link #put(TableName, List) } instead.
+   * @deprecated Use {@link #put(TableName, List) } instead.
    */
   @Deprecated
   public List<Put> put(byte[] tableName, final List<Put> puts) {
@@ -195,7 +195,7 @@ public class HTableMultiplexer {
   }
 
   /**
-   * Deprecated. Use {@link #put(TableName, Put) } instead.
+   * @deprecated Use {@link #put(TableName, Put) } instead.
    */
   @Deprecated
   public boolean put(final byte[] tableName, final Put put, int retry) {
@@ -203,7 +203,7 @@ public class HTableMultiplexer {
   }
 
   /**
-   * Deprecated. Use {@link #put(TableName, Put)} instead.
+   * @deprecated Use {@link #put(TableName, Put)} instead.
    */
   @Deprecated
   public boolean put(final byte[] tableName, Put put) {
@@ -224,8 +224,8 @@ public class HTableMultiplexer {
         worker = serverToFlushWorkerMap.get(addr);
         if (worker == null) {
           // Create the flush worker
-          worker = new FlushWorker(workerConf, this.conn, addr, this, perRegionServerBufferQueueSize,
-                  pool, executor);
+          worker = new FlushWorker(workerConf, this.conn, addr, this,
+              perRegionServerBufferQueueSize, pool, executor);
           this.serverToFlushWorkerMap.put(addr, worker);
           executor.scheduleAtFixedRate(worker, flushPeriod, flushPeriod, TimeUnit.MILLISECONDS);
         }
@@ -343,9 +343,9 @@ public class HTableMultiplexer {
   }
 
   private static class PutStatus {
-    public final HRegionInfo regionInfo;
-    public final Put put;
-    public final int retryCount;
+    private final HRegionInfo regionInfo;
+    private final Put put;
+    private final int retryCount;
 
     public PutStatus(HRegionInfo regionInfo, Put put, int retryCount) {
       this.regionInfo = regionInfo;
@@ -384,7 +384,7 @@ public class HTableMultiplexer {
     }
 
     public synchronized void reset() {
-      this.sum = 0l;
+      this.sum = 0L;
       this.count = 0;
     }
 

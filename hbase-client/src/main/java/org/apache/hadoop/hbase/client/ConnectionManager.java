@@ -189,7 +189,7 @@ import com.google.protobuf.ServiceException;
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
 // NOTE: DO NOT make this class public. It was made package-private on purpose.
-class ConnectionManager {
+final class ConnectionManager {
   static final Log LOG = LogFactory.getLog(ConnectionManager.class);
 
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
@@ -269,6 +269,7 @@ class ConnectionManager {
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static HConnection getConnection(final Configuration conf) throws IOException {
@@ -400,6 +401,9 @@ class ConnectionManager {
     return createConnection(conf, false, pool, user);
   }
 
+  /**
+   * @deprecated instead use one of the {@link ConnectionFactory#createConnection()} methods.
+   */
   @Deprecated
   static HConnection createConnection(final Configuration conf, final boolean managed)
       throws IOException {
@@ -407,6 +411,9 @@ class ConnectionManager {
     return createConnection(conf, managed, null, provider.getCurrent());
   }
 
+  /**
+   * @deprecated instead use one of the {@link ConnectionFactory#createConnection()} methods.
+   */
   @Deprecated
   static ClusterConnection createConnection(final Configuration conf, final boolean managed,
       final ExecutorService pool, final User user)
@@ -420,7 +427,7 @@ class ConnectionManager {
    * then close connection to the zookeeper ensemble and let go of all associated resources.
    *
    * @param conf configuration whose identity is used to find {@link HConnection} instance.
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteConnection(Configuration conf) {
@@ -432,7 +439,7 @@ class ConnectionManager {
    * This will then close connection to the zookeeper ensemble and let go of all resources.
    *
    * @param connection
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteStaleConnection(HConnection connection) {
@@ -443,7 +450,7 @@ class ConnectionManager {
    * Delete information for all connections. Close or not the connection, depending on the
    *  staleConnection boolean and the ref count. By default, you should use it with
    *  staleConnection to true.
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteAllConnections(boolean staleConnection) {
@@ -466,7 +473,9 @@ class ConnectionManager {
     deleteAllConnections(false);
   }
 
-
+  /**
+   * @deprecated connection caching is going away.
+   */
   @Deprecated
   private static void deleteConnection(HConnection connection, boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
@@ -479,6 +488,9 @@ class ConnectionManager {
     }
   }
 
+  /**
+   * @deprecated connection caching is going away.
+˙   */
   @Deprecated
   private static void deleteConnection(HConnectionKey connectionKey, boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
@@ -843,6 +855,7 @@ class ConnectionManager {
      * @return true if the master is running, throws an exception otherwise
      * @throws MasterNotRunningException - if the master is not running
      * @throws ZooKeeperConnectionException
+     * @deprecated this has been deprecated without a replacement
      */
     @Deprecated
     @Override
@@ -989,7 +1002,7 @@ class ConnectionManager {
     @Override
     public List<HRegionLocation> locateRegions(final TableName tableName)
     throws IOException {
-      return locateRegions (tableName, false, true);
+      return locateRegions(tableName, false, true);
     }
 
     @Override
@@ -1345,7 +1358,7 @@ class ConnectionManager {
       int userCount;
       long keepAliveUntil = Long.MAX_VALUE;
 
-      MasterServiceState (final HConnection connection) {
+      MasterServiceState(final HConnection connection) {
         super();
         this.connection = connection;
       }
@@ -1584,7 +1597,7 @@ class ConnectionManager {
       if (zkw == null){
         return;
       }
-      if (keepAliveZookeeperUserCount.addAndGet(-1) <= 0 ){
+      if (keepAliveZookeeperUserCount.addAndGet(-1) <= 0) {
         keepZooKeeperWatcherAliveUntil = System.currentTimeMillis() + keepAlive;
       }
     }
@@ -1596,7 +1609,7 @@ class ConnectionManager {
      *  {@link #keepZooKeeperWatcherAliveUntil}). Keep alive time is
      *  managed by the release functions and the variable {@link #keepAlive}
      */
-    private static class DelayedClosing extends Chore implements Stoppable {
+    private static final class DelayedClosing extends Chore implements Stoppable {
       private HConnectionImplementation hci;
       Stoppable stoppable;
 
@@ -2067,7 +2080,7 @@ class ConnectionManager {
         final Object exception, final HRegionLocation source) {
       assert source != null;
       updateCachedLocations(tableName, source.getRegionInfo().getRegionName()
-        , rowkey, exception, source.getServerName());
+          , rowkey, exception, source.getServerName());
     }
 
     /**
@@ -2144,6 +2157,9 @@ class ConnectionManager {
       updateCachedLocations(TableName.valueOf(tableName), rowkey, exception, source);
     }
 
+    /**
+     * @deprecated since 0.96 - Use {@link HTableInterface#batch} instead
+     */
     @Override
     @Deprecated
     public void processBatch(List<? extends Row> list,
@@ -2160,6 +2176,9 @@ class ConnectionManager {
       processBatchCallback(list, tableName, pool, results, null);
     }
 
+    /**
+     * @deprecated Unsupported API
+     */
     @Override
     @Deprecated
     public void processBatch(List<? extends Row> list,
@@ -2194,6 +2213,9 @@ class ConnectionManager {
       }
     }
 
+    /**
+     * @deprecated Unsupported API
+     */
     @Override
     @Deprecated
     public <R> void processBatchCallback(
@@ -2238,23 +2260,35 @@ class ConnectionManager {
       return metaCache.getNumberOfCachedRegionLocations(tableName);
     }
 
+    /**
+     * @deprecated always return false since 0.99
+     */
     @Override
     @Deprecated
     public void setRegionCachePrefetch(final TableName tableName, final boolean enable) {
     }
 
+    /**
+     * @deprecated always return false since 0.99
+     */
     @Override
     @Deprecated
     public void setRegionCachePrefetch(final byte[] tableName,
         final boolean enable) {
     }
 
+    /**
+     * @deprecated always return false since 0.99
+     */
     @Override
     @Deprecated
     public boolean getRegionCachePrefetch(TableName tableName) {
       return false;
     }
 
+    /**
+     * @deprecated always return false since 0.99
+     */
     @Override
     @Deprecated
     public boolean getRegionCachePrefetch(byte[] tableName) {
@@ -2400,7 +2434,7 @@ class ConnectionManager {
     @Override
     public String[] getTableNames() throws IOException {
       TableName[] tableNames = listTableNames();
-      String result[] = new String[tableNames.length];
+      String[] result = new String[tableNames.length];
       for (int i = 0; i < tableNames.length; i++) {
         result[i] = tableNames[i].getNameAsString();
       }
@@ -2567,7 +2601,7 @@ class ConnectionManager {
       long result;
       ServerErrors errorStats = errorsByServer.get(server);
       if (errorStats != null) {
-        result = ConnectionUtils.getPauseTime(basePause, errorStats.retries.get());
+        result = ConnectionUtils.getPauseTime(basePause, errorStats.getCount());
       } else {
         result = 0; // yes, if the server is not in our list we don't wait before retrying.
       }
@@ -2599,7 +2633,11 @@ class ConnectionManager {
      * The record of errors for a server.
      */
     private static class ServerErrors {
-      public final AtomicInteger retries = new AtomicInteger(0);
+      private final AtomicInteger retries = new AtomicInteger(0);
+
+      public int getCount() {
+        return retries.get();
+      }
 
       public void addError() {
         retries.incrementAndGet();

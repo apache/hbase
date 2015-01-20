@@ -192,7 +192,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       }
       // add details for each cell
       for (Cell cell: entry.getValue()) {
-        if (--maxCols <= 0 ) {
+        if (--maxCols <= 0) {
           continue;
         }
         Map<String, Object> cellMap = cellToStringMap(cell);

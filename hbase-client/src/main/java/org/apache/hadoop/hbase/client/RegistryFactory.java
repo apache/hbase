@@ -25,13 +25,16 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * Get instance of configured Registry.
  */
 @InterfaceAudience.Private
-class RegistryFactory {
+final class RegistryFactory {
+
+  private RegistryFactory() {}
+
   /**
    * @return The cluster registry implementation to use.
    * @throws IOException
    */
   static Registry getRegistry(final Connection connection)
-  throws IOException {
+      throws IOException {
     String registryClass = connection.getConfiguration().get("hbase.client.registry.impl",
       ZooKeeperRegistry.class.getName());
     Registry registry = null;

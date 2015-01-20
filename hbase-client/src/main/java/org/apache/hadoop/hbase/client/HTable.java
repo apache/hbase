@@ -172,7 +172,8 @@ public class HTable implements HTableInterface {
   public HTable(Configuration conf, final TableName tableName)
   throws IOException {
     this.tableName = tableName;
-    this.cleanupPoolOnClose = this.cleanupConnectionOnClose = true;
+    this.cleanupPoolOnClose = true;
+    this.cleanupConnectionOnClose = true;
     if (conf == null) {
       this.connection = null;
       return;
@@ -361,7 +362,8 @@ public class HTable implements HTableInterface {
     }
 
     // puts need to track errors globally due to how the APIs currently work.
-    ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true, rpcControllerFactory);
+    ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true,
+        rpcControllerFactory);
     multiAp = this.connection.getAsyncProcess();
     this.locator = new HRegionLocator(getName(), connection);
   }
@@ -630,7 +632,8 @@ public class HTable implements HTableInterface {
    */
   @Deprecated
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
-    // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocator, singular, returns an HRegionLocation.
+    // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocator, singular,
+    // returns an HRegionLocation.
     return MetaScanner.allTableRegions(this.connection, getName());
   }
 
@@ -931,7 +934,7 @@ public class HTable implements HTableInterface {
    * {@inheritDoc}
    * @deprecated If any exception is thrown by one of the actions, there is no way to
    * retrieve the partially executed results. Use
-   * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
+   * {@link #batchCallback(List, Object[], Batch.Callback)}
    * instead.
    */
   @Deprecated
@@ -984,8 +987,8 @@ public class HTable implements HTableInterface {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     } finally {
       // mutate list so that it is empty for complete success, or contains only failed records
-      // results are returned in the same order as the requests in list
-      // walk the list backwards, so we can remove from list without impacting the indexes of earlier members
+      // results are returned in the same order as the requests in list walk the list backwards,
+      // so we can remove from list without impacting the indexes of earlier members
       for (int i = results.length - 1; i>=0; i--) {
         // if result is not null, it succeeded
         if (results[i] instanceof Result) {
@@ -1434,6 +1437,7 @@ public class HTable implements HTableInterface {
 
   /**
    * {@inheritDoc}
+   * @deprecated Use {@link #existsAll(java.util.List)}  instead.
    */
   @Override
   @Deprecated
@@ -1541,6 +1545,10 @@ public class HTable implements HTableInterface {
 
   /**
    * {@inheritDoc}
+   * @deprecated in 0.96. When called with setAutoFlush(false), this function also
+   *  set clearBufferOnFail to true, which is unexpected but kept for historical reasons.
+   *  Replace it with setAutoFlush(false, false) if this is exactly what you want, or by
+   *  {@link #setAutoFlushTo(boolean)} for all other cases.
    */
   @Deprecated
   @Override
@@ -1770,9 +1778,8 @@ public class HTable implements HTableInterface {
             + Bytes.toStringBinary(e.getKey()), ee);
         throw ee.getCause();
       } catch (InterruptedException ie) {
-        throw new InterruptedIOException("Interrupted calling coprocessor service " + service.getName()
-            + " for row " + Bytes.toStringBinary(e.getKey()))
-            .initCause(ie);
+        throw new InterruptedIOException("Interrupted calling coprocessor service "
+            + service.getName() + " for row " + Bytes.toStringBinary(e.getKey())).initCause(ie);
       }
     }
   }

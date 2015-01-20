@@ -25,8 +25,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost.Environment;
@@ -53,7 +56,9 @@ import com.google.protobuf.ServiceException;
  * which attempt to use objects and methods outside the Environment
  * sandbox.
  */
-public class HTableWrapper implements HTableInterface {
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Stable
+public final class HTableWrapper implements HTableInterface {
 
   private TableName tableName;
   private final Table table;
@@ -112,6 +117,10 @@ public class HTableWrapper implements HTableInterface {
     }
   }
 
+  /**
+   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Use
+   * {@link #setAutoFlushTo(boolean)}} instead.
+   */
   @Deprecated
   public Result getRowOrBefore(byte[] row, byte[] family)
       throws IOException {
@@ -135,6 +144,9 @@ public class HTableWrapper implements HTableInterface {
     return table.existsAll(gets);
   }
 
+  /**
+   * @deprecated Use {@link #existsAll(java.util.List)}  instead.
+   */
   @Deprecated
   public Boolean[] exists(List<Get> gets) throws IOException {
     // Do convertion.
@@ -268,8 +280,7 @@ public class HTableWrapper implements HTableInterface {
    * {@inheritDoc}
    * @deprecated If any exception is thrown by one of the actions, there is no way to
    * retrieve the partially executed results. Use
-   * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
-   * instead.
+   * {@link #batchCallback(List, Object[], Batch.Callback)} instead.
    */
   @Deprecated
   @Override

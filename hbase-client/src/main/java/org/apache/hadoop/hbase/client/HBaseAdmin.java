@@ -339,7 +339,7 @@ public class HBaseAdmin implements Admin {
   @Deprecated
   public String[] getTableNames() throws IOException {
     TableName[] tableNames = listTableNames();
-    String result[] = new String[tableNames.length];
+    String[] result = new String[tableNames.length];
     for (int i = 0; i < tableNames.length; i++) {
       result[i] = tableNames[i].getNameAsString();
     }
@@ -356,7 +356,7 @@ public class HBaseAdmin implements Admin {
   @Deprecated
   public String[] getTableNames(Pattern pattern) throws IOException {
     TableName[] tableNames = listTableNames(pattern);
-    String result[] = new String[tableNames.length];
+    String[] result = new String[tableNames.length];
     for (int i = 0; i < tableNames.length; i++) {
       result[i] = tableNames[i].getNameAsString();
     }
@@ -2902,8 +2902,8 @@ public class HBaseAdmin implements Admin {
                         final byte[] tableName) throws IOException,
     * <p>
     * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
-    * snapshot with the same name (even a different type or with different parameters) will fail with
-    * a {@link SnapshotCreationException} indicating the duplicate naming.
+    * snapshot with the same name (even a different type or with different parameters) will fail
+    * with a {@link SnapshotCreationException} indicating the duplicate naming.
     * <p>
     * Snapshot names follow the same naming constraints as tables in HBase.
     * @param snapshotName name of the snapshot to be created
@@ -3473,7 +3473,8 @@ public class HBaseAdmin implements Admin {
         // sleep a backoff <= pauseTime amount
         long sleep = getPauseTime(tries++);
         sleep = sleep > maxPauseTime ? maxPauseTime : sleep;
-        LOG.debug(tries + ") Sleeping: " + sleep + " ms while we wait for snapshot restore to complete.");
+        LOG.debug(tries + ") Sleeping: " + sleep
+            + " ms while we wait for snapshot restore to complete.");
         Thread.sleep(sleep);
       } catch (InterruptedException e) {
         throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);

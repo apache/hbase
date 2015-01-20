@@ -36,7 +36,9 @@ import com.sun.tools.doclets.standard.Standard;
  * It delegates to the Standard Doclet, and takes the same options.
  */
 @InterfaceAudience.Private
-public class IncludePublicAnnotationsStandardDoclet {
+public final class IncludePublicAnnotationsStandardDoclet {
+
+  private IncludePublicAnnotationsStandardDoclet() {}
 
   public static LanguageVersion languageVersion() {
     return LanguageVersion.JAVA_1_5;

@@ -198,6 +198,9 @@ public interface HConnection extends Connection {
    */
   boolean isTableEnabled(TableName tableName) throws IOException;
 
+  /**
+   * @deprecated instead use {@link #isTableEnabled(TableName)}
+   */
   @Deprecated
   boolean isTableEnabled(byte[] tableName) throws IOException;
 
@@ -208,6 +211,9 @@ public interface HConnection extends Connection {
    */
   boolean isTableDisabled(TableName tableName) throws IOException;
 
+  /**
+   * @deprecated instead use {@link #isTableDisabled(TableName)}
+   */
   @Deprecated
   boolean isTableDisabled(byte[] tableName) throws IOException;
 
@@ -225,6 +231,9 @@ public interface HConnection extends Connection {
    */
   boolean isTableAvailable(TableName tableName) throws IOException;
 
+  /**
+   * @deprecated instead use {@link #isTableAvailable(TableName)}
+   */
   @Deprecated
   boolean isTableAvailable(byte[] tableName) throws IOException;
 
@@ -233,20 +242,18 @@ public interface HConnection extends Connection {
    * splitkeys which was used while creating the given table.
    * Note : If this api is used after a table's region gets splitted, the api may return
    * false.
-   * @param tableName
-   *          tableName
-   * @param splitKeys
-   *          splitKeys used while creating table
-   * @throws IOException
-   *           if a remote or network exception occurs
-   * @deprecated internal method, do not use thru HConnection */
+   * @param tableName tableName
+   * @param splitKeys splitKeys used while creating table
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated internal method, do not use through HConnection */
   @Deprecated
-  boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws
-      IOException;
+  boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
-  boolean isTableAvailable(byte[] tableName, byte[][] splitKeys) throws
-      IOException;
+  boolean isTableAvailable(byte[] tableName, byte[][] splitKeys) throws IOException;
 
   /**
    * List all the userspace tables.  In other words, scan the hbase:meta table.
@@ -278,11 +285,15 @@ public interface HConnection extends Connection {
    * @param tableName table name
    * @return table metadata
    * @throws IOException if a remote or network exception occurs
+   * @deprecated internal method, do not use through HConnection
    */
   @Deprecated
   HTableDescriptor getHTableDescriptor(TableName tableName)
   throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   HTableDescriptor getHTableDescriptor(byte[] tableName)
   throws IOException;
@@ -295,19 +306,22 @@ public interface HConnection extends Connection {
    * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
-   * @deprecated internal method, do not use thru HConnection
+   * @deprecated internal method, do not use through HConnection
    */
   @Deprecated
   public HRegionLocation locateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   public HRegionLocation locateRegion(final byte[] tableName,
       final byte [] row) throws IOException;
 
   /**
    * Allows flushing the region cache.
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use through HConnection */
   @Deprecated
   void clearRegionCache();
 
@@ -316,10 +330,13 @@ public interface HConnection extends Connection {
    * <code>tableName</code>
    * @param tableName Name of the table whose regions we are to remove from
    * cache.
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use through HConnection */
   @Deprecated
   void clearRegionCache(final TableName tableName);
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   void clearRegionCache(final byte[] tableName);
 
@@ -338,15 +355,21 @@ public interface HConnection extends Connection {
    * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use through HConnection */
   @Deprecated
   HRegionLocation relocateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   HRegionLocation relocateRegion(final byte[] tableName,
       final byte [] row) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   void updateCachedLocations(TableName tableName, byte[] rowkey,
                                     Object exception, HRegionLocation source);
@@ -359,12 +382,14 @@ public interface HConnection extends Connection {
    * @param rowkey the row
    * @param exception the exception if any. Can be null.
    * @param source the previous location
-   * @deprecated internal method, do not use thru HConnection
+   * @deprecated internal method, do not use through HConnection
    */
   @Deprecated
   void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
                                     Object exception, ServerName source);
-
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   void updateCachedLocations(byte[] tableName, byte[] rowkey,
                                     Object exception, HRegionLocation source);
@@ -389,6 +414,9 @@ public interface HConnection extends Connection {
   @Deprecated
   List<HRegionLocation> locateRegions(final TableName tableName) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   List<HRegionLocation> locateRegions(final byte[] tableName) throws IOException;
 
@@ -407,6 +435,9 @@ public interface HConnection extends Connection {
       final boolean useCache,
       final boolean offlined) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   public List<HRegionLocation> locateRegions(final byte[] tableName,
       final boolean useCache,
@@ -464,6 +495,9 @@ public interface HConnection extends Connection {
     boolean reload)
   throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   HRegionLocation getRegionLocation(byte[] tableName, byte [] row,
     boolean reload)
@@ -488,6 +522,9 @@ public interface HConnection extends Connection {
   void processBatch(List<? extends Row> actions, final TableName tableName,
       ExecutorService pool, Object[] results) throws IOException, InterruptedException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   void processBatch(List<? extends Row> actions, final byte[] tableName,
       ExecutorService pool, Object[] results) throws IOException, InterruptedException;
@@ -504,6 +541,9 @@ public interface HConnection extends Connection {
       Object[] results,
       Batch.Callback<R> callback) throws IOException, InterruptedException;
 
+  /**
+   * @deprecated Unsupported API
+   */
   @Deprecated
   public <R> void processBatchCallback(List<? extends Row> list,
       final byte[] tableName,
@@ -554,6 +594,9 @@ public interface HConnection extends Connection {
   @Deprecated
   HTableDescriptor[] getHTableDescriptorsByTableName(List<TableName> tableNames) throws IOException;
 
+  /**
+   * @deprecated since 0.96.0
+   */
   @Deprecated
   HTableDescriptor[] getHTableDescriptors(List<String> tableNames) throws
       IOException;

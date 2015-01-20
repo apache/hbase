@@ -32,18 +32,17 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 @InterfaceAudience.Private
 class FailureInfo {
   // The number of consecutive failures.
-  public final AtomicLong numConsecutiveFailures = new AtomicLong();
+  final AtomicLong numConsecutiveFailures = new AtomicLong();
   // The time when the server started to become unresponsive
   // Once set, this would never be updated.
-  public final long timeOfFirstFailureMilliSec;
+  final long timeOfFirstFailureMilliSec;
   // The time when the client last tried to contact the server.
   // This is only updated by one client at a time
-  public volatile long timeOfLatestAttemptMilliSec;
+  volatile long timeOfLatestAttemptMilliSec;
   // Used to keep track of concurrent attempts to contact the server.
   // In Fast fail mode, we want just one client thread to try to connect
   // the rest of the client threads will fail fast.
-  public final AtomicBoolean exclusivelyRetringInspiteOfFastFail = new AtomicBoolean(
-      false);
+  final AtomicBoolean exclusivelyRetringInspiteOfFastFail = new AtomicBoolean(false);
 
   @Override
   public String toString() {

@@ -44,7 +44,7 @@ import java.lang.annotation.RetentionPolicy;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class InterfaceAudience {
+public final class InterfaceAudience {
   /**
    * Intended for use by any project or application.
    */

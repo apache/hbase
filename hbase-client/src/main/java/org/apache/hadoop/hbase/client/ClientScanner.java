@@ -465,9 +465,12 @@ public class ClientScanner extends AbstractClientScanner {
            // We used to catch this error, interpret, and rethrow. However, we
            // have since decided that it's not nice for a scanner's close to
            // throw exceptions. Chances are it was just due to lease time out.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("scanner failed to close", e);
+          }
         } catch (IOException e) {
-           /* An exception other than UnknownScanner is unexpected. */
-           LOG.warn("scanner failed to close. Exception follows: " + e);
+          /* An exception other than UnknownScanner is unexpected. */
+          LOG.warn("scanner failed to close.", e);
         }
         callable = null;
       }

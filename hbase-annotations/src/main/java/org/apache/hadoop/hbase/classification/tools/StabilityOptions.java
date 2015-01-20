@@ -22,7 +22,10 @@ import com.sun.javadoc.DocErrorReporter;
 import java.util.ArrayList;
 import java.util.List;
 
-class StabilityOptions {
+final class StabilityOptions {
+
+  private StabilityOptions() {}
+
   public static final String STABLE_OPTION = "-stable";
   public static final String EVOLVING_OPTION = "-evolving";
   public static final String UNSTABLE_OPTION = "-unstable";
