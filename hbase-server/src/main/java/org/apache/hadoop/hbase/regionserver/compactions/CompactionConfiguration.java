@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
  * minFilesToCompact - lower bound on number of files in any minor compaction
  * maxFilesToCompact - upper bound on number of files in any minor compaction
  * compactionRatio - Ratio used for compaction
+ * minLocalityToForceCompact - Locality threshold for a store file to major compact (HBASE-11195)
  * <p/>
  * Set parameter as "hbase.hstore.compaction.<attribute>"
  */
@@ -56,6 +57,8 @@ public class CompactionConfiguration {
     "hbase.hstore.compaction.max.size";
   public static final String HBASE_HSTORE_OFFPEAK_END_HOUR = "hbase.offpeak.end.hour";
   public static final String HBASE_HSTORE_OFFPEAK_START_HOUR = "hbase.offpeak.start.hour";
+  public static final String HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT =
+      "hbase.hstore.min.locality.to.skip.major.compact";
 
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
@@ -70,6 +73,7 @@ public class CompactionConfiguration {
   private final long throttlePoint;
   private final long majorCompactionPeriod;
   private final float majorCompactionJitter;
+  private final float minLocalityToForceCompact;
 
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
@@ -89,7 +93,7 @@ public class CompactionConfiguration {
     majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24*7);
     // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
-
+    minLocalityToForceCompact = conf.getFloat(HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT, 0f);
     LOG.info(this);
   }
 
@@ -97,7 +101,7 @@ public class CompactionConfiguration {
   public String toString() {
     return String.format(
       "size [%d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
-      + " major period %d, major jitter %f",
+      + " major period %d, major jitter %f, min locality to compact %f",
       minCompactSize,
       maxCompactSize,
       minFilesToCompact,
@@ -106,7 +110,8 @@ public class CompactionConfiguration {
       offPeakCompactionRatio,
       throttlePoint,
       majorCompactionPeriod,
-      majorCompactionJitter);
+      majorCompactionJitter,
+      minLocalityToForceCompact);
   }
 
   /**
@@ -172,5 +177,14 @@ public class CompactionConfiguration {
    */
   public float getMajorCompactionJitter() {
     return majorCompactionJitter;
+  }
+
+  /**
+   * @return Block locality ratio, the ratio at which we will include old regions with a single
+   * store file for major compaction.  Used to improve block locality for regions that
+   * haven't had writes in a while but are still being read.
+   */
+  public float getMinLocalityToForceCompact() {
+    return minLocalityToForceCompact;
   }
 }

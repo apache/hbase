@@ -62,6 +62,8 @@ public abstract class CompactionPolicy {
     this.comConf = new CompactionConfiguration(conf, this.storeConfigInfo);
   }
 
+
+
   /**
    * @return The current compaction configuration settings.
    */
