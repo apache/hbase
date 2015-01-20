@@ -28,6 +28,7 @@ import java.lang.management.MemoryUsage;
 import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -591,10 +592,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
 
     // Server to handle client requests.
-    String hostname = conf.get("hbase.regionserver.ipc.address",
-      Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get("hbase.regionserver.dns.interface", "default"),
-        conf.get("hbase.regionserver.dns.nameserver", "default"))));
+    String hostname = getHostname(conf);
     int port = conf.getInt(HConstants.REGIONSERVER_PORT,
       HConstants.DEFAULT_REGIONSERVER_PORT);
     // Creation of a HSA will force a resolve.
@@ -653,6 +651,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Put up the webui. Webui may come up on port other than configured if
     // that port is occupied. Adjust serverInfo if this is the case.
     this.rsInfo.setInfoPort(putUpWebUI());
+  }
+
+  public static String getHostname(Configuration conf) throws UnknownHostException {
+    return conf.get("hbase.regionserver.ipc.address",
+        Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+            conf.get("hbase.regionserver.dns.interface", "default"),
+            conf.get("hbase.regionserver.dns.nameserver", "default"))));
   }
 
   @Override

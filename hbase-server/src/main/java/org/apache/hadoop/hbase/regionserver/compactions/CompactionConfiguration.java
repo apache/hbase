@@ -47,6 +47,8 @@ public class CompactionConfiguration {
   static final Log LOG = LogFactory.getLog(CompactionConfiguration.class);
 
   private static final String CONFIG_PREFIX = "hbase.hstore.compaction.";
+  public static final String HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT =
+      "hbase.hstore.min.locality.to.skip.major.compact";
   public static final String RATIO_KEY = CONFIG_PREFIX + "ratio";
   public static final String MIN_KEY = CONFIG_PREFIX + "min";
   public static final String MAX_KEY = CONFIG_PREFIX + "max";
@@ -63,6 +65,8 @@ public class CompactionConfiguration {
   long throttlePoint;
   long majorCompactionPeriod;
   float majorCompactionJitter;
+  final float minLocalityToForceCompact;
+
 
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
@@ -82,6 +86,7 @@ public class CompactionConfiguration {
     majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24*7);
     // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
     majorCompactionJitter = conf.getFloat("hbase.hregion.majorcompaction.jitter", 0.50F);
+    minLocalityToForceCompact = conf.getFloat(HBASE_HSTORE_MIN_LOCALITY_TO_SKIP_MAJOR_COMPACT, 0f);
 
     LOG.info(this);
   }
@@ -90,7 +95,7 @@ public class CompactionConfiguration {
   public String toString() {
     return String.format(
       "size [%d, %d); files [%d, %d); ratio %f; off-peak ratio %f; throttle point %d;"
-      + " major period %d, major jitter %f",
+      + " major period %d, major jitter %f, min locality to compact %f\"",
       minCompactSize,
       maxCompactSize,
       minFilesToCompact,
@@ -99,7 +104,9 @@ public class CompactionConfiguration {
       offPeekCompactionRatio,
       throttlePoint,
       majorCompactionPeriod,
-      majorCompactionJitter);
+      majorCompactionJitter,
+      minLocalityToForceCompact
+    );
   }
 
   /**
@@ -165,5 +172,14 @@ public class CompactionConfiguration {
    */
   float getMajorCompactionJitter() {
     return majorCompactionJitter;
+  }
+
+  /**
+   * @return Block locality ratio, the ratio at which we will include old regions with a single
+   * store file for major compaction.  Used to improve block locality for regions that
+   * haven't had writes in a while but are still being read.
+   */
+  float getMinLocalityToForceCompact() {
+    return minLocalityToForceCompact;
   }
 }
