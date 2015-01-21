@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -164,7 +165,8 @@ public class TestScannerWithBulkload {
   }
 
   private HTable init(HBaseAdmin admin, long l, Scan scan, TableName tableName) throws Exception {
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Connection connection = TEST_UTIL.getConnection();
+    HTable table = (HTable) connection.getTable(tableName);
     Put put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version0")));
