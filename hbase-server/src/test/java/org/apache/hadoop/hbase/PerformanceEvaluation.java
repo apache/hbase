@@ -1741,7 +1741,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
-      final String noOfTags = "--nooftags=";
+      final String noOfTags = "--numoftags=";
       if (cmd.startsWith(noOfTags)) {
         opts.noOfTags = Integer.parseInt(cmd.substring(noOfTags.length()));
         continue;
@@ -1832,6 +1832,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
         }
         break;
       }
+
+      // Not matching any option or command.
+      System.err.println("Error: Wrong option or command: " + cmd);
+      args.add(cmd);
+      break;
     }
     return opts;
   }
@@ -1851,10 +1856,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       argv.addAll(Arrays.asList(args));
       TestOptions opts = parseOpts(argv);
 
-      // args remainting, print help and exit
+      // args remaining, print help and exit
       if (!argv.isEmpty()) {
         errCode = 0;
         printUsage();
+        return errCode;
       }
 
       // must run at least 1 client
