@@ -141,6 +141,10 @@
       <artifactId>jackson-mapper-asl</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.jruby.jcodings</groupId>
+      <artifactId>jcodings</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.jruby.joni</groupId>
       <artifactId>joni</artifactId>
     </dependency>
@@ -196,6 +200,10 @@
         </property>
       </activation>
       <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+        </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
@@ -255,6 +263,10 @@
         <hadoop.version>3.0-SNAPSHOT</hadoop.version>
       </properties>
       <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+        </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>

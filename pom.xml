@@ -998,6 +998,7 @@
     <jersey.version>1.8</jersey.version>
     <jruby.version>1.6.8</jruby.version>
     <junit.version>4.11</junit.version>
+    <hamcrest.version>1.3</hamcrest.version>
     <htrace.version>2.04</htrace.version>
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.9.0</mockito-all.version>
@@ -1012,6 +1013,7 @@
     <jettison.version>1.3.1</jettison.version>
     <netty.version>3.6.6.Final</netty.version>
     <joni.version>2.1.2</joni.version>
+    <jcodings.version>1.0.8</jcodings.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
@@ -1334,6 +1336,11 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>org.jruby.jcodings</groupId>
+        <artifactId>jcodings</artifactId>
+        <version>${jcodings.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.jruby.joni</groupId>
         <artifactId>joni</artifactId>
         <version>${joni.version}</version>
@@ -1481,6 +1488,11 @@
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>hamcrest-core</artifactId>
+        <version>${hamcrest.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
