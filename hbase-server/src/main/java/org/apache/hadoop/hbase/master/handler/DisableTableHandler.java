@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
-import org.htrace.Trace;
+import org.apache.htrace.Trace;
 
 /**
  * Handler to run disable of a table.

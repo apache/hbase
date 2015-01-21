@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.*;
 import org.apache.hadoop.io.LongWritable;
@@ -86,10 +87,10 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.htrace.Sampler;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
-import org.htrace.impl.ProbabilitySampler;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.htrace.impl.ProbabilitySampler;
 
 import com.google.common.base.Objects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -952,7 +953,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
      */
     Test(final Connection con, final TestOptions options, final Status status) {
       this.connection = con;
-      this.conf = con ==  null? null: this.connection.getConfiguration();
+      this.conf = con == null ? HBaseConfiguration.create() : this.connection.getConfiguration();
       this.receiverHost = this.conf == null? null: SpanReceiverHost.getInstance(conf);
       this.opts = options;
       this.status = status;
@@ -960,7 +961,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (options.traceRate >= 1.0) {
         this.traceSampler = Sampler.ALWAYS;
       } else if (options.traceRate > 0.0) {
-        this.traceSampler = new ProbabilitySampler(options.traceRate);
+        conf.setDouble("hbase.sampler.fraction", options.traceRate);
+        this.traceSampler = new ProbabilitySampler(new HBaseHTraceConfiguration(conf));
       } else {
         this.traceSampler = Sampler.NEVER;
       }

@@ -30,12 +30,12 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.htrace.Sampler;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
-import org.htrace.TraceTree;
-import org.htrace.impl.POJOSpanReceiver;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.htrace.TraceTree;
+import org.apache.htrace.impl.POJOSpanReceiver;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,11 +48,12 @@ public class TestHTraceHooks {
 
   private static final byte[] FAMILY_BYTES = "family".getBytes();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final POJOSpanReceiver rcvr = new POJOSpanReceiver();
+  private static POJOSpanReceiver rcvr;
 
   @BeforeClass
   public static void before() throws Exception {
     TEST_UTIL.startMiniCluster(2, 3);
+    rcvr = new POJOSpanReceiver(new HBaseHTraceConfiguration(TEST_UTIL.getConfiguration()));
     Trace.addReceiver(rcvr);
   }
 
@@ -60,6 +61,7 @@ public class TestHTraceHooks {
   public static void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     Trace.removeReceiver(rcvr);
+    rcvr = null;
   }
 
   @Test
@@ -85,25 +87,23 @@ public class TestHTraceHooks {
 
     Collection<Span> spans = rcvr.getSpans();
     TraceTree traceTree = new TraceTree(spans);
-    Collection<Span> roots = traceTree.getRoots();
+    Collection<Span> roots = traceTree.getSpansByParent().find(Span.ROOT_SPAN_ID);
 
     assertEquals(1, roots.size());
     Span createTableRoot = roots.iterator().next();
 
     assertEquals("creating table", createTableRoot.getDescription());
-    Multimap<Long, Span> spansByParentIdMap = traceTree
-        .getSpansByParentIdMap();
 
     int createTableCount = 0;
 
-    for (Span s : spansByParentIdMap.get(createTableRoot.getSpanId())) {
+    for (Span s : traceTree.getSpansByParent().find(createTableRoot.getSpanId())) {
       if (s.getDescription().startsWith("MasterService.CreateTable")) {
         createTableCount++;
       }
     }
 
     assertTrue(createTableCount >= 1);
-    assertTrue(spansByParentIdMap.get(createTableRoot.getSpanId()).size() > 3);
+    assertTrue(traceTree.getSpansByParent().find(createTableRoot.getSpanId()).size() > 3);
     assertTrue(spans.size() > 5);
     
     Put put = new Put("row".getBytes());
@@ -118,7 +118,7 @@ public class TestHTraceHooks {
 
     spans = rcvr.getSpans();
     traceTree = new TraceTree(spans);
-    roots = traceTree.getRoots();
+    roots = traceTree.getSpansByParent().find(Span.ROOT_SPAN_ID);
 
     assertEquals(2, roots.size());
     Span putRoot = null;

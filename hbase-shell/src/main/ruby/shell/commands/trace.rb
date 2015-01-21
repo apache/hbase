@@ -16,8 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-HTrace = org.htrace.Trace
-java_import org.htrace.Sampler
+HTrace = org.apache.htrace.Trace
+java_import org.apache.htrace.Sampler
 java_import org.apache.hadoop.hbase.trace.SpanReceiverHost
 
 module Shell

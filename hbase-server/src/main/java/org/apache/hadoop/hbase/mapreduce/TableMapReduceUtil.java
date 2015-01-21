@@ -729,7 +729,7 @@ public class TableMapReduceUtil {
       io.netty.channel.Channel.class,
       com.google.protobuf.Message.class,
       com.google.common.collect.Lists.class,
-      org.htrace.Trace.class);
+      org.apache.htrace.Trace.class);
   }
 
   /**

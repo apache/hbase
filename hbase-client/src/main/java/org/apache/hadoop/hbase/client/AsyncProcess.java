@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.htrace.Trace;
+import org.apache.htrace.Trace;
 
 import com.google.common.annotations.VisibleForTesting;
 
