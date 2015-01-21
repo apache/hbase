@@ -1256,7 +1256,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           continue;
         }
         
-        final String noOfTags = "--nooftags=";
+        final String noOfTags = "--numoftags=";
         if (cmd.startsWith(noOfTags)) {
           opts.noOfTags = Integer.parseInt(cmd.substring(noOfTags.length()));
           continue;
