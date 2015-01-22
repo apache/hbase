@@ -37,6 +37,9 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -94,6 +97,7 @@ public class Result implements CellScannable, CellScanner {
    * Index for where we are when Result is acting as a {@link CellScanner}.
    */
   private int cellScannerIndex = INITIAL_CELLSCANNER_INDEX;
+  private ClientProtos.RegionLoadStats stats;
 
   /**
    * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #rawCells()}.
@@ -870,5 +874,21 @@ public class Result implements CellScannable, CellScanner {
    */
   public boolean isStale() {
     return stale;
+  }
+
+  /**
+   * Add load information about the region to the information about the result
+   * @param loadStats statistics about the current region from which this was returned
+   */
+  public void addResults(ClientProtos.RegionLoadStats loadStats) {
+    this.stats = loadStats;
+  }
+
+  /**
+   * @return the associated statistics about the region from which this was returned. Can be
+   * <tt>null</tt> if stats are disabled.
+   */
+  public ClientProtos.RegionLoadStats getStats() {
+    return stats;
   }
 }
