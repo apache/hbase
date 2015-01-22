@@ -39,9 +39,7 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import com.google.protobuf.ServiceException;
-
-import org.htrace.Trace;
+import org.apache.htrace.Trace;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;

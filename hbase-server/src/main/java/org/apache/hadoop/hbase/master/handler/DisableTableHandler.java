@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.htrace.Trace;
+import org.apache.htrace.Trace;
 
 /**
  * Handler to run disable of a table.

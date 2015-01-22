@@ -21,7 +21,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.htrace.Span;
+import org.apache.htrace.Span;
 
 /**
  * A Future on a filesystem sync call.  It given to a client or 'Handler' for it to wait on till
