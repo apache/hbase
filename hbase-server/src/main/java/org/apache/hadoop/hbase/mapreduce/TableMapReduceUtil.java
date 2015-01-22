@@ -63,8 +63,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
-
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.yammer.metrics.core.MetricsRegistry;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -278,6 +278,7 @@ public class TableMapReduceUtil {
       HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     conf.setFloat("hbase.offheapcache.percentage", 0f);
     conf.setFloat("hbase.bucketcache.size", 0f);
+    conf.unset("hbase.bucketcache.ioengine");
   }
 
   /**
@@ -309,6 +310,7 @@ public class TableMapReduceUtil {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
     initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
         outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
+    addDependencyJars(job.getConfiguration(), MetricsRegistry.class);
     resetCacheConfig(job.getConfiguration());
   }
 
@@ -374,7 +376,7 @@ public class TableMapReduceUtil {
       Class<? extends TableMapper> mapper,
       Class<? extends WritableComparable> outputKeyClass,
       Class<? extends Writable> outputValueClass, Job job,
-      boolean addDependencyJars, 
+      boolean addDependencyJars,
       boolean initCredentials) throws IOException {
     job.setInputFormatClass(MultiTableInputFormat.class);
     if (outputValueClass != null) {
