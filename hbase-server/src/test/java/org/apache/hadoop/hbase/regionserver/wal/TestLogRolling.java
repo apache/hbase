@@ -312,7 +312,7 @@ public class TestLogRolling  {
 
     admin.createTable(desc);
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
-    assertTrue(table.isAutoFlush());
+    assertTrue(((HTable) table).isAutoFlush());
 
     server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
     final FSHLog log = (FSHLog) server.getWAL(null);
@@ -455,8 +455,6 @@ public class TestLogRolling  {
           .isAppendSupported(TEST_UTIL.getConfiguration()));
 
       writeData(table, 1002);
-
-      table.setAutoFlushTo(true);
 
       long curTime = System.currentTimeMillis();
       LOG.info("log.getCurrentFileName()): " + DefaultWALProvider.getCurrentFileName(log));

@@ -219,9 +219,7 @@ public interface Table extends Closeable {
 
   /**
    * Puts some data in the table.
-   * <p>
-   * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
-   * until the internal buffer is full.
+   * 
    * @param put The data to put.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
@@ -230,9 +228,6 @@ public interface Table extends Closeable {
 
   /**
    * Puts some data in the table, in batch.
-   * <p>
-   * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
-   * until the internal buffer is full.
    * <p>
    * This can be used for group commit, or for submitting user defined
    * batches.  The writeBuffer will be periodically inspected while the List
@@ -498,30 +493,6 @@ public interface Table extends Closeable {
     final Batch.Callback<R> callback) throws ServiceException, Throwable;
 
   /**
-   * Tells whether or not 'auto-flush' is turned on.
-   *
-   * @return {@code true} if 'auto-flush' is enabled (default), meaning
-   * {@link Put} operations don't get buffered/delayed and are immediately
-   * executed.
-   */
-  boolean isAutoFlush();
-
-  /**
-   * Executes all the buffered {@link Put} operations.
-   * <p>
-   * This method gets called once automatically for every {@link Put} or batch
-   * of {@link Put}s (when <code>put(List<Put>)</code> is used) when
-   * {@link #isAutoFlush} is {@code true}.
-   * @throws IOException if a remote or network exception occurs.
-   */
-  void flushCommits() throws IOException;
-
-  /**
-   * Set the autoFlush behavior, without changing the value of {@code clearBufferOnFail}
-   */
-  void setAutoFlushTo(boolean autoFlush);
-
-  /**
    * Returns the maximum size in bytes of the write buffer for this HTable.
    * <p>
    * The default value comes from the configuration parameter
@@ -539,7 +510,6 @@ public interface Table extends Closeable {
    * @throws IOException if a remote or network exception occurs.
    */
   void setWriteBufferSize(long writeBufferSize) throws IOException;
-
 
   /**
    * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table

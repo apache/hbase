@@ -24,19 +24,17 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestCase.FlushCache;
 import org.apache.hadoop.hbase.HBaseTestCase.HTableIncommon;
 import org.apache.hadoop.hbase.HBaseTestCase.Incommon;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -46,7 +44,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -220,14 +217,16 @@ public class TestMultiVersions {
       }
     }
     // Insert data
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < startKeys.length; i++) {
       for (int j = 0; j < timestamp.length; j++) {
         Put put = new Put(rows[i], timestamp[j]);
         put.add(HConstants.CATALOG_FAMILY, null, timestamp[j],
             Bytes.toBytes(timestamp[j]));
-        table.put(put);
+        puts.add(put);
       }
     }
+    table.put(puts);
     // There are 5 cases we have to test. Each is described below.
     for (int i = 0; i < rows.length; i++) {
       for (int j = 0; j < timestamp.length; j++) {
@@ -241,7 +240,6 @@ public class TestMultiVersions {
         }
         assertTrue(cellCount == 1);
       }
-      table.flushCommits();
     }
 
     // Case 1: scan with LATEST_TIMESTAMP. Should get two rows

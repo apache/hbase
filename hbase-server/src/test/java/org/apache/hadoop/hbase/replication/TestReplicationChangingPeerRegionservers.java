@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -54,7 +53,6 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
    */
   @Before
   public void setUp() throws Exception {
-    htable1.setAutoFlushTo(false);
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
     for (JVMClusterUtil.RegionServerThread r :
@@ -119,7 +117,10 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     Put put = new Put(row);
     put.add(famName, row, row);
 
-    htable1 = utility1.getConnection().getTable(tableName);
+    if (htable1 == null) {
+      htable1 = utility1.getConnection().getTable(tableName);
+    }
+
     htable1.put(put);
 
     Get get = new Get(row);

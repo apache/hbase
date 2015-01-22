@@ -202,23 +202,22 @@ public class TestFSErrorsExposed {
       util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
       // Make a new Configuration so it makes a new connection that has the
       // above configuration on it; else we use the old one w/ 10 as default.
-      Table table = util.getConnection().getTable(tableName);
-
-      // Load some data
-      util.loadTable(table, fam, false);
-      table.flushCommits();
-      util.flush();
-      util.countRows(table);
-
-      // Kill the DFS cluster
-      util.getDFSCluster().shutdownDataNodes();
-
-      try {
+      try (Table table = util.getConnection().getTable(tableName)) {
+        // Load some data
+        util.loadTable(table, fam, false);
+        util.flush();
         util.countRows(table);
-        fail("Did not fail to count after removing data");
-      } catch (Exception e) {
-        LOG.info("Got expected error", e);
-        assertTrue(e.getMessage().contains("Could not seek"));
+
+        // Kill the DFS cluster
+        util.getDFSCluster().shutdownDataNodes();
+
+        try {
+          util.countRows(table);
+          fail("Did not fail to count after removing data");
+        } catch (Exception e) {
+          LOG.info("Got expected error", e);
+          assertTrue(e.getMessage().contains("Could not seek"));
+        }
       }
 
       // Restart data nodes so that HBase can shut down cleanly.

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -112,10 +111,8 @@ public class HTable implements HTableInterface {
   private final TableName tableName;
   private volatile Configuration configuration;
   private TableConfiguration tableConfiguration;
-  protected List<Row> writeAsyncBuffer = new LinkedList<Row>();
-  private long writeBufferSize;
+  protected BufferedMutatorImpl mutator;
   private boolean autoFlush = true;
-  protected long currentWriteBufferSize = 0 ;
   private boolean closed = false;
   protected int scannerCaching;
   private ExecutorService pool;  // For Multi & Scan
@@ -125,8 +122,6 @@ public class HTable implements HTableInterface {
   private Consistency defaultConsistency = Consistency.STRONG;
   private HRegionLocator locator;
 
-  /** The Async process for puts with autoflush set to false or multiputs */
-  protected AsyncProcess ap;
   /** The Async process for batch */
   protected AsyncProcess multiAp;
   private RpcRetryingCallerFactory rpcCallerFactory;
@@ -219,7 +214,7 @@ public class HTable implements HTableInterface {
     // it also scales when new region servers are added.
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, keepAliveTime, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(), Threads.newDaemonThreadFactory("htable"));
-    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+    pool.allowCoreThreadTimeOut(true);
     return pool;
   }
 
@@ -323,15 +318,18 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * For internal testing.
+   * For internal testing. Uses Connection provided in {@code params}.
    * @throws IOException
    */
   @VisibleForTesting
-  protected HTable() throws IOException {
-    tableName = null;
-    tableConfiguration = new TableConfiguration();
+  protected HTable(ClusterConnection conn, BufferedMutatorParams params) throws IOException {
+    connection = conn;
+    tableName = params.getTableName();
+    tableConfiguration = new TableConfiguration(connection.getConfiguration());
     cleanupPoolOnClose = false;
     cleanupConnectionOnClose = false;
+    // used from tests, don't trust the connection is real
+    this.mutator = new BufferedMutatorImpl(conn, null, null, params);
   }
 
   /**
@@ -351,7 +349,6 @@ public class HTable implements HTableInterface {
 
     this.operationTimeout = tableName.isSystemTable() ?
         tableConfiguration.getMetaOperationTimeout() : tableConfiguration.getOperationTimeout();
-    this.writeBufferSize = tableConfiguration.getWriteBufferSize();
     this.scannerCaching = tableConfiguration.getScannerCaching();
 
     if (this.rpcCallerFactory == null) {
@@ -362,8 +359,6 @@ public class HTable implements HTableInterface {
     }
 
     // puts need to track errors globally due to how the APIs currently work.
-    ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true,
-        rpcControllerFactory);
     multiAp = this.connection.getAsyncProcess();
     this.locator = new HRegionLocator(getName(), connection);
   }
@@ -539,7 +534,7 @@ public class HTable implements HTableInterface {
    */
   @Deprecated
   public List<Row> getWriteBuffer() {
-    return writeAsyncBuffer;
+    return mutator == null ? null : mutator.getWriteBuffer();
   }
 
   /**
@@ -643,7 +638,7 @@ public class HTable implements HTableInterface {
    * This is mainly useful for the MapReduce integration.
    * @return A map of HRegionInfo with it's server address
    * @throws IOException if a remote or network exception occurs
-   * 
+   *
    * @deprecated Use {@link RegionLocator#getAllRegionLocations()} instead;
    */
   @Deprecated
@@ -1000,11 +995,11 @@ public class HTable implements HTableInterface {
 
   /**
    * {@inheritDoc}
+   * @throws IOException
    */
   @Override
-  public void put(final Put put)
-      throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    doPut(put);
+  public void put(final Put put) throws IOException {
+    getBufferedMutator().mutate(put);
     if (autoFlush) {
       flushCommits();
     }
@@ -1012,79 +1007,13 @@ public class HTable implements HTableInterface {
 
   /**
    * {@inheritDoc}
+   * @throws IOException
    */
   @Override
-  public void put(final List<Put> puts)
-      throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    for (Put put : puts) {
-      doPut(put);
-    }
+  public void put(final List<Put> puts) throws IOException {
+    getBufferedMutator().mutate(puts);
     if (autoFlush) {
       flushCommits();
-    }
-  }
-
-
-  /**
-   * Add the put to the buffer. If the buffer is already too large, sends the buffer to the
-   *  cluster.
-   * @throws RetriesExhaustedWithDetailsException if there is an error on the cluster.
-   * @throws InterruptedIOException if we were interrupted.
-   */
-  private void doPut(Put put) throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    // This behavior is highly non-intuitive... it does not protect us against
-    // 94-incompatible behavior, which is a timing issue because hasError, the below code
-    // and setter of hasError are not synchronized. Perhaps it should be removed.
-    if (ap.hasError()) {
-      writeAsyncBuffer.add(put);
-      backgroundFlushCommits(true);
-    }
-
-    validatePut(put);
-
-    currentWriteBufferSize += put.heapSize();
-    writeAsyncBuffer.add(put);
-
-    while (currentWriteBufferSize > writeBufferSize) {
-      backgroundFlushCommits(false);
-    }
-  }
-
-
-  /**
-   * Send the operations in the buffer to the servers. Does not wait for the server's answer.
-   * If the is an error (max retried reach from a previous flush or bad operation), it tries to
-   * send all operations in the buffer and sends an exception.
-   * @param synchronous - if true, sends all the writes and wait for all of them to finish before
-   *                     returning.
-   */
-  private void backgroundFlushCommits(boolean synchronous) throws
-      InterruptedIOException, RetriesExhaustedWithDetailsException {
-
-    try {
-      if (!synchronous) {
-        ap.submit(tableName, writeAsyncBuffer, true, null, false);
-        if (ap.hasError()) {
-          LOG.debug(tableName + ": One or more of the operations have failed -" +
-              " waiting for all operation in progress to finish (successfully or not)");
-        }
-      }
-      if (synchronous || ap.hasError()) {
-        while (!writeAsyncBuffer.isEmpty()) {
-          ap.submit(tableName, writeAsyncBuffer, true, null, false);
-        }
-        RetriesExhaustedWithDetailsException error = ap.waitForAllPreviousOpsAndReset(null);
-        if (error != null) {
-          throw error;
-        }
-      }
-    } finally {
-      currentWriteBufferSize = 0;
-      for (Row mut : writeAsyncBuffer) {
-        if (mut instanceof Mutation) {
-          currentWriteBufferSize += ((Mutation) mut).heapSize();
-        }
-      }
     }
   }
 
@@ -1264,7 +1193,7 @@ public class HTable implements HTableInterface {
           controller.setCallTimeout(callTimeout);
           try {
             MutateRequest request = RequestConverter.buildMutateRequest(
-              getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+                getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
                 new BinaryComparator(value), CompareType.EQUAL, put);
             MutateResponse response = getStub().mutate(controller, request);
             return Boolean.valueOf(response.getProcessed());
@@ -1452,12 +1381,11 @@ public class HTable implements HTableInterface {
 
   /**
    * {@inheritDoc}
+   * @throws IOException
    */
   @Override
-  public void flushCommits() throws InterruptedIOException, RetriesExhaustedWithDetailsException {
-    // As we can have an operation in progress even if the buffer is empty, we call
-    //  backgroundFlushCommits at least one time.
-    backgroundFlushCommits(true);
+  public void flushCommits() throws IOException {
+    getBufferedMutator().flush();
   }
 
   /**
@@ -1581,7 +1509,11 @@ public class HTable implements HTableInterface {
    */
   @Override
   public long getWriteBufferSize() {
-    return writeBufferSize;
+    if (mutator == null) {
+      return tableConfiguration.getWriteBufferSize();
+    } else {
+      return mutator.getWriteBufferSize();
+    }
   }
 
   /**
@@ -1594,10 +1526,8 @@ public class HTable implements HTableInterface {
    */
   @Override
   public void setWriteBufferSize(long writeBufferSize) throws IOException {
-    this.writeBufferSize = writeBufferSize;
-    if(currentWriteBufferSize > writeBufferSize) {
-      flushCommits();
-    }
+    getBufferedMutator();
+    mutator.setWriteBufferSize(writeBufferSize);
   }
 
   /**
@@ -1913,5 +1843,18 @@ public class HTable implements HTableInterface {
 
   public RegionLocator getRegionLocator() {
     return this.locator;
+  }
+
+  @VisibleForTesting
+  BufferedMutator getBufferedMutator() throws IOException {
+    if (mutator == null) {
+      this.mutator = (BufferedMutatorImpl) connection.getBufferedMutator(
+          new BufferedMutatorParams(tableName)
+              .pool(pool)
+              .writeBufferSize(tableConfiguration.getWriteBufferSize())
+              .maxKeyValueSize(tableConfiguration.getMaxKeyValueSize())
+      );
+    }
+    return mutator;
   }
 }

@@ -38,13 +38,11 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -187,7 +185,6 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       protected void instantiateHTable() throws IOException {
         for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
           Table table = connection.getTable(getTableName(i));
-          table.setAutoFlushTo(true);
           //table.setWriteBufferSize(4 * 1024 * 1024);
           this.tables[i] = table;
         }
@@ -232,9 +229,6 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
             // Tickle progress every so often else maprunner will think us hung
             output.progress();
           }
-        }
-        for (int j = 0; j < DEFAULT_TABLES_COUNT; j++) {
-          tables[j].flushCommits();
         }
       }
     }

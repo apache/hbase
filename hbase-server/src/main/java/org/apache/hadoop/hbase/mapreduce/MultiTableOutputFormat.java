@@ -29,13 +29,13 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -76,7 +76,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
       RecordWriter<ImmutableBytesWritable, Mutation> {
     private static final Log LOG = LogFactory.getLog(MultiTableRecordWriter.class);
     Connection connection;
-    Map<ImmutableBytesWritable, Table> tables;
+    Map<ImmutableBytesWritable, BufferedMutator> mutatorMap = new HashMap<>();
     Configuration conf;
     boolean useWriteAheadLogging;
 
@@ -91,7 +91,6 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
         boolean useWriteAheadLogging) throws IOException {
       LOG.debug("Created new MultiTableRecordReader with WAL "
           + (useWriteAheadLogging ? "on" : "off"));
-      this.tables = new HashMap<ImmutableBytesWritable, Table>();
       this.conf = conf;
       this.useWriteAheadLogging = useWriteAheadLogging;
     }
@@ -99,28 +98,28 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     /**
      * @param tableName
      *          the name of the table, as a string
-     * @return the named table
+     * @return the named mutator
      * @throws IOException
      *           if there is a problem opening a table
      */
-    Table getTable(ImmutableBytesWritable tableName) throws IOException {
+    BufferedMutator getBufferedMutator(ImmutableBytesWritable tableName) throws IOException {
       if(this.connection == null){
         this.connection = ConnectionFactory.createConnection(conf);
       }
-      if (!tables.containsKey(tableName)) {
+      if (!mutatorMap.containsKey(tableName)) {
         LOG.debug("Opening HTable \"" + Bytes.toString(tableName.get())+ "\" for writing");
 
-        Table table = connection.getTable(TableName.valueOf(tableName.get()));
-        table.setAutoFlushTo(false);
-        tables.put(tableName, table);
+        BufferedMutator mutator =
+            connection.getBufferedMutator(TableName.valueOf(tableName.get()));
+        mutatorMap.put(tableName, mutator);
       }
-      return tables.get(tableName);
+      return mutatorMap.get(tableName);
     }
 
     @Override
     public void close(TaskAttemptContext context) throws IOException {
-      for (Table table : tables.values()) {
-        table.flushCommits();
+      for (BufferedMutator mutator : mutatorMap.values()) {
+        mutator.flush();
       }
       if(connection != null){
         connection.close();
@@ -139,16 +138,16 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
      */
     @Override
     public void write(ImmutableBytesWritable tableName, Mutation action) throws IOException {
-      Table table = getTable(tableName);
+      BufferedMutator mutator = getBufferedMutator(tableName);
       // The actions are not immutable, so we defensively copy them
       if (action instanceof Put) {
         Put put = new Put((Put) action);
         put.setDurability(useWriteAheadLogging ? Durability.SYNC_WAL
             : Durability.SKIP_WAL);
-        table.put(put);
+        mutator.mutate(put);
       } else if (action instanceof Delete) {
         Delete delete = new Delete((Delete) action);
-        table.delete(delete);
+        mutator.mutate(delete);
       } else
         throw new IllegalArgumentException(
             "action must be either Delete or Put");

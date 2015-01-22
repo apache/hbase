@@ -67,8 +67,8 @@ public interface HTableInterface extends Table {
    *          Whether or not to enable 'auto-flush'.
    * @deprecated in 0.96. When called with setAutoFlush(false), this function also
    *  set clearBufferOnFail to true, which is unexpected but kept for historical reasons.
-   *  Replace it with setAutoFlush(false, false) if this is exactly what you want, or by
-   *  {@link #setAutoFlushTo(boolean)} for all other cases.
+   *  Replace it with setAutoFlush(false, false) if this is exactly what you want, though
+   *  this is the method you want for most cases.
    */
   @Deprecated
   void setAutoFlush(boolean autoFlush);
@@ -105,11 +105,67 @@ public interface HTableInterface extends Table {
    *          the value of this parameter is ignored and clearBufferOnFail is set to true.
    *          Setting clearBufferOnFail to false is deprecated since 0.96.
    * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Use
-   *  {@link #setAutoFlushTo(boolean)}} instead.
-   * @see #flushCommits
+   *  {@link #setAutoFlush(boolean)}} instead.
+   * @see BufferedMutator#flush()
    */
   @Deprecated
   void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail);
+
+  /**
+   * Set the autoFlush behavior, without changing the value of {@code clearBufferOnFail}.
+   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Use
+   * {@link #setAutoFlush(boolean)} instead, or better still, move on to {@link BufferedMutator}
+   */
+  @Deprecated
+  void setAutoFlushTo(boolean autoFlush);
+  
+  /**
+   * Tells whether or not 'auto-flush' is turned on.
+   *
+   * @return {@code true} if 'auto-flush' is enabled (default), meaning
+   * {@link Put} operations don't get buffered/delayed and are immediately
+   * executed.
+   * @deprecated as of 1.0.0. Replaced by {@link BufferedMutator}
+   */
+  @Deprecated
+  boolean isAutoFlush();
+
+  /**
+   * Executes all the buffered {@link Put} operations.
+   * <p>
+   * This method gets called once automatically for every {@link Put} or batch
+   * of {@link Put}s (when <code>put(List<Put>)</code> is used) when
+   * {@link #isAutoFlush} is {@code true}.
+   * @throws IOException if a remote or network exception occurs.
+   * @deprecated as of 1.0.0. Replaced by {@link BufferedMutator#flush()}
+   */
+  @Deprecated
+  void flushCommits() throws IOException;
+
+  /**
+   * Returns the maximum size in bytes of the write buffer for this HTable.
+   * <p>
+   * The default value comes from the configuration parameter
+   * {@code hbase.client.write.buffer}.
+   * @return The size of the write buffer in bytes.
+   * @deprecated as of 1.0.0. Replaced by {@link BufferedMutator#getWriteBufferSize()}
+   */
+  @Deprecated
+  long getWriteBufferSize();
+
+  /**
+   * Sets the size of the buffer in bytes.
+   * <p>
+   * If the new size is less than the current amount of data in the
+   * write buffer, the buffer gets flushed.
+   * @param writeBufferSize The new write buffer size, in bytes.
+   * @throws IOException if a remote or network exception occurs.
+   * @deprecated as of 1.0.0. Replaced by {@link BufferedMutator} and
+   * {@link BufferedMutatorParams#writeBufferSize(long)}
+   */
+  @Deprecated
+  void setWriteBufferSize(long writeBufferSize) throws IOException;
+
 
   /**
    * Return the row that matches <i>row</i> exactly,

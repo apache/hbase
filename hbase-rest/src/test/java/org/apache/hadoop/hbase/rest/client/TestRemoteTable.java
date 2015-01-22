@@ -19,10 +19,10 @@
 package org.apache.hadoop.hbase.rest.client;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -99,9 +98,7 @@ public class TestRemoteTable {
     htd.addFamily(new HColumnDescriptor(COLUMN_2).setMaxVersions(3));
     htd.addFamily(new HColumnDescriptor(COLUMN_3).setMaxVersions(3));
     admin.createTable(htd);
-    Table table = null;
-    try {
-      table = TEST_UTIL.getConnection().getTable(TABLE);
+    try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
       Put put = new Put(ROW_1);
       put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
       table.put(put);
@@ -110,9 +107,6 @@ public class TestRemoteTable {
       put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_2);
       put.add(COLUMN_2, QUALIFIER_2, TS_2, VALUE_2);
       table.put(put);
-      table.flushCommits();
-    } finally {
-      if (null != table) table.close();
     }
     remoteTable = new RemoteHTable(
       new Client(new Cluster().add("localhost", 
@@ -349,7 +343,7 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(VALUE_2, value2));
 
     Delete delete = new Delete(ROW_3);
-    delete.deleteColumn(COLUMN_2, QUALIFIER_2);
+    delete.addColumn(COLUMN_2, QUALIFIER_2);
     remoteTable.delete(delete);
 
     get = new Get(ROW_3);
@@ -464,7 +458,7 @@ public class TestRemoteTable {
     assertTrue(Bytes.equals(VALUE_1, value1));
     assertNull(value2);
     assertTrue(remoteTable.exists(get));
-    assertEquals(1, remoteTable.exists(Collections.singletonList(get)).length);
+    assertEquals(1, remoteTable.existsAll(Collections.singletonList(get)).length);
     Delete delete = new Delete(ROW_1);
 
     remoteTable.checkAndDelete(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_1, delete);

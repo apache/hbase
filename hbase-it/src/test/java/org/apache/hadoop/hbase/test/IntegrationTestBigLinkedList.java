@@ -18,7 +18,18 @@
 
 package org.apache.hadoop.hbase.test;
 
-import com.google.common.collect.Sets;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -40,6 +51,8 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -87,17 +100,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.google.common.collect.Sets;
 
 /**
  * This is an integration test borrowed from goraci, written by Keith Turner,
@@ -340,7 +343,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       byte[] id;
       long count = 0;
       int i;
-      Table table;
+      BufferedMutator mutator;
       Connection connection;
       long numNodes;
       long wrap;
@@ -363,14 +366,14 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       protected void instantiateHTable() throws IOException {
-        table = connection.getTable(getTableName(connection.getConfiguration()));
-        table.setAutoFlushTo(false);
-        table.setWriteBufferSize(4 * 1024 * 1024);
+        mutator = connection.getBufferedMutator(
+            new BufferedMutatorParams(getTableName(connection.getConfiguration()))
+                .writeBufferSize(4 * 1024 * 1024));
       }
 
       @Override
       protected void cleanup(Context context) throws IOException ,InterruptedException {
-        table.close();
+        mutator.close();
         connection.close();
       }
 
@@ -421,7 +424,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           if (id != null) {
             put.add(FAMILY_NAME, COLUMN_CLIENT, id);
           }
-          table.put(put);
+          mutator.mutate(put);
 
           if (i % 1000 == 0) {
             // Tickle progress every so often else maprunner will think us hung
@@ -429,7 +432,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           }
         }
 
-        table.flushCommits();
+        mutator.flush();
       }
     }
 

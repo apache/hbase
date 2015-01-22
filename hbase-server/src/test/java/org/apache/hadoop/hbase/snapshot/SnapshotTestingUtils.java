@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashSet;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -673,20 +673,22 @@ public class SnapshotTestingUtils {
 
   public static void loadData(final HBaseTestingUtility util, final TableName tableName, int rows,
       byte[]... families) throws IOException, InterruptedException {
-    loadData(util, util.getConnection().getTable(tableName), rows, families);
+    BufferedMutator mutator = util.getConnection().getBufferedMutator(tableName);
+    loadData(util, mutator, rows, families);
   }
 
-  public static void loadData(final HBaseTestingUtility util, final Table table, int rows,
+  public static void loadData(final HBaseTestingUtility util, final BufferedMutator mutator, int rows,
       byte[]... families) throws IOException, InterruptedException {
-    table.setAutoFlushTo(false);
-
     // Ensure one row per region
     assertTrue(rows >= KEYS.length);
     for (byte k0: KEYS) {
       byte[] k = new byte[] { k0 };
       byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
       byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
-      putData(table, families, key, value);
+      final byte[][] families1 = families;
+      final byte[] key1 = key;
+      final byte[] value1 = value;
+      mutator.mutate(createPut(families1, key1, value1));
       rows--;
     }
 
@@ -694,22 +696,24 @@ public class SnapshotTestingUtils {
     while (rows-- > 0) {
       byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
-      putData(table, families, key, value);
+      final byte[][] families1 = families;
+      final byte[] key1 = key;
+      final byte[] value1 = value;
+      mutator.mutate(createPut(families1, key1, value1));
     }
-    table.flushCommits();
+    mutator.flush();
 
-    waitForTableToBeOnline(util, table.getName());
+    waitForTableToBeOnline(util, mutator.getName());
   }
 
-  private static void putData(final Table table, final byte[][] families,
-      final byte[] key, final byte[] value) throws IOException {
+  private static Put createPut(final byte[][] families, final byte[] key, final byte[] value) {
     byte[] q = Bytes.toBytes("q");
     Put put = new Put(key);
     put.setDurability(Durability.SKIP_WAL);
     for (byte[] family: families) {
       put.add(family, q, value);
     }
-    table.put(put);
+    return put;
   }
 
   public static void deleteAllSnapshots(final Admin admin)

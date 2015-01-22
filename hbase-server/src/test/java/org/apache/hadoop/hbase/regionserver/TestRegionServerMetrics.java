@@ -31,6 +31,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import static org.junit.Assert.*;
 
 import java.io.IOException;
@@ -109,10 +110,11 @@ public class TestRegionServerMetrics {
 
     TEST_UTIL.createTable(tName, cfName);
 
-    TEST_UTIL.getConnection().getTable(tName).close(); //wait for the table to come up.
+    Connection connection = TEST_UTIL.getConnection();
+    connection.getTable(tName).close(); //wait for the table to come up.
 
     // Do a first put to be sure that the connection is established, meta is there and so on.
-    HTable table = (HTable) TEST_UTIL.getConnection().getTable(tName);
+    Table table = connection.getTable(tName);
     Put p = new Put(row);
     p.add(cfName, qualifier, initValue);
     table.put(p);
@@ -141,19 +143,21 @@ public class TestRegionServerMetrics {
     metricsHelper.assertCounter("readRequestCount", readRequests + 10, serverSource);
     metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
-    for ( HRegionInfo i:table.getRegionLocations().keySet()) {
-      MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
-          .getMetrics()
-          .getSource()
-          .getAggregateSource();
-      String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
-          "_table_"+tableNameString +
-          "_region_" + i.getEncodedName()+
-          "_metric";
-      metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
-      metricsHelper.assertCounter(prefix + "_mutateCount", 31, agg);
+    try (RegionLocator locator = connection.getRegionLocator(tName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+            .getMetrics()
+            .getSource()
+            .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+            "_table_"+tableNameString +
+            "_region_" + i.getEncodedName()+
+            "_metric";
+        metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
+        metricsHelper.assertCounter(prefix + "_mutateCount", 31, agg);
+      }
     }
-
     List<Get> gets = new ArrayList<Get>();
     for (int i=0; i< 10; i++) {
       gets.add(new Get(row));
@@ -165,11 +169,11 @@ public class TestRegionServerMetrics {
     metricsHelper.assertCounter("readRequestCount", readRequests + 20, serverSource);
     metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
-    table.setAutoFlushTo(false);
+    List<Put> puts = new ArrayList<>();
     for (int i=0; i< 30; i++) {
-      table.put(p);
+      puts.add(p);
     }
-    table.flushCommits();
+    table.put(puts);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("totalRequestCount", requests + 80, serverSource);
@@ -325,35 +329,39 @@ public class TestRegionServerMetrics {
     byte[] val = Bytes.toBytes("One");
 
 
-    HTable t = TEST_UTIL.createTable(tableName, cf);
-    t.setAutoFlushTo(false);
+    List<Put> puts = new ArrayList<>();
     for (int insertCount =0; insertCount < 100; insertCount++) {
       Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
       p.add(cf, qualifier, val);
-      t.put(p);
+      puts.add(p);
     }
-    t.flushCommits();
+    try (HTable t = TEST_UTIL.createTable(tableName, cf)) {
+      t.put(puts);
 
-    Scan s = new Scan();
-    s.setBatch(1);
-    s.setCaching(1);
-    ResultScanner resultScanners = t.getScanner(s);
+      Scan s = new Scan();
+      s.setBatch(1);
+      s.setCaching(1);
+      ResultScanner resultScanners = t.getScanner(s);
 
-    for (int nextCount = 0; nextCount < 30; nextCount++) {
-      Result result = resultScanners.next();
-      assertNotNull(result);
-      assertEquals(1, result.size());
+      for (int nextCount = 0; nextCount < 30; nextCount++) {
+        Result result = resultScanners.next();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+      }
     }
-    for ( HRegionInfo i:t.getRegionLocations().keySet()) {
-      MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
-          .getMetrics()
-          .getSource()
-          .getAggregateSource();
-      String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
-          "_table_"+tableNameString +
-          "_region_" + i.getEncodedName()+
-          "_metric";
-      metricsHelper.assertCounter(prefix + "_scanNextNumOps", 30, agg);
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+            .getMetrics()
+            .getSource()
+            .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+            "_table_"+tableNameString +
+            "_region_" + i.getEncodedName()+
+            "_metric";
+        metricsHelper.assertCounter(prefix + "_scanNextNumOps", 30, agg);
+      }
     }
   }
 }

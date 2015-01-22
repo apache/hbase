@@ -227,7 +227,6 @@ public class RowResource extends ResourceBase {
       }
       table = servlet.getTable(tableResource.getName());
       table.put(puts);
-      table.flushCommits();
       ResponseBuilder response = Response.ok();
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return response.build();
@@ -489,7 +488,6 @@ public class RowResource extends ResourceBase {
           .type(MIMETYPE_TEXT).entity("Value not Modified" + CRLF)
           .build();
       }
-      table.flushCommits();
       ResponseBuilder response = Response.ok();
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return response.build();
@@ -580,7 +578,6 @@ public class RowResource extends ResourceBase {
             .type(MIMETYPE_TEXT).entity(" Delete check failed." + CRLF)
             .build();
       }
-      table.flushCommits();
       ResponseBuilder response = Response.ok();
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       return response.build();

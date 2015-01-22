@@ -111,11 +111,12 @@ public class TestRestoreSnapshotFromClient {
     // take an empty snapshot
     admin.snapshot(emptySnapshot, tableName);
 
-    Table table = TEST_UTIL.getConnection().getTable(tableName);
     // enable table and insert data
     admin.enableTable(tableName);
-    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
-    snapshot0Rows = TEST_UTIL.countRows(table);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      snapshot0Rows = TEST_UTIL.countRows(table);
+    }
     admin.disableTable(tableName);
 
     // take a snapshot
@@ -123,9 +124,10 @@ public class TestRestoreSnapshotFromClient {
 
     // enable table and insert more data
     admin.enableTable(tableName);
-    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
-    snapshot1Rows = TEST_UTIL.countRows(table);
-    table.close();
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      snapshot1Rows = TEST_UTIL.countRows(table);
+    }
   }
 
   @After
@@ -184,7 +186,7 @@ public class TestRestoreSnapshotFromClient {
     assertEquals(2, table.getTableDescriptor().getFamilies().size());
     HTableDescriptor htd = admin.getTableDescriptor(tableName);
     assertEquals(2, htd.getFamilies().size());
-    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, TEST_FAMILY2);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, TEST_FAMILY2);
     long snapshot2Rows = snapshot1Rows + 500;
     assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
     assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));

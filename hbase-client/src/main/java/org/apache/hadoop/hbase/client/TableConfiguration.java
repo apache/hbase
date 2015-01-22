@@ -28,20 +28,18 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class TableConfiguration {
 
+  public static final String WRITE_BUFFER_SIZE_KEY = "hbase.client.write.buffer";
+  public static final long WRITE_BUFFER_SIZE_DEFAULT = 2097152;
+  public static final String MAX_KEYVALUE_SIZE_KEY = "hbase.client.keyvalue.maxsize";
+  public static final int MAX_KEYVALUE_SIZE_DEFAULT = -1;
+
   private final long writeBufferSize;
-
   private final int metaOperationTimeout;
-
   private final int operationTimeout;
-
   private final int scannerCaching;
-
   private final int primaryCallTimeoutMicroSecond;
-
   private final int replicaCallTimeoutMicroSecondScan;
-
   private final int retries;
-
   private final int maxKeyValueSize;
 
   /**
@@ -49,7 +47,7 @@ public class TableConfiguration {
    * @param conf Configuration object
    */
   TableConfiguration(Configuration conf) {
-    this.writeBufferSize = conf.getLong("hbase.client.write.buffer", 2097152);
+    this.writeBufferSize = conf.getLong(WRITE_BUFFER_SIZE_KEY, WRITE_BUFFER_SIZE_DEFAULT);
 
     this.metaOperationTimeout = conf.getInt(
       HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
@@ -70,7 +68,7 @@ public class TableConfiguration {
     this.retries = conf.getInt(
        HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
 
-    this.maxKeyValueSize = conf.getInt("hbase.client.keyvalue.maxsize", -1);
+    this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
   }
 
   /**
@@ -80,14 +78,14 @@ public class TableConfiguration {
    */
   @VisibleForTesting
   protected TableConfiguration() {
-    this.writeBufferSize = 2097152;
+    this.writeBufferSize = WRITE_BUFFER_SIZE_DEFAULT;
     this.metaOperationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.operationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.scannerCaching = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING;
     this.primaryCallTimeoutMicroSecond = 10000;
     this.replicaCallTimeoutMicroSecondScan = 1000000;
     this.retries = HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER;
-    this.maxKeyValueSize = -1;
+    this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
   }
 
   public long getWriteBufferSize() {

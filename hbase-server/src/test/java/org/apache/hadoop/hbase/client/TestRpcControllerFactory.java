@@ -133,17 +133,16 @@ public class TestRpcControllerFactory {
 
     Connection connection = ConnectionFactory.createConnection(conf);
     Table table = connection.getTable(name);
-    table.setAutoFlushTo(false);
     byte[] row = Bytes.toBytes("row");
     Put p = new Put(row);
     p.add(fam1, fam1, Bytes.toBytes("val0"));
     table.put(p);
-    table.flushCommits();
+
     Integer counter = 1;
     counter = verifyCount(counter);
 
     Delete d = new Delete(row);
-    d.deleteColumn(fam1, fam1);
+    d.addColumn(fam1, fam1);
     table.delete(d);
     counter = verifyCount(counter);
 

@@ -176,7 +176,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
           p.add(TEST_FAMILY, TEST_QUALIFIER, HConstants.EMPTY_BYTE_ARRAY);
           p.setCellVisibility(new CellVisibility(exp));
           getCounter(expIdx).increment(1);
-          table.put(p);
+          mutator.mutate(p);
 
           if (i % 100 == 0) {
             context.setStatus("Written " + i + "/" + recordsToWrite + " records");
@@ -185,7 +185,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
         }
         // End of block, flush all of them before we start writing anything
         // pointing to these!
-        table.flushCommits();
+        mutator.flush();
       }
     }
 

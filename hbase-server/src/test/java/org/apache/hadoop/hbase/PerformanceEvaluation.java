@@ -49,13 +49,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -392,6 +391,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       throws IOException, InterruptedException {
     final Class<? extends Test> cmd = determineCommandClass(opts.cmdName);
     assert cmd != null;
+    @SuppressWarnings("unchecked")
     Future<RunResult>[] threads = new Future[opts.numClientThreads];
     RunResult[] results = new RunResult[opts.numClientThreads];
     ExecutorService pool = Executors.newFixedThreadPool(opts.numClientThreads,
@@ -457,7 +457,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Path inputDir = writeInputFile(conf, opts);
     conf.set(EvaluationMapTask.CMD_KEY, cmd.getName());
     conf.set(EvaluationMapTask.PE_KEY, PerformanceEvaluation.class.getName());
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.setJarByClass(PerformanceEvaluation.class);
     job.setJobName("HBase Performance Evaluation - " + opts.cmdName);
 
@@ -940,7 +940,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private final Sampler<?> traceSampler;
     private final SpanReceiverHost receiverHost;
     protected Connection connection;
-    protected Table table;
+//    protected Table table;
 
     private String testName;
     private Histogram latency;
@@ -1022,24 +1022,24 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (!opts.oneCon) {
         this.connection = ConnectionFactory.createConnection(conf);
       }
-      this.table = connection.getTable(TableName.valueOf(opts.tableName));
-      this.table.setAutoFlushTo(opts.autoFlush);
+      onStartup();
       latency = YammerHistogramUtils.newHistogram(new UniformSample(1024 * 500));
       valueSize = YammerHistogramUtils.newHistogram(new UniformSample(1024 * 500));
     }
 
+    abstract void onStartup() throws IOException;
+
     void testTakedown() throws IOException {
       reportLatency();
       reportValueSize();
-      if (opts.flushCommits) {
-        this.table.flushCommits();
-      }
-      table.close();
+      onTakedown();
       if (!opts.oneCon) {
         connection.close();
       }
       receiverHost.closeReceivers();
     }
+
+    abstract void onTakedown() throws IOException;
 
     /*
      * Run test
@@ -1136,7 +1136,43 @@ public class PerformanceEvaluation extends Configured implements Tool {
     abstract void testRow(final int i) throws IOException, InterruptedException;
   }
 
-  static class RandomSeekScanTest extends Test {
+  static abstract class TableTest extends Test {
+    protected Table table;
+
+    TableTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    void onStartup() throws IOException {
+      this.table = connection.getTable(TableName.valueOf(opts.tableName));
+    }
+    
+    @Override
+    void onTakedown() throws IOException {
+      table.close();
+    }
+  }
+
+  static abstract class BufferedMutatorTest extends Test {
+    protected BufferedMutator mutator;
+
+    BufferedMutatorTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    void onStartup() throws IOException {
+      this.mutator = connection.getBufferedMutator(TableName.valueOf(opts.tableName));
+    }
+    
+    @Override
+    void onTakedown() throws IOException {
+      mutator.close();
+    }
+  }
+
+  static class RandomSeekScanTest extends TableTest {
     RandomSeekScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
@@ -1166,7 +1202,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
-  static abstract class RandomScanWithRangeTest extends Test {
+  static abstract class RandomScanWithRangeTest extends TableTest {
     RandomScanWithRangeTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
@@ -1254,7 +1290,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class RandomReadTest extends Test {
+  static class RandomReadTest extends TableTest {
     private final Consistency consistency;
     private ArrayList<Get> gets;
     private Random rd = new Random();
@@ -1308,7 +1344,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class RandomWriteTest extends Test {
+  static class RandomWriteTest extends BufferedMutatorTest {
     RandomWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
@@ -1334,11 +1370,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
         updateValueSize(value.length);
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      table.put(put);
+      mutator.mutate(put);
     }
   }
 
-  static class ScanTest extends Test {
+  static class ScanTest extends TableTest {
     private ResultScanner testScanner;
 
     ScanTest(Connection con, TestOptions options, Status status) {
@@ -1371,7 +1407,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
-  static class SequentialReadTest extends Test {
+  static class SequentialReadTest extends TableTest {
     SequentialReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
@@ -1387,7 +1423,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class SequentialWriteTest extends Test {
+  static class SequentialWriteTest extends BufferedMutatorTest {
     SequentialWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
@@ -1413,11 +1449,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
         updateValueSize(value.length);
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      table.put(put);
+      mutator.mutate(put);
     }
   }
 
-  static class FilteredScanTest extends Test {
+  static class FilteredScanTest extends TableTest {
     protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
 
     FilteredScanTest(Connection con, TestOptions options, Status status) {
