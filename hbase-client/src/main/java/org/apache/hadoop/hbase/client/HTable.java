@@ -1872,8 +1872,9 @@ public class HTable implements HTableInterface {
 
     AsyncProcess asyncProcess =
         new AsyncProcess(connection, configuration, pool,
-            RpcRetryingCallerFactory.instantiate(configuration), true,
-            RpcControllerFactory.instantiate(configuration));
+            RpcRetryingCallerFactory.instantiate(configuration, connection.getStatisticsTracker()),
+            true, RpcControllerFactory.instantiate(configuration));
+
     AsyncRequestFuture future = asyncProcess.submitAll(tableName, execs,
         new Callback<ClientProtos.CoprocessorServiceResult>() {
           @Override

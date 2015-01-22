@@ -353,6 +353,14 @@ message RegionAction {
   repeated Action action = 3;
 }
 
+/*
+* Statistics about the current load on the region
+*/
+message RegionLoadStats{
+  // percent load on the memstore. Guaranteed to be positive, between 0 and 100
+  optional int32 memstoreLoad = 1 [default = 0];
+}
+
 /**
  * Either a Result or an Exception NameBytesPair (keyed by
  * exception name whose value is the exception stringified)
@@ -366,6 +374,8 @@ message ResultOrException {
   optional NameBytesPair exception = 3;
   // result if this was a coprocessor service call
   optional CoprocessorServiceResult service_result = 4;
+  // current load on the region
+  optional RegionLoadStats loadStats = 5;
 }
 
 /**
