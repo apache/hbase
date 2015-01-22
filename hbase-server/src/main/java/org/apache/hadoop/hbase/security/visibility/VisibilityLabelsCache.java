@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -57,6 +58,8 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   private Map<String, Integer> labels = new HashMap<String, Integer>();
   private Map<Integer, String> ordinalVsLabels = new HashMap<Integer, String>();
   private Map<String, Set<Integer>> userAuths = new HashMap<String, Set<Integer>>();
+  private Map<String, Set<Integer>> groupAuths = new HashMap<String, Set<Integer>>();
+
   /**
    * This covers the members labels, ordinalVsLabels and userAuths
    */
@@ -139,9 +142,15 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
     this.lock.writeLock().lock();
     try {
       this.userAuths.clear();
+      this.groupAuths.clear();
       for (UserAuthorizations userAuths : multiUserAuths.getUserAuthsList()) {
         String user = Bytes.toString(userAuths.getUser().toByteArray());
-        this.userAuths.put(user, new HashSet<Integer>(userAuths.getAuthList()));
+        if (AccessControlLists.isGroupPrincipal(user)) {
+          this.groupAuths.put(AccessControlLists.getGroupName(user),
+            new HashSet<Integer>(userAuths.getAuthList()));
+        } else {
+          this.userAuths.put(user, new HashSet<Integer>(userAuths.getAuthList()));
+        }
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -196,34 +205,66 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
     }
   }
 
-  public List<String> getAuths(String user) {
+  public List<String> getUserAuths(String user) {
     List<String> auths = EMPTY_LIST;
-    this.lock.readLock().lock();
-    try {
-      Set<Integer> authOrdinals = userAuths.get(user);
-      if (authOrdinals != null) {
-        auths = new ArrayList<String>(authOrdinals.size());
-        for (Integer authOrdinal : authOrdinals) {
-          auths.add(ordinalVsLabels.get(authOrdinal));
-        }
+    Set<Integer> authOrdinals = getUserAuthsAsOrdinals(user);
+    if (!authOrdinals.equals(EMPTY_SET)) {
+      auths = new ArrayList<String>(authOrdinals.size());
+      for (Integer authOrdinal : authOrdinals) {
+        auths.add(ordinalVsLabels.get(authOrdinal));
       }
-    } finally {
-      this.lock.readLock().unlock();
+    }
+    return auths;
+  }
+
+  public List<String> getGroupAuths(String[] groups) {
+    List<String> auths = EMPTY_LIST;
+    Set<Integer> authOrdinals = getGroupAuthsAsOrdinals(groups);
+    if (!authOrdinals.equals(EMPTY_SET)) {
+      auths = new ArrayList<String>(authOrdinals.size());
+      for (Integer authOrdinal : authOrdinals) {
+        auths.add(ordinalVsLabels.get(authOrdinal));
+      }
     }
     return auths;
   }
 
   /**
-   * Returns the list of ordinals of authentications associated with the user
+   * Returns the list of ordinals of labels associated with the user
    *
    * @param user Not null value.
    * @return the list of ordinals
    */
-  public Set<Integer> getAuthsAsOrdinals(String user) {
+  public Set<Integer> getUserAuthsAsOrdinals(String user) {
     this.lock.readLock().lock();
     try {
       Set<Integer> auths = userAuths.get(user);
       return (auths == null) ? EMPTY_SET : auths;
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Returns the list of ordinals of labels associated with the groups
+   *
+   * @param groups
+   * @return the list of ordinals
+   */
+  public Set<Integer> getGroupAuthsAsOrdinals(String[] groups) {
+    this.lock.readLock().lock();
+    try {
+      Set<Integer> authOrdinals = new HashSet<Integer>();
+      if (groups != null && groups.length > 0) {
+        Set<Integer> groupAuthOrdinals = null;
+        for (String group : groups) {
+          groupAuthOrdinals = groupAuths.get(group);
+          if (groupAuthOrdinals != null && !groupAuthOrdinals.isEmpty()) {
+            authOrdinals.addAll(groupAuthOrdinals);
+          }
+        }
+      }
+      return (authOrdinals.isEmpty()) ? EMPTY_SET : authOrdinals;
     } finally {
       this.lock.readLock().unlock();
     }

@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * The interface which deals with visibility labels and user auths admin service as well as the cell
@@ -73,13 +74,36 @@ public interface VisibilityLabelService extends Configurable {
   OperationStatus[] clearAuths(byte[] user, List<byte[]> authLabels) throws IOException;
 
   /**
+   * Retrieve the visibility labels for the user.
+   * @param user
+   *          Name of the user whose authorization to be retrieved
+   * @param systemCall
+   *          Whether a system or user originated call.
+   * @return Visibility labels authorized for the given user.
+   * @deprecated Use {@link#getUserAuths(byte[], boolean)}
+   */
+  @Deprecated
+  List<String> getAuths(byte[] user, boolean systemCall) throws IOException;
+
+  /**
+   * Retrieve the visibility labels for the user.
    * @param user
    *          Name of the user whose authorization to be retrieved
    * @param systemCall
    *          Whether a system or user originated call.
    * @return Visibility labels authorized for the given user.
    */
-  List<String> getAuths(byte[] user, boolean systemCall) throws IOException;
+  List<String> getUserAuths(byte[] user, boolean systemCall) throws IOException;
+
+  /**
+   * Retrieve the visibility labels for the groups.
+   * @param groups
+   *          Name of the groups whose authorization to be retrieved
+   * @param systemCall
+   *          Whether a system or user originated call.
+   * @return Visibility labels authorized for the given group.
+   */
+  List<String> getGroupAuths(String[] groups, boolean systemCall) throws IOException;
 
   /**
    * Retrieve the list of visibility labels defined in the system.
@@ -123,8 +147,20 @@ public interface VisibilityLabelService extends Configurable {
    * @param user
    *          User for whom system auth check to be done.
    * @return true if the given user is having system/super auth
+   * @deprecated Use {@link#havingSystemAuth(User)}
    */
+  @Deprecated
   boolean havingSystemAuth(byte[] user) throws IOException;
+
+  /**
+   * System checks for user auth during admin operations. (ie. Label add, set/clear auth). The
+   * operation is allowed only for users having system auth. Also during read, if the requesting
+   * user has system auth, he can view all the data irrespective of its labels.
+   * @param user
+   *          User for whom system auth check to be done.
+   * @return true if the given user is having system/super auth
+   */
+  boolean havingSystemAuth(User user) throws IOException;
 
   /**
    * System uses this for deciding whether a Cell can be deleted by matching visibility expression
@@ -167,4 +203,5 @@ public interface VisibilityLabelService extends Configurable {
    */
   byte[] encodeVisibilityForReplication(final List<Tag> visTags,
       final Byte serializationFormat) throws IOException;
+
 }
