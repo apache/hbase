@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,7 +65,10 @@ public class FeedUserAuthScanLabelGenerator implements ScanLabelGenerator {
     if (authorizations == null || authorizations.getLabels() == null
         || authorizations.getLabels().isEmpty()) {
       String userName = user.getShortName();
-      return this.labelsCache.getAuths(userName);
+      Set<String> auths = new HashSet<String>();
+      auths.addAll(this.labelsCache.getUserAuths(userName));
+      auths.addAll(this.labelsCache.getGroupAuths(user.getGroupNames()));
+      return new ArrayList<String>(auths);
     }
     return authorizations.getLabels();
   }
