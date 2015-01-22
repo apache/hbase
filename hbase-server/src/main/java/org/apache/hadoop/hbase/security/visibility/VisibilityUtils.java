@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -98,6 +100,38 @@ public class VisibilityUtils {
       visReqBuilder.addVisLabel(visLabBuilder.build());
     }
     return ProtobufUtil.prependPBMagic(visReqBuilder.build().toByteArray());
+  }
+
+  /**
+   * Get the super users and groups defined in the configuration.
+   * The user running the hbase server is always included.
+   * @param conf
+   * @return Pair of super user list and super group list.
+   * @throws IOException
+   */
+  public static Pair<List<String>, List<String>> getSystemAndSuperUsers(Configuration conf)
+      throws IOException {
+    ArrayList<String> superUsers = new ArrayList<String>();
+    ArrayList<String> superGroups = new ArrayList<String>();
+    User user = User.getCurrent();
+    if (user == null) {
+      throw new IOException("Unable to obtain the current user, "
+          + "authorization checks for internal operations will not work correctly!");
+    }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Current user name is " + user.getShortName());
+    }
+    String currentUser = user.getShortName();
+    String[] superUserList = conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]);
+    for (String name : superUserList) {
+      if (AccessControlLists.isGroupPrincipal(name)) {
+        superGroups.add(AccessControlLists.getGroupName(name));
+      } else {
+        superUsers.add(name);
+      }
+    }
+    superUsers.add(currentUser);
+    return new Pair<List<String>, List<String>>(superUsers, superGroups);
   }
 
   /**

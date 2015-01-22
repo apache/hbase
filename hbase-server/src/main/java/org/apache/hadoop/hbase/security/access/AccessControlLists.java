@@ -641,6 +641,13 @@ public class AccessControlLists {
     return aclKey.substring(GROUP_PREFIX.length());
   }
 
+  /**
+   * Returns the group entry with the group prefix for a group principal.
+   */
+  public static String toGroupEntry(String name) {
+    return GROUP_PREFIX + name;
+  }
+
   public static boolean isNamespaceEntry(String entryName) {
     return entryName.charAt(0) == NAMESPACE_PREFIX;
   }

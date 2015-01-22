@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -63,8 +64,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
-import com.google.common.collect.Lists;
-
 @InterfaceAudience.Private
 public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService {
 
@@ -81,6 +80,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private VisibilityLabelsCache labelsCache;
   private List<ScanLabelGenerator> scanLabelGenerators;
   private List<String> superUsers;
+  private List<String> superGroups;
 
   static {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -117,7 +117,10 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       throw ioe;
     }
     this.scanLabelGenerators = VisibilityUtils.getScanLabelGenerators(this.conf);
-    this.superUsers = getSystemAndSuperUsers();
+    Pair<List<String>, List<String>> superUsersAndGroups =
+        VisibilityUtils.getSystemAndSuperUsers(this.conf);
+    this.superUsers = superUsersAndGroups.getFirst();
+    this.superGroups = superUsersAndGroups.getSecond();
     if (e.getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = e.getRegion();
       Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths =
@@ -203,21 +206,6 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     }
   }
 
-  protected List<String> getSystemAndSuperUsers() throws IOException {
-    User user = User.getCurrent();
-    if (user == null) {
-      throw new IOException("Unable to obtain the current user, "
-          + "authorization checks for internal operations will not work correctly!");
-    }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Current user name is " + user.getShortName());
-    }
-    String currentUser = user.getShortName();
-    List<String> superUsers = Lists.asList(currentUser,
-        this.conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
-    return superUsers;
-  }
-
   @Override
   public OperationStatus[] addLabels(List<byte[]> labels) throws IOException {
     assert labelsRegion != null;
@@ -276,7 +264,14 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   public OperationStatus[] clearAuths(byte[] user, List<byte[]> authLabels) throws IOException {
     assert labelsRegion != null;
     OperationStatus[] finalOpStatus = new OperationStatus[authLabels.size()];
-    List<String> currentAuths = this.getAuths(user, true);
+    List<String> currentAuths;
+    if (AccessControlLists.isGroupPrincipal(Bytes.toString(user))) {
+      String group = AccessControlLists.getGroupName(Bytes.toString(user));
+      currentAuths = this.getGroupAuths(new String[]{group}, true);
+    }
+    else {
+      currentAuths = this.getUserAuths(user, true);
+    }
     List<Mutation> deletes = new ArrayList<Mutation>(authLabels.size());
     int i = 0;
     for (byte[] authLabel : authLabels) {
@@ -329,17 +324,20 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   }
 
   @Override
-  public List<String> getAuths(byte[] user, boolean systemCall) throws IOException {
+  public List<String> getUserAuths(byte[] user, boolean systemCall)
+      throws IOException {
     assert (labelsRegion != null || systemCall);
     if (systemCall || labelsRegion == null) {
-      return this.labelsCache.getAuths(Bytes.toString(user));
+      return this.labelsCache.getUserAuths(Bytes.toString(user));
     }
     Scan s = new Scan();
-    s.addColumn(LABELS_TABLE_FAMILY, user);
+    if (user != null && user.length > 0) {
+      s.addColumn(LABELS_TABLE_FAMILY, user);
+    }
     Filter filter = VisibilityUtils.createVisibilityLabelFilter(this.labelsRegion,
         new Authorizations(SYSTEM_LABEL));
     s.setFilter(filter);
-    List<String> auths = new ArrayList<String>();
+    ArrayList<String> auths = new ArrayList<String>();
     RegionScanner scanner = this.labelsRegion.getScanner(s);
     try {
       List<Cell> results = new ArrayList<Cell>(1);
@@ -358,6 +356,43 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       scanner.close();
     }
     return auths;
+  }
+
+  @Override
+  public List<String> getGroupAuths(String[] groups, boolean systemCall)
+      throws IOException {
+    assert (labelsRegion != null || systemCall);
+    if (systemCall || labelsRegion == null) {
+      return this.labelsCache.getGroupAuths(groups);
+    }
+    Scan s = new Scan();
+    if (groups != null && groups.length > 0) {
+      for (String group : groups) {
+        s.addColumn(LABELS_TABLE_FAMILY, Bytes.toBytes(AccessControlLists.toGroupEntry(group)));
+      }
+    }
+    Filter filter = VisibilityUtils.createVisibilityLabelFilter(this.labelsRegion,
+        new Authorizations(SYSTEM_LABEL));
+    s.setFilter(filter);
+    Set<String> auths = new HashSet<String>();
+    RegionScanner scanner = this.labelsRegion.getScanner(s);
+    try {
+      List<Cell> results = new ArrayList<Cell>(1);
+      while (true) {
+        scanner.next(results);
+        if (results.isEmpty()) break;
+        Cell cell = results.get(0);
+        int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        String label = this.labelsCache.getLabel(ordinal);
+        if (label != null) {
+          auths.add(label);
+        }
+        results.clear();
+      }
+    } finally {
+      scanner.close();
+    }
+    return new ArrayList<String>(auths);
   }
 
   @Override
@@ -383,9 +418,11 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   @Override
   public List<Tag> createVisibilityExpTags(String visExpression, boolean withSerializationFormat,
       boolean checkAuths) throws IOException {
-    Set<Integer> auths = null;
+    Set<Integer> auths = new HashSet<Integer>();
     if (checkAuths) {
-      auths = this.labelsCache.getAuthsAsOrdinals(VisibilityUtils.getActiveUser().getShortName());
+      User user = VisibilityUtils.getActiveUser();
+      auths.addAll(this.labelsCache.getUserAuthsAsOrdinals(user.getShortName()));
+      auths.addAll(this.labelsCache.getGroupAuthsAsOrdinals(user.getGroupNames()));
     }
     return VisibilityUtils.createVisibilityExpTags(visExpression, withSerializationFormat,
         checkAuths, auths, labelsCache);
@@ -494,26 +531,44 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   }
 
   protected boolean isReadFromSystemAuthUser() throws IOException {
-    byte[] user = Bytes.toBytes(VisibilityUtils.getActiveUser().getShortName());
+    User user = VisibilityUtils.getActiveUser();
     return havingSystemAuth(user);
   }
 
   @Override
-  public boolean havingSystemAuth(byte[] user) throws IOException {
+  public boolean havingSystemAuth(User user) throws IOException {
     // A super user has 'system' auth.
     if (isSystemOrSuperUser(user)) {
       return true;
     }
     // A user can also be explicitly granted 'system' auth.
-    List<String> auths = this.getAuths(user, true);
+    List<String> auths = this.getUserAuths(Bytes.toBytes(user.getShortName()), true);
     if (LOG.isTraceEnabled()) {
-      LOG.trace("The auths for user " + Bytes.toString(user) + " are " + auths);
+      LOG.trace("The auths for user " + user.getShortName() + " are " + auths);
+    }
+    if (auths.contains(SYSTEM_LABEL)) {
+      return true;
+    }
+    auths = this.getGroupAuths(user.getGroupNames(), true);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("The auths for groups of user " + user.getShortName() + " are " + auths);
     }
     return auths.contains(SYSTEM_LABEL);
   }
 
-  protected boolean isSystemOrSuperUser(byte[] user) throws IOException {
-    return this.superUsers.contains(Bytes.toString(user));
+  private boolean isSystemOrSuperUser(User user) throws IOException {
+    if (this.superUsers.contains(user.getShortName())) {
+      return true;
+    }
+    String[] groups = user.getGroupNames();
+    if (groups != null && groups.length > 0) {
+      for (String group : groups) {
+        if (this.superGroups.contains(group)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Override
