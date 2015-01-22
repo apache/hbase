@@ -363,7 +363,7 @@ public class HStore implements Store {
    * @param family
    * @return TTL in seconds of the specified family
    */
-  private static long determineTTLFromFamily(final HColumnDescriptor family) {
+  static long determineTTLFromFamily(final HColumnDescriptor family) {
     // HCD.getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     long ttl = family.getTimeToLive();
     if (ttl == HConstants.FOREVER) {

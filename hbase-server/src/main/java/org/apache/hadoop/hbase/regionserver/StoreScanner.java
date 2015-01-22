@@ -273,7 +273,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       0);
   }
   
-  private StoreScanner(final Scan scan, ScanInfo scanInfo,
+  StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners, long earliestPutTs, long readPt)
           throws IOException {

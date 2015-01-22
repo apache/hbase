@@ -49,12 +49,23 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
   /**
    * A non-capture group, for hfiles, so that this can be embedded.
    * HFiles are uuid ([0-9a-z]+). Bulk loaded hfiles has (_SeqId_[0-9]+_) has suffix.
+   * The mob del file has (_del) as suffix.
    */
-  public static final String HFILE_NAME_REGEX = "[0-9a-f]+(?:_SeqId_[0-9]+_)?";
+  public static final String HFILE_NAME_REGEX = "[0-9a-f]+(?:(?:_SeqId_[0-9]+_)|(?:_del))?";
 
   /** Regex that will work for hfiles */
   private static final Pattern HFILE_NAME_PATTERN =
     Pattern.compile("^(" + HFILE_NAME_REGEX + ")");
+
+  /**
+   * A non-capture group, for hfiles, so that this can be embedded.
+   * A del file has (_del) as suffix.
+   */
+  public static final String DELFILE_NAME_REGEX = "[0-9a-f]+(?:_del)";
+
+  /** Regex that will work for del files */
+  private static final Pattern DELFILE_NAME_PATTERN =
+    Pattern.compile("^(" + DELFILE_NAME_REGEX + ")");
 
   /**
    * Regex that will work for straight reference names (<hfile>.<parentEncRegion>)
@@ -358,6 +369,23 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
 
   public static boolean isHFile(final String fileName) {
     Matcher m = HFILE_NAME_PATTERN.matcher(fileName);
+    return m.matches() && m.groupCount() > 0;
+  }
+
+  /**
+   * @param path Path to check.
+   * @return True if the path has format of a del file.
+   */
+  public static boolean isDelFile(final Path path) {
+    return isDelFile(path.getName());
+  }
+
+  /**
+   * @param path Path to check.
+   * @return True if the file name has format of a del file.
+   */
+  public static boolean isDelFile(final String fileName) {
+    Matcher m = DELFILE_NAME_PATTERN.matcher(fileName);
     return m.matches() && m.groupCount() > 0;
   }
 
