@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.NavigableMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
