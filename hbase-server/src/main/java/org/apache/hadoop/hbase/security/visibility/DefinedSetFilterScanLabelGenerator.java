@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,8 +62,10 @@ public class DefinedSetFilterScanLabelGenerator implements ScanLabelGenerator {
     if (authorizations != null) {
       List<String> labels = authorizations.getLabels();
       String userName = user.getShortName();
-      List<String> auths = this.labelsCache.getAuths(userName);
-      return dropLabelsNotInUserAuths(labels, auths, userName);
+      Set<String> auths = new HashSet<String>();
+      auths.addAll(this.labelsCache.getUserAuths(userName));
+      auths.addAll(this.labelsCache.getGroupAuths(user.getGroupNames()));
+      return dropLabelsNotInUserAuths(labels, new ArrayList<String>(auths), userName);
     }
     return null;
   }

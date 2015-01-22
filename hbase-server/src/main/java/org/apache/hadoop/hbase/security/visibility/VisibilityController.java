@@ -130,7 +130,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
 
-  List<String> superUsers;
+  private List<String> superUsers;
+  private List<String> superGroups;
   private VisibilityLabelService visibilityLabelService;
 
   // Add to this list if there are any reserved tag types
@@ -159,7 +160,10 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       visibilityLabelService = VisibilityLabelServiceManager.getInstance()
           .getVisibilityLabelService(this.conf);
     }
-    this.superUsers = getSystemAndSuperUsers();
+    Pair<List<String>, List<String>> superUsersAndGroups =
+        VisibilityUtils.getSystemAndSuperUsers(this.conf);
+    this.superUsers = superUsersAndGroups.getFirst();
+    this.superGroups = superUsersAndGroups.getSecond();
   }
 
   @Override
@@ -633,24 +637,20 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     }
   }
 
-  private List<String> getSystemAndSuperUsers() throws IOException {
-    User user = User.getCurrent();
-    if (user == null) {
-      throw new IOException("Unable to obtain the current user, "
-          + "authorization checks for internal operations will not work correctly!");
-    }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Current user name is "+user.getShortName());
-    }
-    String currentUser = user.getShortName();
-    List<String> superUsers = Lists.asList(currentUser,
-        this.conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
-    return superUsers;
-  }
-
   private boolean isSystemOrSuperUser() throws IOException {
     User activeUser = VisibilityUtils.getActiveUser();
-    return this.superUsers.contains(activeUser.getShortName());
+    if (this.superUsers.contains(activeUser.getShortName())) {
+      return true;
+    }
+    String[] groups = activeUser.getGroupNames();
+    if (groups != null && groups.length > 0) {
+      for (String group : groups) {
+        if (this.superGroups.contains(group)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Override
@@ -826,7 +826,13 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
               + (requestingUser != null ? requestingUser.getShortName() : "null")
               + "' is not authorized to perform this action.");
         }
-        labels = this.visibilityLabelService.getAuths(user, false);
+        if (AccessControlLists.isGroupPrincipal(Bytes.toString(user))) {
+          String group = AccessControlLists.getGroupName(Bytes.toString(user));
+          labels = this.visibilityLabelService.getGroupAuths(new String[]{group}, false);
+        }
+        else {
+          labels = this.visibilityLabelService.getUserAuths(user, false);
+        }
       } catch (IOException e) {
         ResponseConverter.setControllerException(controller, e);
       }
@@ -920,7 +926,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       if (user == null) {
         throw new IOException("Unable to retrieve calling user");
       }
-      if (!(this.visibilityLabelService.havingSystemAuth(Bytes.toBytes(user.getShortName())))) {
+      if (!(this.visibilityLabelService.havingSystemAuth(user))) {
         throw new AccessDeniedException("User '" + user.getShortName()
             + "' is not authorized to perform this action.");
       }
