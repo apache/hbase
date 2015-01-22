@@ -30,41 +30,42 @@
 This chapter expands upon the <<getting_started,getting started>> chapter to further explain configuration of Apache HBase.
 Please read this chapter carefully, especially <<basic.prerequisites,basic.prerequisites>> to ensure that your HBase testing and deployment goes smoothly, and prevent data loss.
 
+== Configuration Files
 Apache HBase uses the same configuration system as Apache Hadoop.
-All configuration files are located in the [path]_conf/_ directory, which needs to be kept in sync for each node on your cluster.
+All configuration files are located in the _conf/_ directory, which needs to be kept in sync for each node on your cluster.
 
-.HBase Configuration Files
-[path]_backup-masters_::
+.HBase Configuration File Descriptions
+_backup-masters_::
   Not present by default.
   A plain-text file which lists hosts on which the Master should start a backup Master process, one host per line.
 
-[path]_hadoop-metrics2-hbase.properties_::
+_hadoop-metrics2-hbase.properties_::
   Used to connect HBase Hadoop's Metrics2 framework.
   See the link:http://wiki.apache.org/hadoop/HADOOP-6728-MetricsV2[Hadoop Wiki
               entry] for more information on Metrics2.
   Contains only commented-out examples by default.
 
-[path]_hbase-env.cmd_ and [path]_hbase-env.sh_::
+_hbase-env.cmd_ and _hbase-env.sh_::
   Script for Windows and Linux / Unix environments to set up the working environment for HBase, including the location of Java, Java options, and other environment variables.
   The file contains many commented-out examples to provide guidance.
 
-[path]_hbase-policy.xml_::
+_hbase-policy.xml_::
   The default policy configuration file used by RPC servers to make authorization decisions on client requests.
   Only used if HBase security (<<security,security>>) is enabled.
 
-[path]_hbase-site.xml_::
+_hbase-site.xml_::
   The main HBase configuration file.
   This file specifies configuration options which override HBase's default configuration.
-  You can view (but do not edit) the default configuration file at [path]_docs/hbase-default.xml_.
+  You can view (but do not edit) the default configuration file at _docs/hbase-default.xml_.
   You can also view the entire effective configuration for your cluster (defaults and overrides) in the [label]#HBase Configuration# tab of the HBase Web UI.
 
-[path]_log4j.properties_::
-  Configuration file for HBase logging via [code]+log4j+.
+_log4j.properties_::
+  Configuration file for HBase logging via `log4j`.
 
-[path]_regionservers_::
+_regionservers_::
   A plain-text file containing a list of hosts which should run a RegionServer in your HBase cluster.
-  By default this file contains the single entry [literal]+localhost+.
-  It should contain a list of hostnames or IP addresses, one per line, and should only contain [literal]+localhost+ if each node in your cluster will run a RegionServer on its [literal]+localhost+ interface.
+  By default this file contains the single entry `localhost`.
+  It should contain a list of hostnames or IP addresses, one per line, and should only contain `localhost` if each node in your cluster will run a RegionServer on its `localhost` interface.
 
 .Checking XML Validity
 [TIP]
@@ -75,11 +76,10 @@ By default, +xmllint+ re-flows and prints the XML to standard output.
 To check for well-formedness and only print output if errors exist, use the command +xmllint -noout
         filename.xml+.
 ====
-
 .Keep Configuration In Sync Across the Cluster
 [WARNING]
 ====
-When running in distributed mode, after you make an edit to an HBase configuration, make sure you copy the content of the [path]_conf/_ directory to all nodes of the cluster.
+When running in distributed mode, after you make an edit to an HBase configuration, make sure you copy the content of the _conf/_ directory to all nodes of the cluster.
 HBase will not do this for you.
 Use +rsync+, +scp+, or another secure mechanism for copying the configuration files to your nodes.
 For most configuration, a restart is needed for servers to pick up changes An exception is dynamic configuration.
@@ -123,7 +123,7 @@ support.
 |N/A
 |===
 
-NOTE: In HBase 0.98.5 and newer, you must set `JAVA_HOME` on each node of your cluster. [path]_hbase-env.sh_ provides a handy mechanism to do this.
+NOTE: In HBase 0.98.5 and newer, you must set `JAVA_HOME` on each node of your cluster. _hbase-env.sh_ provides a handy mechanism to do this.
 
 .Operating System Utilities
 ssh::
@@ -133,14 +133,14 @@ DNS::
   HBase uses the local hostname to self-report its IP address. Both forward and reverse DNS resolving must work in versions of HBase previous to 0.92.0. The link:https://github.com/sujee/hadoop-dns-checker[hadoop-dns-checker]                tool can be used to verify DNS is working correctly on the cluster. The project README file provides detailed instructions on usage.
 
 Loopback IP::
-  Prior to hbase-0.96.0, HBase only used the IP address [systemitem]+127.0.0.1+ to refer to [code]+localhost+, and this could not be configured.
+  Prior to hbase-0.96.0, HBase only used the IP address [systemitem]+127.0.0.1+ to refer to `localhost`, and this could not be configured.
   See <<loopback.ip,loopback.ip>>.
 
 NTP::
   The clocks on cluster nodes should be synchronized. A small amount of variation is acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time synchronization is one of the first things to check if you see unexplained problems in your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or another time-synchronization mechanism, on your cluster, and that all nodes look to the same service for time synchronization. See the link:http://www.tldp.org/LDP/sag/html/basic-ntp-config.html[Basic NTP Configuration] at [citetitle]_The Linux Documentation Project (TLDP)_ to set up NTP.
 
 Limits on Number of Files and Processes (ulimit)::
-  Apache HBase is a database. It requires the ability to open a large number of files at once. Many Linux distributions limit the number of files a single user is allowed to open to [literal]+1024+ (or [literal]+256+ on older versions of OS X). You can check this limit on your servers by running the command +ulimit -n+ when logged in as the user which runs HBase. See <<trouble.rs.runtime.filehandles,trouble.rs.runtime.filehandles>> for some of the problems you may experience if the limit is too low. You may also notice errors such as the following:
+  Apache HBase is a database. It requires the ability to open a large number of files at once. Many Linux distributions limit the number of files a single user is allowed to open to `1024` (or `256` on older versions of OS X). You can check this limit on your servers by running the command +ulimit -n+ when logged in as the user which runs HBase. See <<trouble.rs.runtime.filehandles,trouble.rs.runtime.filehandles>> for some of the problems you may experience if the limit is too low. You may also notice errors such as the following:
 +
 ----
 2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
@@ -217,7 +217,7 @@ Use the following legend to interpret this table:
 .Replace the Hadoop Bundled With HBase!
 [NOTE]
 ====
-Because HBase depends on Hadoop, it bundles an instance of the Hadoop jar under its [path]_lib_ directory.
+Because HBase depends on Hadoop, it bundles an instance of the Hadoop jar under its _lib_ directory.
 The bundled jar is ONLY for use in standalone mode.
 In distributed mode, it is _critical_ that the version of Hadoop that is out on your cluster match what is under HBase.
 Replace the hadoop jar found in the HBase lib directory with the hadoop jar you are running on your cluster to avoid version mismatch issues.
@@ -228,7 +228,7 @@ Hadoop version mismatch issues have various manifestations but often all looks l
 [[hadoop2.hbase_0.94]]
 ==== Apache HBase 0.94 with Hadoop 2
 
-To get 0.94.x to run on hadoop 2.2.0, you need to change the hadoop 2 and protobuf versions in the [path]_pom.xml_: Here is a diff with pom.xml changes: 
+To get 0.94.x to run on hadoop 2.2.0, you need to change the hadoop 2 and protobuf versions in the _pom.xml_: Here is a diff with pom.xml changes: 
 
 [source]
 ----
@@ -298,14 +298,14 @@ Do not move to Apache HBase 0.96.x if you cannot upgrade your Hadoop.. See link:
 [[hadoop.older.versions]]
 ==== Hadoop versions 0.20.x - 1.x
 
-HBase will lose data unless it is running on an HDFS that has a durable [code]+sync+ implementation.
+HBase will lose data unless it is running on an HDFS that has a durable `sync` implementation.
 DO NOT use Hadoop 0.20.2, Hadoop 0.20.203.0, and Hadoop 0.20.204.0 which DO NOT have this attribute.
 Currently only Hadoop versions 0.20.205.x or any release in excess of this version -- this includes hadoop-1.0.0 -- have a working, durable sync.
 The Cloudera blog post link:http://www.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/[An
             update on Apache Hadoop 1.0] by Charles Zedlweski has a nice exposition on how all the Hadoop versions relate.
 Its worth checking out if you are having trouble making sense of the Hadoop version morass. 
 
-Sync has to be explicitly enabled by setting [var]+dfs.support.append+ equal to true on both the client side -- in [path]_hbase-site.xml_ -- and on the serverside in [path]_hdfs-site.xml_ (The sync facility HBase needs is a subset of the append code path).
+Sync has to be explicitly enabled by setting `dfs.support.append` equal to true on both the client side -- in _hbase-site.xml_ -- and on the serverside in _hdfs-site.xml_ (The sync facility HBase needs is a subset of the append code path).
 
 [source,xml]
 ----
@@ -317,7 +317,7 @@ Sync has to be explicitly enabled by setting [var]+dfs.support.append+ equal to 
 ----
 
 You will have to restart your cluster after making this edit.
-Ignore the chicken-little comment you'll find in the [path]_hdfs-default.xml_ in the description for the [var]+dfs.support.append+ configuration. 
+Ignore the chicken-little comment you'll find in the _hdfs-default.xml_ in the description for the `dfs.support.append` configuration. 
 
 [[hadoop.security]]
 ==== Apache HBase on Secure Hadoop
@@ -325,12 +325,12 @@ Ignore the chicken-little comment you'll find in the [path]_hdfs-default.xml_ in
 Apache HBase will run on any Hadoop 0.20.x that incorporates Hadoop security features as long as you do as suggested above and replace the Hadoop jar that ships with HBase with the secure version.
 If you want to read more about how to setup Secure HBase, see <<hbase.secure.configuration,hbase.secure.configuration>>.
 
-[var]+dfs.datanode.max.transfer.threads+
+`dfs.datanode.max.transfer.threads`
 [[dfs.datanode.max.transfer.threads]]
 ==== (((dfs.datanode.max.transfer.threads)))
 
 An HDFS datanode has an upper bound on the number of files that it will serve at any one time.
-Before doing any loading, make sure you have configured Hadoop's [path]_conf/hdfs-site.xml_, setting the [var]+dfs.datanode.max.transfer.threads+ value to at least the following: 
+Before doing any loading, make sure you have configured Hadoop's _conf/hdfs-site.xml_, setting the `dfs.datanode.max.transfer.threads` value to at least the following: 
 
 [source,xml]
 ----
@@ -353,7 +353,7 @@ For example:
           contain current block. Will get new block locations from namenode and retry...
 ----
 
-See also <<casestudies.max.transfer.threads,casestudies.max.transfer.threads>> and note that this property was previously known as [var]+dfs.datanode.max.xcievers+ (e.g. link:http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html[
+See also <<casestudies.max.transfer.threads,casestudies.max.transfer.threads>> and note that this property was previously known as `dfs.datanode.max.xcievers` (e.g. link:http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html[
             Hadoop HDFS: Deceived by Xciever]). 
 
 [[zookeeper.requirements]]
@@ -367,10 +367,10 @@ HBase makes use of the [method]+multi+ functionality that is only available sinc
 
 HBase has two run modes: <<standalone,standalone>> and <<distributed,distributed>>.
 Out of the box, HBase runs in standalone mode.
-Whatever your mode, you will need to configure HBase by editing files in the HBase [path]_conf_      directory.
-At a minimum, you must edit [code]+conf/hbase-env.sh+ to tell HBase which +java+ to use.
+Whatever your mode, you will need to configure HBase by editing files in the HBase _conf_      directory.
+At a minimum, you must edit `conf/hbase-env.sh` to tell HBase which +java+ to use.
 In this file you set HBase environment variables such as the heapsize and other options for the +JVM+, the preferred location for log files, etc.
-Set [var]+JAVA_HOME+ to point at the root of your +java+ install.
+Set `JAVA_HOME` to point at the root of your +java+ install.
 
 [[standalone]]
 === Standalone HBase
@@ -417,15 +417,15 @@ Both standalone mode and pseudo-distributed mode are provided for the purposes o
 For a production environment, distributed mode is appropriate.
 In distributed mode, multiple instances of HBase daemons run on multiple servers in the cluster.
 
-Just as in pseudo-distributed mode, a fully distributed configuration requires that you set the [code]+hbase-cluster.distributed+ property to [literal]+true+.
-Typically, the [code]+hbase.rootdir+ is configured to point to a highly-available HDFS filesystem. 
+Just as in pseudo-distributed mode, a fully distributed configuration requires that you set the `hbase-cluster.distributed` property to `true`.
+Typically, the `hbase.rootdir` is configured to point to a highly-available HDFS filesystem. 
 
 In addition, the cluster is configured so that multiple cluster nodes enlist as RegionServers, ZooKeeper QuorumPeers, and backup HMaster servers.
 These configuration basics are all demonstrated in <<quickstart_fully_distributed,quickstart-fully-distributed>>.
 
 .Distributed RegionServers
 Typically, your cluster will contain multiple RegionServers all running on different servers, as well as primary and backup Master and Zookeeper daemons.
-The [path]_conf/regionservers_ file on the master server contains a list of hosts whose RegionServers are associated with this cluster.
+The _conf/regionservers_ file on the master server contains a list of hosts whose RegionServers are associated with this cluster.
 Each host is on a separate line.
 All hosts listed in this file will have their RegionServer processes started and stopped when the master server starts or stops.
 
@@ -434,9 +434,9 @@ See section <<zookeeper,zookeeper>> for ZooKeeper setup for HBase.
 
 .Example Distributed HBase Cluster
 ====
-This is a bare-bones [path]_conf/hbase-site.xml_ for a distributed HBase cluster.
+This is a bare-bones _conf/hbase-site.xml_ for a distributed HBase cluster.
 A cluster that is used for real-world work would contain more custom configuration parameters.
-Most HBase configuration directives have default values, which are used unless the value is overridden in the [path]_hbase-site.xml_.
+Most HBase configuration directives have default values, which are used unless the value is overridden in the _hbase-site.xml_.
 See <<config.files,config.files>> for more information.
 
 [source,xml]
@@ -458,8 +458,8 @@ See <<config.files,config.files>> for more information.
 </configuration>
 ----
 
-This is an example [path]_conf/regionservers_ file, which contains a list of each node that should run a RegionServer in the cluster.
-These nodes need HBase installed and they need to use the same contents of the [path]_conf/_          directory as the Master server..
+This is an example _conf/regionservers_ file, which contains a list of each node that should run a RegionServer in the cluster.
+These nodes need HBase installed and they need to use the same contents of the _conf/_          directory as the Master server..
 
 [source]
 ----
@@ -469,7 +469,7 @@ node-b.example.com
 node-c.example.com
 ----
 
-This is an example [path]_conf/backup-masters_ file, which contains a list of each node that should run a backup Master instance.
+This is an example _conf/backup-masters_ file, which contains a list of each node that should run a backup Master instance.
 The backup Master instances will sit idle unless the main Master becomes unavailable.
 
 [source]
@@ -486,19 +486,19 @@ See <<quickstart_fully_distributed,quickstart-fully-distributed>> for a walk-thr
 .Procedure: HDFS Client Configuration
 . Of note, if you have made HDFS client configuration on your Hadoop cluster, such as configuration directives for HDFS clients, as opposed to server-side configurations, you must use one of the following methods to enable HBase to see and use these configuration changes:
 +
-a. Add a pointer to your [var]+HADOOP_CONF_DIR+ to the [var]+HBASE_CLASSPATH+ environment variable in [path]_hbase-env.sh_.
-b. Add a copy of [path]_hdfs-site.xml_ (or [path]_hadoop-site.xml_) or, better, symlinks, under [path]_${HBASE_HOME}/conf_, or
-c. if only a small set of HDFS client configurations, add them to [path]_hbase-site.xml_.
+a. Add a pointer to your `HADOOP_CONF_DIR` to the `HBASE_CLASSPATH` environment variable in _hbase-env.sh_.
+b. Add a copy of _hdfs-site.xml_ (or _hadoop-site.xml_) or, better, symlinks, under _${HBASE_HOME}/conf_, or
+c. if only a small set of HDFS client configurations, add them to _hbase-site.xml_.
 
 
-An example of such an HDFS client configuration is [var]+dfs.replication+.
+An example of such an HDFS client configuration is `dfs.replication`.
 If for example, you want to run with a replication factor of 5, hbase will create files with the default of 3 unless you do the above to make the configuration available to HBase.
 
 [[confirm]]
 == Running and Confirming Your Installation
 
 Make sure HDFS is running first.
-Start and stop the Hadoop HDFS daemons by running [path]_bin/start-hdfs.sh_ over in the [var]+HADOOP_HOME+        directory.
+Start and stop the Hadoop HDFS daemons by running _bin/start-hdfs.sh_ over in the `HADOOP_HOME`        directory.
 You can ensure it started properly by testing the +put+ and +get+ of files into the Hadoop filesystem.
 HBase does not normally use the mapreduce daemons.
 These do not need to be started.
@@ -511,14 +511,14 @@ Start HBase with the following command:
 bin/start-hbase.sh
 ----
 
-Run the above from the [var]+HBASE_HOME+ directory.
+Run the above from the `HBASE_HOME` directory.
 
 You should now have a running HBase instance.
-HBase logs can be found in the [path]_logs_ subdirectory.
+HBase logs can be found in the _logs_ subdirectory.
 Check them out especially if HBase had trouble starting.
 
 HBase also puts up a UI listing vital attributes.
-By default its deployed on the Master host at port 16010 (HBase RegionServers listen on port 16020 by default and put up an informational http server at 16030). If the Master were running on a host named [var]+master.example.org+ on the default port, to see the Master's homepage you'd point your browser at [path]_http://master.example.org:16010_.
+By default its deployed on the Master host at port 16010 (HBase RegionServers listen on port 16020 by default and put up an informational http server at 16030). If the Master were running on a host named `master.example.org` on the default port, to see the Master's homepage you'd point your browser at _http://master.example.org:16010_.
 
 Prior to HBase 0.98, the default ports the master ui was deployed on port 16010, and the HBase RegionServers would listen on port 16020 by default and put up an informational http server at 16030. 
 
@@ -536,15 +536,15 @@ It can take longer if your cluster is comprised of many machines.
 If you are running a distributed operation, be sure to wait until HBase has shut down completely before stopping the Hadoop daemons.
 
 [[config.files]]
-== Configuration Files
+== Default Configuration
 
 [[hbase.site]]
-=== [path]_hbase-site.xml_ and [path]_hbase-default.xml_
+=== _hbase-site.xml_ and _hbase-default.xml_
 
-Just as in Hadoop where you add site-specific HDFS configuration to the [path]_hdfs-site.xml_ file, for HBase, site specific customizations go into the file [path]_conf/hbase-site.xml_.
-For the list of configurable properties, see <<hbase_default_configurations,hbase default configurations>> below or view the raw [path]_hbase-default.xml_ source file in the HBase source code at [path]_src/main/resources_. 
+Just as in Hadoop where you add site-specific HDFS configuration to the _hdfs-site.xml_ file, for HBase, site specific customizations go into the file _conf/hbase-site.xml_.
+For the list of configurable properties, see <<hbase_default_configurations,hbase default configurations>> below or view the raw _hbase-default.xml_ source file in the HBase source code at _src/main/resources_. 
 
-Not all configuration options make it out to [path]_hbase-default.xml_.
+Not all configuration options make it out to _hbase-default.xml_.
 Configuration that it is thought rare anyone would change can exist only in code; the only way to turn up such configurations is via a reading of the source code itself. 
 
 Currently, changes here will require a cluster restart for HBase to notice the change. 
@@ -554,19 +554,19 @@ include::../../../../target/asciidoc/hbase-default.adoc[]
 
 
 [[hbase.env.sh]]
-=== [path]_hbase-env.sh_
+=== _hbase-env.sh_
 
 Set HBase environment variables in this file.
 Examples include options to pass the JVM on start of an HBase daemon such as heap size and garbage collector configs.
 You can also set configurations for HBase configuration, log directories, niceness, ssh options, where to locate process pid files, etc.
-Open the file at [path]_conf/hbase-env.sh_ and peruse its content.
+Open the file at _conf/hbase-env.sh_ and peruse its content.
 Each option is fairly well documented.
 Add your own environment variables here if you want them read by HBase daemons on startup.
 
 Changes here will require a cluster restart for HBase to notice the change. 
 
 [[log4j]]
-=== [path]_log4j.properties_
+=== _log4j.properties_
 
 Edit this file to change rate at which HBase files are rolled and to change the level at which HBase logs messages. 
 
@@ -580,11 +580,11 @@ If you are running HBase in standalone mode, you don't need to configure anythin
 Since the HBase Master may move around, clients bootstrap by looking to ZooKeeper for current critical locations.
 ZooKeeper is where all these values are kept.
 Thus clients require the location of the ZooKeeper ensemble information before they can do anything else.
-Usually this the ensemble location is kept out in the [path]_hbase-site.xml_        and is picked up by the client from the [var]+CLASSPATH+.
+Usually this the ensemble location is kept out in the _hbase-site.xml_        and is picked up by the client from the `CLASSPATH`.
 
-If you are configuring an IDE to run a HBase client, you should include the [path]_conf/_ directory on your classpath so [path]_hbase-site.xml_ settings can be found (or add [path]_src/test/resources_ to pick up the hbase-site.xml used by tests). 
+If you are configuring an IDE to run a HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests). 
 
-Minimally, a client of HBase needs several libraries in its [var]+CLASSPATH+ when connecting to a cluster, including: 
+Minimally, a client of HBase needs several libraries in its `CLASSPATH` when connecting to a cluster, including: 
 [source]
 ----
 
@@ -599,10 +599,9 @@ slf4j-log4j (slf4j-log4j12-1.5.8.jar)
 zookeeper (zookeeper-3.4.2.jar)
 ----      
 
-An example basic [path]_hbase-site.xml_ for client only might look as follows: 
+An example basic _hbase-site.xml_ for client only might look as follows: 
 [source,xml]
 ----
-
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
@@ -620,7 +619,7 @@ An example basic [path]_hbase-site.xml_ for client only might look as follows:
 
 The configuration used by a Java client is kept in an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration[HBaseConfiguration]          instance.
 
-The factory method on HBaseConfiguration, [code]+HBaseConfiguration.create();+, on invocation, will read in the content of the first [path]_hbase-site.xml_ found on the client's [var]+CLASSPATH+, if one is present (Invocation will also factor in any [path]_hbase-default.xml_ found; an hbase-default.xml ships inside the [path]_hbase.X.X.X.jar_). It is also possible to specify configuration directly without having to read from a [path]_hbase-site.xml_.
+The factory method on HBaseConfiguration, `HBaseConfiguration.create();`, on invocation, will read in the content of the first _hbase-site.xml_ found on the client's `CLASSPATH`, if one is present (Invocation will also factor in any _hbase-default.xml_ found; an hbase-default.xml ships inside the _hbase.X.X.X.jar_). It is also possible to specify configuration directly without having to read from a _hbase-site.xml_.
 For example, to set the ZooKeeper ensemble for the cluster programmatically do as follows: 
 
 [source,java]
@@ -629,7 +628,7 @@ Configuration config = HBaseConfiguration.create();
 config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zookeeper locally
 ----          
 
-If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be specified in a comma-separated list (just as in the [path]_hbase-site.xml_ file). This populated [class]+Configuration+ instance can then be passed to an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable], and so on. 
+If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be specified in a comma-separated list (just as in the _hbase-site.xml_ file). This populated `Configuration` instance can then be passed to an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable], and so on. 
 
 [[example_config]]
 == Example Configurations
@@ -637,20 +636,18 @@ If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be spe
 === Basic Distributed HBase Install
 
 Here is an example basic configuration for a distributed ten node cluster.
-The nodes are named [var]+example0+, [var]+example1+, etc., through node [var]+example9+ in this example.
-The HBase Master and the HDFS namenode are running on the node [var]+example0+.
-RegionServers run on nodes [var]+example1+-[var]+example9+.
-A 3-node ZooKeeper ensemble runs on [var]+example1+, [var]+example2+, and [var]+example3+        on the default ports.
-ZooKeeper data is persisted to the directory [path]_/export/zookeeper_.
-Below we show what the main configuration files -- [path]_hbase-site.xml_, [path]_regionservers_, and [path]_hbase-env.sh_ -- found in the HBase [path]_conf_        directory might look like.
+The nodes are named `example0`, `example1`, etc., through node `example9` in this example.
+The HBase Master and the HDFS namenode are running on the node `example0`.
+RegionServers run on nodes `example1`-`example9`.
+A 3-node ZooKeeper ensemble runs on `example1`, `example2`, and `example3`        on the default ports.
+ZooKeeper data is persisted to the directory _/export/zookeeper_.
+Below we show what the main configuration files -- _hbase-site.xml_, _regionservers_, and _hbase-env.sh_ -- found in the HBase _conf_        directory might look like.
 
 [[hbase_site]]
-==== [path]_hbase-site.xml_
+==== _hbase-site.xml_
 
-[source,bourne]
+[source,xml]
 ----
-
-
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
@@ -685,14 +682,13 @@ Below we show what the main configuration files -- [path]_hbase-site.xml_, [path
 ----
 
 [[regionservers]]
-==== [path]_regionservers_
+==== _regionservers_
 
 In this file you list the nodes that will run RegionServers.
-In our case, these nodes are [var]+example1+-[var]+example9+. 
+In our case, these nodes are `example1`-`example9`. 
 
 [source]
 ----
-
 example1
 example2
 example3
@@ -705,12 +701,12 @@ example9
 ----
 
 [[hbase_env]]
-==== [path]_hbase-env.sh_
+==== _hbase-env.sh_
 
-The following lines in the [path]_hbase-env.sh_ file show how to set the [var]+JAVA_HOME+ environment variable (required for HBase 0.98.5 and newer) and set the heap to 4 GB (rather than the default value of 1 GB). If you copy and paste this example, be sure to adjust the [var]+JAVA_HOME+ to suit your environment.
+The following lines in the _hbase-env.sh_ file show how to set the `JAVA_HOME` environment variable (required for HBase 0.98.5 and newer) and set the heap to 4 GB (rather than the default value of 1 GB). If you copy and paste this example, be sure to adjust the `JAVA_HOME` to suit your environment.
 
+[source,bash]
 ----
-
 # The java implementation to use.
 export JAVA_HOME=/usr/java/jdk1.7.0/          
 
@@ -718,7 +714,7 @@ export JAVA_HOME=/usr/java/jdk1.7.0/
 export HBASE_HEAPSIZE=4096
 ----
 
-Use +rsync+ to copy the content of the [path]_conf_          directory to all nodes of the cluster.
+Use +rsync+ to copy the content of the _conf_          directory to all nodes of the cluster.
 
 [[important_configurations]]
 == The Important Configurations
@@ -736,7 +732,7 @@ Review the <<os,os>> and <<hadoop,hadoop>> sections.
 
 If a cluster with a lot of regions, it is possible if an eager beaver regionserver checks in soon after master start while all the rest in the cluster are laggardly, this first server to checkin will be assigned all regions.
 If lots of regions, this first server could buckle under the load.
-To prevent the above scenario happening up the [var]+hbase.master.wait.on.regionservers.mintostart+ from its default value of 1.
+To prevent the above scenario happening up the `hbase.master.wait.on.regionservers.mintostart` from its default value of 1.
 See link:https://issues.apache.org/jira/browse/HBASE-6389[HBASE-6389 Modify the
             conditions to ensure that Master waits for sufficient number of Region Servers before
             starting region assignments] for more detail. 
@@ -756,13 +752,13 @@ See the configuration <<fail.fast.expired.active.master,fail.fast.expired.active
 ==== ZooKeeper Configuration
 
 [[sect.zookeeper.session.timeout]]
-===== [var]+zookeeper.session.timeout+
+===== `zookeeper.session.timeout`
 
 The default timeout is three minutes (specified in milliseconds). This means that if a server crashes, it will be three minutes before the Master notices the crash and starts recovery.
 You might like to tune the timeout down to a minute or even less so the Master notices failures the sooner.
 Before changing this value, be sure you have your JVM garbage collection configuration under control otherwise, a long garbage collection that lasts beyond the ZooKeeper session timeout will take out your RegionServer (You might be fine with this -- you probably want recovery to start on the server if a RegionServer has been in GC for a long period of time).
 
-To change this configuration, edit [path]_hbase-site.xml_, copy the changed file around the cluster and restart.
+To change this configuration, edit _hbase-site.xml_, copy the changed file around the cluster and restart.
 
 We set this value high to save our having to field noob questions up on the mailing lists asking why a RegionServer went down during a massive import.
 The usual cause is that their JVM is untuned and they are running into long GC pauses.
@@ -781,11 +777,11 @@ See <<zookeeper,zookeeper>>.
 ===== dfs.datanode.failed.volumes.tolerated
 
 This is the "...number of volumes that are allowed to fail before a datanode stops offering service.
-By default any volume failure will cause a datanode to shutdown" from the [path]_hdfs-default.xml_ description.
+By default any volume failure will cause a datanode to shutdown" from the _hdfs-default.xml_ description.
 If you have > three or four disks, you might want to set this to 1 or if you have many disks, two or more. 
 
 [[hbase.regionserver.handler.count_description]]
-==== [var]+hbase.regionserver.handler.count+
+==== `hbase.regionserver.handler.count`
 
 This setting defines the number of threads that are kept open to answer incoming requests to user tables.
 The rule of thumb is to keep this number low when the payload per request approaches the MB (big puts, scans using a large cache) and high when the payload is small (gets, small puts, ICVs, deletes). The total size of the queries in progress is limited by the setting "hbase.ipc.server.max.callqueue.size". 
@@ -826,9 +822,9 @@ However, as all memstores are not expected to be full all the time, less WAL fil
 [[disable.splitting]]
 ==== Managed Splitting
 
-HBase generally handles splitting your regions, based upon the settings in your [path]_hbase-default.xml_ and [path]_hbase-site.xml_          configuration files.
-Important settings include [var]+hbase.regionserver.region.split.policy+, [var]+hbase.hregion.max.filesize+, [var]+hbase.regionserver.regionSplitLimit+.
-A simplistic view of splitting is that when a region grows to [var]+hbase.hregion.max.filesize+, it is split.
+HBase generally handles splitting your regions, based upon the settings in your _hbase-default.xml_ and _hbase-site.xml_          configuration files.
+Important settings include `hbase.regionserver.region.split.policy`, `hbase.hregion.max.filesize`, `hbase.regionserver.regionSplitLimit`.
+A simplistic view of splitting is that when a region grows to `hbase.hregion.max.filesize`, it is split.
 For most use patterns, most of the time, you should use automatic splitting.
 See <<manual_region_splitting_decisions,manual region splitting decisions>> for more information about manual region splitting.
 
@@ -839,7 +835,7 @@ Manual splitting can mitigate region creation and movement under load.
 It also makes it so region boundaries are known and invariant (if you disable region splitting). If you use manual splits, it is easier doing staggered, time-based major compactions spread out your network IO load.
 
 .Disable Automatic Splitting
-To disable automatic splitting, set [var]+hbase.hregion.max.filesize+ to a very large value, such as [literal]+100 GB+ It is not recommended to set it to its absolute maximum value of [literal]+Long.MAX_VALUE+.
+To disable automatic splitting, set `hbase.hregion.max.filesize` to a very large value, such as `100 GB` It is not recommended to set it to its absolute maximum value of `Long.MAX_VALUE`.
 
 .Automatic Splitting Is Recommended
 [NOTE]
@@ -858,8 +854,8 @@ The goal is for the largest region to be just large enough that the compaction s
 Otherwise, the cluster can be prone to compaction storms where a large number of regions under compaction at the same time.
 It is important to understand that the data growth causes compaction storms, and not the manual split decision.
 
-If the regions are split into too many large regions, you can increase the major compaction interval by configuring [var]+HConstants.MAJOR_COMPACTION_PERIOD+.
-HBase 0.90 introduced [class]+org.apache.hadoop.hbase.util.RegionSplitter+, which provides a network-IO-safe rolling split of all regions.
+If the regions are split into too many large regions, you can increase the major compaction interval by configuring `HConstants.MAJOR_COMPACTION_PERIOD`.
+HBase 0.90 introduced `org.apache.hadoop.hbase.util.RegionSplitter`, which provides a network-IO-safe rolling split of all regions.
 
 [[managed.compactions]]
 ==== Managed Compactions
@@ -868,7 +864,7 @@ By default, major compactions are scheduled to run once in a 7-day period.
 Prior to HBase 0.96.x, major compactions were scheduled to happen once per day by default.
 
 If you need to control exactly when and how often major compaction runs, you can disable managed major compactions.
-See the entry for [var]+hbase.hregion.majorcompaction+ in the <<compaction.parameters,compaction.parameters>> table for details.
+See the entry for `hbase.hregion.majorcompaction` in the <<compaction.parameters,compaction.parameters>> table for details.
 
 .Do Not Disable Major Compactions
 [WARNING]
@@ -885,7 +881,7 @@ For more information about compactions and the compaction file selection process
 ==== Speculative Execution
 
 Speculative Execution of MapReduce tasks is on by default, and for HBase clusters it is generally advised to turn off Speculative Execution at a system-level unless you need it for a specific case, where it can be configured per-job.
-Set the properties [var]+mapreduce.map.speculative+ and [var]+mapreduce.reduce.speculative+ to false. 
+Set the properties `mapreduce.map.speculative` and `mapreduce.reduce.speculative` to false. 
 
 [[other_configuration]]
 === Other Configurations
@@ -894,14 +890,14 @@ Set the properties [var]+mapreduce.map.speculative+ and [var]+mapreduce.reduce.s
 ==== Balancer
 
 The balancer is a periodic operation which is run on the master to redistribute regions on the cluster.
-It is configured via [var]+hbase.balancer.period+ and defaults to 300000 (5 minutes). 
+It is configured via `hbase.balancer.period` and defaults to 300000 (5 minutes). 
 
 See <<master.processes.loadbalancer,master.processes.loadbalancer>> for more information on the LoadBalancer. 
 
 [[disabling.blockcache]]
 ==== Disabling Blockcache
 
-Do not turn off block cache (You'd do it by setting [var]+hbase.block.cache.size+ to zero). Currently we do not do well if you do this because the regionserver will spend all its time loading hfile indices over and over again.
+Do not turn off block cache (You'd do it by setting `hbase.block.cache.size` to zero). Currently we do not do well if you do this because the regionserver will spend all its time loading hfile indices over and over again.
 If your working set it such that block cache does you no good, at least size the block cache such that hfile indices will stay up in the cache (you can get a rough idea on the size you need by surveying regionserver UIs; you'll see index block size accounted near the top of the webpage).
 
 [[nagles]]
@@ -925,8 +921,6 @@ HDFS-3703, HDFS-3712, and HDFS-4791 -- hadoop 2 for sure has them and late hadoo
 
 [source,xml]
 ----
-
-<property>
 <property>
     <name>hbase.lease.recovery.dfs.timeout</name>
     <value>23000</value>
@@ -944,7 +938,6 @@ And on the namenode/datanode side, set the following to enable 'staleness' intro
 
 [source,xml]
 ----
-
 <property>
     <name>dfs.client.socket-timeout</name>
     <value>10000</value>
@@ -991,7 +984,7 @@ See link:http://docs.oracle.com/javase/6/docs/technotes/guides/management/agent.
 Historically, besides above port mentioned, JMX opens 2 additional random TCP listening ports, which could lead to port conflict problem.(See link:https://issues.apache.org/jira/browse/HBASE-10289[HBASE-10289]          for details) 
 
 As an alternative, You can use the coprocessor-based JMX implementation provided by HBase.
-To enable it in 0.99 or above, add below property in [path]_hbase-site.xml_: 
+To enable it in 0.99 or above, add below property in _hbase-site.xml_: 
 
 [source,xml]
 ----
@@ -1009,7 +1002,6 @@ The reason why you only configure coprocessor for 'regionserver' is that, starti
 
 [source,xml]
 ----
-
 <property>
     <name>regionserver.rmi.registry.port</name>
     <value>61130</value>
@@ -1024,7 +1016,8 @@ The registry port can be shared with connector port in most cases, so you only n
 However if you want to use SSL communication, the 2 ports must be configured to different values. 
 
 By default the password authentication and SSL communication is disabled.
-To enable password authentication, you need to update [path]_hbase-env.sh_          like below: 
+To enable password authentication, you need to update _hbase-env.sh_          like below: 
+[source,bash]
 ----
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.authenticate=true                  \
                        -Dcom.sun.management.jmxremote.password.file=your_password_file   \
@@ -1038,6 +1031,7 @@ See example password/access file under $JRE_HOME/lib/management.
 
 To enable SSL communication with password authentication, follow below steps: 
 
+[source,bash]
 ----
 #1. generate a key pair, stored in myKeyStore
 keytool -genkey -alias jconsole -keystore myKeyStore
@@ -1049,10 +1043,10 @@ keytool -export -alias jconsole -keystore myKeyStore -file jconsole.cert
 keytool -import -alias jconsole -keystore jconsoleKeyStore -file jconsole.cert
 ----          
 
-And then update [path]_hbase-env.sh_ like below: 
+And then update _hbase-env.sh_ like below: 
 
+[source,bash]
 ----
-
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.ssl=true                         \
                        -Djavax.net.ssl.keyStore=/home/tianq/myKeyStore                 \
                        -Djavax.net.ssl.keyStorePassword=your_password_in_step_1       \
@@ -1066,11 +1060,12 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE "
 
 Finally start jconsole on client using the key store: 
 
+[source,bash]
 ----
 jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
 ----        
 
-NOTE: for HBase 0.98, To enable the HBase JMX implementation on Master, you also need to add below property in [path]_hbase-site.xml_: 
+NOTE: for HBase 0.98, To enable the HBase JMX implementation on Master, you also need to add below property in _hbase-site.xml_: 
 
 [source,xml]
 ----

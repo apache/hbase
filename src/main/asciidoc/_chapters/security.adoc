@@ -32,19 +32,19 @@ HBase provides mechanisms to secure various components and aspects of HBase and 
 == Using Secure HTTP (HTTPS) for the Web UI
 
 A default HBase install uses insecure HTTP connections for web UIs for the master and region servers.
-To enable secure HTTP (HTTPS) connections instead, set [code]+hadoop.ssl.enabled+ to [literal]+true+ in [path]_hbase-site.xml_.
+To enable secure HTTP (HTTPS) connections instead, set `hadoop.ssl.enabled` to `true` in _hbase-site.xml_.
 This does not change the port used by the Web UI.
 To change the port for the web UI for a given HBase component, configure that port's setting in hbase-site.xml.
 These settings are:
 
-* [code]+hbase.master.info.port+
-* [code]+hbase.regionserver.info.port+
+* `hbase.master.info.port`
+* `hbase.regionserver.info.port`
 
 .If you enable HTTPS, clients should avoid using the non-secure HTTP connection.
 [NOTE]
 ====
-If you enable secure HTTP, clients should connect to HBase using the [code]+https://+ URL.
-Clients using the [code]+http://+ URL will receive an HTTP response of [literal]+200+, but will not receive any data.
+If you enable secure HTTP, clients should connect to HBase using the `https://` URL.
+Clients using the `http://` URL will receive an HTTP response of `200`, but will not receive any data.
 The following exception is logged:
 
 ----
@@ -72,8 +72,8 @@ This describes how to set up Apache HBase and clients for connection to secure H
 === Prerequisites
 
 Hadoop Authentication Configuration::
-  To run HBase RPC with strong authentication, you must set [code]+hbase.security.authentication+ to [literal]+true+.
-  In this case, you must also set [code]+hadoop.security.authentication+ to [literal]+true+.
+  To run HBase RPC with strong authentication, you must set `hbase.security.authentication` to `true`.
+  In this case, you must also set `hadoop.security.authentication` to `true`.
   Otherwise, you would be using strong authentication for HBase but not for the underlying HDFS, which would cancel out any benefit.
 
 Kerberos KDC::
@@ -83,11 +83,10 @@ Kerberos KDC::
 
 First, refer to <<security.prerequisites,security.prerequisites>> and ensure that your underlying HDFS configuration is secure.
 
-Add the following to the [code]+hbase-site.xml+ file on every server machine in the cluster: 
+Add the following to the `hbase-site.xml` file on every server machine in the cluster: 
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.security.authentication</name>
   <value>kerberos</value>
@@ -108,27 +107,25 @@ A full shutdown and restart of HBase service is required when deploying these co
 
 First, refer to <<security.prerequisites,security.prerequisites>> and ensure that your underlying HDFS configuration is secure.
 
-Add the following to the [code]+hbase-site.xml+ file on every client: 
+Add the following to the `hbase-site.xml` file on every client: 
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.security.authentication</name>
   <value>kerberos</value>
 </property>
 ----
 
-The client environment must be logged in to Kerberos from KDC or keytab via the [code]+kinit+ command before communication with the HBase cluster will be possible. 
+The client environment must be logged in to Kerberos from KDC or keytab via the `kinit` command before communication with the HBase cluster will be possible. 
 
-Be advised that if the [code]+hbase.security.authentication+ in the client- and server-side site files do not match, the client will not be able to communicate with the cluster. 
+Be advised that if the `hbase.security.authentication` in the client- and server-side site files do not match, the client will not be able to communicate with the cluster. 
 
 Once HBase is configured for secure RPC it is possible to optionally configure encrypted communication.
-To do so, add the following to the [code]+hbase-site.xml+ file on every client: 
+To do so, add the following to the `hbase-site.xml` file on every client: 
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.rpc.protection</name>
   <value>privacy</value>
@@ -136,11 +133,10 @@ To do so, add the following to the [code]+hbase-site.xml+ file on every client:
 ----
 
 This configuration property can also be set on a per connection basis.
-Set it in the [code]+Configuration+ supplied to [code]+HTable+: 
+Set it in the `Configuration` supplied to `HTable`: 
 
 [source,java]
 ----
-
 Configuration conf = HBaseConfiguration.create();
 conf.set("hbase.rpc.protection", "privacy");
 HTable table = new HTable(conf, tablename);
@@ -151,10 +147,9 @@ Expect a ~10% performance penalty for encrypted communication.
 [[security.client.thrift]]
 === Client-side Configuration for Secure Operation - Thrift Gateway
 
-Add the following to the [code]+hbase-site.xml+ file for every Thrift gateway: 
+Add the following to the `hbase-site.xml` file for every Thrift gateway: 
 [source,xml]
 ----
-
 <property>
   <name>hbase.thrift.keytab.file</name>
   <value>/etc/hbase/conf/hbase.keytab</value>
@@ -170,12 +165,11 @@ Add the following to the [code]+hbase-site.xml+ file for every Thrift gateway:
 
 Substitute the appropriate credential and keytab for [replaceable]_$USER_        and [replaceable]_$KEYTAB_ respectively. 
 
-In order to use the Thrift API principal to interact with HBase, it is also necessary to add the [code]+hbase.thrift.kerberos.principal+ to the [code]+_acl_+ table.
-For example, to give the Thrift API principal, [code]+thrift_server+, administrative access, a command such as this one will suffice: 
+In order to use the Thrift API principal to interact with HBase, it is also necessary to add the `hbase.thrift.kerberos.principal` to the `_acl_` table.
+For example, to give the Thrift API principal, `thrift_server`, administrative access, a command such as this one will suffice: 
 
 [source,sql]
 ----
-
 grant 'thrift_server', 'RWCA'
 ----
 
@@ -203,14 +197,14 @@ To enable it, do the following.
 
 . Be sure Thrift is running in secure mode, by following the procedure described in <<security.client.thrift,security.client.thrift>>.
 . Be sure that HBase is configured to allow proxy users, as described in <<security.rest.gateway,security.rest.gateway>>.
-. In [path]_hbase-site.xml_ for each cluster node running a Thrift gateway, set the property [code]+hbase.thrift.security.qop+ to one of the following three values:
+. In _hbase-site.xml_ for each cluster node running a Thrift gateway, set the property `hbase.thrift.security.qop` to one of the following three values:
 +
-* [literal]+auth-conf+ - authentication, integrity, and confidentiality checking
-* [literal]+auth-int+ - authentication and integrity checking
-* [literal]+auth+ - authentication checking only
+* `auth-conf` - authentication, integrity, and confidentiality checking
+* `auth-int` - authentication and integrity checking
+* `auth` - authentication checking only
 
 . Restart the Thrift gateway processes for the changes to take effect.
-  If a node is running Thrift, the output of the +jps+ command will list a [code]+ThriftServer+ process.
+  If a node is running Thrift, the output of the +jps+ command will list a `ThriftServer` process.
   To stop Thrift on a node, run the command +bin/hbase-daemon.sh stop thrift+.
   To start Thrift on a node, run the command +bin/hbase-daemon.sh start thrift+.
 
@@ -255,11 +249,10 @@ Take a look at the link:https://github.com/apache/hbase/blob/master/hbase-exampl
 
 === Client-side Configuration for Secure Operation - REST Gateway
 
-Add the following to the [code]+hbase-site.xml+ file for every REST gateway: 
+Add the following to the `hbase-site.xml` file for every REST gateway: 
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.rest.keytab.file</name>
   <value>$KEYTAB</value>
@@ -276,12 +269,11 @@ The REST gateway will authenticate with HBase using the supplied credential.
 No authentication will be performed by the REST gateway itself.
 All client access via the REST gateway will use the REST gateway's credential and have its privilege. 
 
-In order to use the REST API principal to interact with HBase, it is also necessary to add the [code]+hbase.rest.kerberos.principal+ to the [code]+_acl_+ table.
-For example, to give the REST API principal, [code]+rest_server+, administrative access, a command such as this one will suffice: 
+In order to use the REST API principal to interact with HBase, it is also necessary to add the `hbase.rest.kerberos.principal` to the `_acl_` table.
+For example, to give the REST API principal, `rest_server`, administrative access, a command such as this one will suffice: 
 
 [source,sql]
 ----
-
 grant 'rest_server', 'RWCA'
 ----
 
@@ -304,7 +296,7 @@ So it can apply proper authorizations.
 
 To turn on REST gateway impersonation, we need to configure HBase servers (masters and region servers) to allow proxy users; configure REST gateway to enable impersonation. 
 
-To allow proxy users, add the following to the [code]+hbase-site.xml+ file for every HBase server: 
+To allow proxy users, add the following to the `hbase-site.xml` file for every HBase server: 
 
 [source,xml]
 ----
@@ -324,7 +316,7 @@ To allow proxy users, add the following to the [code]+hbase-site.xml+ file for e
 
 Substitute the REST gateway proxy user for $USER, and the allowed group list for $GROUPS. 
 
-To enable REST gateway impersonation, add the following to the [code]+hbase-site.xml+ file for every REST gateway. 
+To enable REST gateway impersonation, add the following to the `hbase-site.xml` file for every REST gateway. 
 
 [source,xml]
 ----
@@ -370,7 +362,7 @@ None
 
 === Server-side Configuration for Simple User Access Operation
 
-Add the following to the [code]+hbase-site.xml+ file on every server machine in the cluster: 
+Add the following to the `hbase-site.xml` file on every server machine in the cluster: 
 
 [source,xml]
 ----
@@ -396,7 +388,7 @@ Add the following to the [code]+hbase-site.xml+ file on every server machine in 
 </property>
 ----
 
-For 0.94, add the following to the [code]+hbase-site.xml+ file on every server machine in the cluster: 
+For 0.94, add the following to the `hbase-site.xml` file on every server machine in the cluster: 
 
 [source,xml]
 ----
@@ -418,7 +410,7 @@ A full shutdown and restart of HBase service is required when deploying these co
 
 === Client-side Configuration for Simple User Access Operation
 
-Add the following to the [code]+hbase-site.xml+ file on every client: 
+Add the following to the `hbase-site.xml` file on every client: 
 
 [source,xml]
 ----
@@ -428,7 +420,7 @@ Add the following to the [code]+hbase-site.xml+ file on every client:
 </property>
 ----
 
-For 0.94, add the following to the [code]+hbase-site.xml+ file on every server machine in the cluster: 
+For 0.94, add the following to the `hbase-site.xml` file on every server machine in the cluster: 
 
 [source,xml]
 ----
@@ -438,16 +430,15 @@ For 0.94, add the following to the [code]+hbase-site.xml+ file on every server m
 </property>
 ----
 
-Be advised that if the [code]+hbase.security.authentication+ in the client- and server-side site files do not match, the client will not be able to communicate with the cluster. 
+Be advised that if the `hbase.security.authentication` in the client- and server-side site files do not match, the client will not be able to communicate with the cluster. 
 
 ==== Client-side Configuration for Simple User Access Operation - Thrift Gateway
 
 The Thrift gateway user will need access.
-For example, to give the Thrift API user, [code]+thrift_server+, administrative access, a command such as this one will suffice: 
+For example, to give the Thrift API user, `thrift_server`, administrative access, a command such as this one will suffice: 
 
 [source,sql]
 ----
-
 grant 'thrift_server', 'RWCA'
 ----
 
@@ -464,11 +455,10 @@ No authentication will be performed by the REST gateway itself.
 All client access via the REST gateway will use the REST gateway's credential and have its privilege. 
 
 The REST gateway user will need access.
-For example, to give the REST API user, [code]+rest_server+, administrative access, a command such as this one will suffice: 
+For example, to give the REST API user, `rest_server`, administrative access, a command such as this one will suffice: 
 
 [source,sql]
 ----
-
 grant 'rest_server', 'RWCA'
 ----
 
@@ -502,11 +492,11 @@ To take advantage of many of these features, you must be running HBase 0.98+ and
 [WARNING]
 ====
 Several procedures in this section require you to copy files between cluster nodes.
-When copying keys, configuration files, or other files containing sensitive strings, use a secure method, such as [code]+ssh+, to avoid leaking sensitive data.
+When copying keys, configuration files, or other files containing sensitive strings, use a secure method, such as `ssh`, to avoid leaking sensitive data.
 ====
 
 .Procedure: Basic Server-Side Configuration
-. Enable HFile v3, by setting +hfile.format.version +to 3 in [path]_hbase-site.xml_.
+. Enable HFile v3, by setting +hfile.format.version +to 3 in _hbase-site.xml_.
   This is the default for HBase 1.0 and newer. +
 [source,xml]
 ----
@@ -535,10 +525,10 @@ Every tag has a type and the actual tag byte array.
 
 Just as row keys, column families, qualifiers and values can be encoded (see <<data.block.encoding.types,data.block.encoding.types>>), tags can also be encoded as well.
 You can enable or disable tag encoding at the level of the column family, and it is enabled by default.
-Use the [code]+HColumnDescriptor#setCompressionTags(boolean compressTags)+ method to manage encoding settings on a column family.
+Use the `HColumnDescriptor#setCompressionTags(boolean compressTags)` method to manage encoding settings on a column family.
 You also need to enable the DataBlockEncoder for the column family, for encoding of tags to take effect.
 
-You can enable compression of each tag in the WAL, if WAL compression is also enabled, by setting the value of +hbase.regionserver.wal.tags.enablecompression+ to [literal]+true+ in [path]_hbase-site.xml_.
+You can enable compression of each tag in the WAL, if WAL compression is also enabled, by setting the value of +hbase.regionserver.wal.tags.enablecompression+ to `true` in _hbase-site.xml_.
 Tag compression uses dictionary encoding.
 
 Tag compression is not supported when using WAL encryption.
@@ -574,21 +564,21 @@ HBase access levels are granted independently of each other and allow for differ
 The possible scopes are:
 
 * +Superuser+ - superusers can perform any operation available in HBase, to any resource.
-  The user who runs HBase on your cluster is a superuser, as are any principals assigned to the configuration property [code]+hbase.superuser+ in [path]_hbase-site.xml_ on the HMaster.
-* +Global+ - permissions granted at [path]_global_                scope allow the admin to operate on all tables of the cluster.
-* +Namespace+ - permissions granted at [path]_namespace_ scope apply to all tables within a given namespace.
-* +Table+ - permissions granted at [path]_table_                scope apply to data or metadata within a given table.
-* +ColumnFamily+ - permissions granted at [path]_ColumnFamily_ scope apply to cells within that ColumnFamily.
-* +Cell+ - permissions granted at [path]_cell_ scope apply to that exact cell coordinate (key, value, timestamp). This allows for policy evolution along with data.
+  The user who runs HBase on your cluster is a superuser, as are any principals assigned to the configuration property `hbase.superuser` in _hbase-site.xml_ on the HMaster.
+* +Global+ - permissions granted at _global_                scope allow the admin to operate on all tables of the cluster.
+* +Namespace+ - permissions granted at _namespace_ scope apply to all tables within a given namespace.
+* +Table+ - permissions granted at _table_                scope apply to data or metadata within a given table.
+* +ColumnFamily+ - permissions granted at _ColumnFamily_ scope apply to cells within that ColumnFamily.
+* +Cell+ - permissions granted at _cell_ scope apply to that exact cell coordinate (key, value, timestamp). This allows for policy evolution along with data.
 +
 To change an ACL on a specific cell, write an updated cell with new ACL to the precise coordinates of the original.
 +
 If you have a multi-versioned schema and want to update ACLs on all visible versions, you need to write new cells for all visible versions.
 The application has complete control over policy evolution.
 +
-The exception to the above rule is [code]+append+ and [code]+increment+ processing.
+The exception to the above rule is `append` and `increment` processing.
 Appends and increments can carry an ACL in the operation.
-If one is included in the operation, then it will be applied to the result of the [code]+append+ or [code]+increment+.
+If one is included in the operation, then it will be applied to the result of the `append` or `increment`.
 Otherwise, the ACL of the existing cell you are appending to or incrementing is preserved.
 
 
@@ -612,21 +602,21 @@ In a production environment, it is likely that different users will have only on
 +
 [WARNING]
 ====
-In the current implementation, a Global Admin with [code]+Admin+                  permission can grant himself [code]+Read+ and [code]+Write+ permissions on a table and gain access to that table's data.
-For this reason, only grant [code]+Global Admin+ permissions to trusted user who actually need them.
+In the current implementation, a Global Admin with `Admin`                  permission can grant himself `Read` and `Write` permissions on a table and gain access to that table's data.
+For this reason, only grant `Global Admin` permissions to trusted user who actually need them.
 
-Also be aware that a [code]+Global Admin+ with [code]+Create+                  permission can perform a [code]+Put+ operation on the ACL table, simulating a [code]+grant+ or [code]+revoke+ and circumventing the authorization check for [code]+Global Admin+ permissions.
+Also be aware that a `Global Admin` with `Create`                  permission can perform a `Put` operation on the ACL table, simulating a `grant` or `revoke` and circumventing the authorization check for `Global Admin` permissions.
 
-Due to these issues, be cautious with granting [code]+Global Admin+                  privileges.
+Due to these issues, be cautious with granting `Global Admin`                  privileges.
 ====
 
-* +Namespace Admins+ - a namespace admin with [code]+Create+                permissions can create or drop tables within that namespace, and take and restore snapshots.
-  A namespace admin with [code]+Admin+ permissions can perform operations such as splits or major compactions on tables within that namespace.
+* +Namespace Admins+ - a namespace admin with `Create`                permissions can create or drop tables within that namespace, and take and restore snapshots.
+  A namespace admin with `Admin` permissions can perform operations such as splits or major compactions on tables within that namespace.
 * +Table Admins+ - A table admin can perform administrative operations only on that table.
-  A table admin with [code]+Create+ permissions can create snapshots from that table or restore that table from a snapshot.
-  A table admin with [code]+Admin+ permissions can perform operations such as splits or major compactions on that table.
+  A table admin with `Create` permissions can create snapshots from that table or restore that table from a snapshot.
+  A table admin with `Admin` permissions can perform operations such as splits or major compactions on that table.
 * +Users+ - Users can read or write data, or both.
-  Users can also execute coprocessor endpoints, if given [code]+Executable+ permissions.
+  Users can also execute coprocessor endpoints, if given `Executable` permissions.
 
 .Real-World Example of Access Levels
 [cols="1,1,1,1", options="header"]
@@ -682,7 +672,7 @@ Cell-level ACLs are implemented using tags (see <<hbase.tags,hbase.tags>>). In o
 
 
 . As a prerequisite, perform the steps in <<security.data.basic.server.side,security.data.basic.server.side>>.
-. Install and configure the AccessController coprocessor, by setting the following properties in [path]_hbase-site.xml_.
+. Install and configure the AccessController coprocessor, by setting the following properties in _hbase-site.xml_.
   These properties take a list of classes. 
 +
 NOTE: If you use the AccessController along with the VisibilityController, the AccessController must come first in the list, because with both components active, the VisibilityController will delegate access control on its system tables to the AccessController.
@@ -708,10 +698,10 @@ For an example of using both together, see <<security.example.config,security.ex
 </property>
 ----
 +
-Optionally, you can enable transport security, by setting +hbase.rpc.protection+ to [literal]+auth-conf+.
+Optionally, you can enable transport security, by setting +hbase.rpc.protection+ to `auth-conf`.
 This requires HBase 0.98.4 or newer.
 
-. Set up the Hadoop group mapper in the Hadoop namenode's [path]_core-site.xml_.
+. Set up the Hadoop group mapper in the Hadoop namenode's _core-site.xml_.
   This is a Hadoop file, not an HBase file.
   Customize it to your site's needs.
   Following is an example.
@@ -766,11 +756,11 @@ This requires HBase 0.98.4 or newer.
 . Optionally, enable the early-out evaluation strategy.
   Prior to HBase 0.98.0, if a user was not granted access to a column family, or at least a column qualifier, an AccessDeniedException would be thrown.
   HBase 0.98.0 removed this exception in order to allow cell-level exceptional grants.
-  To restore the old behavior in HBase 0.98.0-0.98.6, set +hbase.security.access.early_out+ to [literal]+true+ in [path]_hbase-site.xml_.
-  In HBase 0.98.6, the default has been returned to [literal]+true+.
+  To restore the old behavior in HBase 0.98.0-0.98.6, set +hbase.security.access.early_out+ to `true` in _hbase-site.xml_.
+  In HBase 0.98.6, the default has been returned to `true`.
 . Distribute your configuration and restart your cluster for changes to take effect.
 . To test your configuration, log into HBase Shell as a given user and use the +whoami+ command to report the groups your user is part of.
-  In this example, the user is reported as being a member of the [code]+services+                group.
+  In this example, the user is reported as being a member of the `services`                group.
 +
 ----
 hbase> whoami
@@ -786,7 +776,7 @@ Administration tasks can be performed from HBase Shell or via an API.
 .API Examples
 [CAUTION]
 ====
-Many of the API examples below are taken from source files [path]_hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java_              and [path]_hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/SecureTestUtil.java_.
+Many of the API examples below are taken from source files _hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java_              and _hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/SecureTestUtil.java_.
 
 Neither the examples, nor the source files they are taken from, are part of the public HBase API, and are provided for illustration only.
 Refer to the official API for usage instructions.
@@ -802,12 +792,13 @@ Users and groups are maintained external to HBase, in your directory.
 There are a few different types of syntax for grant statements.
 The first, and most familiar, is as follows, with the table and column family being optional:
 +
+[source,sql]
 ----
 grant 'user', 'RWXCA', 'TABLE', 'CF', 'CQ'
 ----
 +
-Groups and users are granted access in the same way, but groups are prefixed with an [literal]+@+ symbol.
-In the same way, tables and namespaces are specified in the same way, but namespaces are prefixed with an [literal]+@+                symbol.
+Groups and users are granted access in the same way, but groups are prefixed with an `@` symbol.
+In the same way, tables and namespaces are specified in the same way, but namespaces are prefixed with an `@`                symbol.
 +
 It is also possible to grant multiple permissions against the same resource in a single statement, as in this example.
 The first sub-clause maps users to ACLs and the second sub-clause specifies the resource.
@@ -862,7 +853,7 @@ grant <table>, \
   { <scanner-specification> }
 ----
 +
-* [replaceable]_<user-or-group>_ is the user or group name, prefixed with [literal]+@+ in the case of a group.
+* [replaceable]_<user-or-group>_ is the user or group name, prefixed with `@` in the case of a group.
 * [replaceable]_<permissions>_ is a string containing any or all of "RWXCA", though only R and W are meaningful at cell scope.
 * [replaceable]_<scanner-specification>_ is the scanner specification syntax and conventions used by the 'scan' shell command.
   For some examples of scanner specifications, issue the following HBase Shell command.
@@ -911,7 +902,7 @@ public static void grantOnTable(final HBaseTestingUtility util, final String use
 }
 ----
 
-To grant permissions at the cell level, you can use the [code]+Mutation.setACL+ method:
+To grant permissions at the cell level, you can use the `Mutation.setACL` method:
 
 [source,java]
 ----
@@ -919,7 +910,7 @@ Mutation.setACL(String user, Permission perms)
 Mutation.setACL(Map<String, Permission> perms)
 ----
 
-Specifically, this example provides read permission to a user called [literal]+user1+ on any cells contained in a particular Put operation:
+Specifically, this example provides read permission to a user called `user1` on any cells contained in a particular Put operation:
 
 [source,java]
 ----
@@ -1000,7 +991,7 @@ public static void verifyAllowed(User user, AccessTestAction action, int count) 
 === Visibility Labels
 
 Visibility labels control can be used to only permit users or principals associated with a given label to read or access cells with that label.
-For instance, you might label a cell [literal]+top-secret+, and only grant access to that label to the [literal]+managers+ group.
+For instance, you might label a cell `top-secret`, and only grant access to that label to the `managers` group.
 Visibility labels are implemented using Tags, which are a feature of HFile v3, and allow you to store metadata on a per-cell basis.
 A label is a string, and labels can be combined into expressions by using logical operators (&, |, or !), and using parentheses for grouping.
 HBase does not do any kind of validation of expressions beyond basic well-formedness.
@@ -1009,14 +1000,14 @@ Visibility labels have no meaning on their own, and may be used to denote sensit
 If a user's labels do not match a cell's label or expression, the user is denied access to the cell.
 
 In HBase 0.98.6 and newer, UTF-8 encoding is supported for visibility labels and expressions.
-When creating labels using the [code]+addLabels(conf, labels)+ method provided by the [code]+org.apache.hadoop.hbase.security.visibility.VisibilityClient+        class and passing labels in Authorizations via Scan or Get, labels can contain UTF-8 characters, as well as the logical operators normally used in visibility labels, with normal Java notations, without needing any escaping method.
-However, when you pass a CellVisibility expression via a Mutation, you must enclose the expression with the [code]+CellVisibility.quote()+ method if you use UTF-8 characters or logical operators.
-See [code]+TestExpressionParser+ and the source file [path]_hbase-client/src/test/java/org/apache/hadoop/hbase/client/TestScan.java_. 
+When creating labels using the `addLabels(conf, labels)` method provided by the `org.apache.hadoop.hbase.security.visibility.VisibilityClient`        class and passing labels in Authorizations via Scan or Get, labels can contain UTF-8 characters, as well as the logical operators normally used in visibility labels, with normal Java notations, without needing any escaping method.
+However, when you pass a CellVisibility expression via a Mutation, you must enclose the expression with the `CellVisibility.quote()` method if you use UTF-8 characters or logical operators.
+See `TestExpressionParser` and the source file _hbase-client/src/test/java/org/apache/hadoop/hbase/client/TestScan.java_. 
 
 A user adds visibility expressions to a cell during a Put operation.
 In the default configuration, the user does not need to access to a label in order to label cells with it.
 This behavior is controlled by the configuration option +hbase.security.visibility.mutations.checkauths+.
-If you set this option to [literal]+true+, the labels the user is modifying as part of the mutation must be associated with the user, or the mutation will fail.
+If you set this option to `true`, the labels the user is modifying as part of the mutation must be associated with the user, or the mutation will fail.
 Whether a user is authorized to read a labelled cell is determined during a Get or Scan, and results which the user is not allowed to read are filtered out.
 This incurs the same I/O penalty as if the results were returned, but reduces load on the network.
 
@@ -1027,11 +1018,11 @@ The user's effective label set is built in the RPC context when a request is fir
 The way that users are associated with labels is pluggable.
 The default plugin passes through labels specified in Authorizations added to the Get or Scan and checks those against the calling user's authenticated labels list.
 When the client passes labels for which the user is not authenticated, the default plugin drops them.
-You can pass a subset of user authenticated labels via the [code]+Get#setAuthorizations(Authorizations(String,...))+ and [code]+Scan#setAuthorizations(Authorizations(String,...));+ methods. 
+You can pass a subset of user authenticated labels via the `Get#setAuthorizations(Authorizations(String,...))` and `Scan#setAuthorizations(Authorizations(String,...));` methods. 
 
 Visibility label access checking is performed by the VisibilityController coprocessor.
-You can use interface [code]+VisibilityLabelService+ to provide a custom implementation and/or control the way that visibility labels are stored with cells.
-See the source file [path]_hbase-server/src/test/java/org/apache/hadoop/hbase/security/visibility/TestVisibilityLabelsWithCustomVisLabService.java_        for one example.
+You can use interface `VisibilityLabelService` to provide a custom implementation and/or control the way that visibility labels are stored with cells.
+See the source file _hbase-server/src/test/java/org/apache/hadoop/hbase/security/visibility/TestVisibilityLabelsWithCustomVisLabService.java_        for one example.
 
 Visibility labels can be used in conjunction with ACLs.
 
@@ -1058,12 +1049,11 @@ Visibility labels can be used in conjunction with ACLs.
 
 
 . As a prerequisite, perform the steps in <<security.data.basic.server.side,security.data.basic.server.side>>.
-. Install and configure the VisibilityController coprocessor by setting the following properties in [path]_hbase-site.xml_.
+. Install and configure the VisibilityController coprocessor by setting the following properties in _hbase-site.xml_.
   These properties take a list of class names.
 +
 [source,xml]
 ----
-
 <property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
@@ -1080,7 +1070,7 @@ NOTE: If you use the AccessController and VisibilityController coprocessors toge
 +
 By default, users can label cells with any label, including labels they are not associated with, which means that a user can Put data that he cannot read.
 For example, a user could label a cell with the (hypothetical) 'topsecret' label even if the user is not associated with that label.
-If you only want users to be able to label cells with labels they are associated with, set +hbase.security.visibility.mutations.checkauths+ to [literal]+true+.
+If you only want users to be able to label cells with labels they are associated with, set +hbase.security.visibility.mutations.checkauths+ to `true`.
 In that case, the mutation will fail if it makes use of labels the user is not associated with.
 
 . Distribute your configuration and restart your cluster for changes to take effect.
@@ -1093,7 +1083,7 @@ For defining the list of visibility labels and associating labels with users, th
 .API Examples
 [CAUTION]
 ====
-Many of the Java API examples in this section are taken from the source file  [path]_hbase-server/src/test/java/org/apache/hadoop/hbase/security/visibility/TestVisibilityLabels.java_.
+Many of the Java API examples in this section are taken from the source file  _hbase-server/src/test/java/org/apache/hadoop/hbase/security/visibility/TestVisibilityLabels.java_.
 Refer to that file or the API documentation for more context.
 
 Neither these examples, nor the source file they were taken from, are part of the public HBase API, and are provided for illustration only.
@@ -1234,7 +1224,6 @@ The correct way to apply cell level labels is to do so in the application code w
 ====
 [source,java]
 ----
-
 static HTable createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
     throws Exception {
   HTable table = null;
@@ -1262,9 +1251,9 @@ static HTable createTableAndWriteDataWithLabels(TableName tableName, String... l
 ==== Implementing Your Own Visibility Label Algorithm
 
 Interpreting the labels authenticated for a given get/scan request is a pluggable algorithm.
-You can specify a custom plugin by using the property [code]+hbase.regionserver.scan.visibility.label.generator.class+.
-The default implementation class is [code]+org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator+.
-You can also configure a set of [code]+ScanLabelGenerators+ to be used by the system, as a comma-separated list.
+You can specify a custom plugin by using the property `hbase.regionserver.scan.visibility.label.generator.class`.
+The default implementation class is `org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator`.
+You can also configure a set of `ScanLabelGenerators` to be used by the system, as a comma-separated list.
 
 ==== Replicating Visibility Tags as Strings
 
@@ -1292,7 +1281,7 @@ When it is read, it is decrypted on demand.
 The administrator provisions a master key for the cluster, which is stored in a key provider accessible to every trusted HBase process, including the HMaster, RegionServers, and clients (such as HBase Shell) on administrative workstations.
 The default key provider is integrated with the Java KeyStore API and any key management systems with support for it.
 Other custom key provider implementations are possible.
-The key retrieval mechanism is configured in the [path]_hbase-site.xml_ configuration file.
+The key retrieval mechanism is configured in the _hbase-site.xml_ configuration file.
 The master key may be stored on the cluster servers, protected by a secure KeyStore file, or on an external keyserver, or in a hardware security module.
 This master key is resolved as needed by HBase processes through the configured key provider.
 
@@ -1320,8 +1309,9 @@ If you are using a custom implementation, check its documentation and adjust acc
 
 
 . Create a secret key of appropriate length for AES encryption, using the
-  [code]+keytool+ utility.
+  `keytool` utility.
 +
+[source,bash]
 ----
 $ keytool -keystore /path/to/hbase/conf/hbase.jks \
   -storetype jceks -storepass **** \
@@ -1337,17 +1327,16 @@ Do not specify a separate password for the key, but press kbd:[Return] when prom
 . Set appropriate permissions on the keyfile and distribute it to all the HBase
   servers.
 +
-The previous command created a file called [path]_hbase.jks_ in the HBase [path]_conf/_ directory.
+The previous command created a file called _hbase.jks_ in the HBase _conf/_ directory.
 Set the permissions and ownership on this file such that only the HBase service account user can read the file, and securely distribute the key to all HBase servers.
 
 . Configure the HBase daemons.
 +
-Set the following properties in [path]_hbase-site.xml_ on the region servers, to configure HBase daemons to use a key provider backed by the KeyStore file or retrieving the cluster master key.
+Set the following properties in _hbase-site.xml_ on the region servers, to configure HBase daemons to use a key provider backed by the KeyStore file or retrieving the cluster master key.
 In the example below, replace [replaceable]_****_ with the password.
 +
 [source,xml]
 ----
-
 <property>
     <name>hbase.crypto.keyprovider</name>
     <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
@@ -1363,7 +1352,6 @@ However, you can store it with an arbitrary alias (in the +keytool+ command). In
 +
 [source,xml]
 ----
-
 <property>
     <name>hbase.crypto.master.key.name</name>
     <value>my-alias</value>
@@ -1372,11 +1360,10 @@ However, you can store it with an arbitrary alias (in the +keytool+ command). In
 +
 You also need to be sure your HFiles use HFile v3, in order to use transparent encryption.
 This is the default configuration for HBase 1.0 onward.
-For previous versions, set the following property in your [path]_hbase-site.xml_              file.
+For previous versions, set the following property in your _hbase-site.xml_              file.
 +
 [source,xml]
 ----
-
 <property>
     <name>hfile.format.version</name>
     <value>3</value>
@@ -1388,41 +1375,40 @@ Optionally, you can use a different cipher provider, either a Java Cryptography 
 * JCE: 
 +
 * Install a signed JCE provider (supporting ``AES/CTR/NoPadding'' mode with 128 bit keys) 
-* Add it with highest preference to the JCE site configuration file [path]_$JAVA_HOME/lib/security/java.security_.
-* Update +hbase.crypto.algorithm.aes.provider+ and +hbase.crypto.algorithm.rng.provider+ options in [path]_hbase-site.xml_. 
+* Add it with highest preference to the JCE site configuration file _$JAVA_HOME/lib/security/java.security_.
+* Update +hbase.crypto.algorithm.aes.provider+ and +hbase.crypto.algorithm.rng.provider+ options in _hbase-site.xml_. 
 
 * Custom HBase Cipher: 
 +
-* Implement [code]+org.apache.hadoop.hbase.io.crypto.CipherProvider+.
+* Implement `org.apache.hadoop.hbase.io.crypto.CipherProvider`.
 * Add the implementation to the server classpath.
-* Update +hbase.crypto.cipherprovider+ in [path]_hbase-site.xml_.
+* Update +hbase.crypto.cipherprovider+ in _hbase-site.xml_.
 
 
 . Configure WAL encryption.
 +
-Configure WAL encryption in every RegionServer's [path]_hbase-site.xml_, by setting the following properties.
-You can include these in the HMaster's [path]_hbase-site.xml_ as well, but the HMaster does not have a WAL and will not use them.
+Configure WAL encryption in every RegionServer's _hbase-site.xml_, by setting the following properties.
+You can include these in the HMaster's _hbase-site.xml_ as well, but the HMaster does not have a WAL and will not use them.
 +
 [source,xml]
 ----
-
 <property>
-    <name>hbase.regionserver.hlog.reader.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
+  <name>hbase.regionserver.hlog.reader.impl</name>
+  <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
 </property>
 <property>
-    <name>hbase.regionserver.hlog.writer.impl</name>
-    <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
+  <name>hbase.regionserver.hlog.writer.impl</name>
+  <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter</value>
 </property>
 <property>
-    <name>hbase.regionserver.wal.encryption</name>
-    <value>true</value>
+  <name>hbase.regionserver.wal.encryption</name>
+  <value>true</value>
 </property>
 ----
 
-. Configure permissions on the [path]_hbase-site.xml_ file.
+. Configure permissions on the _hbase-site.xml_ file.
 +
-Because the keystore password is stored in the hbase-site.xml, you need to ensure that only the HBase user can read the [path]_hbase-site.xml_ file, using file ownership and permissions.
+Because the keystore password is stored in the hbase-site.xml, you need to ensure that only the HBase user can read the _hbase-site.xml_ file, using file ownership and permissions.
 
 . Restart your cluster.
 +
@@ -1436,7 +1422,7 @@ Administrative tasks can be performed in HBase Shell or the Java API.
 .Java API
 [CAUTION]
 ====
-Java API examples in this section are taken from the source file [path]_hbase-server/src/test/java/org/apache/hadoop/hbase/util/TestHBaseFsckEncryption.java_.
+Java API examples in this section are taken from the source file _hbase-server/src/test/java/org/apache/hadoop/hbase/util/TestHBaseFsckEncryption.java_.
 .
 
 Neither these examples, nor the source files they are taken from, are part of the public HBase API, and are provided for illustration only.
@@ -1454,12 +1440,12 @@ Rotate the Data Key::
   Until the compaction completes, the old HFiles will still be readable using the old key.
 
 Switching Between Using a Random Data Key and Specifying A Key::
-  If you configured a column family to use a specific key and you want to return to the default behavior of using a randomly-generated key for that column family, use the Java API to alter the [code]+HColumnDescriptor+ so that no value is sent with the key [literal]+ENCRYPTION_KEY+.
+  If you configured a column family to use a specific key and you want to return to the default behavior of using a randomly-generated key for that column family, use the Java API to alter the `HColumnDescriptor` so that no value is sent with the key `ENCRYPTION_KEY`.
 
 Rotate the Master Key::
   To rotate the master key, first generate and distribute the new key.
   Then update the KeyStore to contain a new master key, and keep the old master key in the KeyStore using a different alias.
-  Next, configure fallback to the old master key in the [path]_hbase-site.xml_ file.
+  Next, configure fallback to the old master key in the _hbase-site.xml_ file.
 
 ::
 
@@ -1467,29 +1453,29 @@ Rotate the Master Key::
 === Secure Bulk Load
 
 Bulk loading in secure mode is a bit more involved than normal setup, since the client has to transfer the ownership of the files generated from the mapreduce job to HBase.
-Secure bulk loading is implemented by a coprocessor, named link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html[SecureBulkLoadEndpoint], which uses a staging directory configured by the configuration property +hbase.bulkload.staging.dir+, which defaults to [path]_/tmp/hbase-staging/_.
+Secure bulk loading is implemented by a coprocessor, named link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html[SecureBulkLoadEndpoint], which uses a staging directory configured by the configuration property +hbase.bulkload.staging.dir+, which defaults to _/tmp/hbase-staging/_.
 
-* .Secure Bulk Load AlgorithmOne time only, create a staging directory which is world-traversable and owned by the user which runs HBase (mode 711, or [literal]+rwx--x--x+). A listing of this directory will look similar to the following: 
+* .Secure Bulk Load AlgorithmOne time only, create a staging directory which is world-traversable and owned by the user which runs HBase (mode 711, or `rwx--x--x`). A listing of this directory will look similar to the following: 
 +
+[source,bash]
 ----
 $ ls -ld /tmp/hbase-staging
 drwx--x--x  2 hbase  hbase  68  3 Sep 14:54 /tmp/hbase-staging
 ----
 
 * A user writes out data to a secure output directory owned by that user.
-  For example, [path]_/user/foo/data_.
-* Internally, HBase creates a secret staging directory which is globally readable/writable ([code]+-rwxrwxrwx, 777+). For example, [path]_/tmp/hbase-staging/averylongandrandomdirectoryname_.
+  For example, _/user/foo/data_.
+* Internally, HBase creates a secret staging directory which is globally readable/writable (`-rwxrwxrwx, 777`). For example, _/tmp/hbase-staging/averylongandrandomdirectoryname_.
   The name and location of this directory is not exposed to the user.
   HBase manages creation and deletion of this directory.
-* The user makes the data world-readable and world-writable, moves it into the random staging directory, then calls the [code]+SecureBulkLoadClient#bulkLoadHFiles+            method.
+* The user makes the data world-readable and world-writable, moves it into the random staging directory, then calls the `SecureBulkLoadClient#bulkLoadHFiles`            method.
 
 The strength of the security lies in the length and randomness of the secret directory.
 
-To enable secure bulk load, add the following properties to [path]_hbase-site.xml_.
+To enable secure bulk load, add the following properties to _hbase-site.xml_.
 
 [source,xml]
 ----
-
 <property>
   <name>hbase.bulkload.staging.dir</name>
   <value>/tmp/hbase-staging</value>
@@ -1507,11 +1493,10 @@ To enable secure bulk load, add the following properties to [path]_hbase-site.xm
 This configuration example includes support for HFile v3, ACLs, Visibility Labels, and transparent encryption of data at rest and the WAL.
 All options have been discussed separately in the sections above.
 
-.Example Security Settings in [path]_hbase-site.xml_
+.Example Security Settings in _hbase-site.xml_
 ====
 [source,xml]
 ----
-
 <!-- HFile v3 Support -->
 <property>
   <name>hfile.format.version</name>
@@ -1598,13 +1583,12 @@ All options have been discussed separately in the sections above.
 ----
 ====
 
-.Example Group Mapper in Hadoop [path]_core-site.xml_
+.Example Group Mapper in Hadoop _core-site.xml_
 ====
 Adjust these settings to suit your environment.
 
 [source,xml]
 ----
-
 <property>
   <name>hadoop.security.group.mapping</name>
   <value>org.apache.hadoop.security.LdapGroupsMapping</value>

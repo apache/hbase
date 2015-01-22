@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
-<xsl:output method="text"/>
-<xsl:template match="configuration">
+
+
 <!--
 /**
  * Copyright 2010 The Apache Software Foundation
@@ -26,6 +26,19 @@
 This stylesheet is used making an html version of hbase-default.adoc.
 -->
 
+<xsl:output method="text"/>
+
+<!-- Normalize space -->
+<xsl:template match="text()">
+    <xsl:if test="normalize-space(.)">
+      <xsl:value-of select="normalize-space(.)"/>
+    </xsl:if>
+</xsl:template>
+
+<!-- Grab nodes of the <configuration> element -->
+<xsl:template match="configuration">
+
+<!-- Print the license at the top of the file -->
 ////
 /**
  *
@@ -46,7 +59,6 @@ This stylesheet is used making an html version of hbase-default.adoc.
  * limitations under the License.
  */
 ////
-
 :doctype: book
 :numbered:
 :toc: left
@@ -58,18 +70,23 @@ This stylesheet is used making an html version of hbase-default.adoc.
 
 The documentation below is generated using the default hbase configuration file, _hbase-default.xml_, as source.
 
-<xsl:for-each select="property">
-  <xsl:if test="not(@skipInDoc)">
-[[<xsl:value-of select="name" />]]
-*`<xsl:value-of select="name"/>`*::
+  <xsl:for-each select="property">
+    <xsl:if test="not(@skipInDoc)">
+[[<xsl:apply-templates select="name"/>]]
+`<xsl:apply-templates select="name"/>`::
 +
 .Description
-<xsl:value-of select="description"/>
+<xsl:apply-templates select="description"/>
 +
 .Default
-`<xsl:value-of select="value"/>`
+<xsl:choose>
+  <xsl:when test="value != ''">`<xsl:apply-templates select="value"/>`
 
-  </xsl:if>
-</xsl:for-each>
+</xsl:when>
+  <xsl:otherwise>none</xsl:otherwise>
+</xsl:choose>
+    </xsl:if>
+  </xsl:for-each>
+
 </xsl:template>
 </xsl:stylesheet>

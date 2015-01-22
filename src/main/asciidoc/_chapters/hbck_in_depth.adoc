@@ -45,7 +45,7 @@ At the end of the commands output it prints OK or tells you the number of INCONS
 You may also want to run run hbck a few times because some inconsistencies can be transient (e.g.
 cluster is starting up or a region is splitting). Operationally you may want to run hbck regularly and setup alert (e.g.
 via nagios) if it repeatedly reports inconsistencies . A run of hbck will report a list of inconsistencies along with a brief description of the regions and tables affected.
-The using the [code]+-details+ option will report more details including a representative listing of all the splits present in all the tables. 
+The using the `-details` option will report more details including a representative listing of all the splits present in all the tables. 
 
 [source,bourne]
 ----
@@ -76,7 +76,7 @@ There are two invariants that when violated create inconsistencies in HBase:
 Repairs generally work in three phases -- a read-only information gathering phase that identifies inconsistencies, a table integrity repair phase that restores the table integrity invariant, and then finally a region consistency repair phase that restores the region consistency invariant.
 Starting from version 0.90.0, hbck could detect region consistency problems report on a subset of possible table integrity problems.
 It also included the ability to automatically fix the most common inconsistency, region assignment and deployment consistency problems.
-This repair could be done by using the [code]+-fix+ command line option.
+This repair could be done by using the `-fix` command line option.
 These problems close regions if they are open on the wrong server or on multiple region servers and also assigns regions to region servers if they are not open. 
 
 Starting from HBase versions 0.90.7, 0.92.2 and 0.94.0, several new command line options are introduced to aid repairing a corrupted HBase.
@@ -89,8 +89,8 @@ These are generally region consistency repairs -- localized single region repair
 Region consistency requires that the HBase instance has the state of the region's data in HDFS (.regioninfo files), the region's row in the hbase:meta table., and region's deployment/assignments on region servers and the master in accordance.
 Options for repairing region consistency include: 
 
-* [code]+-fixAssignments+ (equivalent to the 0.90 [code]+-fix+ option) repairs unassigned, incorrectly assigned or multiply assigned regions.
-* [code]+-fixMeta+ which removes meta rows when corresponding regions are not present in HDFS and adds new meta rows if they regions are present in HDFS while not in META.                To fix deployment and assignment problems you can run this command: 
+* `-fixAssignments` (equivalent to the 0.90 `-fix` option) repairs unassigned, incorrectly assigned or multiply assigned regions.
+* `-fixMeta` which removes meta rows when corresponding regions are not present in HDFS and adds new meta rows if they regions are present in HDFS while not in META.                To fix deployment and assignment problems you can run this command: 
 
 [source,bourne]
 ----
@@ -110,7 +110,7 @@ There are a few classes of table integrity problems that are low risk repairs.
 The first two are degenerate (startkey == endkey) regions and backwards regions (startkey > endkey). These are automatically handled by sidelining the data to a temporary directory (/hbck/xxxx). The third low-risk class is hdfs region holes.
 This can be repaired by using the:
 
-* [code]+-fixHdfsHoles+ option for fabricating new empty regions on the file system.
+* `-fixHdfsHoles` option for fabricating new empty regions on the file system.
   If holes are detected you can use -fixHdfsHoles and should include -fixMeta and -fixAssignments to make the new region consistent.
 
 [source,bourne]
@@ -119,7 +119,7 @@ This can be repaired by using the:
 $ ./bin/hbase hbck -fixAssignments -fixMeta -fixHdfsHoles
 ----
 
-Since this is a common operation, we've added a the [code]+-repairHoles+ flag that is equivalent to the previous command:
+Since this is a common operation, we've added a the `-repairHoles` flag that is equivalent to the previous command:
 
 [source,bourne]
 ----
@@ -133,12 +133,12 @@ If inconsistencies still remain after these steps, you most likely have table in
 
 Table integrity problems can require repairs that deal with overlaps.
 This is a riskier operation because it requires modifications to the file system, requires some decision making, and may require some manual steps.
-For these repairs it is best to analyze the output of a [code]+hbck -details+                run so that you isolate repairs attempts only upon problems the checks identify.
+For these repairs it is best to analyze the output of a `hbck -details`                run so that you isolate repairs attempts only upon problems the checks identify.
 Because this is riskier, there are safeguard that should be used to limit the scope of the repairs.
 WARNING: This is a relatively new and have only been tested on online but idle HBase instances (no reads/writes). Use at your own risk in an active production environment! The options for repairing table integrity violations include:
 
-* [code]+-fixHdfsOrphans+ option for ``adopting'' a region directory that is missing a region metadata file (the .regioninfo file).
-* [code]+-fixHdfsOverlaps+ ability for fixing overlapping regions
+* `-fixHdfsOrphans` option for ``adopting'' a region directory that is missing a region metadata file (the .regioninfo file).
+* `-fixHdfsOverlaps` ability for fixing overlapping regions
 
 When repairing overlapping regions, a region's data can be modified on the file system in two ways: 1) by merging regions into a larger region or 2) by sidelining regions by moving data to ``sideline'' directory where data could be restored later.
 Merging a large number of regions is technically correct but could result in an extremely large region that requires series of costly compactions and splitting operations.
@@ -147,13 +147,13 @@ Since these sidelined regions are already laid out in HBase's native directory a
 The default safeguard thresholds are conservative.
 These options let you override the default thresholds and to enable the large region sidelining feature.
 
-* [code]+-maxMerge <n>+ maximum number of overlapping regions to merge
-* [code]+-sidelineBigOverlaps+ if more than maxMerge regions are overlapping, sideline attempt to sideline the regions overlapping with the most other regions.
-* [code]+-maxOverlapsToSideline <n>+ if sidelining large overlapping regions, sideline at most n regions.
+* `-maxMerge <n>` maximum number of overlapping regions to merge
+* `-sidelineBigOverlaps` if more than maxMerge regions are overlapping, sideline attempt to sideline the regions overlapping with the most other regions.
+* `-maxOverlapsToSideline <n>` if sidelining large overlapping regions, sideline at most n regions.
 
 Since often times you would just want to get the tables repaired, you can use this option to turn on all repair options:
 
-* [code]+-repair+ includes all the region consistency options and only the hole repairing table integrity options.
+* `-repair` includes all the region consistency options and only the hole repairing table integrity options.
 
 Finally, there are safeguards to limit repairs to only specific tables.
 For example the following command would only attempt to check and repair table TableFoo and TableBar.
@@ -167,7 +167,7 @@ $ ./bin/hbase hbck -repair TableFoo TableBar
 
 There are a few special cases that hbck can handle as well.
 Sometimes the meta table's only region is inconsistently assigned or deployed.
-In this case there is a special [code]+-fixMetaOnly+ option that can try to fix meta assignments.
+In this case there is a special `-fixMetaOnly` option that can try to fix meta assignments.
 
 ----
 
@@ -177,7 +177,7 @@ $ ./bin/hbase hbck -fixMetaOnly -fixAssignments
 ==== Special cases: HBase version file is missing
 
 HBase's data on the file system requires a version file in order to start.
-If this flie is missing, you can use the [code]+-fixVersionFile+ option to fabricating a new HBase version file.
+If this flie is missing, you can use the `-fixVersionFile` option to fabricating a new HBase version file.
 This assumes that the version of hbck you are running is the appropriate version for the HBase cluster.
 
 ==== Special case: Root and META are corrupt.
@@ -204,9 +204,9 @@ HBase can clean up parents in the right order.
 However, there could be some lingering offline split parents sometimes.
 They are in META, in HDFS, and not deployed.
 But HBase can't clean them up.
-In this case, you can use the [code]+-fixSplitParents+ option to reset them in META to be online and not split.
+In this case, you can use the `-fixSplitParents` option to reset them in META to be online and not split.
 Therefore, hbck can merge them with other regions if fixing overlapping regions option is used. 
 
-This option should not normally be used, and it is not in [code]+-fixAll+. 
+This option should not normally be used, and it is not in `-fixAll`. 
 
 :numbered:

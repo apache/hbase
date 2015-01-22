@@ -33,7 +33,7 @@ Anything you can do in IRB, you should be able to do in the HBase Shell.
 
 To run the HBase shell, do as follows:
 
-[source]
+[source,bash]
 ----
 $ ./bin/hbase shell
 ----
@@ -49,11 +49,11 @@ Here is a nicely formatted listing of link:http://learnhbase.wordpress.com/2013/
 [[scripting]]
 == Scripting with Ruby
 
-For examples scripting Apache HBase, look in the HBase [path]_bin_            directory.
-Look at the files that end in [path]_*.rb_.
+For examples scripting Apache HBase, look in the HBase _bin_            directory.
+Look at the files that end in _*.rb_.
 To run one of these files, do as follows:
 
-[source]
+[source,bash]
 ----
 $ ./bin/hbase org.jruby.Main PATH_TO_SCRIPT
 ----
@@ -62,7 +62,7 @@ $ ./bin/hbase org.jruby.Main PATH_TO_SCRIPT
 
 A new non-interactive mode has been added to the HBase Shell (link:https://issues.apache.org/jira/browse/HBASE-11658[HBASE-11658)].
 Non-interactive mode captures the exit status (success or failure) of HBase Shell commands and passes that status back to the command interpreter.
-If you use the normal interactive mode, the HBase Shell will only ever return its own exit status, which will nearly always be [literal]+0+ for success.
+If you use the normal interactive mode, the HBase Shell will only ever return its own exit status, which will nearly always be `0` for success.
 
 To invoke non-interactive mode, pass the +-n+ or +--non-interactive+ option to HBase Shell.
 
@@ -77,10 +77,11 @@ NOTE: Spawning HBase Shell commands in this way is slow, so keep that in mind wh
 
 .Passing Commands to the HBase Shell
 ====
-You can pass commands to the HBase Shell in non-interactive mode (see <<hbasee.shell.noninteractive,hbasee.shell.noninteractive>>) using the +echo+                command and the [literal]+|+ (pipe) operator.
+You can pass commands to the HBase Shell in non-interactive mode (see <<hbasee.shell.noninteractive,hbasee.shell.noninteractive>>) using the +echo+                command and the `|` (pipe) operator.
 Be sure to escape characters in the HBase commands which would otherwise be interpreted by the shell.
 Some debug-level output has been truncated from the example below.
 
+[source,bash]
 ----
 $ echo "describe 'test1'" | ./hbase shell -n
                 
@@ -98,8 +99,9 @@ DESCRIPTION                                          ENABLED
 1 row(s) in 3.2410 seconds
 ----
 
-To suppress all output, echo it to [path]_/dev/null:_
+To suppress all output, echo it to _/dev/null:_
 
+[source,bash]
 ----
 $ echo "describe 'test'" | ./hbase shell -n > /dev/null 2>&1
 ----
@@ -108,15 +110,14 @@ $ echo "describe 'test'" | ./hbase shell -n > /dev/null 2>&1
 .Checking the Result of a Scripted Command
 ====
 Since scripts are not designed to be run interactively, you need a way to check whether your command failed or succeeded.
-The HBase shell uses the standard convention of returning a value of [literal]+0+ for successful commands, and some non-zero value for failed commands.
-Bash stores a command's return value in a special environment variable called [var]+$?+.
+The HBase shell uses the standard convention of returning a value of `0` for successful commands, and some non-zero value for failed commands.
+Bash stores a command's return value in a special environment variable called `$?`.
 Because that variable is overwritten each time the shell runs any command, you should store the result in a different, script-defined variable.
 
 This is a naive script that shows one way to store the return value and make a decision based upon it.
 
-[source,bourne]
+[source,bash]
 ----
-
 #!/bin/bash
 
 echo "describe 'test'" | ./hbase shell -n > /dev/null 2>&1
@@ -147,7 +148,6 @@ You can enter HBase Shell commands into a text file, one command per line, and p
 .Example Command File
 ====
 ----
-
 create 'test', 'cf'
 list 'test'
 put 'test', 'row1', 'cf:a', 'value1'
@@ -170,8 +170,8 @@ If you do not include the +exit+ command in your script, you are returned to the
 There is no way to programmatically check each individual command for success or failure.
 Also, though you see the output for each command, the commands themselves are not echoed to the screen so it can be difficult to line up the command with its output.
 
+[source,bash]
 ----
-
 $ ./hbase shell ./sample_commands.txt
 0 row(s) in 3.4170 seconds
 
@@ -206,13 +206,13 @@ COLUMN                CELL
 
 == Passing VM Options to the Shell
 
-You can pass VM options to the HBase Shell using the [code]+HBASE_SHELL_OPTS+            environment variable.
-You can set this in your environment, for instance by editing [path]_~/.bashrc_, or set it as part of the command to launch HBase Shell.
+You can pass VM options to the HBase Shell using the `HBASE_SHELL_OPTS`            environment variable.
+You can set this in your environment, for instance by editing _~/.bashrc_, or set it as part of the command to launch HBase Shell.
 The following example sets several garbage-collection-related variables, just for the lifetime of the VM running the HBase Shell.
-The command should be run all on a single line, but is broken by the [literal]+\+ character, for readability.
+The command should be run all on a single line, but is broken by the `\` character, for readability.
 
+[source,bash]
 ----
-
 $ HBASE_SHELL_OPTS="-verbose:gc -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCDateStamps \ 
   -XX:+PrintGCDetails -Xloggc:$HBASE_HOME/logs/gc-hbase.log" ./bin/hbase shell
 ----
@@ -229,7 +229,6 @@ The table reference can be used to perform data read write operations such as pu
 For example, previously you would always specify a table name:
 
 ----
-
 hbase(main):000:0> create ‘t’, ‘f’
 0 row(s) in 1.0970 seconds
 hbase(main):001:0> put 't', 'rold', 'f', 'v'
@@ -260,7 +259,6 @@ hbase(main):006:0>
 Now you can assign the table to a variable and use the results in jruby shell code.
 
 ----
-
 hbase(main):007 > t = create 't', 'f'
 0 row(s) in 1.0970 seconds
 
@@ -287,7 +285,6 @@ hbase(main):039:0> t.drop
 If the table has already been created, you can assign a Table to a variable by using the get_table method:
 
 ----
-
 hbase(main):011 > create 't','f'
 0 row(s) in 1.2500 seconds
 
@@ -310,7 +307,6 @@ You can then use jruby to script table operations based on these names.
 The list_snapshots command also acts similarly.
 
 ----
-
 hbase(main):016 > tables = list(‘t.*’)
 TABLE                                                                                                                               
 t                                                                                                                                   
@@ -324,28 +320,26 @@ hbase(main):017:0> tables.map { |t| disable t ; drop  t}
 hbase(main):018:0>
 ----
 
-=== [path]_irbrc_
+=== _irbrc_
 
-Create an [path]_.irbrc_ file for yourself in your home directory.
+Create an _.irbrc_ file for yourself in your home directory.
 Add customizations.
 A useful one is command history so commands are save across Shell invocations:
-
+[source,bash]
 ----
-
 $ more .irbrc
 require 'irb/ext/save-history'
 IRB.conf[:SAVE_HISTORY] = 100
 IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb-save-history"
 ----
 
-See the +ruby+ documentation of [path]_.irbrc_ to learn about other possible configurations. 
+See the +ruby+ documentation of _.irbrc_ to learn about other possible configurations. 
 
 === LOG data to timestamp
 
 To convert the date '08/08/16 20:56:29' from an hbase log into a timestamp, do:
 
 ----
-
 hbase(main):021:0> import java.text.SimpleDateFormat
 hbase(main):022:0> import java.text.ParsePosition
 hbase(main):023:0> SimpleDateFormat.new("yy/MM/dd HH:mm:ss").parse("08/08/16 20:56:29", ParsePosition.new(0)).getTime() => 1218920189000
@@ -354,7 +348,6 @@ hbase(main):023:0> SimpleDateFormat.new("yy/MM/dd HH:mm:ss").parse("08/08/16 20:
 To go the other direction:
 
 ----
-
 hbase(main):021:0> import java.util.Date
 hbase(main):022:0> Date.new(1218920189000).toString() => "Sat Aug 16 20:56:29 UTC 2008"
 ----
@@ -377,7 +370,7 @@ hbase> debug <RETURN>
 
 To enable DEBUG level logging in the shell, launch it with the +-d+ option.
 
-[source]
+[source,bash]
 ----
 $ ./bin/hbase shell -d
 ----

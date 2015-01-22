@@ -42,7 +42,7 @@ The rest of this chapter discusses the filter language provided by the Thrift AP
 
 Thrift Filter Language was introduced in APache HBase 0.92.
 It allows you to perform server-side filtering when accessing HBase over Thrift or in the HBase shell.
-You can find out more about shell integration by using the [code]+scan help+            command in the shell.
+You can find out more about shell integration by using the `scan help`            command in the shell.
 
 You specify a filter as a string, which is parsed on the server to construct the filter.
 
@@ -58,7 +58,7 @@ A simple filter expression is expressed as a string:
 Keep the following syntax guidelines in mind.
 
 * Specify the name of the filter followed by the comma-separated argument list in parentheses.
-* If the argument represents a string, it should be enclosed in single quotes ([literal]+'+).
+* If the argument represents a string, it should be enclosed in single quotes (`'`).
 * Arguments which represent a boolean, an integer, or a comparison operator (such as <, >, or !=), should not be enclosed in quotes
 * The filter name must be a single word.
   All ASCII characters are allowed except for whitespace, single quotes and parentheses.
@@ -68,17 +68,17 @@ Keep the following syntax guidelines in mind.
 === Compound Filters and Operators
 
 .Binary Operators
-[code]+AND+::
-  If the [code]+AND+ operator is used, the key-vallue must satisfy both the filters.
+`AND`::
+  If the `AND` operator is used, the key-vallue must satisfy both the filters.
 
-[code]+OR+::
-  If the [code]+OR+ operator is used, the key-value must satisfy at least one of the filters.
+`OR`::
+  If the `OR` operator is used, the key-value must satisfy at least one of the filters.
 
 .Unary Operators
-[code]+SKIP+::
+`SKIP`::
   For a particular row, if any of the key-values fail the filter condition, the entire row is skipped.
 
-[code]+WHILE+::
+`WHILE`::
   For a particular row, key-values will be emitted until a key-value is reached t hat fails the filter condition.
 
 .Compound Operators
@@ -93,8 +93,8 @@ You can combine multiple operators to create a hierarchy of filters, such as the
 === Order of Evaluation
 
 . Parentheses have the highest precedence.
-. The unary operators [code]+SKIP+ and [code]+WHILE+ are next, and have the same precedence.
-. The binary operators follow. [code]+AND+ has highest precedence, followed by [code]+OR+.
+. The unary operators `SKIP` and `WHILE` are next, and have the same precedence.
+. The binary operators follow. `AND` has highest precedence, followed by `OR`.
 
 .Precedence Example
 ====
@@ -142,8 +142,8 @@ A comparator can be any of the following:
   The comparison is case insensitive.
   Only EQUAL and NOT_EQUAL comparisons are valid with this comparator
 
-The general syntax of a comparator is:[code]+
-                ComparatorType:ComparatorValue+
+The general syntax of a comparator is:`
+                ComparatorType:ComparatorValue`
 
 The ComparatorType for the various comparators is as follows:
 
@@ -184,8 +184,8 @@ The ComparatorValue can be any value.
 
 === Example Filter Strings
 
-* [code]+“PrefixFilter (‘Row’) AND PageFilter (1) AND FirstKeyOnlyFilter
-  ()”+ will return all key-value pairs that match the following conditions:
+* `“PrefixFilter (‘Row’) AND PageFilter (1) AND FirstKeyOnlyFilter
+  ()”` will return all key-value pairs that match the following conditions:
 +
 . The row containing the key-value should have prefix ``Row'' 
 . The key-value must be located in the first row of the table 
@@ -193,9 +193,9 @@ The ComparatorValue can be any value.
             
 
 
-* [code]+“(RowFilter (=, ‘binary:Row 1’) AND TimeStampsFilter (74689,
+* `“(RowFilter (=, ‘binary:Row 1’) AND TimeStampsFilter (74689,
   89734)) OR ColumnRangeFilter (‘abc’, true, ‘xyz’,
-  false))”+ will return all key-value pairs that match both the following conditions:
+  false))”` will return all key-value pairs that match both the following conditions:
 +
 * The key-value is in a row having row key ``Row 1'' 
 * The key-value must have a timestamp of either 74689 or 89734.
@@ -206,7 +206,7 @@ The ComparatorValue can be any value.
 
 
 
-* [code]+“SKIP ValueFilter (0)”+ will skip the entire row if any of the values in the row is not 0            
+* `“SKIP ValueFilter (0)”` will skip the entire row if any of the values in the row is not 0            
 
 [[individualfiltersyntax]]
 === Individual Filter Syntax
@@ -226,12 +226,12 @@ PrefixFilter::
 ColumnPrefixFilter::
   This filter takes one argument – a column prefix.
   It returns only those key-values present in a column that starts with the specified column prefix.
-  The column prefix must be of the form: [code]+“qualifier”+.
+  The column prefix must be of the form: `“qualifier”`.
 
 MultipleColumnPrefixFilter::
   This filter takes a list of column prefixes.
   It returns key-values that are present in a column that starts with any of the specified column prefixes.
-  Each of the column prefixes must be of the form: [code]+“qualifier”+.
+  Each of the column prefixes must be of the form: `“qualifier”`.
 
 ColumnCountGetFilter::
   This filter takes one argument – a limit.

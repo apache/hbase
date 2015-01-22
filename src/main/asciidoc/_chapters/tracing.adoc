@@ -36,7 +36,7 @@ Setting up tracing is quite simple, however it currently requires some very mino
 [[tracing.spanreceivers]]
 === SpanReceivers
 
-The tracing system works by collecting information in structs called 'Spans'. It is up to you to choose how you want to receive this information by implementing the [class]+SpanReceiver+ interface, which defines one method: 
+The tracing system works by collecting information in structs called 'Spans'. It is up to you to choose how you want to receive this information by implementing the `SpanReceiver` interface, which defines one method: 
 
 [source]
 ----
@@ -47,10 +47,10 @@ public void receiveSpan(Span span);
 This method serves as a callback whenever a span is completed.
 HTrace allows you to use as many SpanReceivers as you want so you can easily send trace information to multiple destinations. 
 
-Configure what SpanReceivers you'd like to us by putting a comma separated list of the fully-qualified class name of classes implementing [class]+SpanReceiver+ in [path]_hbase-site.xml_ property: [var]+hbase.trace.spanreceiver.classes+. 
+Configure what SpanReceivers you'd like to us by putting a comma separated list of the fully-qualified class name of classes implementing `SpanReceiver` in _hbase-site.xml_ property: `hbase.trace.spanreceiver.classes`. 
 
-HTrace includes a [class]+LocalFileSpanReceiver+ that writes all span information to local files in a JSON-based format.
-The [class]+LocalFileSpanReceiver+ looks in [path]_hbase-site.xml_      for a [var]+hbase.local-file-span-receiver.path+ property with a value describing the name of the file to which nodes should write their span information. 
+HTrace includes a `LocalFileSpanReceiver` that writes all span information to local files in a JSON-based format.
+The `LocalFileSpanReceiver` looks in _hbase-site.xml_      for a `hbase.local-file-span-receiver.path` property with a value describing the name of the file to which nodes should write their span information. 
 
 [source]
 ----
@@ -65,10 +65,10 @@ The [class]+LocalFileSpanReceiver+ looks in [path]_hbase-site.xml_      for a [v
 </property>
 ----
 
-HTrace also provides [class]+ZipkinSpanReceiver+ which converts spans to link:http://github.com/twitter/zipkin[Zipkin] span format and send them to Zipkin server.
+HTrace also provides `ZipkinSpanReceiver` which converts spans to link:http://github.com/twitter/zipkin[Zipkin] span format and send them to Zipkin server.
 In order to use this span receiver, you need to install the jar of htrace-zipkin to your HBase's classpath on all of the nodes in your cluster. 
 
-[path]_htrace-zipkin_ is published to the maven central repository.
+_htrace-zipkin_ is published to the maven central repository.
 You could get the latest version from there or just build it locally and then copy it out to all nodes, change your config to use zipkin receiver, distribute the new configuration and then (rolling) restart. 
 
 Here is the example of manual setup procedure. 
@@ -82,7 +82,7 @@ $ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HBASE_HOME/lib/
   # copy jar to all nodes...
 ----
 
-The [class]+ZipkinSpanReceiver+ looks in [path]_hbase-site.xml_      for a [var]+hbase.zipkin.collector-hostname+ and [var]+hbase.zipkin.collector-port+ property with a value describing the Zipkin collector server to which span information are sent. 
+The `ZipkinSpanReceiver` looks in _hbase-site.xml_      for a `hbase.zipkin.collector-hostname` and `hbase.zipkin.collector-port` property with a value describing the Zipkin collector server to which span information are sent. 
 
 [source,xml]
 ----
@@ -101,7 +101,7 @@ The [class]+ZipkinSpanReceiver+ looks in [path]_hbase-site.xml_      for a [var]
 </property>
 ----
 
-If you do not want to use the included span receivers, you are encouraged to write your own receiver (take a look at [class]+LocalFileSpanReceiver+ for an example). If you think others would benefit from your receiver, file a JIRA or send a pull request to link:http://github.com/cloudera/htrace[HTrace]. 
+If you do not want to use the included span receivers, you are encouraged to write your own receiver (take a look at `LocalFileSpanReceiver` for an example). If you think others would benefit from your receiver, file a JIRA or send a pull request to link:http://github.com/cloudera/htrace[HTrace]. 
 
 [[tracing.client.modifications]]
 == Client Modifications
@@ -153,8 +153,8 @@ If you wanted to trace half of your 'get' operations, you would pass in:
 new ProbabilitySampler(0.5)
 ----
 
-in lieu of [var]+Sampler.ALWAYS+ to [class]+Trace.startSpan()+.
-See the HTrace [path]_README_ for more information on Samplers. 
+in lieu of `Sampler.ALWAYS` to `Trace.startSpan()`.
+See the HTrace _README_ for more information on Samplers. 
 
 [[tracing.client.shell]]
 == Tracing from HBase Shell

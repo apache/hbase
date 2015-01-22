@@ -32,7 +32,7 @@ This is the official reference guide for the link:http://hbase.apache.org/[HBase
 Herein you will find either the definitive documentation on an HBase topic as of its standing when the referenced HBase version shipped, or it will point to the location in link:http://hbase.apache.org/apidocs/index.html[javadoc], link:https://issues.apache.org/jira/browse/HBASE[JIRA] or link:http://wiki.apache.org/hadoop/Hbase[wiki] where the pertinent information can be found.
 
 .About This Guide
-This reference guide is a work in progress. The source for this guide can be found in the [path]_src/main/docbkx_ directory of the HBase source. This reference guide is marked up using link:http://www.docbook.org/[DocBook] from which the the finished guide is generated as part of the 'site' build target. Run 
+This reference guide is a work in progress. The source for this guide can be found in the _src/main/dasciidoc_ directory of the HBase source. This reference guide is marked up using Asciidoc, from which the the finished guide is generated as part of the 'site' build target. Run 
 [source,bourne]
 ----
 mvn site
@@ -42,7 +42,7 @@ Amendments and improvements to the documentation are welcomed.
 Click link:https://issues.apache.org/jira/secure/CreateIssueDetails!init.jspa?pid=12310753&issuetype=1&components=12312132&summary=SHORT+DESCRIPTION[this link] to file a new documentation bug against Apache HBase with some values pre-selected.
 
 .Contributing to the Documentation
-For an overview of Docbook and suggestions to get started contributing to the documentation, see <<appendix_contributing_to_documentation,appendix contributing to documentation>>.
+For an overview of Asciidoc and suggestions to get started contributing to the documentation, see <<appendix_contributing_to_documentation,appendix contributing to documentation>>.
 
 .Providing Feedback
 This guide allows you to leave comments or questions on any page, using Disqus.

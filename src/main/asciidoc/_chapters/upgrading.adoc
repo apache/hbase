@@ -157,10 +157,12 @@ When we say two HBase versions are compatible, we mean that the versions are wir
 A rolling upgrade is the process by which you update the servers in your cluster a server at a time. You can rolling upgrade across HBase versions if they are binary or wire compatible. See <<hbase.rolling.restart>> for more on what this means. Coarsely, a rolling upgrade is a graceful stop each server, update the software, and then restart. You do this for each server in the cluster. Usually you upgrade the Master first and then the regionservers. See <<rolling>> for tools that can help use the rolling upgrade process.
 
 For example, in the below, hbase was symlinked to the actual hbase install. On upgrade, before running a rolling restart over the cluser, we changed the symlink to point at the new HBase software version and then ran
+
 [source,bash]
 ----
 $ HADOOP_HOME=~/hadoop-2.6.0-CRC-SNAPSHOT ~/hbase/bin/rolling-restart.sh --config ~/conf_hbase
 ----
+
 The rolling-restart script will first gracefully stop and restart the master, and then each of the regionservers in turn. Because the symlink was changed, on restart the server will come up using the new hbase version. Check logs for errors as the rolling upgrade proceeds.
 
 [[hbase.rolling.restart]]
@@ -169,12 +171,14 @@ Unless otherwise specified, HBase point versions are binary compatible. You can 
 
 In the minor version-particular sections below, we call out where the versions are wire/protocol compatible and in this case, it is also possible to do a <<hbase.rolling.upgrade>>. For example, in <<upgrade1.0.rolling.upgrade>>, we state that it is possible to do a rolling upgrade between hbase-0.98.x and hbase-1.0.0.
 
+== Upgrade Paths
+
 [[upgrade1.0]]
-== Upgrading from 0.98.x to 1.0.x
+=== Upgrading from 0.98.x to 1.0.x
 
 In this section we first note the significant changes that come in with 1.0.0 HBase and then we go over the upgrade process.  Be sure to read the significant changes section with care so you avoid surprises.
 
-=== Changes of Note!
+==== Changes of Note!
 
 In here we list important changes that are in 1.0.0 since 0.98.x., changes you should be aware that will go into effect once you upgrade.
 
@@ -184,7 +188,7 @@ See <<zookeeper.requirements>>.
 
 [[default.ports.changed]]
 .HBase Default Ports Changed
-The ports used by HBase changed.  The used to be in the 600XX range.  In hbase-1.0.0 they have been moved up out of the ephemeral port range and are 160XX instead (Master web UI was 60010 and is now 16030; the RegionServer web UI was 60030 and is now 16030, etc). If you want to keep the old port locations, copy the port setting configs from [path]_hbase-default.xml_ into [path]_hbase-site.xml_, change them back to the old values from hbase-0.98.x era, and ensure you've distributed your configurations before you restart.
+The ports used by HBase changed.  The used to be in the 600XX range.  In hbase-1.0.0 they have been moved up out of the ephemeral port range and are 160XX instead (Master web UI was 60010 and is now 16010; the RegionServer web UI was 60030 and is now 16030, etc). If you want to keep the old port locations, copy the port setting configs from _hbase-default.xml_ into _hbase-site.xml_, change them back to the old values from hbase-0.98.x era, and ensure you've distributed your configurations before you restart.
 
 [[upgrade1.0.hbase.bucketcache.percentage.in.combinedcache]]
 .hbase.bucketcache.percentage.in.combinedcache configuration has been REMOVED
@@ -199,31 +203,31 @@ See the release notes on the issue link:https://issues.apache.org/jira/browse/HB
 <<distributed.log.replay>> is off by default in hbase-1.0. Enabling it can make a big difference improving HBase MTTR. Enable this feature if you are doing a clean stop/start when you are upgrading. You cannot rolling upgrade on to this feature (caveat if you are running on a version of hbase in excess of hbase-0.98.4 -- see link:https://issues.apache.org/jira/browse/HBASE-12577[HBASE-12577 Disable distributed log replay by default] for more).
 
 [[upgrade1.0.rolling.upgrade]]
-=== Rolling upgrade from 0.98.x to HBase 1.0.0
+==== Rolling upgrade from 0.98.x to HBase 1.0.0
 .From 0.96.x to 1.0.0
 NOTE: You cannot do a <<hbase.rolling.upgrade,rolling upgrade>> from 0.96.x to 1.0.0 without first doing a rolling upgrade to 0.98.x. See comment in link:https://issues.apache.org/jira/browse/HBASE-11164?focusedCommentId=14182330&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&#35;comment-14182330[HBASE-11164 Document and test rolling updates from 0.98 -> 1.0] for the why. Also because hbase-1.0.0 enables hfilev3 by default, link:https://issues.apache.org/jira/browse/HBASE-9801[HBASE-9801 Change the default HFile version to V3], and support for hfilev3 only arrives in 0.98, this is another reason you cannot rolling upgrade from hbase-0.96.x; if the rolling upgrade stalls, the 0.96.x servers cannot open files written by the servers running the newer hbase-1.0.0 hfilev3 writing servers. 
 
 There are no known issues running a <<hbase.rolling.upgrade,rolling upgrade>> from hbase-0.98.x to hbase-1.0.0.
 
 [[upgrade1.0.from.0.94]]
-=== Upgrading to 1.0 from 0.94
+==== Upgrading to 1.0 from 0.94
 You cannot rolling upgrade from 0.94.x to 1.x.x.  You must stop your cluster, install the 1.x.x software, run the migration described at <<executing.the.0.96.upgrade>> (substituting 1.x.x. wherever we make mention of 0.96.x in the section below), and then restart.  Be sure to upgrade your zookeeper if it is a version less than the required 3.4.x.
 
 [[upgrade0.98]]
-== Upgrading from 0.96.x to 0.98.x
+=== Upgrading from 0.96.x to 0.98.x
 A rolling upgrade from 0.96.x to 0.98.x works. The two versions are not binary compatible.
 
 Additional steps are required to take advantage of some of the new features of 0.98.x, including cell visibility labels, cell ACLs, and transparent server side encryption. See <<security>> for more information. Significant performance improvements include a change to the write ahead log threading model that provides higher transaction throughput under high load, reverse scanners, MapReduce over snapshot files, and striped compaction.
 
 Clients and servers can run with 0.98.x and 0.96.x versions. However, applications may need to be recompiled due to changes in the Java API.
 
-== Upgrading from 0.94.x to 0.98.x
+=== Upgrading from 0.94.x to 0.98.x
 A rolling upgrade from 0.94.x directly to 0.98.x does not work. The upgrade path follows the same procedures as <<upgrade0.96>>. Additional steps are required to use some of the new features of 0.98.x. See <<upgrade0.98>> for an abbreviated list of these features.
 
 [[upgrade0.96]]
-== Upgrading from 0.94.x to 0.96.x
+=== Upgrading from 0.94.x to 0.96.x
 
-=== The "Singularity"
+==== The "Singularity"
 
 .HBase 0.96.x was EOL'd, September 1st, 2014
 NOTE: Do not deploy 0.96.x  Deploy a 0.98.x at least. See link:https://issues.apache.org/jira/browse/HBASE-11642[EOL 0.96].
@@ -233,12 +237,14 @@ You will have to stop your old 0.94.x cluster completely to upgrade. If you are 
 The API has changed. You will need to recompile your code against 0.96 and you may need to adjust applications to go against new APIs (TODO: List of changes).
 
 [[executing.the.0.96.upgrade]]
-=== Executing the 0.96 Upgrade
+==== Executing the 0.96 Upgrade
 
 .HDFS and ZooKeeper must be up!
 NOTE: HDFS and ZooKeeper should be up and running during the upgrade process.
 
 hbase-0.96.0 comes with an upgrade script. Run
+
+[source,bash]
 ----
 $ bin/hbase upgrade
 ----
@@ -250,9 +256,12 @@ The check step is run against a running 0.94 cluster. Run it from a downloaded 0
 The check step prints stats at the end of its run (grep for `“Result:”` in the log) printing absolute path of the tables it scanned, any HFileV1 files found, the regions containing said files (the regions we need to major compact to purge the HFileV1s), and any corrupted files if any found. A corrupt file is unreadable, and so is undefined (neither HFileV1 nor HFileV2).
 
 To run the check step, run 
+
+[source,bash]
 ----
 $ bin/hbase upgrade -check
 ----
+
 Here is sample output:
 ----
 Tables Processed:
@@ -280,6 +289,7 @@ There are some HFileV1, or corrupt files (files with incorrect major version)
 In the above sample output, there are two HFileV1 in two regions, and one corrupt file. Corrupt files should probably be removed. The regions that have HFileV1s need to be major compacted. To major compact, start up the hbase shell and review how to compact an individual region. After the major compaction is done, rerun the check step and the HFileV1s shoudl be gone, replaced by HFileV2 instances.
 
 By default, the check step scans the hbase root directory (defined as hbase.rootdir in the configuration). To scan a specific directory only, pass the -dir option.
+[source,bash]
 ----
 $ bin/hbase upgrade -check -dir /myHBase/testTable
 ----
@@ -293,6 +303,7 @@ After the _check_ step shows the cluster is free of HFileV1, it is safe to proce
 [NOTE]
 ====
 HDFS and ZooKeeper should be up and running during the upgrade process. If zookeeper is managed by HBase, then you can start zookeeper so it is available to the upgrade by running 
+[source,bash]
 ----
 $ ./hbase/bin/hbase-daemon.sh start zookeeper
 ----
@@ -307,6 +318,7 @@ The execute upgrade step is made of three substeps.
 * WAL Log Splitting: If the 0.94.x cluster shutdown was not clean, we'll split WAL logs as part of migration before we startup on 0.96.0. This WAL splitting runs slower than the native distributed WAL splitting because it is all inside the single upgrade process (so try and get a clean shutdown of the 0.94.0 cluster if you can).
 
 To run the _execute_ step, make sure that first you have copied hbase-0.96.0 binaries everywhere under servers and under clients. Make sure the 0.94.0 cluster is down. Then do as follows:
+[source,bash]
 ----
 $ bin/hbase upgrade -execute
 ----
@@ -329,6 +341,7 @@ Successfully completed Log splitting
 ----
          
 If the output from the execute step looks good, stop the zookeeper instance you started to do the upgrade:
+[source,bash]
 ----
 $ ./hbase/bin/hbase-daemon.sh stop zookeeper
 ----
@@ -355,19 +368,19 @@ It will fail with an exception like the below. Upgrade.
 17:22:15    at Client_4_3_0.main(Client_4_3_0.java:63)
 ----
 
-=== Upgrading `META` to use Protocol Buffers (Protobuf)
+==== Upgrading `META` to use Protocol Buffers (Protobuf)
 
 When you upgrade from versions prior to 0.96, `META` needs to be converted to use protocol buffers. This is controlled by the configuration option `hbase.MetaMigrationConvertingToPB`, which is set to `true` by default. Therefore, by default, no action is required on your part.
 
 The migration is a one-time event. However, every time your cluster starts, `META` is scanned to ensure that it does not need to be converted. If you have a very large number of regions, this scan can take a long time. Starting in 0.98.5, you can set `hbase.MetaMigrationConvertingToPB` to `false` in _hbase-site.xml_, to disable this start-up scan. This should be considered an expert-level setting.
 
 [[upgrade0.94]]
-== Upgrading from 0.92.x to 0.94.x
+=== Upgrading from 0.92.x to 0.94.x
 We used to think that 0.92 and 0.94 were interface compatible and that you can do a rolling upgrade between these versions but then we figured that link:https://issues.apache.org/jira/browse/HBASE-5357[">]HBASE-5357 Use builder pattern in HColumnDescriptor] changed method signatures so rather than return void they instead return HColumnDescriptor. This will throw`java.lang.NoSuchMethodError: org.apache.hadoop.hbase.HColumnDescriptor.setMaxVersions(I)V` so 0.92 and 0.94 are NOT compatible. You cannot do a rolling upgrade between them.
 
 [[upgrade0.92]]
-== Upgrading from 0.90.x to 0.92.x
-=== Upgrade Guide
+=== Upgrading from 0.90.x to 0.92.x
+==== Upgrade Guide
 ou will find that 0.92.0 runs a little differently to 0.90.x releases. Here are a few things to watch out for upgrading from 0.90.x to 0.92.0.
 
 .tl:dr
@@ -425,7 +438,7 @@ If an OOME, we now have the JVM kill -9 the regionserver process so it goes down
 0.92.0 stores data in a new format, <<hfilev2>>. As HBase runs, it will move all your data from HFile v1 to HFile v2 format. This auto-migration will run in the background as flushes and compactions run. HFile V2 allows HBase run with larger regions/files. In fact, we encourage that all HBasers going forward tend toward Facebook axiom #1, run with larger, fewer regions. If you have lots of regions now -- more than 100s per host -- you should look into setting your region size up after you move to 0.92.0 (In 0.92.0, default size is now 1G, up from 256M), and then running online merge tool (See link:https://issues.apache.org/jira/browse/HBASE-1621[HBASE-1621 merge tool should work on online cluster, but disabled table]).
 
 [[upgrade0.90]]
-== Upgrading to HBase 0.90.x from 0.20.x or 0.89.x
+=== Upgrading to HBase 0.90.x from 0.20.x or 0.89.x
 This version of 0.90.x HBase can be started on data written by HBase 0.20.x or HBase 0.89.x. There is no need of a migration step. HBase 0.89.x and 0.90.x does write out the name of region directories differently -- it names them with a md5 hash of the region name rather than a jenkins hash -- so this means that once started, there is no going back to HBase 0.20.x.
 
 Be sure to remove the _hbase-default.xml_ from your _conf_ directory on upgrade. A 0.20.x version of this file will have sub-optimal configurations for 0.90.x HBase. The _hbase-default.xml_ file is now bundled into the HBase jar and read from there. If you would like to review the content of this file, see it in the src tree at _src/main/resources/hbase-default.xml_ or see <<hbase_default_configurations>>.

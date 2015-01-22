@@ -199,24 +199,24 @@ If later, fat request has clear advantage, can roll out a v2 later.
 ==== RPC Configurations
 
 .CellBlock Codecs
-To enable a codec other than the default [class]+KeyValueCodec+, set [var]+hbase.client.rpc.codec+ to the name of the Codec class to use.
-Codec must implement hbase's [class]+Codec+ Interface.
+To enable a codec other than the default `KeyValueCodec`, set `hbase.client.rpc.codec` to the name of the Codec class to use.
+Codec must implement hbase's `Codec` Interface.
 After connection setup, all passed cellblocks will be sent with this codec.
-The server will return cellblocks using this same codec as long as the codec is on the servers' CLASSPATH (else you will get [class]+UnsupportedCellCodecException+).
+The server will return cellblocks using this same codec as long as the codec is on the servers' CLASSPATH (else you will get `UnsupportedCellCodecException`).
 
-To change the default codec, set [var]+hbase.client.default.rpc.codec+. 
+To change the default codec, set `hbase.client.default.rpc.codec`. 
 
 To disable cellblocks completely and to go pure protobuf, set the default to the empty String and do not specify a codec in your Configuration.
-So, set [var]+hbase.client.default.rpc.codec+ to the empty string and do not set [var]+hbase.client.rpc.codec+.
+So, set `hbase.client.default.rpc.codec` to the empty string and do not set `hbase.client.rpc.codec`.
 This will cause the client to connect to the server with no codec specified.
 If a server sees no codec, it will return all responses in pure protobuf.
 Running pure protobuf all the time will be slower than running with cellblocks. 
 
 .Compression
 Uses hadoops compression codecs.
-To enable compressing of passed CellBlocks, set [var]+hbase.client.rpc.compressor+ to the name of the Compressor to use.
+To enable compressing of passed CellBlocks, set `hbase.client.rpc.compressor` to the name of the Compressor to use.
 Compressor must implement Hadoops' CompressionCodec Interface.
 After connection setup, all passed cellblocks will be sent compressed.
-The server will return cellblocks compressed using this same compressor as long as the compressor is on its CLASSPATH (else you will get [class]+UnsupportedCompressionCodecException+).
+The server will return cellblocks compressed using this same compressor as long as the compressor is on its CLASSPATH (else you will get `UnsupportedCompressionCodecException`).
 
 :numbered:

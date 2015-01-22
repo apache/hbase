@@ -65,12 +65,12 @@ To enable data block encoding for a ColumnFamily, see <<data.block.encoding.enab
 
 .Data Block Encoding Types
 Prefix::
-  Often, keys are very similar. Specifically, keys often share a common prefix and only differ near the end. For instance, one key might be [literal]+RowKey:Family:Qualifier0+ and the next key might be [literal]+RowKey:Family:Qualifier1+.
+  Often, keys are very similar. Specifically, keys often share a common prefix and only differ near the end. For instance, one key might be `RowKey:Family:Qualifier0` and the next key might be `RowKey:Family:Qualifier1`.
   +
 In Prefix encoding, an extra column is added which holds the length of the prefix shared between the current key and the previous key.
 Assuming the first key here is totally different from the key before, its prefix length is 0.
 +
-The second key's prefix length is [literal]+23+, since they have the first 23 characters in common.
+The second key's prefix length is `23`, since they have the first 23 characters in common.
 +
 Obviously if the keys tend to have nothing in common, Prefix will not provide much benefit.
 +
@@ -168,10 +168,10 @@ bzip2:  false
 Above shows that the native hadoop library is not available in HBase context. 
 
 To fix the above, either copy the Hadoop native libraries local or symlink to them if the Hadoop and HBase stalls are adjacent in the filesystem.
-You could also point at their location by setting the [var]+LD_LIBRARY_PATH+ environment variable.
+You could also point at their location by setting the `LD_LIBRARY_PATH` environment variable.
 
-Where the JVM looks to find native librarys is "system dependent" (See [class]+java.lang.System#loadLibrary(name)+). On linux, by default, is going to look in [path]_lib/native/PLATFORM_ where [var]+PLATFORM+      is the label for the platform your HBase is installed on.
-On a local linux machine, it seems to be the concatenation of the java properties [var]+os.name+ and [var]+os.arch+ followed by whether 32 or 64 bit.
+Where the JVM looks to find native librarys is "system dependent" (See `java.lang.System#loadLibrary(name)`). On linux, by default, is going to look in _lib/native/PLATFORM_ where `PLATFORM`      is the label for the platform your HBase is installed on.
+On a local linux machine, it seems to be the concatenation of the java properties `os.name` and `os.arch` followed by whether 32 or 64 bit.
 HBase on startup prints out all of the java system properties so find the os.name and os.arch in the log.
 For example: 
 [source]
@@ -181,12 +181,12 @@ For example:
 2014-08-06 15:27:22,853 INFO  [main] zookeeper.ZooKeeper: Client environment:os.arch=amd64
 ...
 ----     
-So in this case, the PLATFORM string is [var]+Linux-amd64-64+.
-Copying the Hadoop native libraries or symlinking at [path]_lib/native/Linux-amd64-64_     will ensure they are found.
-Check with the Hadoop [path]_NativeLibraryChecker_.
+So in this case, the PLATFORM string is `Linux-amd64-64`.
+Copying the Hadoop native libraries or symlinking at _lib/native/Linux-amd64-64_     will ensure they are found.
+Check with the Hadoop _NativeLibraryChecker_.
  
 
-Here is example of how to point at the Hadoop libs with [var]+LD_LIBRARY_PATH+      environment variable: 
+Here is example of how to point at the Hadoop libs with `LD_LIBRARY_PATH`      environment variable: 
 [source]
 ----
 $ LD_LIBRARY_PATH=~/hadoop-2.5.0-SNAPSHOT/lib/native ./bin/hbase --config ~/conf_hbase org.apache.hadoop.util.NativeLibraryChecker
@@ -199,7 +199,7 @@ snappy: true /usr/lib64/libsnappy.so.1
 lz4:    true revision:99
 bzip2:  true /lib64/libbz2.so.1
 ----
-Set in [path]_hbase-env.sh_ the LD_LIBRARY_PATH environment variable when starting your HBase. 
+Set in _hbase-env.sh_ the LD_LIBRARY_PATH environment variable when starting your HBase. 
 
 === Compressor Configuration, Installation, and Use
 
@@ -215,17 +215,16 @@ See
 .Compressor Support On the Master
 
 A new configuration setting was introduced in HBase 0.95, to check the Master to determine which data block encoders are installed and configured on it, and assume that the entire cluster is configured the same.
-This option, [code]+hbase.master.check.compression+, defaults to [literal]+true+.
+This option, `hbase.master.check.compression`, defaults to `true`.
 This prevents the situation described in link:https://issues.apache.org/jira/browse/HBASE-6370[HBASE-6370], where a table is created or modified to support a codec that a region server does not support, leading to failures that take a long time to occur and are difficult to debug. 
 
-If [code]+hbase.master.check.compression+ is enabled, libraries for all desired compressors need to be installed and configured on the Master, even if the Master does not run a region server.
+If `hbase.master.check.compression` is enabled, libraries for all desired compressors need to be installed and configured on the Master, even if the Master does not run a region server.
 
 .Install GZ Support Via Native Libraries
 
 HBase uses Java's built-in GZip support unless the native Hadoop libraries are available on the CLASSPATH.
-The recommended way to add libraries to the CLASSPATH is to set the environment variable [var]+HBASE_LIBRARY_PATH+ for the user running HBase.
-If native libraries are not available and Java's GZIP is used, [literal]+Got
-              brand-new compressor+ reports will be present in the logs.
+The recommended way to add libraries to the CLASSPATH is to set the environment variable `HBASE_LIBRARY_PATH` for the user running HBase.
+If native libraries are not available and Java's GZIP is used, `Got brand-new compressor` reports will be present in the logs.
 See <<brand.new.compressor,brand.new.compressor>>).
 
 [[lzo.compression]]
@@ -264,10 +263,10 @@ hbase(main):003:0> alter 'TestTable', {NAME => 'info', COMPRESSION => 'LZ4'}
 
 HBase does not ship with Snappy support because of licensing issues.
 You can install Snappy binaries (for instance, by using +yum install snappy+ on CentOS) or build Snappy from source.
-After installing Snappy, search for the shared library, which will be called [path]_libsnappy.so.X_ where X is a number.
-If you built from source, copy the shared library to a known location on your system, such as [path]_/opt/snappy/lib/_.
+After installing Snappy, search for the shared library, which will be called _libsnappy.so.X_ where X is a number.
+If you built from source, copy the shared library to a known location on your system, such as _/opt/snappy/lib/_.
 
-In addition to the Snappy library, HBase also needs access to the Hadoop shared library, which will be called something like [path]_libhadoop.so.X.Y_, where X and Y are both numbers.
+In addition to the Snappy library, HBase also needs access to the Hadoop shared library, which will be called something like _libhadoop.so.X.Y_, where X and Y are both numbers.
 Make note of the location of the Hadoop library, or copy it to the same location as the Snappy library.
 
 [NOTE]
@@ -278,7 +277,7 @@ See <<compression.test,compression.test>> to find out how to test that this is t
 See <<hbase.regionserver.codecs,hbase.regionserver.codecs>> to configure your RegionServers to fail to start if a given compressor is not available.
 ====
 
-Each of these library locations need to be added to the environment variable [var]+HBASE_LIBRARY_PATH+ for the operating system user that runs HBase.
+Each of these library locations need to be added to the environment variable `HBASE_LIBRARY_PATH` for the operating system user that runs HBase.
 You need to restart the RegionServer for the changes to take effect.
 
 [[compression.test]]
@@ -294,14 +293,14 @@ You can use the CompressionTest tool to verify that your compressor is available
 [[hbase.regionserver.codecs]]
 .Enforce Compression Settings On a RegionServer
 
-You can configure a RegionServer so that it will fail to restart if compression is configured incorrectly, by adding the option hbase.regionserver.codecs to the [path]_hbase-site.xml_, and setting its value to a comma-separated list of codecs that need to be available.
-For example, if you set this property to [literal]+lzo,gz+, the RegionServer would fail to start if both compressors were not available.
+You can configure a RegionServer so that it will fail to restart if compression is configured incorrectly, by adding the option hbase.regionserver.codecs to the _hbase-site.xml_, and setting its value to a comma-separated list of codecs that need to be available.
+For example, if you set this property to `lzo,gz`, the RegionServer would fail to start if both compressors were not available.
 This would prevent a new server from being added to the cluster without having codecs configured properly.
 
 [[changing.compression]]
 ==== Enable Compression On a ColumnFamily
 
-To enable compression for a ColumnFamily, use an [code]+alter+ command.
+To enable compression for a ColumnFamily, use an `alter` command.
 You do not need to re-create the table or copy data.
 If you are changing codecs, be sure the old codec is still available until all the old StoreFiles have been compacted.
 
@@ -342,7 +341,7 @@ DESCRIPTION                                          ENABLED
 ==== Testing Compression Performance
 
 HBase includes a tool called LoadTestTool which provides mechanisms to test your compression performance.
-You must specify either [literal]+-write+ or [literal]+-update-read+ as your first parameter, and if you do not specify another parameter, usage advice is printed for each option.
+You must specify either `-write` or `-update-read` as your first parameter, and if you do not specify another parameter, usage advice is printed for each option.
 
 .+LoadTestTool+ Usage
 ====
@@ -415,7 +414,7 @@ $ hbase org.apache.hadoop.hbase.util.LoadTestTool -write 1:10:100 -num_keys 1000
 == Enable Data Block Encoding
 
 Codecs are built into HBase so no extra configuration is needed.
-Codecs are enabled on a table by setting the [code]+DATA_BLOCK_ENCODING+ property.
+Codecs are enabled on a table by setting the `DATA_BLOCK_ENCODING` property.
 Disable the table before altering its DATA_BLOCK_ENCODING setting.
 Following is an example using HBase Shell:
 

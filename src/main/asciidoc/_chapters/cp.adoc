@@ -69,7 +69,7 @@ Endpoints (HBase 0.94.x and earlier)::
 
 == Examples
 
-An example of an observer is included in [path]_hbase-examples/src/test/java/org/apache/hadoop/hbase/coprocessor/example/TestZooKeeperScanPolicyObserver.java_.
+An example of an observer is included in _hbase-examples/src/test/java/org/apache/hadoop/hbase/coprocessor/example/TestZooKeeperScanPolicyObserver.java_.
 Several endpoint examples are included in the same directory.
 
 == Building A Coprocessor
@@ -80,11 +80,11 @@ You can load the coprocessor from your HBase configuration, so that the coproces
 
 === Load from Configuration
 
-To configure a coprocessor to be loaded when HBase starts, modify the RegionServer's [path]_hbase-site.xml_ and configure one of the following properties, based on the type of observer you are configuring: 
+To configure a coprocessor to be loaded when HBase starts, modify the RegionServer's _hbase-site.xml_ and configure one of the following properties, based on the type of observer you are configuring: 
 
-* [code]+hbase.coprocessor.region.classes+for RegionObservers and Endpoints
-* [code]+hbase.coprocessor.wal.classes+for WALObservers
-* [code]+hbase.coprocessor.master.classes+for MasterObservers
+* `hbase.coprocessor.region.classes`for RegionObservers and Endpoints
+* `hbase.coprocessor.wal.classes`for WALObservers
+* `hbase.coprocessor.master.classes`for MasterObservers
 
 .Example RegionObserver Configuration
 ====
@@ -105,7 +105,7 @@ Therefore, the jar file must reside on the server-side HBase classpath.
 
 Coprocessors which are loaded in this way will be active on all regions of all tables.
 These are the system coprocessor introduced earlier.
-The first listed coprocessors will be assigned the priority [literal]+Coprocessor.Priority.SYSTEM+.
+The first listed coprocessors will be assigned the priority `Coprocessor.Priority.SYSTEM`.
 Each subsequent coprocessor in the list will have its priority value incremented by one (which reduces its priority, because priorities have the natural sort order of Integers). 
 
 When calling out to registered observers, the framework executes their callbacks methods in the sorted order of their priority.
@@ -145,7 +145,7 @@ DESCRIPTION                                                        ENABLED
 ====
 
 The coprocessor framework will try to read the class information from the coprocessor table attribute value.
-The value contains four pieces of information which are separated by the [literal]+|+ character.
+The value contains four pieces of information which are separated by the `|` character.
 
 * File path: The jar file containing the coprocessor implementation must be in a location where all region servers can read it.
   You could copy the file onto the local disk on each region server, but it is recommended to store it in HDFS.

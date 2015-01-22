@@ -123,7 +123,7 @@ foo0004
 ----
 
 Now, imagine that you would like to spread these across four different regions.
-You decide to use four different salts: [literal]+a+, [literal]+b+, [literal]+c+, and [literal]+d+.
+You decide to use four different salts: `a`, `b`, `c`, and `d`.
 In this scenario, each of these letter prefixes will be on a different region.
 After applying the salts, you have the following rowkeys instead.
 Since you can now write to four separate regions, you theoretically have four times the throughput when writing that you would have if all the writes were going to the same region.
@@ -159,7 +159,7 @@ Using a deterministic hash allows the client to reconstruct the complete rowkey 
 
 .Hashing Example
 [example]
-Given the same situation in the salting example above, you could instead apply a one-way hash that would cause the row with key [literal]+foo0003+ to always, and predictably, receive the [literal]+a+ prefix.
+Given the same situation in the salting example above, you could instead apply a one-way hash that would cause the row with key `foo0003` to always, and predictably, receive the `a` prefix.
 Then, to retrieve that row, you would already know the key.
 You could also optimize things so that certain pairs of keys were always in the same region, for instance.
 
@@ -292,8 +292,8 @@ See link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.ht
 
 A common problem in database processing is quickly finding the most recent version of a value.
 A technique using reverse timestamps as a part of the key can help greatly with a special case of this problem.
-Also found in the HBase chapter of Tom White's book Hadoop: The Definitive Guide (O'Reilly), the technique involves appending ([code]+Long.MAX_VALUE -
-          timestamp+) to the end of any key, e.g., [key][reverse_timestamp]. 
+Also found in the HBase chapter of Tom White's book Hadoop: The Definitive Guide (O'Reilly), the technique involves appending (`Long.MAX_VALUE -
+          timestamp`) to the end of any key, e.g., [key][reverse_timestamp]. 
 
 The most recent value for [key] in a table can be found by performing a Scan for [key] and obtaining the first record.
 Since HBase keys are in sorted order, this key sorts before any older row-keys for [key] and thus is first. 
@@ -317,7 +317,7 @@ This is a fairly common question on the HBase dist-list so it pays to get the ro
 === Relationship Between RowKeys and Region Splits
 
 If you pre-split your table, it is _critical_ to understand how your rowkey will be distributed across the region boundaries.
-As an example of why this is important, consider the example of using displayable hex characters as the lead position of the key (e.g., "0000000000000000" to "ffffffffffffffff"). Running those key ranges through [code]+Bytes.split+ (which is the split strategy used when creating regions in [code]+HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)+ for 10 regions will generate the following splits...
+As an example of why this is important, consider the example of using displayable hex characters as the lead position of the key (e.g., "0000000000000000" to "ffffffffffffffff"). Running those key ranges through `Bytes.split` (which is the split strategy used when creating regions in `HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)` for 10 regions will generate the following splits...
 
 ----
 
@@ -428,7 +428,7 @@ This applies to _all_ versions of a row - even the current one.
 The TTL time encoded in the HBase for the row is specified in UTC. 
 
 Store files which contains only expired rows are deleted on minor compaction.
-Setting [var]+hbase.store.delete.expired.storefile+ to [code]+false+ disables this feature.
+Setting `hbase.store.delete.expired.storefile` to `false` disables this feature.
 Setting link:[minimum number of versions] to other than 0 also disables this.
 
 See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor] for more information. 
@@ -455,14 +455,14 @@ This allows for point-in-time queries even in the presence of deletes.
 Deleted cells are still subject to TTL and there will never be more than "maximum number of versions" deleted cells.
 A new "raw" scan options returns all deleted rows and the delete markers. 
 
-.Change the Value of [code]+KEEP_DELETED_CELLS+ Using HBase Shell
+.Change the Value of `KEEP_DELETED_CELLS` Using HBase Shell
 ====
 ----
 hbase> hbase> alter ‘t1′, NAME => ‘f1′, KEEP_DELETED_CELLS => true
 ----
 ====
 
-.Change the Value of [code]+KEEP_DELETED_CELLS+ Using the API
+.Change the Value of `KEEP_DELETED_CELLS` Using the API
 ====
 [source,java]
 ----
@@ -576,7 +576,7 @@ We can store them in an HBase table called LOG_DATA, but what will the rowkey be
 [[schema.casestudies.log_timeseries.tslead]]
 ==== Timestamp In The Rowkey Lead Position
 
-The rowkey [code]+[timestamp][hostname][log-event]+ suffers from the monotonically increasing rowkey problem described in <<timeseries,timeseries>>. 
+The rowkey `[timestamp][hostname][log-event]` suffers from the monotonically increasing rowkey problem described in <<timeseries,timeseries>>. 
 
 There is another pattern frequently mentioned in the dist-lists about ``bucketing'' timestamps, by performing a mod operation on the timestamp.
 If time-oriented scans are important, this could be a useful approach.
@@ -602,14 +602,14 @@ As stated above, to select data for a particular timerange, a Scan will need to 
 [[schema.casestudies.log_timeseries.hostlead]]
 ==== Host In The Rowkey Lead Position
 
-The rowkey [code]+[hostname][log-event][timestamp]+ is a candidate if there is a large-ish number of hosts to spread the writes and reads across the keyspace.
+The rowkey `[hostname][log-event][timestamp]` is a candidate if there is a large-ish number of hosts to spread the writes and reads across the keyspace.
 This approach would be useful if scanning by hostname was a priority. 
 
 [[schema.casestudies.log_timeseries.revts]]
 ==== Timestamp, or Reverse Timestamp?
 
-If the most important access path is to pull most recent events, then storing the timestamps as reverse-timestamps (e.g., [code]+timestamp = Long.MAX_VALUE –
-            timestamp+) will create the property of being able to do a Scan on [code]+[hostname][log-event]+ to obtain the quickly obtain the most recently captured events. 
+If the most important access path is to pull most recent events, then storing the timestamps as reverse-timestamps (e.g., `timestamp = Long.MAX_VALUE –
+            timestamp`) will create the property of being able to do a Scan on `[hostname][log-event]` to obtain the quickly obtain the most recently captured events. 
 
 Neither approach is wrong, it just depends on what is most appropriate for the situation. 
 

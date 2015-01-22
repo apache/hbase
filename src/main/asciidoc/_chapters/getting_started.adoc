@@ -31,7 +31,7 @@
 <<quickstart,quickstart>> will get you up and running on a single-node, standalone instance of HBase, followed by a pseudo-distributed single-machine instance, and finally a fully-distributed cluster. 
 
 [[quickstart]]
-== Quick Start - Standalone HBase
+== Quick Start
 
 This guide describes setup of a standalone HBase instance running against the local filesystem.
 This is not an appropriate configuration for a production instance of HBase, but will allow you to experiment with HBase.
@@ -56,7 +56,7 @@ Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1. U
 
 .Example /etc/hosts File for Ubuntu
 ====
-The following [path]_/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble. 
+The following _/etc/hosts_ file works correctly for HBase 0.94.x and earlier, on Ubuntu. Use this as a template if you run into trouble. 
 [listing]
 ----
 127.0.0.1 localhost
@@ -78,10 +78,10 @@ See <<java,java>> for information about supported JDK versions.
   Click on the suggested top link.
   This will take you to a mirror of _HBase
   Releases_.
-  Click on the folder named [path]_stable_ and then download the binary file that ends in [path]_.tar.gz_ to your local filesystem.
+  Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem.
   Be sure to choose the version that corresponds with the version of Hadoop you are likely to use later.
-  In most cases, you should choose the file for Hadoop 2, which will be called something like [path]_hbase-0.98.3-hadoop2-bin.tar.gz_.
-  Do not download the file ending in [path]_src.tar.gz_ for now.
+  In most cases, you should choose the file for Hadoop 2, which will be called something like _hbase-0.98.3-hadoop2-bin.tar.gz_.
+  Do not download the file ending in _src.tar.gz_ for now.
 . Extract the downloaded file, and change to the newly-created directory.
 +
 ----
@@ -90,29 +90,29 @@ $ tar xzvf hbase-<?eval ${project.version}?>-hadoop2-bin.tar.gz
 $ cd hbase-<?eval ${project.version}?>-hadoop2/
 ----
 
-. For HBase 0.98.5 and later, you are required to set the [var]+JAVA_HOME+            environment variable before starting HBase.
+. For HBase 0.98.5 and later, you are required to set the `JAVA_HOME`            environment variable before starting HBase.
   Prior to 0.98.5, HBase attempted to detect the location of Java if the variables was not set.
-  You can set the variable via your operating system's usual mechanism, but HBase provides a central mechanism, [path]_conf/hbase-env.sh_.
-  Edit this file, uncomment the line starting with [literal]+JAVA_HOME+, and set it to the appropriate location for your operating system.
-  The [var]+JAVA_HOME+ variable should be set to a directory which contains the executable file [path]_bin/java_.
+  You can set the variable via your operating system's usual mechanism, but HBase provides a central mechanism, _conf/hbase-env.sh_.
+  Edit this file, uncomment the line starting with `JAVA_HOME`, and set it to the appropriate location for your operating system.
+  The `JAVA_HOME` variable should be set to a directory which contains the executable file _bin/java_.
   Most modern Linux operating systems provide a mechanism, such as /usr/bin/alternatives on RHEL or CentOS, for transparently switching between versions of executables such as Java.
-  In this case, you can set [var]+JAVA_HOME+ to the directory containing the symbolic link to [path]_bin/java_, which is usually [path]_/usr_.
+  In this case, you can set `JAVA_HOME` to the directory containing the symbolic link to _bin/java_, which is usually _/usr_.
 +
 ----
 JAVA_HOME=/usr
 ----
 +
 NOTE: These instructions assume that each node of your cluster uses the same configuration.
-If this is not the case, you may need to set [var]+JAVA_HOME+              separately for each node.
+If this is not the case, you may need to set `JAVA_HOME`              separately for each node.
 
-. Edit [path]_conf/hbase-site.xml_, which is the main HBase configuration file.
+. Edit _conf/hbase-site.xml_, which is the main HBase configuration file.
   At this time, you only need to specify the directory on the local filesystem where HBase and Zookeeper write data.
   By default, a new directory is created under /tmp.
   Many servers are configured to delete the contents of /tmp upon reboot, so you should store the data elsewhere.
-  The following configuration will store HBase's data in the [path]_hbase_ directory, in the home directory of the user called [systemitem]+testuser+.
+  The following configuration will store HBase's data in the _hbase_ directory, in the home directory of the user called [systemitem]+testuser+.
   Paste the [markup]+<property>+ tags beneath the [markup]+<configuration>+ tags, which should be empty in a new HBase install.
 +
-.Example [path]_hbase-site.xml_ for Standalone HBase
+.Example _hbase-site.xml_ for Standalone HBase
 ====
 [source,xml]
 ----
@@ -134,22 +134,22 @@ You do not need to create the HBase data directory.
 HBase will do this for you.
 If you create the directory, HBase will attempt to do a migration, which is not what you want.
 
-. The [path]_bin/start-hbase.sh_ script is provided as a convenient way to start HBase.
+. The _bin/start-hbase.sh_ script is provided as a convenient way to start HBase.
   Issue the command, and if all goes well, a message is logged to standard output showing that HBase started successfully.
-  You can use the +jps+            command to verify that you have one running process called [literal]+HMaster+.
+  You can use the +jps+            command to verify that you have one running process called `HMaster`.
   In standalone mode HBase runs all daemons within this single JVM, i.e.
   the HMaster, a single HRegionServer, and the ZooKeeper daemon.
 +
 NOTE: Java needs to be installed and available.
-If you get an error indicating that Java is not installed, but it is on your system, perhaps in a non-standard location, edit the [path]_conf/hbase-env.sh_ file and modify the [var]+JAVA_HOME+ setting to point to the directory that contains [path]_bin/java_ your system.
+If you get an error indicating that Java is not installed, but it is on your system, perhaps in a non-standard location, edit the _conf/hbase-env.sh_ file and modify the `JAVA_HOME` setting to point to the directory that contains _bin/java_ your system.
 
 
 .Procedure: Use HBase For the First Time
 . Connect to HBase.
 +
-Connect to your running instance of HBase using the +hbase shell+            command, located in the [path]_bin/_ directory of your HBase install.
+Connect to your running instance of HBase using the +hbase shell+            command, located in the _bin/_ directory of your HBase install.
 In this example, some usage and version information that is printed when you start HBase Shell has been omitted.
-The HBase Shell prompt ends with a [literal]+>+ character.
+The HBase Shell prompt ends with a `>` character.
 +
 ----
 
@@ -159,12 +159,12 @@ hbase(main):001:0>
 
 . Display HBase Shell Help Text.
 +
-Type [literal]+help+ and press Enter, to display some basic usage information for HBase Shell, as well as several example commands.
+Type `help` and press Enter, to display some basic usage information for HBase Shell, as well as several example commands.
 Notice that table names, rows, columns all must be enclosed in quote characters.
 
 . Create a table.
 +
-Use the [code]+create+ command to create a new table.
+Use the `create` command to create a new table.
 You must specify the table name and the ColumnFamily name.
 +
 ----
@@ -175,7 +175,7 @@ hbase> create 'test', 'cf'
 
 . List Information About your Table
 +
-Use the [code]+list+ command to 
+Use the `list` command to 
 +
 ----
 
@@ -189,7 +189,7 @@ test
 
 . Put data into your table.
 +
-To put data into your table, use the [code]+put+ command.
+To put data into your table, use the `put` command.
 +
 ----
 
@@ -204,8 +204,8 @@ hbase> put 'test', 'row3', 'cf:c', 'value3'
 ----
 +
 Here, we insert three values, one at a time.
-The first insert is at [literal]+row1+, column [literal]+cf:a+, with a value of [literal]+value1+.
-Columns in HBase are comprised of a column family prefix, [literal]+cf+ in this example, followed by a colon and then a column qualifier suffix, [literal]+a+ in this case.
+The first insert is at `row1`, column `cf:a`, with a value of `value1`.
+Columns in HBase are comprised of a column family prefix, `cf` in this example, followed by a colon and then a column qualifier suffix, `a` in this case.
 
 . Scan the table for all data at once.
 +
@@ -237,8 +237,8 @@ COLUMN                CELL
 
 . Disable a table.
 +
-If you want to delete a table or change its settings, as well as in some other situations, you need to disable the table first, using the [code]+disable+            command.
-You can re-enable it using the [code]+enable+ command.
+If you want to delete a table or change its settings, as well as in some other situations, you need to disable the table first, using the `disable`            command.
+You can re-enable it using the `enable` command.
 +
 ----
 
@@ -259,7 +259,7 @@ hbase> disable 'test'
 
 . Drop the table.
 +
-To drop (delete) a table, use the [code]+drop+ command.
+To drop (delete) a table, use the `drop` command.
 +
 ----
 
@@ -274,7 +274,7 @@ HBase is still running in the background.
 
 
 .Procedure: Stop HBase
-. In the same way that the [path]_bin/start-hbase.sh_ script is provided to conveniently start all HBase daemons, the [path]_bin/stop-hbase.sh_            script stops them.
+. In the same way that the _bin/start-hbase.sh_ script is provided to conveniently start all HBase daemons, the _bin/stop-hbase.sh_            script stops them.
 +
 ----
 
@@ -291,7 +291,7 @@ $
 
 After working your way through <<quickstart,quickstart>>, you can re-configure HBase to run in pseudo-distributed mode.
 Pseudo-distributed mode means that HBase still runs completely on a single host, but each HBase daemon (HMaster, HRegionServer, and Zookeeper) runs as a separate process.
-By default, unless you configure the [code]+hbase.rootdir+ property as described in <<quickstart,quickstart>>, your data is still stored in [path]_/tmp/_.
+By default, unless you configure the `hbase.rootdir` property as described in <<quickstart,quickstart>>, your data is still stored in _/tmp/_.
 In this walk-through, we store your data in HDFS instead, assuming you have HDFS available.
 You can skip the HDFS configuration to continue storing your data in the local filesystem.
 
@@ -311,7 +311,7 @@ This procedure will create a totally new directory where HBase will store its da
 
 . Configure HBase.
 +
-Edit the [path]_hbase-site.xml_ configuration.
+Edit the _hbase-site.xml_ configuration.
 First, add the following property.
 which directs HBase to run in distributed mode, with one JVM instance per daemon. 
 +
@@ -324,7 +324,7 @@ which directs HBase to run in distributed mode, with one JVM instance per daemon
 </property>
 ----
 +
-Next, change the [code]+hbase.rootdir+ from the local filesystem to the address of your HDFS instance, using the [code]+hdfs:////+ URI syntax.
+Next, change the `hbase.rootdir` from the local filesystem to the address of your HDFS instance, using the `hdfs:////` URI syntax.
 In this example, HDFS is running on the localhost at port 8020.
 +
 [source,xml]
@@ -342,14 +342,14 @@ If you create the directory, HBase will attempt to do a migration, which is not 
 
 . Start HBase.
 +
-Use the [path]_bin/start-hbase.sh_ command to start HBase.
+Use the _bin/start-hbase.sh_ command to start HBase.
 If your system is configured correctly, the +jps+ command should show the HMaster and HRegionServer processes running.
 
 . Check the HBase directory in HDFS.
 +
 If everything worked correctly, HBase created its directory in HDFS.
-In the configuration above, it is stored in [path]_/hbase/_ on HDFS.
-You can use the +hadoop fs+ command in Hadoop's [path]_bin/_ directory to list this directory.
+In the configuration above, it is stored in _/hbase/_ on HDFS.
+You can use the +hadoop fs+ command in Hadoop's _bin/_ directory to list this directory.
 +
 ----
 
@@ -385,7 +385,7 @@ The following command starts 3 backup servers using ports 16012/16022/16032, 160
 $ ./bin/local-master-backup.sh 2 3 5
 ----
 +
-To kill a backup master without killing the entire cluster, you need to find its process ID (PID). The PID is stored in a file with a name like [path]_/tmp/hbase-USER-X-master.pid_.
+To kill a backup master without killing the entire cluster, you need to find its process ID (PID). The PID is stored in a file with a name like _/tmp/hbase-USER-X-master.pid_.
 The only contents of the file are the PID.
 You can use the +kill -9+            command to kill that PID.
 The following command will kill the master with port offset 1, but leave the cluster running:
@@ -413,7 +413,7 @@ The following command starts four additional RegionServers, running on sequentia
 $ .bin/local-regionservers.sh start 2 3 4 5
 ----
 +
-To stop a RegionServer manually, use the +local-regionservers.sh+            command with the [literal]+stop+ parameter and the offset of the server to stop.
+To stop a RegionServer manually, use the +local-regionservers.sh+            command with the `stop` parameter and the offset of the server to stop.
 +
 ----
 $ .bin/local-regionservers.sh stop 3
@@ -421,7 +421,7 @@ $ .bin/local-regionservers.sh stop 3
 
 . Stop HBase.
 +
-You can stop HBase the same way as in the <<quickstart,quickstart>> procedure, using the [path]_bin/stop-hbase.sh_ command.
+You can stop HBase the same way as in the <<quickstart,quickstart>> procedure, using the _bin/stop-hbase.sh_ command.
 
 
 [[quickstart_fully_distributed]]
@@ -437,27 +437,25 @@ The architecture will be as follows:
 .Distributed Cluster Demo Architecture
 [cols="1,1,1,1", options="header"]
 |===
-| Node Name
-| Master
-| ZooKeeper
-| RegionServer
-
-
+| Node Name          | Master | ZooKeeper | RegionServer
+| node-a.example.com | yes    | yes       | no
+| node-b.example.com | backup | yes       | yes
+| node-c.example.com | no     | yes       | yes
 |===
 
 This quickstart assumes that each node is a virtual machine and that they are all on the same network.
-It builds upon the previous quickstart, <<quickstart_pseudo,quickstart-pseudo>>, assuming that the system you configured in that procedure is now [code]+node-a+.
-Stop HBase on [code]+node-a+        before continuing.
+It builds upon the previous quickstart, <<quickstart_pseudo,quickstart-pseudo>>, assuming that the system you configured in that procedure is now `node-a`.
+Stop HBase on `node-a`        before continuing.
 
 NOTE: Be sure that all the nodes have full access to communicate, and that no firewall rules are in place which could prevent them from talking to each other.
-If you see any errors like [literal]+no route to host+, check your firewall.
+If you see any errors like `no route to host`, check your firewall.
 
 .Procedure: Configure Password-Less SSH Access
 
-[code]+node-a+ needs to be able to log into [code]+node-b+ and [code]+node-c+ (and to itself) in order to start the daemons.
-The easiest way to accomplish this is to use the same username on all hosts, and configure password-less SSH login from [code]+node-a+ to each of the others. 
+`node-a` needs to be able to log into `node-b` and `node-c` (and to itself) in order to start the daemons.
+The easiest way to accomplish this is to use the same username on all hosts, and configure password-less SSH login from `node-a` to each of the others. 
 
-. On [code]+node-a+, generate a key pair.
+. On `node-a`, generate a key pair.
 +
 While logged in as the user who will run HBase, generate a SSH key pair, using the following command: 
 +
@@ -467,19 +465,19 @@ $ ssh-keygen -t rsa
 ----
 +
 If the command succeeds, the location of the key pair is printed to standard output.
-The default name of the public key is [path]_id_rsa.pub_.
+The default name of the public key is _id_rsa.pub_.
 
 . Create the directory that will hold the shared keys on the other nodes.
 +
-On [code]+node-b+ and [code]+node-c+, log in as the HBase user and create a [path]_.ssh/_ directory in the user's home directory, if it does not already exist.
+On `node-b` and `node-c`, log in as the HBase user and create a _.ssh/_ directory in the user's home directory, if it does not already exist.
 If it already exists, be aware that it may already contain other keys.
 
 . Copy the public key to the other nodes.
 +
-Securely copy the public key from [code]+node-a+ to each of the nodes, by using the +scp+ or some other secure means.
-On each of the other nodes, create a new file called [path]_.ssh/authorized_keys_ _if it does
-              not already exist_, and append the contents of the [path]_id_rsa.pub_ file to the end of it.
-Note that you also need to do this for [code]+node-a+ itself.
+Securely copy the public key from `node-a` to each of the nodes, by using the +scp+ or some other secure means.
+On each of the other nodes, create a new file called _.ssh/authorized_keys_ _if it does
+              not already exist_, and append the contents of the _id_rsa.pub_ file to the end of it.
+Note that you also need to do this for `node-a` itself.
 +
 ----
 $ cat id_rsa.pub >> ~/.ssh/authorized_keys
@@ -487,27 +485,27 @@ $ cat id_rsa.pub >> ~/.ssh/authorized_keys
 
 . Test password-less login.
 +
-If you performed the procedure correctly, if you SSH from [code]+node-a+ to either of the other nodes, using the same username, you should not be prompted for a password. 
+If you performed the procedure correctly, if you SSH from `node-a` to either of the other nodes, using the same username, you should not be prompted for a password. 
 
-. Since [code]+node-b+ will run a backup Master, repeat the procedure above, substituting [code]+node-b+ everywhere you see [code]+node-a+.
-  Be sure not to overwrite your existing [path]_.ssh/authorized_keys_ files, but concatenate the new key onto the existing file using the [code]+>>+ operator rather than the [code]+>+ operator.
+. Since `node-b` will run a backup Master, repeat the procedure above, substituting `node-b` everywhere you see `node-a`.
+  Be sure not to overwrite your existing _.ssh/authorized_keys_ files, but concatenate the new key onto the existing file using the `>>` operator rather than the `>` operator.
 
-.Procedure: Prepare [code]+node-a+
+.Procedure: Prepare `node-a`
 
 `node-a` will run your primary master and ZooKeeper processes, but no RegionServers.
-. Stop the RegionServer from starting on [code]+node-a+.
+. Stop the RegionServer from starting on `node-a`.
 
-. Edit [path]_conf/regionservers_ and remove the line which contains [literal]+localhost+. Add lines with the hostnames or IP addresses for [code]+node-b+ and [code]+node-c+.
+. Edit _conf/regionservers_ and remove the line which contains `localhost`. Add lines with the hostnames or IP addresses for `node-b` and `node-c`.
 +
-Even if you did want to run a RegionServer on [code]+node-a+, you should refer to it by the hostname the other servers would use to communicate with it.
-In this case, that would be [literal]+node-a.example.com+.
+Even if you did want to run a RegionServer on `node-a`, you should refer to it by the hostname the other servers would use to communicate with it.
+In this case, that would be `node-a.example.com`.
 This enables you to distribute the configuration to each node of your cluster any hostname conflicts.
 Save the file.
 
-. Configure HBase to use [code]+node-b+ as a backup master.
+. Configure HBase to use `node-b` as a backup master.
 +
-Create a new file in [path]_conf/_ called [path]_backup-masters_, and add a new line to it with the hostname for [code]+node-b+.
-In this demonstration, the hostname is [literal]+node-b.example.com+.
+Create a new file in _conf/_ called _backup-masters_, and add a new line to it with the hostname for `node-b`.
+In this demonstration, the hostname is `node-b.example.com`.
 
 . Configure ZooKeeper
 +
@@ -515,7 +513,7 @@ In reality, you should carefully consider your ZooKeeper configuration.
 You can find out more about configuring ZooKeeper in <<zookeeper,zookeeper>>.
 This configuration will direct HBase to start and manage a ZooKeeper instance on each node of the cluster.
 +
-On [code]+node-a+, edit [path]_conf/hbase-site.xml_ and add the following properties.
+On `node-a`, edit _conf/hbase-site.xml_ and add the following properties.
 +
 [source,bourne]
 ----
@@ -529,22 +527,22 @@ On [code]+node-a+, edit [path]_conf/hbase-site.xml_ and add the following proper
 </property>
 ----
 
-. Everywhere in your configuration that you have referred to [code]+node-a+ as [literal]+localhost+, change the reference to point to the hostname that the other nodes will use to refer to [code]+node-a+.
-  In these examples, the hostname is [literal]+node-a.example.com+.
+. Everywhere in your configuration that you have referred to `node-a` as `localhost`, change the reference to point to the hostname that the other nodes will use to refer to `node-a`.
+  In these examples, the hostname is `node-a.example.com`.
 
-.Procedure: Prepare [code]+node-b+ and [code]+node-c+
+.Procedure: Prepare `node-b` and `node-c`
 
-[code]+node-b+ will run a backup master server and a ZooKeeper instance.
+`node-b` will run a backup master server and a ZooKeeper instance.
 
 . Download and unpack HBase.
 +
-Download and unpack HBase to [code]+node-b+, just as you did for the standalone and pseudo-distributed quickstarts.
+Download and unpack HBase to `node-b`, just as you did for the standalone and pseudo-distributed quickstarts.
 
-. Copy the configuration files from [code]+node-a+ to [code]+node-b+.and
-  [code]+node-c+.
+. Copy the configuration files from `node-a` to `node-b`.and
+  `node-c`.
 +
 Each node of your cluster needs to have the same configuration information.
-Copy the contents of the [path]_conf/_ directory to the [path]_conf/_            directory on [code]+node-b+ and [code]+node-c+.
+Copy the contents of the _conf/_ directory to the _conf/_            directory on `node-b` and `node-c`.
 
 
 .Procedure: Start and Test Your Cluster
@@ -552,12 +550,12 @@ Copy the contents of the [path]_conf/_ directory to the [path]_conf/_           
 +
 If you forgot to stop HBase from previous testing, you will have errors.
 Check to see whether HBase is running on any of your nodes by using the +jps+            command.
-Look for the processes [literal]+HMaster+, [literal]+HRegionServer+, and [literal]+HQuorumPeer+.
+Look for the processes `HMaster`, `HRegionServer`, and `HQuorumPeer`.
 If they exist, kill them.
 
 . Start the cluster.
 +
-On [code]+node-a+, issue the +start-hbase.sh+ command.
+On `node-a`, issue the +start-hbase.sh+ command.
 Your output will be similar to that below.
 +
 ----
@@ -614,9 +612,9 @@ $ jps
 .ZooKeeper Process Name
 [NOTE]
 ====
-The [code]+HQuorumPeer+ process is a ZooKeeper instance which is controlled and started by HBase.
+The `HQuorumPeer` process is a ZooKeeper instance which is controlled and started by HBase.
 If you use ZooKeeper this way, it is limited to one instance per cluster node, , and is appropriate for testing only.
-If ZooKeeper is run outside of HBase, the process is called [code]+QuorumPeer+.
+If ZooKeeper is run outside of HBase, the process is called `QuorumPeer`.
 For more about ZooKeeper configuration, including using an external ZooKeeper instance with HBase, see <<zookeeper,zookeeper>>.
 ====
 
@@ -628,9 +626,9 @@ NOTE: Web UI Port Changes
 In HBase newer than 0.98.x, the HTTP ports used by the HBase Web UI changed from 60010 for the Master and 60030 for each RegionServer to 16610 for the Master and 16030 for the RegionServer.
 
 +
-If everything is set up correctly, you should be able to connect to the UI for the Master [literal]+http://node-a.example.com:60110/+ or the secondary master at [literal]+http://node-b.example.com:60110/+ for the secondary master, using a web browser.
-If you can connect via [code]+localhost+ but not from another host, check your firewall rules.
-You can see the web UI for each of the RegionServers at port 60130 of their IP addresses, or by clicking their links in the web UI for the Master.
+If everything is set up correctly, you should be able to connect to the UI for the Master `http://node-a.example.com:16610/` or the secondary master at `http://node-b.example.com:16610/` for the secondary master, using a web browser.
+If you can connect via `localhost` but not from another host, check your firewall rules.
+You can see the web UI for each of the RegionServers at port 16630 of their IP addresses, or by clicking their links in the web UI for the Master.
 
 . Test what happens when nodes or services disappear.
 +

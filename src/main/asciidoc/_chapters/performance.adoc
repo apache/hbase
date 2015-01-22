@@ -111,9 +111,9 @@ Are all the network interfaces functioning correctly? Are you sure? See the Trou
 
 In his presentation, link:http://www.slideshare.net/cloudera/hbase-hug-presentation[Avoiding Full GCs
             with MemStore-Local Allocation Buffers], Todd Lipcon describes two cases of stop-the-world garbage collections common in HBase, especially during loading; CMS failure modes and old generation heap fragmentation brought.
-To address the first, start the CMS earlier than default by adding [code]+-XX:CMSInitiatingOccupancyFraction+ and setting it down from defaults.
+To address the first, start the CMS earlier than default by adding `-XX:CMSInitiatingOccupancyFraction` and setting it down from defaults.
 Start at 60 or 70 percent (The lower you bring down the threshold, the more GCing is done, the more CPU used). To address the second fragmentation issue, Todd added an experimental facility, 
-(((MSLAB))), that must be explicitly enabled in Apache HBase 0.90.x (Its defaulted to be on in Apache 0.92.x HBase). See [code]+hbase.hregion.memstore.mslab.enabled+ to true in your [class]+Configuration+.
+(((MSLAB))), that must be explicitly enabled in Apache HBase 0.90.x (Its defaulted to be on in Apache 0.92.x HBase). See `hbase.hregion.memstore.mslab.enabled` to true in your `Configuration`.
 See the cited slides for background and detail.
 The latest jvms do better regards fragmentation so make sure you are running a recent release.
 Read down in the message, link:http://osdir.com/ml/hotspot-gc-use/2011-11/msg00002.html[Identifying
@@ -125,7 +125,7 @@ Disable MSLAB in this case, or lower the amount of memory it uses or float less 
 If you have a write-heavy workload, check out link:https://issues.apache.org/jira/browse/HBASE-8163[HBASE-8163
             MemStoreChunkPool: An improvement for JAVA GC when using MSLAB].
 It describes configurations to lower the amount of young GC during write-heavy loadings.
-If you do not have HBASE-8163 installed, and you are trying to improve your young GC times, one trick to consider -- courtesy of our Liang Xie -- is to set the GC config [var]+-XX:PretenureSizeThreshold+ in [path]_hbase-env.sh_ to be just smaller than the size of [var]+hbase.hregion.memstore.mslab.chunksize+ so MSLAB allocations happen in the tenured space directly rather than first in the young gen.
+If you do not have HBASE-8163 installed, and you are trying to improve your young GC times, one trick to consider -- courtesy of our Liang Xie -- is to set the GC config `-XX:PretenureSizeThreshold` in _hbase-env.sh_ to be just smaller than the size of `hbase.hregion.memstore.mslab.chunksize` so MSLAB allocations happen in the tenured space directly rather than first in the young gen.
 You'd do this because these MSLAB allocations are going to likely make it to the old gen anyways and rather than pay the price of a copies between s0 and s1 in eden space followed by the copy up from young to old gen after the MSLABs have achieved sufficient tenure, save a bit of YGC churn and allocate in the old gen directly. 
 
 For more information about GC logs, see <<trouble.log.gc,trouble.log.gc>>. 
@@ -145,12 +145,12 @@ See <<recommended_configurations,recommended configurations>>.
 For larger systems, managing link:[compactions and splits] may be something you want to consider.
 
 [[perf.handlers]]
-=== [var]+hbase.regionserver.handler.count+
+=== `hbase.regionserver.handler.count`
 
 See <<hbase.regionserver.handler.count,hbase.regionserver.handler.count>>. 
 
 [[perf.hfile.block.cache.size]]
-=== [var]+hfile.block.cache.size+
+=== `hfile.block.cache.size`
 
 See <<hfile.block.cache.size,hfile.block.cache.size>>.
 A memory setting for the RegionServer process. 
@@ -190,83 +190,79 @@ tableDesc.addFamily(cfDesc);
 See the API documentation for link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html[CacheConfig].
 
 [[perf.rs.memstore.size]]
-=== [var]+hbase.regionserver.global.memstore.size+
+=== `hbase.regionserver.global.memstore.size`
 
 See <<hbase.regionserver.global.memstore.size,hbase.regionserver.global.memstore.size>>.
 This memory setting is often adjusted for the RegionServer process depending on needs. 
 
 [[perf.rs.memstore.size.lower.limit]]
-=== [var]+hbase.regionserver.global.memstore.size.lower.limit+
+=== `hbase.regionserver.global.memstore.size.lower.limit`
 
 See <<hbase.regionserver.global.memstore.size.lower.limit,hbase.regionserver.global.memstore.size.lower.limit>>.
 This memory setting is often adjusted for the RegionServer process depending on needs. 
 
 [[perf.hstore.blockingstorefiles]]
-=== [var]+hbase.hstore.blockingStoreFiles+
+=== `hbase.hstore.blockingStoreFiles`
 
 See <<hbase.hstore.blockingstorefiles,hbase.hstore.blockingStoreFiles>>.
 If there is blocking in the RegionServer logs, increasing this can help. 
 
 [[perf.hregion.memstore.block.multiplier]]
-=== [var]+hbase.hregion.memstore.block.multiplier+
+=== `hbase.hregion.memstore.block.multiplier`
 
 See <<hbase.hregion.memstore.block.multiplier,hbase.hregion.memstore.block.multiplier>>.
 If there is enough RAM, increasing this can help. 
 
 [[hbase.regionserver.checksum.verify.performance]]
-=== [var]+hbase.regionserver.checksum.verify+
+=== `hbase.regionserver.checksum.verify`
 
 Have HBase write the checksum into the datablock and save having to do the checksum seek whenever you read.
 
 See <<hbase.regionserver.checksum.verify,hbase.regionserver.checksum.verify>>, <<hbase.hstore.bytes.per.checksum,hbase.hstore.bytes.per.checksum>> and <<hbase.hstore.checksum.algorithm,hbase.hstore.checksum.algorithm>>        For more information see the release note on link:https://issues.apache.org/jira/browse/HBASE-5074[HBASE-5074 support checksums in HBase block cache]. 
 
-=== Tuning [code]+callQueue+ Options
+=== Tuning `callQueue` Options
 
 link:https://issues.apache.org/jira/browse/HBASE-11355[HBASE-11355]        introduces several callQueue tuning mechanisms which can increase performance.
 See the JIRA for some benchmarking information.
 
-* To increase the number of callqueues, set +hbase.ipc.server.num.callqueue+ to a value greater than [literal]+1+.
-* To split the callqueue into separate read and write queues, set [code]+hbase.ipc.server.callqueue.read.ratio+ to a value between [literal]+0+ and [literal]+1+.
+* To increase the number of callqueues, set +hbase.ipc.server.num.callqueue+ to a value greater than `1`.
+* To split the callqueue into separate read and write queues, set `hbase.ipc.server.callqueue.read.ratio` to a value between `0` and `1`.
   This factor weights the queues toward writes (if below .5) or reads (if above .5). Another way to say this is that the factor determines what percentage of the split queues are used for reads.
   The following examples illustrate some of the possibilities.
   Note that you always have at least one write queue, no matter what setting you use.
 +
-* The default value of [literal]+0+ does not split the queue.
-* A value of [literal]+.3+ uses 30% of the queues for reading and 60% for writing.
-  Given a value of [literal]+10+ for +hbase.ipc.server.num.callqueue+, 3 queues would be used for reads and 7 for writes.
-* A value of [literal]+.5+ uses the same number of read queues and write queues.
-  Given a value of [literal]+10+ for +hbase.ipc.server.num.callqueue+, 5 queues would be used for reads and 5 for writes.
-* A value of [literal]+.6+ uses 60% of the queues for reading and 30% for reading.
-  Given a value of [literal]+10+ for +hbase.ipc.server.num.callqueue+, 7 queues would be used for reads and 3 for writes.
-* A value of [literal]+1.0+ uses one queue to process write requests, and all other queues process read requests.
-  A value higher than [literal]+1.0+                has the same effect as a value of [literal]+1.0+.
-  Given a value of [literal]+10+ for +hbase.ipc.server.num.callqueue+, 9 queues would be used for reads and 1 for writes.
+* The default value of `0` does not split the queue.
+* A value of `.3` uses 30% of the queues for reading and 60% for writing.
+  Given a value of `10` for +hbase.ipc.server.num.callqueue+, 3 queues would be used for reads and 7 for writes.
+* A value of `.5` uses the same number of read queues and write queues.
+  Given a value of `10` for +hbase.ipc.server.num.callqueue+, 5 queues would be used for reads and 5 for writes.
+* A value of `.6` uses 60% of the queues for reading and 30% for reading.
+  Given a value of `10` for +hbase.ipc.server.num.callqueue+, 7 queues would be used for reads and 3 for writes.
+* A value of `1.0` uses one queue to process write requests, and all other queues process read requests.
+  A value higher than `1.0`                has the same effect as a value of `1.0`.
+  Given a value of `10` for +hbase.ipc.server.num.callqueue+, 9 queues would be used for reads and 1 for writes.
 
 * You can also split the read queues so that separate queues are used for short reads (from Get operations) and long reads (from Scan operations), by setting the +hbase.ipc.server.callqueue.scan.ratio+ option.
   This option is a factor between 0 and 1, which determine the ratio of read queues used for Gets and Scans.
-  More queues are used for Gets if the value is below [literal]+.5+ and more are used for scans if the value is above [literal]+.5+.
+  More queues are used for Gets if the value is below `.5` and more are used for scans if the value is above `.5`.
   No matter what setting you use, at least one read queue is used for Get operations.
 +
-* A value of [literal]+0+ does not split the read queue.
-* A value of [literal]+.3+ uses 60% of the read queues for Gets and 30% for Scans.
-  Given a value of [literal]+20+ for +hbase.ipc.server.num.callqueue+ and a value of [literal]+.5
-  + for +hbase.ipc.server.callqueue.read.ratio+, 10 queues would be used for reads, out of those 10, 7 would be used for Gets and 3 for Scans.
-* A value of [literal]+.5+ uses half the read queues for Gets and half for Scans.
-  Given a value of [literal]+20+ for +hbase.ipc.server.num.callqueue+ and a value of [literal]+.5
-  + for +hbase.ipc.server.callqueue.read.ratio+, 10 queues would be used for reads, out of those 10, 5 would be used for Gets and 5 for Scans.
-* A value of [literal]+.6+ uses 30% of the read queues for Gets and 60% for Scans.
-  Given a value of [literal]+20+ for +hbase.ipc.server.num.callqueue+ and a value of [literal]+.5
-  + for +hbase.ipc.server.callqueue.read.ratio+, 10 queues would be used for reads, out of those 10, 3 would be used for Gets and 7 for Scans.
-* A value of [literal]+1.0+ uses all but one of the read queues for Scans.
-  Given a value of [literal]+20+ for +hbase.ipc.server.num.callqueue+ and a value of [literal]+.5
-  + for +hbase.ipc.server.callqueue.read.ratio+, 10 queues would be used for reads, out of those 10, 1 would be used for Gets and 9 for Scans.
+* A value of `0` does not split the read queue.
+* A value of `.3` uses 60% of the read queues for Gets and 30% for Scans.
+  Given a value of `20` for +hbase.ipc.server.num.callqueue+ and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 7 would be used for Gets and 3 for Scans.
+* A value of `.5` uses half the read queues for Gets and half for Scans.
+  Given a value of `20` for +hbase.ipc.server.num.callqueue+ and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 5 would be used for Gets and 5 for Scans.
+* A value of `.6` uses 30% of the read queues for Gets and 60% for Scans.
+  Given a value of `20` for +hbase.ipc.server.num.callqueue+ and a value of `.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 3 would be used for Gets and 7 for Scans.
+* A value of `1.0` uses all but one of the read queues for Scans.
+  Given a value of `20` for +hbase.ipc.server.num.callqueue+ and a value of`.5` for `hbase.ipc.server.callqueue.read.ratio`, 10 queues would be used for reads, out of those 10, 1 would be used for Gets and 9 for Scans.
 
-* You can use the new option +hbase.ipc.server.callqueue.handler.factor+ to programmatically tune the number of queues:
+* You can use the new option `hbase.ipc.server.callqueue.handler.factor` to programmatically tune the number of queues:
 +
-* A value of [literal]+0+ uses a single shared queue between all the handlers.
-* A value of [literal]+1+ uses a separate queue for each handler.
-* A value between [literal]+0+ and [literal]+1+ tunes the number of queues against the number of handlers.
-  For instance, a value of [literal]+.5+ shares one queue between each two handlers.
+* A value of `0` uses a single shared queue between all the handlers.
+* A value of `1` uses a separate queue for each handler.
+* A value between `0` and `1` tunes the number of queues against the number of handlers.
+  For instance, a value of `.5` shares one queue between each two handlers.
 +
 Having more queues, such as in a situation where you have one queue per handler, reduces contention when adding a task to a queue or selecting it from a queue.
 The trade-off is that if you have some queues with long-running tasks, a handler may end up waiting to execute from that queue rather than processing another queue which has waiting tasks.
@@ -297,7 +293,7 @@ See also <<perf.compression.however,perf.compression.however>> for compression c
 [[schema.regionsize]]
 === Table RegionSize
 
-The regionsize can be set on a per-table basis via [code]+setFileSize+ on link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor]        in the event where certain tables require different regionsizes than the configured default regionsize. 
+The regionsize can be set on a per-table basis via `setFileSize` on link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor]        in the event where certain tables require different regionsizes than the configured default regionsize. 
 
 See <<ops.capacity.regions,ops.capacity.regions>> for more information. 
 
@@ -330,8 +326,8 @@ For more information on Bloom filters in relation to HBase, see <<blooms,blooms>
 Since HBase 0.96, row-based Bloom filters are enabled by default.
 You may choose to disable them or to change some tables to use row+column Bloom filters, depending on the characteristics of your data and how it is loaded into HBase.
 
-To determine whether Bloom filters could have a positive impact, check the value of [code]+blockCacheHitRatio+ in the RegionServer metrics.
-If Bloom filters are enabled, the value of [code]+blockCacheHitRatio+ should increase, because the Bloom filter is filtering out blocks that are definitely not needed. 
+To determine whether Bloom filters could have a positive impact, check the value of `blockCacheHitRatio` in the RegionServer metrics.
+If Bloom filters are enabled, the value of `blockCacheHitRatio` should increase, because the Bloom filter is filtering out blocks that are definitely not needed. 
 
 You can choose to enable Bloom filters for a row or for a row+column combination.
 If you generally scan entire rows, the row+column combination will not provide any benefit.
@@ -348,11 +344,11 @@ Bloom filters need to be rebuilt upon deletion, so may not be appropriate in env
 
 Bloom filters are enabled on a Column Family.
 You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API.
-Valid values are [literal]+NONE+ (the default), [literal]+ROW+, or [literal]+ROWCOL+.
-See <<bloom.filters.when,bloom.filters.when>> for more information on [literal]+ROW+ versus [literal]+ROWCOL+.
+Valid values are `NONE` (the default), `ROW`, or `ROWCOL`.
+See <<bloom.filters.when,bloom.filters.when>> for more information on `ROW` versus `ROWCOL`.
 See also the API documentation for link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
-The following example creates a table and enables a ROWCOL Bloom filter on the [literal]+colfam1+ column family.
+The following example creates a table and enables a ROWCOL Bloom filter on the `colfam1` column family.
 
 ----
 
@@ -361,7 +357,7 @@ hbase> create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROWCOL'}
 
 ==== Configuring Server-Wide Behavior of Bloom Filters
 
-You can configure the following settings in the [path]_hbase-site.xml_. 
+You can configure the following settings in the _hbase-site.xml_. 
 
 [cols="1,1,1", options="header"]
 |===
@@ -487,7 +483,7 @@ A useful pattern to speed up the bulk import process is to pre-create empty regi
 Be somewhat conservative in this, because too-many regions can actually degrade performance. 
 
 There are two different approaches to pre-creating splits.
-The first approach is to rely on the default [code]+HBaseAdmin+ strategy (which is implemented in [code]+Bytes.split+)... 
+The first approach is to rely on the default `HBaseAdmin` strategy (which is implemented in `Bytes.split`)... 
 
 [source,java]
 ----
@@ -513,23 +509,23 @@ See <<manual_region_splitting_decisions,manual region splitting decisions>>     
 [[def.log.flush]]
 ===  Table Creation: Deferred Log Flush 
 
-The default behavior for Puts using the Write Ahead Log (WAL) is that [class]+WAL+ edits will be written immediately.
+The default behavior for Puts using the Write Ahead Log (WAL) is that `WAL` edits will be written immediately.
 If deferred log flush is used, WAL edits are kept in memory until the flush period.
-The benefit is aggregated and asynchronous [class]+WAL+- writes, but the potential downside is that if the RegionServer goes down the yet-to-be-flushed edits are lost.
+The benefit is aggregated and asynchronous `WAL`- writes, but the potential downside is that if the RegionServer goes down the yet-to-be-flushed edits are lost.
 This is safer, however, than not using WAL at all with Puts. 
 
 Deferred log flush can be configured on tables via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor].
-The default value of [var]+hbase.regionserver.optionallogflushinterval+ is 1000ms. 
+The default value of `hbase.regionserver.optionallogflushinterval` is 1000ms. 
 
 [[perf.hbase.client.autoflush]]
 === HBase Client: AutoFlush
 
 When performing a lot of Puts, make sure that setAutoFlush is set to false on your link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable]        instance.
 Otherwise, the Puts will be sent one at a time to the RegionServer.
-Puts added via [code]+ htable.add(Put)+ and [code]+ htable.add( <List> Put)+ wind up in the same write buffer.
-If [code]+autoFlush = false+, these messages are not sent until the write-buffer is filled.
+Puts added via ` htable.add(Put)` and ` htable.add( <List> Put)` wind up in the same write buffer.
+If `autoFlush = false`, these messages are not sent until the write-buffer is filled.
 To explicitly flush the messages, call [method]+flushCommits+.
-Calling [method]+close+ on the [class]+HTable+ instance will invoke [method]+flushCommits+.
+Calling [method]+close+ on the `HTable` instance will invoke [method]+flushCommits+.
 
 [[perf.hbase.client.putwal]]
 === HBase Client: Turn off WAL on Puts
@@ -547,8 +543,8 @@ To disable the WAL, see <<wal.disable,wal.disable>>.
 [[perf.hbase.client.regiongroup]]
 === HBase Client: Group Puts by RegionServer
 
-In addition to using the writeBuffer, grouping [class]+Put+s by RegionServer can reduce the number of client RPC calls per writeBuffer flush.
-There is a utility [class]+HTableUtil+ currently on TRUNK that does this, but you can either copy that or implement your own version for those still on 0.90.x or earlier. 
+In addition to using the writeBuffer, grouping `Put`s by RegionServer can reduce the number of client RPC calls per writeBuffer flush.
+There is a utility `HTableUtil` currently on TRUNK that does this, but you can either copy that or implement your own version for those still on 0.90.x or earlier. 
 
 [[perf.hbase.write.mr.reducer]]
 === MapReduce: Skip The Reducer
@@ -599,17 +595,17 @@ Timeouts can also happen in a non-MapReduce use case (i.e., single threaded HBas
 === Scan Attribute Selection
 
 Whenever a Scan is used to process large numbers of rows (and especially when used as a MapReduce source), be aware of which attributes are selected.
-If [code]+scan.addFamily+        is called then _all_ of the attributes in the specified ColumnFamily will be returned to the client.
+If `scan.addFamily`        is called then _all_ of the attributes in the specified ColumnFamily will be returned to the client.
 If only a small number of the available attributes are to be processed, then only those attributes should be specified in the input scan because attribute over-selection is a non-trivial performance penalty over large datasets. 
 
 [[perf.hbase.client.seek]]
 === Avoid scan seeks
 
-When columns are selected explicitly with [code]+scan.addColumn+, HBase will schedule seek operations to seek between the selected columns.
+When columns are selected explicitly with `scan.addColumn`, HBase will schedule seek operations to seek between the selected columns.
 When rows have few columns and each column has only a few versions this can be inefficient.
 A seek operation is generally slower if does not seek at least past 5-10 columns/versions or 512-1024 bytes.
 
-In order to opportunistically look ahead a few columns/versions to see if the next column/version can be found that way before a seek operation is scheduled, a new attribute [code]+Scan.HINT_LOOKAHEAD+ can be set the on Scan object.
+In order to opportunistically look ahead a few columns/versions to see if the next column/version can be found that way before a seek operation is scheduled, a new attribute `Scan.HINT_LOOKAHEAD` can be set the on Scan object.
 The following code instructs the RegionServer to attempt two iterations of next before a seek is scheduled:
 
 [source,java]
@@ -652,7 +648,7 @@ htable.close();
 === Block Cache
 
 link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan]        instances can be set to use the block cache in the RegionServer via the [method]+setCacheBlocks+ method.
-For input Scans to MapReduce jobs, this should be [var]+false+.
+For input Scans to MapReduce jobs, this should be `false`.
 For frequently accessed rows, it is advisable to use the block cache.
 
 Cache more data by moving your Block Cache offheap.
@@ -661,7 +657,7 @@ See <<offheap.blockcache,offheap.blockcache>>
 [[perf.hbase.client.rowkeyonly]]
 === Optimal Loading of Row Keys
 
-When performing a table link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[scan]        where only the row keys are needed (no families, qualifiers, values or timestamps), add a FilterList with a [var]+MUST_PASS_ALL+ operator to the scanner using [method]+setFilter+.
+When performing a table link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[scan]        where only the row keys are needed (no families, qualifiers, values or timestamps), add a FilterList with a `MUST_PASS_ALL` operator to the scanner using [method]+setFilter+.
 The filter list should include both a link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FirstKeyOnlyFilter.html[FirstKeyOnlyFilter]        and a link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/KeyOnlyFilter.html[KeyOnlyFilter].
 Using this filter combination will result in a worst case scenario of a RegionServer reading a single value from disk and minimal network traffic to the client for a single row. 
 
@@ -693,38 +689,38 @@ See also <<schema.bloom,schema.bloom>>.
 [[bloom_footprint]]
 ==== Bloom StoreFile footprint
 
-Bloom filters add an entry to the [class]+StoreFile+ general [class]+FileInfo+ data structure and then two extra entries to the [class]+StoreFile+ metadata section.
+Bloom filters add an entry to the `StoreFile` general `FileInfo` data structure and then two extra entries to the `StoreFile` metadata section.
 
-===== BloomFilter in the [class]+StoreFile+[class]+FileInfo+ data structure
+===== BloomFilter in the `StoreFile``FileInfo` data structure
 
-[class]+FileInfo+ has a [var]+BLOOM_FILTER_TYPE+ entry which is set to [var]+NONE+, [var]+ROW+ or [var]+ROWCOL.+
+`FileInfo` has a `BLOOM_FILTER_TYPE` entry which is set to `NONE`, `ROW` or `ROWCOL.`
 
-===== BloomFilter entries in [class]+StoreFile+ metadata
+===== BloomFilter entries in `StoreFile` metadata
 
-[var]+BLOOM_FILTER_META+ holds Bloom Size, Hash Function used, etc.
-Its small in size and is cached on [class]+StoreFile.Reader+ load
+`BLOOM_FILTER_META` holds Bloom Size, Hash Function used, etc.
+Its small in size and is cached on `StoreFile.Reader` load
 
-[var]+BLOOM_FILTER_DATA+ is the actual bloomfilter data.
+`BLOOM_FILTER_DATA` is the actual bloomfilter data.
 Obtained on-demand.
 Stored in the LRU cache, if it is enabled (Its enabled by default).
 
 [[config.bloom]]
 ==== Bloom Filter Configuration
 
-===== [var]+io.hfile.bloom.enabled+ global kill switch
+===== `io.hfile.bloom.enabled` global kill switch
 
-[code]+io.hfile.bloom.enabled+ in [class]+Configuration+ serves as the kill switch in case something goes wrong.
-Default = [var]+true+.
+`io.hfile.bloom.enabled` in `Configuration` serves as the kill switch in case something goes wrong.
+Default = `true`.
 
-===== [var]+io.hfile.bloom.error.rate+
+===== `io.hfile.bloom.error.rate`
 
-[var]+io.hfile.bloom.error.rate+ = average false positive rate.
+`io.hfile.bloom.error.rate` = average false positive rate.
 Default = 1%. Decrease rate by ½ (e.g.
 to .5%) == +1 bit per bloom entry.
 
-===== [var]+io.hfile.bloom.max.fold+
+===== `io.hfile.bloom.max.fold`
 
-[var]+io.hfile.bloom.max.fold+ = guaranteed minimum fold rate.
+`io.hfile.bloom.max.fold` = guaranteed minimum fold rate.
 Most people should leave this alone.
 Default = 7, or can collapse to at least 1/128th of original size.
 See the _Development Process_ section of the document link:https://issues.apache.org/jira/secure/attachment/12444007/Bloom_Filters_in_HBase.pdf[BloomFilters
@@ -740,9 +736,9 @@ Hedged reads can be helpful for times where a rare slow read is caused by a tran
 
 Because a HBase RegionServer is a HDFS client, you can enable hedged reads in HBase, by adding the following properties to the RegionServer's hbase-site.xml and tuning the values to suit your environment.
 
-* .Configuration for Hedged Reads[code]+dfs.client.hedged.read.threadpool.size+ - the number of threads dedicated to servicing hedged reads.
+* .Configuration for Hedged Reads`dfs.client.hedged.read.threadpool.size` - the number of threads dedicated to servicing hedged reads.
   If this is set to 0 (the default), hedged reads are disabled.
-* [code]+dfs.client.hedged.read.threshold.millis+ - the number of milliseconds to wait before spawning a second read thread.
+* `dfs.client.hedged.read.threshold.millis` - the number of milliseconds to wait before spawning a second read thread.
 
 .Hedged Reads Configuration Example
 ====
@@ -782,9 +778,9 @@ See also <<compaction,compaction>> and link:http://hbase.apache.org/apidocs/org/
 [[perf.deleting.rpc]]
 === Delete RPC Behavior
 
-Be aware that [code]+htable.delete(Delete)+ doesn't use the writeBuffer.
+Be aware that `htable.delete(Delete)` doesn't use the writeBuffer.
 It will execute an RegionServer RPC with each invocation.
-For a large number of deletes, consider [code]+htable.delete(List)+. 
+For a large number of deletes, consider `htable.delete(List)`. 
 
 See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29      
 
@@ -818,7 +814,7 @@ See link:http://blog.cloudera.com/blog/2013/08/how-improved-short-circuit-local-
 See link:http://archive.cloudera.com/cdh4/cdh/4/hadoop/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html[Hadoop
           shortcircuit reads configuration page] for how to enable the latter, better version of shortcircuit.
 For example, here is a minimal config.
-enabling short-circuit reads added to [path]_hbase-site.xml_: 
+enabling short-circuit reads added to _hbase-site.xml_: 
 
 [source,xml]
 ----
@@ -845,9 +841,9 @@ Be careful about permissions for the directory that hosts the shared domain sock
 
 If you are running on an old Hadoop, one that is without link:https://issues.apache.org/jira/browse/HDFS-347[HDFS-347] but that has link:https://issues.apache.org/jira/browse/HDFS-2246[HDFS-2246], you must set two configurations.
 First, the hdfs-site.xml needs to be amended.
-Set the property [var]+dfs.block.local-path-access.user+ to be the _only_        user that can use the shortcut.
+Set the property `dfs.block.local-path-access.user` to be the _only_        user that can use the shortcut.
 This has to be the user that started HBase.
-Then in hbase-site.xml, set [var]+dfs.client.read.shortcircuit+ to be [var]+true+      
+Then in hbase-site.xml, set `dfs.client.read.shortcircuit` to be `true`      
 
 Services -- at least the HBase RegionServers -- will need to be restarted in order to pick up the new configurations. 
 

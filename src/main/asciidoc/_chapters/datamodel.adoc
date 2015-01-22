@@ -31,7 +31,8 @@ In HBase, data is stored in tables, which have rows and columns.
 This is a terminology overlap with relational databases (RDBMSs), but this is not a helpful analogy.
 Instead, it can be helpful to think of an HBase table as a multi-dimensional map.
 
-.HBase Data Model TerminologyTable::
+.HBase Data Model Terminology
+Table::
   An HBase table consists of multiple rows.
 
 Row::
@@ -43,7 +44,7 @@ Row::
   If your row keys are domains, you should probably store them in reverse (org.apache.www, org.apache.mail, org.apache.jira). This way, all of the Apache domains are near each other in the table, rather than being spread out based on the first letter of the subdomain.
 
 Column::
-  A column in HBase consists of a column family and a column qualifier, which are delimited by a [literal]+:+ (colon) character.
+  A column in HBase consists of a column family and a column qualifier, which are delimited by a `:` (colon) character.
 
 Column Family::
   Column families physically colocate a set of columns and their values, often for performance reasons.
@@ -52,7 +53,7 @@ Column Family::
 
 Column Qualifier::
   A column qualifier is added to a column family to provide the index for a given piece of data.
-  Given a column family [literal]+content+, a column qualifier might be [literal]+content:html+, and another might be [literal]+content:pdf+.
+  Given a column family `content`, a column qualifier might be `content:html`, and another might be `content:pdf`.
   Though column families are fixed at table creation, column qualifiers are mutable and may differ greatly between rows.
 
 Cell::
@@ -65,48 +66,39 @@ Timestamp::
 [[conceptual.view]]
 == Conceptual View
 
-You can read a very understandable explanation of the HBase data model in the blog post link:http://jimbojw.com/wiki/index.php?title=Understanding_Hbase_and_BigTable[Understanding
-          HBase and BigTable] by Jim R.
-Wilson.
-Another good explanation is available in the PDF link:http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf[Introduction
-          to Basic Schema Design] by Amandeep Khurana.
+You can read a very understandable explanation of the HBase data model in the blog post link:http://jimbojw.com/wiki/index.php?title=Understanding_Hbase_and_BigTable[Understanding HBase and BigTable] by Jim R. Wilson.
+
+Another good explanation is available in the PDF link:http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf[Introduction 
+to Basic Schema Design] by Amandeep Khurana.
+
 It may help to read different perspectives to get a solid understanding of HBase schema design.
 The linked articles cover the same ground as the information in this section.
 
 The following example is a slightly modified form of the one on page 2 of the link:http://research.google.com/archive/bigtable.html[BigTable] paper.
-There is a table called [var]+webtable+ that contains two rows ([literal]+com.cnn.www+          and [literal]+com.example.www+), three column families named [var]+contents+, [var]+anchor+, and [var]+people+.
-In this example, for the first row ([literal]+com.cnn.www+),  [var]+anchor+ contains two columns ([var]+anchor:cssnsi.com+, [var]+anchor:my.look.ca+) and [var]+contents+ contains one column ([var]+contents:html+). This example contains 5 versions of the row with the row key [literal]+com.cnn.www+, and one version of the row with the row key [literal]+com.example.www+.
-The [var]+contents:html+ column qualifier contains the entire HTML of a given website.
-Qualifiers of the [var]+anchor+ column family each contain the external site which links to the site represented by the row, along with the text it used in the anchor of its link.
-The [var]+people+ column family represents people associated with the site. 
+There is a table called `webtable` that contains two rows (`com.cnn.www`          and `com.example.www`), three column families named `contents`, `anchor`, and `people`.
+In this example, for the first row (`com.cnn.www`),  `anchor` contains two columns (`anchor:cssnsi.com`, `anchor:my.look.ca`) and `contents` contains one column (`contents:html`). This example contains 5 versions of the row with the row key `com.cnn.www`, and one version of the row with the row key `com.example.www`.
+The `contents:html` column qualifier contains the entire HTML of a given website.
+Qualifiers of the `anchor` column family each contain the external site which links to the site represented by the row, along with the text it used in the anchor of its link.
+The `people` column family represents people associated with the site. 
 
 .Column Names
 [NOTE]
 ====
 By convention, a column name is made of its column family prefix and a _qualifier_.
-For example, the column _contents:html_ is made up of the column family [var]+contents+ and the [var]+html+ qualifier.
-The colon character ([literal]+:+) delimits the column family from the column family _qualifier_. 
+For example, the column _contents:html_ is made up of the column family `contents` and the `html` qualifier.
+The colon character (`:`) delimits the column family from the column family _qualifier_. 
 ====
 
-.Table [var]+webtable+
+.Table `webtable`
 [cols="1,1,1,1,1", frame="all", options="header"]
 |===
-| Row Key
-| Time Stamp
-| ColumnFamily contents
-| ColumnFamily anchor
-| ColumnFamily people
-| anchor:cnnsi.com = "CNN"
-
-| anchor:my.look.ca = "CNN.com"
-
-| contents:html = "<html>..."
-
-| contents:html = "<html>..."
-
-| contents:html = "<html>..."
-
-| contents:html = "<html>..."
+|Row Key |Time Stamp  |ColumnFamily `contents` |ColumnFamily `anchor`|ColumnFamily `people`
+|"com.cnn.www" |t9    | |anchor:cnnsi.com = "CNN"   |
+|"com.cnn.www" |t8    | |anchor:my.look.ca = "CNN.com" |  
+|"com.cnn.www" |t6  | contents:html = "<html>..."    | |
+|"com.cnn.www" |t5  | contents:html = "<html>..."    | |
+|"com.cnn.www" |t3  | contents:html = "<html>..."    | |
+|"com.example.www"| t5  | contents:html = "<html>..."   | people:author = "John Doe"
 |===
 
 Cells in this table that appear to be empty do not take space, or in fact exist, in HBase.
@@ -114,9 +106,8 @@ This is what makes HBase "sparse." A tabular view is not the only possible way t
 The following represents the same information as a multi-dimensional map.
 This is only a mock-up for illustrative purposes and may not be strictly accurate.
 
-[source]
+[source,json]
 ----
-
 {
 	"com.cnn.www": {
 		contents: {
@@ -148,36 +139,31 @@ This is only a mock-up for illustrative purposes and may not be strictly accurat
 Although at a conceptual level tables may be viewed as a sparse set of rows, they are physically stored by column family.
 A new column qualifier (column_family:column_qualifier) can be added to an existing column family at any time.
 
-.ColumnFamily [var]+anchor+
+.ColumnFamily `anchor`
 [cols="1,1,1", frame="all", options="header"]
 |===
-| Row Key
-| Time Stamp
-| Column Family anchor
-| anchor:cnnsi.com = "CNN"
-
-| anchor:my.look.ca = "CNN.com"
+|Row Key | Time Stamp |Column Family `anchor`
+|"com.cnn.www" |t9  |`anchor:cnnsi.com = "CNN"`
+|"com.cnn.www" |t8  |`anchor:my.look.ca = "CNN.com"`
 |===
 
-.ColumnFamily [var]+contents+
+
+.ColumnFamily `contents`
 [cols="1,1,1", frame="all", options="header"]
 |===
-| Row Key
-| Time Stamp
-| ColumnFamily "contents:"
-| contents:html = "<html>..."
-
-| contents:html = "<html>..."
-
-| contents:html = "<html>..."
+|Row Key |Time Stamp  |ColumnFamily `contents:`
+|"com.cnn.www" |t6  |contents:html = "<html>..."
+|"com.cnn.www" |t5  |contents:html = "<html>..."
+|"com.cnn.www" |t3  |contents:html = "<html>..."
 |===
+
 
 The empty cells shown in the conceptual view are not stored at all.
-Thus a request for the value of the [var]+contents:html+ column at time stamp [literal]+t8+ would return no value.
-Similarly, a request for an [var]+anchor:my.look.ca+ value at time stamp [literal]+t9+ would return no value.
+Thus a request for the value of the `contents:html` column at time stamp `t8` would return no value.
+Similarly, a request for an `anchor:my.look.ca` value at time stamp `t9` would return no value.
 However, if no timestamp is supplied, the most recent value for a particular column would be returned.
 Given multiple versions, the most recent is also the first one found,  since timestamps are stored in descending order.
-Thus a request for the values of all columns in the row [var]+com.cnn.www+ if no timestamp is specified would be: the value of [var]+contents:html+ from timestamp [literal]+t6+, the value of [var]+anchor:cnnsi.com+ from timestamp [literal]+t9+, the value of [var]+anchor:my.look.ca+ from timestamp [literal]+t8+. 
+Thus a request for the values of all columns in the row `com.cnn.www` if no timestamp is specified would be: the value of `contents:html` from timestamp `t6`, the value of `anchor:cnnsi.com` from timestamp `t9`, the value of `anchor:my.look.ca` from timestamp `t8`. 
 
 For more information about the internals of how Apache HBase stores data, see <<regions.arch,regions.arch>>. 
 
@@ -269,7 +255,7 @@ The empty byte array is used to denote both the start and end of a tables' names
 Columns in Apache HBase are grouped into _column families_.
 All column members of a column family have the same prefix.
 For example, the columns _courses:history_ and _courses:math_ are both members of the _courses_ column family.
-The colon character ([literal]+:+) delimits the column family from the 
+The colon character (`:`) delimits the column family from the 
 column family qualifier.
 The column family prefix must be composed of _printable_ characters.
 The qualifying tail, the column family _qualifier_, can be made of any arbitrary bytes.
@@ -280,7 +266,7 @@ Because tunings and storage specifications are done at the column family level, 
 
 == Cells
 
-A _{row, column, version}_ tuple exactly specifies a [literal]+cell+ in HBase.
+A _{row, column, version}_ tuple exactly specifies a `cell` in HBase.
 Cell content is uninterrpreted bytes
 
 == Data Model Operations
@@ -344,15 +330,15 @@ See <<version.delete,version.delete>> for more information on deleting versions 
 [[versions]]
 == Versions
 
-A _{row, column, version}_ tuple exactly specifies a [literal]+cell+ in HBase.
+A _{row, column, version}_ tuple exactly specifies a `cell` in HBase.
 It's possible to have an unbounded number of cells where the row and column are the same but the cell address differs only in its version dimension.
 
 While rows and column keys are expressed as bytes, the version is specified using a long integer.
-Typically this long contains time instances such as those returned by [code]+java.util.Date.getTime()+ or [code]+System.currentTimeMillis()+, that is: [quote]_the difference, measured in milliseconds, between the current time and midnight, January 1, 1970 UTC_.
+Typically this long contains time instances such as those returned by `java.util.Date.getTime()` or `System.currentTimeMillis()`, that is: [quote]_the difference, measured in milliseconds, between the current time and midnight, January 1, 1970 UTC_.
 
 The HBase version dimension is stored in decreasing order, so that when reading from a store file, the most recent values are found first.
 
-There is a lot of confusion over the semantics of [literal]+cell+ versions, in HBase.
+There is a lot of confusion over the semantics of `cell` versions, in HBase.
 In particular:
 
 * If multiple writes to a cell have the same version, only the last written is fetchable.
@@ -367,12 +353,12 @@ This section is basically a synopsis of this article by Bruno Dumon.
 [[specify.number.of.versions]]
 === Specifying the Number of Versions to Store
 
-The maximum number of versions to store for a given column is part of the column schema and is specified at table creation, or via an +alter+ command, via [code]+HColumnDescriptor.DEFAULT_VERSIONS+.
-Prior to HBase 0.96, the default number of versions kept was [literal]+3+, but in 0.96 and newer has been changed to [literal]+1+.
+The maximum number of versions to store for a given column is part of the column schema and is specified at table creation, or via an +alter+ command, via `HColumnDescriptor.DEFAULT_VERSIONS`.
+Prior to HBase 0.96, the default number of versions kept was `3`, but in 0.96 and newer has been changed to `1`.
 
 .Modify the Maximum Number of Versions for a Column
 ====
-This example uses HBase Shell to keep a maximum of 5 versions of column [code]+f1+.
+This example uses HBase Shell to keep a maximum of 5 versions of column `f1`.
 You could also use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
 ----
@@ -384,7 +370,7 @@ hbase> alter ‘t1′, NAME => ‘f1′, VERSIONS => 5
 ====
 You can also specify the minimum number of versions to store.
 By default, this is set to 0, which means the feature is disabled.
-The following example sets the minimum number of versions on field [code]+f1+ to [literal]+2+, via HBase Shell.
+The following example sets the minimum number of versions on field `f1` to `2`, via HBase Shell.
 You could also use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
 ----
@@ -392,7 +378,7 @@ hbase> alter ‘t1′, NAME => ‘f1′, MIN_VERSIONS => 2
 ----
 ====
 
-Starting with HBase 0.98.2, you can specify a global default for the maximum number of versions kept for all newly-created columns, by setting +hbase.column.max.version+ in [path]_hbase-site.xml_.
+Starting with HBase 0.98.2, you can specify a global default for the maximum number of versions kept for all newly-created columns, by setting +hbase.column.max.version+ in _hbase-site.xml_.
 See <<hbase.column.max.version,hbase.column.max.version>>.
 
 [[versions.ops]]
@@ -406,7 +392,7 @@ Gets are implemented on top of Scans.
 The below discussion of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get]            applies equally to link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scans].
 
 By default, i.e.
-if you specify no explicit version, when doing a [literal]+get+, the cell whose version has the largest value is returned (which may or may not be the latest one written, see later). The default behavior can be modified in the following ways:
+if you specify no explicit version, when doing a `get`, the cell whose version has the largest value is returned (which may or may not be the latest one written, see later). The default behavior can be modified in the following ways:
 
 * to return more than one version, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()[Get.setMaxVersions()]
 * to return versions other than the latest, see link:???[Get.setTimeRange()]
@@ -448,8 +434,8 @@ List<KeyValue> kv = r.getColumn(CF, ATTR);  // returns all versions of this colu
 
 ==== Put
 
-Doing a put always creates a new version of a [literal]+cell+, at a certain timestamp.
-By default the system uses the server's [literal]+currentTimeMillis+, but you can specify the version (= the long integer) yourself, on a per-column level.
+Doing a put always creates a new version of a `cell`, at a certain timestamp.
+By default the system uses the server's `currentTimeMillis`, but you can specify the version (= the long integer) yourself, on a per-column level.
 This means you could assign a time in the past or the future, or use the long value for non-time purposes.
 
 To overwrite an existing value, do a put at exactly the same row, column, and version as that of the cell you would overshadow.
@@ -504,7 +490,7 @@ When deleting an entire row, HBase will internally create a tombstone for each C
 
 Deletes work by creating _tombstone_ markers.
 For example, let's suppose we want to delete a row.
-For this you can specify a version, or else by default the [literal]+currentTimeMillis+ is used.
+For this you can specify a version, or else by default the `currentTimeMillis` is used.
 What this means is [quote]_delete all
               cells where the version is less than or equal to this version_.
 HBase never modifies data in place, so for example a delete will not immediately delete (or mark as deleted) the entries in the storage file that correspond to the delete condition.
@@ -518,7 +504,7 @@ For an informative discussion on how deletes and versioning interact, see the th
 Also see <<keyvalue,keyvalue>> for more information on the internal KeyValue format. 
 
 Delete markers are purged during the next major compaction of the store, unless the +KEEP_DELETED_CELLS+ option is set in the column family.
-To keep the deletes for a configurable amount of time, you can set the delete TTL via the +hbase.hstore.time.to.purge.deletes+ property in [path]_hbase-site.xml_.
+To keep the deletes for a configurable amount of time, you can set the delete TTL via the +hbase.hstore.time.to.purge.deletes+ property in _hbase-site.xml_.
 If +hbase.hstore.time.to.purge.deletes+ is not set, or set to 0, all delete markers, including those with timestamps in the future, are purged during the next major compaction.
 Otherwise, a delete marker with a timestamp in the future is kept until the major compaction which occurs after the time represented by the marker's timestamp plus the value of +hbase.hstore.time.to.purge.deletes+, in milliseconds. 
 

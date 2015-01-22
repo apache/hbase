@@ -68,11 +68,11 @@ Having Write permission does not imply Read permission.::
   It is possible and sometimes desirable for a user to be able to write data that same user cannot read. One such example is a log-writing process. 
 The [systemitem]+hbase:meta+ table is readable by every user, regardless of the user's other grants or restrictions.::
   This is a requirement for HBase to function correctly.
-[code]+CheckAndPut+ and [code]+CheckAndDelete+ operations will fail if the user does not have both Write and Read permission.::
-[code]+Increment+ and [code]+Append+ operations do not require Read access.::
+`CheckAndPut` and `CheckAndDelete` operations will fail if the user does not have both Write and Read permission.::
+`Increment` and `Append` operations do not require Read access.::
 
 The following table is sorted by the interface that provides each operation.
-In case the table goes out of date, the unit tests which check for accuracy of permissions can be found in [path]_hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java_, and the access controls themselves can be examined in [path]_hbase-server/src/main/java/org/apache/hadoop/hbase/security/access/AccessController.java_.
+In case the table goes out of date, the unit tests which check for accuracy of permissions can be found in _hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java_, and the access controls themselves can be examined in _hbase-server/src/main/java/org/apache/hadoop/hbase/security/access/AccessController.java_.
 
 .ACL Matrix
 [cols="1,1,1,1", frame="all", options="header"]

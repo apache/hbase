@@ -312,12 +312,12 @@ Version 3 added two additional pieces of information to the reserved keys in the
  | hfile.TAGS_COMPRESSED | Does the block encoder for this hfile compress tags? (boolean). Should only be present if hfile.MAX_TAGS_LEN is also present.
 |===      
 
-When reading a Version 3 HFile the presence of [class]+MAX_TAGS_LEN+ is used to determine how to deserialize the cells within a data block.
+When reading a Version 3 HFile the presence of `MAX_TAGS_LEN` is used to determine how to deserialize the cells within a data block.
 Therefore, consumers must read the file's info block prior to reading any data blocks. 
 
-When writing a Version 3 HFile, HBase will always include [class]+MAX_TAGS_LEN + when flushing the memstore to underlying filesystem and when using prefix tree encoding for data blocks, as described in <<compression,compression>>. 
+When writing a Version 3 HFile, HBase will always include `MAX_TAGS_LEN ` when flushing the memstore to underlying filesystem and when using prefix tree encoding for data blocks, as described in <<compression,compression>>. 
 
-When compacting extant files, the default writer will omit [class]+MAX_TAGS_LEN+ if all of the files selected do not themselves contain any cells with tags.
+When compacting extant files, the default writer will omit `MAX_TAGS_LEN` if all of the files selected do not themselves contain any cells with tags.
 
 See <<compaction,compaction>> for details on the compaction file selection algorithm. 
 
@@ -338,11 +338,11 @@ Within an HFile, HBase cells are stored in data blocks as a sequence of KeyValue
 | | Tags bytes (variable)                
 |===      
 
-If the info block for a given HFile contains an entry for [class]+MAX_TAGS_LEN+ each cell will have the length of that cell's tags included, even if that length is zero.
+If the info block for a given HFile contains an entry for `MAX_TAGS_LEN` each cell will have the length of that cell's tags included, even if that length is zero.
 The actual tags are stored as a sequence of tag length (2 bytes), tag type (1 byte), tag bytes (variable). The format an individual tag's bytes depends on the tag type. 
 
 Note that the dependence on the contents of the info block implies that prior to reading any data blocks you must first process a file's info block.
-It also implies that prior to writing a data block you must know if the file's info block will include [class]+MAX_TAGS_LEN+. 
+It also implies that prior to writing a data block you must know if the file's info block will include `MAX_TAGS_LEN`. 
 
 [[hfilev3.fixedtrailer]]
 ==== Fixed File Trailer in Version 3

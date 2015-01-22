@@ -49,19 +49,19 @@ For more information on GC pauses, see the link:http://www.cloudera.com/blog/201
 
 The key process logs are as follows... (replace <user> with the user that started the service, and <hostname> for the machine name) 
 
-NameNode: [path]_$HADOOP_HOME/logs/hadoop-<user>-namenode-<hostname>.log_    
+NameNode: _$HADOOP_HOME/logs/hadoop-<user>-namenode-<hostname>.log_    
 
-DataNode: [path]_$HADOOP_HOME/logs/hadoop-<user>-datanode-<hostname>.log_    
+DataNode: _$HADOOP_HOME/logs/hadoop-<user>-datanode-<hostname>.log_    
 
-JobTracker: [path]_$HADOOP_HOME/logs/hadoop-<user>-jobtracker-<hostname>.log_    
+JobTracker: _$HADOOP_HOME/logs/hadoop-<user>-jobtracker-<hostname>.log_    
 
-TaskTracker: [path]_$HADOOP_HOME/logs/hadoop-<user>-tasktracker-<hostname>.log_    
+TaskTracker: _$HADOOP_HOME/logs/hadoop-<user>-tasktracker-<hostname>.log_    
 
-HMaster: [path]_$HBASE_HOME/logs/hbase-<user>-master-<hostname>.log_    
+HMaster: _$HBASE_HOME/logs/hbase-<user>-master-<hostname>.log_    
 
-RegionServer: [path]_$HBASE_HOME/logs/hbase-<user>-regionserver-<hostname>.log_    
+RegionServer: _$HBASE_HOME/logs/hbase-<user>-regionserver-<hostname>.log_    
 
-ZooKeeper: [path]_TODO_    
+ZooKeeper: _TODO_    
 
 [[trouble.log.locations]]
 === Log Locations
@@ -94,17 +94,17 @@ Enabling the RPC-level logging on a RegionServer can often given insight on timi
 Once enabled, the amount of log spewed is voluminous.
 It is not recommended that you leave this logging on for more than short bursts of time.
 To enable RPC-level logging, browse to the RegionServer UI and click on _Log Level_.
-Set the log level to [var]+DEBUG+ for the package [class]+org.apache.hadoop.ipc+ (Thats right, for [class]+hadoop.ipc+, NOT, [class]+hbase.ipc+). Then tail the RegionServers log.
+Set the log level to `DEBUG` for the package `org.apache.hadoop.ipc` (Thats right, for `hadoop.ipc`, NOT, `hbase.ipc`). Then tail the RegionServers log.
 Analyze.
 
-To disable, set the logging level back to [var]+INFO+ level. 
+To disable, set the logging level back to `INFO` level. 
 
 [[trouble.log.gc]]
 === JVM Garbage Collection Logs
 
 HBase is memory intensive, and using the default GC you can see long pauses in all threads including the _Juliet Pause_ aka "GC of Death". To help debug this or confirm this is happening GC logging can be turned on in the Java virtual machine. 
 
-To enable, in [path]_hbase-env.sh_, uncomment one of the below lines :
+To enable, in _hbase-env.sh_, uncomment one of the below lines :
 
 [source,bourne]
 ----
@@ -188,14 +188,14 @@ CMS pauses are always low, but if your ParNew starts growing, you can see minor 
 This can be due to the size of the ParNew, which should be relatively small.
 If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if its too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m. 
 
-Add the below line in [path]_hbase-env.sh_: 
+Add the below line in _hbase-env.sh_: 
 [source,bourne]
 ----
 
 export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
 ----      
 
-Similarly, to enable GC logging for client processes, uncomment one of the below lines in [path]_hbase-env.sh_:
+Similarly, to enable GC logging for client processes, uncomment one of the below lines in _hbase-env.sh_:
 
 [source,bourne]
 ----
@@ -273,7 +273,7 @@ See <<hbase_metrics,hbase metrics>> for more information in metric definitions.
 [[trouble.tools.builtin.zkcli]]
 ==== zkcli
 
-[code]+zkcli+ is a very useful tool for investigating ZooKeeper-related issues.
+`zkcli` is a very useful tool for investigating ZooKeeper-related issues.
 To invoke: 
 [source,bourne]
 ----
@@ -312,14 +312,14 @@ The commands (and arguments) are:
 [[trouble.tools.tail]]
 ==== tail
 
-[code]+tail+ is the command line tool that lets you look at the end of a file.
+`tail` is the command line tool that lets you look at the end of a file.
 Add the ``-f'' option and it will refresh when new data is available.
 It's useful when you are wondering what's happening, for example, when a cluster is taking a long time to shutdown or startup as you can just fire a new terminal and tail the master log (and maybe a few RegionServers). 
 
 [[trouble.tools.top]]
 ==== top
 
-[code]+top+ is probably one of the most important tool when first trying to see what's running on a machine and how the resources are consumed.
+`top` is probably one of the most important tool when first trying to see what's running on a machine and how the resources are consumed.
 Here's an example from production system:
 
 [source]
@@ -351,7 +351,7 @@ Typing ``1'' will give you the detail of how each CPU is used instead of the ave
 [[trouble.tools.jps]]
 ==== jps
 
-[code]+jps+ is shipped with every JDK and gives the java process ids for the current user (if root, then it gives the ids for all users). Example:
+`jps` is shipped with every JDK and gives the java process ids for the current user (if root, then it gives the ids for all users). Example:
 
 [source,bourne]
 ----
@@ -389,7 +389,7 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
 [[trouble.tools.jstack]]
 ==== jstack
 
-[code]+jstack+ is one of the most important tools when trying to figure out what a java process is doing apart from looking at the logs.
+`jstack` is one of the most important tools when trying to figure out what a java process is doing apart from looking at the logs.
 It has to be used in conjunction with jps in order to give it a process id.
 It shows a list of threads, each one has a name, and they appear in the order that they were created (so the top ones are the most recent threads). Here are a few example: 
 
@@ -566,36 +566,36 @@ For more information on the HBase client, see <<client,client>>.
 === ScannerTimeoutException or UnknownScannerException
 
 This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.
-For example, if [code]+Scan.setCaching+ is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 [code]+.next()+ calls on the ResultScanner because data is being transferred in blocks of 500 rows to the client.
+For example, if `Scan.setCaching` is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 `.next()` calls on the ResultScanner because data is being transferred in blocks of 500 rows to the client.
 Reducing the setCaching value may be an option, but setting this value too low makes for inefficient processing on numbers of rows. 
 
 See <<perf.hbase.client.caching,perf.hbase.client.caching>>. 
 
 === Performance Differences in Thrift and Java APIs
 
-Poor performance, or even [code]+ScannerTimeoutExceptions+, can occur if [code]+Scan.setCaching+ is too high, as discussed in <<trouble.client.scantimeout,trouble.client.scantimeout>>.
+Poor performance, or even `ScannerTimeoutExceptions`, can occur if `Scan.setCaching` is too high, as discussed in <<trouble.client.scantimeout,trouble.client.scantimeout>>.
 If the Thrift client uses the wrong caching settings for a given workload, performance can suffer compared to the Java API.
-To set caching for a given scan in the Thrift client, use the [code]+scannerGetList(scannerId,
-          numRows)+ method, where [code]+numRows+ is an integer representing the number of rows to cache.
+To set caching for a given scan in the Thrift client, use the `scannerGetList(scannerId,
+          numRows)` method, where `numRows` is an integer representing the number of rows to cache.
 In one case, it was found that reducing the cache for Thrift scans from 1000 to 100 increased performance to near parity with the Java API given the same queries.
 
 See also Jesse Andersen's link:http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/[blog post]  about using Scans with Thrift.
 
 [[trouble.client.lease.exception]]
-=== [class]+LeaseException+ when calling[class]+Scanner.next+
+=== `LeaseException` when calling`Scanner.next`
 
 In some situations clients that fetch data from a RegionServer get a LeaseException instead of the usual <<trouble.client.scantimeout,trouble.client.scantimeout>>.
-Usually the source of the exception is [class]+org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)+        (line number may vary). It tends to happen in the context of a slow/freezing RegionServer#next call.
-It can be prevented by having [var]+hbase.rpc.timeout+ > [var]+hbase.regionserver.lease.period+.
+Usually the source of the exception is `org.apache.hadoop.hbase.regionserver.Leases.removeLease(Leases.java:230)`        (line number may vary). It tends to happen in the context of a slow/freezing RegionServer#next call.
+It can be prevented by having `hbase.rpc.timeout` > `hbase.regionserver.lease.period`.
 Harsh J investigated the issue as part of the mailing list thread link:http://mail-archives.apache.org/mod_mbox/hbase-user/201209.mbox/%3CCAOcnVr3R-LqtKhFsk8Bhrm-YW2i9O6J6Fhjz2h7q6_sxvwd2yw%40mail.gmail.com%3E[HBase,
           mail # user - Lease does not exist exceptions]      
 
 [[trouble.client.scarylogs]]
 === Shell or client application throws lots of scary exceptions during normaloperation
 
-Since 0.20.0 the default log level for [code]+org.apache.hadoop.hbase.*+is DEBUG. 
+Since 0.20.0 the default log level for `org.apache.hadoop.hbase.*`is DEBUG. 
 
-On your clients, edit [path]_$HBASE_HOME/conf/log4j.properties_ and change this: [code]+log4j.logger.org.apache.hadoop.hbase=DEBUG+ to this: [code]+log4j.logger.org.apache.hadoop.hbase=INFO+, or even [code]+log4j.logger.org.apache.hadoop.hbase=WARN+. 
+On your clients, edit _$HBASE_HOME/conf/log4j.properties_ and change this: `log4j.logger.org.apache.hadoop.hbase=DEBUG` to this: `log4j.logger.org.apache.hadoop.hbase=INFO`, or even `log4j.logger.org.apache.hadoop.hbase=WARN`. 
 
 [[trouble.client.longpauseswithcompression]]
 === Long Client Pauses With Compression
@@ -606,7 +606,7 @@ Compression can exacerbate the pauses, although it is not the source of the prob
 
 See <<precreate.regions,precreate.regions>> on the pattern for pre-creating regions and confirm that the table isn't starting with a single region.
 
-See <<perf.configurations,perf.configurations>> for cluster configuration, particularly [code]+hbase.hstore.blockingStoreFiles+, [code]+hbase.hregion.memstore.block.multiplier+, [code]+MAX_FILESIZE+ (region size), and [code]+MEMSTORE_FLUSHSIZE.+      
+See <<perf.configurations,perf.configurations>> for cluster configuration, particularly `hbase.hstore.blockingStoreFiles`, `hbase.hregion.memstore.block.multiplier`, `MAX_FILESIZE` (region size), and `MEMSTORE_FLUSHSIZE.`      
 
 A slightly longer explanation of why pauses can happen is as follows: Puts are sometimes blocked on the MemStores which are blocked by the flusher thread which is blocked because there are too many files to compact because the compactor is given too many small files to compact and has to compact the same data repeatedly.
 This situation can occur even with minor compactions.
@@ -631,7 +631,7 @@ Secure Client Connect ([Caused by GSSException: No valid credentials provided
 
 This issue is caused by bugs in the MIT Kerberos replay_cache component, link:http://krbdev.mit.edu/rt/Ticket/Display.html?id=1201[#1201] and link:http://krbdev.mit.edu/rt/Ticket/Display.html?id=5924[#5924].
 These bugs caused the old version of krb5-server to erroneously block subsequent requests sent from a Principal.
-This caused krb5-server to block the connections sent from one Client (one HTable instance with multi-threading connection instances for each regionserver); Messages, such as [literal]+Request is a replay (34)+, are logged in the client log You can ignore the messages, because HTable will retry 5 * 10 (50) times for each failed connection by default.
+This caused krb5-server to block the connections sent from one Client (one HTable instance with multi-threading connection instances for each regionserver); Messages, such as `Request is a replay (34)`, are logged in the client log You can ignore the messages, because HTable will retry 5 * 10 (50) times for each failed connection by default.
 HTable will throw IOException if any connection to the regionserver fails after the retries, so that the user client code for HTable instance can handle it further. 
 
 Alternatively, update krb5-server to a version which solves these issues, such as krb5-server-1.10.3.
@@ -673,8 +673,8 @@ The utility <<trouble.tools.builtin.zkcli,trouble.tools.builtin.zkcli>> may help
 You are likely running into the issue that is described and worked through in the mail thread link:http://search-hadoop.com/m/ubhrX8KvcH/Suspected+memory+leak&subj=Re+Suspected+memory+leak[HBase,
           mail # user - Suspected memory leak] and continued over in link:http://search-hadoop.com/m/p2Agc1Zy7Va/MaxDirectMemorySize+Was%253A+Suspected+memory+leak&subj=Re+FeedbackRe+Suspected+memory+leak[HBase,
           mail # dev - FeedbackRe: Suspected memory leak].
-A workaround is passing your client-side JVM a reasonable value for [code]+-XX:MaxDirectMemorySize+.
-By default, the [var]+MaxDirectMemorySize+ is equal to your [code]+-Xmx+ max heapsize setting (if [code]+-Xmx+ is set). Try seting it to something smaller (for example, one user had success setting it to [code]+1g+ when they had a client-side heap of [code]+12g+). If you set it too small, it will bring on [code]+FullGCs+ so keep it a bit hefty.
+A workaround is passing your client-side JVM a reasonable value for `-XX:MaxDirectMemorySize`.
+By default, the `MaxDirectMemorySize` is equal to your `-Xmx` max heapsize setting (if `-Xmx` is set). Try seting it to something smaller (for example, one user had success setting it to `1g` when they had a client-side heap of `12g`). If you set it too small, it will bring on `FullGCs` so keep it a bit hefty.
 You want to make this setting client-side only especially if you are running the new experiemental server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep separate client-side and server-side config dirs). 
 
 [[trouble.client.slowdown.admin]]
@@ -715,7 +715,7 @@ Uncompress and extract the downloaded file, and install the policy jars into <ja
 [[trouble.mapreduce.local]]
 === You Think You're On The Cluster, But You're Actually Local
 
-This following stacktrace happened using [code]+ImportTsv+, but things like this can happen on any job with a mis-configuration.
+This following stacktrace happened using `ImportTsv`, but things like this can happen on any job with a mis-configuration.
 
 [source]
 ----
@@ -748,7 +748,7 @@ at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
 
 LocalJobRunner means the job is running locally, not on the cluster. 
 
-To solve this problem, you should run your MR job with your [code]+HADOOP_CLASSPATH+ set to include the HBase dependencies.
+To solve this problem, you should run your MR job with your `HADOOP_CLASSPATH` set to include the HBase dependencies.
 The "hbase classpath" utility can be used to do this easily.
 For example (substitute VERSION with your HBase version):
 
@@ -776,7 +776,7 @@ For more information on the NameNode, see <<arch.hdfs,arch.hdfs>>.
 [[trouble.namenode.disk]]
 === HDFS Utilization of Tables and Regions
 
-To determine how much space HBase is using on HDFS use the [code]+hadoop+ shell commands from the NameNode.
+To determine how much space HBase is using on HDFS use the `hadoop` shell commands from the NameNode.
 For example... 
 
 
@@ -833,7 +833,7 @@ The HDFS directory structure of HBase WAL is..
 ----      
 
 See the link:http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html[HDFS User
-          Guide] for other non-shell diagnostic utilities like [code]+fsck+. 
+          Guide] for other non-shell diagnostic utilities like `fsck`. 
 
 [[trouble.namenode.0size.hlogs]]
 ==== Zero size WALs with data in them
@@ -856,7 +856,7 @@ Additionally, after a major compaction if the resulting StoreFile is "small" it 
 [[trouble.network.spikes]]
 === Network Spikes
 
-If you are seeing periodic network spikes you might want to check the [code]+compactionQueues+ to see if major compactions are happening. 
+If you are seeing periodic network spikes you might want to check the `compactionQueues` to see if major compactions are happening. 
 
 See <<managed.compactions,managed.compactions>> for more information on managing compactions. 
 
@@ -886,7 +886,7 @@ The Master believes the RegionServers have the IP of 127.0.0.1 - which is localh
 
 The RegionServers are erroneously informing the Master that their IP addresses are 127.0.0.1. 
 
-Modify [path]_/etc/hosts_ on the region servers, from...
+Modify _/etc/hosts_ on the region servers, from...
 
 [source]
 ----
@@ -933,7 +933,7 @@ See the Configuration section on link:[LZO compression configuration].
 
 Are you running an old JVM (< 1.6.0_u21?)? When you look at a thread dump, does it look like threads are BLOCKED but no one holds the lock all are blocked on? See link:https://issues.apache.org/jira/browse/HBASE-3622[HBASE 3622 Deadlock in
             HBaseServer (JVM bug?)].
-Adding [code]`-XX:+UseMembar` to the HBase [var]+HBASE_OPTS+ in [path]_conf/hbase-env.sh_ may fix it. 
+Adding `-XX:+UseMembar` to the HBase `HBASE_OPTS` in _conf/hbase-env.sh_ may fix it. 
 
 [[trouble.rs.runtime.filehandles]]
 ==== java.io.IOException...(Too many open files)
@@ -1013,13 +1013,13 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
 The JVM is doing a long running garbage collecting which is pausing every threads (aka "stop the world"). Since the RegionServer's local ZooKeeper client cannot send heartbeats, the session times out.
 By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere. 
 
-* Make sure you give plenty of RAM (in [path]_hbase-env.sh_), the default of 1GB won't be able to sustain long running imports.
+* Make sure you give plenty of RAM (in _hbase-env.sh_), the default of 1GB won't be able to sustain long running imports.
 * Make sure you don't swap, the JVM never behaves well under swapping.
 * Make sure you are not CPU starving the RegionServer thread.
   For example, if you are running a MapReduce job using 6 CPU-intensive tasks on a machine with 4 cores, you are probably starving the RegionServer enough to create longer garbage collection pauses.
 * Increase the ZooKeeper session timeout
 
-If you wish to increase the session timeout, add the following to your [path]_hbase-site.xml_ to increase the timeout from the default of 60 seconds to 120 seconds. 
+If you wish to increase the session timeout, add the following to your _hbase-site.xml_ to increase the timeout from the default of 60 seconds to 120 seconds. 
 
 [source,xml]
 ----
@@ -1138,10 +1138,10 @@ A ZooKeeper server wasn't able to start, throws that error.
 xyz is the name of your server.
 
 This is a name lookup problem.
-HBase tries to start a ZooKeeper server on some machine but that machine isn't able to find itself in the [var]+hbase.zookeeper.quorum+ configuration. 
+HBase tries to start a ZooKeeper server on some machine but that machine isn't able to find itself in the `hbase.zookeeper.quorum` configuration. 
 
 Use the hostname presented in the error message instead of the value you used.
-If you have a DNS server, you can set [var]+hbase.zookeeper.dns.interface+ and [var]+hbase.zookeeper.dns.nameserver+ in [path]_hbase-site.xml_ to make sure it resolves to the correct FQDN. 
+If you have a DNS server, you can set `hbase.zookeeper.dns.interface` and `hbase.zookeeper.dns.nameserver` in _hbase-site.xml_ to make sure it resolves to the correct FQDN. 
 
 [[trouble.zookeeper.general]]
 === ZooKeeper, The Cluster Canary
@@ -1191,10 +1191,10 @@ See Andrew's answer here, up on the user list: link:http://search-hadoop.com/m/s
 == HBase and Hadoop version issues
 
 [[trouble.versions.205]]
-=== [code]+NoClassDefFoundError+ when trying to run 0.90.x on hadoop-0.20.205.x (or hadoop-1.0.x)
+=== `NoClassDefFoundError` when trying to run 0.90.x on hadoop-0.20.205.x (or hadoop-1.0.x)
 
 Apache HBase 0.90.x does not ship with hadoop-0.20.205.x, etc.
-To make it run, you need to replace the hadoop jars that Apache HBase shipped with in its [path]_lib_ directory with those of the Hadoop you want to run HBase on.
+To make it run, you need to replace the hadoop jars that Apache HBase shipped with in its _lib_ directory with those of the Hadoop you want to run HBase on.
 If even after replacing Hadoop jars you get the below exception:
 
 [source]
@@ -1212,7 +1212,7 @@ sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.initialize(Us
 sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:177)
 ----
 
-you need to copy under [path]_hbase/lib_, the [path]_commons-configuration-X.jar_ you find in your Hadoop's [path]_lib_ directory.
+you need to copy under _hbase/lib_, the _commons-configuration-X.jar_ you find in your Hadoop's _lib_ directory.
 That should fix the above complaint. 
 
 [[trouble.wrong.version]]
@@ -1228,7 +1228,7 @@ If you see something like the following in your logs [computeroutput]+... 2012-0
 If the Hadoop configuration is loaded after the HBase configuration, and you have configured custom IPC settings in both HBase and Hadoop, the Hadoop values may overwrite the HBase values.
 There is normally no need to change these settings for HBase, so this problem is an edge case.
 However, link:https://issues.apache.org/jira/browse/HBASE-11492[HBASE-11492] renames these settings for HBase to remove the chance of a conflict.
-Each of the setting names have been prefixed with [literal]+hbase.+, as shown in the following table.
+Each of the setting names have been prefixed with `hbase.`, as shown in the following table.
 No action is required related to these changes unless you are already experiencing a conflict.
 
 These changes were backported to HBase 0.98.x and apply to all newer versions.
@@ -1297,7 +1297,7 @@ To operate with the most efficiency, HBase needs data to be available locally.
 Therefore, it is a good practice to run an HDFS datanode on each RegionServer.
 
 .Important Information and Guidelines for HBase and HDFSHBase is a client of HDFS.::
-  HBase is an HDFS client, using the HDFS [code]+DFSClient+ class, and references to this class appear in HBase logs with other HDFS client log messages.
+  HBase is an HDFS client, using the HDFS `DFSClient` class, and references to this class appear in HBase logs with other HDFS client log messages.
 
 Configuration is necessary in multiple places.::
   Some HDFS configurations relating to HBase need to be done at the HDFS (server) side.
@@ -1309,9 +1309,9 @@ Write errors which affect HBase may be logged in the HDFS logs rather than HBase
   Communication problems between datanodes are logged in the HDFS logs, not the HBase logs.
 
 HBase communicates with HDFS using two different ports.::
-  HBase communicates with datanodes using the [code]+ipc.Client+ interface and the [code]+DataNode+ class.
+  HBase communicates with datanodes using the `ipc.Client` interface and the `DataNode` class.
   References to these will appear in HBase logs.
-  Each of these communication channels use a different port (50010 and 50020 by default). The ports are configured in the HDFS configuration, via the [code]+dfs.datanode.address+ and [code]+dfs.datanode.ipc.address+            parameters.
+  Each of these communication channels use a different port (50010 and 50020 by default). The ports are configured in the HDFS configuration, via the `dfs.datanode.address` and `dfs.datanode.ipc.address`            parameters.
 
 Errors may be logged in HBase, HDFS, or both.::
   When troubleshooting HDFS issues in HBase, check logs in both places for errors.
@@ -1320,8 +1320,8 @@ HDFS takes a while to mark a node as dead. You can configure HDFS to avoid using
           datanodes.::
   By default, HDFS does not mark a node as dead until it is unreachable for 630 seconds.
   In Hadoop 1.1 and Hadoop 2.x, this can be alleviated by enabling checks for stale datanodes, though this check is disabled by default.
-  You can enable the check for reads and writes separately, via [code]+dfs.namenode.avoid.read.stale.datanode+ and [code]+dfs.namenode.avoid.write.stale.datanode settings+.
-  A stale datanode is one that has not been reachable for [code]+dfs.namenode.stale.datanode.interval+            (default is 30 seconds). Stale datanodes are avoided, and marked as the last possible target for a read or write operation.
+  You can enable the check for reads and writes separately, via `dfs.namenode.avoid.read.stale.datanode` and `dfs.namenode.avoid.write.stale.datanode settings`.
+  A stale datanode is one that has not been reachable for `dfs.namenode.stale.datanode.interval`            (default is 30 seconds). Stale datanodes are avoided, and marked as the last possible target for a read or write operation.
   For configuration details, see the HDFS documentation.
 
 Settings for HDFS retries and timeouts are important to HBase.::
@@ -1336,28 +1336,28 @@ Connection timeouts occur between the client (HBASE) and the HDFS datanode.
 They may occur when establishing a connection, attempting to read, or attempting to write.
 The two settings below are used in combination, and affect connections between the DFSClient and the datanode, the ipc.cClient and the datanode, and communication between two datanodes. 
 
-[code]+dfs.client.socket-timeout+ (default: 60000)::
+`dfs.client.socket-timeout` (default: 60000)::
   The amount of time before a client connection times out when establishing a connection or reading.
   The value is expressed in milliseconds, so the default is 60 seconds.
 
-[code]+dfs.datanode.socket.write.timeout+ (default: 480000)::
+`dfs.datanode.socket.write.timeout` (default: 480000)::
   The amount of time before a write operation times out.
   The default is 8 minutes, expressed as milliseconds.
 
 .Typical Error Logs
 The following types of errors are often seen in the logs.
 
-[code]+INFO HDFS.DFSClient: Failed to connect to /xxx50010, add to deadNodes and
+`INFO HDFS.DFSClient: Failed to connect to /xxx50010, add to deadNodes and
             continue java.net.SocketTimeoutException: 60000 millis timeout while waiting for channel
             to be ready for connect. ch : java.nio.channels.SocketChannel[connection-pending
-            remote=/region-server-1:50010]+::
+            remote=/region-server-1:50010]`::
   All datanodes for a block are dead, and recovery is not possible.
   Here is the sequence of events that leads to this error:
 
-[code]+INFO org.apache.hadoop.HDFS.DFSClient: Exception in createBlockOutputStream
+`INFO org.apache.hadoop.HDFS.DFSClient: Exception in createBlockOutputStream
             java.net.SocketTimeoutException: 69000 millis timeout while waiting for channel to be
             ready for connect. ch : java.nio.channels.SocketChannel[connection-pending remote=/
-            xxx:50010]+::
+            xxx:50010]`::
   This type of error indicates a write issue.
   In this case, the master wants to split the log.
   It does not have a local datanode so it tries to connect to a remote datanode, but the datanode is dead.
@@ -1423,7 +1423,7 @@ This problem appears to affect some versions of OpenJDK 7 shipped by some Linux 
 NSS is configured as the default provider.
 If the host has an x86_64 architecture, depending on if the vendor packages contain the defect, the NSS provider will not function correctly. 
 
-To work around this problem, find the JRE home directory and edit the file [path]_lib/security/java.security_.
+To work around this problem, find the JRE home directory and edit the file _lib/security/java.security_.
 Edit the file to comment out the line: 
 
 [source]
@@ -1446,7 +1446,7 @@ Some users have reported seeing the following error:
 kernel: java: page allocation failure. order:4, mode:0x20
 ----
 
-Raising the value of [code]+min_free_kbytes+ was reported to fix this problem.
+Raising the value of `min_free_kbytes` was reported to fix this problem.
 This parameter is set to a percentage of the amount of RAM on your system, and is described in more detail at link:http://www.centos.org/docs/5/html/5.1/Deployment_Guide/s3-proc-sys-vm.html. 
 
 To find the current value on your system, run the following command:
@@ -1460,7 +1460,7 @@ Try doubling, then quadrupling the value.
 Note that setting the value too low or too high could have detrimental effects on your system.
 Consult your operating system vendor for specific recommendations.
 
-Use the following command to modify the value of [code]+min_free_kbytes+, substituting [replaceable]_<value>_ with your intended value:
+Use the following command to modify the value of `min_free_kbytes`, substituting [replaceable]_<value>_ with your intended value:
 
 ----
 [user@host]# echo <value> > /proc/sys/vm/min_free_kbytes

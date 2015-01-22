@@ -34,9 +34,9 @@ The subject of operations is related to the topics of <<trouble,trouble>>, <<per
 == HBase Tools and Utilities
 
 HBase provides several tools for administration, analysis, and debugging of your cluster.
-The entry-point to most of these tools is the [path]_bin/hbase_ command, though some tools are available in the [path]_dev-support/_ directory.
+The entry-point to most of these tools is the _bin/hbase_ command, though some tools are available in the _dev-support/_ directory.
 
-To see usage instructions for [path]_bin/hbase_ command, run it with no arguments, or with the +-h+ argument.
+To see usage instructions for _bin/hbase_ command, run it with no arguments, or with the +-h+ argument.
 These are the usage instructions for HBase 0.98.x.
 Some commands, such as +version+, +pe+, +ltt+, +clean+, are not available in previous versions.
 
@@ -70,14 +70,14 @@ Some commands take arguments. Pass no args or -h for usage.
   CLASSNAME       Run the class named CLASSNAME
 ----
 
-Some of the tools and utilities below are Java classes which are passed directly to the [path]_bin/hbase_ command, as referred to in the last line of the usage instructions.
+Some of the tools and utilities below are Java classes which are passed directly to the _bin/hbase_ command, as referred to in the last line of the usage instructions.
 Others, such as +hbase shell+ (<<shell,shell>>), +hbase upgrade+ (<<upgrading,upgrading>>), and +hbase
         thrift+ (<<thrift,thrift>>), are documented elsewhere in this guide.
 
 === Canary
 
 There is a Canary class can help users to canary-test the HBase cluster status, with every column-family for every regions or regionservers granularity.
-To see the usage, use the [literal]+--help+ parameter. 
+To see the usage, use the `--help` parameter. 
 
 ----
 $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -help
@@ -197,17 +197,17 @@ $ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -t 600000
 
 ==== Running Canary in a Kerberos-enabled Cluster
 
-To run Canary in a Kerberos-enabled cluster, configure the following two properties in [path]_hbase-site.xml_:
+To run Canary in a Kerberos-enabled cluster, configure the following two properties in _hbase-site.xml_:
 
-* [code]+hbase.client.keytab.file+
-* [code]+hbase.client.kerberos.principal+
+* `hbase.client.keytab.file`
+* `hbase.client.kerberos.principal`
 
 Kerberos credentials are refreshed every 30 seconds when Canary runs in daemon mode.
 
-To configure the DNS interface for the client, configure the following optional properties in [path]_hbase-site.xml_.
+To configure the DNS interface for the client, configure the following optional properties in _hbase-site.xml_.
 
-* [code]+hbase.client.dns.interface+
-* [code]+hbase.client.dns.nameserver+
+* `hbase.client.dns.interface`
+* `hbase.client.dns.nameserver`
 
 .Canary in a Kerberos-Enabled Cluster
 ====
@@ -244,10 +244,10 @@ See link:[HBASE-7351 Periodic health check script] for configurations and detail
 
 === Driver
 
-Several frequently-accessed utilities are provided as [code]+Driver+ classes, and executed by the [path]_bin/hbase_ command.
+Several frequently-accessed utilities are provided as `Driver` classes, and executed by the _bin/hbase_ command.
 These utilities represent MapReduce jobs which run on your cluster.
 They are run in the following way, replacing [replaceable]_UtilityName_ with the utility you want to run.
-This command assumes you have set the environment variable [literal]+HBASE_HOME+ to the directory where HBase is unpacked on your server.
+This command assumes you have set the environment variable `HBASE_HOME` to the directory where HBase is unpacked on your server.
 
 ----
 
@@ -299,10 +299,10 @@ See <<hfile_tool,hfile tool>>.
 === WAL Tools
 
 [[hlog_tool]]
-==== [class]+FSHLog+ tool
+==== `FSHLog` tool
 
-The main method on [class]+FSHLog+ offers manual split and dump facilities.
-Pass it WALs or the product of a split, the content of the [path]_recovered.edits_.
+The main method on `FSHLog` offers manual split and dump facilities.
+Pass it WALs or the product of a split, the content of the _recovered.edits_.
 directory.
 
 You can get a textual dump of a WAL file content by doing the following:
@@ -311,7 +311,7 @@ You can get a textual dump of a WAL file content by doing the following:
  $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --dump hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012
 ----
 
-The return code will be non-zero if issues with the file so you can test wholesomeness of file by redirecting [var]+STDOUT+ to [code]+/dev/null+ and testing the program return.
+The return code will be non-zero if issues with the file so you can test wholesomeness of file by redirecting `STDOUT` to `/dev/null` and testing the program return.
 
 Similarly you can force a split of a log file directory by doing:
 
@@ -332,7 +332,7 @@ You can invoke it via the hbase cli with the 'wal' command.
 .WAL Printing in older versions of HBase
 [NOTE]
 ====
-Prior to version 2.0, the WAL Pretty Printer was called the [class]+HLogPrettyPrinter+, after an internal name for HBase's write ahead log.
+Prior to version 2.0, the WAL Pretty Printer was called the `HLogPrettyPrinter`, after an internal name for HBase's write ahead log.
 In those versions, you can pring the contents of a WAL using the same configuration as above, but with the 'hlog' command. 
 
 ----
@@ -394,13 +394,13 @@ For performance consider the following general options:
 .Scanner Caching
 [NOTE]
 ====
-Caching for the input Scan is configured via [code]+hbase.client.scanner.caching+          in the job configuration. 
+Caching for the input Scan is configured via `hbase.client.scanner.caching`          in the job configuration. 
 ====
 
 .Versions
 [NOTE]
 ====
-By default, CopyTable utility only copies the latest version of row cells unless [code]+--versions=n+ is explicitly specified in the command. 
+By default, CopyTable utility only copies the latest version of row cells unless `--versions=n` is explicitly specified in the command. 
 ====
 
 See Jonathan Hsieh's link:http://www.cloudera.com/blog/2012/06/online-hbase-backups-with-copytable-2/[Online
@@ -415,7 +415,7 @@ Invoke via:
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
 ----
 
-Note: caching for the input Scan is configured via [code]+hbase.client.scanner.caching+ in the job configuration. 
+Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration. 
 
 === Import
 
@@ -435,7 +435,7 @@ $ bin/hbase -Dhbase.import.version=0.94 org.apache.hadoop.hbase.mapreduce.Import
 === ImportTsv
 
 ImportTsv is a utility that will load data in TSV format into HBase.
-It has two distinct usages: loading data from TSV format in HDFS into HBase via Puts, and preparing StoreFiles to be loaded via the [code]+completebulkload+. 
+It has two distinct usages: loading data from TSV format in HDFS into HBase via Puts, and preparing StoreFiles to be loaded via the `completebulkload`. 
 
 To load data via Puts (i.e., non-bulk loading):
 
@@ -525,7 +525,7 @@ For more information about bulk-loading HFiles into HBase, see <<arch.bulk.load,
 
 === CompleteBulkLoad
 
-The [code]+completebulkload+ utility will move generated StoreFiles into an HBase table.
+The `completebulkload` utility will move generated StoreFiles into an HBase table.
 This utility is often used in conjunction with output from <<importtsv,importtsv>>. 
 
 There are two ways to invoke this utility, with explicit classname and via the driver:
@@ -570,7 +570,7 @@ $ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer /backuplogdir oldTable1,
 ----
 
 WALPlayer, by default, runs as a mapreduce job.
-To NOT run WALPlayer as a mapreduce job on your cluster, force it to run all in the local process by adding the flags [code]+-Dmapreduce.jobtracker.address=local+ on the command line. 
+To NOT run WALPlayer as a mapreduce job on your cluster, force it to run all in the local process by adding the flags `-Dmapreduce.jobtracker.address=local` on the command line. 
 
 [[rowcounter]]
 === RowCounter and CellCounter
@@ -583,7 +583,7 @@ It will run the mapreduce all in a single process but it will run faster if you 
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter <tablename> [<column1> <column2>...]
 ----
 
-Note: caching for the input Scan is configured via [code]+hbase.client.scanner.caching+ in the job configuration. 
+Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration. 
 
 HBase ships another diagnostic mapreduce job called link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/CellCounter.html[CellCounter].
 Like RowCounter, it gathers more fine-grained statistics about your table.
@@ -598,13 +598,13 @@ The statistics gathered by RowCounter are more fine-grained and include:
 
 The program allows you to limit the scope of the run.
 Provide a row regex or prefix to limit the rows to analyze.
-Use [code]+hbase.mapreduce.scan.column.family+ to specify scanning a single column family.
+Use `hbase.mapreduce.scan.column.family` to specify scanning a single column family.
 
 ----
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.CellCounter <tablename> <outputDir> [regex or prefix]
 ----
 
-Note: just like RowCounter, caching for the input Scan is configured via [code]+hbase.client.scanner.caching+ in the job configuration. 
+Note: just like RowCounter, caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration. 
 
 === mlockall
 
@@ -639,7 +639,7 @@ Options:
 
 === +hbase pe+
 
-The +hbase pe+ command is a shortcut provided to run the [code]+org.apache.hadoop.hbase.PerformanceEvaluation+ tool, which is used for testing.
+The +hbase pe+ command is a shortcut provided to run the `org.apache.hadoop.hbase.PerformanceEvaluation` tool, which is used for testing.
 The +hbase pe+ command was introduced in HBase 0.98.4.
 
 The PerformanceEvaluation tool accepts many different options and commands.
@@ -651,7 +651,7 @@ The PerformanceEvaluation tool has received many updates in recent HBase release
 
 === +hbase ltt+
 
-The +hbase ltt+ command is a shortcut provided to run the [code]+org.apache.hadoop.hbase.util.LoadTestTool+ utility, which is used for testing.
+The +hbase ltt+ command is a shortcut provided to run the `org.apache.hadoop.hbase.util.LoadTestTool` utility, which is used for testing.
 The +hbase ltt+ command was introduced in HBase 0.98.4.
 
 You must specify either +-write+ or +-update-read+ as the first option.
@@ -721,8 +721,8 @@ See <<lb,lb>> below.
 .Kill Node Tool
 [NOTE]
 ====
-In hbase-2.0, in the bin directory, we added a script named [path]_considerAsDead.sh_ that can be used to kill a regionserver.
-Hardware issues could be detected by specialized monitoring tools before the  zookeeper timeout has expired. [path]_considerAsDead.sh_ is a simple function to mark a RegionServer as dead.
+In hbase-2.0, in the bin directory, we added a script named _considerAsDead.sh_ that can be used to kill a regionserver.
+Hardware issues could be detected by specialized monitoring tools before the  zookeeper timeout has expired. _considerAsDead.sh_ is a simple function to mark a RegionServer as dead.
 It deletes all the znodes of the server, starting the recovery process.
 Plug in the script into your monitoring/fault detection tools to initiate faster failover.
 Be careful how you use this disruptive tool.
@@ -733,7 +733,7 @@ A downside to the above stop of a RegionServer is that regions could be offline 
 Regions are closed in order.
 If many regions on the server, the first region to close may not be back online until all regions close and after the master notices the RegionServer's znode gone.
 In Apache HBase 0.90.2, we added facility for having a node gradually shed its load and then shutdown itself down.
-Apache HBase 0.90.2 added the [path]_graceful_stop.sh_ script.
+Apache HBase 0.90.2 added the _graceful_stop.sh_ script.
 Here is its usage:
 
 ----
@@ -748,21 +748,21 @@ Usage: graceful_stop.sh [--config &conf-dir>] [--restart] [--reload] [--thrift] 
 ----
 
 To decommission a loaded RegionServer, run the following: +$
-          ./bin/graceful_stop.sh HOSTNAME+ where [var]+HOSTNAME+ is the host carrying the RegionServer you would decommission. 
+          ./bin/graceful_stop.sh HOSTNAME+ where `HOSTNAME` is the host carrying the RegionServer you would decommission. 
 
-.On [var]+HOSTNAME+
+.On `HOSTNAME`
 [NOTE]
 ====
-The [var]+HOSTNAME+ passed to [path]_graceful_stop.sh_ must match the hostname that hbase is using to identify RegionServers.
+The `HOSTNAME` passed to _graceful_stop.sh_ must match the hostname that hbase is using to identify RegionServers.
 Check the list of RegionServers in the master UI for how HBase is referring to servers.
 Its usually hostname but can also be FQDN.
-Whatever HBase is using, this is what you should pass the [path]_graceful_stop.sh_ decommission script.
+Whatever HBase is using, this is what you should pass the _graceful_stop.sh_ decommission script.
 If you pass IPs, the script is not yet smart enough to make a hostname (or FQDN) of it and so it will fail when it checks if server is currently running; the graceful unloading of regions will not run. 
 ====
 
-The [path]_graceful_stop.sh_ script will move the regions off the decommissioned RegionServer one at a time to minimize region churn.
+The _graceful_stop.sh_ script will move the regions off the decommissioned RegionServer one at a time to minimize region churn.
 It will verify the region deployed in the new location before it will moves the next region and so on until the decommissioned server is carrying zero regions.
-At this point, the [path]_graceful_stop.sh_ tells the RegionServer +stop+.
+At this point, the _graceful_stop.sh_ tells the RegionServer +stop+.
 The master will at this point notice the RegionServer gone but all regions will have already been redeployed and because the RegionServer went down cleanly, there will be no WAL logs to split. 
 
 .Load Balancer
@@ -797,8 +797,8 @@ Hence, it is better to manage the balancer apart from +graceful_stop+ reenabling
 
 If you have a large cluster, you may want to decommission more than one machine at a time by gracefully stopping mutiple RegionServers concurrently.
 To gracefully drain multiple regionservers at the same time, RegionServers can be put into a "draining" state.
-This is done by marking a RegionServer as a draining node by creating an entry in ZooKeeper under the [path]_hbase_root/draining_ znode.
-This znode has format [code]+name,port,startcode+ just like the regionserver entries under [path]_hbase_root/rs_ znode. 
+This is done by marking a RegionServer as a draining node by creating an entry in ZooKeeper under the _hbase_root/draining_ znode.
+This znode has format `name,port,startcode` just like the regionserver entries under _hbase_root/rs_ znode. 
 
 Without this facility, decommissioning mulitple nodes may be non-optimal because regions that are being drained from one region server may be moved to other regionservers that are also draining.
 Marking RegionServers to be in the draining state prevents this from happening.
@@ -810,7 +810,7 @@ See this link:http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.
 
 It is good having <<dfs.datanode.failed.volumes.tolerated,dfs.datanode.failed.volumes.tolerated>> set if you have a decent number of disks per machine for the case where a disk plain dies.
 But usually disks do the "John Wayne" -- i.e.
-take a while to go down spewing errors in [path]_dmesg_ -- or for some reason, run much slower than their companions.
+take a while to go down spewing errors in _dmesg_ -- or for some reason, run much slower than their companions.
 In this case you want to decommission the disk.
 You have two options.
 You can link:http://wiki.apache.org/hadoop/FAQ#I_want_to_make_a_large_cluster_smaller_by_taking_out_a_bunch_of_nodes_simultaneously._How_can_this_be_done.3F[decommission
@@ -835,13 +835,13 @@ These methods are detailed below.
 
 ==== Using the +rolling-restart.sh+ Script
 
-HBase ships with a script, [path]_bin/rolling-restart.sh_, that allows you to perform rolling restarts on the entire cluster, the master only, or the RegionServers only.
+HBase ships with a script, _bin/rolling-restart.sh_, that allows you to perform rolling restarts on the entire cluster, the master only, or the RegionServers only.
 The script is provided as a template for your own script, and is not explicitly tested.
 It requires password-less SSH login to be configured and assumes that you have deployed using a tarball.
 The script requires you to set some environment variables before running it.
 Examine the script and modify it to suit your needs.
 
-.[path]_rolling-restart.sh_ General Usage
+._rolling-restart.sh_ General Usage
 ====
 ----
 
@@ -851,19 +851,19 @@ Usage: rolling-restart.sh [--config <hbase-confdir>] [--rs-only] [--master-only]
 ====
 
 Rolling Restart on RegionServers Only::
-  To perform a rolling restart on the RegionServers only, use the [code]+--rs-only+ option.
+  To perform a rolling restart on the RegionServers only, use the `--rs-only` option.
   This might be necessary if you need to reboot the individual RegionServer or if you make a configuration change that only affects RegionServers and not the other HBase processes.
 
 Rolling Restart on Masters Only::
-  To perform a rolling restart on the active and backup Masters, use the [code]+--master-only+ option.
+  To perform a rolling restart on the active and backup Masters, use the `--master-only` option.
   You might use this if you know that your configuration change only affects the Master and not the RegionServers, or if you need to restart the server where the active Master is running.
 
 Graceful Restart::
-  If you specify the [code]+--graceful+ option, RegionServers are restarted using the [path]_bin/graceful_stop.sh_ script, which moves regions off a RegionServer before restarting it.
+  If you specify the `--graceful` option, RegionServers are restarted using the _bin/graceful_stop.sh_ script, which moves regions off a RegionServer before restarting it.
   This is safer, but can delay the restart.
 
 Limiting the Number of Threads::
-  To limit the rolling restart to using only a specific number of threads, use the [code]+--maxthreads+ option.
+  To limit the rolling restart to using only a specific number of threads, use the `--maxthreads` option.
 
 [[rolling.restart.manual]]
 ==== Manual Rolling Restart
@@ -882,7 +882,7 @@ It disables the load balancer before moving the regions.
 $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &> /tmp/log.txt &;
 ----
 
-Monitor the output of the [path]_/tmp/log.txt_ file to follow the progress of the script. 
+Monitor the output of the _/tmp/log.txt_ file to follow the progress of the script. 
 
 ==== Logic for Crafting Your Own Rolling Restart Script
 
@@ -936,7 +936,7 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
 
 Adding a new regionserver in HBase is essentially free, you simply start it like this: +$ ./bin/hbase-daemon.sh start regionserver+ and it will register itself with the master.
 Ideally you also started a DataNode on the same machine so that the RS can eventually start to have local files.
-If you rely on ssh to start your daemons, don't forget to add the new hostname in [path]_conf/regionservers_ on the master. 
+If you rely on ssh to start your daemons, don't forget to add the new hostname in _conf/regionservers_ on the master. 
 
 At this point the region server isn't serving data because no regions have moved to it yet.
 If the balancer is enabled, it will start moving regions to the new RS.
@@ -961,10 +961,10 @@ You can also filter which metrics are emitted and extend the metrics framework t
 
 For HBase 0.95 and newer, HBase ships with a default metrics configuration, or [firstterm]_sink_.
 This includes a wide variety of individual metrics, and emits them every 10 seconds by default.
-To configure metrics for a given region server, edit the [path]_conf/hadoop-metrics2-hbase.properties_ file.
+To configure metrics for a given region server, edit the _conf/hadoop-metrics2-hbase.properties_ file.
 Restart the region server for the changes to take effect.
 
-To change the sampling rate for the default sink, edit the line beginning with [literal]+*.period+.
+To change the sampling rate for the default sink, edit the line beginning with `*.period`.
 To filter which metrics are emitted or to extend the metrics framework, see link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/package-summary.html      
 
 .HBase Metrics and Ganglia
@@ -978,7 +978,7 @@ See link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/metrics2/pa
 
 === Disabling Metrics
 
-To disable metrics for a region server, edit the [path]_conf/hadoop-metrics2-hbase.properties_ file and comment out any uncommented lines.
+To disable metrics for a region server, edit the _conf/hadoop-metrics2-hbase.properties_ file and comment out any uncommented lines.
 Restart the region server for the changes to take effect.
 
 [[discovering.available.metrics]]
@@ -988,15 +988,15 @@ Rather than listing each metric which HBase emits by default, you can browse thr
 Different metrics are exposed for the Master process and each region server process.
 
 .Procedure: Access a JSON Output of Available Metrics
-. After starting HBase, access the region server's web UI, at [literal]+http://REGIONSERVER_HOSTNAME:60030+ by default (or port 16030 in HBase 1.0+).
+. After starting HBase, access the region server's web UI, at `http://REGIONSERVER_HOSTNAME:60030` by default (or port 16030 in HBase 1.0+).
 . Click the [label]#Metrics Dump# link near the top.
   The metrics for the region server are presented as a dump of the JMX bean in JSON format.
   This will dump out all metrics names and their values.
-  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of [literal]+?description=true+ so your URL becomes [literal]+http://REGIONSERVER_HOSTNAME:60030/jmx?description=true+.
+  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes `http://REGIONSERVER_HOSTNAME:60030/jmx?description=true`.
   Not all beans and attributes have descriptions. 
-. To view metrics for the Master, connect to the Master's web UI instead (defaults to [literal]+http://localhost:60010+ or port 16010 in HBase 1.0+) and click its [label]#Metrics
+. To view metrics for the Master, connect to the Master's web UI instead (defaults to `http://localhost:60010` or port 16010 in HBase 1.0+) and click its [label]#Metrics
   Dump# link.
-  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of [literal]+?description=true+ so your URL becomes [literal]+http://REGIONSERVER_HOSTNAME:60010/jmx?description=true+.
+  To include metrics descriptions in the listing -- this can be useful when you are exploring what is available -- add a query string of `?description=true` so your URL becomes `http://REGIONSERVER_HOSTNAME:60010/jmx?description=true`.
   Not all beans and attributes have descriptions. 
 
 
@@ -1023,15 +1023,15 @@ This procedure uses +jvisualvm+, which is an application usually available in th
 === Units of Measure for Metrics
 
 Different metrics are expressed in different units, as appropriate.
-Often, the unit of measure is in the name (as in the metric [code]+shippedKBs+). Otherwise, use the following guidelines.
+Often, the unit of measure is in the name (as in the metric `shippedKBs`). Otherwise, use the following guidelines.
 When in doubt, you may need to examine the source for a given metric.
 
 * Metrics that refer to a point in time are usually expressed as a timestamp.
-* Metrics that refer to an age (such as [code]+ageOfLastShippedOp+) are usually expressed in milliseconds.
+* Metrics that refer to an age (such as `ageOfLastShippedOp`) are usually expressed in milliseconds.
 * Metrics that refer to memory sizes are in bytes.
-* Sizes of queues (such as [code]+sizeOfLogQueue+) are expressed as the number of items in the queue.
+* Sizes of queues (such as `sizeOfLogQueue`) are expressed as the number of items in the queue.
   Determine the size by multiplying by the block size (default is 64 MB in HDFS).
-* Metrics that refer to things like the number of a given type of operations (such as [code]+logEditsRead+) are expressed as an integer.
+* Metrics that refer to things like the number of a given type of operations (such as `logEditsRead`) are expressed as an integer.
 
 [[master_metrics]]
 === Most Important Master Metrics
@@ -1174,10 +1174,10 @@ It is also prepended with identifying tags [constant]+(responseTooSlow)+, [const
 
 There are two configuration knobs that can be used to adjust the thresholds for when queries are logged. 
 
-* [var]+hbase.ipc.warn.response.time+ Maximum number of milliseconds that a query can be run without being logged.
+* `hbase.ipc.warn.response.time` Maximum number of milliseconds that a query can be run without being logged.
   Defaults to 10000, or 10 seconds.
   Can be set to -1 to disable logging by time. 
-* [var]+hbase.ipc.warn.response.size+ Maximum byte size of response that a query can return without being logged.
+* `hbase.ipc.warn.response.size` Maximum byte size of response that a query can return without being logged.
   Defaults to 100 megabytes.
   Can be set to -1 to disable logging by size. 
 
@@ -1185,8 +1185,8 @@ There are two configuration knobs that can be used to adjust the thresholds for 
 
 The slow query log exposes to metrics to JMX.
 
-* [var]+hadoop.regionserver_rpc_slowResponse+ a global metric reflecting the durations of all responses that triggered logging.
-* [var]+hadoop.regionserver_rpc_methodName.aboveOneSec+ A metric reflecting the durations of all responses that lasted for more than one second.
+* `hadoop.regionserver_rpc_slowResponse` a global metric reflecting the durations of all responses that triggered logging.
+* `hadoop.regionserver_rpc_methodName.aboveOneSec` A metric reflecting the durations of all responses that lasted for more than one second.
 
 ==== Output
 
@@ -1293,8 +1293,8 @@ For more information, see the link:http://hbase.apache.org/apidocs/org/apache/ha
 . Configure and start the source and destination clusters.
   Create tables with the same names and column families on both the source and destination clusters, so that the destination cluster knows where to store data it will receive.
   All hosts in the source and destination clusters should be reachable to each other.
-. On the source cluster, enable replication by setting [code]+hbase.replication+            to [literal]+true+ in [path]_hbase-site.xml_.
-. On the source cluster, in HBase Shell, add the destination cluster as a peer, using the [code]+add_peer+ command.
+. On the source cluster, enable replication by setting `hbase.replication`            to `true` in _hbase-site.xml_.
+. On the source cluster, in HBase Shell, add the destination cluster as a peer, using the `add_peer` command.
   The syntax is as follows:
 +
 ----
@@ -1307,7 +1307,7 @@ The ID is a string (prior to link:https://issues.apache.org/jira/browse/HBASE-11
 hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
 ----
 +
-If both clusters use the same ZooKeeper cluster, you must use a different [code]+zookeeper.znode.parent+, because they cannot write in the same folder.
+If both clusters use the same ZooKeeper cluster, you must use a different `zookeeper.znode.parent`, because they cannot write in the same folder.
 
 . On the source cluster, configure each column family to be replicated by setting its REPLICATION_SCOPE to 1, using commands such as the following in HBase Shell.
 +
@@ -1325,7 +1325,7 @@ Getting 1 rs from peer cluster # 0
 Choosing peer 10.10.1.49:62020
 ----
 
-. To verify the validity of replicated data, you can use the included [code]+VerifyReplication+ MapReduce job on the source cluster, providing it with the ID of the replication peer and table name to verify.
+. To verify the validity of replicated data, you can use the included `VerifyReplication` MapReduce job on the source cluster, providing it with the ID of the replication peer and table name to verify.
   Other options are possible, such as a time range or specific families to verify.
 +
 The command has the following form:
@@ -1334,7 +1334,7 @@ The command has the following form:
 hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication [--starttime=timestamp1] [--stoptime=timestamp [--families=comma separated list of families] <peerId><tablename>
 ----
 +
-The [code]+VerifyReplication+ command prints out [literal]+GOODROWS+            and [literal]+BADROWS+ counters to indicate rows that did and did not replicate correctly. 
+The `VerifyReplication` command prints out `GOODROWS`            and `BADROWS` counters to indicate rows that did and did not replicate correctly. 
 
 
 === Detailed Information About Cluster Replication
@@ -1351,7 +1351,7 @@ A single WAL edit goes through several steps in order to be replicated to a slav
 . If the changed cell corresponds to a column family that is scoped for replication, the edit is added to the queue for replication.
 . In a separate thread, the edit is read from the log, as part of a batch process.
   Only the KeyValues that are eligible for replication are kept.
-  Replicable KeyValues are part of a column family whose schema is scoped GLOBAL, are not part of a catalog such as [code]+hbase:meta+, did not originate from the target slave cluster, and have not already been consumed by the target slave cluster.
+  Replicable KeyValues are part of a column family whose schema is scoped GLOBAL, are not part of a catalog such as `hbase:meta`, did not originate from the target slave cluster, and have not already been consumed by the target slave cluster.
 . The edit is tagged with the master's UUID and added to a buffer.
   When the buffer is filled, or the reader reaches the end of the file, the buffer is sent to a random region server on the slave cluster.
 . The region server reads the edits sequentially and separates them into buffers, one buffer per table.
@@ -1374,31 +1374,31 @@ When replication is active, a subset of region servers in the source cluster is 
 This responsibility must be failed over like all other region server functions should a process or node crash.
 The following configuration settings are recommended for maintaining an even distribution of replication activity over the remaining live servers in the source cluster:
 
-* Set [code]+replication.source.maxretriesmultiplier+ to [literal]+300+.
-* Set [code]+replication.source.sleepforretries+ to [literal]+1+ (1 second). This value, combined with the value of [code]+replication.source.maxretriesmultiplier+, causes the retry cycle to last about 5 minutes.
-* Set [code]+replication.sleep.before.failover+ to [literal]+30000+ (30 seconds) in the source cluster site configuration.
+* Set `replication.source.maxretriesmultiplier` to `300`.
+* Set `replication.source.sleepforretries` to `1` (1 second). This value, combined with the value of `replication.source.maxretriesmultiplier`, causes the retry cycle to last about 5 minutes.
+* Set `replication.sleep.before.failover` to `30000` (30 seconds) in the source cluster site configuration.
 
 .Preserving Tags During Replication
 By default, the codec used for replication between clusters strips tags, such as cell-level ACLs, from cells.
 To prevent the tags from being stripped, you can use a different codec which does not strip them.
-Configure [code]+hbase.replication.rpc.codec+ to use [literal]+org.apache.hadoop.hbase.codec.KeyValueCodecWithTags+, on both the source and sink RegionServers involved in the replication.
+Configure `hbase.replication.rpc.codec` to use `org.apache.hadoop.hbase.codec.KeyValueCodecWithTags`, on both the source and sink RegionServers involved in the replication.
 This option was introduced in link:https://issues.apache.org/jira/browse/HBASE-10322[HBASE-10322].
 
 ==== Replication Internals
 
 Replication State in ZooKeeper::
   HBase replication maintains its state in ZooKeeper.
-  By default, the state is contained in the base node [path]_/hbase/replication_.
-  This node contains two child nodes, the [code]+Peers+ znode and the [code]+RS+                znode.
+  By default, the state is contained in the base node _/hbase/replication_.
+  This node contains two child nodes, the `Peers` znode and the `RS`                znode.
 
-The [code]+Peers+ Znode::
-  The [code]+peers+ znode is stored in [path]_/hbase/replication/peers_ by default.
+The `Peers` Znode::
+  The `peers` znode is stored in _/hbase/replication/peers_ by default.
   It consists of a list of all peer replication clusters, along with the status of each of them.
   The value of each peer is its cluster key, which is provided in the HBase Shell.
   The cluster key contains a list of ZooKeeper nodes in the cluster's quorum, the client port for the ZooKeeper quorum, and the base znode for HBase in HDFS on that cluster.
 
-The [code]+RS+ Znode::
-  The [code]+rs+ znode contains a list of WAL logs which need to be replicated.
+The `RS` Znode::
+  The `rs` znode contains a list of WAL logs which need to be replicated.
   This list is divided into a set of queues organized by region server and the peer cluster the region server is shipping the logs to.
   The rs znode has one child znode for each region server in the cluster.
   The child znode name is the region server's hostname, client port, and start code.
@@ -1406,11 +1406,11 @@ The [code]+RS+ Znode::
 
 ==== Choosing Region Servers to Replicate To
 
-When a master cluster region server initiates a replication source to a slave cluster, it first connects to the slave's ZooKeeper ensemble using the provided cluster key . It then scans the [path]_rs/_ directory to discover all the available sinks (region servers that are accepting incoming streams of edits to replicate) and randomly chooses a subset of them using a configured ratio which has a default value of 10%. For example, if a slave cluster has 150 machines, 15 will be chosen as potential recipient for edits that this master cluster region server sends.
+When a master cluster region server initiates a replication source to a slave cluster, it first connects to the slave's ZooKeeper ensemble using the provided cluster key . It then scans the _rs/_ directory to discover all the available sinks (region servers that are accepting incoming streams of edits to replicate) and randomly chooses a subset of them using a configured ratio which has a default value of 10%. For example, if a slave cluster has 150 machines, 15 will be chosen as potential recipient for edits that this master cluster region server sends.
 Because this selection is performed by each master region server, the probability that all slave region servers are used is very high, and this method works for clusters of any size.
 For example, a master cluster of 10 machines replicating to a slave cluster of 5 machines with a ratio of 10% causes the master cluster region servers to choose one machine each at random.
 
-A ZooKeeper watcher is placed on the [path]_${zookeeper.znode.parent}/rs_ node of the slave cluster by each of the master cluster's region servers.
+A ZooKeeper watcher is placed on the _${zookeeper.znode.parent}/rs_ node of the slave cluster by each of the master cluster's region servers.
 This watch is used to monitor changes in the composition of the slave cluster.
 When nodes are removed from the slave cluster, or if nodes go down or come back up, the master cluster's region servers will respond by selecting a new pool of slave region servers to replicate to.
 
@@ -1428,7 +1428,7 @@ This ensures that all the sources are aware that a new log exists before the reg
 The queue items are discarded when the replication thread cannot read more entries from a file (because it reached the end of the last block) and there are other files in the queue.
 This means that if a source is up to date and replicates from the log that the region server writes to, reading up to the "end" of the current file will not delete the item in the queue.
 
-A log can be archived if it is no longer used or if the number of logs exceeds [code]+hbase.regionserver.maxlogs+ because the insertion rate is faster than regions are flushed.
+A log can be archived if it is no longer used or if the number of logs exceeds `hbase.regionserver.maxlogs` because the insertion rate is faster than regions are flushed.
 When a log is archived, the source threads are notified that the path for that log changed.
 If a particular source has already finished with an archived log, it will just ignore the message.
 If the log is in the queue, the path will be updated in memory.
@@ -1463,7 +1463,7 @@ The next time the cleaning process needs to look for a log, it starts by using i
 When no region servers are failing, keeping track of the logs in ZooKeeper adds no value.
 Unfortunately, region servers do fail, and since ZooKeeper is highly available, it is useful for managing the transfer of the queues in the event of a failure.
 
-Each of the master cluster region servers keeps a watcher on every other region server, in order to be notified when one dies (just as the master does). When a failure happens, they all race to create a znode called [literal]+lock+ inside the dead region server's znode that contains its queues.
+Each of the master cluster region servers keeps a watcher on every other region server, in order to be notified when one dies (just as the master does). When a failure happens, they all race to create a znode called `lock` inside the dead region server's znode that contains its queues.
 The region server that creates it successfully then transfers all the queues to its own znode, one at a time since ZooKeeper does not support renaming queues.
 After queues are all transferred, they are deleted from the old location.
 The znodes that were recovered are renamed with the ID of the slave cluster appended with the name of the dead server.
@@ -1472,9 +1472,9 @@ Next, the master cluster region server creates one new source thread per copied 
 The main difference is that those queues will never receive new data, since they do not belong to their new region server.
 When the reader hits the end of the last log, the queue's znode is deleted and the master cluster region server closes that replication source.
 
-Given a master cluster with 3 region servers replicating to a single slave with id [literal]+2+, the following hierarchy represents what the znodes layout could be at some point in time.
-The region servers' znodes all contain a [literal]+peers+          znode which contains a single queue.
-The znode names in the queues represent the actual file names on HDFS in the form [literal]+address,port.timestamp+.
+Given a master cluster with 3 region servers replicating to a single slave with id `2`, the following hierarchy represents what the znodes layout could be at some point in time.
+The region servers' znodes all contain a `peers`          znode which contains a single queue.
+The znode names in the queues represent the actual file names on HDFS in the form `address,port.timestamp`.
 
 ----
 
@@ -1553,16 +1553,16 @@ The new layout will be:
 
 The following metrics are exposed at the global region server level and (since HBase 0.95) at the peer level:
 
-[code]+source.sizeOfLogQueue+::
+`source.sizeOfLogQueue`::
   number of WALs to process (excludes the one which is being processed) at the Replication source
 
-[code]+source.shippedOps+::
+`source.shippedOps`::
   number of mutations shipped
 
-[code]+source.logEditsRead+::
+`source.logEditsRead`::
   number of mutations read from WALs at the replication source
 
-[code]+source.ageOfLastShippedOp+::
+`source.ageOfLastShippedOp`::
   age of last batch that was shipped by the replication source
 
 === Replication Configuration Options
@@ -1679,7 +1679,7 @@ The disadvantages of these methods are that you can degrade region server perfor
 [[ops.snapshots.configuration]]
 === Configuration
 
-To turn on the snapshot support just set the [var]+hbase.snapshot.enabled+        property to true.
+To turn on the snapshot support just set the `hbase.snapshot.enabled`        property to true.
 (Snapshots are enabled by default in 0.95+ and off by default in 0.94.6+)
 
 [source,java]
@@ -1789,7 +1789,7 @@ $ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySn
 ----
 
 .Limiting Bandwidth Consumption
-You can limit the bandwidth consumption when exporting a snapshot, by specifying the [code]+-bandwidth+ parameter, which expects an integer representing megabytes per second.
+You can limit the bandwidth consumption when exporting a snapshot, by specifying the `-bandwidth` parameter, which expects an integer representing megabytes per second.
 The following example limits the above example to 200 MB/sec.
 
 [source,bourne]
@@ -1856,7 +1856,7 @@ Generally less regions makes for a smoother running cluster (you can always manu
 The number of regions cannot be configured directly (unless you go for fully <<disable.splitting,disable.splitting>>); adjust the region size to achieve the target region size given table size.
 
 When configuring regions for multiple tables, note that most region settings can be set on a per-table basis via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html[HTableDescriptor], as well as shell commands.
-These settings will override the ones in [var]+hbase-site.xml+.
+These settings will override the ones in `hbase-site.xml`.
 That is useful if your tables have different workloads/use cases.
 
 Also note that in the discussion of region sizes here, _HDFS replication factor is not (and should not be) taken into account, whereas
@@ -1957,7 +1957,7 @@ See <<compaction,compaction>> for some details.
 
 When provisioning for large data sizes, however, it's good to keep in mind that compactions can affect write throughput.
 Thus, for write-intensive workloads, you may opt for less frequent compactions and more store files per regions.
-Minimum number of files for compactions ([var]+hbase.hstore.compaction.min+) can be set to higher value; <<hbase.hstore.blockingstorefiles,hbase.hstore.blockingStoreFiles>> should also be increased, as more files might accumulate in such case.
+Minimum number of files for compactions (`hbase.hstore.compaction.min`) can be set to higher value; <<hbase.hstore.blockingstorefiles,hbase.hstore.blockingStoreFiles>> should also be increased, as more files might accumulate in such case.
 You may also consider manually managing compactions: <<managed.compactions,managed.compactions>>
 
 [[ops.capacity.config.presplit]]
