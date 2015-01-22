@@ -44,12 +44,17 @@ import org.mockito.Mockito;
 import com.google.common.collect.Lists;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 
 /**
  * Tests for the region server status page and its template.
  */
 @Category(SmallTests.class)
 public class TestRSStatusServlet {
+  private static final Log LOG = LogFactory.getLog(TestRSStatusServlet.class);
   private HRegionServer rs;
   
   static final int FAKE_IPC_PORT = 1585;
@@ -75,6 +80,12 @@ public class TestRSStatusServlet {
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
     Mockito.doReturn(zkw).when(rs).getZooKeeper();
 
+    // Fake CacheConfig
+    LOG.warn("The " + HConstants.HFILE_BLOCK_CACHE_SIZE_KEY + " is set to 0");
+    CacheConfig cacheConf = Mockito.mock(CacheConfig.class);
+    Mockito.doReturn(null).when(cacheConf).getBlockCache();
+    Mockito.doReturn(cacheConf).when(rs).getCacheConfig();
+    
     // Fake MasterAddressTracker
     MasterAddressTracker mat = Mockito.mock(MasterAddressTracker.class);
     Mockito.doReturn(fakeMasterAddress).when(mat).getMasterAddress();
