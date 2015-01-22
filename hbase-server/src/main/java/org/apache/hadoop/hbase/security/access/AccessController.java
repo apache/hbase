@@ -1936,7 +1936,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   /**
-   * Verifies user has WRITE privileges on
+   * Verifies user has CREATE privileges on
    * the Column Families involved in the bulkLoadHFile
    * request. Specific Column Write privileges are presently
    * ignored.
@@ -1993,11 +1993,11 @@ public class AccessController extends BaseMasterAndRegionObserver
                                  PrepareBulkLoadRequest request) throws IOException {
     RegionCoprocessorEnvironment e = ctx.getEnvironment();
 
-    AuthResult authResult = hasSomeAccess(e, "prePrepareBulkLoad", Action.WRITE);
+    AuthResult authResult = hasSomeAccess(e, "prePrepareBulkLoad", Action.CREATE);
     logResult(authResult);
     if (!authResult.isAllowed()) {
       throw new AccessDeniedException("Insufficient permissions (table=" +
-        e.getRegion().getTableDesc().getTableName() + ", action=WRITE)");
+        e.getRegion().getTableDesc().getTableName() + ", action=CREATE)");
     }
   }
 
@@ -2013,11 +2013,11 @@ public class AccessController extends BaseMasterAndRegionObserver
                                  CleanupBulkLoadRequest request) throws IOException {
     RegionCoprocessorEnvironment e = ctx.getEnvironment();
 
-    AuthResult authResult = hasSomeAccess(e, "preCleanupBulkLoad", Action.WRITE);
+    AuthResult authResult = hasSomeAccess(e, "preCleanupBulkLoad", Action.CREATE);
     logResult(authResult);
     if (!authResult.isAllowed()) {
       throw new AccessDeniedException("Insufficient permissions (table=" +
-        e.getRegion().getTableDesc().getTableName() + ", action=WRITE)");
+        e.getRegion().getTableDesc().getTableName() + ", action=CREATE)");
     }
   }
 
