@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.security.User;
 import com.google.protobuf.BlockingService;
 
 import org.apache.hadoop.hbase.util.Bytes;
-import org.htrace.Trace;
+import org.apache.htrace.Trace;
 
 import java.net.InetAddress;
 

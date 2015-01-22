@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
+import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -58,10 +59,11 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.htrace.Sampler;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
-import org.htrace.impl.ProbabilitySampler;
+import org.apache.htrace.HTraceConfiguration;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.htrace.impl.ProbabilitySampler;
 
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Meter;
@@ -150,7 +152,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
               + " SpanReciever can keep up.");
           }
         } else {
-          loopSampler = new ProbabilitySampler(traceFreq);
+          getConf().setDouble("hbase.sampler.fraction", traceFreq);
+          loopSampler = new ProbabilitySampler(new HBaseHTraceConfiguration(getConf()));
         }
       }
     }

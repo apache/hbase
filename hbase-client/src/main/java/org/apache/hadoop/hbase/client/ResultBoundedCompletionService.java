@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.htrace.Trace;
+import org.apache.htrace.Trace;
 
 /**
  * A completion service for the RpcRetryingCallerFactory.

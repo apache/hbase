@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 import com.google.protobuf.Message;
 
