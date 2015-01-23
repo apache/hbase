@@ -299,6 +299,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // Cache flushing
   protected MemStoreFlusher cacheFlusher;
 
+  protected HeapMemoryManager hMemManager;
+
   // catalog tracker
   protected CatalogTracker catalogTracker;
 
@@ -982,6 +984,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive? If OOME could have exited already
+    if (this.hMemManager != null) this.hMemManager.stop();
     if (this.cacheFlusher != null) this.cacheFlusher.interruptIfNecessary();
     if (this.compactSplitThread != null) this.compactSplitThread.interruptIfNecessary();
     if (this.hlogRoller != null) this.hlogRoller.interruptIfNecessary();
@@ -1323,6 +1326,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
 
       startServiceThreads();
+      startHeapMemoryManager();
       LOG.info("Serving as " + this.serverNameFromMasterPOV +
         ", RpcServer on " + this.isa +
         ", sessionid=0x" +
@@ -1335,6 +1339,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           "Region server startup failed");
     } finally {
       sleeper.skipSleepCycle();
+    }
+  }
+
+  private void startHeapMemoryManager() {
+    this.hMemManager = HeapMemoryManager.create(this);
+    if (this.hMemManager != null) {
+      this.hMemManager.start();
     }
   }
 
@@ -4924,4 +4935,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     return this.cacheConfig;
   }
 
+  @Override
+  public HeapMemoryManager getHeapMemoryManager() {
+    return hMemManager;
+  }
 }

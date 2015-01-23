@@ -1042,6 +1042,13 @@ public final class HConstants {
   public static final String ENABLE_CLIENT_BACKPRESSURE = "hbase.client.backpressure.enabled";
   public static final boolean DEFAULT_ENABLE_CLIENT_BACKPRESSURE = false;
 
+  public static final String HEAP_OCCUPANCY_LOW_WATERMARK_KEY =
+      "hbase.heap.occupancy.low_water_mark";
+  public static final float DEFAULT_HEAP_OCCUPANCY_LOW_WATERMARK = 0.95f;
+  public static final String HEAP_OCCUPANCY_HIGH_WATERMARK_KEY =
+      "hbase.heap.occupancy.high_water_mark";
+  public static final float DEFAULT_HEAP_OCCUPANCY_HIGH_WATERMARK = 0.98f;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

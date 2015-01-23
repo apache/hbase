@@ -5061,7 +5061,8 @@ public class HRegion implements HeapSize { // , Writable{
     }
     ClientProtos.RegionLoadStats.Builder stats = ClientProtos.RegionLoadStats.newBuilder();
     stats.setMemstoreLoad((int) (Math.min(100, (this.memstoreSize.get() * 100) / this
-      .memstoreFlushSize)));
+        .memstoreFlushSize)));
+    stats.setHeapOccupancy((int)rsServices.getHeapMemoryManager().getHeapOccupancyPercent()*100);
     return stats.build();
   }
 

@@ -25721,7 +25721,7 @@ public final class ClientProtos {
      * <code>optional int32 memstoreLoad = 1 [default = 0];</code>
      *
      * <pre>
-     * percent load on the memstore. Guaranteed to be positive, between 0 and 100
+     * Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
      * </pre>
      */
     boolean hasMemstoreLoad();
@@ -25729,10 +25729,30 @@ public final class ClientProtos {
      * <code>optional int32 memstoreLoad = 1 [default = 0];</code>
      *
      * <pre>
-     * percent load on the memstore. Guaranteed to be positive, between 0 and 100
+     * Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
      * </pre>
      */
     int getMemstoreLoad();
+
+    // optional int32 heapOccupancy = 2 [default = 0];
+    /**
+     * <code>optional int32 heapOccupancy = 2 [default = 0];</code>
+     *
+     * <pre>
+     * Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+     * We can move this to "ServerLoadStats" should we develop them.
+     * </pre>
+     */
+    boolean hasHeapOccupancy();
+    /**
+     * <code>optional int32 heapOccupancy = 2 [default = 0];</code>
+     *
+     * <pre>
+     * Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+     * We can move this to "ServerLoadStats" should we develop them.
+     * </pre>
+     */
+    int getHeapOccupancy();
   }
   /**
    * Protobuf type {@code RegionLoadStats}
@@ -25795,6 +25815,11 @@ public final class ClientProtos {
               memstoreLoad_ = input.readInt32();
               break;
             }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              heapOccupancy_ = input.readInt32();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -25842,7 +25867,7 @@ public final class ClientProtos {
      * <code>optional int32 memstoreLoad = 1 [default = 0];</code>
      *
      * <pre>
-     * percent load on the memstore. Guaranteed to be positive, between 0 and 100
+     * Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
      * </pre>
      */
     public boolean hasMemstoreLoad() {
@@ -25852,15 +25877,42 @@ public final class ClientProtos {
      * <code>optional int32 memstoreLoad = 1 [default = 0];</code>
      *
      * <pre>
-     * percent load on the memstore. Guaranteed to be positive, between 0 and 100
+     * Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
      * </pre>
      */
     public int getMemstoreLoad() {
       return memstoreLoad_;
     }
 
+    // optional int32 heapOccupancy = 2 [default = 0];
+    public static final int HEAPOCCUPANCY_FIELD_NUMBER = 2;
+    private int heapOccupancy_;
+    /**
+     * <code>optional int32 heapOccupancy = 2 [default = 0];</code>
+     *
+     * <pre>
+     * Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+     * We can move this to "ServerLoadStats" should we develop them.
+     * </pre>
+     */
+    public boolean hasHeapOccupancy() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional int32 heapOccupancy = 2 [default = 0];</code>
+     *
+     * <pre>
+     * Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+     * We can move this to "ServerLoadStats" should we develop them.
+     * </pre>
+     */
+    public int getHeapOccupancy() {
+      return heapOccupancy_;
+    }
+
     private void initFields() {
       memstoreLoad_ = 0;
+      heapOccupancy_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -25877,6 +25929,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, memstoreLoad_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeInt32(2, heapOccupancy_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -25889,6 +25944,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(1, memstoreLoad_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(2, heapOccupancy_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -25918,6 +25977,11 @@ public final class ClientProtos {
         result = result && (getMemstoreLoad()
             == other.getMemstoreLoad());
       }
+      result = result && (hasHeapOccupancy() == other.hasHeapOccupancy());
+      if (hasHeapOccupancy()) {
+        result = result && (getHeapOccupancy()
+            == other.getHeapOccupancy());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -25934,6 +25998,10 @@ public final class ClientProtos {
       if (hasMemstoreLoad()) {
         hash = (37 * hash) + MEMSTORELOAD_FIELD_NUMBER;
         hash = (53 * hash) + getMemstoreLoad();
+      }
+      if (hasHeapOccupancy()) {
+        hash = (37 * hash) + HEAPOCCUPANCY_FIELD_NUMBER;
+        hash = (53 * hash) + getHeapOccupancy();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -26051,6 +26119,8 @@ public final class ClientProtos {
         super.clear();
         memstoreLoad_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
+        heapOccupancy_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -26083,6 +26153,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.memstoreLoad_ = memstoreLoad_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.heapOccupancy_ = heapOccupancy_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -26101,6 +26175,9 @@ public final class ClientProtos {
         if (other == org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionLoadStats.getDefaultInstance()) return this;
         if (other.hasMemstoreLoad()) {
           setMemstoreLoad(other.getMemstoreLoad());
+        }
+        if (other.hasHeapOccupancy()) {
+          setHeapOccupancy(other.getHeapOccupancy());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -26135,7 +26212,7 @@ public final class ClientProtos {
        * <code>optional int32 memstoreLoad = 1 [default = 0];</code>
        *
        * <pre>
-       * percent load on the memstore. Guaranteed to be positive, between 0 and 100
+       * Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
        * </pre>
        */
       public boolean hasMemstoreLoad() {
@@ -26145,7 +26222,7 @@ public final class ClientProtos {
        * <code>optional int32 memstoreLoad = 1 [default = 0];</code>
        *
        * <pre>
-       * percent load on the memstore. Guaranteed to be positive, between 0 and 100
+       * Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
        * </pre>
        */
       public int getMemstoreLoad() {
@@ -26155,7 +26232,7 @@ public final class ClientProtos {
        * <code>optional int32 memstoreLoad = 1 [default = 0];</code>
        *
        * <pre>
-       * percent load on the memstore. Guaranteed to be positive, between 0 and 100
+       * Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
        * </pre>
        */
       public Builder setMemstoreLoad(int value) {
@@ -26168,12 +26245,65 @@ public final class ClientProtos {
        * <code>optional int32 memstoreLoad = 1 [default = 0];</code>
        *
        * <pre>
-       * percent load on the memstore. Guaranteed to be positive, between 0 and 100
+       * Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
        * </pre>
        */
       public Builder clearMemstoreLoad() {
         bitField0_ = (bitField0_ & ~0x00000001);
         memstoreLoad_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional int32 heapOccupancy = 2 [default = 0];
+      private int heapOccupancy_ ;
+      /**
+       * <code>optional int32 heapOccupancy = 2 [default = 0];</code>
+       *
+       * <pre>
+       * Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+       * We can move this to "ServerLoadStats" should we develop them.
+       * </pre>
+       */
+      public boolean hasHeapOccupancy() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional int32 heapOccupancy = 2 [default = 0];</code>
+       *
+       * <pre>
+       * Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+       * We can move this to "ServerLoadStats" should we develop them.
+       * </pre>
+       */
+      public int getHeapOccupancy() {
+        return heapOccupancy_;
+      }
+      /**
+       * <code>optional int32 heapOccupancy = 2 [default = 0];</code>
+       *
+       * <pre>
+       * Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+       * We can move this to "ServerLoadStats" should we develop them.
+       * </pre>
+       */
+      public Builder setHeapOccupancy(int value) {
+        bitField0_ |= 0x00000002;
+        heapOccupancy_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 heapOccupancy = 2 [default = 0];</code>
+       *
+       * <pre>
+       * Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+       * We can move this to "ServerLoadStats" should we develop them.
+       * </pre>
+       */
+      public Builder clearHeapOccupancy() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        heapOccupancy_ = 0;
         onChanged();
         return this;
       }
@@ -31422,32 +31552,32 @@ public final class ClientProtos {
       "(\0132\004.Get\022-\n\014service_call\030\004 \001(\0132\027.Coproce",
       "ssorServiceCall\"Y\n\014RegionAction\022 \n\006regio" +
       "n\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006atomic\030\002 \001(" +
-      "\010\022\027\n\006action\030\003 \003(\0132\007.Action\"*\n\017RegionLoad" +
-      "Stats\022\027\n\014memstoreLoad\030\001 \001(\005:\0010\"\266\001\n\021Resul" +
-      "tOrException\022\r\n\005index\030\001 \001(\r\022\027\n\006result\030\002 " +
-      "\001(\0132\007.Result\022!\n\texception\030\003 \001(\0132\016.NameBy" +
-      "tesPair\0221\n\016service_result\030\004 \001(\0132\031.Coproc" +
-      "essorServiceResult\022#\n\tloadStats\030\005 \001(\0132\020." +
-      "RegionLoadStats\"f\n\022RegionActionResult\022-\n" +
-      "\021resultOrException\030\001 \003(\0132\022.ResultOrExcep",
-      "tion\022!\n\texception\030\002 \001(\0132\016.NameBytesPair\"" +
-      "f\n\014MultiRequest\022#\n\014regionAction\030\001 \003(\0132\r." +
-      "RegionAction\022\022\n\nnonceGroup\030\002 \001(\004\022\035\n\tcond" +
-      "ition\030\003 \001(\0132\n.Condition\"S\n\rMultiResponse" +
-      "\022/\n\022regionActionResult\030\001 \003(\0132\023.RegionAct" +
-      "ionResult\022\021\n\tprocessed\030\002 \001(\0102\205\003\n\rClientS" +
-      "ervice\022 \n\003Get\022\013.GetRequest\032\014.GetResponse" +
-      "\022)\n\006Mutate\022\016.MutateRequest\032\017.MutateRespo" +
-      "nse\022#\n\004Scan\022\014.ScanRequest\032\r.ScanResponse" +
-      "\022>\n\rBulkLoadHFile\022\025.BulkLoadHFileRequest",
-      "\032\026.BulkLoadHFileResponse\022F\n\013ExecService\022" +
-      "\032.CoprocessorServiceRequest\032\033.Coprocesso" +
-      "rServiceResponse\022R\n\027ExecRegionServerServ" +
-      "ice\022\032.CoprocessorServiceRequest\032\033.Coproc" +
-      "essorServiceResponse\022&\n\005Multi\022\r.MultiReq" +
-      "uest\032\016.MultiResponseBB\n*org.apache.hadoo" +
-      "p.hbase.protobuf.generatedB\014ClientProtos" +
-      "H\001\210\001\001\240\001\001"
+      "\010\022\027\n\006action\030\003 \003(\0132\007.Action\"D\n\017RegionLoad" +
+      "Stats\022\027\n\014memstoreLoad\030\001 \001(\005:\0010\022\030\n\rheapOc" +
+      "cupancy\030\002 \001(\005:\0010\"\266\001\n\021ResultOrException\022\r" +
+      "\n\005index\030\001 \001(\r\022\027\n\006result\030\002 \001(\0132\007.Result\022!" +
+      "\n\texception\030\003 \001(\0132\016.NameBytesPair\0221\n\016ser" +
+      "vice_result\030\004 \001(\0132\031.CoprocessorServiceRe" +
+      "sult\022#\n\tloadStats\030\005 \001(\0132\020.RegionLoadStat" +
+      "s\"f\n\022RegionActionResult\022-\n\021resultOrExcep",
+      "tion\030\001 \003(\0132\022.ResultOrException\022!\n\texcept" +
+      "ion\030\002 \001(\0132\016.NameBytesPair\"f\n\014MultiReques" +
+      "t\022#\n\014regionAction\030\001 \003(\0132\r.RegionAction\022\022" +
+      "\n\nnonceGroup\030\002 \001(\004\022\035\n\tcondition\030\003 \001(\0132\n." +
+      "Condition\"S\n\rMultiResponse\022/\n\022regionActi" +
+      "onResult\030\001 \003(\0132\023.RegionActionResult\022\021\n\tp" +
+      "rocessed\030\002 \001(\0102\205\003\n\rClientService\022 \n\003Get\022" +
+      "\013.GetRequest\032\014.GetResponse\022)\n\006Mutate\022\016.M" +
+      "utateRequest\032\017.MutateResponse\022#\n\004Scan\022\014." +
+      "ScanRequest\032\r.ScanResponse\022>\n\rBulkLoadHF",
+      "ile\022\025.BulkLoadHFileRequest\032\026.BulkLoadHFi" +
+      "leResponse\022F\n\013ExecService\022\032.CoprocessorS" +
+      "erviceRequest\032\033.CoprocessorServiceRespon" +
+      "se\022R\n\027ExecRegionServerService\022\032.Coproces" +
+      "sorServiceRequest\032\033.CoprocessorServiceRe" +
+      "sponse\022&\n\005Multi\022\r.MultiRequest\032\016.MultiRe" +
+      "sponseBB\n*org.apache.hadoop.hbase.protob" +
+      "uf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -31609,7 +31739,7 @@ public final class ClientProtos {
           internal_static_RegionLoadStats_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionLoadStats_descriptor,
-              new java.lang.String[] { "MemstoreLoad", });
+              new java.lang.String[] { "MemstoreLoad", "HeapOccupancy", });
           internal_static_ResultOrException_descriptor =
             getDescriptor().getMessageTypes().get(23);
           internal_static_ResultOrException_fieldAccessorTable = new
