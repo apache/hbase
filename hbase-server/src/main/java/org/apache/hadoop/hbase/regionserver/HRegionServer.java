@@ -3140,4 +3140,9 @@ public class HRegionServer extends HasThread implements
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
   }
+
+  @Override
+  public HeapMemoryManager getHeapMemoryManager() {
+    return hMemManager;
+  }
 }

@@ -356,9 +356,12 @@ message RegionAction {
 /*
 * Statistics about the current load on the region
 */
-message RegionLoadStats{
-  // percent load on the memstore. Guaranteed to be positive, between 0 and 100
+message RegionLoadStats {
+  // Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
   optional int32 memstoreLoad = 1 [default = 0];
+  // Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+  // We can move this to "ServerLoadStats" should we develop them.
+  optional int32 heapOccupancy = 2 [default = 0];
 }
 
 /**

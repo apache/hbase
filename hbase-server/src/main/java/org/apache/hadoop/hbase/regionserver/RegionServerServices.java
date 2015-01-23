@@ -149,4 +149,8 @@ public interface RegionServerServices
    */
   boolean registerService(Service service);
 
+  /**
+   * @return heap memory manager instance
+   */
+  HeapMemoryManager getHeapMemoryManager();
 }

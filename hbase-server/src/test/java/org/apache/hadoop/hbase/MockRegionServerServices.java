@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -279,5 +280,10 @@ public class MockRegionServerServices implements RegionServerServices {
   public boolean registerService(Service service) {
     // TODO Auto-generated method stub
     return false;
+  }
+
+  @Override
+  public HeapMemoryManager getHeapMemoryManager() {
+    return null;
   }
 }
