@@ -615,7 +615,8 @@ class MemStoreFlusher implements FlushRequester {
     return this.globalMemStoreLimit;
   }
 
-  interface FlushQueueEntry extends Delayed {}
+  interface FlushQueueEntry extends Delayed {
+  }
 
   /**
    * Token to insert into the flush queue that ensures that the flusher does not sleep
@@ -635,7 +636,6 @@ class MemStoreFlusher implements FlushRequester {
     public boolean equals(Object obj) {
       return (this == obj);
     }
-
   }
 
   /**
@@ -705,8 +705,14 @@ class MemStoreFlusher implements FlushRequester {
 
     @Override
     public int compareTo(Delayed other) {
-      return Long.valueOf(getDelay(TimeUnit.MILLISECONDS) -
+      // Delay is compared first. If there is a tie, compare region's hash code
+      int ret = Long.valueOf(getDelay(TimeUnit.MILLISECONDS) -
         other.getDelay(TimeUnit.MILLISECONDS)).intValue();
+      if (ret != 0) {
+        return ret;
+      }
+      FlushQueueEntry otherEntry = (FlushQueueEntry) other;
+      return hashCode() - otherEntry.hashCode();
     }
 
     @Override
@@ -716,7 +722,8 @@ class MemStoreFlusher implements FlushRequester {
 
     @Override
     public int hashCode() {
-      return (int) getDelay(TimeUnit.MILLISECONDS);
+      int hash = (int) getDelay(TimeUnit.MILLISECONDS);
+      return hash ^ region.hashCode();
     }
 
    @Override

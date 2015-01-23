@@ -33,8 +33,9 @@ public class TestFlushRegionEntry {
 
   @Test
   public void test() {
-    FlushRegionEntry entry = new FlushRegionEntry(Mockito.mock(HRegion.class), true);
-    FlushRegionEntry other = new FlushRegionEntry(Mockito.mock(HRegion.class), true);
+    HRegion r = Mockito.mock(HRegion.class);
+    FlushRegionEntry entry = new FlushRegionEntry(r, true);
+    FlushRegionEntry other = new FlushRegionEntry(r, true);
 
     assertEquals(entry.hashCode(), other.hashCode());
     assertEquals(entry, other);
