@@ -393,25 +393,18 @@ public class TestVisibilityLabelsReplication {
   }
 
   static Table writeData(TableName tableName, String... labelExps) throws Exception {
-    HTable table = null;
-    try {
-      table = new HTable(conf, TABLE_NAME_BYTES);
-      int i = 1;
-      List<Put> puts = new ArrayList<Put>();
-      for (String labelExp : labelExps) {
-        Put put = new Put(Bytes.toBytes("row" + i));
-        put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
-        put.setCellVisibility(new CellVisibility(labelExp));
-        put.setAttribute(NON_VISIBILITY, Bytes.toBytes(TEMP));
-        puts.add(put);
-        i++;
-      }
-      table.put(puts);
-    } finally {
-      if (table != null) {
-        table.flushCommits();
-      }
+    Table table = TEST_UTIL.getConnection().getTable(TableName.valueOf(TABLE_NAME));
+    int i = 1;
+    List<Put> puts = new ArrayList<Put>();
+    for (String labelExp : labelExps) {
+      Put put = new Put(Bytes.toBytes("row" + i));
+      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+      put.setCellVisibility(new CellVisibility(labelExp));
+      put.setAttribute(NON_VISIBILITY, Bytes.toBytes(TEMP));
+      puts.add(put);
+      i++;
     }
+    table.put(puts);
     return table;
   }
   // A simple BaseRegionbserver impl that allows to add a non-visibility tag from the

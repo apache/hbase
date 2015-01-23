@@ -175,11 +175,11 @@ public class TestHTableWrapper {
 
   private void checkAutoFlush() {
     boolean initialAutoFlush = hTableInterface.isAutoFlush();
-    hTableInterface.setAutoFlushTo(false);
+    hTableInterface.setAutoFlush(false);
     assertFalse(hTableInterface.isAutoFlush());
-    hTableInterface.setAutoFlushTo(true);
+    hTableInterface.setAutoFlush(true);
     assertTrue(hTableInterface.isAutoFlush());
-    hTableInterface.setAutoFlushTo(initialAutoFlush);
+    hTableInterface.setAutoFlush(initialAutoFlush);
   }
 
   private void checkBufferSize() throws IOException {

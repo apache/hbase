@@ -33,10 +33,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -137,7 +138,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private int presplitRegions = 0;
   private boolean useTags = false;
   private int noOfTags = 1;
-  private HConnection connection;
+  private Connection connection;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
   /**
@@ -501,7 +502,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         value.getRows(), value.getTotalRows(),
         value.isFlushCommits(), value.isWriteToWAL(),
         value.isUseTags(), value.getNoOfTags(),
-        HConnectionManager.createConnection(context.getConfiguration()), status);
+        ConnectionFactory.createConnection(context.getConfiguration()), status);
       // Collect how much time the thing took. Report as map output and
       // to the ELAPSED_TIME counter.
       context.getCounter(Counter.ELAPSED_TIME).increment(elapsedTime);
@@ -609,7 +610,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     final int preSplitRegions = this.presplitRegions;
     final boolean useTags = this.useTags;
     final int numTags = this.noOfTags;
-    final HConnection connection = HConnectionManager.createConnection(getConf());
+    final Connection connection = ConnectionFactory.createConnection(getConf());
     for (int i = 0; i < this.N; i++) {
       final int index = i;
       Thread t = new Thread ("TestClient-" + i) {
@@ -684,7 +685,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Path inputDir = writeInputFile(conf);
     conf.set(EvaluationMapTask.CMD_KEY, cmd.getName());
     conf.set(EvaluationMapTask.PE_KEY, getClass().getName());
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.setJarByClass(PerformanceEvaluation.class);
     job.setJobName("HBase Performance Evaluation");
 
@@ -790,14 +791,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private boolean writeToWAL = true;
     private boolean useTags = false;
     private int noOfTags = 0;
-    private HConnection connection;
+    private Connection connection;
 
     TestOptions() {
     }
 
     TestOptions(int startRow, int perClientRunRows, int totalRows, int numClientThreads,
         TableName tableName, boolean flushCommits, boolean writeToWAL, boolean useTags,
-        int noOfTags, HConnection connection) {
+        int noOfTags, Connection connection) {
       this.startRow = startRow;
       this.perClientRunRows = perClientRunRows;
       this.totalRows = totalRows;
@@ -838,7 +839,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return writeToWAL;
     }
 
-    public HConnection getConnection() {
+    public Connection getConnection() {
       return connection;
     }
 
@@ -870,13 +871,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected final int totalRows;
     private final Status status;
     protected TableName tableName;
-    protected Table table;
     protected volatile Configuration conf;
-    protected boolean flushCommits;
     protected boolean writeToWAL;
     protected boolean useTags;
     protected int noOfTags;
-    protected HConnection connection;
+    protected Connection connection;
 
     /**
      * Note that all subclasses of this class must provide a public contructor
@@ -889,9 +888,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.totalRows = options.getTotalRows();
       this.status = status;
       this.tableName = options.getTableName();
-      this.table = null;
       this.conf = conf;
-      this.flushCommits = options.isFlushCommits();
       this.writeToWAL = options.isWriteToWAL();
       this.useTags = options.isUseTags();
       this.noOfTags = options.getNumTags();
@@ -907,18 +904,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return period == 0? this.perClientRunRows: period;
     }
 
-    void testSetup() throws IOException {
-      this.table = connection.getTable(tableName);
-      this.table.setAutoFlushTo(false);
-    }
-
-    void testTakedown()  throws IOException {
-      if (flushCommits) {
-        this.table.flushCommits();
-      }
-      table.close();
-    }
-
+    abstract void testTakedown()  throws IOException;
     /*
      * Run test
      * @return Elapsed time.
@@ -935,6 +921,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       return (System.nanoTime() - startTime) / 1000000;
     }
+
+    abstract void testSetup() throws IOException;
 
     /**
      * Provides an extension point for tests that don't want a per row invocation.
@@ -957,8 +945,45 @@ public class PerformanceEvaluation extends Configured implements Tool {
     abstract void testRow(final int i) throws IOException;
   }
 
-  @SuppressWarnings("unused")
-  static class RandomSeekScanTest extends Test {
+  static abstract class TableTest extends Test {
+    protected Table table;
+    
+    public TableTest(Configuration conf, TestOptions options, Status status) {
+      super(conf, options, status);
+    }
+
+    void testSetup() throws IOException {
+      this.table = connection.getTable(tableName);
+    }
+
+    @Override
+    void testTakedown() throws IOException {
+      table.close();
+    }
+  }
+
+  static abstract class BufferedMutatorTest extends Test {
+    protected BufferedMutator mutator;
+    protected boolean flushCommits;
+
+    public BufferedMutatorTest(Configuration conf, TestOptions options, Status status) {
+      super(conf, options, status);
+      this.flushCommits = options.isFlushCommits();
+    }
+
+    void testSetup() throws IOException {
+      this.mutator = connection.getBufferedMutator(tableName);
+    }
+
+    void testTakedown()  throws IOException {
+      if (flushCommits) {
+        this.mutator.flush();
+      }
+      mutator.close();
+    }
+  }
+
+  static class RandomSeekScanTest extends TableTest {
     RandomSeekScanTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
     }
@@ -981,7 +1006,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   @SuppressWarnings("unused")
-  static abstract class RandomScanWithRangeTest extends Test {
+  static abstract class RandomScanWithRangeTest extends TableTest {
     RandomScanWithRangeTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
     }
@@ -1065,7 +1090,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class RandomReadTest extends Test {
+  static class RandomReadTest extends TableTest {
     RandomReadTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
     }
@@ -1085,7 +1110,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
-  static class RandomWriteTest extends Test {
+  static class RandomWriteTest extends BufferedMutatorTest {
     RandomWriteTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
     }
@@ -1109,11 +1134,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
         put.add(FAMILY_NAME, QUALIFIER_NAME, value);
       }
       put.setDurability(writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      table.put(put);
+      mutator.mutate(put);
     }
   }
 
-  static class ScanTest extends Test {
+  static class ScanTest extends TableTest {
     private ResultScanner testScanner;
 
     ScanTest(Configuration conf, TestOptions options, Status status) {
@@ -1141,7 +1166,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
-  static class SequentialReadTest extends Test {
+  static class SequentialReadTest extends TableTest {
     SequentialReadTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
     }
@@ -1155,7 +1180,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
-  static class SequentialWriteTest extends Test {
+  static class SequentialWriteTest extends BufferedMutatorTest {
 
     SequentialWriteTest(Configuration conf, TestOptions options, Status status) {
       super(conf, options, status);
@@ -1180,11 +1205,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
         put.add(FAMILY_NAME, QUALIFIER_NAME, value);
       }
       put.setDurability(writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      table.put(put);
+      mutator.mutate(put);
     }
   }
 
-  static class FilteredScanTest extends Test {
+  static class FilteredScanTest extends TableTest {
     protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
 
     FilteredScanTest(Configuration conf, TestOptions options, Status status) {
@@ -1268,7 +1293,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   long runOneClient(final Class<? extends Test> cmd, final int startRow,
       final int perClientRunRows, final int totalRows,
       boolean flushCommits, boolean writeToWAL, boolean useTags, int noOfTags,
-      HConnection connection, final Status status)
+      Connection connection, final Status status)
   throws IOException {
     status.setStatus("Start " + cmd + " at offset " + startRow + " for " +
       perClientRunRows + " rows");
@@ -1463,7 +1488,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           continue;
         }
 
-        this.connection = HConnectionManager.createConnection(getConf());
+        this.connection = ConnectionFactory.createConnection(getConf());
 
         final String useTags = "--usetags=";
         if (cmd.startsWith(useTags)) {

@@ -37,12 +37,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -70,7 +70,6 @@ public class TestFlushSnapshotFromClient {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 2;
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
-  private static final byte[] TEST_QUAL = Bytes.toBytes("q");
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private final int DEFAULT_NUM_ROWS = 100;
 
@@ -139,8 +138,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
+    SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
@@ -178,8 +176,9 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    UTIL.loadTable(table, TEST_FAM);
+    try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
+      UTIL.loadTable(table, TEST_FAM);
+    }
 
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
@@ -222,8 +221,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
+    SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),

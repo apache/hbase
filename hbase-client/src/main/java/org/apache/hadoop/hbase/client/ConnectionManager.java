@@ -69,8 +69,8 @@ import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
-import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -710,6 +710,28 @@ class ConnectionManager {
         throw new IOException("The connection has to be unmanaged.");
       }
       return new HTable(tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, pool);
+    }
+
+    @Override
+    public BufferedMutator getBufferedMutator(BufferedMutatorParams params) {
+      if (params.getTableName() == null) {
+        throw new IllegalArgumentException("TableName cannot be null.");
+      }
+      if (params.getPool() == null) {
+        params.pool(HTable.getDefaultExecutor(getConfiguration()));
+      }
+      if (params.getWriteBufferSize() == BufferedMutatorParams.UNSET) {
+        params.writeBufferSize(tableConfig.getWriteBufferSize());
+      }
+      if (params.getMaxKeyValueSize() == BufferedMutatorParams.UNSET) {
+        params.maxKeyValueSize(tableConfig.getMaxKeyValueSize());
+      }
+      return new BufferedMutatorImpl(this, rpcCallerFactory, rpcControllerFactory, params);
+    }
+
+    @Override
+    public BufferedMutator getBufferedMutator(TableName tableName) {
+      return getBufferedMutator(new BufferedMutatorParams(tableName));
     }
 
     @Override

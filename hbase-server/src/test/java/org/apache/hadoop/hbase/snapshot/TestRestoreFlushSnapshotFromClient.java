@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -101,8 +101,8 @@ public class TestRestoreFlushSnapshotFromClient {
 
     // create Table and disable it
     SnapshotTestingUtils.createTable(UTIL, tableName, FAMILY);
-    HTable table = new HTable(UTIL.getConfiguration(), tableName);
-    SnapshotTestingUtils.loadData(UTIL, table, 500, FAMILY);
+    SnapshotTestingUtils.loadData(UTIL, tableName, 500, FAMILY);
+    Table table = UTIL.getConnection().getTable(tableName);
     snapshot0Rows = UTIL.countRows(table);
     LOG.info("=== before snapshot with 500 rows");
     logFSTree();
@@ -115,7 +115,7 @@ public class TestRestoreFlushSnapshotFromClient {
     logFSTree();
 
     // insert more data
-    SnapshotTestingUtils.loadData(UTIL, table, 500, FAMILY);
+    SnapshotTestingUtils.loadData(UTIL, tableName, 500, FAMILY);
     snapshot1Rows = UTIL.countRows(table);
     LOG.info("=== before snapshot with 1000 rows");
     logFSTree();

@@ -133,7 +133,7 @@ public class TestClientPushback {
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicLong endTime = new AtomicLong();
     long startTime = EnvironmentEdgeManager.currentTime();    
-    table.ap.submit(tablename, ops, true, new Batch.Callback<Result>() {
+    table.mutator.ap.submit(tablename, ops, true, new Batch.Callback<Result>() {
       @Override
       public void update(byte[] region, byte[] row, Result result) {
         endTime.set(EnvironmentEdgeManager.currentTime());

@@ -55,8 +55,7 @@ import com.google.protobuf.ServiceException;
  */
 public class HTableWrapper implements HTableInterface {
 
-  private TableName tableName;
-  private final Table table;
+  private final HTableInterface table;
   private ClusterConnection connection;
   private final List<HTableInterface> openTables;
 
@@ -73,7 +72,6 @@ public class HTableWrapper implements HTableInterface {
   private HTableWrapper(List<HTableInterface> openTables, TableName tableName,
       ClusterConnection connection, ExecutorService pool)
       throws IOException {
-    this.tableName = tableName;
     this.table = connection.getTable(tableName, pool);
     this.connection = connection;
     this.openTables = openTables;
@@ -232,7 +230,7 @@ public class HTableWrapper implements HTableInterface {
 
   @Override
   public byte[] getTableName() {
-    return tableName.getName();
+    return table.getTableName();
   }
 
   @Override
@@ -307,7 +305,7 @@ public class HTableWrapper implements HTableInterface {
 
   @Override
   public void setAutoFlush(boolean autoFlush) {
-    table.setAutoFlushTo(autoFlush);
+    table.setAutoFlush(autoFlush);
   }
 
   @Override

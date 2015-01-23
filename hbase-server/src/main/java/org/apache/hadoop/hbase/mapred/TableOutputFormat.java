@@ -25,10 +25,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InvalidJobConfException;
@@ -52,22 +52,22 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    * and write to an HBase table.
    */
   protected static class TableRecordWriter implements RecordWriter<ImmutableBytesWritable, Put> {
-    private Table m_table;
+    private BufferedMutator m_mutator;
 
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing. Assumes control over the
      * lifecycle of {@code conn}.
      */
-    public TableRecordWriter(final Table table) throws IOException {
-      this.m_table = table;
+    public TableRecordWriter(final BufferedMutator mutator) throws IOException {
+      this.m_mutator = mutator;
     }
 
     public void close(Reporter reporter) throws IOException {
-      this.m_table.close();
+      this.m_mutator.close();
     }
 
     public void write(ImmutableBytesWritable key, Put value) throws IOException {
-      m_table.put(new Put(value));
+      m_mutator.mutate(new Put(value));
     }
   }
 
@@ -77,13 +77,12 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   throws IOException {
     // expecting exactly one path
     TableName tableName = TableName.valueOf(job.get(OUTPUT_TABLE));
-    Table table =  null;
+    BufferedMutator mutator =  null;
     // Connection is not closed. Dies with JVM.  No possibility for cleanup.
     Connection connection = ConnectionFactory.createConnection(job);
-    table = connection.getTable(tableName);
+    mutator = connection.getBufferedMutator(tableName);
     // Clear write buffer on fail is true by default so no need to reset it.
-    table.setAutoFlushTo(false);
-    return new TableRecordWriter(table);
+    return new TableRecordWriter(mutator);
   }
 
   @Override

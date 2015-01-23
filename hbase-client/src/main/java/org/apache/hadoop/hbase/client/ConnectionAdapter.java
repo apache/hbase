@@ -111,6 +111,17 @@ abstract class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
+  public BufferedMutator getBufferedMutator(BufferedMutatorParams params)
+      throws IOException {
+    return wrappedConnection.getBufferedMutator(params);
+  }
+
+  @Override
+  public BufferedMutator getBufferedMutator(TableName tableName) throws IOException {
+    return wrappedConnection.getBufferedMutator(tableName);
+  }
+
+  @Override
   public RegionLocator getRegionLocator(TableName tableName) throws IOException {
     return wrappedConnection.getRegionLocator(tableName);
   }
