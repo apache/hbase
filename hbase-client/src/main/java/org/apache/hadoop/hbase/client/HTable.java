@@ -1409,6 +1409,10 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @Override
   public void flushCommits() throws IOException {
+    if (mutator == null) {
+      // nothing to flush if there's no mutator; don't bother creating one.
+      return;
+    }
     getBufferedMutator().flush();
   }
 
