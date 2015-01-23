@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -600,6 +601,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public UpdateConfigurationResponse updateConfiguration(
       RpcController controller, UpdateConfigurationRequest request)
       throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public HeapMemoryManager getHeapMemoryManager() {
     return null;
   }
 }

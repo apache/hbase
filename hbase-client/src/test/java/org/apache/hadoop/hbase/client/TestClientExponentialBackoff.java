@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.backoff.ExponentialClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
@@ -101,10 +102,42 @@ public class TestClientExponentialBackoff {
     }
   }
 
+  @Test
+  public void testHeapOccupancyPolicy() {
+    Configuration conf = new Configuration(false);
+    ExponentialClientBackoffPolicy backoff = new ExponentialClientBackoffPolicy(conf);
+
+    ServerStatistics stats = new ServerStatistics();
+    long backoffTime;
+
+    update(stats, 0, 95);
+    backoffTime = backoff.getBackoffTime(server, regionname, stats);
+    assertTrue("Heap occupancy at low watermark had no effect", backoffTime > 0);
+
+    long previous = backoffTime;
+    update(stats, 0, 96);
+    backoffTime = backoff.getBackoffTime(server, regionname, stats);
+    assertTrue("Increase above low watermark should have increased backoff",
+      backoffTime > previous);
+
+    update(stats, 0, 98);
+    backoffTime = backoff.getBackoffTime(server, regionname, stats);
+    assertEquals("We should be using max backoff when at high watermark", backoffTime,
+      ExponentialClientBackoffPolicy.DEFAULT_MAX_BACKOFF);
+  }
+
   private void update(ServerStatistics stats, int load) {
     ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
         .setMemstoreLoad
             (load).build();
+    stats.update(regionname, stat);
+  }
+
+  private void update(ServerStatistics stats, int memstoreLoad, int heapOccupancy) {
+    ClientProtos.RegionLoadStats stat = ClientProtos.RegionLoadStats.newBuilder()
+        .setMemstoreLoad(memstoreLoad)
+        .setHeapOccupancy(heapOccupancy)
+            .build();
     stats.update(regionname, stat);
   }
 }

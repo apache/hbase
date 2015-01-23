@@ -54,15 +54,21 @@ public class ServerStatistics {
     return stats.get(regionName);
   }
 
-  public static class RegionStatistics{
+  public static class RegionStatistics {
     private int memstoreLoad = 0;
+    private int heapOccupancy = 0;
 
     public void update(ClientProtos.RegionLoadStats currentStats) {
       this.memstoreLoad = currentStats.getMemstoreLoad();
+      this.heapOccupancy = currentStats.getHeapOccupancy();
     }
 
     public int getMemstoreLoadPercent(){
       return this.memstoreLoad;
+    }
+
+    public int getHeapOccupancyPercent(){
+      return this.heapOccupancy;
     }
   }
 }
