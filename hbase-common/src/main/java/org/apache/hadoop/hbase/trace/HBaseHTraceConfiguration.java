@@ -21,15 +21,46 @@ package org.apache.hadoop.hbase.trace;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.htrace.HTraceConfiguration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 @InterfaceAudience.Private
 public class HBaseHTraceConfiguration extends HTraceConfiguration {
+  private static final Log LOG =
+    LogFactory.getLog(HBaseHTraceConfiguration.class);
 
-  public static final String KEY_PREFIX = "hbase.";
+  public static final String KEY_PREFIX = "hbase.htrace.";
+
   private Configuration conf;
+
+  private void handleDeprecation(String key) {
+    String oldKey = "hbase." + key;
+    String newKey = KEY_PREFIX + key;
+    String oldValue = conf.get(oldKey);
+    if (oldValue != null) {
+      LOG.warn("Warning: using deprecated configuration key " + oldKey +
+          ".  Please use " + newKey + " instead.");
+      String newValue = conf.get(newKey);
+      if (newValue == null) {
+        conf.set(newKey, oldValue);
+      } else {
+        LOG.warn("Conflicting values for " + newKey + " and " + oldKey +
+            ".  Using " + newValue);
+      }
+    }
+  }
 
   public HBaseHTraceConfiguration(Configuration conf) {
     this.conf = conf;
+    handleDeprecation("local-file-span-receiver.path");
+    handleDeprecation("local-file-span-receiver.capacity");
+    handleDeprecation("sampler.frequency");
+    handleDeprecation("sampler.fraction");
+    handleDeprecation("zipkin.collector-hostname");
+    handleDeprecation("zipkin.collector-port");
+    handleDeprecation("zipkin.num-threads");
+    handleDeprecation("zipkin.traced-service-hostname");
+    handleDeprecation("zipkin.traced-service-port");
   }
 
   @Override
