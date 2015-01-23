@@ -78,6 +78,7 @@ public class TestRegionFavoredNodes {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    table.close();
     if (createWithFavoredNode == null) {
       return;
     }

@@ -149,9 +149,8 @@ public class TestReplicationWithTags {
         Admin admin = conn.getAdmin()) {
       admin.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     }
-    htable1 = new HTable(conf1, TABLE_NAME);
-    htable1.setWriteBufferSize(1024);
-    htable2 = new HTable(conf2, TABLE_NAME);
+    htable1 = utility1.getConnection().getTable(TABLE_NAME);
+    htable2 = utility2.getConnection().getTable(TABLE_NAME);
   }
 
   /**

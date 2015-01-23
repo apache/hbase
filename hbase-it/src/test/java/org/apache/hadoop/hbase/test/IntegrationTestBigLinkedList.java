@@ -53,6 +53,10 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -340,7 +344,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       byte[] id;
       long count = 0;
       int i;
-      Table table;
+      BufferedMutator mutator;
+      Connection connection;
       long numNodes;
       long wrap;
       int width;
@@ -349,7 +354,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       protected void setup(Context context) throws IOException, InterruptedException {
         id = Bytes.toBytes("Job: "+context.getJobID() + " Task: " + context.getTaskAttemptID());
         Configuration conf = context.getConfiguration();
-        instantiateHTable(conf);
+        connection = ConnectionFactory.createConnection(conf);
+        instantiateHTable();
         this.width = context.getConfiguration().getInt(GENERATOR_WIDTH_KEY, WIDTH_DEFAULT);
         current = new byte[this.width][];
         int wrapMultiplier = context.getConfiguration().getInt(GENERATOR_WRAP_KEY, WRAP_DEFAULT);
@@ -361,15 +367,16 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         }
       }
 
-      protected void instantiateHTable(Configuration conf) throws IOException {
-        table = new HTable(conf, getTableName(conf));
-        table.setAutoFlushTo(false);
-        table.setWriteBufferSize(4 * 1024 * 1024);
+      protected void instantiateHTable() throws IOException {
+        mutator = connection.getBufferedMutator(
+            new BufferedMutatorParams(getTableName(connection.getConfiguration()))
+                .writeBufferSize(4 * 1024 * 1024));
       }
 
       @Override
       protected void cleanup(Context context) throws IOException ,InterruptedException {
-        table.close();
+        mutator.close();
+        connection.close();
       }
 
       @Override
@@ -419,7 +426,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           if (id != null) {
             put.add(FAMILY_NAME, COLUMN_CLIENT, id);
           }
-          table.put(put);
+          mutator.mutate(put);
 
           if (i % 1000 == 0) {
             // Tickle progress every so often else maprunner will think us hung
@@ -427,7 +434,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           }
         }
 
-        table.flushCommits();
+        mutator.flush();
       }
     }
 

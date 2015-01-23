@@ -82,11 +82,11 @@ public class TestMaster {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 
-    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
-    assertTrue(m.assignmentManager.getTableStateManager().isTableState(TABLENAME,
-      ZooKeeperProtos.Table.State.ENABLED));
-    TEST_UTIL.loadTable(ht, FAMILYNAME, false);
-    ht.close();
+    try (HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME)) {
+      assertTrue(m.assignmentManager.getTableStateManager().isTableState(TABLENAME,
+        ZooKeeperProtos.Table.State.ENABLED));
+      TEST_UTIL.loadTable(ht, FAMILYNAME, false);
+    }
 
     List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
         m.getZooKeeper(),

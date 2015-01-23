@@ -130,18 +130,18 @@ public class TestRpcControllerFactory {
     // change one of the connection properties so we get a new HConnection with our configuration
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT + 1);
 
-    Table table = new HTable(conf, name);
-    table.setAutoFlushTo(false);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(name);
     byte[] row = Bytes.toBytes("row");
     Put p = new Put(row);
     p.add(fam1, fam1, Bytes.toBytes("val0"));
     table.put(p);
-    table.flushCommits();
+
     Integer counter = 1;
     counter = verifyCount(counter);
 
     Delete d = new Delete(row);
-    d.deleteColumn(fam1, fam1);
+    d.addColumn(fam1, fam1);
     table.delete(d);
     counter = verifyCount(counter);
 

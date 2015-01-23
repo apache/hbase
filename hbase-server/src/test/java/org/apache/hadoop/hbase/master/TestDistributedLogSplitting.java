@@ -937,7 +937,6 @@ public class TestDistributedLogSplitting {
       if (key == null || key.length == 0) {
         key = new byte[] { 0, 0, 0, 0, 1 };
       }
-      ht.setAutoFlushTo(true);
       Put put = new Put(key);
       put.add(Bytes.toBytes("family"), Bytes.toBytes("c1"), new byte[]{'b'});
       ht.put(put);
@@ -1607,11 +1606,11 @@ public class TestDistributedLogSplitting {
   /**
    * Load table with puts and deletes with expected values so that we can verify later
    */
-  private void prepareData(final HTable t, final byte[] f, final byte[] column) throws IOException {
-    t.setAutoFlushTo(false);
+  private void prepareData(final Table t, final byte[] f, final byte[] column) throws IOException {
     byte[] k = new byte[3];
 
     // add puts
+    List<Put> puts = new ArrayList<>();
     for (byte b1 = 'a'; b1 <= 'z'; b1++) {
       for (byte b2 = 'a'; b2 <= 'z'; b2++) {
         for (byte b3 = 'a'; b3 <= 'z'; b3++) {
@@ -1620,11 +1619,11 @@ public class TestDistributedLogSplitting {
           k[2] = b3;
           Put put = new Put(k);
           put.add(f, column, k);
-          t.put(put);
+          puts.add(put);
         }
       }
     }
-    t.flushCommits();
+    t.put(puts);
     // add deletes
     for (byte b3 = 'a'; b3 <= 'z'; b3++) {
       k[0] = 'a';
@@ -1633,7 +1632,6 @@ public class TestDistributedLogSplitting {
       Delete del = new Delete(k);
       t.delete(del);
     }
-    t.flushCommits();
   }
 
   private void waitForCounter(AtomicLong ctr, long oldval, long newval,

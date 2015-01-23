@@ -22,11 +22,12 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -234,12 +235,11 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
   private LinkedBlockingQueue<Long> insertData() throws IOException, InterruptedException {
     LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<Long>(25000);
-    Table ht = new HTable(util.getConfiguration(), this.tableName);
+    BufferedMutator ht = util.getConnection().getBufferedMutator(this.tableName);
     byte[] value = new byte[300];
     for (int x = 0; x < 5000; x++) {
       TraceScope traceScope = Trace.startSpan("insertData", Sampler.ALWAYS);
       try {
-        ht.setAutoFlushTo(false);
         for (int i = 0; i < 5; i++) {
           long rk = random.nextLong();
           rowKeys.add(rk);
@@ -248,7 +248,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
             random.nextBytes(value);
             p.add(familyName, Bytes.toBytes(random.nextLong()), value);
           }
-          ht.put(p);
+          ht.mutate(p);
         }
         if ((x % 1000) == 0) {
           admin.flush(tableName);

@@ -708,36 +708,47 @@ public class TestClientNoCluster extends Configured implements Tool {
    * @throws IOException
    */
   static void cycle(int id, final Configuration c, final Connection sharedConnection) throws IOException {
-    Table table = sharedConnection.getTable(TableName.valueOf(BIG_USER_TABLE));
-    table.setAutoFlushTo(false);
     long namespaceSpan = c.getLong("hbase.test.namespace.span", 1000000);
     long startTime = System.currentTimeMillis();
     final int printInterval = 100000;
     Random rd = new Random(id);
     boolean get = c.getBoolean("hbase.test.do.gets", false);
-    try {
-      Stopwatch stopWatch = new Stopwatch();
-      stopWatch.start();
-      for (int i = 0; i < namespaceSpan; i++) {
-        byte [] b = format(rd.nextLong());
-        if (get){
+    TableName tableName = TableName.valueOf(BIG_USER_TABLE);
+    if (get) {
+      try (Table table = sharedConnection.getTable(tableName)){
+        Stopwatch stopWatch = new Stopwatch();
+        stopWatch.start();
+        for (int i = 0; i < namespaceSpan; i++) {
+          byte [] b = format(rd.nextLong());
           Get g = new Get(b);
           table.get(g);
-        } else {
+          if (i % printInterval == 0) {
+            LOG.info("Get " + printInterval + "/" + stopWatch.elapsedMillis());
+            stopWatch.reset();
+            stopWatch.start();
+          }
+        }
+        LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
+            (System.currentTimeMillis() - startTime) + "ms");
+      }
+    } else {
+      try (BufferedMutator mutator = sharedConnection.getBufferedMutator(tableName)) {
+        Stopwatch stopWatch = new Stopwatch();
+        stopWatch.start();
+        for (int i = 0; i < namespaceSpan; i++) {
+          byte [] b = format(rd.nextLong());
           Put p = new Put(b);
           p.add(HConstants.CATALOG_FAMILY, b, b);
-          table.put(p);
+          mutator.mutate(p);
+          if (i % printInterval == 0) {
+            LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());
+            stopWatch.reset();
+            stopWatch.start();
+          }
         }
-        if (i % printInterval == 0) {
-          LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());
-          stopWatch.reset();
-          stopWatch.start();
+        LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
+            (System.currentTimeMillis() - startTime) + "ms");
         }
-      }
-      LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
-          (System.currentTimeMillis() - startTime) + "ms");
-    } finally {
-      table.close();
     }
   }
 

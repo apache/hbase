@@ -88,7 +88,6 @@ public class TestScannerWithBulkload {
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version3")));
     table.put(put0);
-    table.flushCommits();
     admin.flush(tableName);
     scanner = table.getScanner(scan);
     result = scanner.next();
@@ -169,19 +168,16 @@ public class TestScannerWithBulkload {
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version0")));
     table.put(put0);
-    table.flushCommits();
     admin.flush(tableName);
     Put put1 = new Put(Bytes.toBytes("row2"));
     put1.add(new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version0")));
     table.put(put1);
-    table.flushCommits();
     admin.flush(tableName);
     put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version1")));
     table.put(put0);
-    table.flushCommits();
     admin.flush(tableName);
     admin.compact(tableName);
 
@@ -218,8 +214,7 @@ public class TestScannerWithBulkload {
           put1.add(new KeyValue(Bytes.toBytes("row5"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
               Bytes.toBytes("version0")));
           table.put(put1);
-          table.flushCommits();
-          bulkload.doBulkLoad(hfilePath, table);
+          bulkload.doBulkLoad(hfilePath, (HTable) table);
           latch.countDown();
         } catch (TableNotFoundException e) {
         } catch (IOException e) {
@@ -260,7 +255,6 @@ public class TestScannerWithBulkload {
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version3")));
     table.put(put0);
-    table.flushCommits();
     admin.flush(tableName);
     scanner = table.getScanner(scan);
     result = scanner.next();

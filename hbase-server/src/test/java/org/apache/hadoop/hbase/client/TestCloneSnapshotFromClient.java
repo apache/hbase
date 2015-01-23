@@ -101,31 +101,30 @@ public class TestCloneSnapshotFromClient {
     // take an empty snapshot
     admin.snapshot(emptySnapshot, tableName);
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    try {
-      // enable table and insert data
-      admin.enableTable(tableName);
-      SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
+    // enable table and insert data
+    admin.enableTable(tableName);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)){
       snapshot0Rows = TEST_UTIL.countRows(table);
-      admin.disableTable(tableName);
-
-      // take a snapshot
-      admin.snapshot(snapshotName0, tableName);
-
-      // enable table and insert more data
-      admin.enableTable(tableName);
-      SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
-      snapshot1Rows = TEST_UTIL.countRows(table);
-      admin.disableTable(tableName);
-
-      // take a snapshot of the updated table
-      admin.snapshot(snapshotName1, tableName);
-
-      // re-enable table
-      admin.enableTable(tableName);
-    } finally {
-      table.close();
     }
+    admin.disableTable(tableName);
+
+    // take a snapshot
+    admin.snapshot(snapshotName0, tableName);
+
+    // enable table and insert more data
+    admin.enableTable(tableName);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)){
+      snapshot1Rows = TEST_UTIL.countRows(table);
+    }
+    admin.disableTable(tableName);
+
+    // take a snapshot of the updated table
+    admin.snapshot(snapshotName1, tableName);
+
+    // re-enable table
+    admin.enableTable(tableName);
   }
 
   protected int getNumReplicas() {

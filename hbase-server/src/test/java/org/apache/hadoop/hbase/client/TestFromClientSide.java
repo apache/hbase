@@ -692,15 +692,15 @@ public class TestFromClientSide {
   public void testMaxKeyValueSize() throws Exception {
     byte [] TABLE = Bytes.toBytes("testMaxKeyValueSize");
     Configuration conf = TEST_UTIL.getConfiguration();
-    String oldMaxSize = conf.get("hbase.client.keyvalue.maxsize");
+    String oldMaxSize = conf.get(TableConfiguration.MAX_KEYVALUE_SIZE_KEY);
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte[] value = new byte[4 * 1024 * 1024];
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, value);
     ht.put(put);
     try {
-      TEST_UTIL.getConfiguration().setInt("hbase.client.keyvalue.maxsize", 2 * 1024 * 1024);
-      TABLE = Bytes.toBytes("testMaxKeyValueSize2");
+      TEST_UTIL.getConfiguration().setInt(
+          TableConfiguration.MAX_KEYVALUE_SIZE_KEY, 2 * 1024 * 1024);
       // Create new table so we pick up the change in Configuration.
       try (Connection connection =
           ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
@@ -712,7 +712,7 @@ public class TestFromClientSide {
       }
       fail("Inserting a too large KeyValue worked, should throw exception");
     } catch(Exception e) {}
-    conf.set("hbase.client.keyvalue.maxsize", oldMaxSize);
+    conf.set(TableConfiguration.MAX_KEYVALUE_SIZE_KEY, oldMaxSize);
   }
 
   @Test
@@ -3906,7 +3906,7 @@ public class TestFromClientSide {
     final int NB_BATCH_ROWS = 10;
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPutBufferedOneFlush"),
       new byte [][] {CONTENTS_FAMILY, SMALL_FAMILY});
-    table.setAutoFlushTo(false);
+    table.setAutoFlush(false);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
       byte[] row = Bytes.toBytes("row" + i);
@@ -3937,6 +3937,7 @@ public class TestFromClientSide {
     Result row : scanner)
       nbRows++;
     assertEquals(NB_BATCH_ROWS * 10, nbRows);
+    table.close();
   }
 
   @Test
@@ -3947,7 +3948,6 @@ public class TestFromClientSide {
     final int NB_BATCH_ROWS = 10;
     HTable table = TEST_UTIL.createTable(Bytes.toBytes("testRowsPutBufferedManyManyFlushes"),
       new byte[][] {CONTENTS_FAMILY, SMALL_FAMILY });
-    table.setAutoFlushTo(false);
     table.setWriteBufferSize(10);
     ArrayList<Put> rowsUpdate = new ArrayList<Put>();
     for (int i = 0; i < NB_BATCH_ROWS * 10; i++) {
@@ -3958,8 +3958,6 @@ public class TestFromClientSide {
       rowsUpdate.add(put);
     }
     table.put(rowsUpdate);
-
-    table.flushCommits();
 
     Scan scan = new Scan();
     scan.addFamily(CONTENTS_FAMILY);
@@ -4149,6 +4147,7 @@ public class TestFromClientSide {
     HBaseAdmin ha = new HBaseAdmin(t.getConnection());
     assertTrue(ha.tableExists(tableName));
     assertTrue(t.get(new Get(ROW)).isEmpty());
+    ha.close();
   }
 
   /**
@@ -4162,9 +4161,10 @@ public class TestFromClientSide {
     final TableName tableName = TableName.valueOf("testUnmanagedHConnectionReconnect");
     HTable t = createUnmangedHConnectionHTable(tableName);
     Connection conn = t.getConnection();
-    HBaseAdmin ha = new HBaseAdmin(conn);
-    assertTrue(ha.tableExists(tableName));
-    assertTrue(t.get(new Get(ROW)).isEmpty());
+    try (HBaseAdmin ha = new HBaseAdmin(conn)) {
+      assertTrue(ha.tableExists(tableName));
+      assertTrue(t.get(new Get(ROW)).isEmpty());
+    }
 
     // stop the master
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -4177,9 +4177,10 @@ public class TestFromClientSide {
 
     // test that the same unmanaged connection works with a new
     // HBaseAdmin and can connect to the new master;
-    HBaseAdmin newAdmin = new HBaseAdmin(conn);
-    assertTrue(newAdmin.tableExists(tableName));
-    assertTrue(newAdmin.getClusterStatus().getServersSize() == SLAVES);
+    try (HBaseAdmin newAdmin = new HBaseAdmin(conn)) {
+      assertTrue(newAdmin.tableExists(tableName));
+      assertTrue(newAdmin.getClusterStatus().getServersSize() == SLAVES);
+    }
   }
 
   @Test
@@ -4276,7 +4277,6 @@ public class TestFromClientSide {
           new byte[][] { HConstants.CATALOG_FAMILY, Bytes.toBytes("info2") }, 1, 1024);
     // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
     // in Store.rowAtOrBeforeFromStoreFile
-    table.setAutoFlush(true);
     String regionName = table.getRegionLocations().firstKey().getEncodedName();
     HRegion region =
         TEST_UTIL.getRSForFirstRegionInTable(tableAname).getFromOnlineRegions(regionName);
@@ -4351,6 +4351,8 @@ public class TestFromClientSide {
     assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
     assertTrue(Bytes.equals(result.getRow(), forthRow));
     assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
+
+    table.close();
   }
 
   /**
