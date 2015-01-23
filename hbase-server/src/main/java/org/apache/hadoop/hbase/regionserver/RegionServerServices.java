@@ -134,4 +134,9 @@ public interface RegionServerServices
    * @return {@code true} if the registration was successful, {@code false}
    */
   boolean registerService(Service service);
+
+  /**
+   * @return heap memory manager instance
+   */
+  HeapMemoryManager getHeapMemoryManager();
 }
