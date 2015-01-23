@@ -2006,7 +2006,7 @@ public class HBaseFsck extends Configured implements Closeable {
         TableInfo tableInfo = tablesInfo.get(hri.getTable());
         if (tableInfo.regionsFromMeta.isEmpty()) {
           for (HbckInfo h : regionInfoMap.values()) {
-            if (h.getTableName().equals(hri.getTable())) {
+            if (hri.getTable().equals(h.getTableName())) {
               if (h.metaEntry != null) tableInfo.regionsFromMeta
                   .add((HRegionInfo) h.metaEntry);
             }
