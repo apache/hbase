@@ -346,7 +346,7 @@ module Hbase
     end
 
     def get_table_attributes(table_name)
-      @admin.getTableDescriptor(TableName.valueOf(table_name)).toStringTableAttributes
+      @admin.getTableDescriptor(table_name.to_java_bytes).toStringTableAttributes
     end
 
     #----------------------------------------------------------------------------------------------
