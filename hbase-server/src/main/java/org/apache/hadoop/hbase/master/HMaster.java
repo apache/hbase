@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.quotas.RegionStateListener;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -724,9 +725,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     status.setStatus("Starting namespace manager");
     initNamespace();
 
-    status.setStatus("Starting quota manager");
-    initQuotaManager();
-
     if (this.cpHost != null) {
       try {
         this.cpHost.preMasterInitialization();
@@ -739,6 +737,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     LOG.info("Master has completed initialization");
     configurationManager.registerObserver(this.balancer);
     initialized = true;
+    status.setStatus("Starting quota manager");
+    initQuotaManager();
+
     // clear the dead servers with same host name and port of online server because we are not
     // removing dead server with same hostname and port of rs which is trying to check in before
     // master initialization. See HBASE-5916.
@@ -840,6 +841,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   void initQuotaManager() throws IOException {
     quotaManager = new MasterQuotaManager(this);
+    this.assignmentManager.setRegionStateListener((RegionStateListener)quotaManager);
     quotaManager.start();
   }
 
@@ -1242,6 +1244,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     sanityCheckTableDescriptor(hTableDescriptor);
+    this.quotaManager.checkNamespaceTableAndRegionQuota(hTableDescriptor.getTableName(),
+      newRegions.length);
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }

@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.quotas.RegionStateListener;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
@@ -85,6 +86,7 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -193,6 +195,8 @@ public class AssignmentManager {
 
   /** Listeners that are called on assignment events. */
   private List<AssignmentListener> listeners = new CopyOnWriteArrayList<AssignmentListener>();
+  
+  private RegionStateListener regionStateListener;
 
   /**
    * Constructs a new assignment manager.
@@ -2758,7 +2762,12 @@ public class AssignmentManager {
         errorMsg = onRegionClosed(current, hri, serverName);
         break;
       case READY_TO_SPLIT:
-        errorMsg = onRegionReadyToSplit(current, hri, serverName, transition);
+        try {
+          regionStateListener.onRegionSplit(hri);
+          errorMsg = onRegionReadyToSplit(current, hri, serverName, transition);
+        } catch (IOException exp) {
+          errorMsg = StringUtils.stringifyException(exp);
+        }
         break;
       case SPLIT_PONR:
         errorMsg = onRegionSplitPONR(current, hri, serverName, transition);
@@ -2768,6 +2777,13 @@ public class AssignmentManager {
         break;
       case SPLIT_REVERTED:
         errorMsg = onRegionSplitReverted(current, hri, serverName, transition);
+        if (org.apache.commons.lang.StringUtils.isEmpty(errorMsg)) {
+          try {
+            regionStateListener.onRegionSplitReverted(hri);
+          } catch (IOException exp) {
+            LOG.warn(StringUtils.stringifyException(exp));
+          }
+        }
         break;
       case READY_TO_MERGE:
         errorMsg = onRegionReadyToMerge(current, hri, serverName, transition);
@@ -2805,5 +2821,9 @@ public class AssignmentManager {
   public Map<ServerName, List<HRegionInfo>>
     getSnapShotOfAssignment(Collection<HRegionInfo> infos) {
     return getRegionStates().getRegionAssignments(infos);
+  }
+
+  void setRegionStateListener(RegionStateListener listener) {
+    this.regionStateListener = listener;
   }
 }
