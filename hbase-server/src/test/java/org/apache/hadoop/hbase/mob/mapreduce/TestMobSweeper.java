@@ -180,7 +180,7 @@ public class TestMobSweeper {
 
 
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setLong(SweepJob.MOB_COMPACTION_DELAY, 24 * 60 * 60 * 1000);
+    conf.setLong(SweepJob.MOB_SWEEP_JOB_DELAY, 24 * 60 * 60 * 1000);
 
     String[] args = new String[2];
     args[0] = tableName;
@@ -260,7 +260,7 @@ public class TestMobSweeper {
 
 
     Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setLong(SweepJob.MOB_COMPACTION_DELAY, 0);
+    conf.setLong(SweepJob.MOB_SWEEP_JOB_DELAY, 0);
 
     String[] args = new String[2];
     args[0] = tableName;

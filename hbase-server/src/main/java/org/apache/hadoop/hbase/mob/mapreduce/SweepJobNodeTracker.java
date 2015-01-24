@@ -18,8 +18,14 @@
  */
 package org.apache.hadoop.hbase.mob.mapreduce;
 
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -36,38 +42,58 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class SweepJobNodeTracker extends ZooKeeperListener {
 
-  private String node;
-  private String sweepJobId;
+  private String parentNode;
+  private String lockNodePrefix;
+  private String owner;
+  private String lockNode;
 
-  public SweepJobNodeTracker(ZooKeeperWatcher watcher, String node, String sweepJobId) {
+  public SweepJobNodeTracker(ZooKeeperWatcher watcher, String parentNode, String owner) {
     super(watcher);
-    this.node = node;
-    this.sweepJobId = sweepJobId;
+    this.parentNode = parentNode;
+    this.owner = owner;
+    this.lockNodePrefix = ZKUtil.joinZNode(parentNode, "write-");
   }
 
   /**
    * Registers the watcher on the sweep job node.
    * If there's no such a sweep job node, or it's not created by the sweep job that
    * owns the current MR, the current process will be aborted.
+   * This assumes the table lock uses the Zookeeper. It's a workaround and only used
+   * in the sweep tool, and the sweep tool will be removed after the mob file compaction
+   * is finished.
    */
   public void start() throws KeeperException {
     watcher.registerListener(this);
-    if (ZKUtil.watchAndCheckExists(watcher, node)) {
-      byte[] data = ZKUtil.getDataAndWatch(watcher, node);
-      if (data != null) {
-        if (!sweepJobId.equals(Bytes.toString(data))) {
-          System.exit(1);
+    List<String> children = ZKUtil.listChildrenNoWatch(watcher, parentNode);
+    if (children != null && !children.isEmpty()) {
+      // there are locks
+      TreeSet<String> sortedChildren = new TreeSet<String>();
+      sortedChildren.addAll(children);
+      // find all the write locks
+      SortedSet<String> tails = sortedChildren.tailSet(lockNodePrefix);
+      if (!tails.isEmpty()) {
+        for (String tail : tails) {
+          String path = ZKUtil.joinZNode(parentNode, tail);
+          byte[] data = ZKUtil.getDataAndWatch(watcher, path);
+          TableLock lock = TableLockManager.fromBytes(data);
+          ServerName serverName = lock.getLockOwner();
+          org.apache.hadoop.hbase.ServerName sn = org.apache.hadoop.hbase.ServerName.valueOf(
+              serverName.getHostName(), serverName.getPort(), serverName.getStartCode());
+          // compare the server names (host, port and start code), make sure the lock is created
+          if (owner.equals(sn.toString())) {
+            lockNode = path;
+            return;
+          }
         }
       }
-    } else {
-      System.exit(1);
     }
+    System.exit(1);
   }
 
   @Override
   public void nodeDeleted(String path) {
-    // If the ephemeral node is deleted, abort the current process.
-    if (node.equals(path)) {
+    // If the lock node is deleted, abort the current process.
+    if (path.equals(lockNode)) {
       System.exit(1);
     }
   }

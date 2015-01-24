@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFile;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.MobZookeeper.DummyMobAbortable;
+import org.apache.hadoop.hbase.mob.mapreduce.SweepJob.DummyMobAbortable;
 import org.apache.hadoop.hbase.mob.mapreduce.SweepJob.SweepCounter;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.DefaultMemStore;
@@ -102,8 +102,8 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
   protected void setup(Context context) throws IOException, InterruptedException {
     this.conf = context.getConfiguration();
     this.fs = FileSystem.get(conf);
-    // the MOB_COMPACTION_DELAY is ONE_DAY by default. Its value is only changed when testing.
-    mobCompactionDelay = conf.getLong(SweepJob.MOB_COMPACTION_DELAY, SweepJob.ONE_DAY);
+    // the MOB_SWEEP_JOB_DELAY is ONE_DAY by default. Its value is only changed when testing.
+    mobCompactionDelay = conf.getLong(SweepJob.MOB_SWEEP_JOB_DELAY, SweepJob.ONE_DAY);
     String tableName = conf.get(TableInputFormat.INPUT_TABLE);
     String familyName = conf.get(TableInputFormat.SCAN_COLUMN_FAMILY);
     TableName tn = TableName.valueOf(tableName);
@@ -125,7 +125,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
     }
     // disable the block cache.
     Configuration copyOfConf = new Configuration(conf);
-    copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.00001f);
+    copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     this.cacheConfig = new CacheConfig(copyOfConf);
 
     table = new HTable(this.conf, Bytes.toBytes(tableName));
@@ -148,12 +148,13 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
   @Override
   public void run(Context context) throws IOException, InterruptedException {
     String jobId = context.getConfiguration().get(SweepJob.SWEEP_JOB_ID);
-    String sweeperNode = context.getConfiguration().get(SweepJob.SWEEPER_NODE);
+    String owner = context.getConfiguration().get(SweepJob.SWEEP_JOB_SERVERNAME);
+    String sweeperNode = context.getConfiguration().get(SweepJob.SWEEP_JOB_TABLE_NODE);
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(context.getConfiguration(), jobId,
         new DummyMobAbortable());
     FSDataOutputStream fout = null;
     try {
-      SweepJobNodeTracker tracker = new SweepJobNodeTracker(zkw, sweeperNode, jobId);
+      SweepJobNodeTracker tracker = new SweepJobNodeTracker(zkw, sweeperNode, owner);
       tracker.start();
       setup(context);
       // create a sequence contains all the visited file names in this reducer.

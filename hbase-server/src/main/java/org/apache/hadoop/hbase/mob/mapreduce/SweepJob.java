@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mob.mapreduce;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -37,32 +38,39 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.MobZookeeper;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.serializer.JavaSerialization;
 import org.apache.hadoop.io.serializer.WritableSerialization;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.KeeperException;
@@ -77,21 +85,23 @@ public class SweepJob {
   private final FileSystem fs;
   private final Configuration conf;
   private static final Log LOG = LogFactory.getLog(SweepJob.class);
-  static final String SWEEP_JOB_ID = "mob.compaction.id";
-  static final String SWEEPER_NODE = "mob.compaction.sweep.node";
-  static final String WORKING_DIR_KEY = "mob.compaction.dir";
-  static final String WORKING_ALLNAMES_FILE_KEY = "mob.compaction.all.file";
-  static final String WORKING_VISITED_DIR_KEY = "mob.compaction.visited.dir";
+  static final String SWEEP_JOB_ID = "mob.sweep.job.id";
+  static final String SWEEP_JOB_SERVERNAME = "mob.sweep.job.servername";
+  static final String SWEEP_JOB_TABLE_NODE = "mob.sweep.job.table.node";
+  static final String WORKING_DIR_KEY = "mob.sweep.job.dir";
+  static final String WORKING_ALLNAMES_FILE_KEY = "mob.sweep.job.all.file";
+  static final String WORKING_VISITED_DIR_KEY = "mob.sweep.job.visited.dir";
   static final String WORKING_ALLNAMES_DIR = "all";
   static final String WORKING_VISITED_DIR = "visited";
-  public static final String WORKING_FILES_DIR_KEY = "mob.compaction.files.dir";
-  //the MOB_COMPACTION_DELAY is ONE_DAY by default. Its value is only changed when testing.
-  public static final String MOB_COMPACTION_DELAY = "hbase.mob.compaction.delay";
+  public static final String WORKING_FILES_DIR_KEY = "mob.sweep.job.files.dir";
+  //the MOB_SWEEP_JOB_DELAY is ONE_DAY by default. Its value is only changed when testing.
+  public static final String MOB_SWEEP_JOB_DELAY = "hbase.mob.sweep.job.delay";
   protected static long ONE_DAY = 24 * 60 * 60 * 1000;
   private long compactionStartTime = EnvironmentEdgeManager.currentTime();
   public final static String CREDENTIALS_LOCATION = "credentials_location";
   private CacheConfig cacheConfig;
   static final int SCAN_CACHING = 10000;
+  private TableLockManager tableLockManager;
 
   public SweepJob(Configuration conf, FileSystem fs) {
     this.conf = conf;
@@ -100,6 +110,22 @@ public class SweepJob {
     Configuration copyOfConf = new Configuration(conf);
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     cacheConfig = new CacheConfig(copyOfConf);
+  }
+
+  static ServerName getCurrentServerName(Configuration conf) throws IOException {
+    String hostname = conf.get(
+        "hbase.regionserver.ipc.address",
+        Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+            conf.get("hbase.regionserver.dns.interface", "default"),
+            conf.get("hbase.regionserver.dns.nameserver", "default"))));
+    int port = conf.getInt(HConstants.REGIONSERVER_PORT, HConstants.DEFAULT_REGIONSERVER_PORT);
+    // Creation of a HSA will force a resolve.
+    InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
+    if (initialIsa.getAddress() == null) {
+      throw new IllegalArgumentException("Failed resolve of " + initialIsa);
+    }
+    return ServerName.valueOf(initialIsa.getHostName(), initialIsa.getPort(),
+        EnvironmentEdgeManager.currentTime());
   }
 
   /**
@@ -141,37 +167,21 @@ public class SweepJob {
     }
     String familyName = family.getNameAsString();
     String id = "SweepJob" + UUID.randomUUID().toString().replace("-", "");
-    MobZookeeper zk = MobZookeeper.newInstance(conf, id);
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, id, new DummyMobAbortable());
     try {
-      // Try to obtain the lock. Use this lock to synchronize all the query, creation/deletion
-      // in the Zookeeper.
-      if (!zk.lockColumnFamily(tn.getNameAsString(), familyName)) {
-        LOG.warn("Can not lock the store " + familyName
-            + ". The major compaction in HBase may be in-progress. Please re-run the job.");
-        return 3;
-      }
+      ServerName serverName = getCurrentServerName(conf);
+      tableLockManager = TableLockManager.createTableLockManager(conf, zkw, serverName);
+      TableName lockName = MobUtils.getTableLockName(tn);
+      TableLock lock = tableLockManager.writeLock(lockName, "Run sweep tool");
+      String tableName = tn.getNameAsString();
+      // Try to obtain the lock. Use this lock to synchronize all the query
       try {
-        // Checks whether there're HBase major compaction now.
-        boolean hasChildren = zk.hasMajorCompactionChildren(tn.getNameAsString(), familyName);
-        if (hasChildren) {
-          LOG.warn("The major compaction in HBase may be in-progress."
-              + " Please re-run the job.");
-          return 4;
-        } else {
-          // Checks whether there's sweep tool in progress.
-          boolean hasSweeper = zk.isSweeperZNodeExist(tn.getNameAsString(), familyName);
-          if (hasSweeper) {
-            LOG.warn("Another sweep job is running");
-            return 5;
-          } else {
-            // add the sweeper node, mark that there's one sweep tool in progress.
-            // All the HBase major compaction and sweep tool in this column family could not
-            // run until this sweep tool is finished.
-            zk.addSweeperZNode(tn.getNameAsString(), familyName, Bytes.toBytes(id));
-          }
-        }
-      } finally {
-        zk.unlockColumnFamily(tn.getNameAsString(), familyName);
+        lock.acquire();
+      } catch (Exception e) {
+        LOG.warn("Can not lock the table " + tableName
+            + ". The major compaction in HBase may be in-progress or another sweep job is running."
+            + " Please re-run the job.");
+        return 3;
       }
       Job job = null;
       try {
@@ -186,7 +196,9 @@ public class SweepJob {
         conf.set(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY,
             JavaSerialization.class.getName() + "," + WritableSerialization.class.getName());
         conf.set(SWEEP_JOB_ID, id);
-        conf.set(SWEEPER_NODE, zk.getSweeperZNodePath(tn.getNameAsString(), familyName));
+        conf.set(SWEEP_JOB_SERVERNAME, serverName.toString());
+        String tableLockNode = ZKUtil.joinZNode(zkw.tableLockZNode, lockName.getNameAsString());
+        conf.set(SWEEP_JOB_TABLE_NODE, tableLockNode);
         job = prepareJob(tn, familyName, scan, conf);
         job.getConfiguration().set(TableInputFormat.SCAN_COLUMN_FAMILY, familyName);
         // Record the compaction start time.
@@ -204,14 +216,21 @@ public class SweepJob {
           removeUnusedFiles(job, tn, family);
         } else {
           System.err.println("Job Failed");
-          return 6;
+          return 4;
         }
       } finally {
-        cleanup(job, tn, familyName);
-        zk.deleteSweeperZNode(tn.getNameAsString(), familyName);
+        try {
+          cleanup(job, tn, familyName);
+        } finally {
+          try {
+            lock.release();
+          } catch (IOException e) {
+            LOG.error("Fail to release the table lock " + tableName, e);
+          }
+        }
       }
     } finally {
-      zk.close();
+      zkw.close();
     }
     return 0;
   }
@@ -305,7 +324,7 @@ public class SweepJob {
     // archive them.
     FileStatus[] files = fs.listStatus(mobStorePath);
     Set<String> fileNames = new TreeSet<String>();
-    long mobCompactionDelay = job.getConfiguration().getLong(MOB_COMPACTION_DELAY, ONE_DAY);
+    long mobCompactionDelay = job.getConfiguration().getLong(MOB_SWEEP_JOB_DELAY, ONE_DAY);
     for (FileStatus fileStatus : files) {
       if (fileStatus.isFile() && !HFileLink.isHFileLink(fileStatus.getPath())) {
         if (compactionStartTime - fileStatus.getModificationTime() > mobCompactionDelay) {
@@ -422,9 +441,8 @@ public class SweepJob {
    * Deletes the working directory.
    * @param job The current job.
    * @param familyName The family to cleanup
-   * @throws IOException
    */
-  private void cleanup(Job job, TableName tn, String familyName) throws IOException {
+  private void cleanup(Job job, TableName tn, String familyName) {
     if (job != null) {
       // delete the working directory
       Path workingPath = new Path(job.getConfiguration().get(WORKING_DIR_KEY));
@@ -562,5 +580,19 @@ public class SweepJob {
      * How many records are updated.
      */
     RECORDS_UPDATED,
+  }
+
+  public static class DummyMobAbortable implements Abortable {
+
+    private boolean abort = false;
+
+    public void abort(String why, Throwable e) {
+      abort = true;
+    }
+
+    public boolean isAborted() {
+      return abort;
+    }
+
   }
 }

@@ -274,16 +274,6 @@ public class MobUtils {
   }
 
   /**
-   * Gets the znode name of column family.
-   * @param tableName The current table name.
-   * @param familyName The name of the current column family.
-   * @return The znode name of column family.
-   */
-  public static String getColumnFamilyZNodeName(String tableName, String familyName) {
-    return tableName + ":" + familyName;
-  }
-
-  /**
    * Gets the root dir of the mob files.
    * It's {HBASE_DIR}/mobdir.
    * @param conf The current configuration.
@@ -547,5 +537,16 @@ public class MobUtils {
   public static String getMobFileName(Cell cell) {
     return Bytes.toString(cell.getValueArray(), cell.getValueOffset() + Bytes.SIZEOF_INT,
         cell.getValueLength() - Bytes.SIZEOF_INT);
+  }
+
+  /**
+   * Gets the table name used in the table lock.
+   * The table lock name is a dummy one, it's not a table name. It's tableName + ".mobLock".
+   * @param tn The table name.
+   * @return The table name used in table lock.
+   */
+  public static TableName getTableLockName(TableName tn) {
+    byte[] tableName = tn.getName();
+    return TableName.valueOf(Bytes.add(tableName, MobConstants.MOB_TABLE_LOCK_SUFFIX));
   }
 }

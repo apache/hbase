@@ -46,17 +46,17 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFile;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.MobZookeeper;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * The store implementation to save MOBs (medium objects), it extends the HStore.
@@ -91,6 +91,8 @@ public class HMobStore extends HStore {
   private volatile long mobScanCellsSize = 0;
   private List<Path> mobDirLocations;
   private HColumnDescriptor family;
+  private TableLockManager tableLockManager;
+  private TableName tableLockName;
 
   public HMobStore(final HRegion region, final HColumnDescriptor family,
       final Configuration confParam) throws IOException {
@@ -105,6 +107,10 @@ public class HMobStore extends HStore {
     TableName tn = region.getTableDesc().getTableName();
     mobDirLocations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils
         .getMobRegionInfo(tn).getEncodedName(), family.getNameAsString()));
+    if (region.getRegionServerServices() != null) {
+      tableLockManager = region.getRegionServerServices().getTableLockManager();
+      tableLockName = MobUtils.getTableLockName(getTableName());
+    }
   }
 
   /**
@@ -425,59 +431,40 @@ public class HMobStore extends HStore {
       //             compaction as retainDeleteMarkers and continue the compaction.
       //      1.2.2. If the node is not there, add a child to the major compaction node, and
       //             run the compaction directly.
-      String compactionName = UUID.randomUUID().toString().replaceAll("-", "");
-      MobZookeeper zk = null;
-      try {
-        zk = MobZookeeper.newInstance(region.getBaseConf(), compactionName);
-      } catch (KeeperException e) {
-        LOG.error("Cannot connect to the zookeeper, forcing the delete markers to be retained", e);
-        compaction.getRequest().forceRetainDeleteMarkers();
-        return super.compact(compaction);
+      TableLock lock = null;
+      if (tableLockManager != null) {
+        lock = tableLockManager.readLock(tableLockName, "Major compaction in HMobStore");
       }
-      boolean keepDeleteMarkers = true;
-      boolean majorCompactNodeAdded = false;
-      try {
-        // try to acquire the operation lock.
-        if (zk.lockColumnFamily(getTableName().getNameAsString(), getFamily().getNameAsString())) {
-          try {
-            LOG.info("Obtain the lock for the store[" + this
-                + "], ready to perform the major compaction");
-            // check the sweeping node to find out whether the sweeping is in progress.
-            boolean hasSweeper = zk.isSweeperZNodeExist(getTableName().getNameAsString(),
-                getFamily().getNameAsString());
-            if (!hasSweeper) {
-              // if not, add a child to the major compaction node of this store.
-              majorCompactNodeAdded = zk.addMajorCompactionZNode(getTableName().getNameAsString(),
-                  getFamily().getNameAsString(), compactionName);
-              // If we failed to add the major compact node, go with keep delete markers mode.
-              keepDeleteMarkers = !majorCompactNodeAdded;
-            }
-          } catch (Exception e) {
-            LOG.error("Fail to handle the Zookeeper", e);
-          } finally {
-            // release the operation lock
-            zk.unlockColumnFamily(getTableName().getNameAsString(), getFamily().getNameAsString());
-          }
-        }
+      boolean tableLocked = false;
+      String tableName = getTableName().getNameAsString();
+      if (lock != null) {
         try {
-          if (keepDeleteMarkers) {
-            LOG.warn("Cannot obtain the lock or a sweep tool is running on this store[" + this
-                + "], forcing the delete markers to be retained");
-            compaction.getRequest().forceRetainDeleteMarkers();
-          }
-          return super.compact(compaction);
-        } finally {
-          if (majorCompactNodeAdded) {
-            try {
-              zk.deleteMajorCompactionZNode(getTableName().getNameAsString(), getFamily()
-                  .getNameAsString(), compactionName);
-            } catch (KeeperException e) {
-              LOG.error("Fail to delete the compaction znode" + compactionName, e);
-            }
+          LOG.info("Start to acquire a read lock for the table[" + tableName
+              + "], ready to perform the major compaction");
+          lock.acquire();
+          tableLocked = true;
+        } catch (Exception e) {
+          LOG.error("Fail to lock the table " + tableName, e);
+        }
+      } else {
+        // If the tableLockManager is null, mark the tableLocked as true.
+        tableLocked = true;
+      }
+      try {
+        if (!tableLocked) {
+          LOG.warn("Cannot obtain the table lock, maybe a sweep tool is running on this table["
+              + tableName + "], forcing the delete markers to be retained");
+          compaction.getRequest().forceRetainDeleteMarkers();
+        }
+        return super.compact(compaction);
+      } finally {
+        if (tableLocked && lock != null) {
+          try {
+            lock.release();
+          } catch (IOException e) {
+            LOG.error("Fail to release the table lock " + tableName, e);
           }
         }
-      } finally {
-        zk.close();
       }
     } else {
       // If it's not a major compaction, continue the compaction.

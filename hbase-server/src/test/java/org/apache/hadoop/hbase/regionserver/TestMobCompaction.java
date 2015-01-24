@@ -224,62 +224,6 @@ public class TestMobCompaction {
         countMobCellsInMetadata());
   }
 
-  /**
-   * Tests the major compaction when the zk is not connected.
-   * After that the major compaction will be marked as retainDeleteMarkers, the delete marks
-   * will be retained.
-   * @throws Exception
-   */
-  @Test
-  public void testMajorCompactionWithZKError() throws Exception {
-    Configuration conf = new Configuration(UTIL.getConfiguration());
-    // use the wrong zk settings
-    conf.setInt("zookeeper.recovery.retry", 0);
-    conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 100);
-    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
-        conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181) - 1);
-    init(conf, 200);
-    byte[] dummyData = makeDummyData(300); // larger than mob threshold
-    HRegionIncommon loader = new HRegionIncommon(region);
-    byte[] deleteRow = Bytes.toBytes(0);
-    for (int i = 0; i < compactionThreshold - 1 ; i++) {
-      Put p = new Put(Bytes.toBytes(i));
-      p.setDurability(Durability.SKIP_WAL);
-      p.add(COLUMN_FAMILY, Bytes.toBytes("colX"), dummyData);
-      loader.put(p);
-      loader.flushcache();
-    }
-    Delete delete = new Delete(deleteRow);
-    delete.deleteFamily(COLUMN_FAMILY);
-    region.delete(delete);
-    loader.flushcache();
-
-    assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
-    region.compactStores(true);
-    assertEquals("After compaction: store files", 1, countStoreFiles());
-
-    Scan scan = new Scan();
-    scan.setRaw(true);
-    InternalScanner scanner = region.getScanner(scan);
-    List<Cell> results = new ArrayList<Cell>();
-    scanner.next(results);
-    int deleteCount = 0;
-    while (!results.isEmpty()) {
-      for (Cell c : results) {
-        if (c.getTypeByte() == KeyValue.Type.DeleteFamily.getCode()) {
-          deleteCount++;
-          assertTrue(Bytes.equals(CellUtil.cloneRow(c), deleteRow));
-        }
-      }
-      results.clear();
-      scanner.next(results);
-    }
-    // assert the delete mark is retained, the major compaction is marked as
-    // retainDeleteMarkers.
-    assertEquals(1, deleteCount);
-    scanner.close();
-  }
-
   @Test
   public void testMajorCompactionAfterDelete() throws Exception {
     init(UTIL.getConfiguration(), 100);

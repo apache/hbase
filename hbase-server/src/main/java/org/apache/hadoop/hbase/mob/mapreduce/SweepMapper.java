@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.MobZookeeper.DummyMobAbortable;
+import org.apache.hadoop.hbase.mob.mapreduce.SweepJob.DummyMobAbortable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
 import org.apache.zookeeper.KeeperException;
@@ -45,11 +45,12 @@ public class SweepMapper extends TableMapper<Text, KeyValue> {
   protected void setup(Context context) throws IOException,
       InterruptedException {
     String id = context.getConfiguration().get(SweepJob.SWEEP_JOB_ID);
-    String sweeperNode = context.getConfiguration().get(SweepJob.SWEEPER_NODE);
+    String owner = context.getConfiguration().get(SweepJob.SWEEP_JOB_SERVERNAME);
+    String sweeperNode = context.getConfiguration().get(SweepJob.SWEEP_JOB_TABLE_NODE);
     zkw = new ZooKeeperWatcher(context.getConfiguration(), id,
         new DummyMobAbortable());
     try {
-      SweepJobNodeTracker tracker = new SweepJobNodeTracker(zkw, sweeperNode, id);
+      SweepJobNodeTracker tracker = new SweepJobNodeTracker(zkw, sweeperNode, owner);
       tracker.start();
     } catch (KeeperException e) {
       throw new IOException(e);

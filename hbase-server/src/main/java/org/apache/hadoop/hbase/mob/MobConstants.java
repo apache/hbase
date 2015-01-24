@@ -72,6 +72,7 @@ public class MobConstants {
   public static final long DEFAULT_MOB_CACHE_EVICT_PERIOD = 3600l;
 
   public final static String TEMP_DIR_NAME = ".tmp";
+  public final static byte[] MOB_TABLE_LOCK_SUFFIX = Bytes.toBytes(".mobLock");
   public final static String EMPTY_STRING = "";
   private MobConstants() {
 
