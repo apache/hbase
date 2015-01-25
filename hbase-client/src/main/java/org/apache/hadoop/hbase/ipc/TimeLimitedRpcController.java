@@ -42,8 +42,12 @@ public class TimeLimitedRpcController implements RpcController {
 
   private IOException exception;
 
-  public Integer getCallTimeout() {
-    return callTimeout;
+  public int getCallTimeout() {
+    if (callTimeout != null) {
+      return callTimeout;
+    } else {
+      return 0;
+    }
   }
 
   public void setCallTimeout(int callTimeout) {

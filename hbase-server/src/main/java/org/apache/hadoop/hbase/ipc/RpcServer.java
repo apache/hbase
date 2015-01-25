@@ -44,6 +44,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -1408,9 +1409,9 @@ public class RpcServer implements RpcServerInterface {
       int count;
       // Check for 'HBas' magic.
       this.dataLengthBuffer.flip();
-      if (!HConstants.RPC_HEADER.equals(dataLengthBuffer)) {
+      if (!Arrays.equals(HConstants.RPC_HEADER, dataLengthBuffer.array())) {
         return doBadPreambleHandling("Expected HEADER=" +
-            Bytes.toStringBinary(HConstants.RPC_HEADER.array()) +
+            Bytes.toStringBinary(HConstants.RPC_HEADER) +
             " but received HEADER=" + Bytes.toStringBinary(dataLengthBuffer.array()) +
             " from " + toString());
       }

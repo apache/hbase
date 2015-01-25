@@ -117,7 +117,7 @@ public class HBaseSaslRpcClient {
         throw new IOException(
             "Failed to specify server's Kerberos principal name");
       }
-      String names[] = SaslUtil.splitKerberosName(serverPrincipal);
+      String[] names = SaslUtil.splitKerberosName(serverPrincipal);
       if (names.length != 3) {
         throw new IOException(
           "Kerberos principal does not have the expected format: "

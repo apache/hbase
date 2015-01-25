@@ -42,7 +42,7 @@ public class PayloadCarryingRpcController
    */
   // Currently only multi call makes use of this.  Eventually this should be only way to set
   // priority.
-  private int priority = 0;
+  private int priority = HConstants.NORMAL_QOS;
 
   /**
    * They are optionally set on construction, cleared after we make the call, and then optionally
