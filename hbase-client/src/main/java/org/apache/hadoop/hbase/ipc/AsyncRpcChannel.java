@@ -53,8 +53,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
-import org.htrace.Span;
-import org.htrace.Trace;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
 
 import javax.security.sasl.SaslException;
 import java.io.IOException;
