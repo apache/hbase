@@ -183,9 +183,8 @@ public class TestFSErrorsExposed {
     Assume.assumeTrue(!util.isReadShortCircuitOn());
 
     try {
-      // We set it not to run or it will trigger server shutdown while sync'ing
-      // because all the datanodes are bad
-      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+      // Make it fail faster.
+      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
 
       util.startMiniCluster(1);
       TableName tableName = TableName.valueOf("table");
@@ -198,8 +197,7 @@ public class TestFSErrorsExposed {
           .setBlockCacheEnabled(false)
       );
       admin.createTable(desc);
-      // Make it fail faster.
-      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+
       // Make a new Configuration so it makes a new connection that has the
       // above configuration on it; else we use the old one w/ 10 as default.
       try (Table table = util.getConnection().getTable(tableName)) {
@@ -266,6 +264,7 @@ public class TestFSErrorsExposed {
       faultsStarted = true;
     }
 
+    @Override
     public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
       injectFault();
