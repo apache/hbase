@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
@@ -2371,8 +2370,17 @@ public class AssignmentManager extends ZooKeeperListener {
           || existingPlan.getDestination() == null
           || !destServers.contains(existingPlan.getDestination())) {
         newPlan = true;
-        randomPlan = new RegionPlan(region, null,
-            balancer.randomAssignment(region, destServers));
+      }
+    }
+
+    if (newPlan) {
+      ServerName destination = balancer.randomAssignment(region, destServers);
+      if (destination == null) {
+        LOG.warn("Can't find a destination for " + encodedName);
+        return null;
+      }
+      synchronized (this.regionPlans) {
+        randomPlan = new RegionPlan(region, null, destination);
         if (!region.isMetaTable() && shouldAssignRegionsWithFavoredNodes) {
           List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
           regions.add(region);
@@ -2384,20 +2392,12 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         this.regionPlans.put(encodedName, randomPlan);
       }
+      LOG.debug("No previous transition plan found (or ignoring " + "an existing plan) for "
+          + region.getRegionNameAsString() + "; generated random plan=" + randomPlan + "; "
+          + destServers.size() + " (online=" + serverManager.getOnlineServers().size()
+          + ") available servers, forceNewPlan=" + forceNewPlan);
+      return randomPlan;
     }
-
-    if (newPlan) {
-      if (randomPlan.getDestination() == null) {
-        LOG.warn("Can't find a destination for " + encodedName);
-        return null;
-      }
-      LOG.debug("No previous transition plan found (or ignoring " +
-        "an existing plan) for " + region.getRegionNameAsString() +
-        "; generated random plan=" + randomPlan + "; " + destServers.size() +
-        " (online=" + serverManager.getOnlineServers().size() +
-        ") available servers, forceNewPlan=" + forceNewPlan);
-        return randomPlan;
-      }
     LOG.debug("Using pre-existing plan for " +
       region.getRegionNameAsString() + "; plan=" + existingPlan);
     return existingPlan;
