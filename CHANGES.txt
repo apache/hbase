@@ -154,6 +154,7 @@ Release Notes - HBase - Version 1.0.0 02/08/2015
 ** Task
     * [HBASE-12493] - User class should provide a way to re-use existing token
     * [HBASE-12567] - Track remaining issues for HBase-1.0
+    * [HBASE-12624] - Remove rename_snapshot.rb from code as there is no equivalent renameSnapshot api in Admin class
     * [HBASE-12625] - Deprecate certain methods in classes annotated with InterfaceAudience.Public in branch-1
     * [HBASE-12689] - Move version on from 0.99.2 to HBASE-1.0.0-SNAPSHOT
     * [HBASE-12724] - Upgrade the interface audience of RegionScanner from Private to LimitedPrivate
