@@ -95,7 +95,7 @@ public class ThriftHttpServlet extends TServlet {
       UserGroupInformation ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, realUser);
       // validate the proxy user authorization
       try {
-        ProxyUsers.authorize(ugi, request.getRemoteAddr());
+        ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
       } catch (AuthorizationException e) {
         throw new ServletException(e.getMessage());
       }
