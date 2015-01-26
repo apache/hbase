@@ -77,8 +77,8 @@ public abstract class TestTableMapReduceBase {
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
     HTable table =
-        UTIL.createTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY, OUTPUT_FAMILY });
-    UTIL.createMultiRegions(table, INPUT_FAMILY);
+        UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY,
+            OUTPUT_FAMILY });
     UTIL.loadTable(table, INPUT_FAMILY, false);
     UTIL.startMiniMapReduceCluster();
   }

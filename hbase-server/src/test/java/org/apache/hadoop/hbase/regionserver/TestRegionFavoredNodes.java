@@ -31,10 +31,10 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -71,8 +71,7 @@ public class TestRegionFavoredNodes {
       return;
     }
     TEST_UTIL.startMiniCluster(REGION_SERVERS);
-    table = TEST_UTIL.createTable(TABLE_NAME, COLUMN_FAMILY);
-    TEST_UTIL.createMultiRegions(table, COLUMN_FAMILY);
+    table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, COLUMN_FAMILY);
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
   }
 

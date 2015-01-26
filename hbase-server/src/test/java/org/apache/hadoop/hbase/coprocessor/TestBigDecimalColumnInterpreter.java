@@ -18,15 +18,19 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
+
 import java.math.BigDecimal;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.BigDecimalColumnInterpreter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -77,9 +81,8 @@ public class TestBigDecimalColumnInterpreter {
       "org.apache.hadoop.hbase.coprocessor.AggregateImplementation");
 
     util.startMiniCluster(2);
-    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY);
-    util.createMultiRegions(util.getConfiguration(), table, TEST_FAMILY, new byte[][] {
-        HConstants.EMPTY_BYTE_ARRAY, ROWS[rowSeperator1], ROWS[rowSeperator2] });
+    final byte[][] SPLIT_KEYS = new byte[][] { ROWS[rowSeperator1], ROWS[rowSeperator2] };
+    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
     /**
      * The testtable has one CQ which is always populated and one variable CQ for each row rowkey1:
      * CF:CQ CF:CQ1 rowKey2: CF:CQ CF:CQ2

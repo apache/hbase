@@ -76,8 +76,8 @@ public class TestMultiTableInputFormat {
     // create and fill table
     for (int i = 0; i < 3; i++) {
       try (HTable table =
-          TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME + String.valueOf(i)), INPUT_FAMILY)) {
-        TEST_UTIL.createMultiRegions(TEST_UTIL.getConfiguration(), table, INPUT_FAMILY, 4);
+          TEST_UTIL.createMultiRegionTable(TableName.valueOf(TABLE_NAME + String.valueOf(i)),
+            INPUT_FAMILY, 4)) {
         TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
       }
     }

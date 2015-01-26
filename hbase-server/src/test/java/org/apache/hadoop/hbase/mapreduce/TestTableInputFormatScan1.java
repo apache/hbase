@@ -95,5 +95,4 @@ public class TestTableInputFormatScan1 extends TestTableInputFormatScanBase {
   throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "opp", "opo");
   }
-
 }

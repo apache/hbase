@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -74,6 +73,7 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -354,6 +354,16 @@ public class TestHFileOutputFormat  {
     return ret;
   }
 
+  private byte[][] generateRandomSplitKeys(int numKeys) {
+    Random random = new Random();
+    byte[][] ret = new byte[numKeys][];
+    for (int i = 0; i < numKeys; i++) {
+      ret[i] =
+          PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
+    }
+    return ret;
+  }
+
   @Test
   public void testMRIncrementalLoad() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoad\n");
@@ -370,17 +380,19 @@ public class TestHFileOutputFormat  {
       boolean shouldChangeRegions) throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
-    byte[][] startKeys = generateRandomStartKeys(5);
+    byte[][] splitKeys = generateRandomSplitKeys(4);
     HBaseAdmin admin = null;
     try {
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
-      admin = new HBaseAdmin(conf);
-      HTable table = util.createTable(TABLE_NAME, FAMILIES);
+      admin = util.getHBaseAdmin();
+      HTable table = util.createTable(TABLE_NAME, FAMILIES, splitKeys);
       assertEquals("Should start with empty table",
           0, util.countRows(table));
-      int numRegions = util.createMultiRegions(
-          util.getConfiguration(), table, FAMILIES[0], startKeys);
+      int numRegions = -1;
+      try(RegionLocator r = table.getRegionLocator()) {
+        numRegions = r.getStartKeys().length;
+      }
       assertEquals("Should make 5 regions", numRegions, 5);
 
       // Generate the bulk load files
@@ -411,10 +423,9 @@ public class TestHFileOutputFormat  {
           Threads.sleep(200);
           LOG.info("Waiting on table to finish disabling");
         }
-        byte[][] newStartKeys = generateRandomStartKeys(15);
-        util.createMultiRegions(
-            util.getConfiguration(), table, FAMILIES[0], newStartKeys);
-        admin.enableTable(table.getTableName());
+        util.deleteTable(table.getName());
+        byte[][] newSplitKeys = generateRandomSplitKeys(14);
+        table = util.createTable(TABLE_NAME, FAMILIES, newSplitKeys);
         while (table.getRegionLocations().size() != 15 ||
             !admin.isTableAvailable(table.getTableName())) {
           Thread.sleep(200);
@@ -1052,12 +1063,8 @@ public class TestHFileOutputFormat  {
     util = new HBaseTestingUtility(conf);
     if ("newtable".equals(args[0])) {
       TableName tname = TableName.valueOf(args[1]);
-      HTable table = util.createTable(tname, FAMILIES);
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.disableTable(tname);
-      byte[][] startKeys = generateRandomStartKeys(5);
-      util.createMultiRegions(conf, table, FAMILIES[0], startKeys);
-      admin.enableTable(tname);
+      byte[][] splitKeys = generateRandomSplitKeys(4);
+      HTable table = util.createTable(tname, FAMILIES, splitKeys);
     } else if ("incremental".equals(args[0])) {
       TableName tname = TableName.valueOf(args[1]);
       HTable table = new HTable(conf, tname);

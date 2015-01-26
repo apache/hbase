@@ -27,6 +27,22 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,7 +58,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -77,6 +92,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -88,23 +104,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
-
 /**
  * Run tests that use the HBase clients; {@link HTable}.
  * Sets up the HBase mini cluster once at start and runs through all client tests.
@@ -4990,17 +4989,18 @@ public class TestFromClientSide {
 
     // Set up test table:
     // Create table:
-    HTable ht = new HTable(conf, TABLENAME);
-
-    // Create multiple regions for this table
-    int numOfRegions = TEST_UTIL.createMultiRegions(ht, FAMILY);
-    // Create 3 rows in the table, with rowkeys starting with "z*" so that
+    HTable ht = TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILY);
+    int numOfRegions = -1;
+    try (RegionLocator r = ht.getRegionLocator()) {
+      numOfRegions = r.getStartKeys().length;
+    }
+    // Create 3 rows in the table, with rowkeys starting with "zzz*" so that
     // scan are forced to hit all the regions.
-    Put put1 = new Put(Bytes.toBytes("z1"));
+    Put put1 = new Put(Bytes.toBytes("zzz1"));
     put1.add(FAMILY, QUALIFIER, VALUE);
-    Put put2 = new Put(Bytes.toBytes("z2"));
+    Put put2 = new Put(Bytes.toBytes("zzz2"));
     put2.add(FAMILY, QUALIFIER, VALUE);
-    Put put3 = new Put(Bytes.toBytes("z3"));
+    Put put3 = new Put(Bytes.toBytes("zzz3"));
     put3.add(FAMILY, QUALIFIER, VALUE);
     ht.put(Arrays.asList(put1, put2, put3));
 
@@ -5250,9 +5250,12 @@ public class TestFromClientSide {
     byte [] startKey = Bytes.toBytes("ddc");
     byte [] endKey = Bytes.toBytes("mmm");
     TableName TABLE = TableName.valueOf("testGetRegionsInRange");
-    HTable table = TEST_UTIL.createTable(TABLE, new byte[][] {FAMILY}, 10);
-    int numOfRegions = TEST_UTIL.createMultiRegions(table, FAMILY);
-    assertEquals(25, numOfRegions);
+    HTable table = TEST_UTIL.createMultiRegionTable(TABLE, new byte[][] { FAMILY }, 10);
+    int numOfRegions = -1;
+    try (RegionLocator r = table.getRegionLocator()) {
+      numOfRegions = r.getStartKeys().length;
+    }
+    assertEquals(26, numOfRegions);
 
     // Get the regions in this range
     List<HRegionLocation> regionsList = table.getRegionsInRange(startKey,
@@ -5275,22 +5278,22 @@ public class TestFromClientSide {
 
     // Empty end key
     regionsList = table.getRegionsInRange(startKey, HConstants.EMPTY_END_ROW);
-    assertEquals(20, regionsList.size());
+    assertEquals(21, regionsList.size());
 
     // Both start and end keys empty
     regionsList = table.getRegionsInRange(HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW);
-    assertEquals(25, regionsList.size());
+    assertEquals(26, regionsList.size());
 
     // Change the end key to somewhere in the last block
-    endKey = Bytes.toBytes("yyz");
+    endKey = Bytes.toBytes("zzz1");
     regionsList = table.getRegionsInRange(startKey, endKey);
-    assertEquals(20, regionsList.size());
+    assertEquals(21, regionsList.size());
 
     // Change the start key to somewhere in the first block
     startKey = Bytes.toBytes("aac");
     regionsList = table.getRegionsInRange(startKey, endKey);
-    assertEquals(25, regionsList.size());
+    assertEquals(26, regionsList.size());
 
     // Make start and end key the same
     startKey = endKey = Bytes.toBytes("ccc");

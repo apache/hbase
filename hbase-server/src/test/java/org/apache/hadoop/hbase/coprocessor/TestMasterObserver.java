@@ -1457,10 +1457,9 @@ public class TestMasterObserver {
     cp.enableBypass(false);
     cp.resetStates();
 
-    HTable table = UTIL.createTable(TEST_TABLE, TEST_FAMILY);
+    HTable table = UTIL.createMultiRegionTable(TEST_TABLE, TEST_FAMILY);
 
     try {
-      UTIL.createMultiRegions(table, TEST_FAMILY);
       UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
 
       NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();

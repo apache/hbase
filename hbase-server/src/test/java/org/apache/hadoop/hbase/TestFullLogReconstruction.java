@@ -90,10 +90,7 @@ public class TestFullLogReconstruction {
    */
   @Test (timeout=300000)
   public void testReconstruction() throws Exception {
-
-    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
-
-    TEST_UTIL.createMultiRegions(table, Bytes.toBytes("family"));
+    HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAMILY);
 
     // Load up the table with simple rows and count them
     int initialCount = TEST_UTIL.loadTable(table, FAMILY);

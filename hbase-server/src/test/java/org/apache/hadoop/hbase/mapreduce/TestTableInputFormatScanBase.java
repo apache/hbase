@@ -78,8 +78,7 @@ public abstract class TestTableInputFormatScanBase {
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
-    table = TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME), INPUT_FAMILY);
-    TEST_UTIL.createMultiRegions(table, INPUT_FAMILY);
+    table = TEST_UTIL.createMultiRegionTable(TableName.valueOf(TABLE_NAME), INPUT_FAMILY);
     TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
     // start MR cluster
     TEST_UTIL.startMiniMapReduceCluster();

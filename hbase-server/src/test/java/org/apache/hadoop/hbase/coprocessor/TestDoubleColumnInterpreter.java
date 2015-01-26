@@ -79,9 +79,8 @@ public class TestDoubleColumnInterpreter {
       "org.apache.hadoop.hbase.coprocessor.AggregateImplementation");
 
     util.startMiniCluster(2);
-    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY);
-    util.createMultiRegions(util.getConfiguration(), table, TEST_FAMILY, new byte[][] {
-        HConstants.EMPTY_BYTE_ARRAY, ROWS[rowSeperator1], ROWS[rowSeperator2] });
+    final byte[][] SPLIT_KEYS = new byte[][] { ROWS[rowSeperator1], ROWS[rowSeperator2] };
+    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
     /**
      * The testtable has one CQ which is always populated and one variable CQ for each row rowkey1:
      * CF:CQ CF:CQ1 rowKey2: CF:CQ CF:CQ2

@@ -31,12 +31,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -58,6 +56,7 @@ import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRes
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -155,9 +154,8 @@ public class TestServerCustomProtocol {
 
   @Before
   public void before()  throws Exception {
-    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY);
-    util.createMultiRegions(util.getConfiguration(), table, TEST_FAMILY,
-      new byte[][]{ HConstants.EMPTY_BYTE_ARRAY, ROW_B, ROW_C});
+    final byte[][] SPLIT_KEYS = new byte[][] { ROW_B, ROW_C };
+    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
 
     Put puta = new Put( ROW_A );
     puta.add(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
