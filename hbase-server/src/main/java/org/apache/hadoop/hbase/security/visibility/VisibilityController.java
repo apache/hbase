@@ -827,11 +827,21 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
               + "' is not authorized to perform this action.");
         }
         if (AccessControlLists.isGroupPrincipal(Bytes.toString(user))) {
+          // For backward compatibility. Previous custom visibilityLabelService
+          // implementation may not have getGroupAuths
+          try {
+            this.visibilityLabelService.getClass().getDeclaredMethod("getGroupAuths",
+                new Class[] { String[].class, Boolean.TYPE });
+          } catch (SecurityException e) {
+            throw new AccessDeniedException("Failed to obtain getGroupAuths implementation");
+          } catch (NoSuchMethodException e) {
+            throw new AccessDeniedException(
+                "Get group auth is not supported in this implementation");
+          }
           String group = AccessControlLists.getGroupName(Bytes.toString(user));
-          labels = this.visibilityLabelService.getGroupAuths(new String[]{group}, false);
-        }
-        else {
-          labels = this.visibilityLabelService.getUserAuths(user, false);
+          labels = this.visibilityLabelService.getGroupAuths(new String[] { group }, false);
+        } else {
+          labels = this.visibilityLabelService.getAuths(user, false);
         }
       } catch (IOException e) {
         ResponseConverter.setControllerException(controller, e);
@@ -926,7 +936,20 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       if (user == null) {
         throw new IOException("Unable to retrieve calling user");
       }
-      if (!(this.visibilityLabelService.havingSystemAuth(user))) {
+      boolean havingSystemAuth = false;
+      try {
+        this.visibilityLabelService.getClass().getDeclaredMethod("havingSystemAuth",
+            new Class[] { User.class });
+        havingSystemAuth = this.visibilityLabelService.havingSystemAuth(user);
+      } catch (SecurityException e) {
+        // Just consider this as AccessDeniedException
+      } catch (NoSuchMethodException e) {
+        // VLS not having havingSystemAuth(User) method. Go with deprecated havingSystemAuth(byte[])
+        // method invoke
+        havingSystemAuth = this.visibilityLabelService.havingSystemAuth(Bytes.toBytes(user
+            .getShortName()));
+      }
+      if (!havingSystemAuth) {
         throw new AccessDeniedException("User '" + user.getShortName()
             + "' is not authorized to perform this action.");
       }
