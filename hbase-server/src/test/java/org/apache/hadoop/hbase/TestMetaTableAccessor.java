@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -49,6 +50,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.common.collect.Lists;
+
 /**
  * Test {@link org.apache.hadoop.hbase.MetaTableAccessor}.
  */
@@ -58,6 +61,7 @@ public class TestMetaTableAccessor {
   private static final Log LOG = LogFactory.getLog(TestMetaTableAccessor.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static Connection connection;
+  private Random random = new Random();
 
   @BeforeClass public static void beforeClass() throws Exception {
     UTIL.startMiniCluster(3);
@@ -320,7 +324,6 @@ public class TestMetaTableAccessor {
 
   @Test
   public void testMetaLocationsForRegionReplicas() throws IOException {
-    Random random = new Random();
     ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
     ServerName serverName1 = ServerName.valueOf("bar", 60010, random.nextLong());
     ServerName serverName100 = ServerName.valueOf("baz", 60010, random.nextLong());
@@ -379,6 +382,92 @@ public class TestMetaTableAccessor {
       assertTrue(Bytes.equals(
         result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(replicaId)),
         Bytes.toBytes(seqNum)));
+    }
+  }
+
+  public static void assertEmptyMetaLocation(Table meta, byte[] row, int replicaId)
+      throws IOException {
+    Get get = new Get(row);
+    Result result = meta.get(get);
+    Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+      MetaTableAccessor.getServerColumn(replicaId));
+    Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+      MetaTableAccessor.getStartCodeColumn(replicaId));
+    assertNotNull(serverCell);
+    assertNotNull(startCodeCell);
+    assertEquals(0, serverCell.getValueLength());
+    assertEquals(0, startCodeCell.getValueLength());
+  }
+
+  @Test
+  public void testMetaLocationForRegionReplicasIsAddedAtTableCreation() throws IOException {
+    long regionId = System.currentTimeMillis();
+    HRegionInfo primary = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId, 0);
+
+    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    try {
+      List<HRegionInfo> regionInfos = Lists.newArrayList(primary);
+      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
+
+      assertEmptyMetaLocation(meta, primary.getRegionName(), 1);
+      assertEmptyMetaLocation(meta, primary.getRegionName(), 2);
+    } finally {
+      meta.close();
+    }
+  }
+
+  @Test
+  public void testMetaLocationForRegionReplicasIsAddedAtRegionSplit() throws IOException {
+    long regionId = System.currentTimeMillis();
+    ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
+    HRegionInfo parent = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId, 0);
+    HRegionInfo splitA = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, Bytes.toBytes("a"), false, regionId+1, 0);
+    HRegionInfo splitB = new HRegionInfo(TableName.valueOf("table_foo"),
+      Bytes.toBytes("a"), HConstants.EMPTY_END_ROW, false, regionId+1, 0);
+
+
+    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    try {
+      List<HRegionInfo> regionInfos = Lists.newArrayList(parent);
+      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
+
+      MetaTableAccessor.splitRegion(connection, parent, splitA, splitB, serverName0, 3);
+
+      assertEmptyMetaLocation(meta, splitA.getRegionName(), 1);
+      assertEmptyMetaLocation(meta, splitA.getRegionName(), 2);
+      assertEmptyMetaLocation(meta, splitB.getRegionName(), 1);
+      assertEmptyMetaLocation(meta, splitB.getRegionName(), 2);
+    } finally {
+      meta.close();
+    }
+  }
+
+  @Test
+  public void testMetaLocationForRegionReplicasIsAddedAtRegionMerge() throws IOException {
+    long regionId = System.currentTimeMillis();
+    ServerName serverName0 = ServerName.valueOf("foo", 60010, random.nextLong());
+
+    HRegionInfo parentA = new HRegionInfo(TableName.valueOf("table_foo"),
+      Bytes.toBytes("a"), HConstants.EMPTY_END_ROW, false, regionId, 0);
+    HRegionInfo parentB = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, Bytes.toBytes("a"), false, regionId, 0);
+    HRegionInfo merged = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId+1, 0);
+
+    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    try {
+      List<HRegionInfo> regionInfos = Lists.newArrayList(parentA, parentB);
+      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 3);
+
+      MetaTableAccessor.mergeRegions(connection, merged, parentA, parentB, serverName0, 3);
+
+      assertEmptyMetaLocation(meta, merged.getRegionName(), 1);
+      assertEmptyMetaLocation(meta, merged.getRegionName(), 2);
+    } finally {
+      meta.close();
     }
   }
 }

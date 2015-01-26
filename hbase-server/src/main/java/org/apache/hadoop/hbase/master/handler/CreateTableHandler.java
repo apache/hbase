@@ -225,7 +225,7 @@ public class CreateTableHandler extends EventHandler {
 
     if (regionInfos != null && regionInfos.size() > 0) {
       // 4. Add regions to META
-      addRegionsToMeta(regionInfos);
+      addRegionsToMeta(regionInfos, hTableDescriptor.getRegionReplication());
       // 5. Add replicas if needed
       regionInfos = addReplicas(hTableDescriptor, regionInfos);
 
@@ -296,8 +296,8 @@ public class CreateTableHandler extends EventHandler {
   /**
    * Add the specified set of regions to the hbase:meta table.
    */
-  protected void addRegionsToMeta(final List<HRegionInfo> regionInfos)
+  protected void addRegionsToMeta(final List<HRegionInfo> regionInfos, int regionReplication)
       throws IOException {
-    MetaTableAccessor.addRegionsToMeta(this.server.getConnection(), regionInfos);
+    MetaTableAccessor.addRegionsToMeta(this.server.getConnection(), regionInfos, regionReplication);
   }
 }

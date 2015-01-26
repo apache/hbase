@@ -183,6 +183,10 @@ public class TableStateManager {
     return tableState;
   }
 
+  TableDescriptors getTableDescriptors() {
+    return descriptors;
+  }
+
   /**
    * Write descriptor in place, update cache of states.
    * Write lock should be hold by caller.

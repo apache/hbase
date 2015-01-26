@@ -739,8 +739,14 @@ public class MetaTableAccessor {
       if (replicaId < 0) {
         break;
       }
-
-      locations.add(getRegionLocation(r, regionInfo, replicaId));
+      HRegionLocation location = getRegionLocation(r, regionInfo, replicaId);
+      // In case the region replica is newly created, it's location might be null. We usually do not
+      // have HRL's in RegionLocations object with null ServerName. They are handled as null HRLs.
+      if (location == null || location.getServerName() == null) {
+        locations.add(null);
+      } else {
+        locations.add(location);
+      }
     }
 
     return new RegionLocations(locations);
@@ -1089,8 +1095,7 @@ public class MetaTableAccessor {
    * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
    * does not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
-   * {@link #splitRegion(org.apache.hadoop.hbase.client.Connection,
-   *   HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
+   * {@link #splitRegion(Connection, HRegionInfo, HRegionInfo, HRegionInfo, ServerName, int)
    * if you want to do that.
    * @param meta the Table for META
    * @param regionInfo region information
@@ -1112,7 +1117,7 @@ public class MetaTableAccessor {
    * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
    * does not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
-   * {@link #splitRegion(Connection, HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
+   * {@link #splitRegion(Connection, HRegionInfo, HRegionInfo, HRegionInfo, ServerName, int)
    * if you want to do that.
    * @param connection connection we're using
    * @param regionInfo region information
@@ -1137,12 +1142,19 @@ public class MetaTableAccessor {
    * @throws IOException if problem connecting or updating meta
    */
   public static void addRegionsToMeta(Connection connection,
-                                      List<HRegionInfo> regionInfos)
+                                      List<HRegionInfo> regionInfos, int regionReplication)
     throws IOException {
     List<Put> puts = new ArrayList<Put>();
     for (HRegionInfo regionInfo : regionInfos) {
       if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
         puts.add(makePutFromRegionInfo(regionInfo));
+        Put put = makePutFromRegionInfo(regionInfo);
+        // Add empty locations for region replicas so that number of replicas can be cached
+        // whenever the primary region is looked up from meta
+        for (int i = 1; i < regionReplication; i++) {
+          addEmptyLocation(put, i);
+        }
+        puts.add(put);
       }
     }
     putsToMetaTable(connection, puts);
@@ -1180,7 +1192,8 @@ public class MetaTableAccessor {
    * @throws IOException
    */
   public static void mergeRegions(final Connection connection, HRegionInfo mergedRegion,
-      HRegionInfo regionA, HRegionInfo regionB, ServerName sn) throws IOException {
+      HRegionInfo regionA, HRegionInfo regionB, ServerName sn, int regionReplication)
+          throws IOException {
     Table meta = getMetaHTable(connection);
     try {
       HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
@@ -1198,6 +1211,12 @@ public class MetaTableAccessor {
 
       // The merged is a new region, openSeqNum = 1 is fine.
       addLocation(putOfMerged, sn, 1, mergedRegion.getReplicaId());
+
+      // Add empty locations for region replicas of the merged region so that number of replicas can
+      // be cached whenever the primary region is looked up from meta
+      for (int i = 1; i < regionReplication; i++) {
+        addEmptyLocation(putOfMerged, i);
+      }
 
       byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
         + HConstants.DELIMITER);
@@ -1220,7 +1239,7 @@ public class MetaTableAccessor {
    */
   public static void splitRegion(final Connection connection,
                                  HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
-                                 ServerName sn) throws IOException {
+                                 ServerName sn, int regionReplication) throws IOException {
     Table meta = getMetaHTable(connection);
     try {
       HRegionInfo copyOfParent = new HRegionInfo(parent);
@@ -1237,6 +1256,13 @@ public class MetaTableAccessor {
 
       addLocation(putA, sn, 1, splitA.getReplicaId()); //new regions, openSeqNum = 1 is fine.
       addLocation(putB, sn, 1, splitB.getReplicaId());
+
+      // Add empty locations for region replicas of daughters so that number of replicas can be
+      // cached whenever the primary region is looked up from meta
+      for (int i = 1; i < regionReplication; i++) {
+        addEmptyLocation(putA, i);
+        addEmptyLocation(putB, i);
+      }
 
       byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
       multiMutate(meta, tableRow, putParent, putA, putB);
@@ -1385,14 +1411,14 @@ public class MetaTableAccessor {
    * @throws IOException
    */
   public static void overwriteRegions(Connection connection,
-                                      List<HRegionInfo> regionInfos) throws IOException {
+      List<HRegionInfo> regionInfos, int regionReplication) throws IOException {
     deleteRegions(connection, regionInfos);
     // Why sleep? This is the easiest way to ensure that the previous deletes does not
     // eclipse the following puts, that might happen in the same ts from the server.
     // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
     // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
     Threads.sleep(20);
-    addRegionsToMeta(connection, regionInfos);
+    addRegionsToMeta(connection, regionInfos, regionReplication);
     LOG.info("Overwritten " + regionInfos);
   }
 
@@ -1431,6 +1457,14 @@ public class MetaTableAccessor {
       Bytes.toBytes(sn.getStartcode()));
     p.addImmutable(HConstants.CATALOG_FAMILY, getSeqNumColumn(replicaId), now,
       Bytes.toBytes(openSeqNum));
+    return p;
+  }
+
+  public static Put addEmptyLocation(final Put p, int replicaId) {
+    long now = EnvironmentEdgeManager.currentTime();
+    p.addImmutable(HConstants.CATALOG_FAMILY, getServerColumn(replicaId), now, null);
+    p.addImmutable(HConstants.CATALOG_FAMILY, getStartCodeColumn(replicaId), now, null);
+    p.addImmutable(HConstants.CATALOG_FAMILY, getSeqNumColumn(replicaId), now, null);
     return p;
   }
 }
