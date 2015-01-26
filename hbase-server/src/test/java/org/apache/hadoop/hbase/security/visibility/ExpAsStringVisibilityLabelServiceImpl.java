@@ -149,6 +149,12 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   }
 
   @Override
+  @Deprecated
+  public List<String> getAuths(byte[] user, boolean systemCall) throws IOException {
+    return getUserAuths(user, systemCall);
+  }
+
+  @Override
   public List<String> getUserAuths(byte[] user, boolean systemCall) throws IOException {
     assert (labelsRegion != null || systemCall);
     List<String> auths = new ArrayList<String>();
@@ -428,6 +434,20 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
       }
     }
     return false;
+  }
+
+  @Override
+  @Deprecated
+  public boolean havingSystemAuth(byte[] user) throws IOException {
+    // Implementation for backward compatibility
+    if (this.superUsers.contains(Bytes.toString(user))) {
+      return true;
+    }
+    List<String> auths = this.getUserAuths(user, true);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("The auths for user " + Bytes.toString(user) + " are " + auths);
+    }
+    return auths.contains(SYSTEM_LABEL);
   }
 
   @Override

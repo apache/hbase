@@ -80,6 +80,18 @@ public interface VisibilityLabelService extends Configurable {
    * @param systemCall
    *          Whether a system or user originated call.
    * @return Visibility labels authorized for the given user.
+   * @deprecated Use {@link#getUserAuths(byte[], boolean)}
+   */
+  @Deprecated
+  List<String> getAuths(byte[] user, boolean systemCall) throws IOException;
+
+  /**
+   * Retrieve the visibility labels for the user.
+   * @param user
+   *          Name of the user whose authorization to be retrieved
+   * @param systemCall
+   *          Whether a system or user originated call.
+   * @return Visibility labels authorized for the given user.
    */
   List<String> getUserAuths(byte[] user, boolean systemCall) throws IOException;
 
@@ -127,6 +139,18 @@ public interface VisibilityLabelService extends Configurable {
    */
   VisibilityExpEvaluator getVisibilityExpEvaluator(Authorizations authorizations)
       throws IOException;
+
+  /**
+   * System checks for user auth during admin operations. (ie. Label add, set/clear auth). The
+   * operation is allowed only for users having system auth. Also during read, if the requesting
+   * user has system auth, he can view all the data irrespective of its labels.
+   * @param user
+   *          User for whom system auth check to be done.
+   * @return true if the given user is having system/super auth
+   * @deprecated Use {@link#havingSystemAuth(User)}
+   */
+  @Deprecated
+  boolean havingSystemAuth(byte[] user) throws IOException;
 
   /**
    * System checks for user auth during admin operations. (ie. Label add, set/clear auth). The
