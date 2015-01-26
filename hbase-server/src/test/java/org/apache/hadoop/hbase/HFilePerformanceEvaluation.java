@@ -75,7 +75,7 @@ public class HFilePerformanceEvaluation {
   }
 
   static Cell createCell(final byte [] keyRow) {
-    return createCell(keyRow);
+    return CellUtil.createCell(keyRow);
   }
 
   static Cell createCell(final byte [] keyRow, final byte [] value) {
