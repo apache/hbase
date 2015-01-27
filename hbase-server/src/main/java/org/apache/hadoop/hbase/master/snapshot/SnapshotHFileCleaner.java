@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,17 +57,20 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   private SnapshotFileCache cache;
 
   @Override
-  public synchronized boolean isFileDeletable(FileStatus fStat) {
+  public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     try {
-      return !cache.contains(fStat.getPath().getName());
+      return cache.getUnreferencedFiles(files);
     } catch (IOException e) {
-      LOG.error("Exception while checking if:" + fStat.getPath()
-          + " was valid, keeping it just in case.", e);
-      return false;
+      LOG.error("Exception while checking if files were valid, keeping them just in case.", e);
+      return Collections.emptyList();
     }
   }
 
   @Override
+  protected boolean isFileDeletable(FileStatus fStat) {
+    return false;
+  }
+
   public void setConf(final Configuration conf) {
     super.setConf(conf);
     try {
