@@ -4985,7 +4985,6 @@ public class TestFromClientSide {
     TableName TABLENAME = TableName.valueOf("testScanMetrics");
 
     Configuration conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     // Set up test table:
     // Create table:
