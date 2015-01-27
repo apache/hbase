@@ -57,7 +57,6 @@ import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
@@ -354,8 +353,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(List<Scan> scans,
       Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job) throws IOException {
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, Job job) throws IOException {
     initTableMapperJob(scans, mapper, outputKeyClass, outputValueClass, job,
         true);
   }
@@ -376,8 +375,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(List<Scan> scans,
       Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, Job job,
       boolean addDependencyJars) throws IOException {
     initTableMapperJob(scans, mapper, outputKeyClass, outputValueClass, job,
       addDependencyJars, true);
@@ -400,8 +399,8 @@ public class TableMapReduceUtil {
    */
   public static void initTableMapperJob(List<Scan> scans,
       Class<? extends TableMapper> mapper,
-      Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, Job job,
       boolean addDependencyJars,
       boolean initCredentials) throws IOException {
     job.setInputFormatClass(MultiTableInputFormat.class);
