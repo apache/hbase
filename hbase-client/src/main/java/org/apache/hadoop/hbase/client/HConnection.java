@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -520,4 +521,14 @@ public interface HConnection extends Abortable, Closeable {
    * @return Nonce generator for this HConnection; may be null if disabled in configuration.
    */
   public NonceGenerator getNonceGenerator();
+
+  /**
+   * @return the current statistics tracker associated with this connection
+   */
+  ServerStatisticTracker getStatisticsTracker();
+
+  /**
+   * @return the configured client backoff policy
+   */
+  ClientBackoffPolicy getBackoffPolicy();
 }

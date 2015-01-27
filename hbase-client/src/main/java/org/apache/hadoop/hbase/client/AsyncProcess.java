@@ -626,8 +626,7 @@ class AsyncProcess<CResult> {
       final HConnectionManager.ServerErrorTracker errorsByServer,
       final Batch.Callback<CResult> batchCallback) {
     // no stats to manage, just do the standard action
-    if (!(AsyncProcess.this.hConnection instanceof StatisticsHConnection) ||
-        ((StatisticsHConnection)AsyncProcess.this.hConnection).getStatisticsTracker() == null) {
+    if (AsyncProcess.this.hConnection.getStatisticsTracker() == null) {
       List<Runnable> toReturn = new ArrayList<Runnable>(1);
       toReturn.add(Trace.wrap("AsyncProcess.sendMultiAction", 
         getNewSingleServerRunnable(initialActions, loc, multiAction, numAttempt,
@@ -674,12 +673,9 @@ class AsyncProcess<CResult> {
    * specified server and region
    */
   private Long getBackoff(HRegionLocation location) {
-    Preconditions.checkState(AsyncProcess.this.hConnection instanceof StatisticsHConnection,
-      "AsyncProcess connection should be a StatisticsHConnection");
-    ServerStatisticTracker tracker = ((StatisticsHConnection)AsyncProcess.this.hConnection)
-      .getStatisticsTracker();
+    ServerStatisticTracker tracker = AsyncProcess.this.hConnection.getStatisticsTracker();
     ServerStatistics stats = tracker.getStats(location.getServerName());
-    return ((StatisticsHConnection)AsyncProcess.this.hConnection).getBackoffPolicy()
+    return AsyncProcess.this.hConnection.getBackoffPolicy()
       .getBackoffTime(location.getServerName(), location.getRegionInfo().getRegionName(),
         stats);
   }

@@ -92,7 +92,7 @@ public class TestClientPushback {
     TableName tablename = TableName.valueOf(tableName);
     // Cast also verifies HConnectionManager is creating connection instances
     // of the correct type
-    StatisticsHConnection conn = (StatisticsHConnection)HConnectionManager.createConnection(conf);
+    HConnection conn = HConnectionManager.createConnection(conf);
     HTable table = (HTable) conn.getTable(tablename);
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);

@@ -414,8 +414,7 @@ public class HTableMultiplexer {
       this.multiplexer = multiplexer;
       this.queue = new LinkedBlockingQueue<PutStatus>(perRegionServerBufferQueueSize);
       RpcRetryingCallerFactory rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf,
-        conn instanceof StatisticsHConnection ?
-          ((StatisticsHConnection)conn).getStatisticsTracker() : null);
+        conn.getStatisticsTracker());
       RpcControllerFactory rpcControllerFactory = RpcControllerFactory.instantiate(conf);
       this.ap = new AsyncProcess<Object>(conn, null, pool, this, conf, rpcCallerFactory,
               rpcControllerFactory);

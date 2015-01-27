@@ -380,8 +380,7 @@ public class HTable implements HTableInterface {
 
     if (this.rpcCallerFactory == null) {
       this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration,
-        this.connection instanceof StatisticsHConnection ?
-           ((StatisticsHConnection)this.connection).getStatisticsTracker() : null);
+        this.connection.getStatisticsTracker());
     }
     if (this.rpcControllerFactory == null) {
       this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);

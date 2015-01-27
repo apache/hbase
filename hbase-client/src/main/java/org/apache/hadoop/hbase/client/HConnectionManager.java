@@ -594,7 +594,7 @@ public class HConnectionManager {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
       justification="Access to the conncurrent hash map is under a lock so should be fine.")
-  public static class HConnectionImplementation implements StatisticsHConnection, Closeable {
+  public static class HConnectionImplementation implements HConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final long pause;
     private final int numTries;
