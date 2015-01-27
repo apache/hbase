@@ -38,15 +38,15 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.Import;
@@ -172,8 +172,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     }
 
     static class VisibilityGeneratorMapper extends GeneratorMapper {
-      Table[] tables = new Table[DEFAULT_TABLES_COUNT];
-      Table commonTable = null;
+      BufferedMutator[] tables = new BufferedMutator[DEFAULT_TABLES_COUNT];
 
       @Override
       protected void setup(org.apache.hadoop.mapreduce.Mapper.Context context) throws IOException,
@@ -184,8 +183,9 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       @Override
       protected void instantiateHTable() throws IOException {
         for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
-          Table table = connection.getTable(getTableName(i));
-          //table.setWriteBufferSize(4 * 1024 * 1024);
+          BufferedMutatorParams params = new BufferedMutatorParams(getTableName(i));
+          params.writeBufferSize(4 * 1024 * 1024);
+          BufferedMutator table = connection.getBufferedMutator(params);
           this.tables[i] = table;
         }
       }
@@ -218,7 +218,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
             }
             visibilityExps = split[j * 2] + OR + split[(j * 2) + 1];
             put.setCellVisibility(new CellVisibility(visibilityExps));
-            tables[j].put(put);
+            tables[j].mutate(put);
             try {
               Thread.sleep(1);
             } catch (InterruptedException e) {
