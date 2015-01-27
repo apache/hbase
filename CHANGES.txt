@@ -1,5 +1,86 @@
 HBase Change Log
 
+Release 0.98.10 - 2/2/2015
+
+** Sub-task
+    * [HBASE-12729] - Backport HBASE-5162 (Basic client pushback mechanism) to 0.98
+    * [HBASE-12776] - SpliTransaction: Log number of files to be split
+    * [HBASE-12779] - SplitTransaction: Add metrics
+    * [HBASE-12793] - [hbck] closeRegionSilentlyAndWait() should log cause of IOException and retry until  hbase.hbck.close.timeout expires
+    * [HBASE-12842] - Fix the incompatibility introduced by AccessControlClient in 0.98
+    * [HBASE-12854] - Fix the CopyTable incompatibility introduced in HBASE-11997 in 0.98
+
+** Bug
+    * [HBASE-8026] - HBase Shell docs for scan command does not reference VERSIONS
+    * [HBASE-10499] - In write heavy scenario one of the regions does not get flushed causing RegionTooBusyException
+    * [HBASE-10528] - DefaultBalancer selects plans to move regions onto draining nodes
+    * [HBASE-12270] - A bug in the bucket cache, with cache blocks on write enabled
+    * [HBASE-12393] - The regionserver web will throw exception if we disable block cache
+    * [HBASE-12480] - Regions in FAILED_OPEN/FAILED_CLOSE should be processed on master failover 
+    * [HBASE-12607] - TestHBaseFsck#testParallelHbck fails running against hadoop 2.6.0
+    * [HBASE-12644] - Visibility Labels: issue with storing super users in labels table
+    * [HBASE-12694] - testTableExistsIfTheSpecifiedTableRegionIsSplitParent in TestSplitTransactionOnCluster class leaves regions in transition
+    * [HBASE-12697] - Don't use RegionLocationFinder if localityCost == 0
+    * [HBASE-12699] - undefined method `setAsyncLogFlush' exception thrown when setting DEFERRED_LOG_FLUSH=>true
+    * [HBASE-12715] - getLastSequenceId always returns -1
+    * [HBASE-12716] - A bug in RegionSplitter.UniformSplit algorithm
+    * [HBASE-12732] - Log messages in FileLink$FileLinkInputStream#tryOpen are reversed
+    * [HBASE-12739] - Avoid too large identifier of ZooKeeperWatcher
+    * [HBASE-12750] - getRequestsCount() in ClusterStatus returns total number of request
+    * [HBASE-12767] - Fix a StoreFileScanner NPE in reverse scan flow
+    * [HBASE-12774] - Fix the inconsistent permission checks for bulkloading.
+    * [HBASE-12781] - thrift2 listen port will bind always to the passed command line address
+    * [HBASE-12791] - HBase does not attempt to clean up an aborted split when the regionserver shutting down
+    * [HBASE-12801] - Failed to truncate a table while maintaing binary region boundaries
+    * [HBASE-12804] - ImportTsv fails to delete partition files created by it
+    * [HBASE-12811] - [AccessController] NPE while scanning a table with user not having READ permission on the namespace
+    * [HBASE-12817] - Data missing while scanning using PREFIX_TREE data block encoding
+    * [HBASE-12819] - ExportSnapshot doesn't close FileSystem instances
+    * [HBASE-12832] - Describe table from shell no longer shows Table's attributes, only CF attributes
+    * [HBASE-12837] - ReplicationAdmin leaks zk connections
+    * [HBASE-12844] - ServerManager.isServerReacable() should sleep between retries
+    * [HBASE-12845] - ByteBufferOutputStream should grow as direct buffer if the initial buffer is also direct BB
+    * [HBASE-12847] - TestZKLessSplitOnCluster frequently times out in 0.98 builds
+    * [HBASE-12864] - IntegrationTestTableSnapshotInputFormat fails
+    * [HBASE-12878] - Incorrect HFile path in TestHFilePerformance print output (fix for easier debugging)
+    * [HBASE-12886] - Correct tag option name in PerformanceEvaluation
+    * [HBASE-12892] - Add a class to allow taking a snapshot from the command line
+    * [HBASE-12898] - Add in used undeclared dependencies
+    * [HBASE-12904] - Threading issues in region_mover.rb
+    * [HBASE-12905] - Clean up presence of hadoop annotations in 0.98
+    * [HBASE-12910] - describe in the shell is broken
+    * [HBASE-12915] - Disallow small scan with batching
+
+** Improvement
+    * [HBASE-11195] - Potentially improve block locality during major compaction for old regions
+    * [HBASE-12121] - maven release plugin does not allow for customized goals
+    * [HBASE-12223] - MultiTableInputFormatBase.getSplits is too slow
+    * [HBASE-12608] - region_mover.rb does not log moving region count correctly when loading regions
+    * [HBASE-12627] - Add back snapshot batching facility from HBASE-11360 dropped by HBASE-11742
+    * [HBASE-12641] - Grant all permissions of hbase zookeeper node to hbase superuser in a secure cluster
+    * [HBASE-12720] - Make InternalScan LimitedPrivate
+    * [HBASE-12745] - Visibility Labels:  support visibility labels for user groups.
+    * [HBASE-12762] - Region with no hfiles will have the highest locality cost in LocalityCostFunction
+    * [HBASE-12768] - Support enable cache_data_on_write in Shell while creating table
+    * [HBASE-12773] - Add warning message when user is trying to bulkload a large HFile.
+    * [HBASE-12825] - CallRunner exception messages should include destination host:port
+
+** New Feature
+    * [HBASE-12709] - [mvn] Add unit test excludes command line flag to the build. 
+    * [HBASE-12731] - Heap occupancy based client pushback
+
+** Task
+    * [HBASE-12658] - Backport HBASE-12574 (Update replication metrics to not do so many map look ups) to 0.98
+    * [HBASE-12724] - Upgrade the interface audience of RegionScanner from Private to LimitedPrivate
+    * [HBASE-12787] - Backport HBASE-12028 (Abort the RegionServer when it's handler threads die) to 0.98
+    * [HBASE-12788] - Promote Abortable to LimitedPrivate
+    * [HBASE-12834] - Promote ScanType to LimitedPrivate
+
+** Test
+    * [HBASE-12722] - Backport TestMultiTableInputFormat to 0.98 branch
+    * [HBASE-12885] - Unit test for RAW / VERSIONS scanner specifications
+
+
 Release 0.98.9 - 12/22/2014
 
 ** Sub-task
