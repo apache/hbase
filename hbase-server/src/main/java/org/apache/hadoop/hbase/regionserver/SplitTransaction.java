@@ -341,11 +341,13 @@ public class SplitTransaction {
       if (metaEntries == null || metaEntries.isEmpty()) {
         MetaTableAccessor.splitRegion(server.getConnection(),
           parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(),
-          daughterRegions.getSecond().getRegionInfo(), server.getServerName());
+          daughterRegions.getSecond().getRegionInfo(), server.getServerName(),
+          parent.getTableDesc().getRegionReplication());
       } else {
         offlineParentInMetaAndputMetaEntries(server.getConnection(),
           parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(), daughterRegions
-              .getSecond().getRegionInfo(), server.getServerName(), metaEntries);
+              .getSecond().getRegionInfo(), server.getServerName(), metaEntries,
+              parent.getTableDesc().getRegionReplication());
       }
     } else if (services != null && !useZKForAssignment) {
       if (!services.reportRegionStateTransition(TransitionCode.SPLIT_PONR,
@@ -569,7 +571,7 @@ public class SplitTransaction {
 
   private void offlineParentInMetaAndputMetaEntries(HConnection hConnection,
       HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
-      ServerName serverName, List<Mutation> metaEntries) throws IOException {
+      ServerName serverName, List<Mutation> metaEntries, int regionReplication) throws IOException {
     List<Mutation> mutations = metaEntries;
     HRegionInfo copyOfParent = new HRegionInfo(parent);
     copyOfParent.setOffline(true);
@@ -588,7 +590,22 @@ public class SplitTransaction {
     addLocation(putB, serverName, 1);
     mutations.add(putA);
     mutations.add(putB);
+
+    // Add empty locations for region replicas of daughters so that number of replicas can be
+    // cached whenever the primary region is looked up from meta
+    for (int i = 1; i < regionReplication; i++) {
+      addEmptyLocation(putA, i);
+      addEmptyLocation(putB, i);
+    }
+
     MetaTableAccessor.mutateMetaTable(hConnection, mutations);
+  }
+
+  private static Put addEmptyLocation(final Put p, int replicaId){
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(replicaId), null);
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(replicaId), null);
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(replicaId), null);
+    return p;
   }
 
   public Put addLocation(final Put p, final ServerName sn, long openSeqNum) {

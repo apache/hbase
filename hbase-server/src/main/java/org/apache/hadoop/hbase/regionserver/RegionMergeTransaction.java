@@ -326,11 +326,11 @@ public class RegionMergeTransaction {
       if (metaEntries.isEmpty()) {
         MetaTableAccessor.mergeRegions(server.getConnection(),
           mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
-          server.getServerName());
+          server.getServerName(), region_a.getTableDesc().getRegionReplication());
       } else {
         mergeRegionsAndPutMetaEntries(server.getConnection(),
           mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
-          server.getServerName(), metaEntries);
+          server.getServerName(), metaEntries, region_a.getTableDesc().getRegionReplication());
       }
     } else if (services != null && !useCoordinationForAssignment) {
       if (!services.reportRegionStateTransition(TransitionCode.MERGE_PONR,
@@ -346,13 +346,16 @@ public class RegionMergeTransaction {
 
   private void mergeRegionsAndPutMetaEntries(HConnection hConnection,
       HRegionInfo mergedRegion, HRegionInfo regionA, HRegionInfo regionB,
-      ServerName serverName, List<Mutation> metaEntries) throws IOException {
-    prepareMutationsForMerge(mergedRegion, regionA, regionB, serverName, metaEntries);
+      ServerName serverName, List<Mutation> metaEntries, 
+      int regionReplication) throws IOException {
+    prepareMutationsForMerge(mergedRegion, regionA, regionB, serverName, metaEntries,
+      regionReplication);
     MetaTableAccessor.mutateMetaTable(hConnection, metaEntries);
   }
 
   public void prepareMutationsForMerge(HRegionInfo mergedRegion, HRegionInfo regionA,
-      HRegionInfo regionB, ServerName serverName, List<Mutation> mutations) throws IOException {
+      HRegionInfo regionB, ServerName serverName, List<Mutation> mutations,
+      int regionReplication) throws IOException {
     HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
     // Put for parent
@@ -365,6 +368,13 @@ public class RegionMergeTransaction {
     Delete deleteB = MetaTableAccessor.makeDeleteFromRegionInfo(regionB);
     mutations.add(deleteA);
     mutations.add(deleteB);
+
+    // Add empty locations for region replicas of the merged region so that number of replicas can
+    // be cached whenever the primary region is looked up from meta
+    for (int i = 1; i < regionReplication; i++) {
+      addEmptyLocation(putOfMerged, i);
+    }
+
     // The merged is a new region, openSeqNum = 1 is fine.
     addLocation(putOfMerged, serverName, 1);
   }
@@ -375,6 +385,13 @@ public class RegionMergeTransaction {
     p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(sn
         .getStartcode()));
     p.add(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER, Bytes.toBytes(openSeqNum));
+    return p;
+  }
+
+  private static Put addEmptyLocation(final Put p, int replicaId) {
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(replicaId), null);
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaTableAccessor.getStartCodeColumn(replicaId), null);
+    p.addImmutable(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(replicaId), null);
     return p;
   }
 

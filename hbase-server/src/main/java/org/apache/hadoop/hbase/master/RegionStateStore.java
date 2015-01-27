@@ -250,12 +250,12 @@ public class RegionStateStore {
   }
 
   void splitRegion(HRegionInfo p,
-      HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
-    MetaTableAccessor.splitRegion(server.getConnection(), p, a, b, sn);
+      HRegionInfo a, HRegionInfo b, ServerName sn, int regionReplication) throws IOException {
+    MetaTableAccessor.splitRegion(server.getConnection(), p, a, b, sn, regionReplication);
   }
 
   void mergeRegions(HRegionInfo p,
-      HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
-    MetaTableAccessor.mergeRegions(server.getConnection(), p, a, b, sn);
+      HRegionInfo a, HRegionInfo b, ServerName sn, int regionReplication) throws IOException {
+    MetaTableAccessor.mergeRegions(server.getConnection(), p, a, b, sn, regionReplication);
   }
 }

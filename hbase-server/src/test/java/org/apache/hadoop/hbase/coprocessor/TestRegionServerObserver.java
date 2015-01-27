@@ -152,7 +152,8 @@ public class TestRegionServerObserver {
       }
       mergedRegion = rmt.stepsBeforePONR(rs, rs, false);
       rmt.prepareMutationsForMerge(mergedRegion.getRegionInfo(), regionA.getRegionInfo(),
-        regionB.getRegionInfo(), rs.getServerName(), metaEntries);
+        regionB.getRegionInfo(), rs.getServerName(), metaEntries,
+        regionA.getTableDesc().getRegionReplication());
       MetaTableAccessor.mutateMetaTable(rs.getConnection(), metaEntries);
     }
 

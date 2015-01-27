@@ -36,6 +36,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -810,7 +812,8 @@ public class RegionStates {
 
   void splitRegion(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
-    regionStateStore.splitRegion(p, a, b, sn);
+
+    regionStateStore.splitRegion(p, a, b, sn, getRegionReplication(p));
     synchronized (this) {
       // After PONR, split is considered to be done.
       // Update server holdings to be aligned with the meta.
@@ -826,7 +829,7 @@ public class RegionStates {
 
   void mergeRegions(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
-    regionStateStore.mergeRegions(p, a, b, sn);
+    regionStateStore.mergeRegions(p, a, b, sn, getRegionReplication(a));
     synchronized (this) {
       // After PONR, merge is considered to be done.
       // Update server holdings to be aligned with the meta.
@@ -838,6 +841,16 @@ public class RegionStates {
       regions.remove(b);
       regions.add(p);
     }
+  }
+
+  private int getRegionReplication(HRegionInfo r) throws IOException {
+    if (tableStateManager != null) {
+      HTableDescriptor htd = ((MasterServices)server).getTableDescriptors().get(r.getTable());
+      if (htd != null) {
+        return htd.getRegionReplication();
+      }
+    }
+    return 1;
   }
 
   /**
