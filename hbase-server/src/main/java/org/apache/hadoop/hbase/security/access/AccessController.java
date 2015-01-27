@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -30,7 +29,6 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -51,6 +49,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -1953,34 +1952,6 @@ public class AccessController extends BaseMasterAndRegionObserver
     }
   }
 
-  private AuthResult hasSomeAccess(RegionCoprocessorEnvironment e, String method, Action action)
-      throws IOException {
-    User requestUser = getActiveUser();
-    final TableName tableName = e.getRegion().getTableDesc().getTableName();
-    AuthResult authResult = permissionGranted(method, requestUser, action, e,
-      Collections.EMPTY_MAP);
-    if (!authResult.isAllowed()) {
-      final Configuration conf = e.getConfiguration();
-      // hasSomeAccess is called from bulkload pre hooks
-      List<UserPermission> perms =
-        User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
-          @Override
-          public List<UserPermission> run() throws Exception {
-            return AccessControlLists.getUserTablePermissions(conf, tableName);
-          }
-        });
-      for (UserPermission userPerm: perms) {
-        for (Action userAction: userPerm.getActions()) {
-          if (userAction.equals(action)) {
-            return AuthResult.allow(method, "Access allowed", requestUser,
-              action, tableName, null, null);
-          }
-        }
-      }
-    }
-    return authResult;
-  }
-
   /**
    * Authorization check for
    * SecureBulkLoadProtocol.prepareBulkLoad()
@@ -1991,14 +1962,8 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
                                  PrepareBulkLoadRequest request) throws IOException {
-    RegionCoprocessorEnvironment e = ctx.getEnvironment();
-
-    AuthResult authResult = hasSomeAccess(e, "prePrepareBulkLoad", Action.CREATE);
-    logResult(authResult);
-    if (!authResult.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions (table=" +
-        e.getRegion().getTableDesc().getTableName() + ", action=CREATE)");
-    }
+    requireAccess("prePareBulkLoad",
+        ctx.getEnvironment().getRegion().getTableDesc().getTableName(), Action.CREATE);
   }
 
   /**
@@ -2011,14 +1976,8 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx,
                                  CleanupBulkLoadRequest request) throws IOException {
-    RegionCoprocessorEnvironment e = ctx.getEnvironment();
-
-    AuthResult authResult = hasSomeAccess(e, "preCleanupBulkLoad", Action.CREATE);
-    logResult(authResult);
-    if (!authResult.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions (table=" +
-        e.getRegion().getTableDesc().getTableName() + ", action=CREATE)");
-    }
+    requireAccess("preCleanupBulkLoad",
+        ctx.getEnvironment().getRegion().getTableDesc().getTableName(), Action.CREATE);
   }
 
   /* ---- EndpointObserver implementation ---- */
