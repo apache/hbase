@@ -23,6 +23,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.coprocessor.SingletonCoprocessorService;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
@@ -154,6 +156,28 @@ public class RegionServerCoprocessorHost extends
       public void call(RegionServerObserver oserver,
           ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
         oserver.postRollWALWriterRequest(ctx);
+      }
+    });
+  }
+
+  public void preReplicateLogEntries(final List<WALEntry> entries, final CellScanner cells)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(RegionServerObserver oserver,
+          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
+        oserver.preReplicateLogEntries(ctx, entries, cells);
+      }
+    });
+  }
+
+  public void postReplicateLogEntries(final List<WALEntry> entries, final CellScanner cells)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(RegionServerObserver oserver,
+          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
+        oserver.postReplicateLogEntries(ctx, entries, cells);
       }
     });
   }

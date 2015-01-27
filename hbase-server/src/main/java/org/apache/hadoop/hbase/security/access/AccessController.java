@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest;
@@ -2314,5 +2315,16 @@ public class AccessController extends BaseMasterAndRegionObserver
   public ReplicationEndpoint postCreateReplicationEndPoint(
       ObserverContext<RegionServerCoprocessorEnvironment> ctx, ReplicationEndpoint endpoint) {
     return endpoint;
+  }
+
+  @Override
+  public void preReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      List<WALEntry> entries, CellScanner cells) throws IOException {
+    requirePermission("replicateLogEntries", Action.WRITE);
+  }
+
+  @Override
+  public void postReplicateLogEntries(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      List<WALEntry> entries, CellScanner cells) throws IOException {
   }
 }

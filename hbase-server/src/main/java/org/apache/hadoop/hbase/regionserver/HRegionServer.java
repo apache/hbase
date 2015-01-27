@@ -4195,8 +4195,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (replicationSinkHandler != null) {
         checkOpen();
         requestCount.increment();
-        this.replicationSinkHandler.replicateLogEntries(request.getEntryList(),
-          ((PayloadCarryingRpcController)controller).cellScanner());
+        List<WALEntry> entries = request.getEntryList();
+        CellScanner cellScanner = ((PayloadCarryingRpcController)controller).cellScanner();
+        rsHost.preReplicateLogEntries(entries, cellScanner);
+        replicationSinkHandler.replicateLogEntries(entries, cellScanner);
+        rsHost.postReplicateLogEntries(entries, cellScanner);
       }
       return ReplicateWALEntryResponse.newBuilder().build();
     } catch (IOException ie) {
