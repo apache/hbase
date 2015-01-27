@@ -72,6 +72,11 @@ module HBaseConstants
   TYPE = 'TYPE'
   NONE = 'NONE'
   VALUE = 'VALUE'
+  ENDPOINT_CLASSNAME = 'ENDPOINT_CLASSNAME'
+  CLUSTER_KEY = 'CLUSTER_KEY'
+  TABLE_CFS = 'TABLE_CFS'
+  CONFIG = 'CONFIG'
+  DATA = 'DATA'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
