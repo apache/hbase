@@ -24,7 +24,9 @@ package org.apache.hadoop.hbase.zookeeper;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,7 +36,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Op;
+import org.apache.zookeeper.ZooDefs.Ids;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -74,7 +79,7 @@ public class TestZKMulti {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
-  @Test
+  @Test (timeout=60000)
   public void testSimpleMulti() throws Exception {
     // null multi
     ZKUtil.multiOrSequential(zkw, null, false);
@@ -103,7 +108,7 @@ public class TestZKMulti {
     assertTrue(ZKUtil.checkExists(zkw, path) == -1);
   }
 
-  @Test
+  @Test (timeout=60000)
   public void testComplexMulti() throws Exception {
     String path1 = ZKUtil.joinZNode(zkw.baseZNode, "testComplexMulti1");
     String path2 = ZKUtil.joinZNode(zkw.baseZNode, "testComplexMulti2");
@@ -145,7 +150,7 @@ public class TestZKMulti {
     assertTrue(Bytes.equals(ZKUtil.getData(zkw, path6), Bytes.toBytes(path6)));
   }
 
-  @Test
+  @Test (timeout=60000)
   public void testSingleFailure() throws Exception {
     // try to delete a node that doesn't exist
     boolean caughtNoNode = false;
@@ -183,7 +188,7 @@ public class TestZKMulti {
     assertTrue(caughtNodeExists);
   }
 
-  @Test
+  @Test (timeout=60000)
   public void testSingleFailureInMulti() throws Exception {
     // try a multi where all but one operation succeeds
     String pathA = ZKUtil.joinZNode(zkw.baseZNode, "testSingleFailureInMultiA");
@@ -206,7 +211,7 @@ public class TestZKMulti {
     assertTrue(ZKUtil.checkExists(zkw, pathC) == -1);
   }
 
-  @Test
+  @Test (timeout=60000)
   public void testMultiFailure() throws Exception {
     String pathX = ZKUtil.joinZNode(zkw.baseZNode, "testMultiFailureX");
     String pathY = ZKUtil.joinZNode(zkw.baseZNode, "testMultiFailureY");
@@ -260,7 +265,7 @@ public class TestZKMulti {
     assertTrue(ZKUtil.checkExists(zkw, pathV) == -1);
   }
 
-  @Test
+  @Test (timeout=60000)
   public void testRunSequentialOnMultiFailure() throws Exception {
     String path1 = ZKUtil.joinZNode(zkw.baseZNode, "runSequential1");
     String path2 = ZKUtil.joinZNode(zkw.baseZNode, "runSequential2");
@@ -287,5 +292,73 @@ public class TestZKMulti {
     assertTrue(ZKUtil.checkExists(zkw, path2) == -1);
     assertTrue(ZKUtil.checkExists(zkw, path3) == -1);
     assertFalse(ZKUtil.checkExists(zkw, path4) == -1);
+  }
+
+  /**
+   * Verifies that for the given root node, it should delete all the child nodes
+   * recursively using multi-update api.
+   */
+  @Test (timeout=60000)
+  public void testdeleteChildrenRecursivelyMulti() throws Exception {
+    String parentZNode = "/testRootMulti";
+    createZNodeTree(parentZNode);
+
+    ZKUtil.deleteChildrenRecursivelyMultiOrSequential(zkw, true, parentZNode);
+
+    assertTrue("Wrongly deleted parent znode!",
+        ZKUtil.checkExists(zkw, parentZNode) > -1);
+    List<String> children = zkw.getRecoverableZooKeeper().getChildren(
+        parentZNode, false);
+    assertTrue("Failed to delete child znodes!", 0 == children.size());
+  }
+
+  /**
+   * Verifies that for the given root node, it should delete all the child nodes
+   * recursively using normal sequential way.
+   */
+  @Test (timeout=60000)
+  public void testdeleteChildrenRecursivelySequential() throws Exception {
+    String parentZNode = "/testRootSeq";
+    createZNodeTree(parentZNode);
+    boolean useMulti = zkw.getConfiguration().getBoolean(
+        "hbase.zookeeper.useMulti", false);
+    zkw.getConfiguration().setBoolean("hbase.zookeeper.useMulti", false);
+    try {
+      // disables the multi-update api execution
+      ZKUtil.deleteChildrenRecursivelyMultiOrSequential(zkw, true, parentZNode);
+
+      assertTrue("Wrongly deleted parent znode!",
+          ZKUtil.checkExists(zkw, parentZNode) > -1);
+      List<String> children = zkw.getRecoverableZooKeeper().getChildren(
+          parentZNode, false);
+      assertTrue("Failed to delete child znodes!", 0 == children.size());
+    } finally {
+      // sets back the multi-update api execution
+      zkw.getConfiguration().setBoolean("hbase.zookeeper.useMulti", useMulti);
+    }
+  }
+
+  private void createZNodeTree(String rootZNode) throws KeeperException,
+      InterruptedException {
+    List<Op> opList = new ArrayList<Op>();
+    opList.add(Op.create(rootZNode, new byte[0], Ids.OPEN_ACL_UNSAFE,
+        CreateMode.PERSISTENT));
+    int level = 0;
+    String parentZNode = rootZNode;
+    while (level < 10) {
+      // define parent node
+      parentZNode = parentZNode + "/" + level;
+      opList.add(Op.create(parentZNode, new byte[0], Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT));
+      int elements = 0;
+      // add elements to the parent node
+      while (elements < level) {
+        opList.add(Op.create(parentZNode + "/" + elements, new byte[0],
+            Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT));
+        elements++;
+      }
+      level++;
+    }
+    zkw.getRecoverableZooKeeper().multi(opList);
   }
 }

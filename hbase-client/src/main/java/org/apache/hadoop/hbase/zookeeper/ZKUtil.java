@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -1352,14 +1353,106 @@ public class ZKUtil {
    *
    * Sets no watches.  Throws all exceptions besides dealing with deletion of
    * children.
+   *
+   * If hbase.zookeeper.useMulti is true, use ZooKeeper's multi-update functionality.
+   * Otherwise, run the list of operations sequentially.
+   *
+   * @throws KeeperException
    */
   public static void deleteChildrenRecursively(ZooKeeperWatcher zkw, String node)
-  throws KeeperException {
-    List<String> children = ZKUtil.listChildrenNoWatch(zkw, node);
-    if (children == null || children.isEmpty()) return;
-    for(String child : children) {
-      deleteNodeRecursively(zkw, joinZNode(node, child));
+      throws KeeperException {
+    deleteChildrenRecursivelyMultiOrSequential(zkw, true, node);
+  }
+
+  /**
+   * Delete all the children of the specified node but not the node itself. This
+   * will first traverse the znode tree for listing the children and then delete
+   * these znodes using multi-update api or sequential based on the specified
+   * configurations.
+   * <p>
+   * Sets no watches. Throws all exceptions besides dealing with deletion of
+   * children.
+   * <p>
+   * If hbase.zookeeper.useMulti is true, use ZooKeeper's multi-update
+   * functionality. Otherwise, run the list of operations sequentially.
+   * <p>
+   * If all of the following are true:
+   * <ul>
+   * <li>runSequentialOnMultiFailure is true
+   * <li>hbase.zookeeper.useMulti is true
+   * </ul>
+   * on calling multi, we get a ZooKeeper exception that can be handled by a
+   * sequential call(*), we retry the operations one-by-one (sequentially).
+   *
+   * @param zkw
+   *          - zk reference
+   * @param runSequentialOnMultiFailure
+   *          - if true when we get a ZooKeeper exception that could retry the
+   *          operations one-by-one (sequentially)
+   * @param pathRoots
+   *          - path of the parent node(s)
+   * @throws KeeperException.NotEmptyException
+   *           if node has children while deleting
+   * @throws KeeperException
+   *           if unexpected ZooKeeper exception
+   * @throws IllegalArgumentException
+   *           if an invalid path is specified
+   */
+  public static void deleteChildrenRecursivelyMultiOrSequential(
+      ZooKeeperWatcher zkw, boolean runSequentialOnMultiFailure,
+      String... pathRoots) throws KeeperException {
+    if (pathRoots == null || pathRoots.length <= 0) {
+      LOG.warn("Given path is not valid!");
+      return;
     }
+    List<ZKUtilOp> ops = new ArrayList<ZKUtil.ZKUtilOp>();
+    for (String eachRoot : pathRoots) {
+      List<String> children = listChildrenBFSNoWatch(zkw, eachRoot);
+      // Delete the leaves first and eventually get rid of the root
+      for (int i = children.size() - 1; i >= 0; --i) {
+        ops.add(ZKUtilOp.deleteNodeFailSilent(children.get(i)));
+      }
+    }
+    // atleast one element should exist
+    if (ops.size() > 0) {
+      multiOrSequential(zkw, ops, runSequentialOnMultiFailure);
+    }
+  }
+
+  /**
+   * BFS Traversal of all the children under path, with the entries in the list,
+   * in the same order as that of the traversal. Lists all the children without
+   * setting any watches.
+   *
+   * @param zkw
+   *          - zk reference
+   * @param znode
+   *          - path of node
+   * @return list of children znodes under the path
+   * @throws KeeperException
+   *           if unexpected ZooKeeper exception
+   */
+  private static List<String> listChildrenBFSNoWatch(ZooKeeperWatcher zkw,
+      final String znode) throws KeeperException {
+    Deque<String> queue = new LinkedList<String>();
+    List<String> tree = new ArrayList<String>();
+    queue.add(znode);
+    while (true) {
+      String node = queue.pollFirst();
+      if (node == null) {
+        break;
+      }
+      List<String> children = listChildrenNoWatch(zkw, node);
+      if (children == null) {
+        continue;
+      }
+      for (final String child : children) {
+        final String childPath = node + "/" + child;
+        queue.add(childPath);
+        tree.add(childPath);
+      }
+    }
+    return tree;
   }
 
   /**
