@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * @see HConnectionManager
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public interface HConnection extends Abortable, Closeable {
   /**
    * Key for configuration in Configuration whose value is the class we implement making a
