@@ -21,9 +21,11 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
@@ -131,4 +133,23 @@ public interface RegionServerObserver extends Coprocessor {
   ReplicationEndpoint postCreateReplicationEndPoint(
       ObserverContext<RegionServerCoprocessorEnvironment> ctx, ReplicationEndpoint endpoint);
 
+  /**
+   * This will be called before executing replication request to shipping log entries.
+   * @param ctx An instance of ObserverContext
+   * @param entries list of WALEntries to replicate
+   * @param cells Cells that the WALEntries refer to (if cells is non-null)
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  void preReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      List<WALEntry> entries, CellScanner cells) throws IOException;
+
+  /**
+   * This will be called after executing replication request to shipping log entries.
+   * @param ctx An instance of ObserverContext
+   * @param entries list of WALEntries to replicate
+   * @param cells Cells that the WALEntries refer to (if cells is non-null)
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  void postReplicateLogEntries(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
+      List<WALEntry> entries, CellScanner cells) throws IOException;
 }

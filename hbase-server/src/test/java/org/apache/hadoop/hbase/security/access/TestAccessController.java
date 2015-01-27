@@ -2639,4 +2639,21 @@ public class TestAccessController extends SecureTestUtil {
     verifyAnyCreate(prepareBulkLoadAction);
     verifyAnyCreate(cleanupBulkLoadAction);
   }
+
+  @Test
+  public void testReplicateLogEntries() throws Exception {
+    AccessTestAction replicateLogEntriesAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preReplicateLogEntries(ObserverContext.createAndPrepare(RSCP_ENV, null),
+          null, null);
+        ACCESS_CONTROLLER.postReplicateLogEntries(ObserverContext.createAndPrepare(RSCP_ENV, null),
+          null, null);
+        return null;
+      }
+    };
+
+    verifyAllowed(replicateLogEntriesAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(replicateLogEntriesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
 }
