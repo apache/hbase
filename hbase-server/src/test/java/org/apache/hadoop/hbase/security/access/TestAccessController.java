@@ -266,7 +266,7 @@ public class TestAccessController extends SecureTestUtil {
 
     grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(),
       TEST_TABLE.getTableName(), TEST_FAMILY,
-      null, Permission.Action.ADMIN);
+      null, Permission.Action.ADMIN, Permission.Action.CREATE);
 
     assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
     try {
@@ -2613,5 +2613,30 @@ public class TestAccessController extends SecureTestUtil {
     TEST_UTIL.deleteTable(table1);
     TEST_UTIL.deleteTable(table2);
     TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(ns);
+  }
+
+  private void verifyAnyCreate(AccessTestAction action) throws Exception {
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_ADMIN_CF);
+    verifyDenied(action, USER_NONE, USER_RO, USER_RW);
+  }
+
+  @Test
+  public void testPrepareAndCleanBulkLoad() throws Exception {
+    AccessTestAction prepareBulkLoadAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.prePrepareBulkLoad(ObserverContext.createAndPrepare(RCP_ENV, null), null);
+        return null;
+      }
+    };
+    AccessTestAction cleanupBulkLoadAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preCleanupBulkLoad(ObserverContext.createAndPrepare(RCP_ENV, null), null);
+        return null;
+      }
+    };
+    verifyAnyCreate(prepareBulkLoadAction);
+    verifyAnyCreate(cleanupBulkLoadAction);
   }
 }
