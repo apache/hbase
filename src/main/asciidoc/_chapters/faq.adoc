@@ -1,0 +1,141 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[appendix]
+[[faq]]
+== FAQ
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+=== General
+When should I use HBase?::
+  See <<arch.overview>> in the Architecture chapter.
+
+Are there other HBase FAQs?::
+  See the FAQ that is up on the wiki, link:http://wiki.apache.org/hadoop/Hbase/FAQ[HBase Wiki FAQ].
+
+Does HBase support SQL?::
+  Not really. SQL-ish support for HBase via link:http://hive.apache.org/[Hive] is in development, however Hive is based on MapReduce which is not generally suitable for low-latency requests. See the <<datamodel>> section for examples on the HBase client.
+
+How can I find examples of NoSQL/HBase?::
+  See the link to the BigTable paper in <<other.info>>, as well as the other papers.
+
+What is the history of HBase?::
+  See <<hbase.history,hbase.history>>.
+
+=== Upgrading
+How do I upgrade Maven-managed projects from HBase 0.94 to HBase 0.96+?::
+  In HBase 0.96, the project moved to a modular structure. Adjust your project's dependencies to rely upon the `hbase-client` module or another module as appropriate, rather than a single JAR. You can model your Maven depency after one of the following, depending on your targeted version of HBase. See Section 3.5, “Upgrading from 0.94.x to 0.96.x” or Section 3.3, “Upgrading from 0.96.x to 0.98.x” for more information.
++
+.Maven Dependency for HBase 0.98
+[source,xml]
+----
+<dependency>
+  <groupId>org.apache.hbase</groupId>
+  <artifactId>hbase-client</artifactId>
+  <version>0.98.5-hadoop2</version>
+</dependency>  
+----              
++    
+.Maven Dependency for HBase 0.96       
+[source,xml]
+----
+<dependency>
+  <groupId>org.apache.hbase</groupId>
+  <artifactId>hbase-client</artifactId>
+  <version>0.96.2-hadoop2</version>
+</dependency>  
+----           
++
+.Maven Dependency for HBase 0.94
+[source,xml]
+----
+<dependency>
+  <groupId>org.apache.hbase</groupId>
+  <artifactId>hbase</artifactId>
+  <version>0.94.3</version>
+</dependency>   
+----         
+                
+
+=== Architecture
+How does HBase handle Region-RegionServer assignment and locality?::
+  See <<regions.arch>>.
+
+=== Configuration
+How can I get started with my first cluster?::
+  See <<quickstart>>.
+
+Where can I learn about the rest of the configuration options?::
+  See <<configuration>>.
+
+=== Schema Design / Data Access
+  
+How should I design my schema in HBase?::
+  See <<datamodel>> and <<schema>>.
+
+How can I store (fill in the blank) in HBase?::
+  See <<supported.datatypes>>.
+
+How can I handle secondary indexes in HBase?::
+  See <<secondary.indexes>>.
+
+Can I change a table's rowkeys?::
+  This is a very common question. You can't. See <<changing.rowkeys>>.
+
+What APIs does HBase support?::
+  See <<datamodel>>, <<architecture.client>>, and <<nonjava.jvm>>.
+
+=== MapReduce
+
+How can I use MapReduce with HBase?::
+  See <<mapreduce>>.
+
+=== Performance and Troubleshooting
+
+How can I improve HBase cluster performance?::
+  See <<performance>>.
+
+How can I troubleshoot my HBase cluster?::
+  See <<trouble>>.
+
+=== Amazon EC2
+
+I am running HBase on Amazon EC2 and...::
+  EC2 issues are a special case. See <<trouble.ec2>> and <<perf.ec2>>.
+
+=== Operations
+
+How do I manage my HBase cluster?::
+  See <<ops_mgt>>.
+
+How do I back up my HBase cluster?::
+  See <<ops.backup>>.
+
+=== HBase in Action
+
+Where can I find interesting videos and presentations on HBase?::
+  See <<other.info>>.
+
+:numbered:
