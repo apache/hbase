@@ -170,7 +170,7 @@ public class RegionStateStore {
         // persist meta state in MetaTableLocator (which in turn is zk storage currently)
         try {
           MetaTableLocator.setMetaLocation(server.getZooKeeper(),
-            newState.getServerName(), newState.getState());
+            newState.getServerName(), hri.getReplicaId(), newState.getState());
           return; // Done
         } catch (KeeperException e) {
           throw new IOException("Failed to update meta ZNode", e);

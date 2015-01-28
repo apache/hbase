@@ -894,6 +894,12 @@ public final class HConstants {
   public static final String LOG_REPLAY_WAIT_REGION_TIMEOUT =
       "hbase.master.log.replay.wait.region.timeout";
 
+  /** Conf key for enabling meta replication */
+  public static final String USE_META_REPLICAS = "hbase.meta.replicas.use";
+  public static final boolean DEFAULT_USE_META_REPLICAS = false;
+  public static final String META_REPLICAS_NUM = "hbase.meta.replica.count";
+  public static final int DEFAULT_META_REPLICA_NUM = 1;
+
   /**
    * The name of the configuration parameter that specifies
    * the number of bytes in a newly created checksum chunk.

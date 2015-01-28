@@ -49,6 +49,7 @@ class HConnectionKey {
       HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.HBASE_CLIENT_INSTANCE_ID,
       HConstants.RPC_CODEC_CONF_KEY,
+      HConstants.USE_META_REPLICAS,
       RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY};
 
   private Map<String, String> properties;

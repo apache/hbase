@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -219,12 +220,16 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * first meta regions
    */
   private HRegionInfo(long regionId, TableName tableName) {
+    this(regionId, tableName, DEFAULT_REPLICA_ID);
+  }
+
+  public HRegionInfo(long regionId, TableName tableName, int replicaId) {
     super();
     this.regionId = regionId;
     this.tableName = tableName;
-    // Note: First Meta regions names are still in old format
-    this.regionName = createRegionName(tableName, null,
-                                       regionId, false);
+    this.replicaId = replicaId;
+    // Note: First Meta region replicas names are in old format
+    this.regionName = createRegionName(tableName, null, regionId, replicaId, false);
     setHashCode();
   }
 
@@ -914,7 +919,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     TableName tableName =
         ProtobufUtil.toTableName(proto.getTableName());
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return FIRST_META_REGIONINFO;
+      return RegionReplicaUtil.getRegionInfoForReplica(FIRST_META_REGIONINFO,
+          proto.getReplicaId());
     }
     long regionId = proto.getRegionId();
     int replicaId = proto.hasReplicaId() ? proto.getReplicaId() : DEFAULT_REPLICA_ID;

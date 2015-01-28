@@ -40,6 +40,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -966,7 +967,7 @@ public class ZKUtil {
       // Certain znodes are accessed directly by the client,
       // so they must be readable by non-authenticated clients
       if ((node.equals(zkw.baseZNode) == true) ||
-          (node.equals(zkw.metaServerZNode) == true) ||
+          (zkw.isAnyMetaReplicaZnode(node)) ||
           (node.equals(zkw.getMasterAddressZNode()) == true) ||
           (node.equals(zkw.clusterIdZNode) == true) ||
           (node.equals(zkw.rsZNode) == true) ||
@@ -1699,6 +1700,13 @@ public class ZKUtil {
       }
       sb.append("\nRegion server holding hbase:meta: "
         + new MetaTableLocator().getMetaRegionLocation(zkw));
+      Configuration conf = HBaseConfiguration.create();
+      int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
+               HConstants.DEFAULT_META_REPLICA_NUM);
+      for (int i = 1; i < numMetaReplicas; i++) {
+        sb.append("\nRegion server holding hbase:meta, replicaId " + i + " "
+                    + new MetaTableLocator().getMetaRegionLocation(zkw, i));
+      }
       sb.append("\nRegion servers:");
       for (String child : listChildrenNoWatch(zkw, zkw.rsZNode)) {
         sb.append("\n ").append(child);
@@ -1887,7 +1895,7 @@ public class ZKUtil {
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
       (data == null? "null": data.length == 0? "empty": (
-          znode.startsWith(zkw.metaServerZNode)?
+          znode.startsWith(ZooKeeperWatcher.META_ZNODE_PREFIX)?
             getServerNameOrEmptyString(data):
           znode.startsWith(zkw.backupMasterAddressesZNode)?
             getServerNameOrEmptyString(data):

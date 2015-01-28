@@ -272,7 +272,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       return 0; // not scheduling on other replicas for strong consistency
     }
     for (int id = min; id <= max; id++) {
-      if (currentScannerCallable.getHRegionInfo().getReplicaId() == id) {
+      if (currentScannerCallable.id == id) {
         continue; //this was already scheduled earlier
       }
       ScannerCallable s = currentScannerCallable.getScannerCallableForReplica(id);

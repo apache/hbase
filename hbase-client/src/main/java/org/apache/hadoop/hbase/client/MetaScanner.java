@@ -153,7 +153,9 @@ public final class MetaScanner {
     try (Table metaTable = new HTable(TableName.META_TABLE_NAME, connection, null)) {
       if (row != null) {
         // Scan starting at a particular row in a particular table
-        Result startRowResult = getClosestRowOrBefore(metaTable, tableName, row);
+        Result startRowResult = getClosestRowOrBefore(metaTable, tableName, row,
+            connection.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
+                HConstants.DEFAULT_USE_META_REPLICAS));
         if (startRowResult == null) {
           throw new TableNotFoundException("Cannot find row in " + metaTable.getName() +
             " for table: " + tableName + ", row=" + Bytes.toStringBinary(row));
@@ -177,6 +179,10 @@ public final class MetaScanner {
       int scannerCaching = connection.getConfiguration()
           .getInt(HConstants.HBASE_META_SCANNER_CACHING,
               HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+      if (connection.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
+                HConstants.DEFAULT_USE_META_REPLICAS)) {
+        scan.setConsistency(Consistency.TIMELINE);
+      }
       if (rowUpperLimit <= scannerCaching) {
           scan.setSmall(true);
       }
@@ -215,10 +221,13 @@ public final class MetaScanner {
    * @throws IOException
    */
   private static Result getClosestRowOrBefore(final Table metaTable, final TableName userTableName,
-      final byte [] row)
+      final byte [] row, boolean useMetaReplicas)
   throws IOException {
     byte[] searchRow = HRegionInfo.createRegionName(userTableName, row, HConstants.NINES, false);
     Scan scan = Scan.createGetClosestRowOrBeforeReverseScan(searchRow);
+    if (useMetaReplicas) {
+      scan.setConsistency(Consistency.TIMELINE);
+    }
     try (ResultScanner resultScanner = metaTable.getScanner(scan)) {
       return resultScanner.next();
     }

@@ -857,10 +857,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
 
   /**
    * Check if a region belongs to some small system table.
-   * If so, it may be expected to be put on the master regionserver.
+   * If so, the primary replica may be expected to be put on the master regionserver.
    */
   public boolean shouldBeOnMaster(HRegionInfo region) {
-    return tablesOnMaster.contains(region.getTable().getNameAsString());
+    return tablesOnMaster.contains(region.getTable().getNameAsString())
+        && region.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID;
   }
 
   /**

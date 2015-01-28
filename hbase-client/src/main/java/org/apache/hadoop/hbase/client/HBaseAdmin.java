@@ -421,9 +421,6 @@ public class HBaseAdmin implements Admin {
   public HTableDescriptor getTableDescriptor(final TableName tableName)
   throws TableNotFoundException, IOException {
     if (tableName == null) return null;
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return HTableDescriptor.META_TABLEDESC;
-    }
     HTableDescriptor htd = executeCallable(new MasterCallable<HTableDescriptor>(getConnection()) {
       @Override
       public HTableDescriptor call(int callTimeout) throws ServiceException {

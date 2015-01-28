@@ -1381,14 +1381,15 @@ public class AssignmentManager {
   }
 
   /**
-   * Assigns the hbase:meta region.
+   * Assigns the hbase:meta region or a replica.
    * <p>
    * Assumes that hbase:meta is currently closed and is not being actively served by
    * any RegionServer.
+   * @param hri TODO
    */
-  public void assignMeta() throws KeeperException {
-    regionStates.updateRegionState(HRegionInfo.FIRST_META_REGIONINFO, State.OFFLINE);
-    assign(HRegionInfo.FIRST_META_REGIONINFO);
+  public void assignMeta(HRegionInfo hri) throws KeeperException {
+    regionStates.updateRegionState(hri, State.OFFLINE);
+    assign(hri);
   }
 
   /**
@@ -1966,6 +1967,15 @@ public class AssignmentManager {
 
   public boolean isCarryingMeta(ServerName serverName) {
     return isCarryingRegion(serverName, HRegionInfo.FIRST_META_REGIONINFO);
+  }
+
+  public boolean isCarryingMetaReplica(ServerName serverName, int replicaId) {
+    return isCarryingRegion(serverName,
+        RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, replicaId));
+  }
+
+  public boolean isCarryingMetaReplica(ServerName serverName, HRegionInfo metaHri) {
+    return isCarryingRegion(serverName, metaHri);
   }
 
   /**

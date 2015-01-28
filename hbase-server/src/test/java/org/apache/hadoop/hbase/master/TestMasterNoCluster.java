@@ -262,8 +262,8 @@ public class TestMasterNoCluster {
       TESTUTIL.getConfiguration());
     HMaster master = new HMaster(conf, cp) {
       @Override
-      void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMeatRSs) {
-      }
+      void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMeatRSs, int replicaId)
+      { }
 
       @Override
       void initializeZKBasedSystemTrackers() throws IOException,
