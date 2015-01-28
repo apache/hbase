@@ -9,6 +9,7 @@ Release 0.98.10 - 2/2/2015
     * [HBASE-12793] - [hbck] closeRegionSilentlyAndWait() should log cause of IOException and retry until  hbase.hbck.close.timeout expires
     * [HBASE-12842] - Fix the incompatibility introduced by AccessControlClient in 0.98
     * [HBASE-12854] - Fix the CopyTable incompatibility introduced in HBASE-11997 in 0.98
+    * [HBASE-12933] - [0.98] Fold StatisticsHConnection into HConnection
 
 ** Bug
     * [HBASE-8026] - HBase Shell docs for scan command does not reference VERSIONS
@@ -50,6 +51,8 @@ Release 0.98.10 - 2/2/2015
     * [HBASE-12905] - Clean up presence of hadoop annotations in 0.98
     * [HBASE-12910] - describe in the shell is broken
     * [HBASE-12915] - Disallow small scan with batching
+    * [HBASE-12916] - No access control for replicating WAL entries
+    * [HBASE-12918] - Backport asciidoc changes
 
 ** Improvement
     * [HBASE-11195] - Potentially improve block locality during major compaction for old regions
@@ -75,6 +78,7 @@ Release 0.98.10 - 2/2/2015
     * [HBASE-12787] - Backport HBASE-12028 (Abort the RegionServer when it's handler threads die) to 0.98
     * [HBASE-12788] - Promote Abortable to LimitedPrivate
     * [HBASE-12834] - Promote ScanType to LimitedPrivate
+    * [HBASE-12932] - [0.98] Change the interface annotation of HConnection from Public/Stable to Public/Evolving
 
 ** Test
     * [HBASE-12722] - Backport TestMultiTableInputFormat to 0.98 branch
