@@ -671,6 +671,7 @@
               <exclude>**/*.svg</exclude>
               <exclude>**/META-INF/services/**</exclude>
               <!-- MIT: https://github.com/twbs/bootstrap/blob/master/LICENSE -->
+              <exclude>**/src/main/asciidoc/hbase.css</exclude>
               <exclude>**/bootstrap-theme.css</exclude>
               <exclude>**/bootstrap-theme.min.css</exclude>
               <!-- MIT http://jquery.org/license -->
@@ -793,8 +794,14 @@
               <includes>
                 <include>hbase-default.xml</include>
               </includes>
-              <stylesheet>${basedir}/src/main/xslt/configuration_to_docbook_section.xsl</stylesheet>
-              <outputDir>${basedir}/target/docbkx</outputDir>
+              <stylesheet>${basedir}/src/main/xslt/configuration_to_asciidoc_chapter.xsl</stylesheet>
+              <fileMappers>
+                <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.RegExpFileMapper">
+                  <pattern>^(.*)\.xml$</pattern>
+                  <replacement>$1.adoc</replacement>
+                </fileMapper>
+              </fileMappers>
+              <outputDir>${basedir}/target/asciidoc</outputDir>
             </transformationSet>
           </transformationSets>
         </configuration>
@@ -831,62 +838,6 @@
           <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
         </configuration>
       </plugin>
-      <!--Build the documentation.  We build it twice.  Once as a single page and then
-           again as multipage.-->
-      <plugin>
-        <groupId>com.agilejava.docbkx</groupId>
-        <artifactId>docbkx-maven-plugin</artifactId>
-        <version>2.0.15</version>
-        <inherited>false</inherited>
-        <dependencies>
-          <dependency>
-            <groupId>org.docbook</groupId>
-            <artifactId>docbook-xml</artifactId>
-            <version>4.4</version>
-            <scope>runtime</scope>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <sourceDirectory>${basedir}/src/main/docbkx</sourceDirectory>
-          <xincludeSupported>true</xincludeSupported>
-          <useIdAsFilename>true</useIdAsFilename>
-          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
-          <sectionAutolabel>true</sectionAutolabel>
-          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
-          <htmlCustomization>${basedir}/src/main/docbkx/customization.xsl</htmlCustomization>
-          <tocMaxDepth>2</tocMaxDepth>
-          <insertXrefPageNumber>yes</insertXrefPageNumber>
-          <chunkerOutputEncoding>UTF-8</chunkerOutputEncoding>
-        </configuration>
-        <executions>
-          <execution>
-            <id>multipage</id>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <navigShowtitles>true</navigShowtitles>
-              <chunkedOutput>true</chunkedOutput>
-              <imgSrcPath>../images/</imgSrcPath>
-              <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
-              <targetDirectory>${basedir}/target/docbkx/book</targetDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <id>onepage</id>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <imgSrcPath>images/</imgSrcPath>
-              <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
-              <targetDirectory>${basedir}/target/docbkx/</targetDirectory>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
@@ -912,18 +863,37 @@
             </configuration>
           </execution>
           <execution>
-            <id>copy-docbkx</id>
+            <id>copy-htaccess</id>
             <goals>
               <goal>copy-resources</goal>
             </goals>
-            <phase>site</phase>
+            <phase>post-site</phase>
             <configuration>
-              <outputDirectory>target/site</outputDirectory>
+              <outputDirectory>${basedir}/target/site</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${basedir}/target/docbkx</directory>
+                  <directory>${basedir}/src/main/site/resources/</directory>
                   <includes>
-                    <include>**/**</include>
+                    <include>.htaccess</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <!-- needed to make the redirect above work -->
+          <execution>
+            <id>copy-empty-book-dir</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>post-site</phase>
+            <configuration>
+              <outputDirectory>${basedir}/target/site</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/src/main/site/resources/</directory>
+                  <includes>
+                    <include>book/**</include>
                   </includes>
                 </resource>
               </resources>
@@ -953,6 +923,31 @@
           <outputEncoding>UTF-8</outputEncoding>
           <templateFile>${basedir}/src/main/site/site.vm</templateFile>
         </configuration>
+      </plugin>
+      <!-- For AsciiDoc docs building -->
+      <plugin>
+        <groupId>org.asciidoctor</groupId>
+        <artifactId>asciidoctor-maven-plugin</artifactId>
+        <version>1.5.2</version> 
+        <executions>
+          <execution>
+            <id>output-html</id> 
+            <goals>
+              <goal>process-asciidoc</goal> 
+            </goals>
+            <phase>site</phase>
+            <configuration>
+              <imagesDir>./images</imagesDir>
+              <doctype>book</doctype>
+              <attributes>
+                <stylesheet>hbase.css</stylesheet>
+              </attributes>
+              <backend>html5</backend>
+              <sourceHighlighter>coderay</sourceHighlighter>
+              <outputDirectory>target/site</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>
@@ -2203,6 +2198,8 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.9.1</version>
         <configuration>
+          <sourceFilesExclude>**/generated</sourceFilesExclude>
+          <excludePackageNames>org.apache.hadoop.hbase.generated.master</excludePackageNames>
           <maxmemory>2048m</maxmemory>
           <notimestamp>true</notimestamp>
         </configuration>

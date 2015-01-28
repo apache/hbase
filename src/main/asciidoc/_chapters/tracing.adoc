@@ -1,0 +1,193 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+
+[appendix]
+[[tracing]]
+== Enabling Dapper-like Tracing in HBase
+
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+link:https://issues.apache.org/jira/browse/HBASE-6449[HBASE-6449] added support for tracing requests through HBase, using the open source tracing library, link:http://github.com/cloudera/htrace[HTrace].
+Setting up tracing is quite simple, however it currently requires some very minor changes to your client code (it would not be very difficult to remove this requirement). 
+
+[[tracing.spanreceivers]]
+=== SpanReceivers
+
+The tracing system works by collecting information in structs called 'Spans'. It is up to you to choose how you want to receive this information by implementing the `SpanReceiver` interface, which defines one method: 
+
+[source]
+----
+
+public void receiveSpan(Span span);
+----
+
+This method serves as a callback whenever a span is completed.
+HTrace allows you to use as many SpanReceivers as you want so you can easily send trace information to multiple destinations. 
+
+Configure what SpanReceivers you'd like to us by putting a comma separated list of the fully-qualified class name of classes implementing `SpanReceiver` in _hbase-site.xml_ property: `hbase.trace.spanreceiver.classes`. 
+
+HTrace includes a `LocalFileSpanReceiver` that writes all span information to local files in a JSON-based format.
+The `LocalFileSpanReceiver` looks in _hbase-site.xml_      for a `hbase.local-file-span-receiver.path` property with a value describing the name of the file to which nodes should write their span information. 
+
+[source]
+----
+
+<property>
+  <name>hbase.trace.spanreceiver.classes</name>
+  <value>org.htrace.impl.LocalFileSpanReceiver</value>
+</property>
+<property>
+  <name>hbase.local-file-span-receiver.path</name>
+  <value>/var/log/hbase/htrace.out</value>
+</property>
+----
+
+HTrace also provides `ZipkinSpanReceiver` which converts spans to link:http://github.com/twitter/zipkin[Zipkin] span format and send them to Zipkin server.
+In order to use this span receiver, you need to install the jar of htrace-zipkin to your HBase's classpath on all of the nodes in your cluster. 
+
+_htrace-zipkin_ is published to the maven central repository.
+You could get the latest version from there or just build it locally and then copy it out to all nodes, change your config to use zipkin receiver, distribute the new configuration and then (rolling) restart. 
+
+Here is the example of manual setup procedure. 
+
+----
+
+$ git clone https://github.com/cloudera/htrace
+$ cd htrace/htrace-zipkin
+$ mvn compile assembly:single
+$ cp target/htrace-zipkin-*-jar-with-dependencies.jar $HBASE_HOME/lib/
+  # copy jar to all nodes...
+----
+
+The `ZipkinSpanReceiver` looks in _hbase-site.xml_      for a `hbase.zipkin.collector-hostname` and `hbase.zipkin.collector-port` property with a value describing the Zipkin collector server to which span information are sent. 
+
+[source,xml]
+----
+
+<property>
+  <name>hbase.trace.spanreceiver.classes</name>
+  <value>org.htrace.impl.ZipkinSpanReceiver</value>
+</property> 
+<property>
+  <name>hbase.zipkin.collector-hostname</name>
+  <value>localhost</value>
+</property> 
+<property>
+  <name>hbase.zipkin.collector-port</name>
+  <value>9410</value>
+</property>
+----
+
+If you do not want to use the included span receivers, you are encouraged to write your own receiver (take a look at `LocalFileSpanReceiver` for an example). If you think others would benefit from your receiver, file a JIRA or send a pull request to link:http://github.com/cloudera/htrace[HTrace]. 
+
+[[tracing.client.modifications]]
+== Client Modifications
+
+In order to turn on tracing in your client code, you must initialize the module sending spans to receiver once per client process. 
+
+[source,java]
+----
+
+private SpanReceiverHost spanReceiverHost;
+
+...
+
+  Configuration conf = HBaseConfiguration.create();
+  SpanReceiverHost spanReceiverHost = SpanReceiverHost.getInstance(conf);
+----
+
+Then you simply start tracing span before requests you think are interesting, and close it when the request is done.
+For example, if you wanted to trace all of your get operations, you change this: 
+
+[source,java]
+----
+
+HTable table = new HTable(conf, "t1");
+Get get = new Get(Bytes.toBytes("r1"));
+Result res = table.get(get);
+----
+
+into: 
+
+[source,java]
+----
+
+TraceScope ts = Trace.startSpan("Gets", Sampler.ALWAYS);
+try {
+  HTable table = new HTable(conf, "t1");
+  Get get = new Get(Bytes.toBytes("r1"));
+  Result res = table.get(get);
+} finally {
+  ts.close();
+}
+----
+
+If you wanted to trace half of your 'get' operations, you would pass in: 
+
+[source,java]
+----
+
+new ProbabilitySampler(0.5)
+----
+
+in lieu of `Sampler.ALWAYS` to `Trace.startSpan()`.
+See the HTrace _README_ for more information on Samplers. 
+
+[[tracing.client.shell]]
+== Tracing from HBase Shell
+
+You can use +trace+ command for tracing requests from HBase Shell. +trace 'start'+ command turns on tracing and +trace
+        'stop'+ command turns off tracing. 
+
+[source]
+----
+
+hbase(main):001:0> trace 'start'
+hbase(main):002:0> put 'test', 'row1', 'f:', 'val1'   # traced commands
+hbase(main):003:0> trace 'stop'
+----
+
++trace 'start'+ and +trace 'stop'+ always returns boolean value representing if or not there is ongoing tracing.
+As a result, +trace
+        'stop'+ returns false on suceess. +trace 'status'+ just returns if or not tracing is turned on. 
+
+[source]
+----
+
+hbase(main):001:0> trace 'start'
+=> true
+
+hbase(main):002:0> trace 'status'
+=> true
+
+hbase(main):003:0> trace 'stop'
+=> false
+
+hbase(main):004:0> trace 'status'
+=> false
+----
+
+:numbered:
