@@ -18,6 +18,7 @@ Release Notes - HBase - Version 1.0.0 02/08/2015
     * [HBASE-12779] - SplitTransaction: Add metrics
     * [HBASE-12793] - [hbck] closeRegionSilentlyAndWait() should log cause of IOException and retry until  hbase.hbck.close.timeout expires
     * [HBASE-12802] - Remove unnecessary Table.flushCommits()
+    * [HBASE-12926] - Backport HBASE-12688 (Update site with a bootstrap-based UI) for HBASE-12918
 
 ** Bug
     * [HBASE-8026] - HBase Shell docs for scan command does not reference VERSIONS
@@ -113,6 +114,12 @@ Release Notes - HBase - Version 1.0.0 02/08/2015
     * [HBASE-12898] - Add in used undeclared dependencies
     * [HBASE-12901] - Possible deadlock while onlining a region and get region plan for other region run parallel
     * [HBASE-12904] - Threading issues in region_mover.rb
+    * [HBASE-12915] - Disallow small scan with batching
+    * [HBASE-12916] - No access control for replicating WAL entries
+    * [HBASE-12917] - HFilePerformanceEvaluation Scan tests fail with StackOverflowError due to recursive call in createCell function
+    * [HBASE-12918] - Backport asciidoc changes
+    * [HBASE-12919] - Compilation with Hadoop-2.4- is broken again
+    * [HBASE-12925] - Use acl cache for doing access control checks in prepare and clean phases of Bulkloading.
 
 ** Improvement
     * [HBASE-5699] - Run with > 1 WAL in HRegionServer
@@ -168,7 +175,6 @@ Release Notes - HBase - Version 1.0.0 02/08/2015
     * [HBASE-12685] - TestSplitLogManager#testLogFilesAreArchived sometimes times out due to race condition 
     * [HBASE-12799] - ITAG fails with java.lang.RuntimeException if table does not exist
     * [HBASE-12885] - Unit test for RAW / VERSIONS scanner specifications
-
 
 Release Notes - HBase - Version 0.99.2 12/07/2014
 
