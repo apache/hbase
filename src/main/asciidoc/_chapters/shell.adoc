@@ -38,13 +38,13 @@ To run the HBase shell, do as follows:
 $ ./bin/hbase shell
 ----
 
-Type +help+ and then +<RETURN>+ to see a listing of shell commands and options.
-Browse at least the paragraphs at the end of the help emission for the gist of how variables and command arguments are entered into the HBase shell; in particular note how table names, rows, and columns, etc., must be quoted.
+Type `help` and then `<RETURN>` to see a listing of shell commands and options.
+Browse at least the paragraphs at the end of the help output for the gist of how variables and command arguments are entered into the HBase shell; in particular note how table names, rows, and columns, etc., must be quoted.
 
-See <<shell_exercises,shell exercises>> for example basic shell operation. 
+See <<shell_exercises,shell exercises>> for example basic shell operation.
 
 Here is a nicely formatted listing of link:http://learnhbase.wordpress.com/2013/03/02/hbase-shell-commands/[all shell
-            commands] by Rajeshbabu Chintaguntla. 
+            commands] by Rajeshbabu Chintaguntla.
 
 [[scripting]]
 == Scripting with Ruby
@@ -64,27 +64,26 @@ A new non-interactive mode has been added to the HBase Shell (link:https://issue
 Non-interactive mode captures the exit status (success or failure) of HBase Shell commands and passes that status back to the command interpreter.
 If you use the normal interactive mode, the HBase Shell will only ever return its own exit status, which will nearly always be `0` for success.
 
-To invoke non-interactive mode, pass the +-n+ or +--non-interactive+ option to HBase Shell.
+To invoke non-interactive mode, pass the `-n` or `--non-interactive` option to HBase Shell.
 
 [[hbase.shell.noninteractive]]
 == HBase Shell in OS Scripts
 
 You can use the HBase shell from within operating system script interpreters like the Bash shell which is the default command interpreter for most Linux and UNIX distributions.
-The following guidelines use Bash syntax, but could be adjusted to work with C-style shells such as csh or tcsh, and could probably be modified to work with the Microsoft Windows script interpreter as well.
-Submissions are welcome.
+The following guidelines use Bash syntax, but could be adjusted to work with C-style shells such as csh or tcsh, and could probably be modified to work with the Microsoft Windows script interpreter as well. Submissions are welcome.
 
 NOTE: Spawning HBase Shell commands in this way is slow, so keep that in mind when you are deciding when combining HBase operations with the operating system command line is appropriate.
 
 .Passing Commands to the HBase Shell
 ====
-You can pass commands to the HBase Shell in non-interactive mode (see <<hbasee.shell.noninteractive,hbasee.shell.noninteractive>>) using the +echo+                command and the `|` (pipe) operator.
+You can pass commands to the HBase Shell in non-interactive mode (see <<hbasee.shell.noninteractive,hbasee.shell.noninteractive>>) using the `echo` command and the `|` (pipe) operator.
 Be sure to escape characters in the HBase commands which would otherwise be interpreted by the shell.
 Some debug-level output has been truncated from the example below.
 
 [source,bash]
 ----
 $ echo "describe 'test1'" | ./hbase shell -n
-                
+
 Version 0.98.3-hadoop2, rd5e65a9144e315bb0a964e7730871af32f5018d5, Sat May 31 19:56:09 PDT 2014
 
 describe 'test1'
@@ -122,7 +121,7 @@ This is a naive script that shows one way to store the return value and make a d
 
 echo "describe 'test'" | ./hbase shell -n > /dev/null 2>&1
 status=$?
-echo "The status was " $status  
+echo "The status was " $status
 if ($status == 0); then
     echo "The command succeeded"
 else
@@ -134,7 +133,7 @@ return $status
 
 === Checking for Success or Failure In Scripts
 
-Getting an exit code of 0 means that the command you scripted definitely succeeded.
+Getting an exit code of `0` means that the command you scripted definitely succeeded.
 However, getting a non-zero exit code does not necessarily mean the command failed.
 The command could have succeeded, but the client lost connectivity, or some other event obscured its success.
 This is because RPC commands are stateless.
@@ -163,10 +162,9 @@ enable 'test'
 
 .Directing HBase Shell to Execute the Commands
 ====
-Pass the path to the command file as the only argument to the +hbase
-                    shell+ command.
+Pass the path to the command file as the only argument to the `hbase shell` command.
 Each command is executed and its output is shown.
-If you do not include the +exit+ command in your script, you are returned to the HBase shell prompt.
+If you do not include the `exit` command in your script, you are returned to the HBase shell prompt.
 There is no way to programmatically check each individual command for success or failure.
 Also, though you see the output for each command, the commands themselves are not echoed to the screen so it can be difficult to line up the command with its output.
 
@@ -206,14 +204,14 @@ COLUMN                CELL
 
 == Passing VM Options to the Shell
 
-You can pass VM options to the HBase Shell using the `HBASE_SHELL_OPTS`            environment variable.
+You can pass VM options to the HBase Shell using the `HBASE_SHELL_OPTS` environment variable.
 You can set this in your environment, for instance by editing _~/.bashrc_, or set it as part of the command to launch HBase Shell.
 The following example sets several garbage-collection-related variables, just for the lifetime of the VM running the HBase Shell.
 The command should be run all on a single line, but is broken by the `\` character, for readability.
 
 [source,bash]
 ----
-$ HBASE_SHELL_OPTS="-verbose:gc -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCDateStamps \ 
+$ HBASE_SHELL_OPTS="-verbose:gc -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCDateStamps \
   -XX:+PrintGCDetails -Xloggc:$HBASE_HOME/logs/gc-hbase.log" ./bin/hbase shell
 ----
 
@@ -221,10 +219,10 @@ $ HBASE_SHELL_OPTS="-verbose:gc -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCD
 
 === Table variables
 
-HBase 0.95 adds shell commands that provide a jruby-style object-oriented references for tables.
+HBase 0.95 adds shell commands that provides jruby-style object-oriented references for tables.
 Previously all of the shell commands that act upon a table have a procedural style that always took the name of the table as an argument.
 HBase 0.95 introduces the ability to assign a table to a jruby variable.
-The table reference can be used to perform data read write operations such as puts, scans, and gets well as admin functionality such as disabling, dropping, describing tables. 
+The table reference can be used to perform data read write operations such as puts, scans, and gets well as admin functionality such as disabling, dropping, describing tables.
 
 For example, previously you would always specify a table name:
 
@@ -234,17 +232,17 @@ hbase(main):000:0> create ‘t’, ‘f’
 hbase(main):001:0> put 't', 'rold', 'f', 'v'
 0 row(s) in 0.0080 seconds
 
-hbase(main):002:0> scan 't' 
-ROW                                COLUMN+CELL                                                                                      
- rold                              column=f:, timestamp=1378473207660, value=v                                                      
+hbase(main):002:0> scan 't'
+ROW                                COLUMN+CELL
+ rold                              column=f:, timestamp=1378473207660, value=v
 1 row(s) in 0.0130 seconds
 
 hbase(main):003:0> describe 't'
-DESCRIPTION                                                                           ENABLED                                       
- 't', {NAME => 'f', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER => 'ROW', REPLICATION_ true                                          
- SCOPE => '0', VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2                                               
- 147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false                                               
- ', BLOCKCACHE => 'true'}                                                                                 
+DESCRIPTION                                                                           ENABLED
+ 't', {NAME => 'f', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER => 'ROW', REPLICATION_ true
+ SCOPE => '0', VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2
+ 147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false
+ ', BLOCKCACHE => 'true'}
 1 row(s) in 1.4430 seconds
 
 hbase(main):004:0> disable 't'
@@ -266,15 +264,15 @@ hbase(main):007 > t = create 't', 'f'
 hbase(main):008 > t.put 'r', 'f', 'v'
 0 row(s) in 0.0640 seconds
 hbase(main):009 > t.scan
-ROW                           COLUMN+CELL                                                                        
- r                            column=f:, timestamp=1331865816290, value=v                                        
+ROW                           COLUMN+CELL
+ r                            column=f:, timestamp=1331865816290, value=v
 1 row(s) in 0.0110 seconds
 hbase(main):010:0> t.describe
-DESCRIPTION                                                                           ENABLED                                       
- 't', {NAME => 'f', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER => 'ROW', REPLICATION_ true                                          
- SCOPE => '0', VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2                                               
- 147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false                                               
- ', BLOCKCACHE => 'true'}                                                                                 
+DESCRIPTION                                                                           ENABLED
+ 't', {NAME => 'f', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER => 'ROW', REPLICATION_ true
+ SCOPE => '0', VERSIONS => '1', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2
+ 147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false
+ ', BLOCKCACHE => 'true'}
 1 row(s) in 0.0210 seconds
 hbase(main):038:0> t.disable
 0 row(s) in 6.2350 seconds
@@ -293,11 +291,11 @@ hbase(main):012:0> tab = get_table 't'
 0 row(s) in 0.0010 seconds
 
 => Hbase::Table - t
-hbase(main):013:0> tab.put ‘r1’ ,’f’, ‘v’ 
+hbase(main):013:0> tab.put ‘r1’ ,’f’, ‘v’
 0 row(s) in 0.0100 seconds
 hbase(main):014:0> tab.scan
-ROW                                COLUMN+CELL                                                                                      
- r1                                column=f:, timestamp=1378473876949, value=v                                                      
+ROW                                COLUMN+CELL
+ r1                                column=f:, timestamp=1378473876949, value=v
 1 row(s) in 0.0240 seconds
 hbase(main):015:0>
 ----
@@ -308,8 +306,8 @@ The list_snapshots command also acts similarly.
 
 ----
 hbase(main):016 > tables = list(‘t.*’)
-TABLE                                                                                                                               
-t                                                                                                                                   
+TABLE
+t
 1 row(s) in 0.1040 seconds
 
 => #<#<Class:0x7677ce29>:0x21d377a4>
@@ -333,7 +331,7 @@ IRB.conf[:SAVE_HISTORY] = 100
 IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb-save-history"
 ----
 
-See the +ruby+ documentation of _.irbrc_ to learn about other possible configurations. 
+See the `ruby` documentation of _.irbrc_ to learn about other possible configurations.
 
 === LOG data to timestamp
 
@@ -352,7 +350,7 @@ hbase(main):021:0> import java.util.Date
 hbase(main):022:0> Date.new(1218920189000).toString() => "Sat Aug 16 20:56:29 UTC 2008"
 ----
 
-To output in a format that is exactly like that of the HBase log format will take a little messing with link:http://download.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html[SimpleDateFormat]. 
+To output in a format that is exactly like that of the HBase log format will take a little messing with link:http://download.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html[SimpleDateFormat].
 
 === Debug
 
@@ -368,7 +366,7 @@ hbase> debug <RETURN>
 
 ==== DEBUG log level
 
-To enable DEBUG level logging in the shell, launch it with the +-d+ option.
+To enable DEBUG level logging in the shell, launch it with the `-d` option.
 
 [source,bash]
 ----
@@ -380,13 +378,13 @@ $ ./bin/hbase shell -d
 ==== count
 
 Count command returns the number of rows in a table.
-It's quite fast when configured with the right CACHE 
+It's quite fast when configured with the right CACHE
 
 [source]
 ----
 hbase> count '<tablename>', CACHE => 1000
-----                    
+----
 
 The above count fetches 1000 rows at a time.
 Set CACHE lower if your rows are big.
-Default is to fetch one row at a time. 
+Default is to fetch one row at a time.
