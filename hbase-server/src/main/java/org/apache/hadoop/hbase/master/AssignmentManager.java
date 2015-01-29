@@ -2802,7 +2802,12 @@ public class AssignmentManager {
         errorMsg = onRegionMergePONR(current, hri, serverName, transition);
         break;
       case MERGED:
-        errorMsg = onRegionMerged(current, hri, serverName, transition);
+        try {
+          errorMsg = onRegionMerged(current, hri, serverName, transition);
+          regionStateListener.onRegionMerged(hri);
+        } catch (IOException exp) {
+          errorMsg = StringUtils.stringifyException(exp);
+        }
         break;
       case MERGE_REVERTED:
         errorMsg = onRegionMergeReverted(current, hri, serverName, transition);

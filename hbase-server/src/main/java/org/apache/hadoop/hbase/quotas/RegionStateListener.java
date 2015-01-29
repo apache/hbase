@@ -44,4 +44,11 @@ public interface RegionStateListener {
    */
   void onRegionSplitReverted(HRegionInfo hri) throws IOException;
 
+  /**
+   * Process region merge event.
+   *
+   * @param hri An instance of HRegionInfo
+   * @throws IOException
+   */
+  void onRegionMerged(HRegionInfo hri) throws IOException;
 }

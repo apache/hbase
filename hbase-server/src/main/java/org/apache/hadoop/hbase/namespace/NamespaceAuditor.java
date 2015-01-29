@@ -108,7 +108,18 @@ public class NamespaceAuditor {
       throw new IOException(
           "Split operation is being performed even before namespace auditor is initialized.");
     } else if (!stateManager
-        .checkAndUpdateNamespaceRegionCount(hri.getTable(), hri.getRegionName())) {
+        .checkAndUpdateNamespaceRegionCount(hri.getTable(), hri.getRegionName(), 1)) {
+      throw new QuotaExceededException("Region split not possible for :" + hri.getEncodedName()
+          + " as quota limits are exceeded ");
+    }
+  }
+
+  public void updateQuotaForRegionMerge(HRegionInfo hri) throws IOException {
+    if (!stateManager.isInitialized()) {
+      throw new IOException(
+          "Merge operation is being performed even before namespace auditor is initialized.");
+    } else if (!stateManager
+        .checkAndUpdateNamespaceRegionCount(hri.getTable(), hri.getRegionName(), -1)) {
       throw new QuotaExceededException("Region split not possible for :" + hri.getEncodedName()
           + " as quota limits are exceeded ");
     }

@@ -313,6 +313,12 @@ public class MasterQuotaManager implements RegionStateListener {
     }
   }
 
+  public void onRegionMerged(HRegionInfo hri) throws IOException {
+    if (enabled) {
+      namespaceQuotaManager.updateQuotaForRegionMerge(hri);
+    }
+  }
+
   public void onRegionSplit(HRegionInfo hri) throws IOException {
     if (enabled) {
       namespaceQuotaManager.checkQuotaToSplitRegion(hri);
