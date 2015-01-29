@@ -34,6 +34,8 @@ PATCH_DIR=/tmp
 BASEDIR=$(pwd)
 BRANCH_NAME="master"
 
+. $BASEDIR/dev-support/test-patch.properties
+
 PS=${PS:-ps}
 AWK=${AWK:-awk}
 WGET=${WGET:-wget}
@@ -277,7 +279,6 @@ setup () {
       cleanupAndExit 0
     fi
   fi
-  . $BASEDIR/dev-support/test-patch.properties
   ### exit if warnings are NOT defined in the properties file
   if [ -z "$OK_FINDBUGS_WARNINGS" ] || [[ -z "$OK_JAVADOC_WARNINGS" ]] || [[ -z $OK_RELEASEAUDIT_WARNINGS ]] ; then
     echo "Please define the following properties in test-patch.properties file"
