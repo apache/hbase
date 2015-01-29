@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoordinatedStateException;
@@ -683,6 +684,8 @@ public class TestAssignmentManager {
       Mockito.when(services.getZooKeeper()).thenReturn(this.watcher);
       Mockito.when(services.getMasterFileSystem()).thenReturn(fs);
       Mockito.when(services.getConnection()).thenReturn(connection);
+      Configuration conf = server.getConfiguration();
+      Mockito.when(services.getConfiguration()).thenReturn(conf);
       ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
           services, deadServers, SERVERNAME_A, false);
       am.failoverCleanupDone.set(true);
