@@ -1341,7 +1341,7 @@ public class HRegionServer extends HasThread implements
    * @throws IOException
    */
   private RegionLoad createRegionLoad(final HRegion r, RegionLoad.Builder regionLoadBldr,
-      RegionSpecifier.Builder regionSpecifier) {
+      RegionSpecifier.Builder regionSpecifier) throws IOException {
     byte[] name = r.getRegionName();
     int stores = 0;
     int storefiles = 0;
@@ -1403,8 +1403,8 @@ public class HRegionServer extends HasThread implements
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
       .setCompleteSequenceId(r.maxFlushedSeqId)
-      .setDataLocality(dataLocality);
-
+      .setDataLocality(dataLocality)
+      .setLastMajorCompactionTs(r.getOldestHfileTs(true));
     return regionLoadBldr.build();
   }
 
@@ -1412,7 +1412,7 @@ public class HRegionServer extends HasThread implements
    * @param encodedRegionName
    * @return An instance of RegionLoad.
    */
-  public RegionLoad createRegionLoad(final String encodedRegionName) {
+  public RegionLoad createRegionLoad(final String encodedRegionName) throws IOException {
     HRegion r = null;
     r = this.onlineRegions.get(encodedRegionName);
     return r != null ? createRegionLoad(r, null, null) : null;

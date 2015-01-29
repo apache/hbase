@@ -991,6 +991,7 @@ public class HStore implements Store {
                                 .withHBaseCheckSum(true)
                                 .withDataBlockEncoding(family.getDataBlockEncoding())
                                 .withEncryptionContext(cryptoContext)
+                                .withCreateTime(EnvironmentEdgeManager.currentTime())
                                 .build();
     return hFileContext;
   }

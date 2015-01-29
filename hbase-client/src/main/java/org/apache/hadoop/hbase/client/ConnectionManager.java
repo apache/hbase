@@ -136,6 +136,9 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescript
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
@@ -2036,6 +2039,20 @@ final class ConnectionManager {
             RpcController controller, SetQuotaRequest request)
             throws ServiceException {
           return stub.setQuota(controller, request);
+        }
+
+        @Override
+        public MajorCompactionTimestampResponse getLastMajorCompactionTimestamp(
+            RpcController controller, MajorCompactionTimestampRequest request)
+            throws ServiceException {
+          return stub.getLastMajorCompactionTimestamp(controller, request);
+        }
+
+        @Override
+        public MajorCompactionTimestampResponse getLastMajorCompactionTimestampForRegion(
+            RpcController controller, MajorCompactionTimestampForRegionRequest request)
+            throws ServiceException {
+          return stub.getLastMajorCompactionTimestampForRegion(controller, request);
         }
       };
     }

@@ -117,6 +117,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -1492,6 +1493,28 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
   @VisibleForTesting
   public long getEarliestFlushTimeForAllStores() {
     return Collections.min(lastStoreFlushTimeMap.values());
+  }
+
+  /**
+   * This can be used to determine the last time all files of this region were major compacted.
+   * @param majorCompactioOnly Only consider HFile that are the result of major compaction
+   * @return the timestamp of the oldest HFile for all stores of this region
+   */
+  public long getOldestHfileTs(boolean majorCompactioOnly) throws IOException {
+    long result = Long.MAX_VALUE;
+    for (Store store : getStores().values()) {
+      for (StoreFile file : store.getStorefiles()) {
+        HFile.Reader reader = file.getReader().getHFileReader();
+        if (majorCompactioOnly) {
+          byte[] val = reader.loadFileInfo().get(StoreFile.MAJOR_COMPACTION_KEY);
+          if (val == null || !Bytes.toBoolean(val)) {
+            continue;
+          }
+        }
+        result = Math.min(result, reader.getFileContext().getFileCreateTime());
+      }
+    }
+    return result == Long.MAX_VALUE ? 0 : result;
   }
 
   //////////////////////////////////////////////////////////////////////////////

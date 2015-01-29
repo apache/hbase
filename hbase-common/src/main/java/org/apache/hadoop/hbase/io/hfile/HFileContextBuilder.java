@@ -52,6 +52,7 @@ public class HFileContextBuilder {
   private DataBlockEncoding encoding = DataBlockEncoding.NONE;
   /** Crypto context */
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
+  private long fileCreateTime = 0;
 
   public HFileContextBuilder withHBaseCheckSum(boolean useHBaseCheckSum) {
     this.usesHBaseChecksum = useHBaseCheckSum;
@@ -103,8 +104,14 @@ public class HFileContextBuilder {
     return this;
   }
 
+  public HFileContextBuilder withCreateTime(long fileCreateTime) {
+    this.fileCreateTime = fileCreateTime;
+    return this;
+  }
+
   public HFileContext build() {
     return new HFileContext(usesHBaseChecksum, includesMvcc, includesTags, compression,
-      compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext);
+        compressTags, checksumType, bytesPerChecksum, blocksize, encoding, cryptoContext,
+        fileCreateTime);
   }
 }

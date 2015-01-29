@@ -113,6 +113,8 @@ message RegionLoad {
 
   /** The current data locality for region in the regionserver */
   optional float data_locality = 16;
+
+  optional uint64 last_major_compaction_ts = 17 [default = 0];
 }
 
 /* Server-level protobufs */

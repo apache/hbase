@@ -2290,4 +2290,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
   }
+
+  @Override
+  public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
+    return getClusterStatus().getLastMajorCompactionTsForTable(table);
+  }
+
+  @Override
+  public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
+    return getClusterStatus().getLastMajorCompactionTsForRegion(regionName);
+  }
 }

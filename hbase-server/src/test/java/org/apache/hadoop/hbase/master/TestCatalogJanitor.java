@@ -458,6 +458,18 @@ public class TestCatalogJanitor {
       // Auto-generated method stub
       return false;
     }
+
+    @Override
+    public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
+      // Auto-generated method stub
+      return 0;
+    }
+
+    @Override
+    public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
+      // Auto-generated method stub
+      return 0;
+    }
   }
 
   @Test

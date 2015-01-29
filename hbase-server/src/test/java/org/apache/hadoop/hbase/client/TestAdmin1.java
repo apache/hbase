@@ -409,6 +409,58 @@ public class TestAdmin1 {
   }
 
   @Test (timeout=300000)
+  public void testCompactionTimestamps() throws Exception {
+    HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
+    TableName tableName = TableName.valueOf("testCompactionTimestampsTable");
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(fam1);
+    this.admin.createTable(htd);
+    HTable table = (HTable)TEST_UTIL.getConnection().getTable(htd.getTableName());
+    long ts = this.admin.getLastMajorCompactionTimestamp(tableName);
+    assertEquals(0, ts);
+    Put p = new Put(Bytes.toBytes("row1"));
+    p.add(Bytes.toBytes("fam1"), Bytes.toBytes("fam1"), Bytes.toBytes("fam1"));
+    table.put(p);
+    ts = this.admin.getLastMajorCompactionTimestamp(tableName);
+    // no files written -> no data
+    assertEquals(0, ts);
+
+    this.admin.flush(tableName);
+    ts = this.admin.getLastMajorCompactionTimestamp(tableName);
+    // still 0, we flushed a file, but no major compaction happened
+    assertEquals(0, ts);
+
+    byte[] regionName =
+        table.getRegionLocator().getAllRegionLocations().get(0).getRegionInfo().getRegionName();
+    long ts1 = this.admin.getLastMajorCompactionTimestampForRegion(regionName);
+    assertEquals(ts, ts1);
+    p = new Put(Bytes.toBytes("row2"));
+    p.add(Bytes.toBytes("fam1"), Bytes.toBytes("fam1"), Bytes.toBytes("fam1"));
+    table.put(p);
+    this.admin.flush(tableName);
+    ts = this.admin.getLastMajorCompactionTimestamp(tableName);
+    // make sure the region API returns the same value, as the old file is still around
+    assertEquals(ts1, ts);
+
+    TEST_UTIL.compact(tableName, true);
+    table.put(p);
+    // forces a wait for the compaction
+    this.admin.flush(tableName);
+    ts = this.admin.getLastMajorCompactionTimestamp(tableName);
+    // after a compaction our earliest timestamp will have progressed forward
+    assertTrue(ts > ts1);
+
+    // region api still the same
+    ts1 = this.admin.getLastMajorCompactionTimestampForRegion(regionName);
+    assertEquals(ts, ts1);
+    table.put(p);
+    this.admin.flush(tableName);
+    ts = this.admin.getLastMajorCompactionTimestamp(tableName);
+    assertEquals(ts, ts1);
+    table.close();
+  }
+
+  @Test (timeout=300000)
   public void testHColumnValidName() {
        boolean exceptionThrown;
        try {

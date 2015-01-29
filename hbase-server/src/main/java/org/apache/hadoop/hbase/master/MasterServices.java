@@ -261,4 +261,20 @@ public interface MasterServices extends Server {
    * @throws IOException
    */
   public List<TableName> listTableNamesByNamespace(String name) throws IOException;
+
+  /**
+   * @param table
+   * @return the timestamp of the last successful major compaction for the passed table,
+   * or 0 if no HFile resulting from a major compaction exists
+   * @throws IOException
+   */
+  public long getLastMajorCompactionTimestamp(TableName table) throws IOException;
+
+  /**
+   * @param regionName
+   * @return the timestamp of the last successful major compaction for the passed region
+   * or 0 if no HFile resulting from a major compaction exists
+   * @throws IOException
+   */
+  public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException;
 }
