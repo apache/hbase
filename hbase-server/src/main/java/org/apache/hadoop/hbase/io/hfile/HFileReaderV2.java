@@ -157,7 +157,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
     // File info
     fileInfo = new FileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
-    this.hfileContext.setFileCreateTime(Bytes.toLong(fileInfo.get(FileInfo.CREATE_TIME_TS)));
+    byte[] creationTimeBytes = fileInfo.get(FileInfo.CREATE_TIME_TS);
+    this.hfileContext.setFileCreateTime(creationTimeBytes == null ? 0 : Bytes.toLong(creationTimeBytes));
     lastKey = fileInfo.get(FileInfo.LASTKEY);
     avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
     avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));
