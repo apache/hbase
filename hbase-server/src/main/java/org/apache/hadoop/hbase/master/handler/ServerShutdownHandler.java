@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -218,7 +219,17 @@ public class ServerShutdownHandler extends EventHandler {
       } catch (IOException ioe) {
         resubmit(serverName, ioe);
       }
-
+      List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
+      int replicaCount = services.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
+          HConstants.DEFAULT_META_REPLICA_NUM);
+      for (int i = 1; i < replicaCount; i++) {
+        HRegionInfo metaHri =
+            RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, i);
+        if (am.isCarryingMetaReplica(serverName, metaHri)) {
+          LOG.info("Reassigning meta replica" + metaHri + " that was on " + serverName);
+          toAssignRegions.add(metaHri);
+        }
+      }
       // Clean out anything in regions in transition.  Being conservative and
       // doing after log splitting.  Could do some states before -- OPENING?
       // OFFLINE? -- and then others after like CLOSING that depend on log
@@ -228,8 +239,7 @@ public class ServerShutdownHandler extends EventHandler {
         " region(s) that " + (serverName == null? "null": serverName)  +
         " was carrying (and " + regionsInTransition.size() +
         " regions(s) that were opening on this server)");
-
-      List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
+      
       toAssignRegions.addAll(regionsInTransition);
 
       // Iterate regions that were on this server and assign them

@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaMigrationConvertingToPB;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -76,6 +78,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -107,6 +110,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -122,6 +126,7 @@ import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
@@ -336,6 +341,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
         ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
+
+    // Disable usage of meta replicas in the master
+    this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
 
     Replication.decorateMasterConfiguration(this.conf);
 
@@ -592,7 +600,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // enable table descriptors cache
     this.tableDescriptors.setCacheOn();
-
+    // set the META's descriptor to the correct replication
+    this.tableDescriptors.get(TableName.META_TABLE_NAME).setRegionReplication(
+        conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM));
     // warm-up HTDs cache on master initialization
     if (preLoadTableDescriptors) {
       status.setStatus("Pre-loading table descriptors");
@@ -679,7 +689,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");
-    assignMeta(status, previouslyFailedMetaRSs);
+    assignMeta(status, previouslyFailedMetaRSs, HRegionInfo.DEFAULT_REPLICA_ID);
     // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
     if(isStopped()) return;
@@ -730,6 +740,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     LOG.info("Master has completed initialization");
     configurationManager.registerObserver(this.balancer);
     initialized = true;
+
+    // assign the meta replicas
+    Set<ServerName> EMPTY_SET = new HashSet<ServerName>();
+    int numReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
+           HConstants.DEFAULT_META_REPLICA_NUM);
+    for (int i = 1; i < numReplicas; i++) {
+      assignMeta(status, EMPTY_SET, i);
+    }
+    unassignExcessMetaReplica(zooKeeper, numReplicas);
+
     // clear the dead servers with same host name and port of online server because we are not
     // removing dead server with same hostname and port of rs which is trying to check in before
     // master initialization. See HBASE-5916.
@@ -763,34 +783,64 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return new ServerManager(master, services);
   }
 
+  private void unassignExcessMetaReplica(ZooKeeperWatcher zkw, int numMetaReplicasConfigured) {
+    // unassign the unneeded replicas (for e.g., if the previous master was configured
+    // with a replication of 3 and now it is 2, we need to unassign the 1 unneeded replica)
+    try {
+      List<String> metaReplicaZnodes = zooKeeper.getMetaReplicaNodes();
+      for (String metaReplicaZnode : metaReplicaZnodes) {
+        int replicaId = zooKeeper.getMetaReplicaIdFromZnode(metaReplicaZnode);
+        if (replicaId >= numMetaReplicasConfigured) {
+          RegionState r = MetaTableLocator.getMetaRegionState(zkw, replicaId);
+          LOG.info("Closing excess replica of meta region " + r.getRegion());
+          // send a close and wait for a max of 30 seconds
+          ServerManager.closeRegionSilentlyAndWait(getConnection(), r.getServerName(),
+              r.getRegion(), 30000);
+          ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(replicaId));
+        }
+      }
+    } catch (Exception ex) {
+      // ignore the exception since we don't want the master to be wedged due to potential
+      // issues in the cleanup of the extra regions. We can do that cleanup via hbck or manually
+      LOG.warn("Ignoring exception " + ex);
+    }
+  }
+
   /**
    * Check <code>hbase:meta</code> is assigned. If not, assign it.
    * @param status MonitoredTask
    * @param previouslyFailedMetaRSs
+   * @param replicaId
    * @throws InterruptedException
    * @throws IOException
    * @throws KeeperException
    */
-  void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMetaRSs)
+  void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMetaRSs, int replicaId)
       throws InterruptedException, IOException, KeeperException {
     // Work on meta region
     int assigned = 0;
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
-    status.setStatus("Assigning hbase:meta region");
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+      status.setStatus("Assigning hbase:meta region");
+    } else {
+      status.setStatus("Assigning hbase:meta region, replicaId " + replicaId);
+    }
     // Get current meta state from zk.
     RegionStates regionStates = assignmentManager.getRegionStates();
-    RegionState metaState = MetaTableLocator.getMetaRegionState(getZooKeeper());
+    RegionState metaState = MetaTableLocator.getMetaRegionState(getZooKeeper(), replicaId);
+    HRegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO,
+        replicaId);
     ServerName currentMetaServer = metaState.getServerName();
     if (!ConfigUtil.useZKForAssignment(conf)) {
-      regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO, metaState.getState(),
+      regionStates.createRegionState(hri, metaState.getState(),
         currentMetaServer, null);
     } else {
-      regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
+      regionStates.createRegionState(hri);
     }
     boolean rit = this.assignmentManager.
-      processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
+      processRegionInTransitionAndBlockUntilAssigned(hri);
     boolean metaRegionLocation = metaTableLocator.verifyMetaRegionLocation(
-      this.getConnection(), this.getZooKeeper(), timeout);
+      this.getConnection(), this.getZooKeeper(), timeout, replicaId);
     if (!metaRegionLocation || !metaState.isOpened()) {
       // Meta location is not verified. It should be in transition, or offline.
       // We will wait for it to be assigned in enableSSHandWaitForMeta below.
@@ -811,10 +861,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             LOG.info("Forcing expire of " + currentMetaServer);
             serverManager.expireServer(currentMetaServer);
           }
-          splitMetaLogBeforeAssignment(currentMetaServer);
-          previouslyFailedMetaRSs.add(currentMetaServer);
+          if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+            splitMetaLogBeforeAssignment(currentMetaServer);
+            previouslyFailedMetaRSs.add(currentMetaServer);
+          }
         }
-        assignmentManager.assignMeta();
+        assignmentManager.assignMeta(hri);
       }
     } else {
       // Region already assigned. We didn't assign it. Add to in-memory state.
@@ -824,7 +876,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         HRegionInfo.FIRST_META_REGIONINFO, currentMetaServer);
     }
 
-    enableMeta(TableName.META_TABLE_NAME);
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableMeta(TableName.META_TABLE_NAME);
 
     if ((RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode())
         && (!previouslyFailedMetaRSs.isEmpty())) {
@@ -837,10 +889,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // if the meta region server is died at this time, we need it to be re-assigned
     // by SSH so that system tables can be assigned.
     // No need to wait for meta is assigned = 0 when meta is just verified.
-    enableServerShutdownHandler(assigned != 0);
-
-    LOG.info("hbase:meta assigned=" + assigned + ", rit=" + rit +
-      ", location=" + metaTableLocator.getMetaRegionLocation(this.getZooKeeper()));
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableServerShutdownHandler(assigned != 0);
+    LOG.info("hbase:meta with replicaId " + replicaId + " assigned=" + assigned + ", rit=" + rit +
+      ", location=" + metaTableLocator.getMetaRegionLocation(this.getZooKeeper(), replicaId));
     status.setStatus("META assigned.");
   }
 
@@ -852,13 +903,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       assignmentManager.processRegionInTransitionZkLess();
     } else {
       if (currentServer != null) {
-        splitMetaLogBeforeAssignment(currentServer);
-        regionStates.logSplit(HRegionInfo.FIRST_META_REGIONINFO);
-        previouslyFailedRs.add(currentServer);
+        if (regionState.getRegion().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
+          splitMetaLogBeforeAssignment(currentServer);
+          regionStates.logSplit(HRegionInfo.FIRST_META_REGIONINFO);
+          previouslyFailedRs.add(currentServer);
+        }
       }
       LOG.info("Re-assigning hbase:meta, it was on " + currentServer);
-      regionStates.updateRegionState(HRegionInfo.FIRST_META_REGIONINFO, State.OFFLINE);
-      assignmentManager.assignMeta();
+      regionStates.updateRegionState(regionState.getRegion(), State.OFFLINE);
+      assignmentManager.assignMeta(regionState.getRegion());
     }
   }
 

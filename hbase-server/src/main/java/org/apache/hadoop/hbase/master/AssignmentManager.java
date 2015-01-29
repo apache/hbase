@@ -2633,18 +2633,19 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Assigns the hbase:meta region.
+   * Assigns the hbase:meta region or a replica.
    * <p>
    * Assumes that hbase:meta is currently closed and is not being actively served by
    * any RegionServer.
    * <p>
    * Forcibly unsets the current meta region location in ZooKeeper and assigns
    * hbase:meta to a random RegionServer.
+   * @param hri TODO
    * @throws KeeperException
    */
-  public void assignMeta() throws KeeperException {
-    this.server.getMetaTableLocator().deleteMetaLocation(this.watcher);
-    assign(HRegionInfo.FIRST_META_REGIONINFO, true);
+  public void assignMeta(HRegionInfo hri) throws KeeperException {
+    this.server.getMetaTableLocator().deleteMetaLocation(this.watcher, hri.getReplicaId());
+    assign(hri, true);
   }
 
   /**
@@ -3271,6 +3272,15 @@ public class AssignmentManager extends ZooKeeperListener {
 
   public boolean isCarryingMeta(ServerName serverName) {
     return isCarryingRegion(serverName, HRegionInfo.FIRST_META_REGIONINFO);
+  }
+
+  public boolean isCarryingMetaReplica(ServerName serverName, int replicaId) {
+    return isCarryingRegion(serverName,
+        RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, replicaId));
+  }
+
+  public boolean isCarryingMetaReplica(ServerName serverName, HRegionInfo metaHri) {
+    return isCarryingRegion(serverName, metaHri);
   }
 
   /**

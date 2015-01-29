@@ -535,6 +535,7 @@ class ConnectionManager {
   static class HConnectionImplementation implements ClusterConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final long pause;
+    private final boolean useMetaReplicas;
     private final int numTries;
     final int rpcTimeout;
     private NonceGenerator nonceGenerator = null;
@@ -658,6 +659,8 @@ class ConnectionManager {
       this.closed = false;
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
           HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+      this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
+          HConstants.DEFAULT_USE_META_REPLICAS); 
       this.numTries = tableConfig.getRetriesNumber();
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
@@ -1115,7 +1118,7 @@ class ConnectionManager {
       RegionLocations locations = null;
       if (useCache) {
         locations = getCachedLocation(tableName, metaCacheKey);
-        if (locations != null) {
+        if (locations != null && locations.getRegionLocation(replicaId) != null) {
           return locations;
         }
       }
@@ -1126,7 +1129,7 @@ class ConnectionManager {
         // same query while we were waiting on the lock.
         if (useCache) {
           locations = getCachedLocation(tableName, metaCacheKey);
-          if (locations != null) {
+          if (locations != null && locations.getRegionLocation(replicaId) != null) {
             return locations;
           }
         }
@@ -1166,6 +1169,9 @@ class ConnectionManager {
       s.setStartRow(metaKey);
       s.setSmall(true);
       s.setCaching(1);
+      if (this.useMetaReplicas) {
+        s.setConsistency(Consistency.TIMELINE);
+      }
 
       int localNumRetries = (retry ? numTries : 1);
 

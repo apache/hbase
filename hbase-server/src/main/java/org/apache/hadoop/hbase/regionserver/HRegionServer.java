@@ -466,6 +466,8 @@ public class HRegionServer extends HasThread implements
     checkCodecs(this.conf);
     this.userProvider = UserProvider.instantiate(conf);
     FSUtils.setupShortCircuitRead(this.conf);
+    // Disable usage of meta replicas in the regionserver
+    this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
 
     // Config'ed params
     this.numRetries = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
@@ -783,11 +785,19 @@ public class HRegionServer extends HasThread implements
     rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
         rpcServices.isa.getAddress(), 0));
 
+    boolean onlyMetaRefresh = false;
     int storefileRefreshPeriod = conf.getInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD
       , StorefileRefresherChore.DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD);
+    if (storefileRefreshPeriod == 0) {
+      storefileRefreshPeriod = conf.getInt(
+          StorefileRefresherChore.REGIONSERVER_META_STOREFILE_REFRESH_PERIOD,
+          StorefileRefresherChore.DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD);
+      onlyMetaRefresh = true;
+    }
     if (storefileRefreshPeriod > 0) {
-      this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod, this, this);
+      this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod,
+          onlyMetaRefresh, this, this);
     }
     registerConfigurationObservers();
   }
@@ -1726,7 +1736,8 @@ public class HRegionServer extends HasThread implements
     WAL wal;
     LogRoller roller = walRoller;
     //_ROOT_ and hbase:meta regions have separate WAL.
-    if (regionInfo != null && regionInfo.isMetaTable()) {
+    if (regionInfo != null && regionInfo.isMetaTable() &&
+        regionInfo.getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
       roller = ensureMetaWALRoller();
       wal = walFactory.getMetaWAL(regionInfo.getEncodedNameAsBytes());
     } else if (regionInfo == null) {
@@ -1801,7 +1812,8 @@ public class HRegionServer extends HasThread implements
 
     // Update ZK, or META
     if (r.getRegionInfo().isMetaRegion()) {
-      MetaTableLocator.setMetaLocation(getZooKeeper(), serverName, State.OPEN);
+      MetaTableLocator.setMetaLocation(getZooKeeper(), serverName, r.getRegionInfo().getReplicaId(),
+         State.OPEN);
     } else if (useZKForAssignment) {
       MetaTableAccessor.updateRegionLocation(getConnection(), r.getRegionInfo(),
         this.serverName, openSeqNum);

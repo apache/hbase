@@ -144,7 +144,7 @@ public class TestStoreFileRefresherChore {
     boolean isStale = false;
     public StaleStorefileRefresherChore(int period, HRegionServer regionServer,
         Stoppable stoppable) {
-      super(period, regionServer, stoppable);
+      super(period, false, regionServer, stoppable);
     }
     @Override
     protected boolean isRegionStale(String encodedName, long time) {

@@ -176,19 +176,19 @@ public class RegionStateStore {
     
     HRegionInfo hri = newState.getRegion();
     try {
-    // update meta before checking for initialization.
-    // meta state stored in zk.
-    if (hri.isMetaRegion()) {
-      // persist meta state in MetaTableLocator (which in turn is zk storage currently)
-      try {
-        MetaTableLocator.setMetaLocation(server.getZooKeeper(),
-          newState.getServerName(), newState.getState());
-        return; // Done
-      } catch (KeeperException e) {
-        throw new IOException("Failed to update meta ZNode", e);
+      // update meta before checking for initialization.
+      // meta state stored in zk.
+      if (hri.isMetaRegion()) {
+        // persist meta state in MetaTableLocator (which in turn is zk storage currently)
+        try {
+          MetaTableLocator.setMetaLocation(server.getZooKeeper(),
+            newState.getServerName(), hri.getReplicaId(), newState.getState());
+          return; // Done
+        } catch (KeeperException e) {
+          throw new IOException("Failed to update meta ZNode", e);
+        }
       }
-    }
-    
+
     if (!initialized || !shouldPersistStateChange(hri, newState, oldState)) {
       return;
     }

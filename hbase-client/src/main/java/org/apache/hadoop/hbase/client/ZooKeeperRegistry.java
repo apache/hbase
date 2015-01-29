@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,14 +58,32 @@ class ZooKeeperRegistry implements Registry {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Looking up meta region location in ZK," + " connection=" + this);
       }
-      ServerName servername = new MetaTableLocator().blockUntilAvailable(zkw, hci.rpcTimeout);
+      List<ServerName> servers = new MetaTableLocator().blockUntilAvailable(zkw, hci.rpcTimeout,
+          hci.getConfiguration());
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Looked up meta region location, connection=" + this +
-          "; serverName=" + ((servername == null) ? "null" : servername));
+        if (servers == null) {
+          LOG.trace("Looked up meta region location, connection=" + this +
+            "; servers = null");
+        } else {
+          StringBuilder str = new StringBuilder();
+          for (ServerName s : servers) {
+            str.append(s.toString());
+            str.append(" ");
+          }
+          LOG.trace("Looked up meta region location, connection=" + this +
+            "; servers = " + str.toString());
+        }
       }
-      if (servername == null) return null;
-      HRegionLocation loc = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, servername, 0);
-      return new RegionLocations(new HRegionLocation[] {loc});
+      if (servers == null) return null;
+      HRegionLocation[] locs = new HRegionLocation[servers.size()];
+      int i = 0;
+      for (ServerName server : servers) {
+        HRegionInfo h = RegionReplicaUtil.getRegionInfoForReplica(
+                HRegionInfo.FIRST_META_REGIONINFO, i);
+        if (server == null) locs[i++] = null;
+        else locs[i++] = new HRegionLocation(h, server, 0);
+      }
+      return new RegionLocations(locs);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return null;

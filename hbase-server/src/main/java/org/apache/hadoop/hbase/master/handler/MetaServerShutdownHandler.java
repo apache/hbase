@@ -156,7 +156,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
         getLong("hbase.catalog.verification.timeout", 1000);
     if (!server.getMetaTableLocator().verifyMetaRegionLocation(server.getConnection(),
       this.server.getZooKeeper(), timeout)) {
-      this.services.getAssignmentManager().assignMeta();
+      this.services.getAssignmentManager().assignMeta(HRegionInfo.FIRST_META_REGIONINFO);
     } else if (serverName.equals(server.getMetaTableLocator().getMetaRegionLocation(
       this.server.getZooKeeper()))) {
       throw new IOException("hbase:meta is onlined on the dead server "
