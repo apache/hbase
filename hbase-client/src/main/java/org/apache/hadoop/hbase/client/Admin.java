@@ -954,6 +954,32 @@ public interface Admin extends Abortable, Closeable {
     final byte[] regionName) throws IOException;
 
   /**
+   * Get the timestamp of the last major compaction for the passed table
+   *
+   * The timestamp of the oldest HFile resulting from a major compaction of that table,
+   * or 0 if no such HFile could be found.
+   *
+   * @param tableName table to examine
+   * @return the last major compaction timestamp or 0
+   * @throws IOException if a remote or network exception occurs
+   */
+  long getLastMajorCompactionTimestamp(final TableName tableName)
+    throws IOException;
+
+  /**
+   * Get the timestamp of the last major compaction for the passed region.
+   *
+   * The timestamp of the oldest HFile resulting from a major compaction of that region,
+   * or 0 if no such HFile could be found.
+   *
+   * @param regionName region to examine
+   * @return the last major compaction timestamp or 0
+   * @throws IOException if a remote or network exception occurs
+   */
+  long getLastMajorCompactionTimestampForRegion(final byte[] regionName)
+      throws IOException;
+
+  /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be
    * taken. If the table is disabled, an offline snapshot is taken. Snapshots are considered unique
    * based on <b>the name of the snapshot</b>. Attempts to take a snapshot with the same name (even

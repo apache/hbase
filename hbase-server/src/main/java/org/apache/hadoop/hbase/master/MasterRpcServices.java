@@ -106,6 +106,9 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescript
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
@@ -1242,5 +1245,36 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
+  }
+
+  @Override
+  public MajorCompactionTimestampResponse getLastMajorCompactionTimestamp(RpcController controller,
+      MajorCompactionTimestampRequest request) throws ServiceException {
+    MajorCompactionTimestampResponse.Builder response =
+        MajorCompactionTimestampResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      response.setCompactionTimestamp(master.getLastMajorCompactionTimestamp(ProtobufUtil
+          .toTableName(request.getTableName())));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return response.build();
+  }
+
+  @Override
+  public MajorCompactionTimestampResponse getLastMajorCompactionTimestampForRegion(
+      RpcController controller, MajorCompactionTimestampForRegionRequest request)
+      throws ServiceException {
+    MajorCompactionTimestampResponse.Builder response =
+        MajorCompactionTimestampResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      response.setCompactionTimestamp(master.getLastMajorCompactionTimestampForRegion(request
+          .getRegion().getValue().toByteArray()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return response.build();
   }
 }

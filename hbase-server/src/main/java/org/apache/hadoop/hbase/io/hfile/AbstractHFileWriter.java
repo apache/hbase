@@ -148,6 +148,9 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
     int avgValueLen =
         entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
     fileInfo.append(FileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
+
+    fileInfo.append(FileInfo.CREATE_TIME_TS, Bytes.toBytes(hFileContext.getFileCreateTime()),
+      false);
   }
 
   /**

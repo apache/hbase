@@ -169,6 +169,14 @@ public class RegionLoad {
     }
     return 0.0f;
   }
+
+  /**
+   * @return the timestamp of the oldest hfile for any store of this region.
+   */
+  public long getLastMajorCompactionTs() {
+    return regionLoadPB.getLastMajorCompactionTs();
+  }
+
   /**
    * @see java.lang.Object#toString()
    */
@@ -179,7 +187,9 @@ public class RegionLoad {
     sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
         this.getStorefiles());
     sb = Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
-        this.getStoreUncompressedSizeMB());
+      this.getStoreUncompressedSizeMB());
+    sb = Strings.appendKeyValue(sb, "lastMajorCompactionTimestamp",
+      this.getLastMajorCompactionTs());
     sb = Strings.appendKeyValue(sb, "storefileSizeMB",
         this.getStorefileSizeMB());
     if (this.getStoreUncompressedSizeMB() != 0) {

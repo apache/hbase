@@ -267,6 +267,29 @@ public class ClusterStatus extends VersionedWritable {
     return masterCoprocessors;
   }
 
+  public long getLastMajorCompactionTsForTable(TableName table) {
+    long result = Long.MAX_VALUE;
+    for (ServerName server : getServers()) {
+      ServerLoad load = getLoad(server);
+      for (RegionLoad rl : load.getRegionsLoad().values()) {
+        if (table.equals(HRegionInfo.getTable(rl.getName()))) {
+          result = Math.min(result, rl.getLastMajorCompactionTs());
+        }
+      }
+    }
+    return result == Long.MAX_VALUE ? 0 : result;
+  }
+
+  public long getLastMajorCompactionTsForRegion(final byte[] region) {
+    for (ServerName server : getServers()) {
+      ServerLoad load = getLoad(server);
+      RegionLoad rl = load.getRegionsLoad().get(region);
+      if (rl != null) {
+        return rl.getLastMajorCompactionTs();
+      }
+    }
+    return 0;
+  }
 
   public boolean isBalancerOn() {
     return balancerOn != null && balancerOn;

@@ -364,6 +364,18 @@ message IsProcedureDoneResponse {
         optional ProcedureDescription snapshot = 2;
 }
 
+message MajorCompactionTimestampRequest {
+  required TableName table_name = 1;
+}
+
+message MajorCompactionTimestampForRegionRequest {
+  required RegionSpecifier region = 1;
+}
+
+message MajorCompactionTimestampResponse {
+  required int64 compaction_timestamp = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -571,4 +583,12 @@ service MasterService {
   /** returns a list of tables for a given namespace*/
   rpc ListTableNamesByNamespace(ListTableNamesByNamespaceRequest)
     returns(ListTableNamesByNamespaceResponse);
+
+  /** Returns the timestamp of the last major compaction */
+  rpc getLastMajorCompactionTimestamp(MajorCompactionTimestampRequest)
+    returns(MajorCompactionTimestampResponse);
+
+  /** Returns the timestamp of the last major compaction */
+  rpc getLastMajorCompactionTimestampForRegion(MajorCompactionTimestampForRegionRequest)
+    returns(MajorCompactionTimestampResponse);
 }

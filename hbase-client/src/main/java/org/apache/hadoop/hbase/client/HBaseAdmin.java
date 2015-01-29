@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfiguratio
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
@@ -115,6 +116,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRes
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
@@ -3720,5 +3723,34 @@ public class HBaseAdmin implements Admin {
     } catch (KeeperException e) {
       throw new IOException("Failed to get master info port from MasterAddressTracker", e);
     }
+  }
+
+  @Override
+  public long getLastMajorCompactionTimestamp(final TableName tableName) throws IOException {
+    return executeCallable(new MasterCallable<Long>(getConnection()) {
+      @Override
+      public Long call(int callTimeout) throws ServiceException {
+        MajorCompactionTimestampRequest req =
+            MajorCompactionTimestampRequest.newBuilder()
+                .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
+        return master.getLastMajorCompactionTimestamp(null, req).getCompactionTimestamp();
+      }
+    });
+  }
+
+  @Override
+  public long getLastMajorCompactionTimestampForRegion(final byte[] regionName) throws IOException {
+    return executeCallable(new MasterCallable<Long>(getConnection()) {
+      @Override
+      public Long call(int callTimeout) throws ServiceException {
+        MajorCompactionTimestampForRegionRequest req =
+            MajorCompactionTimestampForRegionRequest
+                .newBuilder()
+                .setRegion(
+                  RequestConverter
+                      .buildRegionSpecifier(RegionSpecifierType.REGION_NAME, regionName)).build();
+        return master.getLastMajorCompactionTimestampForRegion(null, req).getCompactionTimestamp();
+      }
+    });
   }
 }

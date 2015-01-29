@@ -56,6 +56,7 @@ public class HFileContext implements HeapSize, Cloneable {
   private DataBlockEncoding encoding = DataBlockEncoding.NONE;
   /** Encryption algorithm and key used */
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
+  private long fileCreateTime;
 
   //Empty constructor.  Go with setters
   public HFileContext() {
@@ -76,12 +77,13 @@ public class HFileContext implements HeapSize, Cloneable {
     this.blocksize = context.blocksize;
     this.encoding = context.encoding;
     this.cryptoContext = context.cryptoContext;
+    this.fileCreateTime = context.fileCreateTime;
   }
 
   public HFileContext(boolean useHBaseChecksum, boolean includesMvcc, boolean includesTags,
       Compression.Algorithm compressAlgo, boolean compressTags, ChecksumType checksumType,
       int bytesPerChecksum, int blockSize, DataBlockEncoding encoding,
-      Encryption.Context cryptoContext) {
+      Encryption.Context cryptoContext, long fileCreateTime) {
     this.usesHBaseChecksum = useHBaseChecksum;
     this.includesMvcc =  includesMvcc;
     this.includesTags = includesTags;
@@ -94,6 +96,7 @@ public class HFileContext implements HeapSize, Cloneable {
       this.encoding = encoding;
     }
     this.cryptoContext = cryptoContext;
+    this.fileCreateTime = fileCreateTime;
   }
 
   /**
@@ -141,6 +144,10 @@ public class HFileContext implements HeapSize, Cloneable {
     this.includesTags = includesTags;
   }
 
+  public void setFileCreateTime(long fileCreateTime) {
+    this.fileCreateTime = fileCreateTime;
+  }
+
   public boolean isCompressTags() {
     return compressTags;
   }
@@ -159,6 +166,10 @@ public class HFileContext implements HeapSize, Cloneable {
 
   public int getBlocksize() {
     return blocksize;
+  }
+
+  public long getFileCreateTime() {
+    return fileCreateTime;
   }
 
   public DataBlockEncoding getDataBlockEncoding() {
@@ -189,7 +200,8 @@ public class HFileContext implements HeapSize, Cloneable {
         4 * ClassSize.REFERENCE +
         2 * Bytes.SIZEOF_INT +
         // usesHBaseChecksum, includesMvcc, includesTags and compressTags
-        4 * Bytes.SIZEOF_BOOLEAN);
+        4 * Bytes.SIZEOF_BOOLEAN +
+        Bytes.SIZEOF_LONG);
     return size;
   }
 
