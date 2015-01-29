@@ -201,13 +201,6 @@ checkout () {
       fi
     fi
     echo
-  else
-    if [[ $BRANCH_NAME -ne "master" ]]; then
-      echo "${GIT} checkout ${BRANCH_NAME}"
-      ${GIT} checkout ${BRANCH_NAME}
-      echo "${GIT} status"
-      ${GIT} status
-    fi
   fi
   return $?
 }
@@ -221,6 +214,26 @@ findBranchNameFromPatchName() {
     fi
   done
   return 0
+}
+
+checkoutBranch() {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Testing patch on branch ${BRANCH_NAME}."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  if [[ $JENKINS == "true" ]] ; then
+    if [[ $BRANCH_NAME -ne "master" ]]; then
+      echo "${GIT} checkout ${BRANCH_NAME}"
+      ${GIT} checkout ${BRANCH_NAME}
+      echo "${GIT} status"
+      ${GIT} status
+    fi
+  fi
 }
 
 ###############################################################################
@@ -247,6 +260,7 @@ setup () {
     $WGET -q -O $PATCH_DIR/patch $patchURL
     VERSION=${GIT_COMMIT}_${defect}_PATCH-${patchNum}
     findBranchNameFromPatchName ${relativePatchURL}
+    checkoutBranch
     JIRA_COMMENT="Here are the results of testing the latest attachment 
   $patchURL
   against ${BRANCH_NAME} branch at commit ${GIT_COMMIT}.
