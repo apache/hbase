@@ -32,6 +32,7 @@ PROJECT_NAME=HBase
 JENKINS=false
 PATCH_DIR=/tmp
 BASEDIR=$(pwd)
+BRANCH_NAME="master"
 
 PS=${PS:-ps}
 AWK=${AWK:-awk}
@@ -200,8 +201,26 @@ checkout () {
       fi
     fi
     echo
+  else
+    if [[ $BRANCH_NAME -ne "master" ]]; then
+      echo "${GIT} checkout ${BRANCH_NAME}"
+      ${GIT} checkout ${BRANCH_NAME}
+      echo "${GIT} status"
+      ${GIT} status
+    fi
   fi
   return $?
+}
+
+findBranchNameFromPatchName() {
+  local patchName=$1
+  for LOCAL_BRANCH_NAME in $BRANCH_NAMES; do
+    if [[ $patchName =~ .*$LOCAL_BRANCH_NAME.* ]]; then
+      BRANCH_NAME=$LOCAL_BRANCH_NAME
+      break
+    fi
+  done
+  return 0
 }
 
 ###############################################################################
@@ -227,9 +246,10 @@ setup () {
     echo "$patchURL"
     $WGET -q -O $PATCH_DIR/patch $patchURL
     VERSION=${GIT_COMMIT}_${defect}_PATCH-${patchNum}
+    findBranchNameFromPatchName ${relativePatchURL}
     JIRA_COMMENT="Here are the results of testing the latest attachment 
   $patchURL
-  against master branch at commit ${GIT_COMMIT}.
+  against ${BRANCH_NAME} branch at commit ${GIT_COMMIT}.
   ATTACHMENT ID: ${ATTACHMENT_ID}"
 
   ### Copy the patch file to $PATCH_DIR
