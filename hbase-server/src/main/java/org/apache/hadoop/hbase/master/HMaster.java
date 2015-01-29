@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
@@ -124,6 +125,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
@@ -799,7 +801,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         int replicaId = zooKeeper.getMetaReplicaIdFromZnode(metaReplicaZnode);
         if (replicaId >= numMetaReplicasConfigured) {
           RegionState r = MetaTableLocator.getMetaRegionState(zkw, replicaId);
-          serverManager.sendRegionClose(r.getServerName(), r.getRegion());
+          LOG.info("Closing excess replica of meta region " + r.getRegion());
+          // send a close and wait for a max of 30 seconds
+          ServerManager.closeRegionSilentlyAndWait(getConnection(), r.getServerName(),
+              r.getRegion(), 30000);
           ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(replicaId));
         }
       }

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -38,8 +39,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.zookeeper.KeeperException;
 
@@ -153,29 +153,10 @@ public class HBaseFsckRepair {
   @SuppressWarnings("deprecation")
   public static void closeRegionSilentlyAndWait(HConnection connection, 
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
-    AdminService.BlockingInterface rs = connection.getAdmin(server);
-    try {
-      ProtobufUtil.closeRegion(rs, server, region.getRegionName());
-    } catch (IOException e) {
-      LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
-    }
     long timeout = connection.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);
-    long expiration = timeout + System.currentTimeMillis();
-    while (System.currentTimeMillis() < expiration) {
-      try {
-        HRegionInfo rsRegion =
-          ProtobufUtil.getRegionInfo(rs, region.getRegionName());
-        if (rsRegion == null) return;
-      } catch (IOException ioe) {
-        if (ioe instanceof NotServingRegionException) // no need to retry again
-          return;
-        LOG.warn("Exception when retrieving regioninfo from: " + region.getRegionNameAsString(), ioe);
-      }
-      Thread.sleep(1000);
-    }
-    throw new IOException("Region " + region + " failed to close within"
-        + " timeout " + timeout);
+    ServerManager.closeRegionSilentlyAndWait((ClusterConnection)connection, server,
+         region, timeout);
   }
 
   /**
