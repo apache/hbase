@@ -229,7 +229,7 @@ checkoutBranch() {
   echo ""
   echo ""
   if [[ $JENKINS == "true" ]] ; then
-    if [[ $BRANCH_NAME -ne "master" ]]; then
+    if [[ "$BRANCH_NAME" != "master" ]]; then
       echo "${GIT} checkout ${BRANCH_NAME}"
       ${GIT} checkout ${BRANCH_NAME}
       echo "${GIT} status"
