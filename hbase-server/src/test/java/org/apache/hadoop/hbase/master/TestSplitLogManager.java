@@ -46,6 +46,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -160,6 +161,11 @@ public class TestSplitLogManager {
 
     @Override
     public MetaTableLocator getMetaTableLocator() {
+      return null;
+    }
+
+    @Override
+    public ChoreService getChoreService() {
       return null;
     }
   }

@@ -18,20 +18,19 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Date;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -247,13 +246,13 @@ public class ServerNonceManager {
   }
 
   /**
-   * Creates a chore that is used to clean up old nonces.
+   * Creates a scheduled chore that is used to clean up old nonces.
    * @param stoppable Stoppable for the chore.
-   * @return Chore; the chore is not started.
+   * @return ScheduledChore; the scheduled chore is not started.
    */
-  public Chore createCleanupChore(Stoppable stoppable) {
+  public ScheduledChore createCleanupScheduledChore(Stoppable stoppable) {
     // By default, it will run every 6 minutes (30 / 5).
-    return new Chore("nonceCleaner", deleteNonceGracePeriod / 5, stoppable) {
+    return new ScheduledChore("nonceCleaner", stoppable, deleteNonceGracePeriod / 5) {
       @Override
       protected void chore() {
         cleanUpOldNonces();

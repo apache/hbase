@@ -23,10 +23,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -53,6 +54,7 @@ public class ConnectionCache {
   private final UserGroupInformation realUser;
   private final UserProvider userProvider;
   private final Configuration conf;
+  private final ChoreService choreService;
 
   private final ThreadLocal<String> effectiveUserNames =
       new ThreadLocal<String>() {
@@ -69,8 +71,8 @@ public class ConnectionCache {
       @Override public void stop(String why) { isStopped = true;}
       @Override public boolean isStopped() {return isStopped;}
     };
-
-    Chore cleaner = new Chore("ConnectionCleaner", cleanInterval, stoppable) {
+    this.choreService = new ChoreService("ConnectionCache");
+    ScheduledChore cleaner = new ScheduledChore("ConnectionCleaner", stoppable, cleanInterval) {
       @Override
       protected void chore() {
         for (Map.Entry<String, ConnectionInfo> entry: connections.entrySet()) {
@@ -93,7 +95,7 @@ public class ConnectionCache {
       }
     };
     // Start the daemon cleaner chore
-    Threads.setDaemonThreadRunning(cleaner.getThread());
+    choreService.scheduleChore(cleaner);
     this.realUser = userProvider.getCurrent().getUGI();
     this.realUserName = realUser.getShortUserName();
     this.userProvider = userProvider;
@@ -112,6 +114,13 @@ public class ConnectionCache {
    */
   public String getEffectiveUser() {
     return effectiveUserNames.get();
+  }
+
+  /**
+   * Called when cache is no longer needed so that it can perform cleanup operations
+   */
+  public void shutdown() {
+    if (choreService != null) choreService.shutdown();
   }
 
   /**

@@ -384,7 +384,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             " is not set - not publishing status");
       } else {
         clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
-        Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
+        getChoreService().scheduleChore(clusterStatusPublisherChore);
       }
     }
     activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
@@ -726,11 +726,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // been assigned.
     status.setStatus("Starting balancer and catalog janitor");
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
-    Threads.setDaemonThreadRunning(clusterStatusChore.getThread());
+    getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
-    Threads.setDaemonThreadRunning(balancerChore.getThread());
+    getChoreService().scheduleChore(balancerChore);
     this.catalogJanitorChore = new CatalogJanitor(this, this);
-    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
+    getChoreService().scheduleChore(catalogJanitorChore);
 
     status.setStatus("Starting namespace manager");
     initNamespace();
@@ -1013,16 +1013,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       new LogCleaner(cleanerInterval,
          this, conf, getMasterFileSystem().getFileSystem(),
          getMasterFileSystem().getOldLogDir());
-         Threads.setDaemonThreadRunning(logCleaner.getThread(),
-           getServerName().toShortString() + ".oldLogCleaner");
+    getChoreService().scheduleChore(logCleaner);
 
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
         .getFileSystem(), archiveDir);
-    Threads.setDaemonThreadRunning(hfileCleaner.getThread(),
-      getServerName().toShortString() + ".archivedHFileCleaner");
-
+    getChoreService().scheduleChore(hfileCleaner);
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Started service threads");
@@ -1051,8 +1048,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       LOG.debug("Stopping service threads");
     }
     // Clean up and close up shop
-    if (this.logCleaner!= null) this.logCleaner.interrupt();
-    if (this.hfileCleaner != null) this.hfileCleaner.interrupt();
+    if (this.logCleaner != null) this.logCleaner.cancel(true);
+    if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
     if (this.quotaManager != null) this.quotaManager.stop();
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
     if (this.serverManager != null) this.serverManager.stop();
@@ -1063,16 +1060,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private void stopChores() {
     if (this.balancerChore != null) {
-      this.balancerChore.interrupt();
+      this.balancerChore.cancel(true);
     }
     if (this.clusterStatusChore != null) {
-      this.clusterStatusChore.interrupt();
+      this.clusterStatusChore.cancel(true);
     }
     if (this.catalogJanitorChore != null) {
-      this.catalogJanitorChore.interrupt();
+      this.catalogJanitorChore.cancel(true);
     }
     if (this.clusterStatusPublisherChore != null){
-      clusterStatusPublisherChore.interrupt();
+      clusterStatusPublisherChore.cancel(true);
     }
   }
 

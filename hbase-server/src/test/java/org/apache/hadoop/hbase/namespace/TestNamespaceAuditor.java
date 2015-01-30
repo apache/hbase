@@ -119,7 +119,7 @@ public class TestNamespaceAuditor {
       .getMasterQuotaManager().isQuotaEnabled());
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testTableOperations() throws Exception {
     String nsp = prefix + "_np2";
     NamespaceDescriptor nspDesc =

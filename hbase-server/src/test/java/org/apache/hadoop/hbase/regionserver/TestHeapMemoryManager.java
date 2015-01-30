@@ -27,6 +27,7 @@ import java.lang.management.ManagementFactory;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -111,7 +112,8 @@ public class TestHeapMemoryManager {
         new RegionServerStub(conf));
     long oldMemstoreHeapSize = memStoreFlusher.memstoreSize;
     long oldBlockCacheSize = blockCache.maxSize;
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     memStoreFlusher.flushType = FlushType.ABOVE_HIGHER_MARK;
     memStoreFlusher.requestFlush(null, false);
     memStoreFlusher.requestFlush(null, false);
@@ -151,7 +153,8 @@ public class TestHeapMemoryManager {
         new RegionServerStub(conf));
     long oldMemstoreHeapSize = memStoreFlusher.memstoreSize;
     long oldBlockCacheSize = blockCache.maxSize;
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     blockCache.evictBlock(null);
     blockCache.evictBlock(null);
     blockCache.evictBlock(null);
@@ -186,7 +189,8 @@ public class TestHeapMemoryManager {
     // Let the system start with default values for memstore heap and block cache size.
     HeapMemoryManager heapMemoryManager = new HeapMemoryManager(blockCache, memStoreFlusher,
         new RegionServerStub(conf));
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     // Now we wants to be in write mode. Set bigger memstore size from CustomHeapMemoryTuner
     CustomHeapMemoryTuner.memstoreSize = 0.78f;
     CustomHeapMemoryTuner.blockCacheSize = 0.02f;
@@ -215,7 +219,8 @@ public class TestHeapMemoryManager {
         HeapMemoryTuner.class);
     HeapMemoryManager heapMemoryManager = new HeapMemoryManager(blockCache, memStoreFlusher,
         new RegionServerStub(conf));
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     CustomHeapMemoryTuner.memstoreSize = 0.78f;
     CustomHeapMemoryTuner.blockCacheSize = 0.02f;
     Thread.sleep(1500); // Allow the tuner to run once and do necessary memory up
@@ -241,7 +246,8 @@ public class TestHeapMemoryManager {
         new RegionServerStub(conf));
     long oldMemstoreSize = memStoreFlusher.memstoreSize;
     long oldBlockCacheSize = blockCache.maxSize;
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     CustomHeapMemoryTuner.memstoreSize = 0.7f;
     CustomHeapMemoryTuner.blockCacheSize = 0.3f;
     Thread.sleep(1500);
@@ -283,7 +289,8 @@ public class TestHeapMemoryManager {
         conf));
     long oldMemstoreSize = memStoreFlusher.memstoreSize;
     long oldBlockCacheSize = blockCache.maxSize;
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     CustomHeapMemoryTuner.memstoreSize = 0.4f;
     CustomHeapMemoryTuner.blockCacheSize = 0.4f;
     Thread.sleep(1500);
@@ -489,6 +496,11 @@ public class TestHeapMemoryManager {
     @Override
     public ServerName getServerName() {
       return ServerName.valueOf("server1",4000,12345);
+    }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
     }
   }
 

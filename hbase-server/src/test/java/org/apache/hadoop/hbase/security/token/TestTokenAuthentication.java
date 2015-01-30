@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutorService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.Coprocessor;
@@ -318,6 +319,11 @@ public class TestTokenAuthentication {
       } catch (IOException ioe) {
         throw new ServiceException(ioe);
       }
+    }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
     }
   }
 

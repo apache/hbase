@@ -65,4 +65,9 @@ public interface Server extends Abortable, Stoppable {
    * Get CoordinatedStateManager instance for this server.
    */
   CoordinatedStateManager getCoordinatedStateManager();
+
+  /**
+   * @return The {@link ChoreService} instance for this server
+   */
+  ChoreService getChoreService();
 }

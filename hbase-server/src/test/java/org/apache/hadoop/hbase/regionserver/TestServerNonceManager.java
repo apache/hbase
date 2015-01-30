@@ -19,17 +19,20 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.NO_NONCE;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
@@ -87,7 +90,7 @@ public class TestServerNonceManager {
     EnvironmentEdgeManager.injectEdge(edge);
     try {
       ServerNonceManager nm = createManager(6);
-      Chore cleanup = nm.createCleanupChore(Mockito.mock(Stoppable.class));
+      ScheduledChore cleanup = nm.createCleanupScheduledChore(Mockito.mock(Stoppable.class));
       edge.setValue(1);
       assertTrue(nm.startOperation(NO_NONCE, 1, createStoppable()));
       assertTrue(nm.startOperation(NO_NONCE, 2, createStoppable()));
@@ -120,7 +123,7 @@ public class TestServerNonceManager {
     EnvironmentEdgeManager.injectEdge(edge);
     try {
       ServerNonceManager nm = createManager(6);
-      Chore cleanup = nm.createCleanupChore(Mockito.mock(Stoppable.class));
+      ScheduledChore cleanup = nm.createCleanupScheduledChore(Mockito.mock(Stoppable.class));
       // Add nonces from WAL, including dups.
       edge.setValue(12);
       nm.reportOperationFromWal(NO_NONCE, 1, 8);

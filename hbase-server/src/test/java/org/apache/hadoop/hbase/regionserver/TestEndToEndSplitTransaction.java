@@ -34,11 +34,12 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -198,8 +199,9 @@ public class TestEndToEndSplitTransaction {
     Stoppable stopper = new StoppableImplementation();
     RegionSplitter regionSplitter = new RegionSplitter(table);
     RegionChecker regionChecker = new RegionChecker(conf, stopper, TABLENAME);
+    final ChoreService choreService = new ChoreService("TEST_SERVER");
 
-    regionChecker.start();
+    choreService.scheduleChore(regionChecker);
     regionSplitter.start();
 
     //wait until the splitter is finished
@@ -298,17 +300,16 @@ public class TestEndToEndSplitTransaction {
   /**
    * Checks regions using MetaScanner, MetaTableAccessor and HTable methods
    */
-  static class RegionChecker extends Chore {
+  static class RegionChecker extends ScheduledChore {
     Connection connection;
     Configuration conf;
     TableName tableName;
     Throwable ex;
 
     RegionChecker(Configuration conf, Stoppable stopper, TableName tableName) throws IOException {
-      super("RegionChecker", 10, stopper);
+      super("RegionChecker", stopper, 10);
       this.conf = conf;
       this.tableName = tableName;
-      this.setDaemon(true);
 
       this.connection = ConnectionFactory.createConnection(conf);
     }

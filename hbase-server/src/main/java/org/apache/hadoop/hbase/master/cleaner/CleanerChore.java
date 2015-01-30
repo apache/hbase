@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -41,7 +41,7 @@ import com.google.common.collect.Lists;
  * Abstract Cleaner that uses a chain of delegates to clean a directory of files
  * @param <T> Cleaner delegate class that is dynamically loaded from configuration
  */
-public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore {
+public abstract class CleanerChore<T extends FileCleanerDelegate> extends ScheduledChore {
 
   private static final Log LOG = LogFactory.getLog(CleanerChore.class.getName());
 
@@ -61,7 +61,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    */
   public CleanerChore(String name, final int sleepPeriod, final Stoppable s, Configuration conf,
       FileSystem fs, Path oldFileDir, String confKey) {
-    super(name, sleepPeriod, s);
+    super(name, s, sleepPeriod);
     this.fs = fs;
     this.oldFileDir = oldFileDir;
     this.conf = conf;
