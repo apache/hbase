@@ -52,7 +52,7 @@ See link:https://issues.apache.org/jira/browse/HBASE-3696[HBASE-3696] and its as
 .Loopback IP - HBase 0.94.x and earlier
 NOTE: _The below advice is for hbase-0.94.x and older versions only. This is fixed in hbase-0.96.0 and beyond._
 
-Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1. Ubuntu and some other distributions default to 127.0.1.1 and this will cause problems for you.
+Prior to HBase 0.94.x, HBase expected the loopback IP address to be 127.0.0.1. Ubuntu and some other distributions default to 127.0.1.1 and this will cause problems for you. See link:http://devving.com/?p=414[Why does HBase care about /etc/hosts?] for detail
 
 
 .Example /etc/hosts File for Ubuntu
