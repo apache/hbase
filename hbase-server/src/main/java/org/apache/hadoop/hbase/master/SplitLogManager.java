@@ -39,29 +39,30 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLogManagerDetails;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -102,6 +103,7 @@ public class SplitLogManager {
 
   private final Stoppable stopper;
   private final Configuration conf;
+  private final ChoreService choreService;
 
   public static final int DEFAULT_UNASSIGNED_TIMEOUT = (3 * 60 * 1000); // 3 min
 
@@ -138,6 +140,7 @@ public class SplitLogManager {
     this.server = server;
     this.conf = conf;
     this.stopper = stopper;
+    this.choreService = new ChoreService(serverName.toString() + "_splitLogManager_");
     if (server.getCoordinatedStateManager() != null) {
       SplitLogManagerCoordination coordination =
           ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
@@ -154,8 +157,7 @@ public class SplitLogManager {
     this.timeoutMonitor =
         new TimeoutMonitor(conf.getInt("hbase.splitlog.manager.timeoutmonitor.period", 1000),
             stopper);
-    Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), serverName
-        + ".splitLogManagerTimeoutMonitor");
+    choreService.scheduleChore(timeoutMonitor);
   }
 
   private FileStatus[] getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
@@ -528,8 +530,11 @@ public class SplitLogManager {
   }
 
   public void stop() {
+    if (choreService != null) {
+      choreService.shutdown();
+    }
     if (timeoutMonitor != null) {
-      timeoutMonitor.interrupt();
+      timeoutMonitor.cancel(true);
     }
   }
 
@@ -683,11 +688,11 @@ public class SplitLogManager {
   /**
    * Periodically checks all active tasks and resubmits the ones that have timed out
    */
-  private class TimeoutMonitor extends Chore {
+  private class TimeoutMonitor extends ScheduledChore {
     private long lastLog = 0;
 
     public TimeoutMonitor(final int period, Stoppable stopper) {
-      super("SplitLogManager Timeout Monitor", period, stopper);
+      super("SplitLogManager Timeout Monitor", stopper, period);
     }
 
     @Override

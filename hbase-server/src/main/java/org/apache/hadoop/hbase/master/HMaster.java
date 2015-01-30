@@ -26,7 +26,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -57,7 +56,6 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaMigrationConvertingToPB;
@@ -65,7 +63,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -110,7 +107,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -126,7 +122,6 @@ import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
@@ -380,7 +375,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             " is not set - not publishing status");
       } else {
         clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
-        Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
+        getChoreService().scheduleChore(clusterStatusPublisherChore);
       }
     }
     activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
@@ -719,11 +714,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // been assigned.
     status.setStatus("Starting balancer and catalog janitor");
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
-    Threads.setDaemonThreadRunning(clusterStatusChore.getThread());
+    getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
-    Threads.setDaemonThreadRunning(balancerChore.getThread());
+    getChoreService().scheduleChore(balancerChore);
     this.catalogJanitorChore = new CatalogJanitor(this, this);
-    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
+    getChoreService().scheduleChore(catalogJanitorChore);
 
     status.setStatus("Starting namespace manager");
     initNamespace();
@@ -1032,16 +1027,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       new LogCleaner(cleanerInterval,
          this, conf, getMasterFileSystem().getFileSystem(),
          getMasterFileSystem().getOldLogDir());
-         Threads.setDaemonThreadRunning(logCleaner.getThread(),
-           getServerName().toShortString() + ".oldLogCleaner");
+    getChoreService().scheduleChore(logCleaner);
 
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
         .getFileSystem(), archiveDir);
-    Threads.setDaemonThreadRunning(hfileCleaner.getThread(),
-      getServerName().toShortString() + ".archivedHFileCleaner");
-
+    getChoreService().scheduleChore(hfileCleaner);
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Started service threads");
@@ -1070,8 +1062,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       LOG.debug("Stopping service threads");
     }
     // Clean up and close up shop
-    if (this.logCleaner!= null) this.logCleaner.interrupt();
-    if (this.hfileCleaner != null) this.hfileCleaner.interrupt();
+    if (this.logCleaner != null) this.logCleaner.cancel(true);
+    if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
     if (this.serverManager != null) this.serverManager.stop();
     if (this.assignmentManager != null) this.assignmentManager.stop();
@@ -1081,16 +1073,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private void stopChores() {
     if (this.balancerChore != null) {
-      this.balancerChore.interrupt();
+      this.balancerChore.cancel(true);
     }
     if (this.clusterStatusChore != null) {
-      this.clusterStatusChore.interrupt();
+      this.clusterStatusChore.cancel(true);
     }
     if (this.catalogJanitorChore != null) {
-      this.catalogJanitorChore.interrupt();
+      this.catalogJanitorChore.cancel(true);
     }
     if (this.clusterStatusPublisherChore != null){
-      clusterStatusPublisherChore.interrupt();
+      clusterStatusPublisherChore.cancel(true);
     }
   }
 

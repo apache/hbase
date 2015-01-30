@@ -33,9 +33,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
@@ -76,7 +77,7 @@ public class TestHFileArchiving {
     UTIL.startMiniCluster();
 
     // We don't want the cleaner to remove files. The tests do that.
-    UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().interrupt();
+    UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().cancel(true);
   }
 
   private static void setupConf(Configuration conf) {
@@ -350,6 +351,7 @@ public class TestHFileArchiving {
   @Test
   public void testCleaningRace() throws Exception {
     final long TEST_TIME = 20 * 1000;
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
 
     Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
@@ -368,7 +370,7 @@ public class TestHFileArchiving {
     // The cleaner should be looping without long pauses to reproduce the race condition.
     HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir);
     try {
-      cleaner.start();
+      choreService.scheduleChore(cleaner);
 
       // Keep creating/archiving new files while the cleaner is running in the other thread
       long startTime = System.currentTimeMillis();
@@ -403,7 +405,8 @@ public class TestHFileArchiving {
       }
     } finally {
       stoppable.stop("test end");
-      cleaner.join();
+      cleaner.cancel(true);
+      choreService.shutdown();
       fs.delete(rootDir, true);
     }
   }

@@ -58,7 +58,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.HealthCheckChore;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -128,10 +129,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
@@ -149,6 +147,9 @@ import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -320,15 +321,20 @@ public class HRegionServer extends HasThread implements
   MetricsRegionServer metricsRegionServer;
   private SpanReceiverHost spanReceiverHost;
 
+  /**
+   * ChoreService used to schedule tasks that we want to run periodically
+   */
+  private final ChoreService choreService;
+
   /*
    * Check for compactions requests.
    */
-  Chore compactionChecker;
+  ScheduledChore compactionChecker;
 
   /*
    * Check for flushes
    */
-  Chore periodicFlusher;
+  ScheduledChore periodicFlusher;
 
   protected volatile WALFactory walFactory;
 
@@ -367,7 +373,7 @@ public class HRegionServer extends HasThread implements
   private HealthCheckChore healthCheckChore;
 
   /** The nonce manager chore. */
-  private Chore nonceManagerChore;
+  private ScheduledChore nonceManagerChore;
 
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
@@ -550,6 +556,7 @@ public class HRegionServer extends HasThread implements
     rpcServices.start();
     putUpWebUI();
     this.walRoller = new LogRoller(this, this);
+    this.choreService = new ChoreService(getServerName().toString());
   }
 
   protected void login(UserProvider user, String host) throws IOException {
@@ -777,8 +784,8 @@ public class HRegionServer extends HasThread implements
     movedRegionsCleaner = MovedRegionsCleaner.createAndStart(this);
 
     if (this.nonceManager != null) {
-      // Create the chore that cleans up nonces.
-      nonceManagerChore = this.nonceManager.createCleanupChore(this);
+      // Create the scheduled chore that cleans up nonces.
+      nonceManagerChore = this.nonceManager.createCleanupScheduledChore(this);
     }
 
     // Setup RPC client for master communication
@@ -927,17 +934,10 @@ public class HRegionServer extends HasThread implements
     if(this.hMemManager != null) this.hMemManager.stop();
     if (this.cacheFlusher != null) this.cacheFlusher.interruptIfNecessary();
     if (this.compactSplitThread != null) this.compactSplitThread.interruptIfNecessary();
-    if (this.compactionChecker != null)
-      this.compactionChecker.interrupt();
-    if (this.healthCheckChore != null) {
-      this.healthCheckChore.interrupt();
-    }
-    if (this.nonceManagerChore != null) {
-      this.nonceManagerChore.interrupt();
-    }
-    if (this.storefileRefresher != null) {
-      this.storefileRefresher.interrupt();
-    }
+    if (this.compactionChecker != null) this.compactionChecker.cancel(true);
+    if (this.healthCheckChore != null) this.healthCheckChore.cancel(true);
+    if (this.nonceManagerChore != null) this.nonceManagerChore.cancel(true);
+    if (this.storefileRefresher != null) this.storefileRefresher.cancel(true);
 
     // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
     if (rspmHost != null) {
@@ -1293,7 +1293,7 @@ public class HRegionServer extends HasThread implements
   private void startHeapMemoryManager() {
     this.hMemManager = HeapMemoryManager.create(this.conf, this.cacheFlusher, this);
     if (this.hMemManager != null) {
-      this.hMemManager.start();
+      this.hMemManager.start(getChoreService());
     }
   }
 
@@ -1408,7 +1408,7 @@ public class HRegionServer extends HasThread implements
   /*
    * Inner class that runs on a long period checking if regions need compaction.
    */
-  private static class CompactionChecker extends Chore {
+  private static class CompactionChecker extends ScheduledChore {
     private final HRegionServer instance;
     private final int majorCompactPriority;
     private final static int DEFAULT_PRIORITY = Integer.MAX_VALUE;
@@ -1416,7 +1416,7 @@ public class HRegionServer extends HasThread implements
 
     CompactionChecker(final HRegionServer h, final int sleepTime,
         final Stoppable stopper) {
-      super("CompactionChecker", sleepTime, h);
+      super("CompactionChecker", stopper, sleepTime);
       this.instance = h;
       LOG.info(this.getName() + " runs every " + StringUtils.formatTime(sleepTime));
 
@@ -1462,12 +1462,12 @@ public class HRegionServer extends HasThread implements
     }
   }
 
-  class PeriodicMemstoreFlusher extends Chore {
+  class PeriodicMemstoreFlusher extends ScheduledChore {
     final HRegionServer server;
     final static int RANGE_OF_DELAY = 20000; //millisec
     final static int MIN_DELAY_TIME = 3000; //millisec
     public PeriodicMemstoreFlusher(int cacheFlushInterval, final HRegionServer server) {
-      super(server.getServerName() + "-MemstoreFlusherChore", cacheFlushInterval, server);
+      super(server.getServerName() + "-MemstoreFlusherChore", server, cacheFlushInterval);
       this.server = server;
     }
 
@@ -1608,22 +1608,12 @@ public class HRegionServer extends HasThread implements
     Threads.setDaemonThreadRunning(this.walRoller.getThread(), getName() + ".logRoller",
         uncaughtExceptionHandler);
     this.cacheFlusher.start(uncaughtExceptionHandler);
-    Threads.setDaemonThreadRunning(this.compactionChecker.getThread(), getName() +
-      ".compactionChecker", uncaughtExceptionHandler);
-    Threads.setDaemonThreadRunning(this.periodicFlusher.getThread(), getName() +
-        ".periodicFlusher", uncaughtExceptionHandler);
-    if (this.healthCheckChore != null) {
-      Threads.setDaemonThreadRunning(this.healthCheckChore.getThread(), getName() + ".healthChecker",
-            uncaughtExceptionHandler);
-    }
-    if (this.nonceManagerChore != null) {
-      Threads.setDaemonThreadRunning(this.nonceManagerChore.getThread(), getName() + ".nonceCleaner",
-            uncaughtExceptionHandler);
-    }
-    if (this.storefileRefresher != null) {
-      Threads.setDaemonThreadRunning(this.storefileRefresher.getThread(), getName() + ".storefileRefresher",
-            uncaughtExceptionHandler);
-    }
+
+    if (this.compactionChecker != null) choreService.scheduleChore(compactionChecker);
+    if (this.periodicFlusher != null) choreService.scheduleChore(periodicFlusher);
+    if (this.healthCheckChore != null) choreService.scheduleChore(healthCheckChore);
+    if (this.nonceManagerChore != null) choreService.scheduleChore(nonceManagerChore);
+    if (this.storefileRefresher != null) choreService.scheduleChore(storefileRefresher);
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -1716,8 +1706,8 @@ public class HRegionServer extends HasThread implements
     // Verify that all threads are alive
     if (!(leases.isAlive()
         && cacheFlusher.isAlive() && walRoller.isAlive()
-        && this.compactionChecker.isAlive()
-        && this.periodicFlusher.isAlive())) {
+        && this.compactionChecker.isScheduled()
+        && this.periodicFlusher.isScheduled())) {
       stop("One or more threads are no longer alive -- stop");
       return false;
     }
@@ -1962,21 +1952,18 @@ public class HRegionServer extends HasThread implements
    * have already been called.
    */
   protected void stopServiceThreads() {
-    if (this.nonceManagerChore != null) {
-      Threads.shutdown(this.nonceManagerChore.getThread());
-    }
-    if (this.compactionChecker != null) {
-      Threads.shutdown(this.compactionChecker.getThread());
-    }
-    if (this.periodicFlusher != null) {
-      Threads.shutdown(this.periodicFlusher.getThread());
-    }
+    // clean up the scheduled chores
+    if (this.choreService != null) choreService.shutdown();
+    if (this.nonceManagerChore != null) nonceManagerChore.cancel(true);
+    if (this.compactionChecker != null) compactionChecker.cancel(true);
+    if (this.periodicFlusher != null) periodicFlusher.cancel(true);
+    if (this.healthCheckChore != null) healthCheckChore.cancel(true);
+    if (this.storefileRefresher != null) storefileRefresher.cancel(true);
+
     if (this.cacheFlusher != null) {
       this.cacheFlusher.join();
     }
-    if (this.healthCheckChore != null) {
-      Threads.shutdown(this.healthCheckChore.getThread());
-    }
+
     if (this.spanReceiverHost != null) {
       this.spanReceiverHost.closeReceivers();
     }
@@ -2001,9 +1988,6 @@ public class HRegionServer extends HasThread implements
       if (this.replicationSinkHandler != null) {
         this.replicationSinkHandler.stopReplicationService();
       }
-    }
-    if (this.storefileRefresher != null) {
-      Threads.shutdown(this.storefileRefresher.getThread());
     }
   }
 
@@ -2401,6 +2385,11 @@ public class HRegionServer extends HasThread implements
   @Override
   public ExecutorService getExecutorService() {
     return service;
+  }
+
+  @Override
+  public ChoreService getChoreService() {
+    return choreService;
   }
 
   //
@@ -2904,13 +2893,13 @@ public class HRegionServer extends HasThread implements
   /**
    * Creates a Chore thread to clean the moved region cache.
    */
-  protected static class MovedRegionsCleaner extends Chore implements Stoppable {
+  protected static class MovedRegionsCleaner extends ScheduledChore implements Stoppable {
     private HRegionServer regionServer;
     Stoppable stoppable;
 
     private MovedRegionsCleaner(
       HRegionServer regionServer, Stoppable stoppable){
-      super("MovedRegionsCleaner for region "+regionServer, TIMEOUT_REGION_MOVED, stoppable);
+      super("MovedRegionsCleaner for region " + regionServer, stoppable, TIMEOUT_REGION_MOVED);
       this.regionServer = regionServer;
       this.stoppable = stoppable;
     }

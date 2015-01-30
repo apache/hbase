@@ -34,15 +34,12 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -57,13 +54,15 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.Pair;
@@ -215,8 +214,9 @@ public class TestEndToEndSplitTransaction {
     Stoppable stopper = new StoppableImplementation();
     RegionSplitter regionSplitter = new RegionSplitter(table);
     RegionChecker regionChecker = new RegionChecker(conf, stopper, TABLENAME);
+    final ChoreService choreService = new ChoreService("TEST_SERVER");
 
-    regionChecker.start();
+    choreService.scheduleChore(regionChecker);
     regionSplitter.start();
 
     //wait until the splitter is finished
@@ -315,17 +315,16 @@ public class TestEndToEndSplitTransaction {
   /**
    * Checks regions using MetaScanner, MetaTableAccessor and HTable methods
    */
-  static class RegionChecker extends Chore {
+  static class RegionChecker extends ScheduledChore {
     Connection connection;
     Configuration conf;
     TableName tableName;
     Throwable ex;
 
     RegionChecker(Configuration conf, Stoppable stopper, TableName tableName) throws IOException {
-      super("RegionChecker", 10, stopper);
+      super("RegionChecker", stopper, 10);
       this.conf = conf;
       this.tableName = tableName;
-      this.setDaemon(true);
 
       this.connection = ConnectionFactory.createConnection(conf);
     }
@@ -410,7 +409,7 @@ public class TestEndToEndSplitTransaction {
         verify();
       } catch (Throwable ex) {
         this.ex = ex;
-        stopper.stop("caught exception");
+        getStopper().stop("caught exception");
       }
     }
   }

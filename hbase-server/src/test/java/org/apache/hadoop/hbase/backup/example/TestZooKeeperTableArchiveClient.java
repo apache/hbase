@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -211,6 +212,7 @@ public class TestZooKeeperTableArchiveClient {
     Configuration conf = UTIL.getConfiguration();
     // setup the delegate
     Stoppable stop = new StoppableImplementation();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);
@@ -249,7 +251,7 @@ public class TestZooKeeperTableArchiveClient {
     // need to be checked) in 'otherTable' and the files (which should be retained) in the 'table'
     CountDownLatch finished = setupCleanerWatching(delegate, cleaners, files.size() + 3);
     // run the cleaner
-    cleaner.start();
+    choreService.scheduleChore(cleaner);
     // wait for the cleaner to check all the files
     finished.await();
     // stop the cleaner
@@ -411,8 +413,9 @@ public class TestZooKeeperTableArchiveClient {
    */
   private void runCleaner(HFileCleaner cleaner, CountDownLatch finished, Stoppable stop)
       throws InterruptedException {
+    final ChoreService choreService = new ChoreService("CLEANER_SERVER_NAME");
     // run the cleaner
-    cleaner.start();
+    choreService.scheduleChore(cleaner);
     // wait for the cleaner to check all the files
     finished.await();
     // stop the cleaner

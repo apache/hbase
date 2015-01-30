@@ -36,12 +36,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -773,8 +775,15 @@ public final class Canary implements Tool {
 
   public static void main(String[] args) throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    AuthUtil.launchAuthChore(conf);
+    final ChoreService choreService = new ChoreService("CANARY_TOOL");
+    final ScheduledChore authChore = AuthUtil.getAuthChore(conf);
+    if (authChore != null) {
+      choreService.scheduleChore(authChore);
+    }
+
     int exitCode = ToolRunner.run(conf, new Canary(), args);
+
+    choreService.shutdown();
     System.exit(exitCode);
   }
 }

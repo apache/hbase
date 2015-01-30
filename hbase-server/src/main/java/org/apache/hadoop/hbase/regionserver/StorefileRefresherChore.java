@@ -25,9 +25,9 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
@@ -42,7 +42,7 @@ import org.apache.hadoop.util.StringUtils;
  * primary region).
  */
 @InterfaceAudience.Private
-public class StorefileRefresherChore extends Chore {
+public class StorefileRefresherChore extends ScheduledChore {
 
   private static final Log LOG = LogFactory.getLog(StorefileRefresherChore.class);
 
@@ -69,7 +69,7 @@ public class StorefileRefresherChore extends Chore {
 
   public StorefileRefresherChore(int period, boolean onlyMetaRefresh, HRegionServer regionServer,
       Stoppable stoppable) {
-    super("StorefileRefresherChore", period, stoppable);
+    super("StorefileRefresherChore", stoppable, period);
     this.period = period;
     this.regionServer = regionServer;
     this.hfileTtl = this.regionServer.getConfiguration().getLong(

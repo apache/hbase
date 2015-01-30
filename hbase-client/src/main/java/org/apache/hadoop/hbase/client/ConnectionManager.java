@@ -42,9 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -56,11 +54,11 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
@@ -159,8 +157,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
@@ -563,8 +561,6 @@ class ConnectionManager {
     private final Object masterAndZKLock = new Object();
 
     private long keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
-    private final DelayedClosing delayedClosing =
-      DelayedClosing.createAndStart(this);
 
     // thread executor shared by all HTableInterface instances created
     // by this connection
@@ -1370,7 +1366,6 @@ class ConnectionManager {
       HConnection connection;
       MasterService.BlockingInterface stub;
       int userCount;
-      long keepAliveUntil = Long.MAX_VALUE;
 
       MasterServiceState (final HConnection connection) {
         super();
@@ -1616,71 +1611,6 @@ class ConnectionManager {
       }
     }
 
-    /**
-     * Creates a Chore thread to check the connections to master & zookeeper
-     *  and close them when they reach their closing time (
-     *  {@link MasterServiceState#keepAliveUntil} and
-     *  {@link #keepZooKeeperWatcherAliveUntil}). Keep alive time is
-     *  managed by the release functions and the variable {@link #keepAlive}
-     */
-    private static class DelayedClosing extends Chore implements Stoppable {
-      private HConnectionImplementation hci;
-      Stoppable stoppable;
-
-      private DelayedClosing(
-        HConnectionImplementation hci, Stoppable stoppable){
-        super(
-          "ZooKeeperWatcher and Master delayed closing for connection "+hci,
-          60*1000, // We check every minutes
-          stoppable);
-        this.hci = hci;
-        this.stoppable = stoppable;
-      }
-
-      static DelayedClosing createAndStart(HConnectionImplementation hci){
-        Stoppable stoppable = new Stoppable() {
-              private volatile boolean isStopped = false;
-              @Override public void stop(String why) { isStopped = true;}
-              @Override public boolean isStopped() {return isStopped;}
-            };
-
-        return new DelayedClosing(hci, stoppable);
-      }
-
-      protected void closeMasterProtocol(MasterServiceState protocolState) {
-        if (System.currentTimeMillis() > protocolState.keepAliveUntil) {
-          hci.closeMasterService(protocolState);
-          protocolState.keepAliveUntil = Long.MAX_VALUE;
-        }
-      }
-
-      @Override
-      protected void chore() {
-        synchronized (hci.masterAndZKLock) {
-          if (hci.canCloseZKW) {
-            if (System.currentTimeMillis() >
-              hci.keepZooKeeperWatcherAliveUntil) {
-
-              hci.closeZooKeeperWatcher();
-              hci.keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
-            }
-          }
-          closeMasterProtocol(hci.masterServiceState);
-          closeMasterProtocol(hci.masterServiceState);
-        }
-      }
-
-      @Override
-      public void stop(String why) {
-        stoppable.stop(why);
-      }
-
-      @Override
-      public boolean isStopped() {
-        return stoppable.isStopped();
-      }
-    }
-
     private void closeZooKeeperWatcher() {
       synchronized (masterAndZKLock) {
         if (keepAliveZookeeper != null) {
@@ -1703,7 +1633,6 @@ class ConnectionManager {
 
     private void resetMasterServiceState(final MasterServiceState mss) {
       mss.userCount++;
-      mss.keepAliveUntil = Long.MAX_VALUE;
     }
 
     @Override
@@ -2054,9 +1983,6 @@ class ConnectionManager {
       if (mss.getStub() == null) return;
       synchronized (masterAndZKLock) {
         --mss.userCount;
-        if (mss.userCount <= 0) {
-          mss.keepAliveUntil = System.currentTimeMillis() + keepAlive;
-        }
       }
     }
 
@@ -2356,7 +2282,6 @@ class ConnectionManager {
       if (this.closed) {
         return;
       }
-      delayedClosing.stop("Closing connection");
       closeMaster();
       shutdownBatchPool();
       this.closed = true;

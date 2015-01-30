@@ -37,15 +37,16 @@ import java.util.concurrent.Future;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -344,9 +345,10 @@ public class TestTableLockManager {
 
     int familyValues = admin.getTableDescriptor(tableName).getFamily(family).getValues().size();
     StoppableImplementation stopper = new StoppableImplementation();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
 
     //alter table every 10 sec
-    Chore alterThread = new Chore("Alter Chore", 10000, stopper) {
+    ScheduledChore alterThread = new ScheduledChore("Alter Chore", stopper, 10000) {
       @Override
       protected void chore() {
         Random random = new Random();
@@ -365,7 +367,7 @@ public class TestTableLockManager {
     };
 
     //split table every 5 sec
-    Chore splitThread = new Chore("Split thread", 5000, stopper) {
+    ScheduledChore splitThread = new ScheduledChore("Split thread", stopper, 5000) {
       @Override
       public void chore() {
         try {
@@ -390,8 +392,8 @@ public class TestTableLockManager {
       }
     };
 
-    alterThread.start();
-    splitThread.start();
+    choreService.scheduleChore(alterThread);
+    choreService.scheduleChore(splitThread);
     TEST_UTIL.waitTableEnabled(tableName);
     while (true) {
       List<HRegionInfo> regions = admin.getTableRegions(tableName);
@@ -421,6 +423,7 @@ public class TestTableLockManager {
     }
 
     admin.close();
+    choreService.shutdown();
   }
 
 }

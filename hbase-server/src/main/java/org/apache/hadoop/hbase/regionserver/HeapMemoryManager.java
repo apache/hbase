@@ -26,16 +26,16 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -183,11 +183,11 @@ public class HeapMemoryManager {
     return true;
   }
 
-  public void start() {
-    LOG.info("Starting HeapMemoryTuner chore.");
-    this.heapMemTunerChore = new HeapMemoryTunerChore();
-    Threads.setDaemonThreadRunning(heapMemTunerChore.getThread());
-    if (tunerOn) {
+  public void start(ChoreService service) {
+      LOG.info("Starting HeapMemoryTuner chore.");
+      this.heapMemTunerChore = new HeapMemoryTunerChore();
+      service.scheduleChore(heapMemTunerChore);
+      if (tunerOn) {
       // Register HeapMemoryTuner as a memstore flush listener
       memStoreFlusher.registerFlushRequestListener(heapMemTunerChore);
     }
@@ -196,7 +196,8 @@ public class HeapMemoryManager {
   public void stop() {
     // The thread is Daemon. Just interrupting the ongoing process.
     LOG.info("Stoping HeapMemoryTuner chore.");
-    this.heapMemTunerChore.interrupt();
+    this.heapMemTunerChore.cancel(true);
+    
   }
 
   // Used by the test cases.
@@ -211,7 +212,7 @@ public class HeapMemoryManager {
     return this.heapOccupancyPercent;
   }
 
-  private class HeapMemoryTunerChore extends Chore implements FlushRequestListener {
+  private class HeapMemoryTunerChore extends ScheduledChore implements FlushRequestListener {
     private HeapMemoryTuner heapMemTuner;
     private AtomicLong blockedFlushCount = new AtomicLong();
     private AtomicLong unblockedFlushCount = new AtomicLong();
@@ -220,25 +221,10 @@ public class HeapMemoryManager {
     private boolean alarming = false;
 
     public HeapMemoryTunerChore() {
-      super(server.getServerName() + "-HeapMemoryTunerChore", defaultChorePeriod, server);
+      super(server.getServerName() + "-HeapMemoryTunerChore", server, defaultChorePeriod);
       Class<? extends HeapMemoryTuner> tunerKlass = server.getConfiguration().getClass(
           HBASE_RS_HEAP_MEMORY_TUNER_CLASS, DefaultHeapMemoryTuner.class, HeapMemoryTuner.class);
       heapMemTuner = ReflectionUtils.newInstance(tunerKlass, server.getConfiguration());
-    }
-
-    @Override
-    protected void sleep() {
-      if (!alarming) {
-        super.sleep();
-      } else {
-        // we are in the alarm state, so sleep only for a short fixed period
-        try {
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {
-          // Interrupted, propagate
-          Thread.currentThread().interrupt();
-        }
-      }
     }
 
     @Override
@@ -253,6 +239,16 @@ public class HeapMemoryManager {
           LOG.warn("heapOccupancyPercent " + heapOccupancyPercent +
             " is above heap occupancy alarm watermark (" + heapOccupancyLowWatermark + ")");
           alarming = true;
+        }
+
+        triggerNow();
+        try {
+          // Need to sleep ourselves since we've told the chore's sleeper
+          // to skip the next sleep cycle.
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // Interrupted, propagate
+          Thread.currentThread().interrupt();
         }
       } else {
         if (alarming) {
