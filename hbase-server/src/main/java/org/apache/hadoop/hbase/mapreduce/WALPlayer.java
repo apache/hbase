@@ -128,14 +128,12 @@ public class WALPlayer extends Configured implements Tool {
    * A mapper that writes out {@link Mutation} to be directly applied to
    * a running HBase instance.
    */
-  static class WALMapper
+  protected static class WALMapper
   extends Mapper<WALKey, WALEdit, ImmutableBytesWritable, Mutation> {
-    private Map<TableName, TableName> tables =
-        new TreeMap<TableName, TableName>();
+    private Map<TableName, TableName> tables = new TreeMap<TableName, TableName>();
 
     @Override
-    public void map(WALKey key, WALEdit value,
-      Context context)
+    public void map(WALKey key, WALEdit value, Context context)
     throws IOException {
       try {
         if (tables.isEmpty() || tables.containsKey(key.getTablename())) {
@@ -150,26 +148,28 @@ public class WALPlayer extends Configured implements Tool {
             // filtering WAL meta entries
             if (WALEdit.isMetaEditFamily(cell.getFamily())) continue;
 
-            // A WALEdit may contain multiple operations (HBASE-3584) and/or
-            // multiple rows (HBASE-5229).
-            // Aggregate as much as possible into a single Put/Delete
-            // operation before writing to the context.
-            if (lastCell == null || lastCell.getTypeByte() != cell.getTypeByte()
-                || !CellUtil.matchingRow(lastCell, cell)) {
-              // row or type changed, write out aggregate KVs.
-              if (put != null) context.write(tableOut, put);
-              if (del != null) context.write(tableOut, del);
-
-              if (CellUtil.isDelete(cell)) {
-                del = new Delete(cell.getRow());
-              } else {
-                put = new Put(cell.getRow());
+            // Allow a subclass filter out this cell.
+            if (filter(context, cell)) {
+              // A WALEdit may contain multiple operations (HBASE-3584) and/or
+              // multiple rows (HBASE-5229).
+              // Aggregate as much as possible into a single Put/Delete
+              // operation before writing to the context.
+              if (lastCell == null || lastCell.getTypeByte() != cell.getTypeByte()
+                  || !CellUtil.matchingRow(lastCell, cell)) {
+                // row or type changed, write out aggregate KVs.
+                if (put != null) context.write(tableOut, put);
+                if (del != null) context.write(tableOut, del);
+                if (CellUtil.isDelete(cell)) {
+                  del = new Delete(cell.getRow());
+                } else {
+                  put = new Put(cell.getRow());
+                }
               }
-            }
-            if (CellUtil.isDelete(cell)) {
-              del.addDeleteMarker(cell);
-            } else {
-              put.add(cell);
+              if (CellUtil.isDelete(cell)) {
+                del.addDeleteMarker(cell);
+              } else {
+                put.add(cell);
+              }
             }
             lastCell = cell;
           }
@@ -182,18 +182,30 @@ public class WALPlayer extends Configured implements Tool {
       }
     }
 
+    /**
+     * @param cell
+     * @return Return true if we are to emit this cell.
+     */
+    protected boolean filter(Context context, final Cell cell) {
+      return true;
+    }
+
     @Override
     public void setup(Context context) throws IOException {
       String[] tableMap = context.getConfiguration().getStrings(TABLE_MAP_KEY);
       String[] tablesToUse = context.getConfiguration().getStrings(TABLES_KEY);
-      if (tablesToUse == null || tableMap == null || tablesToUse.length != tableMap.length) {
+      if (tablesToUse == null && tableMap == null) {
+        // Then user wants all tables.
+      } else if (tablesToUse == null || tableMap == null || tablesToUse.length != tableMap.length) {
         // this can only happen when WALMapper is used directly by a class other than WALPlayer
         throw new IOException("No tables or incorrect table mapping specified.");
       }
       int i = 0;
-      for (String table : tablesToUse) {
-        tables.put(TableName.valueOf(table),
+      if (tablesToUse != null) {
+        for (String table : tablesToUse) {
+          tables.put(TableName.valueOf(table),
             TableName.valueOf(tableMap[i++]));
+        }
       }
     }
   }
