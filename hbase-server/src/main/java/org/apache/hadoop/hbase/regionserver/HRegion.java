@@ -1631,7 +1631,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   boolean shouldFlush() {
     // This is a rough measure.
-    if (this.completeSequenceId > 0 
+    if (this.completeSequenceId > 0
           && (this.completeSequenceId + this.flushPerChanges < this.sequenceId.get())) {
       return true;
     }
@@ -2752,7 +2752,7 @@ public class HRegion implements HeapSize { // , Writable{
         if (this.getCoprocessorHost() != null) {
           Boolean processed = null;
           if (w instanceof Put) {
-            processed = this.getCoprocessorHost().preCheckAndPutAfterRowLock(row, family, 
+            processed = this.getCoprocessorHost().preCheckAndPutAfterRowLock(row, family,
                 qualifier, compareOp, comparator, (Put) w);
           } else if (w instanceof Delete) {
             processed = this.getCoprocessorHost().preCheckAndDeleteAfterRowLock(row, family,
@@ -3087,7 +3087,7 @@ public class HRegion implements HeapSize { // , Writable{
         Store store = getStore(family);
         int listSize = cells.size();
         for (int i=0; i < listSize; i++) {
-          Cell cell = cells.get(i);  
+          Cell cell = cells.get(i);
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
           kv.setMvccVersion(localizedWriteEntry.getWriteNumber());
           size += store.add(kv);
@@ -3482,9 +3482,7 @@ public class HRegion implements HeapSize { // , Writable{
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
-            if (!flush) {
-              flush = restoreEdit(store, kv);
-            }
+            flush |= restoreEdit(store, cell);
             editsCount++;
           }
           if (flush) {
