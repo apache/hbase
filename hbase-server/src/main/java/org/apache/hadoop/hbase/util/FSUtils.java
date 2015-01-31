@@ -1201,7 +1201,7 @@ public abstract class FSUtils {
     private List<String> blacklist;
 
     /**
-     * Create a filter on the give filesystem with the specified blacklist
+     * Create a filter on the givem filesystem with the specified blacklist
      * @param fs filesystem to filter
      * @param directoryNameBlackList list of the names of the directories to filter. If
      *          <tt>null</tt>, all directories are returned

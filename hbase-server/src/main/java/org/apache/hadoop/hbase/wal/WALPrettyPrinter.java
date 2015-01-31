@@ -75,7 +75,7 @@ public class WALPrettyPrinter {
   // enable in order to output a single list of transactions from several files
   private boolean persistentOutput;
   private boolean firstTxn;
-  // useful for programatic capture of JSON output
+  // useful for programmatic capture of JSON output
   private PrintStream out;
   // for JSON encoding
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -267,8 +267,9 @@ public class WALPrettyPrinter {
           Map<String, Object> op = new HashMap<String, Object>(toStringMap(cell));
           if (outputValues) op.put("value", Bytes.toStringBinary(cell.getValue()));
           // check row output filter
-          if (row == null || ((String) op.get("row")).equals(row))
+          if (row == null || ((String) op.get("row")).equals(row)) {
             actions.add(op);
+          }
         }
         if (actions.size() == 0)
           continue;
@@ -283,22 +284,16 @@ public class WALPrettyPrinter {
           out.print(MAPPER.writeValueAsString(txn));
         } else {
           // Pretty output, complete with indentation by atomic action
-          out.println("Sequence " + txn.get("sequence") + " "
-              + "from region " + txn.get("region") + " " + "in table "
-              + txn.get("table") + " at write timestamp: " + new Date(writeTime));
+          out.println("Sequence=" + txn.get("sequence") + " "
+              + ", region=" + txn.get("region") + " at write timestamp=" + new Date(writeTime));
           for (int i = 0; i < actions.size(); i++) {
             Map op = actions.get(i);
-            out.println("  Action:");
-            out.println("    row: " + op.get("row"));
-            out.println("    column: " + op.get("family") + ":"
-                + op.get("qualifier"));
-            out.println("    timestamp: "
-                + (new Date((Long) op.get("timestamp"))));
-            if(op.get("tag") != null) {
+            out.println("row=" + op.get("row") +
+                ", column=" + op.get("family") + ":" + op.get("qualifier"));
+            if (op.get("tag") != null) {
               out.println("    tag: " + op.get("tag"));
             }
-            if (outputValues)
-              out.println("    value: " + op.get("value"));
+            if (outputValues) out.println("    value: " + op.get("value"));
           }
         }
       }
@@ -347,8 +342,6 @@ public class WALPrettyPrinter {
    *          Command line arguments
    * @throws IOException
    *           Thrown upon file system errors etc.
-   * @throws ParseException
-   *           Thrown if command-line parsing fails.
    */
   public static void run(String[] args) throws IOException {
     // create options
@@ -364,7 +357,7 @@ public class WALPrettyPrinter {
 
     WALPrettyPrinter printer = new WALPrettyPrinter();
     CommandLineParser parser = new PosixParser();
-    List files = null;
+    List<?> files = null;
     try {
       CommandLine cmd = parser.parse(options, args);
       files = cmd.getArgList();

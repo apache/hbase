@@ -2404,14 +2404,14 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Stops the previously started <code>MiniMRCluster</code>.
    */
   public void shutdownMiniMapReduceCluster() {
-    LOG.info("Stopping mini mapreduce cluster...");
     if (mrCluster != null) {
+      LOG.info("Stopping mini mapreduce cluster...");
       mrCluster.shutdown();
       mrCluster = null;
+      LOG.info("Mini mapreduce cluster stopped");
     }
     // Restore configuration to point to local jobtracker
     conf.set("mapreduce.jobtracker.address", "local");
-    LOG.info("Mini mapreduce cluster stopped");
   }
 
   /**

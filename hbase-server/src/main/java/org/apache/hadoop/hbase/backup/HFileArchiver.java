@@ -221,9 +221,9 @@ public class HFileArchiver {
     }
 
     // otherwise we attempt to archive the store files
-    if (LOG.isTraceEnabled()) LOG.trace("Archiving compacted store files.");
+    if (LOG.isDebugEnabled()) LOG.debug("Archiving compacted store files.");
 
-    // wrap the storefile into a File
+    // Wrap the storefile into a File
     StoreToFile getStorePath = new StoreToFile(fs);
     Collection<File> storeFiles = Collections2.transform(compactedFiles, getStorePath);
 
