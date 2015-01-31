@@ -988,6 +988,7 @@ public class FSHLog implements WAL {
         i.preLogArchive(p, newPath);
       }
     }
+    LOG.info("Archiving " + p + " to " + newPath);
     if (!FSUtils.renameAndSetModifyTime(this.fs, p, newPath)) {
       throw new IOException("Unable to rename " + p + " to " + newPath);
     }

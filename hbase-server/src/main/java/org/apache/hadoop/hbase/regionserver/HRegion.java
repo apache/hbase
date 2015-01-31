@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -3525,11 +3526,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       internalFlushcache(null, seqid, status);
     }
     // Now delete the content of recovered edits.  We're done w/ them.
-    for (Path file: files) {
-      if (!fs.delete(file, false)) {
-        LOG.error("Failed delete of " + file);
-      } else {
-        LOG.debug("Deleted recovered.edits file=" + file);
+    if (files.size() > 0 && this.conf.getBoolean("hbase.region.archive.recovered.edits", false)) {
+      // For debugging data loss issues!
+      // If this flag is set, make use of the hfile archiving by making recovered.edits a fake
+      // column family. Have to fake out file type too by casting our recovered.edits as storefiles
+      String fakeFamilyName = WALSplitter.getRegionDirRecoveredEditsDir(regiondir).getName();
+      Set<StoreFile> fakeStoreFiles = new HashSet<StoreFile>(files.size());
+      for (Path file: files) {
+        fakeStoreFiles.add(new StoreFile(getRegionFileSystem().getFileSystem(), file, this.conf,
+          null, null));
+      }
+      getRegionFileSystem().removeStoreFiles(fakeFamilyName, fakeStoreFiles);
+    } else {
+      for (Path file: files) {
+        if (!fs.delete(file, false)) {
+          LOG.error("Failed delete of " + file);
+        } else {
+          LOG.debug("Deleted recovered.edits file=" + file);
+        }
       }
     }
     return seqid;
@@ -3569,8 +3583,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
 
       try {
         // How many edits seen before we check elapsed time
-        int interval = this.conf.getInt("hbase.hstore.report.interval.edits",
-            2000);
+        int interval = this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
         // How often to send a progress report (default 1/2 master timeout)
         int period = this.conf.getInt("hbase.hstore.report.period", 300000);
         long lastReport = EnvironmentEdgeManager.currentTime();
@@ -3629,21 +3642,24 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
               continue;
             }
           }
+          // Check this edit is for this region.
+          if (!Bytes.equals(key.getEncodedRegionName(),
+              this.getRegionInfo().getEncodedNameAsBytes())) {
+            skippedEdits++;
+            continue;
+          }
 
           boolean flush = false;
           for (Cell cell: val.getCells()) {
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
-            if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY) ||
-                !Bytes.equals(key.getEncodedRegionName(),
-                  this.getRegionInfo().getEncodedNameAsBytes())) {
+            if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
               //this is a special edit, we should handle it
               CompactionDescriptor compaction = WALEdit.getCompaction(cell);
               if (compaction != null) {
                 //replay the compaction
                 completeCompactionMarker(compaction);
               }
-
               skippedEdits++;
               continue;
             }
@@ -3669,10 +3685,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
-            if (!flush) {
-              flush = restoreEdit(store, cell);
-            }
-
+            flush |= restoreEdit(store, cell);
             editsCount++;
           }
           if (flush) {
@@ -5002,6 +5015,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * @return qualified path of region directory
    */
   @Deprecated
+  @VisibleForTesting
   public static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
     return new Path(
       FSUtils.getTableDir(rootdir, info.getTable()), info.getEncodedName());

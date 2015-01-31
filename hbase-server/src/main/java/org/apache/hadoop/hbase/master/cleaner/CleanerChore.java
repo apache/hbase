@@ -249,8 +249,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     int deletedFileCount = 0;
     for (FileStatus file : filesToDelete) {
       Path filePath = file.getPath();
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Removing: " + filePath + " from archive");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Removing: " + filePath + " from archive");
       }
       try {
         boolean success = this.fs.delete(filePath, false);

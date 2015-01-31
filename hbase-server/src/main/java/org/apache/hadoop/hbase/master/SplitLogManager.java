@@ -164,7 +164,7 @@ public class SplitLogManager {
 
   /**
    * Get a list of paths that need to be split given a set of server-specific directories and
-   * optinally  a filter.
+   * optionally  a filter.
    *
    * See {@link DefaultWALProvider#getServerNameFromWALDirectoryName} for more info on directory
    * layout.
