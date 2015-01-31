@@ -3482,7 +3482,7 @@ public class HRegion implements HeapSize { // , Writable{
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
-            flush |= restoreEdit(store, cell);
+            flush |= restoreEdit(store, kv);
             editsCount++;
           }
           if (flush) {
