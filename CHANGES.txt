@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.10 - 2/2/2015
+Release 0.98.10 - 2/5/2015
 
 ** Sub-task
     * [HBASE-12729] - Backport HBASE-5162 (Basic client pushback mechanism) to 0.98
@@ -9,6 +9,7 @@ Release 0.98.10 - 2/2/2015
     * [HBASE-12793] - [hbck] closeRegionSilentlyAndWait() should log cause of IOException and retry until  hbase.hbck.close.timeout expires
     * [HBASE-12842] - Fix the incompatibility introduced by AccessControlClient in 0.98
     * [HBASE-12854] - Fix the CopyTable incompatibility introduced in HBASE-11997 in 0.98
+    * [HBASE-12926] - Backport HBASE-12688 (Update site with a bootstrap-based UI) for HBASE-12918
     * [HBASE-12933] - [0.98] Fold StatisticsHConnection into HConnection
 
 ** Bug
@@ -31,12 +32,14 @@ Release 0.98.10 - 2/2/2015
     * [HBASE-12767] - Fix a StoreFileScanner NPE in reverse scan flow
     * [HBASE-12774] - Fix the inconsistent permission checks for bulkloading.
     * [HBASE-12781] - thrift2 listen port will bind always to the passed command line address
+    * [HBASE-12782] - ITBLL fails for me if generator does anything but 5M per maptask
     * [HBASE-12791] - HBase does not attempt to clean up an aborted split when the regionserver shutting down
     * [HBASE-12801] - Failed to truncate a table while maintaing binary region boundaries
     * [HBASE-12804] - ImportTsv fails to delete partition files created by it
     * [HBASE-12811] - [AccessController] NPE while scanning a table with user not having READ permission on the namespace
     * [HBASE-12817] - Data missing while scanning using PREFIX_TREE data block encoding
     * [HBASE-12819] - ExportSnapshot doesn't close FileSystem instances
+    * [HBASE-12831] - Changing the set of vis labels a user has access to doesn't generate an audit log event
     * [HBASE-12832] - Describe table from shell no longer shows Table's attributes, only CF attributes
     * [HBASE-12837] - ReplicationAdmin leaks zk connections
     * [HBASE-12844] - ServerManager.isServerReacable() should sleep between retries
@@ -53,6 +56,7 @@ Release 0.98.10 - 2/2/2015
     * [HBASE-12915] - Disallow small scan with batching
     * [HBASE-12916] - No access control for replicating WAL entries
     * [HBASE-12918] - Backport asciidoc changes
+    * [HBASE-12925] - Use acl cache for doing access control checks in prepare and clean phases of Bulkloading.
 
 ** Improvement
     * [HBASE-11195] - Potentially improve block locality during major compaction for old regions
