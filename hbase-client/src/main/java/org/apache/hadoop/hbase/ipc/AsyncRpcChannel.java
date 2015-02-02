@@ -108,7 +108,7 @@ public class AsyncRpcChannel {
   private Token<? extends TokenIdentifier> token;
   private String serverPrincipal;
 
-  boolean shouldCloseConnection = false;
+  volatile boolean shouldCloseConnection = false;
   private IOException closeException;
 
   private Timeout cleanupTimer;
@@ -312,6 +312,13 @@ public class AsyncRpcChannel {
     });
 
     calls.put(call.id, call);
+
+    // check again, see https://issues.apache.org/jira/browse/HBASE-12951
+    if (shouldCloseConnection) {
+      Promise<Message> promise = channel.eventLoop().newPromise();
+      promise.setFailure(new ConnectException());
+      return promise;
+    }
 
     // Add timeout for cleanup if none is present
     if (cleanupTimer == null) {
