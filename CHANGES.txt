@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.0.0 02/08/2015
+Release Notes - HBase - Version 1.0.0 02/11/2015
 
 ** Sub-task
     * [HBASE-11852] - Still see "UnsupportedOperationException: CollectionUsage threshold is not supported"
@@ -88,6 +88,7 @@ Release Notes - HBase - Version 1.0.0 02/08/2015
     * [HBASE-12771] - TestFailFast#testFastFail failing
     * [HBASE-12774] - Fix the inconsistent permission checks for bulkloading.
     * [HBASE-12781] - thrift2 listen port will bind always to the passed command line address
+    * [HBASE-12782] - ITBLL fails for me if generator does anything but 5M per maptask
     * [HBASE-12791] - HBase does not attempt to clean up an aborted split when the regionserver shutting down
     * [HBASE-12798] - Map Reduce jobs should not create Tables in setConf()
     * [HBASE-12801] - Failed to truncate a table while maintaing binary region boundaries
@@ -97,6 +98,7 @@ Release Notes - HBase - Version 1.0.0 02/08/2015
     * [HBASE-12817] - Data missing while scanning using PREFIX_TREE data block encoding
     * [HBASE-12819] - ExportSnapshot doesn't close FileSystem instances
     * [HBASE-12824] - CompressionTest fails with org.apache.hadoop.hbase.io.hfile.AbstractHFileReader$NotSeekedException: Not seeked to a key/value
+    * [HBASE-12831] - Changing the set of vis labels a user has access to doesn't generate an audit log event
     * [HBASE-12832] - Describe table from shell no longer shows Table's attributes, only CF attributes
     * [HBASE-12833] - [shell] table.rb leaks connections
     * [HBASE-12835] - HBASE-12422 changed new HTable(Configuration) to not use managed Connections anymore
@@ -120,6 +122,7 @@ Release Notes - HBase - Version 1.0.0 02/08/2015
     * [HBASE-12918] - Backport asciidoc changes
     * [HBASE-12919] - Compilation with Hadoop-2.4- is broken again
     * [HBASE-12925] - Use acl cache for doing access control checks in prepare and clean phases of Bulkloading.
+    * [HBASE-12942] - After disabling the hfile block cache, Regionserver UI is throwing java.lang.NullPointerException
 
 ** Improvement
     * [HBASE-5699] - Run with > 1 WAL in HRegionServer
@@ -151,7 +154,9 @@ Release Notes - HBase - Version 1.0.0 02/08/2015
     * [HBASE-12768] - Support enable cache_data_on_write in Shell while creating table
     * [HBASE-12773] - Add warning message when user is trying to bulkload a large HFile.
     * [HBASE-12825] - CallRunner exception messages should include destination host:port
+    * [HBASE-12893] - IntegrationTestBigLinkedListWithVisibility should use buffered writes
     * [HBASE-12899] - HBase should prefix htrace configuration keys with "hbase.htrace" rather than just "hbase."
+    * [HBASE-12929] - TableMapReduceUtil.initTableMapperJob unnecessarily limits the types of outputKeyClass and outputValueClass
 
 ** New Feature
     * [HBASE-10560] - Per cell TTLs
