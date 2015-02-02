@@ -31,18 +31,18 @@
 Apache link:http://thrift.apache.org/[Thrift] is a cross-platform, cross-language development framework.
 HBase includes a Thrift API and filter language.
 The Thrift API relies on client and server processes.
-Documentation about the HBase Thrift API is located at link:http://wiki.apache.org/hadoop/Hbase/ThriftApi. 
+Documentation about the HBase Thrift API is located at http://wiki.apache.org/hadoop/Hbase/ThriftApi.
 
-You can configure Thrift for secure authentication at the server and client side, by following the procedures in <<security.client.thrift,security.client.thrift>> and <<security.gateway.thrift,security.gateway.thrift>>. 
+You can configure Thrift for secure authentication at the server and client side, by following the procedures in <<security.client.thrift>> and <<security.gateway.thrift>>.
 
 The rest of this chapter discusses the filter language provided by the Thrift API.
 
 [[thrift.filter_language]]
 == Filter Language
 
-Thrift Filter Language was introduced in APache HBase 0.92.
+Thrift Filter Language was introduced in HBase 0.92.
 It allows you to perform server-side filtering when accessing HBase over Thrift or in the HBase shell.
-You can find out more about shell integration by using the `scan help`            command in the shell.
+You can find out more about shell integration by using the `scan help` command in the shell.
 
 You specify a filter as a string, which is parsed on the server to construct the filter.
 
@@ -69,7 +69,7 @@ Keep the following syntax guidelines in mind.
 
 .Binary Operators
 `AND`::
-  If the `AND` operator is used, the key-vallue must satisfy both the filters.
+  If the `AND` operator is used, the key-value must satisfy both filters.
 
 `OR`::
   If the `OR` operator is used, the key-value must satisfy at least one of the filters.
@@ -79,7 +79,7 @@ Keep the following syntax guidelines in mind.
   For a particular row, if any of the key-values fail the filter condition, the entire row is skipped.
 
 `WHILE`::
-  For a particular row, key-values will be emitted until a key-value is reached t hat fails the filter condition.
+  For a particular row, key-values will be emitted until a key-value is reached that fails the filter condition.
 
 .Compound Operators
 ====
@@ -142,8 +142,7 @@ A comparator can be any of the following:
   The comparison is case insensitive.
   Only EQUAL and NOT_EQUAL comparisons are valid with this comparator
 
-The general syntax of a comparator is:`
-                ComparatorType:ComparatorValue`
+The general syntax of a comparator is: `ComparatorType:ComparatorValue`
 
 The ComparatorType for the various comparators is as follows:
 
@@ -155,7 +154,7 @@ The ComparatorType for the various comparators is as follows:
 The ComparatorValue can be any value.
 
 .Example ComparatorValues
-. `binary:abc` will match everything that is lexicographically greater than "abc" 
+. `binary:abc` will match everything that is lexicographically greater than "abc"
 . `binaryprefix:abc` will match everything whose first 3 characters are lexicographically equal to "abc"
 . `regexstring:ab*yz` will match everything that doesn't begin with "ab" and ends with "yz"
 . `substring:abc123` will match everything that begins with the substring "abc123"
@@ -165,48 +164,39 @@ The ComparatorValue can be any value.
 
 [source,php]
 ----
-<? $_SERVER['PHP_ROOT'] = realpath(dirname(__FILE__).'/..');
-   require_once $_SERVER['PHP_ROOT'].'/flib/__flib.php';
-   flib_init(FLIB_CONTEXT_SCRIPT);
-   require_module('storage/hbase');
-   $hbase = new HBase('<server_name_running_thrift_server>', <port on which thrift server is running>);
-   $hbase->open();
-   $client = $hbase->getClient();
-   $result = $client->scannerOpenWithFilterString('table_name', "(PrefixFilter ('row2') AND (QualifierFilter (>=, 'binary:xyz'))) AND (TimestampsFilter ( 123, 456))");
-   $to_print = $client->scannerGetList($result,1);
-   while ($to_print) {
-      print_r($to_print);
-      $to_print = $client->scannerGetList($result,1);
-    }
-   $client->scannerClose($result);
+<?
+  $_SERVER['PHP_ROOT'] = realpath(dirname(__FILE__).'/..');
+  require_once $_SERVER['PHP_ROOT'].'/flib/__flib.php';
+  flib_init(FLIB_CONTEXT_SCRIPT);
+  require_module('storage/hbase');
+  $hbase = new HBase('<server_name_running_thrift_server>', <port on which thrift server is running>);
+  $hbase->open();
+  $client = $hbase->getClient();
+  $result = $client->scannerOpenWithFilterString('table_name', "(PrefixFilter ('row2') AND (QualifierFilter (>=, 'binary:xyz'))) AND (TimestampsFilter ( 123, 456))");
+  $to_print = $client->scannerGetList($result,1);
+  while ($to_print) {
+    print_r($to_print);
+    $to_print = $client->scannerGetList($result,1);
+  }
+  $client->scannerClose($result);
 ?>
 ----
 
 === Example Filter Strings
 
-* `“PrefixFilter (‘Row’) AND PageFilter (1) AND FirstKeyOnlyFilter
-  ()”` will return all key-value pairs that match the following conditions:
+* `"PrefixFilter ('Row') AND PageFilter (1) AND FirstKeyOnlyFilter ()"` will return all key-value pairs that match the following conditions:
 +
-. The row containing the key-value should have prefix ``Row'' 
-. The key-value must be located in the first row of the table 
-. The key-value pair must be the first key-value in the row 
-            
-
-
-* `“(RowFilter (=, ‘binary:Row 1’) AND TimeStampsFilter (74689,
-  89734)) OR ColumnRangeFilter (‘abc’, true, ‘xyz’,
-  false))”` will return all key-value pairs that match both the following conditions:
+. The row containing the key-value should have prefix _Row_
+. The key-value must be located in the first row of the table
+. The key-value pair must be the first key-value in the row
 +
-* The key-value is in a row having row key ``Row 1'' 
-* The key-value must have a timestamp of either 74689 or 89734.
-* Or it must match the following condition:
+* `"(RowFilter (=, 'binary:Row 1') AND TimeStampsFilter (74689, 89734)) OR ColumnRangeFilter ('abc', true, 'xyz', false))"` will return all key-value pairs that match both the following conditions:
+** The key-value is in a row having row key _Row 1_
+** The key-value must have a timestamp of either 74689 or 89734.
+** Or it must match the following condition:
+*** The key-value pair must be in a column that is lexicographically >= abc and < xyz 
 +
-* The key-value pair must be in a column that is lexicographically >= abc and < xyz 
-
-
-
-
-* `“SKIP ValueFilter (0)”` will skip the entire row if any of the values in the row is not 0            
+* `"SKIP ValueFilter (0)"` will skip the entire row if any of the values in the row is not 0
 
 [[individualfiltersyntax]]
 === Individual Filter Syntax
@@ -279,7 +269,7 @@ SingleColumnValueFilter::
   This filter takes a column family, a qualifier, a compare operator and a comparator.
   If the specified column is not found – all the columns of that row will be emitted.
   If the column is found and the comparison with the comparator returns true, all the columns of the row will be emitted.
-  If the condition fails, the row will not be emitted. 
+  If the condition fails, the row will not be emitted.
 
 SingleColumnValueExcludeFilter::
   This filter takes the same arguments and behaves same as SingleColumnValueFilter – however, if the column is found and the condition passes, all the columns of the row will be emitted except for the tested column value.

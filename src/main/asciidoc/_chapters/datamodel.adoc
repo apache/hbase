@@ -32,6 +32,7 @@ This is a terminology overlap with relational databases (RDBMSs), but this is no
 Instead, it can be helpful to think of an HBase table as a multi-dimensional map.
 
 .HBase Data Model Terminology
+
 Table::
   An HBase table consists of multiple rows.
 
@@ -67,26 +68,24 @@ Timestamp::
 == Conceptual View
 
 You can read a very understandable explanation of the HBase data model in the blog post link:http://jimbojw.com/wiki/index.php?title=Understanding_Hbase_and_BigTable[Understanding HBase and BigTable] by Jim R. Wilson.
-
-Another good explanation is available in the PDF link:http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf[Introduction 
-to Basic Schema Design] by Amandeep Khurana.
+Another good explanation is available in the PDF link:http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf[Introduction to Basic Schema Design] by Amandeep Khurana.
 
 It may help to read different perspectives to get a solid understanding of HBase schema design.
 The linked articles cover the same ground as the information in this section.
 
 The following example is a slightly modified form of the one on page 2 of the link:http://research.google.com/archive/bigtable.html[BigTable] paper.
-There is a table called `webtable` that contains two rows (`com.cnn.www`          and `com.example.www`), three column families named `contents`, `anchor`, and `people`.
+There is a table called `webtable` that contains two rows (`com.cnn.www` and `com.example.www`) and three column families named `contents`, `anchor`, and `people`.
 In this example, for the first row (`com.cnn.www`),  `anchor` contains two columns (`anchor:cssnsi.com`, `anchor:my.look.ca`) and `contents` contains one column (`contents:html`). This example contains 5 versions of the row with the row key `com.cnn.www`, and one version of the row with the row key `com.example.www`.
 The `contents:html` column qualifier contains the entire HTML of a given website.
 Qualifiers of the `anchor` column family each contain the external site which links to the site represented by the row, along with the text it used in the anchor of its link.
-The `people` column family represents people associated with the site. 
+The `people` column family represents people associated with the site.
 
 .Column Names
 [NOTE]
 ====
 By convention, a column name is made of its column family prefix and a _qualifier_.
 For example, the column _contents:html_ is made up of the column family `contents` and the `html` qualifier.
-The colon character (`:`) delimits the column family from the column family _qualifier_. 
+The colon character (`:`) delimits the column family from the column family _qualifier_.
 ====
 
 .Table `webtable`
@@ -109,27 +108,27 @@ This is only a mock-up for illustrative purposes and may not be strictly accurat
 [source,json]
 ----
 {
-	"com.cnn.www": {
-		contents: {
-			t6: contents:html: "<html>..."
-			t5: contents:html: "<html>..."
-			t3: contents:html: "<html>..."
-		}
-		anchor: {
-			t9: anchor:cnnsi.com = "CNN"
-			t8: anchor:my.look.ca = "CNN.com"
-		}
-		people: {}
-	}
-	"com.example.www": {
-		contents: {
-			t5: contents:html: "<html>..."
-		}
-		anchor: {}
-		people: {
-			t5: people:author: "John Doe"
-		}
-	}
+  "com.cnn.www": {
+    contents: {
+      t6: contents:html: "<html>..."
+      t5: contents:html: "<html>..."
+      t3: contents:html: "<html>..."
+    }
+    anchor: {
+      t9: anchor:cnnsi.com = "CNN"
+      t8: anchor:my.look.ca = "CNN.com"
+    }
+    people: {}
+  }
+  "com.example.www": {
+    contents: {
+      t5: contents:html: "<html>..."
+    }
+    anchor: {}
+    people: {
+      t5: people:author: "John Doe"
+    }
+  }
 }
 ----
 
@@ -163,18 +162,18 @@ Thus a request for the value of the `contents:html` column at time stamp `t8` wo
 Similarly, a request for an `anchor:my.look.ca` value at time stamp `t9` would return no value.
 However, if no timestamp is supplied, the most recent value for a particular column would be returned.
 Given multiple versions, the most recent is also the first one found,  since timestamps are stored in descending order.
-Thus a request for the values of all columns in the row `com.cnn.www` if no timestamp is specified would be: the value of `contents:html` from timestamp `t6`, the value of `anchor:cnnsi.com` from timestamp `t9`, the value of `anchor:my.look.ca` from timestamp `t8`. 
+Thus a request for the values of all columns in the row `com.cnn.www` if no timestamp is specified would be: the value of `contents:html` from timestamp `t6`, the value of `anchor:cnnsi.com` from timestamp `t9`, the value of `anchor:my.look.ca` from timestamp `t8`.
 
-For more information about the internals of how Apache HBase stores data, see <<regions.arch,regions.arch>>. 
+For more information about the internals of how Apache HBase stores data, see <<regions.arch,regions.arch>>.
 
 == Namespace
 
 A namespace is a logical grouping of tables analogous to a database in relation database systems.
-This abstraction lays the groundwork for upcoming multi-tenancy related features: 
+This abstraction lays the groundwork for upcoming multi-tenancy related features:
 
-* Quota Management (HBASE-8410) - Restrict the amount of resources (ie regions, tables) a namespace can consume.
-* Namespace Security Administration (HBASE-9206) - provide another level of security administration for tenants.
-* Region server groups (HBASE-6721) - A namespace/table can be pinned onto a subset of regionservers thus guaranteeing a course level of isolation.      
+* Quota Management (link:https://issues.apache.org/jira/browse/HBASE-8410[HBASE-8410]) - Restrict the amount of resources (ie regions, tables) a namespace can consume.
+* Namespace Security Administration (link:https://issues.apache.org/jira/browse/HBASE-9206[HBASE-9206]) - Provide another level of security administration for tenants.
+* Region server groups (link:https://issues.apache.org/jira/browse/HBASE-6721[HBASE-6721]) - A namespace/table can be pinned onto a subset of RegionServers thus guaranteeing a course level of isolation.
 
 [[namespace_creation]]
 === Namespace management
@@ -221,10 +220,10 @@ alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
 [[namespace_special]]
 === Predefined namespaces
 
-There are two predefined special namespaces: 
+There are two predefined special namespaces:
 
-* hbase - system namespace, used to contain hbase internal tables
-* default - tables with no explicit specified namespace will automatically fall into this namespace.
+* hbase - system namespace, used to contain HBase internal tables
+* default - tables with no explicit specified namespace will automatically fall into this namespace
 
 .Examples
 ====
@@ -241,11 +240,11 @@ create 'bar', 'fam'
 
 == Table
 
-Tables are declared up front at schema definition time. 
+Tables are declared up front at schema definition time.
 
 == Row
 
-Row keys are uninterrpreted bytes.
+Row keys are uninterpreted bytes.
 Rows are lexicographically sorted with the lowest order appearing first in a table.
 The empty byte array is used to denote both the start and end of a tables' namespace.
 
@@ -255,8 +254,7 @@ The empty byte array is used to denote both the start and end of a tables' names
 Columns in Apache HBase are grouped into _column families_.
 All column members of a column family have the same prefix.
 For example, the columns _courses:history_ and _courses:math_ are both members of the _courses_ column family.
-The colon character (`:`) delimits the column family from the 
-column family qualifier.
+The colon character (`:`) delimits the column family from the column family qualifier.
 The column family prefix must be composed of _printable_ characters.
 The qualifying tail, the column family _qualifier_, can be made of any arbitrary bytes.
 Column families must be declared up front at schema definition time whereas columns do not need to be defined at schema time but can be conjured on the fly while the table is up an running.
@@ -267,29 +265,26 @@ Because tunings and storage specifications are done at the column family level, 
 == Cells
 
 A _{row, column, version}_ tuple exactly specifies a `cell` in HBase.
-Cell content is uninterrpreted bytes
+Cell content is uninterpreted bytes
 
 == Data Model Operations
 
 The four primary data model operations are Get, Put, Scan, and Delete.
-Operations are applied via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table]        instances. 
+Operations are applied via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instances.
 
 === Get
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get]          returns attributes for a specified row.
-Gets are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#get(org.apache.hadoop.hbase.client.Get)[
-            Table.get]. 
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] returns attributes for a specified row.
+Gets are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#get(org.apache.hadoop.hbase.client.Get)[Table.get].
 
 === Put
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put]          either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put(org.apache.hadoop.hbase.client.Put)[
-            Table.put] (writeBuffer) or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List, java.lang.Object[])[
-            Table.batch] (non-writeBuffer). 
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html[Put] either adds new rows to a table (if the key is new) or can update existing rows (if the key already exists). Puts are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#put(org.apache.hadoop.hbase.client.Put)[Table.put] (writeBuffer) or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch(java.util.List, java.lang.Object[])[Table.batch] (non-writeBuffer).
 
 [[scan]]
 === Scans
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan]          allow iteration over multiple rows for specified attributes. 
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scan] allow iteration over multiple rows for specified attributes.
 
 The following is an example of a Scan on a Table instance.
 Assume that a table is populated with rows with keys "row1", "row2", "row3", and then another set of rows with the keys "abc1", "abc2", and "abc3". The following example shows how to set a Scan instance to return the rows beginning with "row".
@@ -309,23 +304,24 @@ scan.setRowPrefixFilter(Bytes.toBytes("row"));
 ResultScanner rs = table.getScanner(scan);
 try {
   for (Result r = rs.next(); r != null; r = rs.next()) {
-  // process result...
+    // process result...
+  }
 } finally {
   rs.close();  // always close the ResultScanner!
+}
 ----
 
-Note that generally the easiest way to specify a specific stop point for a scan is by using the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/InclusiveStopFilter.html[InclusiveStopFilter]          class. 
+Note that generally the easiest way to specify a specific stop point for a scan is by using the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/InclusiveStopFilter.html[InclusiveStopFilter] class.
 
 === Delete
 
-link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html[Delete]          removes a row from a table.
-Deletes are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)[
-            HTable.delete]. 
+link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html[Delete] removes a row from a table.
+Deletes are executed via link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete(org.apache.hadoop.hbase.client.Delete)[HTable.delete].
 
 HBase does not modify data in place, and so deletes are handled by creating new markers called _tombstones_.
-These tombstones, along with the dead values, are cleaned up on major compactions. 
+These tombstones, along with the dead values, are cleaned up on major compactions.
 
-See <<version.delete,version.delete>> for more information on deleting versions of columns, and see <<compaction,compaction>> for more information on compactions. 
+See <<version.delete,version.delete>> for more information on deleting versions of columns, and see <<compaction,compaction>> for more information on compactions.
 
 [[versions]]
 == Versions
@@ -345,20 +341,20 @@ In particular:
 * It is OK to write cells in a non-increasing version order.
 
 Below we describe how the version dimension in HBase currently works.
-See link:https://issues.apache.org/jira/browse/HBASE-2406[HBASE-2406] for discussion of HBase versions. link:http://outerthought.org/blog/417-ot.html[Bending time in HBase]            makes for a good read on the version, or time, dimension in HBase.
+See link:https://issues.apache.org/jira/browse/HBASE-2406[HBASE-2406] for discussion of HBase versions. link:http://outerthought.org/blog/417-ot.html[Bending time in HBase] makes for a good read on the version, or time, dimension in HBase.
 It has more detail on versioning than is provided here.
-As of this writing, the limiitation _Overwriting values at existing timestamps_ mentioned in the article no longer holds in HBase.
+As of this writing, the limitation _Overwriting values at existing timestamps_ mentioned in the article no longer holds in HBase.
 This section is basically a synopsis of this article by Bruno Dumon.
 
 [[specify.number.of.versions]]
 === Specifying the Number of Versions to Store
 
-The maximum number of versions to store for a given column is part of the column schema and is specified at table creation, or via an +alter+ command, via `HColumnDescriptor.DEFAULT_VERSIONS`.
+The maximum number of versions to store for a given column is part of the column schema and is specified at table creation, or via an `alter` command, via `HColumnDescriptor.DEFAULT_VERSIONS`.
 Prior to HBase 0.96, the default number of versions kept was `3`, but in 0.96 and newer has been changed to `1`.
 
-.Modify the Maximum Number of Versions for a Column
+.Modify the Maximum Number of Versions for a Column Family
 ====
-This example uses HBase Shell to keep a maximum of 5 versions of column `f1`.
+This example uses HBase Shell to keep a maximum of 5 versions of all columns in column family `f1`.
 You could also use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
 ----
@@ -366,11 +362,11 @@ hbase> alter ‘t1′, NAME => ‘f1′, VERSIONS => 5
 ----
 ====
 
-.Modify the Minimum Number of Versions for a Column
+.Modify the Minimum Number of Versions for a Column Family
 ====
-You can also specify the minimum number of versions to store.
+You can also specify the minimum number of versions to store per column family.
 By default, this is set to 0, which means the feature is disabled.
-The following example sets the minimum number of versions on field `f1` to `2`, via HBase Shell.
+The following example sets the minimum number of versions on all columns in column family `f1` to `2`, via HBase Shell.
 You could also use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html[HColumnDescriptor].
 
 ----
@@ -378,7 +374,7 @@ hbase> alter ‘t1′, NAME => ‘f1′, MIN_VERSIONS => 2
 ----
 ====
 
-Starting with HBase 0.98.2, you can specify a global default for the maximum number of versions kept for all newly-created columns, by setting +hbase.column.max.version+ in _hbase-site.xml_.
+Starting with HBase 0.98.2, you can specify a global default for the maximum number of versions kept for all newly-created columns, by setting `hbase.column.max.version` in _hbase-site.xml_.
 See <<hbase.column.max.version,hbase.column.max.version>>.
 
 [[versions.ops]]
@@ -389,13 +385,12 @@ In this section we look at the behavior of the version dimension for each of the
 ==== Get/Scan
 
 Gets are implemented on top of Scans.
-The below discussion of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get]            applies equally to link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scans].
+The below discussion of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html[Get] applies equally to link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html[Scans].
 
-By default, i.e.
-if you specify no explicit version, when doing a `get`, the cell whose version has the largest value is returned (which may or may not be the latest one written, see later). The default behavior can be modified in the following ways:
+By default, i.e. if you specify no explicit version, when doing a `get`, the cell whose version has the largest value is returned (which may or may not be the latest one written, see later). The default behavior can be modified in the following ways:
 
 * to return more than one version, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()[Get.setMaxVersions()]
-* to return versions other than the latest, see link:???[Get.setTimeRange()]
+* to return versions other than the latest, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setTimeRange(long,%20long)[Get.setTimeRange()]
 +
 To retrieve the latest version that is less than or equal to a given value, thus giving the 'latest' state of the record at a certain point in time, just use a range from 0 to the desired version and set the max versions to 1.
 
@@ -438,7 +433,7 @@ Doing a put always creates a new version of a `cell`, at a certain timestamp.
 By default the system uses the server's `currentTimeMillis`, but you can specify the version (= the long integer) yourself, on a per-column level.
 This means you could assign a time in the past or the future, or use the long value for non-time purposes.
 
-To overwrite an existing value, do a put at exactly the same row, column, and version as that of the cell you would overshadow.
+To overwrite an existing value, do a put at exactly the same row, column, and version as that of the cell you want to overwrite.
 
 ===== Implicit Version Example
 
@@ -471,42 +466,39 @@ put.add(CF, ATTR, explicitTimeInMs, Bytes.toBytes(data));
 table.put(put);
 ----
 
-Caution: the version timestamp is internally by HBase for things like time-to-live calculations.
+Caution: the version timestamp is used internally by HBase for things like time-to-live calculations.
 It's usually best to avoid setting this timestamp yourself.
-Prefer using a separate timestamp attribute of the row, or have the timestamp a part of the rowkey, or both. 
+Prefer using a separate timestamp attribute of the row, or have the timestamp as a part of the row key, or both.
 
 [[version.delete]]
 ==== Delete
 
 There are three different types of internal delete markers.
-See Lars Hofhansl's blog for discussion of his attempt adding another, link:http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html[Scanning
-              in HBase: Prefix Delete Marker]. 
+See Lars Hofhansl's blog for discussion of his attempt adding another, link:http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html[Scanning in HBase: Prefix Delete Marker].
 
 * Delete: for a specific version of a column.
 * Delete column: for all versions of a column.
 * Delete family: for all columns of a particular ColumnFamily
 
-When deleting an entire row, HBase will internally create a tombstone for each ColumnFamily (i.e., not each individual column). 
+When deleting an entire row, HBase will internally create a tombstone for each ColumnFamily (i.e., not each individual column).
 
 Deletes work by creating _tombstone_ markers.
 For example, let's suppose we want to delete a row.
 For this you can specify a version, or else by default the `currentTimeMillis` is used.
-What this means is [quote]_delete all
-              cells where the version is less than or equal to this version_.
+What this means is _delete all cells where the version is less than or equal to this version_.
 HBase never modifies data in place, so for example a delete will not immediately delete (or mark as deleted) the entries in the storage file that correspond to the delete condition.
 Rather, a so-called _tombstone_ is written, which will mask the deleted values.
 When HBase does a major compaction, the tombstones are processed to actually remove the dead values, together with the tombstones themselves.
 If the version you specified when deleting a row is larger than the version of any value in the row, then you can consider the complete row to be deleted.
 
-For an informative discussion on how deletes and versioning interact, see the thread link:http://comments.gmane.org/gmane.comp.java.hadoop.hbase.user/28421[Put w/
-              timestamp -> Deleteall -> Put w/ timestamp fails] up on the user mailing list.
+For an informative discussion on how deletes and versioning interact, see the thread link:http://comments.gmane.org/gmane.comp.java.hadoop.hbase.user/28421[Put w/timestamp -> Deleteall -> Put w/ timestamp fails] up on the user mailing list.
 
-Also see <<keyvalue,keyvalue>> for more information on the internal KeyValue format. 
+Also see <<keyvalue,keyvalue>> for more information on the internal KeyValue format.
 
-Delete markers are purged during the next major compaction of the store, unless the +KEEP_DELETED_CELLS+ option is set in the column family.
+Delete markers are purged during the next major compaction of the store, unless the `KEEP_DELETED_CELLS` option is set in the column family.
 To keep the deletes for a configurable amount of time, you can set the delete TTL via the +hbase.hstore.time.to.purge.deletes+ property in _hbase-site.xml_.
-If +hbase.hstore.time.to.purge.deletes+ is not set, or set to 0, all delete markers, including those with timestamps in the future, are purged during the next major compaction.
-Otherwise, a delete marker with a timestamp in the future is kept until the major compaction which occurs after the time represented by the marker's timestamp plus the value of +hbase.hstore.time.to.purge.deletes+, in milliseconds. 
+If `hbase.hstore.time.to.purge.deletes` is not set, or set to 0, all delete markers, including those with timestamps in the future, are purged during the next major compaction.
+Otherwise, a delete marker with a timestamp in the future is kept until the major compaction which occurs after the time represented by the marker's timestamp plus the value of `hbase.hstore.time.to.purge.deletes`, in milliseconds.
 
 NOTE: This behavior represents a fix for an unexpected change that was introduced in HBase 0.94, and was fixed in link:https://issues.apache.org/jira/browse/HBASE-10118[HBASE-10118].
 The change has been backported to HBase 0.94 and newer branches.
@@ -529,35 +521,34 @@ But they can occur even if you do not care about time: just do delete and put im
 [[major.compactions.change.query.results]]
 ==== Major compactions change query results
 
-[quote]_...create three cell versions at t1, t2 and t3, with a maximum-versions
-              setting of 2. So when getting all versions, only the values at t2 and t3 will be
-              returned. But if you delete the version at t2 or t3, the one at t1 will appear again.
-              Obviously, once a major compaction has run, such behavior will not be the case
-              anymore..._ (See _Garbage Collection_ in link:http://outerthought.org/blog/417-ot.html[Bending time in
-            HBase].)
+_...create three cell versions at t1, t2 and t3, with a maximum-versions
+    setting of 2. So when getting all versions, only the values at t2 and t3 will be
+    returned. But if you delete the version at t2 or t3, the one at t1 will appear again.
+    Obviously, once a major compaction has run, such behavior will not be the case
+    anymore..._ (See _Garbage Collection_ in link:http://outerthought.org/blog/417-ot.html[Bending time in HBase].)
 
 [[dm.sort]]
 == Sort Order
 
 All data model operations HBase return data in sorted order.
-First by row, then by ColumnFamily, followed by column qualifier, and finally timestamp (sorted in reverse, so newest records are returned first). 
+First by row, then by ColumnFamily, followed by column qualifier, and finally timestamp (sorted in reverse, so newest records are returned first).
 
 [[dm.column.metadata]]
 == Column Metadata
 
 There is no store of column metadata outside of the internal KeyValue instances for a ColumnFamily.
-Thus, while HBase can support not only a wide number of columns per row, but a heterogenous set of columns between rows as well, it is your responsibility to keep track of the column names. 
+Thus, while HBase can support not only a wide number of columns per row, but a heterogeneous set of columns between rows as well, it is your responsibility to keep track of the column names.
 
 The only way to get a complete set of columns that exist for a ColumnFamily is to process all the rows.
-For more information about how HBase stores data internally, see <<keyvalue,keyvalue>>. 
+For more information about how HBase stores data internally, see <<keyvalue,keyvalue>>.
 
 == Joins
 
-Whether HBase supports joins is a common question on the dist-list, and there is a simple answer:  it doesn't, at not least in the way that RDBMS' support them (e.g., with equi-joins or outer-joins in SQL).  As has been illustrated in this chapter, the read data model operations in HBase are Get and Scan. 
+Whether HBase supports joins is a common question on the dist-list, and there is a simple answer:  it doesn't, at not least in the way that RDBMS' support them (e.g., with equi-joins or outer-joins in SQL).  As has been illustrated in this chapter, the read data model operations in HBase are Get and Scan.
 
 However, that doesn't mean that equivalent join functionality can't be supported in your application, but you have to do it yourself.
 The two primary strategies are either denormalizing the data upon writing to HBase, or to have lookup tables and do the join between HBase tables in your application or MapReduce code (and as RDBMS' demonstrate, there are several strategies for this depending on the size of the tables, e.g., nested loops vs.
-hash-joins).  So which is the best approach?  It depends on what you are trying to do, and as such there isn't a single answer that works for every use case. 
+hash-joins). So which is the best approach? It depends on what you are trying to do, and as such there isn't a single answer that works for every use case.
 
 == ACID
 
