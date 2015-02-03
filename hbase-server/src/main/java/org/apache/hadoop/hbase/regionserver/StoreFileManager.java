@@ -134,4 +134,10 @@ public interface StoreFileManager {
    * @return The files which don't have any necessary data according to TTL and other criteria.
    */
   Collection<StoreFile> getUnneededFiles(long maxTs, List<StoreFile> filesCompacting);
+
+  /**
+   * @return the compaction pressure used for compaction throughput tuning.
+   * @see Store#getCompactionPressure()
+   */
+  double getCompactionPressure();
 }

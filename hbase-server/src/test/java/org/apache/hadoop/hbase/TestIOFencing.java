@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -116,14 +117,17 @@ public class TestIOFencing {
         throw new IOException(ex);
       }
     }
+
     @Override
-    public boolean compact(CompactionContext compaction, Store store) throws IOException {
+    public boolean compact(CompactionContext compaction, Store store,
+        CompactionThroughputController throughputController) throws IOException {
       try {
-        return super.compact(compaction, store);
+        return super.compact(compaction, store, throughputController);
       } finally {
         compactCount++;
       }
     }
+
     public int countStoreFiles() {
       int count = 0;
       for (Store store : stores.values()) {

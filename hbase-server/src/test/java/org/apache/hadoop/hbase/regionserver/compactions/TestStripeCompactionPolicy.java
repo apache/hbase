@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -208,9 +209,10 @@ public class TestStripeCompactionPolicy {
     assertTrue(policy.needsCompactions(si, al()));
     StripeCompactionPolicy.StripeCompactionRequest scr = policy.selectCompaction(si, al(), false);
     assertEquals(si.getStorefiles(), scr.getRequest().getFiles());
-    scr.execute(sc);
-    verify(sc, only()).compact(eq(scr.getRequest()), anyInt(), anyLong(),
-        aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY));
+    scr.execute(sc, NoLimitCompactionThroughputController.INSTANCE);
+    verify(sc, only()).compact(eq(scr.getRequest()), anyInt(), anyLong(), aryEq(OPEN_KEY),
+      aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY),
+      any(NoLimitCompactionThroughputController.class));
   }
 
   @Test
@@ -442,7 +444,7 @@ public class TestStripeCompactionPolicy {
     // All the Stripes are expired, so the Compactor will not create any Writers. We need to create
     // an empty file to preserve metadata
     StripeCompactor sc = createCompactor();
-    List<Path> paths = scr.execute(sc);
+    List<Path> paths = scr.execute(sc, NoLimitCompactionThroughputController.INSTANCE);
     assertEquals(1, paths.size());
   }
 
@@ -501,22 +503,21 @@ public class TestStripeCompactionPolicy {
     assertTrue(policy.needsCompactions(si, al()));
     StripeCompactionPolicy.StripeCompactionRequest scr = policy.selectCompaction(si, al(), false);
     verifyCollectionsEqual(sfs, scr.getRequest().getFiles());
-    scr.execute(sc);
-    verify(sc, times(1)).compact(eq(scr.getRequest()), argThat(
-        new ArgumentMatcher<List<byte[]>>() {
-          @Override
-          public boolean matches(Object argument) {
-            @SuppressWarnings("unchecked")
-            List<byte[]> other = (List<byte[]>)argument;
-            if (other.size() != boundaries.size()) return false;
-            for (int i = 0; i < other.size(); ++i) {
-              if (!Bytes.equals(other.get(i), boundaries.get(i))) return false;
-            }
-            return true;
-          }
-        }),
-        dropDeletesFrom == null ? isNull(byte[].class) : aryEq(dropDeletesFrom),
-        dropDeletesTo == null ? isNull(byte[].class) : aryEq(dropDeletesTo));
+    scr.execute(sc, NoLimitCompactionThroughputController.INSTANCE);
+    verify(sc, times(1)).compact(eq(scr.getRequest()), argThat(new ArgumentMatcher<List<byte[]>>() {
+      @Override
+      public boolean matches(Object argument) {
+        @SuppressWarnings("unchecked")
+        List<byte[]> other = (List<byte[]>) argument;
+        if (other.size() != boundaries.size()) return false;
+        for (int i = 0; i < other.size(); ++i) {
+          if (!Bytes.equals(other.get(i), boundaries.get(i))) return false;
+        }
+        return true;
+      }
+    }), dropDeletesFrom == null ? isNull(byte[].class) : aryEq(dropDeletesFrom),
+      dropDeletesTo == null ? isNull(byte[].class) : aryEq(dropDeletesTo),
+      any(NoLimitCompactionThroughputController.class));
   }
 
   /**
@@ -537,11 +538,12 @@ public class TestStripeCompactionPolicy {
     assertTrue(!needsCompaction || policy.needsCompactions(si, al()));
     StripeCompactionPolicy.StripeCompactionRequest scr = policy.selectCompaction(si, al(), false);
     verifyCollectionsEqual(sfs, scr.getRequest().getFiles());
-    scr.execute(sc);
+    scr.execute(sc, NoLimitCompactionThroughputController.INSTANCE);
     verify(sc, times(1)).compact(eq(scr.getRequest()),
-        count == null ? anyInt() : eq(count.intValue()),
-        size == null ? anyLong() : eq(size.longValue()), aryEq(start), aryEq(end),
-        dropDeletesMatcher(dropDeletes, start), dropDeletesMatcher(dropDeletes, end));
+      count == null ? anyInt() : eq(count.intValue()),
+      size == null ? anyLong() : eq(size.longValue()), aryEq(start), aryEq(end),
+      dropDeletesMatcher(dropDeletes, start), dropDeletesMatcher(dropDeletes, end),
+      any(NoLimitCompactionThroughputController.class));
   }
 
   /** Verify arbitrary flush. */
@@ -727,7 +729,10 @@ public class TestStripeCompactionPolicy {
     HColumnDescriptor col = new HColumnDescriptor(Bytes.toBytes("foo"));
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     Store store = mock(Store.class);
+    HRegionInfo info = mock(HRegionInfo.class);
+    when(info.getRegionNameAsString()).thenReturn("testRegion");
     when(store.getFamily()).thenReturn(col);
+    when(store.getRegionInfo()).thenReturn(info);
     when(
       store.createWriterInTmp(anyLong(), any(Compression.Algorithm.class), anyBoolean(),
         anyBoolean(), anyBoolean())).thenAnswer(writers);

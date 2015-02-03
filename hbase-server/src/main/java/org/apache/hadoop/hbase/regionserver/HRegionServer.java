@@ -3106,4 +3106,18 @@ public class HRegionServer extends HasThread implements
   public HeapMemoryManager getHeapMemoryManager() {
     return hMemManager;
   }
+
+  @Override
+  public double getCompactionPressure() {
+    double max = 0;
+    for (HRegion region : onlineRegions.values()) {
+      for (Store store : region.getStores().values()) {
+        double normCount = store.getCompactionPressure();
+        if (normCount > max) {
+          max = normCount;
+        }
+      }
+    }
+    return max;
+  }
 }

@@ -277,4 +277,9 @@ public class MockRegionServerServices implements RegionServerServices {
   public HeapMemoryManager getHeapMemoryManager() {
     return null;
   }
+
+  @Override
+  public double getCompactionPressure() {
+    return 0;
+  }
 }

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -120,7 +121,8 @@ public class TestStripeCompactor {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     StripeCompactor sc = createCompactor(writers, input);
     List<Path> paths =
-        sc.compact(createDummyRequest(), Arrays.asList(boundaries), majorFrom, majorTo);
+        sc.compact(createDummyRequest(), Arrays.asList(boundaries), majorFrom, majorTo,
+          NoLimitCompactionThroughputController.INSTANCE);
     writers.verifyKvs(output, allFiles, true);
     if (allFiles) {
       assertEquals(output.length, paths.size());
@@ -155,8 +157,9 @@ public class TestStripeCompactor {
       byte[] left, byte[] right, KeyValue[][] output) throws Exception {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     StripeCompactor sc = createCompactor(writers, input);
-    List<Path> paths = sc.compact(
-        createDummyRequest(), targetCount, targetSize, left, right, null, null);
+    List<Path> paths =
+        sc.compact(createDummyRequest(), targetCount, targetSize, left, right, null, null,
+          NoLimitCompactionThroughputController.INSTANCE);
     assertEquals(output.length, paths.size());
     writers.verifyKvs(output, true, true);
     List<byte[]> boundaries = new ArrayList<byte[]>();

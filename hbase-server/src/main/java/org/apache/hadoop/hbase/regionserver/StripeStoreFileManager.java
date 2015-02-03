@@ -31,16 +31,16 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -471,20 +471,23 @@ public class StripeStoreFileManager
     if (!LOG.isDebugEnabled()) return;
     StringBuilder sb = new StringBuilder();
     sb.append("\n" + string + "; current stripe state is as such:");
-    sb.append("\n level 0 with ").append(state.level0Files.size())
+    sb.append("\n level 0 with ")
+        .append(state.level0Files.size())
         .append(
           " files: "
-              + StringUtils.humanReadableInt(StripeCompactionPolicy
-                  .getTotalFileSize(state.level0Files)) + ";");
+              + TraditionalBinaryPrefix.long2String(
+                StripeCompactionPolicy.getTotalFileSize(state.level0Files), "", 1) + ";");
     for (int i = 0; i < state.stripeFiles.size(); ++i) {
       String endRow = (i == state.stripeEndRows.length)
           ? "(end)" : "[" + Bytes.toString(state.stripeEndRows[i]) + "]";
-      sb.append("\n stripe ending in ").append(endRow).append(" with ")
+      sb.append("\n stripe ending in ")
+          .append(endRow)
+          .append(" with ")
           .append(state.stripeFiles.get(i).size())
           .append(
             " files: "
-                + StringUtils.humanReadableInt(StripeCompactionPolicy
-                    .getTotalFileSize(state.stripeFiles.get(i))) + ";");
+                + TraditionalBinaryPrefix.long2String(
+                  StripeCompactionPolicy.getTotalFileSize(state.stripeFiles.get(i)), "", 1) + ";");
     }
     sb.append("\n").append(state.stripeFiles.size()).append(" stripes total.");
     sb.append("\n").append(getStorefileCount()).append(" files total.");
@@ -954,5 +957,37 @@ public class StripeStoreFileManager
       }
     }
     return expiredStoreFiles;
+  }
+
+  @Override
+  public double getCompactionPressure() {
+    State stateLocal = this.state;
+    if (stateLocal.allFilesCached.size() > blockingFileCount) {
+      // just a hit to tell others that we have reached the blocking file count.
+      return 2.0;
+    }
+    if (stateLocal.stripeFiles.isEmpty()) {
+      return 0.0;
+    }
+    int blockingFilePerStripe = blockingFileCount / stateLocal.stripeFiles.size();
+    // do not calculate L0 separately because data will be moved to stripe quickly and in most cases
+    // we flush data to stripe directly.
+    int delta = stateLocal.level0Files.isEmpty() ? 0 : 1;
+    double max = 0.0;
+    for (ImmutableList<StoreFile> stripeFile : stateLocal.stripeFiles) {
+      int stripeFileCount = stripeFile.size();
+      double normCount =
+          (double) (stripeFileCount + delta - config.getStripeCompactMinFiles())
+              / (blockingFilePerStripe - config.getStripeCompactMinFiles());
+      if (normCount >= 1.0) {
+        // This could happen if stripe is not split evenly. Do not return values that larger than
+        // 1.0 because we have not reached the blocking file count actually.
+        return 1.0;
+      }
+      if (normCount > max) {
+        max = normCount;
+      }
+    }
+    return max;
   }
 }

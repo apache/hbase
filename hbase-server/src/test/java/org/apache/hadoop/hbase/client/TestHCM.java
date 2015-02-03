@@ -406,7 +406,6 @@ public class TestHCM {
         return step.get() == 3;
       }
     });
-
     table.close();
     Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
     TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
