@@ -46,8 +46,8 @@ public class ServerLoad {
   private int storefileSizeMB = 0;
   private int memstoreSizeMB = 0;
   private int storefileIndexSizeMB = 0;
-  private int readRequestsCount = 0;
-  private int writeRequestsCount = 0;
+  private long readRequestsCount = 0;
+  private long writeRequestsCount = 0;
   private int rootIndexSizeKB = 0;
   private int totalStaticIndexSizeKB = 0;
   private int totalStaticBloomSizeKB = 0;
@@ -139,11 +139,11 @@ public class ServerLoad {
     return storefileIndexSizeMB;
   }
 
-  public int getReadRequestsCount() {
+  public long getReadRequestsCount() {
     return readRequestsCount;
   }
 
-  public int getWriteRequestsCount() {
+  public long getWriteRequestsCount() {
     return writeRequestsCount;
   }
 
