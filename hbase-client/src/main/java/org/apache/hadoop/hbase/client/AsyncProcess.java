@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -684,21 +685,33 @@ class AsyncProcess {
       private final MultiAction<Row> multiAction;
       private final int numAttempt;
       private final ServerName server;
+      private final Set<MultiServerCallable<Row>> callsInProgress;
 
       private SingleServerRequestRunnable(
-          MultiAction<Row> multiAction, int numAttempt, ServerName server) {
+          MultiAction<Row> multiAction, int numAttempt, ServerName server,
+          Set<MultiServerCallable<Row>> callsInProgress) {
         this.multiAction = multiAction;
         this.numAttempt = numAttempt;
         this.server = server;
+        this.callsInProgress = callsInProgress;
       }
 
       @Override
       public void run() {
         MultiResponse res;
+        MultiServerCallable<Row> callable = null;
         try {
-          MultiServerCallable<Row> callable = createCallable(server, tableName, multiAction);
+          callable = createCallable(server, tableName, multiAction);
           try {
-            res = createCaller(callable).callWithoutRetries(callable, timeout);
+            RpcRetryingCaller<MultiResponse> caller = createCaller(callable);
+            if (callsInProgress != null) callsInProgress.add(callable);
+            res = caller.callWithoutRetries(callable, timeout);
+
+            if (res == null) {
+              // Cancelled
+              return;
+            }
+
           } catch (IOException e) {
             // The service itself failed . It may be an error coming from the communication
             //   layer, but, as well, a functional error raised by the server.
@@ -721,6 +734,9 @@ class AsyncProcess {
               throw new RuntimeException(t);
         } finally {
           decTaskCounters(multiAction.getRegions(), server);
+          if (callsInProgress != null && callable != null) {
+            callsInProgress.remove(callable);
+          }
         }
       }
     }
@@ -729,6 +745,7 @@ class AsyncProcess {
     private final BatchErrors errors;
     private final ConnectionManager.ServerErrorTracker errorsByServer;
     private final ExecutorService pool;
+    private final Set<MultiServerCallable<Row>> callsInProgress;
 
 
     private final TableName tableName;
@@ -813,8 +830,15 @@ class AsyncProcess {
       } else {
         this.replicaGetIndices = null;
       }
+      this.callsInProgress = !hasAnyReplicaGets ? null :
+          Collections.newSetFromMap(new ConcurrentHashMap<MultiServerCallable<Row>, Boolean>());
+
       this.errorsByServer = createServerErrorTracker();
       this.errors = (globalErrors != null) ? globalErrors : new BatchErrors();
+    }
+
+    public Set<MultiServerCallable<Row>> getCallsInProgress() {
+      return callsInProgress;
     }
 
     /**
@@ -979,7 +1003,7 @@ class AsyncProcess {
       // no stats to manage, just do the standard action
       if (AsyncProcess.this.connection.getStatisticsTracker() == null) {
         return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction",
-            new SingleServerRequestRunnable(multiAction, numAttempt, server)));
+            new SingleServerRequestRunnable(multiAction, numAttempt, server, callsInProgress)));
       }
 
       // group the actions by the amount of delay
@@ -1001,7 +1025,8 @@ class AsyncProcess {
       for (DelayingRunner runner : actions.values()) {
         String traceText = "AsyncProcess.sendMultiAction";
         Runnable runnable =
-            new SingleServerRequestRunnable(runner.getActions(), numAttempt, server);
+            new SingleServerRequestRunnable(runner.getActions(), numAttempt, server,
+                callsInProgress);
         // use a delay runner only if we need to sleep for some time
         if (runner.getSleepTime() > 0) {
           runner.setRunner(runnable);
@@ -1517,6 +1542,12 @@ class AsyncProcess {
         waitUntilDone(Long.MAX_VALUE);
       } catch (InterruptedException iex) {
         throw new InterruptedIOException(iex.getMessage());
+      } finally {
+        if (callsInProgress != null) {
+          for (MultiServerCallable<Row> clb : callsInProgress) {
+            clb.cancel();
+          }
+        }
       }
     }
 
