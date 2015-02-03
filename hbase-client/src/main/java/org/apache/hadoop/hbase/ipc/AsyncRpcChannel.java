@@ -307,9 +307,14 @@ public class AsyncRpcChannel {
     controller.notifyOnCancel(new RpcCallback<Object>() {
       @Override
       public void run(Object parameter) {
-        failCall(call, new IOException("Canceled connection"));
+        calls.remove(call.id);
       }
     });
+    if (controller.isCanceled()) {
+      // To finish if the call was cancelled before we set the notification (race condition)
+      call.cancel(true);
+      return call;
+    }
 
     calls.put(call.id, call);
 
