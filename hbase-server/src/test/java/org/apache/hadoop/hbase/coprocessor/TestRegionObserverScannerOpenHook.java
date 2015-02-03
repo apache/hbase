@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -229,9 +230,11 @@ public class TestRegionObserverScannerOpenHook {
       if (compactionStateChangeLatch == null) compactionStateChangeLatch = new CountDownLatch(1);
       return compactionStateChangeLatch;
     }
+
     @Override
-    public boolean compact(CompactionContext compaction, Store store) throws IOException {
-      boolean ret = super.compact(compaction, store);
+    public boolean compact(CompactionContext compaction, Store store,
+        CompactionThroughputController throughputController) throws IOException {
+      boolean ret = super.compact(compaction, store, throughputController);
       if (ret) compactionStateChangeLatch.countDown();
       return ret;
     }

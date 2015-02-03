@@ -36,7 +36,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 
 /**
- * Compact passed set of files. Create an instance and then call {@link #compact(CompactionRequest)}
+ * Compact passed set of files. Create an instance and then call
+ * {@link #compact(CompactionRequest, CompactionThroughputController)}
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor {
@@ -49,7 +50,8 @@ public class DefaultCompactor extends Compactor {
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    */
-  public List<Path> compact(final CompactionRequest request) throws IOException {
+  public List<Path> compact(final CompactionRequest request,
+      CompactionThroughputController throughputController) throws IOException {
     FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles());
     this.progress = new CompactionProgress(fd.maxKeyCount);
 
@@ -99,7 +101,8 @@ public class DefaultCompactor extends Compactor {
         
         writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
             true, fd.maxTagsLength > 0);
-        boolean finished = performCompaction(scanner, writer, smallestReadPoint, cleanSeqId);
+        boolean finished =
+            performCompaction(scanner, writer, smallestReadPoint, cleanSeqId, throughputController);
         if (!finished) {
           writer.close();
           store.getFileSystem().delete(writer.getPath(), false);
@@ -144,7 +147,7 @@ public class DefaultCompactor extends Compactor {
 
   /**
    * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to
-   * {@link #compact(CompactionRequest)};
+   * {@link #compact(CompactionRequest, CompactionThroughputController)};
    * @param filesToCompact the files to compact. These are used as the compactionSelection for
    *          the generated {@link CompactionRequest}.
    * @param isMajor true to major compact (prune all deletes, max versions, etc)
@@ -156,6 +159,6 @@ public class DefaultCompactor extends Compactor {
       throws IOException {
     CompactionRequest cr = new CompactionRequest(filesToCompact);
     cr.setIsMajor(isMajor, isMajor);
-    return this.compact(cr);
+    return this.compact(cr, NoLimitCompactionThroughputController.INSTANCE);
   }
 }

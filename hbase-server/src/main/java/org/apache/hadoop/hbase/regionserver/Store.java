@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -188,7 +189,8 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
 
   void cancelRequestedCompaction(CompactionContext compaction);
 
-  List<StoreFile> compact(CompactionContext compaction) throws IOException;
+  List<StoreFile> compact(CompactionContext compaction,
+      CompactionThroughputController throughputController) throws IOException;
 
   /**
    * @return true if we should run a major compaction.
@@ -396,5 +398,22 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * the primary region files.
    * @throws IOException
    */
-   void refreshStoreFiles() throws IOException;
+  void refreshStoreFiles() throws IOException;
+
+  /**
+   * This value can represent the degree of emergency of compaction for this store. It should be
+   * greater than or equal to 0.0, any value greater than 1.0 means we have too many store files.
+   * <ul>
+   * <li>if getStorefilesCount &lt;= getMinFilesToCompact, return 0.0</li>
+   * <li>return (getStorefilesCount - getMinFilesToCompact) / (blockingFileCount -
+   * getMinFilesToCompact)</li>
+   * </ul>
+   * <p>
+   * And for striped stores, we should calculate this value by the files in each stripe separately
+   * and return the maximum value.
+   * <p>
+   * It is similar to {@link #getCompactPriority()} except that it is more suitable to use in a
+   * linear formula.
+   */
+  double getCompactionPressure();
 }

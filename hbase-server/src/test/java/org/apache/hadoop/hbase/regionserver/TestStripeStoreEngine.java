@@ -17,8 +17,16 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,12 +35,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -63,9 +73,10 @@ public class TestStripeStoreEngine {
     TestStoreEngine se = createEngine(conf);
     StripeCompactor mockCompactor = mock(StripeCompactor.class);
     se.setCompactorOverride(mockCompactor);
-    when(mockCompactor.compact(any(CompactionRequest.class), anyInt(), anyLong(),
-        any(byte[].class), any(byte[].class), any(byte[].class), any(byte[].class)))
-        .thenReturn(new ArrayList<Path>());
+    when(
+      mockCompactor.compact(any(CompactionRequest.class), anyInt(), anyLong(), any(byte[].class),
+        any(byte[].class), any(byte[].class), any(byte[].class),
+        any(CompactionThroughputController.class))).thenReturn(new ArrayList<Path>());
 
     // Produce 3 L0 files.
     StoreFile sf = createFile();
@@ -83,9 +94,10 @@ public class TestStripeStoreEngine {
     assertEquals(2, compaction.getRequest().getFiles().size());
     assertFalse(compaction.getRequest().getFiles().contains(sf));
     // Make sure the correct method it called on compactor.
-    compaction.compact();
+    compaction.compact(NoLimitCompactionThroughputController.INSTANCE);
     verify(mockCompactor, times(1)).compact(compaction.getRequest(), targetCount, 0L,
-          StripeStoreFileManager.OPEN_KEY, StripeStoreFileManager.OPEN_KEY, null, null);
+      StripeStoreFileManager.OPEN_KEY, StripeStoreFileManager.OPEN_KEY, null, null,
+      NoLimitCompactionThroughputController.INSTANCE);
   }
 
   private static StoreFile createFile() throws Exception {

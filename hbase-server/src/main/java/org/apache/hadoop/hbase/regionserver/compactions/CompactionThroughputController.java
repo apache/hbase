@@ -1,0 +1,52 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.hbase.regionserver.compactions;
+
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+
+/**
+ * A utility that constrains the total throughput of one or more simultaneous flows (compactions) by
+ * sleeping when necessary.
+ */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+public interface CompactionThroughputController extends Stoppable {
+
+  /**
+   * Setup controller for the given region server.
+   */
+  void setup(RegionServerServices server);
+
+  /**
+   * Start a compaction.
+   */
+  void start(String compactionName);
+
+  /**
+   * Control the compaction throughput. Will sleep if too fast.
+   * @return the actual sleep time.
+   */
+  long control(String compactionName, long size) throws InterruptedException;
+
+  /**
+   * Finish a compaction. Should call this method in a finally block.
+   */
+  void finish(String compactionName);
+}

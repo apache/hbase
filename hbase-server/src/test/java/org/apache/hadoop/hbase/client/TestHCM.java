@@ -407,7 +407,6 @@ public class TestHCM {
         return step.get() == 3;
       }
     });
-
     table.close();
     connection.close();
     Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);

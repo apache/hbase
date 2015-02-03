@@ -626,4 +626,9 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public HeapMemoryManager getHeapMemoryManager() {
     return null;
   }
+
+  @Override
+  public double getCompactionPressure() {
+    return 0;
+  }
 }
