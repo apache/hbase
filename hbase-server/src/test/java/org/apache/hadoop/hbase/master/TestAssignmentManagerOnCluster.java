@@ -288,9 +288,9 @@ public class TestAssignmentManagerOnCluster {
 
       long timeoutTime = System.currentTimeMillis() + 800;
       while (true) {
-        List<HRegionInfo> regions =
-          regionStates.getRegionsOfTable(table);
-        if (!regions.contains(hri)) break;
+        if (regionStates.getRegionByStateOfTable(table)
+            .get(RegionState.State.OFFLINE).contains(hri))
+          break;
         long now = System.currentTimeMillis();
         if (now > timeoutTime) {
           fail("Failed to offline the region in time");
