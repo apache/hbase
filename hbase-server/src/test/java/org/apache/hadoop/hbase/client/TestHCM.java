@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -90,7 +89,7 @@ import com.google.common.collect.Lists;
 /**
  * This class is for testing HBaseConnectionManager features
  */
-@Category({MediumTests.class, FlakeyTests.class})
+@Category({MediumTests.class})
 public class TestHCM {
   private static final Log LOG = LogFactory.getLog(TestHCM.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
