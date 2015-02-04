@@ -488,6 +488,7 @@ public final class RequestConverter {
     builder.setCloseScanner(closeScanner);
     builder.setRegion(region);
     builder.setScan(ProtobufUtil.toScan(scan));
+    builder.setClientHandlesPartials(true);
     return builder.build();
   }
 
@@ -505,6 +506,7 @@ public final class RequestConverter {
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
     builder.setScannerId(scannerId);
+    builder.setClientHandlesPartials(true);
     return builder.build();
   }
 
@@ -524,6 +526,7 @@ public final class RequestConverter {
     builder.setCloseScanner(closeScanner);
     builder.setScannerId(scannerId);
     builder.setNextCallSeq(nextCallSeq);
+    builder.setClientHandlesPartials(true);
     return builder.build();
   }
 

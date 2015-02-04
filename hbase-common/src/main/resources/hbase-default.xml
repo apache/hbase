@@ -527,13 +527,19 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.client.scanner.caching</name>
-    <value>100</value>
-    <description>Number of rows that will be fetched when calling next
-    on a scanner if it is not served from (local, client) memory. Higher
-    caching values will enable faster scanners but will eat up more memory
-    and some calls of next may take longer and longer times when the cache is empty.
-    Do not set this value such that the time between invocations is greater
-    than the scanner timeout; i.e. hbase.client.scanner.timeout.period</description>
+    <value>2147483647</value>
+    <description>Number of rows that we try to fetch when calling next
+    on a scanner if it is not served from (local, client) memory. This configuration
+    works together with hbase.client.scanner.max.result.size to try and use the
+    network efficiently. The default value is Integer.MAX_VALUE by default so that
+    the network will fill the chunk size defined by hbase.client.scanner.max.result.size
+    rather than be limited by a particular number of rows since the size of rows varies
+    table to table. If you know ahead of time that you will not require more than a certain
+    number of rows from a scan, this configuration should be set to that row limit via
+    Scan#setCaching. Higher caching values will enable faster scanners but will eat up more
+    memory and some calls of next may take longer and longer times when the cache is empty.
+    Do not set this value such that the time between invocations is greater than the scanner
+    timeout; i.e. hbase.client.scanner.timeout.period</description>
   </property>
   <property>
     <name>hbase.client.keyvalue.maxsize</name>

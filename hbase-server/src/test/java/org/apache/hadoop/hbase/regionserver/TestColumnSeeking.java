@@ -19,7 +19,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,10 +32,18 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Rule;
@@ -151,7 +160,7 @@ public class TestColumnSeeking {
         }
         InternalScanner scanner = region.getScanner(scan);
         List<Cell> results = new ArrayList<Cell>();
-        while (scanner.next(results))
+        while (NextState.hasMoreValues(scanner.next(results)))
           ;
         assertEquals(kvSet.size(), results.size());
         assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
@@ -263,7 +272,7 @@ public class TestColumnSeeking {
       }
       InternalScanner scanner = region.getScanner(scan);
       List<Cell> results = new ArrayList<Cell>();
-      while (scanner.next(results))
+      while (NextState.hasMoreValues(scanner.next(results)))
         ;
       assertEquals(kvSet.size(), results.size());
       assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));

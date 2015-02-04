@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.ClientScanner.createClosestRowBefore;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -43,8 +45,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.annotations.VisibleForTesting;
-
-import static org.apache.hadoop.hbase.client.ReversedClientScanner.createClosestRowBefore;
 
 /**
  * This class has the logic for handling scanners for regions with and without replicas.

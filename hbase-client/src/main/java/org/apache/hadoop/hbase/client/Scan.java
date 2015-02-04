@@ -98,6 +98,19 @@ public class Scan extends Query {
   private int maxVersions = 1;
   private int batch = -1;
 
+  /**
+   * Partial {@link Result}s are {@link Result}s must be combined to form a complete {@link Result}.
+   * The {@link Result}s had to be returned in fragments (i.e. as partials) because the size of the
+   * cells in the row exceeded max result size on the server. Typically partial results will be
+   * combined client side into complete results before being delivered to the caller. However, if
+   * this flag is set, the caller is indicating that they do not mind seeing partial results (i.e.
+   * they understand that the results returned from the Scanner may only represent part of a
+   * particular row). In such a case, any attempt to combine the partials into a complete result on
+   * the client side will be skipped, and the caller will be able to see the exact results returned
+   * from the server.
+   */
+  private boolean allowPartialResults = false;
+
   private int storeLimit = -1;
   private int storeOffset = 0;
   private boolean getScan;
@@ -668,6 +681,27 @@ public class Scan extends Query {
    */
   public boolean isReversed() {
     return reversed;
+  }
+
+  /**
+   * Setting whether the caller wants to see the partial results that may be returned from the
+   * server. By default this value is false and the complete results will be assembled client side
+   * before being delivered to the caller.
+   * @param allowPartialResults
+   * @return this
+   */
+  public Scan setAllowPartialResults(final boolean allowPartialResults) {
+    this.allowPartialResults = allowPartialResults;
+    return this;
+  }
+
+  /**
+   * @return true when the constructor of this scan understands that the results they will see may
+   *         only represent a partial portion of a row. The entire row would be retrieved by
+   *         subsequent calls to {@link ResultScanner#next()}
+   */
+  public boolean getAllowPartialResults() {
+    return allowPartialResults;
   }
 
   /**

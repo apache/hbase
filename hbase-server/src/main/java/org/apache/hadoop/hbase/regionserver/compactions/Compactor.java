@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -248,7 +249,7 @@ public abstract class Compactor {
     throughputController.start(compactionName);
     try {
       do {
-        hasMore = scanner.next(cells, compactionKVMax);
+        hasMore = NextState.hasMoreValues(scanner.next(cells, compactionKVMax));
         if (LOG.isDebugEnabled()) {
           now = EnvironmentEdgeManager.currentTime();
         }
