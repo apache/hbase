@@ -150,6 +150,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescripto
 import org.apache.hadoop.hbase.quotas.OperationQuota;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
@@ -339,6 +340,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (isClientCellBlockSupport()) {
       for (Result res : results) {
         builder.addCellsPerResult(res.size());
+        builder.addPartialFlagPerResult(res.isPartial());
       }
       ((PayloadCarryingRpcController)controller).
         setCellScanner(CellUtil.createCellScanner(results));
@@ -2040,6 +2042,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       RegionScannerHolder rsh = null;
       boolean moreResults = true;
       boolean closeScanner = false;
+      boolean isSmallScan = false;
       ScanResponse.Builder builder = ScanResponse.newBuilder();
       if (request.hasCloseScanner()) {
         closeScanner = request.getCloseScanner();
@@ -2071,6 +2074,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         if (!isLoadingCfsOnDemandSet) {
           scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
         }
+
+        isSmallScan = scan.isSmall();
         region.prepareScanner(scan);
         if (region.getCoprocessorHost() != null) {
           scanner = region.getCoprocessorHost().preScannerOpen(scan);
@@ -2111,9 +2116,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // Remove lease while its being processed in server; protects against case
           // where processing of request takes > lease expiration time.
           lease = regionServer.leases.removeLease(scannerName);
-          List<Result> results = new ArrayList<Result>(rows);
-          long currentScanResultSize = 0;
+          List<Result> results = new ArrayList<Result>();
           long totalCellSize = 0;
+          long currentScanResultSize = 0;
 
           boolean done = false;
           // Call coprocessor. Get region info from scanner.
@@ -2123,8 +2128,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             if (!results.isEmpty()) {
               for (Result r : results) {
                 for (Cell cell : r.rawCells()) {
-                  currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
                   totalCellSize += CellUtil.estimatedSerializedSizeOf(cell);
+                  currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
                 }
               }
             }
@@ -2144,23 +2149,60 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               int i = 0;
               synchronized(scanner) {
                 boolean stale = (region.getRegionInfo().getReplicaId() != 0);
+                boolean clientHandlesPartials =
+                    request.hasClientHandlesPartials() && request.getClientHandlesPartials();
+
+                // On the server side we must ensure that the correct ordering of partial results is
+                // returned to the client to allow them to properly reconstruct the partial results.
+                // If the coprocessor host is adding to the result list, we cannot guarantee the
+                // correct ordering of partial results and so we prevent partial results from being
+                // formed.
+                boolean serverGuaranteesOrderOfPartials = currentScanResultSize == 0;
+                boolean enforceMaxResultSizeAtCellLevel =
+                    clientHandlesPartials && serverGuaranteesOrderOfPartials && !isSmallScan;
+
                 while (i < rows) {
-                  // Stop collecting results if maxScannerResultSize is set and we have exceeded it
-                  if ((maxScannerResultSize < Long.MAX_VALUE) &&
-                      (currentScanResultSize >= maxResultSize)) {
+                  // Stop collecting results if we have exceeded maxResultSize
+                  if (currentScanResultSize >= maxResultSize) {
                     break;
                   }
+
+                  // A negative remainingResultSize communicates that there is no limit on the size
+                  // of the results.
+                  final long remainingResultSize =
+                      enforceMaxResultSizeAtCellLevel ? maxResultSize - currentScanResultSize
+                          : -1;
+
                   // Collect values to be returned here
-                  boolean moreRows = scanner.nextRaw(values);
+                  NextState state =
+                      scanner.nextRaw(values, scanner.getBatch(), remainingResultSize);
+                  // Invalid states should never be returned. If one is seen, throw exception
+                  // to stop the scan -- We have no way of telling how we should proceed
+                  if (!NextState.isValidState(state)) {
+                    throw new IOException("NextState returned from call to nextRaw was invalid");
+                  }
                   if (!values.isEmpty()) {
+                    // The state should always contain an estimate of the result size because that
+                    // estimate must be used to decide when partial results are formed.
+                    boolean skipResultSizeCalculation = state.hasResultSizeEstimate();
+                    if (skipResultSizeCalculation) currentScanResultSize += state.getResultSize();
+
                     for (Cell cell : values) {
-                      currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
                       totalCellSize += CellUtil.estimatedSerializedSizeOf(cell);
+
+                      // If the calculation can't be skipped, then do it now.
+                      if (!skipResultSizeCalculation) {
+                        currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
+                      }
                     }
-                    results.add(Result.create(values, null, stale));
+                    // The size limit was reached. This means there are more cells remaining in
+                    // the row but we had to stop because we exceeded our max result size. This
+                    // indicates that we are returning a partial result
+                    final boolean partial = state != null && state.sizeLimitReached();
+                    results.add(Result.create(values, null, stale, partial));
                     i++;
                   }
-                  if (!moreRows) {
+                  if (!NextState.hasMoreValues(state)) {
                     break;
                   }
                   values.clear();

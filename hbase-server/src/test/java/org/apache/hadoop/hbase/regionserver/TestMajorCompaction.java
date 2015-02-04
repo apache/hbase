@@ -44,8 +44,6 @@ import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -54,11 +52,14 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
-import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -131,7 +132,7 @@ public class TestMajorCompaction {
     InternalScanner s = r.getScanner(new Scan());
     do {
       List<Cell> results = new ArrayList<Cell>();
-      boolean result = s.next(results);
+      boolean result = NextState.hasMoreValues(s.next(results));
       r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
       if (!result) break;
     } while(true);
@@ -144,7 +145,7 @@ public class TestMajorCompaction {
     int counter = 0;
     do {
       List<Cell> results = new ArrayList<Cell>();
-      boolean result = s.next(results);
+      boolean result = NextState.hasMoreValues(s.next(results));
       if (!result) break;
       counter++;
     } while(true);
@@ -458,7 +459,7 @@ public class TestMajorCompaction {
     InternalScanner s = r.getScanner(scan);
     do {
       List<Cell> results = new ArrayList<Cell>();
-      boolean result = s.next(results);
+      boolean result = NextState.hasMoreValues(s.next(results));
       assertTrue(!results.isEmpty());
       r.delete(new Delete(results.get(0).getRow()));
       if (!result) break;
@@ -474,7 +475,7 @@ public class TestMajorCompaction {
     int counter = 0;
     do {
       List<Cell> results = new ArrayList<Cell>();
-      boolean result = s.next(results);
+      boolean result = NextState.hasMoreValues(s.next(results));
       if (!result) break;
       counter++;
     } while (true);

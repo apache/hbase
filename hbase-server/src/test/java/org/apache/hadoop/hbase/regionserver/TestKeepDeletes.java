@@ -33,13 +33,14 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -263,7 +264,7 @@ public class TestKeepDeletes {
     s.setTimeRange(0L, ts+1);
     InternalScanner scanner = region.getScanner(s);
     List<Cell> kvs = new ArrayList<Cell>();
-    while(scanner.next(kvs));
+    while (NextState.hasMoreValues(scanner.next(kvs)));
     assertTrue(kvs.isEmpty());
 
     // flushing and minor compaction keep delete markers
@@ -945,7 +946,7 @@ public class TestKeepDeletes {
     int res = 0;
     boolean hasMore;
     do {
-      hasMore = scan.next(kvs);
+      hasMore = NextState.hasMoreValues(scan.next(kvs));
       for (Cell kv : kvs) {
         if(CellUtil.isDelete(kv)) res++;
       }

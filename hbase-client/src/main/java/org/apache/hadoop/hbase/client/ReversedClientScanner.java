@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
@@ -38,9 +37,6 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
 @InterfaceAudience.Private
 public class ReversedClientScanner extends ClientScanner {
   private static final Log LOG = LogFactory.getLog(ReversedClientScanner.class);
-  // A byte array in which all elements are the max byte, and it is used to
-  // construct closest front row
-  static byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
 
   /**
    * Create a new ReversibleClientScanner for the specified table Note that the
@@ -139,9 +135,10 @@ public class ReversedClientScanner extends ClientScanner {
         new ReversedScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
             locateStartRow, this.rpcControllerFactory);
     s.setCaching(nbRows);
-    ScannerCallableWithReplicas sr = new ScannerCallableWithReplicas(getTable(), getConnection(),
-        s, pool, primaryOperationTimeout, scan,
-        getRetries(), getScannerTimeout(), caching, getConf(), caller);
+    ScannerCallableWithReplicas sr =
+        new ScannerCallableWithReplicas(getTable(), getConnection(), s, pool,
+            primaryOperationTimeout, scan, getRetries(), getScannerTimeout(), caching, getConf(),
+            caller);
     return sr;
   }
 
@@ -160,27 +157,5 @@ public class ReversedClientScanner extends ClientScanner {
       }
     }
     return false; // unlikely.
-  }
-
-  /**
-   * Create the closest row before the specified row
-   * @param row
-   * @return a new byte array which is the closest front row of the specified one
-   */
-  protected static byte[] createClosestRowBefore(byte[] row) {
-    if (row == null) {
-      throw new IllegalArgumentException("The passed row is empty");
-    }
-    if (Bytes.equals(row, HConstants.EMPTY_BYTE_ARRAY)) {
-      return MAX_BYTE_ARRAY;
-    }
-    if (row[row.length - 1] == 0) {
-      return Arrays.copyOf(row, row.length - 1);
-    } else {
-      byte[] closestFrontRow = Arrays.copyOf(row, row.length);
-      closestFrontRow[row.length - 1] = (byte) ((closestFrontRow[row.length - 1] & 0xff) - 1);
-      closestFrontRow = Bytes.add(closestFrontRow, MAX_BYTE_ARRAY);
-      return closestFrontRow;
-    }
   }
 }

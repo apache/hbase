@@ -24,9 +24,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Implements a heap merge across any number of KeyValueScanners.
@@ -125,18 +125,29 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * <p>
    * This method takes care of updating the heap.
    * <p>
-   * This can ONLY be called when you are using Scanners that implement
-   * InternalScanner as well as KeyValueScanner (a {@link StoreScanner}).
+   * This can ONLY be called when you are using Scanners that implement InternalScanner as well as
+   * KeyValueScanner (a {@link StoreScanner}).
    * @param result
    * @param limit
-   * @return true if there are more keys, false if all scanners are done
+   * @return state where NextState#hasMoreValues() is true if more keys exist after this
+   *         one, false if scanner is done
    */
-  public boolean next(List<Cell> result, int limit) throws IOException {
+  public NextState next(List<Cell> result, int limit) throws IOException {
+    return next(result, limit, -1);
+  }
+
+  public NextState next(List<Cell> result, int limit, long remainingResultSize) throws IOException {
     if (this.current == null) {
-      return false;
+      return NextState.makeState(NextState.State.NO_MORE_VALUES);
     }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
-    boolean mayContainMoreRows = currentAsInternal.next(result, limit);
+    NextState state = currentAsInternal.next(result, limit, remainingResultSize);
+    // Invalid states should never be returned. Receiving an invalid state means that we have
+    // no clue how to proceed. Throw an exception.
+    if (!NextState.isValidState(state)) {
+      throw new IOException("Invalid state returned from InternalScanner#next");
+    }
+    boolean mayContainMoreRows = NextState.hasMoreValues(state);
     Cell pee = this.current.peek();
     /*
      * By definition, any InternalScanner must return false only when it has no
@@ -151,7 +162,10 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
       this.heap.add(this.current);
     }
     this.current = pollRealKV();
-    return (this.current != null);
+    if (this.current == null) {
+      state = NextState.makeState(NextState.State.NO_MORE_VALUES, state.getResultSize());
+    }
+    return state;
   }
 
   /**
@@ -159,12 +173,13 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * <p>
    * This method takes care of updating the heap.
    * <p>
-   * This can ONLY be called when you are using Scanners that implement
-   * InternalScanner as well as KeyValueScanner (a {@link StoreScanner}).
+   * This can ONLY be called when you are using Scanners that implement InternalScanner as well as
+   * KeyValueScanner (a {@link StoreScanner}).
    * @param result
-   * @return true if there are more keys, false if all scanners are done
+   * @return state where NextState#hasMoreValues() is true if more keys exist after this
+   *         one, false if scanner is done
    */
-  public boolean next(List<Cell> result) throws IOException {
+  public NextState next(List<Cell> result) throws IOException {
     return next(result, -1);
   }
 

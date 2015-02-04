@@ -339,6 +339,9 @@ public final class ResponseConverter {
         // Cells are out in cellblocks.  Group them up again as Results.  How many to read at a
         // time will be found in getCellsLength -- length here is how many Cells in the i'th Result
         int noOfCells = response.getCellsPerResult(i);
+        boolean isPartial =
+            response.getPartialFlagPerResultCount() > i ?
+                response.getPartialFlagPerResult(i) : false;
         List<Cell> cells = new ArrayList<Cell>(noOfCells);
         for (int j = 0; j < noOfCells; j++) {
           try {
@@ -361,7 +364,7 @@ public final class ResponseConverter {
           }
           cells.add(cellScanner.current());
         }
-        results[i] = Result.create(cells, null, response.getStale());
+        results[i] = Result.create(cells, null, response.getStale(), isPartial);
       } else {
         // Result is pure pb.
         results[i] = ProtobufUtil.toResult(response.getResults(i));
