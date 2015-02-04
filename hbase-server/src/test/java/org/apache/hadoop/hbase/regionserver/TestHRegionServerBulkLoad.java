@@ -17,27 +17,24 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -55,14 +52,27 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
+import org.apache.hadoop.hbase.regionserver.wal.TestWALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 
 /**
  * Tests bulk loading of HFiles and shows the atomicity or lack of atomicity of
@@ -290,7 +300,11 @@ public class TestHRegionServerBulkLoad {
 
     UTIL.startMiniCluster(1);
     try {
+      WAL log = UTIL.getHBaseCluster().getRegionServer(0).getWAL(null);
+      FindBulkHBaseListener listener = new FindBulkHBaseListener();
+      log.registerWALActionsListener(listener);
       runAtomicBulkloadTest(TABLE_NAME, millisToRun, numScanners);
+      assertThat(listener.isFound(), is(true));
     } finally {
       UTIL.shutdownMiniCluster();
     }
@@ -346,5 +360,25 @@ public class TestHRegionServerBulkLoad {
     UTIL = new HBaseTestingUtility(c);
   }
 
+  static class FindBulkHBaseListener extends TestWALActionsListener.DummyWALActionsListener {
+    private boolean found = false;
+
+    @Override
+    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit) {
+      for (Cell cell : logEdit.getCells()) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        for (Map.Entry entry : kv.toStringMap().entrySet()) {
+          if (entry.getValue().equals(Bytes.toString(WALEdit.BULK_LOAD))) {
+            found = true;
+          }
+        }
+      }
+    }
+
+    public boolean isFound() {
+      return found;
+    }
+  }
 }
+
 
