@@ -26,14 +26,14 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -207,19 +207,26 @@ public class EnableTableHandler extends EventHandler {
     List<ServerName> onlineServers = serverManager.createDestinationServersList();
     Map<ServerName, List<HRegionInfo>> bulkPlan =
         this.assignmentManager.getBalancer().retainAssignment(regionsToAssign, onlineServers);
-    LOG.info("Bulk assigning " + regionsCount + " region(s) across " + bulkPlan.size()
-      + " server(s), retainAssignment=true");
+    if (bulkPlan != null) {
+      LOG.info("Bulk assigning " + regionsCount + " region(s) across " + bulkPlan.size()
+          + " server(s), retainAssignment=true");
 
-    BulkAssigner ba = new GeneralBulkAssigner(this.server, bulkPlan, this.assignmentManager, true);
-    try {
-      if (ba.bulkAssign()) {
-        done = true;
+      BulkAssigner ba =
+          new GeneralBulkAssigner(this.server, bulkPlan, this.assignmentManager, true);
+      try {
+        if (ba.bulkAssign()) {
+          done = true;
+        }
+      } catch (InterruptedException e) {
+        LOG.warn("Enable operation was interrupted when enabling table '"
+            + this.tableName + "'");
+        // Preserve the interrupt.
+        Thread.currentThread().interrupt();
       }
-    } catch (InterruptedException e) {
-      LOG.warn("Enable operation was interrupted when enabling table '"
-        + this.tableName + "'");
-      // Preserve the interrupt.
-      Thread.currentThread().interrupt();
+    } else {
+      LOG.info("Balancer was unable to find suitable servers for table " + tableName
+          + ", leaving unassigned");
+      done = true;
     }
     if (done) {
       // Flip the table to enabled.
