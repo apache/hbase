@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
@@ -90,6 +91,7 @@ public class WALEdit implements Writable, HeapSize {
   static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
   static final byte [] FLUSH = Bytes.toBytes("HBASE::FLUSH");
   static final byte [] REGION_EVENT = Bytes.toBytes("HBASE::REGION_EVENT");
+  public static final byte [] BULK_LOAD = Bytes.toBytes("HBASE::BULK_LOAD");
 
   private final int VERSION_2 = -1;
   private final boolean isReplay;
@@ -294,7 +296,7 @@ public class WALEdit implements Writable, HeapSize {
   }
 
   /**
-   * Create a compacion WALEdit
+   * Create a compaction WALEdit
    * @param c
    * @return A WALEdit that has <code>c</code> serialized as its value
    */
@@ -323,6 +325,35 @@ public class WALEdit implements Writable, HeapSize {
   public static CompactionDescriptor getCompaction(Cell kv) throws IOException {
     if (CellUtil.matchingColumn(kv, METAFAMILY, COMPACTION)) {
       return CompactionDescriptor.parseFrom(kv.getValue());
+    }
+    return null;
+  }
+
+  /**
+   * Create a bulk loader WALEdit
+   *
+   * @param hri                The HRegionInfo for the region in which we are bulk loading
+   * @param bulkLoadDescriptor The descriptor for the Bulk Loader
+   * @return The WALEdit for the BulkLoad
+   */
+  public static WALEdit createBulkLoadEvent(HRegionInfo hri,
+                                            WALProtos.BulkLoadDescriptor bulkLoadDescriptor) {
+    KeyValue kv = new KeyValue(getRowForRegion(hri),
+        METAFAMILY,
+        BULK_LOAD,
+        EnvironmentEdgeManager.currentTime(),
+        bulkLoadDescriptor.toByteArray());
+    return new WALEdit().add(kv);
+  }
+  
+  /**
+   * Deserialized and returns a BulkLoadDescriptor from the passed in Cell
+   * @param cell the key value
+   * @return deserialized BulkLoadDescriptor or null.
+   */
+  public static WALProtos.BulkLoadDescriptor getBulkLoadDescriptor(Cell cell) throws IOException {
+    if (CellUtil.matchingColumn(cell, METAFAMILY, BULK_LOAD)) {
+      return WALProtos.BulkLoadDescriptor.parseFrom(cell.getValue());
     }
     return null;
   }

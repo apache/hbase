@@ -20,14 +20,17 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
@@ -94,6 +97,42 @@ public class WALUtil {
     log.sync(trx);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
+    }
+    return trx;
+  }
+
+  /**
+   * Write a log marker that a bulk load has succeeded and is about to be committed.
+   *
+   * @param wal        The log to write into.
+   * @param htd        A description of the table that we are bulk loading into.
+   * @param info       A description of the region in the table that we are bulk loading into.
+   * @param descriptor A protocol buffers based description of the client's bulk loading request
+   * @param sequenceId The current sequenceId in the log at the time when we were to write the
+   *                   bulk load marker.
+   * @return txid of this transaction or if nothing to do, the last txid
+   * @throws IOException We will throw an IOException if we can not append to the HLog.
+   */
+  public static long writeBulkLoadMarkerAndSync(final WAL wal,
+                                                final HTableDescriptor htd,
+                                                final HRegionInfo info,
+                                                final WALProtos.BulkLoadDescriptor descriptor,
+                                                final AtomicLong sequenceId) throws IOException {
+    TableName tn = info.getTable();
+    WALKey key = new HLogKey(info.getEncodedNameAsBytes(), tn);
+
+    // Add it to the log but the false specifies that we don't need to add it to the memstore
+    long trx = wal.append(htd,
+            info,
+            key,
+            WALEdit.createBulkLoadEvent(info, descriptor),
+            sequenceId,
+            false,
+            new ArrayList<Cell>());
+    wal.sync(trx);
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Appended Bulk Load marker " + TextFormat.shortDebugString(descriptor));
     }
     return trx;
   }

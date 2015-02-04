@@ -122,6 +122,8 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -2610,8 +2612,7 @@ public final class ProtobufUtil {
         .setServer(toServerName(server));
 
     for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
-      RegionEventDescriptor.StoreDescriptor.Builder builder
-        = RegionEventDescriptor.StoreDescriptor.newBuilder()
+      StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
           .setFamilyName(ByteStringer.wrap(entry.getKey()))
           .setStoreHomeDir(Bytes.toString(entry.getKey()));
       for (Path path : entry.getValue()) {
@@ -2827,5 +2828,35 @@ public final class ProtobufUtil {
       }
     }
     return result;
+  }
+
+  /**
+   * Generates a marker for the WAL so that we propagate the notion of a bulk region load
+   * throughout the WAL.
+   *
+   * @param tableName         The tableName into which the bulk load is being imported into.
+   * @param encodedRegionName Encoded region name of the region which is being bulk loaded.
+   * @param storeFiles        A set of store files of a column family are bulk loaded.
+   * @param bulkloadSeqId     sequence ID (by a force flush) used to create bulk load hfile
+   *                          name
+   * @return The WAL log marker for bulk loads.
+   */
+  public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
+      ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles, long bulkloadSeqId) {
+    BulkLoadDescriptor.Builder desc = BulkLoadDescriptor.newBuilder()
+        .setTableName(ProtobufUtil.toProtoTableName(tableName))
+        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
+
+    for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
+      WALProtos.StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
+          .setFamilyName(ByteStringer.wrap(entry.getKey()))
+          .setStoreHomeDir(Bytes.toString(entry.getKey())); // relative to region
+      for (Path path : entry.getValue()) {
+        builder.addStoreFile(path.getName());
+      }
+      desc.addStores(builder);
+    }
+
+    return desc.build();
   }
 }
