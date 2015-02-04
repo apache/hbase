@@ -118,7 +118,7 @@ public class TestHFileBlockIndex {
     fs = HFileSystem.get(conf);
   }
 
-  //@Test
+  @Test
   public void testBlockIndex() throws IOException {
     testBlockIndexInternals(false);
     clear();
