@@ -576,9 +576,9 @@ public final class HConstants {
    * Note that when a single row is larger than this limit the row is still
    * returned completely.
    *
-   * The default value is unlimited.
+   * The default value is 2MB.
    */
-  public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
+  public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = 2 * 1024 * 1024;
 
   /**
    * Parameter name for client pause value, used mostly as value to wait
