@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
  * <b>Use this Codec only at server side.</b>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+@InterfaceStability.Unstable
 public class KeyValueCodecWithTags implements Codec {
   public static class KeyValueEncoder extends BaseEncoder {
     public KeyValueEncoder(final OutputStream out) {

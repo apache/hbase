@@ -47,7 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * A facade for encryption algorithms and related support.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public final class Encryption {
 
   private static final Log LOG = LogFactory.getLog(Encryption.class);

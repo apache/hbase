@@ -35,6 +35,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 @InterfaceStability.Evolving
 public class CellCreator {
 
+  @InterfaceStability.Unstable
   public static final String VISIBILITY_EXP_RESOLVER_CLASS =
       "hbase.mapreduce.visibility.expression.resolver.class";
 
@@ -130,6 +131,7 @@ public class CellCreator {
   /**
    * @return Visibility expression resolver
    */
+  @InterfaceStability.Unstable
   public VisibilityExpressionResolver getVisibilityExpressionResolver() {
     return this.visExpResolver;
   }

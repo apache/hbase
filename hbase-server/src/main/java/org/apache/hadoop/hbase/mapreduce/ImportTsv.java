@@ -119,16 +119,18 @@ public class ImportTsv extends Configured implements Tool {
 
     public static final String ATTRIBUTES_COLUMN_SPEC = "HBASE_ATTRIBUTES_KEY";
 
+    @InterfaceStability.Unstable
     public static final String CELL_VISIBILITY_COLUMN_SPEC = "HBASE_CELL_VISIBILITY";
-
+    @InterfaceStability.Unstable
     public static final String CELL_TTL_COLUMN_SPEC = "HBASE_CELL_TTL";
 
     private int attrKeyColumnIndex = DEFAULT_ATTRIBUTES_COLUMN_INDEX;
 
     public static final int DEFAULT_ATTRIBUTES_COLUMN_INDEX = -1;
 
+    @InterfaceStability.Unstable
     public static final int DEFAULT_CELL_VISIBILITY_COLUMN_INDEX = -1;
-
+    @InterfaceStability.Unstable
     public static final int DEFAULT_CELL_TTL_COLUMN_INDEX = -1;
 
     private int cellVisibilityColumnIndex = DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
@@ -200,10 +202,11 @@ public class ImportTsv extends Configured implements Tool {
       return attrKeyColumnIndex != DEFAULT_ATTRIBUTES_COLUMN_INDEX;
     }
 
+    @InterfaceStability.Unstable
     public boolean hasCellVisibility() {
       return cellVisibilityColumnIndex != DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
     }
-
+    @InterfaceStability.Unstable
     public boolean hasCellTTL() {
       return cellTTLColumnIndex != DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
     }
@@ -211,11 +214,11 @@ public class ImportTsv extends Configured implements Tool {
     public int getAttributesKeyColumnIndex() {
       return attrKeyColumnIndex;
     }
-
+    @InterfaceStability.Unstable
     public int getCellVisibilityColumnIndex() {
       return cellVisibilityColumnIndex;
     }
-
+    @InterfaceStability.Unstable
     public int getCellTTLColumnIndex() {
       return cellTTLColumnIndex;
     }

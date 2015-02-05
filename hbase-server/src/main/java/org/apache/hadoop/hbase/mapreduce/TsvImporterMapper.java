@@ -62,8 +62,9 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 
   protected Configuration conf;
 
+  @InterfaceStability.Unstable
   protected String cellVisibilityExpr;
-
+  @InterfaceStability.Unstable
   protected long ttl;
 
   protected CellCreator kvCreator;

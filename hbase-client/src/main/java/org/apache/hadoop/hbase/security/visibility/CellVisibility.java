@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * expression can contain visibility labels combined with logical operators AND(&), OR(|) and NOT(!)
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public class CellVisibility {
 
   private String expression;

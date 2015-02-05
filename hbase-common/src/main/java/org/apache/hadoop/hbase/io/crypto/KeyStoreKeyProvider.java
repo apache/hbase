@@ -70,7 +70,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * LoadStoreParameters.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public class KeyStoreKeyProvider implements KeyProvider {
 
   protected KeyStore store;

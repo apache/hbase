@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  *
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public interface KeyProvider {
 
   public static final String PASSWORD = "password";

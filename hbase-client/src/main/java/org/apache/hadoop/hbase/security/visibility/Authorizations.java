@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * current scan/get can access.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public class Authorizations {
 
   private List<String> labels;

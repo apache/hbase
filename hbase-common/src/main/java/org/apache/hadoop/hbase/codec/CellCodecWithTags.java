@@ -23,6 +23,7 @@ import java.io.OutputStream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <b>Use this Codec only at server side.</b>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+@InterfaceStability.Unstable
 public class CellCodecWithTags implements Codec {
   static class CellEncoder extends BaseEncoder {
     CellEncoder(final OutputStream out) {

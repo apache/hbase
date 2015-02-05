@@ -107,7 +107,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String KEEP_DELETED_CELLS = "KEEP_DELETED_CELLS";
   public static final String COMPRESS_TAGS = "COMPRESS_TAGS";
 
+  @InterfaceStability.Unstable
   public static final String ENCRYPTION = "ENCRYPTION";
+  @InterfaceStability.Unstable
   public static final String ENCRYPTION_KEY = "ENCRYPTION_KEY";
 
   /**
@@ -1339,6 +1341,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Return the encryption algorithm in use by this family
    */
+  @InterfaceStability.Unstable
   public String getEncryptionType() {
     return getValue(ENCRYPTION);
   }
@@ -1347,17 +1350,20 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * Set the encryption algorithm for use with this family
    * @param algorithm
    */
+  @InterfaceStability.Unstable
   public HColumnDescriptor setEncryptionType(String algorithm) {
     setValue(ENCRYPTION, algorithm);
     return this;
   }
 
   /** Return the raw crypto key attribute for the family, or null if not set  */
+  @InterfaceStability.Unstable
   public byte[] getEncryptionKey() {
     return getValue(Bytes.toBytes(ENCRYPTION_KEY));
   }
 
   /** Set the raw crypto key attribute for the family */
+  @InterfaceStability.Unstable
   public HColumnDescriptor setEncryptionKey(byte[] keyBytes) {
     setValue(Bytes.toBytes(ENCRYPTION_KEY), keyBytes);
     return this;

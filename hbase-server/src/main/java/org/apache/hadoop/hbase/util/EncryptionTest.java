@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public class EncryptionTest {
   static final Log LOG = LogFactory.getLog(EncryptionTest.class);
 

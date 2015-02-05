@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.io.crypto.aes.AES;
  * The default cipher provider. Supports AES via the JCE.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public final class DefaultCipherProvider implements CipherProvider {
 
   private static DefaultCipherProvider instance;

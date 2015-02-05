@@ -368,6 +368,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * It is illegal to set <code>CellVisibility</code> on <code>Delete</code> mutation.
    * @param expression
    */
+  @InterfaceStability.Unstable
   public void setCellVisibility(CellVisibility expression) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY, ProtobufUtil
         .toCellVisibility(expression).toByteArray());
@@ -377,6 +378,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return CellVisibility associated with cells in this Mutation.
    * @throws DeserializationException
    */
+  @InterfaceStability.Unstable
   public CellVisibility getCellVisibility() throws DeserializationException {
     byte[] cellVisibilityBytes = this.getAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY);
     if (cellVisibilityBytes == null) return null;
@@ -440,6 +442,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   /**
    * @return The serialized ACL for this operation, or null if none
    */
+  @InterfaceStability.Unstable
   public byte[] getACL() {
     return getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
   }
@@ -448,6 +451,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @param user User short name
    * @param perms Permissions for the user
    */
+  @InterfaceStability.Unstable
   public void setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
@@ -456,6 +460,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   /**
    * @param perms A map of permissions for a user or users
    */
+  @InterfaceStability.Unstable
   public void setACL(Map<String, Permission> perms) {
     ListMultimap<String, Permission> permMap = ArrayListMultimap.create();
     for (Map.Entry<String, Permission> entry : perms.entrySet()) {
@@ -485,6 +490,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @return the TTL requested for the result of the mutation, in milliseconds,
    * or Long.MAX_VALUE if unset
    */
+  @InterfaceStability.Unstable
   public long getTTL() {
     byte[] ttlBytes = getAttribute(OP_ATTRIBUTE_TTL);
     if (ttlBytes != null) {
@@ -498,6 +504,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @param ttl the TTL desired for the result of the mutation, in milliseconds
    * @return this
    */
+  @InterfaceStability.Unstable
   public Mutation setTTL(long ttl) {
     setAttribute(OP_ATTRIBUTE_TTL, Bytes.toBytes(ttl));
     return this;

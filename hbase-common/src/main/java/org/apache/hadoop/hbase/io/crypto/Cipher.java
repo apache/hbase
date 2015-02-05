@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * A common interface for a cryptographic algorithm.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public abstract class Cipher {
 
   private final CipherProvider provider;

@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configurable;
  * Ciphers.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public interface CipherProvider extends Configurable {
 
   /**

@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.Cell;
  * read results.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public interface VisibilityExpEvaluator {
 
   /**

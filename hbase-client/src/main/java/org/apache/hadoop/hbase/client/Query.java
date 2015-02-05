@@ -61,6 +61,7 @@ public abstract class Query extends OperationWithAttributes {
    * Sets the authorizations to be used by this Query
    * @param authorizations
    */
+  @InterfaceStability.Unstable
   public void setAuthorizations(Authorizations authorizations) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY, ProtobufUtil
         .toAuthorizations(authorizations).toByteArray());
@@ -70,6 +71,7 @@ public abstract class Query extends OperationWithAttributes {
    * @return The authorizations this Query is associated with.
    * @throws DeserializationException
    */
+  @InterfaceStability.Unstable
   public Authorizations getAuthorizations() throws DeserializationException {
     byte[] authorizationsBytes = this.getAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY);
     if (authorizationsBytes == null) return null;
@@ -79,6 +81,7 @@ public abstract class Query extends OperationWithAttributes {
   /**
    * @return The serialized ACL for this operation, or null if none
    */
+  @InterfaceStability.Unstable
   public byte[] getACL() {
     return getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
   }
@@ -87,6 +90,7 @@ public abstract class Query extends OperationWithAttributes {
    * @param user User short name
    * @param perms Permissions for the user
    */
+  @InterfaceStability.Unstable
   public void setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
@@ -95,6 +99,7 @@ public abstract class Query extends OperationWithAttributes {
   /**
    * @param perms A map of permissions for a user or users
    */
+  @InterfaceStability.Unstable
   public void setACL(Map<String, Permission> perms) {
     ListMultimap<String, Permission> permMap = ArrayListMultimap.create();
     for (Map.Entry<String, Permission> entry : perms.entrySet()) {

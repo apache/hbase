@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.security.User;
  * visibility expression storage part and read time evaluation.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public interface VisibilityLabelService extends Configurable {
 
   /**

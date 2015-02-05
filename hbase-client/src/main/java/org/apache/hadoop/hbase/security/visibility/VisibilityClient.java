@@ -49,7 +49,7 @@ import com.google.protobuf.ServiceException;
  * Utility client for doing visibility labels admin operations.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public class VisibilityClient {
 
   /**

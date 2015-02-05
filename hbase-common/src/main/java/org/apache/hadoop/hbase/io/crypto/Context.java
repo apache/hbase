@@ -31,7 +31,7 @@ import com.google.common.base.Preconditions;
  * Crypto context. Encapsulates an encryption algorithm and its key material.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public class Context implements Configurable {
   private Configuration conf;
   private Cipher cipher;

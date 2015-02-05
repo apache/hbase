@@ -53,6 +53,7 @@ public final class CellUtil {
       cell.getQualifierLength());
   }
 
+  @InterfaceStability.Unstable
   public static ByteRange fillTagRange(Cell cell, ByteRange range) {
     return range.set(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLengthUnsigned());
   }
@@ -90,6 +91,7 @@ public final class CellUtil {
    * @param cell
    * @return tag value in a new byte array.
    */
+  @InterfaceStability.Unstable
   public static byte[] getTagArray(Cell cell){
     byte[] output = new byte[cell.getTagsLengthUnsigned()];
     copyTagTo(cell, output, 0);
@@ -130,6 +132,7 @@ public final class CellUtil {
    * @param destinationOffset
    * @return position after tags
    */
+  @InterfaceStability.Unstable
   public static int copyTagTo(Cell cell, byte[] destination, int destinationOffset) {
     System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
         cell.getTagsLengthUnsigned());
@@ -405,6 +408,7 @@ public final class CellUtil {
    * @param length
    * @return iterator for the tags
    */
+  @InterfaceStability.Unstable
   public static Iterator<Tag> tagsIterator(final byte[] tags, final int offset, final int length) {
     return new Iterator<Tag>() {
       private int pos = offset;

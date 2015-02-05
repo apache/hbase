@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.Tag;
  * Interface to convert visibility expressions into Tags for storing along with Cells in HFiles.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public interface VisibilityExpressionResolver extends Configurable {
 
   /**

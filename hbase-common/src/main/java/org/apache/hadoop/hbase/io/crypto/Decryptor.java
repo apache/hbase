@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * Decryptors apply a cipher to an InputStream to recover plaintext.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public interface Decryptor {
 
   /**

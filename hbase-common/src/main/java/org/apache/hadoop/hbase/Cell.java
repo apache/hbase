@@ -173,11 +173,13 @@ public interface Cell {
   /**
    * @return the tags byte array
    */
+  @InterfaceStability.Unstable
   byte[] getTagsArray();
 
   /**
    * @return the first offset where the tags start in the Cell
    */
+  @InterfaceStability.Unstable
   int getTagsOffset();
 
   /**
@@ -185,6 +187,7 @@ public interface Cell {
    * @deprecated use {@link #getTagsLengthUnsigned()} which can handle tags length upto 65535.
    */
   @Deprecated
+  @InterfaceStability.Unstable
   short getTagsLength();
 
   /**
@@ -192,6 +195,7 @@ public interface Cell {
    * @deprecated From next major version this will be renamed to getTagsLength() which returns int.
    */
   @Deprecated
+  @InterfaceStability.Unstable
   int getTagsLengthUnsigned();
   
   /**

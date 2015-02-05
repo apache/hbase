@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * Encryptors apply a cipher to an OutputStream to produce ciphertext.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public interface Encryptor {
 
   /**

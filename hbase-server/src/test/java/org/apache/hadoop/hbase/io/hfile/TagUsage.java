@@ -17,9 +17,13 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.io.hfile;
+
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * Used in testcases only.  
  */
+@InterfaceStability.Unstable
 public enum TagUsage {
   // No tags would be added
   NO_TAG, 

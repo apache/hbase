@@ -1006,26 +1006,33 @@ public final class HConstants {
   public static final long NO_NONCE = 0;
 
   /** Configuration key for the crypto algorithm provider, a class name */
+  @InterfaceStability.Unstable
   public static final String CRYPTO_CIPHERPROVIDER_CONF_KEY = "hbase.crypto.cipherprovider";
 
   /** Configuration key for the crypto key provider, a class name */
+  @InterfaceStability.Unstable
   public static final String CRYPTO_KEYPROVIDER_CONF_KEY = "hbase.crypto.keyprovider";
 
   /** Configuration key for the crypto key provider parameters */
+  @InterfaceStability.Unstable
   public static final String CRYPTO_KEYPROVIDER_PARAMETERS_KEY =
       "hbase.crypto.keyprovider.parameters";
 
   /** Configuration key for the name of the master key for the cluster, a string */
+  @InterfaceStability.Unstable
   public static final String CRYPTO_MASTERKEY_NAME_CONF_KEY = "hbase.crypto.master.key.name";
 
   /** Configuration key for the name of the alternate master key for the cluster, a string */
+  @InterfaceStability.Unstable
   public static final String CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY =
     "hbase.crypto.master.alternate.key.name";
 
   /** Configuration key for the algorithm to use when encrypting the WAL, a string */
+  @InterfaceStability.Unstable
   public static final String CRYPTO_WAL_ALGORITHM_CONF_KEY = "hbase.crypto.wal.algorithm";
 
   /** Configuration key for the name of the master WAL encryption key for the cluster, a string */
+  @InterfaceStability.Unstable
   public static final String CRYPTO_WAL_KEY_NAME_CONF_KEY = "hbase.crypto.wal.key.name";
 
   /** Configuration key for enabling HLog encryption, a boolean */
