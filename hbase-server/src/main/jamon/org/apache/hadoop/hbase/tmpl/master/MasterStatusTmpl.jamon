@@ -44,6 +44,8 @@ org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.client.HBaseAdmin;
 org.apache.hadoop.hbase.client.HConnectionManager;
+org.apache.hadoop.hbase.HRegionInfo;
+org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.TableName;
@@ -348,17 +350,42 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
         </%if>
         <th>Online Regions</th>
+        <th>Offline Regions</th>
+        <th>Failed Regions</th>
+        <th>Split Regions</th>
+        <th>Other Regions</th>
         <th>Description</th>
     </tr>
     <%for HTableDescriptor htDesc : tables%>
+    <%java>
+      Map<RegionState.State, List<HRegionInfo>> tableRegions =
+          master.getAssignmentManager().getRegionStates()
+            .getRegionByStateOfTable(htDesc.getTableName());
+      int openRegionsCount = tableRegions.get(RegionState.State.OPEN).size();
+      int offlineRegionsCount = tableRegions.get(RegionState.State.OFFLINE).size();
+      int splitRegionsCount = tableRegions.get(RegionState.State.SPLIT).size();
+      int failedRegionsCount = tableRegions.get(RegionState.State.FAILED_OPEN).size()
+             + tableRegions.get(RegionState.State.FAILED_CLOSE).size();
+      int otherRegionsCount = 0;
+      for (List<HRegionInfo> list: tableRegions.values()) {
+         otherRegionsCount += list.size();
+      }
+      // now subtract known states
+      otherRegionsCount = otherRegionsCount - openRegionsCount
+                     - failedRegionsCount - offlineRegionsCount
+                     - splitRegionsCount;
+    </%java>
     <tr>
         <td><% htDesc.getTableName().getNamespaceAsString() %></td>
         <td><a href=table.jsp?name=<% htDesc.getTableName().getNameAsString() %>><% htDesc.getTableName().getQualifierAsString() %></a> </td>
         <%if (frags != null) %>
             <td align="center"><% frags.get(htDesc.getTableName().getNameAsString()) != null ? frags.get(htDesc.getTableName().getQualifierAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
-        <td><% master.getAssignmentManager().getRegionStates().getRegionsOfTable(htDesc
-        .getTableName()).size() %>
+        <td><% openRegionsCount %></td>
+        <td><% offlineRegionsCount %></td>
+        <td><% failedRegionsCount %></td>
+        <td><% splitRegionsCount %></td>
+        <td><% otherRegionsCount %></td>
         <td><% htDesc.toStringCustomizedValues() %></td>
     </tr>
     </%for>

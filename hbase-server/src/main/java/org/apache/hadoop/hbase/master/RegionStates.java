@@ -72,6 +72,12 @@ public class RegionStates {
   private final HashMap<String, RegionState> regionStates;
 
   /**
+   * Holds mapping of table -> region state
+   */
+  private final Map<TableName, Map<String, RegionState>> regionStatesTableIndex =
+      new HashMap<TableName, Map<String, RegionState>>();
+
+  /**
    * Server to regions assignment map.
    * Contains the set of regions currently assigned to a given server.
    */
@@ -273,7 +279,7 @@ public class RegionStates {
         + "used existing: " + regionState + ", ignored new: " + newState);
     } else {
       regionState = new RegionState(hri, newState, serverName);
-      regionStates.put(encodedName, regionState);
+      putRegionState(regionState);
       if (newState == State.OPEN) {
         regionAssignments.put(hri, serverName);
         lastAssignments.put(encodedName, serverName);
@@ -288,6 +294,20 @@ public class RegionStates {
       }
     }
     return regionState;
+  }
+
+  private RegionState putRegionState(RegionState regionState) {
+    HRegionInfo hri = regionState.getRegion();
+    String encodedName = hri.getEncodedName();
+    TableName table = hri.getTable();
+    RegionState oldState = regionStates.put(encodedName, regionState);
+    Map<String, RegionState> map = regionStatesTableIndex.get(table);
+    if (map == null) {
+      map = new HashMap<String, RegionState>();
+      regionStatesTableIndex.put(table, map);
+    }
+    map.put(encodedName, regionState);
+    return oldState;
   }
 
   /**
@@ -587,6 +607,30 @@ public class RegionStates {
     return tableRegions;
   }
 
+  /**
+   * Gets current state of all regions of the table.
+   * This method looks at the in-memory state.  It does not go to <code>hbase:meta</code>.
+   * Method guaranteed to return keys for all states
+   * in {@link org.apache.hadoop.hbase.master.RegionState.State}
+   *
+   * @param tableName
+   * @return Online regions from <code>tableName</code>
+   */
+  public synchronized Map<RegionState.State, List<HRegionInfo>>
+  getRegionByStateOfTable(TableName tableName) {
+    Map<RegionState.State, List<HRegionInfo>> tableRegions =
+        new HashMap<State, List<HRegionInfo>>();
+    for (State state : State.values()) {
+      tableRegions.put(state, new ArrayList<HRegionInfo>());
+    }
+    Map<String, RegionState> indexMap = regionStatesTableIndex.get(tableName);
+    if (indexMap == null)
+      return tableRegions;
+    for (RegionState regionState : indexMap.values()) {
+      tableRegions.get(regionState.getState()).add(regionState.getRegion());
+    }
+    return tableRegions;
+  }
 
   /**
    * Wait on region to clear regions-in-transition.
@@ -848,7 +892,7 @@ public class RegionStates {
 
     synchronized (this) {
       regionsInTransition.put(encodedName, regionState);
-      regionStates.put(encodedName, regionState);
+      putRegionState(regionState);
 
       // For these states, region should be properly closed.
       // There should be no log splitting issue.
