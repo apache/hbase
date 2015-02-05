@@ -21,25 +21,22 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
-import org.apache.hadoop.hbase.regionserver.StripeStoreFileManager;
-import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -54,7 +51,8 @@ public class StripeCompactor extends Compactor {
   }
 
   public List<Path> compact(CompactionRequest request, List<byte[]> targetBoundaries,
-      byte[] majorRangeFromRow, byte[] majorRangeToRow) throws IOException {
+      byte[] majorRangeFromRow, byte[] majorRangeToRow,
+      CompactionThroughputController throughputController) throws IOException {
     if (LOG.isDebugEnabled()) {
       StringBuilder sb = new StringBuilder();
       sb.append("Executing compaction with " + targetBoundaries.size() + " boundaries:");
@@ -65,12 +63,13 @@ public class StripeCompactor extends Compactor {
     }
     StripeMultiFileWriter writer = new StripeMultiFileWriter.BoundaryMultiWriter(
         targetBoundaries, majorRangeFromRow, majorRangeToRow);
-    return compactInternal(writer, request, majorRangeFromRow, majorRangeToRow);
+    return compactInternal(writer, request, majorRangeFromRow, majorRangeToRow,
+      throughputController);
   }
 
   public List<Path> compact(CompactionRequest request, int targetCount, long targetSize,
-      byte[] left, byte[] right, byte[] majorRangeFromRow, byte[] majorRangeToRow)
-      throws IOException {
+      byte[] left, byte[] right, byte[] majorRangeFromRow, byte[] majorRangeToRow,
+      CompactionThroughputController throughputController) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Executing compaction with " + targetSize
           + " target file size, no more than " + targetCount + " files, in ["
@@ -78,11 +77,13 @@ public class StripeCompactor extends Compactor {
     }
     StripeMultiFileWriter writer = new StripeMultiFileWriter.SizeMultiWriter(
         targetCount, targetSize, left, right);
-    return compactInternal(writer, request, majorRangeFromRow, majorRangeToRow);
+    return compactInternal(writer, request, majorRangeFromRow, majorRangeToRow,
+      throughputController);
   }
 
   private List<Path> compactInternal(StripeMultiFileWriter mw, CompactionRequest request,
-      byte[] majorRangeFromRow, byte[] majorRangeToRow) throws IOException {
+      byte[] majorRangeFromRow, byte[] majorRangeToRow,
+      CompactionThroughputController throughputController) throws IOException {
     final Collection<StoreFile> filesToCompact = request.getFiles();
     final FileDetails fd = getFileDetails(filesToCompact, request.isMajor());
     this.progress = new CompactionProgress(fd.maxKeyCount);
@@ -124,7 +125,7 @@ public class StripeCompactor extends Compactor {
       // It is ok here if storeScanner is null.
       StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
       mw.init(storeScanner, factory, store.getComparator());
-      finished = performCompaction(scanner, mw, smallestReadPoint);
+      finished = performCompaction(scanner, mw, smallestReadPoint, throughputController);
       if (!finished) {
         throw new InterruptedIOException( "Aborting compaction of store " + store +
             " in region " + store.getRegionInfo().getRegionNameAsString() +

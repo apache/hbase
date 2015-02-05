@@ -126,7 +126,7 @@ public class CompactionConfiguration {
   /**
    * @return upper bound on number of files to be included in minor compactions
    */
-  int getMinFilesToCompact() {
+  public int getMinFilesToCompact() {
     return minFilesToCompact;
   }
 

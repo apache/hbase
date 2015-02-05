@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -162,7 +163,8 @@ public class CompactionTool extends Configured implements Tool {
       do {
         CompactionContext compaction = store.requestCompaction(Store.PRIORITY_USER, null);
         if (compaction == null) break;
-        List<StoreFile> storeFiles = store.compact(compaction);
+        List<StoreFile> storeFiles =
+            store.compact(compaction, NoLimitCompactionThroughputController.INSTANCE);
         if (storeFiles != null && !storeFiles.isEmpty()) {
           if (keepCompactedFiles && deleteCompacted) {
             for (StoreFile storeFile: storeFiles) {
