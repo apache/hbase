@@ -31,19 +31,18 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -387,7 +386,7 @@ public class RegionStates {
     return updateRegionState(regionInfo, state,
       transition.getServerName());
   }
-
+  
   /**
    * Transition a region state to OPEN from OPENING/PENDING_OPEN
    */
@@ -585,90 +584,74 @@ public class RegionStates {
   /**
    * A server is offline, all regions on it are dead.
    */
-  public List<HRegionInfo> serverOffline(final ZooKeeperWatcher watcher, final ServerName sn) {
+  public synchronized List<HRegionInfo> serverOffline(
+      final ZooKeeperWatcher watcher, final ServerName sn) {
     // Offline all regions on this server not already in transition.
     List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
-    Set<HRegionInfo> regionsToCleanIfNoMetaEntry = new HashSet<HRegionInfo>();
-    synchronized (this) {
-      Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
-      if (assignedRegions == null) {
-        assignedRegions = new HashSet<HRegionInfo>();
-      }
+    Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
+    if (assignedRegions == null) {
+      assignedRegions = new HashSet<HRegionInfo>();
+    }
 
-      // Offline regions outside the loop to avoid ConcurrentModificationException
-      Set<HRegionInfo> regionsToOffline = new HashSet<HRegionInfo>();
-      for (HRegionInfo region : assignedRegions) {
-        // Offline open regions, no need to offline if SPLIT/MERGED/OFFLINE
-        if (isRegionOnline(region)) {
+    // Offline regions outside the loop to avoid ConcurrentModificationException
+    Set<HRegionInfo> regionsToOffline = new HashSet<HRegionInfo>();
+    for (HRegionInfo region : assignedRegions) {
+      // Offline open regions, no need to offline if SPLIT/MERGED/OFFLINE
+      if (isRegionOnline(region)) {
+        regionsToOffline.add(region);
+      } else if (isRegionInState(region, State.SPLITTING, State.MERGING)) {
+        LOG.debug("Offline splitting/merging region " + getRegionState(region));
+        try {
+          // Delete the ZNode if exists
+          ZKAssign.deleteNodeFailSilent(watcher, region);
           regionsToOffline.add(region);
-        } else if (isRegionInState(region, State.SPLITTING, State.MERGING)) {
-          LOG.debug("Offline splitting/merging region " + getRegionState(region));
+        } catch (KeeperException ke) {
+          server.abort("Unexpected ZK exception deleting node " + region, ke);
+        }
+      }
+    }
+
+    for (RegionState state : regionsInTransition.values()) {
+      HRegionInfo hri = state.getRegion();
+      if (assignedRegions.contains(hri)) {
+        // Region is open on this region server, but in transition.
+        // This region must be moving away from this server, or splitting/merging.
+        // SSH will handle it, either skip assigning, or re-assign.
+        LOG.info("Transitioning " + state + " will be handled by SSH for " + sn);
+      } else if (sn.equals(state.getServerName())) {
+        // Region is in transition on this region server, and this
+        // region is not open on this server. So the region must be
+        // moving to this server from another one (i.e. opening or
+        // pending open on this server, was open on another one.
+        // Offline state is also kind of pending open if the region is in
+        // transition. The region could be in failed_close state too if we have
+        // tried several times to open it while this region server is not reachable)
+        if (state.isPendingOpenOrOpening() || state.isFailedClose() || state.isOffline()) {
+          LOG.info("Found region in " + state + " to be reassigned by SSH for " + sn);
+          rits.add(hri);
+        } else if(state.isSplittingNew()) {
           try {
-            // Delete the ZNode if exists
-            ZKAssign.deleteNodeFailSilent(watcher, region);
-            regionsToOffline.add(region);
-          } catch (KeeperException ke) {
-            server.abort("Unexpected ZK exception deleting node " + region, ke);
+            if (MetaTableAccessor.getRegion(server.getConnection(), state.getRegion()
+                .getEncodedNameAsBytes()) == null) {
+              regionsToOffline.add(state.getRegion());
+              FSUtils.deleteRegionDir(server.getConfiguration(), state.getRegion());
+            }
+          } catch (IOException e) {
+            LOG.warn("Got exception while deleting " + state.getRegion()
+                + " directories from file system.", e);
           }
+        } else {
+          LOG.warn("THIS SHOULD NOT HAPPEN: unexpected " + state);
         }
-      }
-
-      for (RegionState state : regionsInTransition.values()) {
-        HRegionInfo hri = state.getRegion();
-        if (assignedRegions.contains(hri)) {
-          // Region is open on this region server, but in transition.
-          // This region must be moving away from this server, or splitting/merging.
-          // SSH will handle it, either skip assigning, or re-assign.
-          LOG.info("Transitioning " + state + " will be handled by SSH for " + sn);
-        } else if (sn.equals(state.getServerName())) {
-          // Region is in transition on this region server, and this
-          // region is not open on this server. So the region must be
-          // moving to this server from another one (i.e. opening or
-          // pending open on this server, was open on another one.
-          // Offline state is also kind of pending open if the region is in
-          // transition. The region could be in failed_close state too if we have
-          // tried several times to open it while this region server is not reachable)
-          if (state.isPendingOpenOrOpening() || state.isFailedClose() || state.isOffline()) {
-            LOG.info("Found region in " + state + " to be reassigned by SSH for " + sn);
-            rits.add(hri);
-          } else if(state.isSplittingNew()) {
-            regionsToCleanIfNoMetaEntry.add(state.getRegion());
-          } else {
-            LOG.warn("THIS SHOULD NOT HAPPEN: unexpected " + state);
-          }
-        }
-
-        for (HRegionInfo h : regionsToOffline) {
-          regionOffline(h);
-        }
-
-        this.notifyAll();
       }
     }
-    cleanIfNoMetaEntry(regionsToCleanIfNoMetaEntry);
+
+    for (HRegionInfo hri : regionsToOffline) {
+      regionOffline(hri);
+    }
+
+    this.notifyAll();
     return rits;
-  }
-
-  /**
-   * This method does an RPC to hbase:meta. Do not call this method with a lock/synchronize held.
-   * @param hris The hris to check if empty in hbase:meta and if so, clean them up.
-   */
-  private void cleanIfNoMetaEntry(Set<HRegionInfo> hris) {
-    if (hris.isEmpty()) return;
-    for (HRegionInfo hri: hris) {
-      try {
-        // This is RPC to meta table. It is done while we have a synchronize on
-        // regionstates. No progress will be made if meta is not available at this time.
-        // This is a cleanup task. Not critical.
-        if (MetaTableAccessor.getRegion(server.getConnection(), hri.getEncodedNameAsBytes()) ==
-            null) {
-          regionOffline(hri);
-          FSUtils.deleteRegionDir(server.getConfiguration(), hri);
-        }
-      } catch (IOException e) {
-        LOG.warn("Got exception while deleting " + hri + " directories from file system.", e);
-      }
-    }
   }
 
   /**
@@ -990,8 +973,7 @@ public class RegionStates {
   }
 
   /**
-   * Get the HRegionInfo from cache, if not there, from the hbase:meta table.
-   * Be careful. Does RPC. Do not hold a lock or synchronize when you call this method.
+   * Get the HRegionInfo from cache, if not there, from the hbase:meta table
    * @param  regionName
    * @return HRegionInfo for the region
    */
