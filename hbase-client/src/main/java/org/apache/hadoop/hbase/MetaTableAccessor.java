@@ -204,6 +204,7 @@ public class MetaTableAccessor {
    * @throws IOException
    */
   private static Result get(final Table t, final Get g) throws IOException {
+    if (t == null) return null;
     try {
       return t.get(g);
     } finally {
