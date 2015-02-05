@@ -554,7 +554,7 @@ public class RegionStates {
         // This is RPC to meta table. It is done while we have a synchronize on
         // regionstates. No progress will be made if meta is not available at this time.
         // This is a cleanup task. Not critical.
-        if (MetaTableAccessor.getRegion(server.getConnection(), hri.getEncodedNameAsBytes()) ==
+        if (MetaReader.getRegion(server.getCatalogTracker(), hri.getEncodedNameAsBytes()) ==
             null) {
           regionOffline(hri);
           FSUtils.deleteRegionDir(server.getConfiguration(), hri);
