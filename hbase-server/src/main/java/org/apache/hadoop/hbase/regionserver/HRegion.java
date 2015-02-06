@@ -5017,18 +5017,18 @@ public class HRegion implements HeapSize { // , Writable{
     return results;
   }
 
-  public ClientProtos.RegionLoadStats mutateRow(RowMutations rm) throws IOException {
+  public void mutateRow(RowMutations rm) throws IOException {
     // Don't need nonces here - RowMutations only supports puts and deletes
-    return mutateRowsWithLocks(rm.getMutations(), Collections.singleton(rm.getRow()));
+    mutateRowsWithLocks(rm.getMutations(), Collections.singleton(rm.getRow()));
   }
 
   /**
    * Perform atomic mutations within the region w/o nonces.
    * See {@link #mutateRowsWithLocks(Collection, Collection, long, long)}
    */
-  public ClientProtos.RegionLoadStats mutateRowsWithLocks(Collection<Mutation> mutations,
+  public void mutateRowsWithLocks(Collection<Mutation> mutations,
       Collection<byte[]> rowsToLock) throws IOException {
-    return mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    mutateRowsWithLocks(mutations, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
   /**
@@ -5043,11 +5043,10 @@ public class HRegion implements HeapSize { // , Writable{
    * <code>rowsToLock</code> is sorted in order to avoid deadlocks.
    * @throws IOException
    */
-  public ClientProtos.RegionLoadStats mutateRowsWithLocks(Collection<Mutation> mutations,
+  public void mutateRowsWithLocks(Collection<Mutation> mutations,
       Collection<byte[]> rowsToLock, long nonceGroup, long nonce) throws IOException {
     MultiRowMutationProcessor proc = new MultiRowMutationProcessor(mutations, rowsToLock);
     processRowsWithLocks(proc, -1, nonceGroup, nonce);
-    return getRegionStats();
   }
 
   /**
