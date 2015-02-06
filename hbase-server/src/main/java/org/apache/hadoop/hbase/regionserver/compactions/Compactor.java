@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A compactor is a compaction algorithm associated a given policy. Base class also contains
@@ -147,7 +147,7 @@ public abstract class Compactor {
         LOG.debug("Compacting " + file +
           ", keycount=" + keyCount +
           ", bloomtype=" + r.getBloomFilterType().toString() +
-          ", size=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1) +
+          ", size=" + StringUtils.humanReadableInt(r.length()) +
           ", encoding=" + r.getHFileReader().getDataBlockEncoding() +
           ", seqNum=" + seqNum +
           (calculatePutTs ? ", earliestPutTs=" + earliestPutTs: ""));

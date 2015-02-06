@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -877,7 +876,7 @@ public class HStore implements Store {
     if (LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
-        ", filesize=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1));
+        ", filesize=" + StringUtils.humanReadableInt(r.length()));
     }
     return sf;
   }
@@ -1108,7 +1107,7 @@ public class HStore implements Store {
       LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
           + this + " of " + this.getRegionInfo().getRegionNameAsString()
           + " into tmpdir=" + fs.getTempDir() + ", totalSize="
-          + TraditionalBinaryPrefix.long2String(cr.getSize(), "", 1));
+          + StringUtils.humanReadableInt(cr.getSize()));
 
       // Commence the compaction.
       List<Path> newFiles = compaction.compact(throughputController);
@@ -1223,12 +1222,12 @@ public class HStore implements Store {
       for (StoreFile sf: sfs) {
         message.append(sf.getPath().getName());
         message.append("(size=");
-        message.append(TraditionalBinaryPrefix.long2String(sf.getReader().length(), "", 1));
+        message.append(StringUtils.humanReadableInt(sf.getReader().length()));
         message.append("), ");
       }
     }
     message.append("total size for store is ")
-      .append(StringUtils.TraditionalBinaryPrefix.long2String(storeSize, "", 1))
+      .append(StringUtils.humanReadableInt(storeSize))
       .append(". This selection was in queue for ")
       .append(StringUtils.formatTimeDiff(compactionStartTime, cr.getSelectionTime()))
       .append(", and took ").append(StringUtils.formatTimeDiff(now, compactionStartTime))
@@ -1506,7 +1505,7 @@ public class HStore implements Store {
     completeCompaction(delSfs);
     LOG.info("Completed removal of " + delSfs.size() + " unnecessary (expired) file(s) in "
         + this + " of " + this.getRegionInfo().getRegionNameAsString()
-        + "; total size for store is " + TraditionalBinaryPrefix.long2String(storeSize, "", 1));
+        + "; total size for store is " + StringUtils.humanReadableInt(storeSize));
   }
 
   @Override
