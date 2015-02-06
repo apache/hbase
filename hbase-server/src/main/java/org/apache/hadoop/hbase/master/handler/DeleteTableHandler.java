@@ -18,31 +18,37 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
-import java.io.InterruptedIOException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateException;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 
 @InterfaceAudience.Private
 public class DeleteTableHandler extends TableEventHandler {
@@ -125,6 +131,33 @@ public class DeleteTableHandler extends TableEventHandler {
     // 5. If entry for this table states, remove it.
     LOG.debug("Marking '" + tableName + "' as deleted.");
     am.getTableStateManager().setDeletedTable(tableName);
+
+    // 6.Clean any remaining rows for this table.
+    cleanAnyRemainingRows();
+  }
+
+  /**
+   * There may be items for this table still up in hbase:meta in the case where the
+   * info:regioninfo column was empty because of some write error. Remove ALL rows from hbase:meta
+   * that have to do with this table. See HBASE-12980.
+   * @throws IOException
+   */
+  private void cleanAnyRemainingRows() throws IOException {
+    Scan tableScan = MetaTableAccessor.getScanForTableName(tableName);
+    try (Table metaTable =
+        this.masterServices.getConnection().getTable(TableName.META_TABLE_NAME)) {
+      List<Delete> deletes = new ArrayList<Delete>();
+      try (ResultScanner resScanner = metaTable.getScanner(tableScan)) {
+        for (Result result : resScanner) {
+          deletes.add(new Delete(result.getRow()));
+        }
+      }
+      if (!deletes.isEmpty()) {
+        LOG.warn("Deleting some vestigal " + deletes.size() + " rows of " + this.tableName +
+          " from " + TableName.META_TABLE_NAME);
+        metaTable.delete(deletes);
+      }
+    }
   }
 
   /**
