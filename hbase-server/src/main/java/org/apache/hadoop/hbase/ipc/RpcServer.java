@@ -196,7 +196,7 @@ public class RpcServer implements RpcServerInterface {
   static final ThreadLocal<MonitoredRPCHandler> MONITORED_RPC
       = new ThreadLocal<MonitoredRPCHandler>();
 
-  protected final InetSocketAddress isa;
+  protected final InetSocketAddress bindAddress;
   protected int port;                             // port we listen on
   private int readThreads;                        // number of read threads
   protected int maxIdleTime;                      // the maximum idle time after
@@ -525,8 +525,8 @@ public class RpcServer implements RpcServerInterface {
       acceptChannel = ServerSocketChannel.open();
       acceptChannel.configureBlocking(false);
 
-      // Bind the server socket to the local host and port
-      bind(acceptChannel.socket(), isa, backlogLength);
+      // Bind the server socket to the binding addrees (can be different from the default interface)
+      bind(acceptChannel.socket(), bindAddress, backlogLength);
       port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
       // create a selector;
       selector= Selector.open();
@@ -534,7 +534,8 @@ public class RpcServer implements RpcServerInterface {
       readers = new Reader[readThreads];
       readPool = Executors.newFixedThreadPool(readThreads,
         new ThreadFactoryBuilder().setNameFormat(
-          "RpcServer.reader=%d,port=" + port).setDaemon(true).build());
+          "RpcServer.reader=%d,bindAddress=" + bindAddress.getHostName() +
+          ",port=" + port).setDaemon(true).build());
       for (int i = 0; i < readThreads; ++i) {
         Reader reader = new Reader();
         readers[i] = reader;
@@ -1873,17 +1874,18 @@ public class RpcServer implements RpcServerInterface {
    * instance else pass null for no authentication check.
    * @param name Used keying this rpc servers' metrics and for naming the Listener thread.
    * @param services A list of services.
-   * @param isa Where to listen
+   * @param bindAddres Where to listen
    * @throws IOException
    */
   public RpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
-      final InetSocketAddress isa, Configuration conf,
+      final InetSocketAddress bindAddress, Configuration conf,
       RpcScheduler scheduler)
-  throws IOException {
+      throws IOException {
+
     this.server = server;
     this.services = services;
-    this.isa = isa;
+    this.bindAddress = bindAddress;
     this.conf = conf;
     this.socketSendBufferSize = 0;
     this.maxQueueSize =
