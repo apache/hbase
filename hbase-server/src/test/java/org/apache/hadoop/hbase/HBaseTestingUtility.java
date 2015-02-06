@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -63,6 +64,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -1773,6 +1775,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     getHBaseAdmin().deleteTable(tableName);
   }
 
+  /**
+   * Drop an existing table
+   * @param tableName existing table
+   */
+  public void deleteTableIfAny(TableName tableName) throws IOException {
+    try {
+      deleteTable(tableName);
+    } catch (TableNotFoundException e) {
+      // ignore
+    }
+  }
+
   // ==========================================================================
   // Canned table and table descriptor creation
   // TODO replace HBaseTestCase
@@ -2085,7 +2099,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return rowCount;
   }
 
-  public void loadNumericRows(final Table t, final byte[] f, int startRow, int endRow) throws IOException {
+  public void loadNumericRows(final Table t, final byte[] f, int startRow, int endRow)
+      throws IOException {
     for (int i = startRow; i < endRow; i++) {
       byte[] data = Bytes.toBytes(String.valueOf(i));
       Put put = new Put(data);
@@ -2094,7 +2109,23 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
-  public void deleteNumericRows(final Table t, final byte[] f, int startRow, int endRow) throws IOException {
+  public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow)
+      throws IOException {
+    for (int i = startRow; i < endRow; i++) {
+      String failMsg = "Failed verification of row :" + i;
+      byte[] data = Bytes.toBytes(String.valueOf(i));
+      Result result = region.get(new Get(data));
+      assertTrue(failMsg, result.containsColumn(f, null));
+      assertEquals(failMsg, result.getColumnCells(f, null).size(), 1);
+      Cell cell = result.getColumnLatestCell(f, null);
+      assertTrue(failMsg,
+        Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
+    }
+  }
+
+  public void deleteNumericRows(final HTable t, final byte[] f, int startRow, int endRow)
+      throws IOException {
     for (int i = startRow; i < endRow; i++) {
       byte[] data = Bytes.toBytes(String.valueOf(i));
       Delete delete = new Delete(data);

@@ -717,7 +717,8 @@ public class ReplicationSource extends Thread
         }
         break;
       } catch (Exception ex) {
-        LOG.warn(replicationEndpoint.getClass().getName() + " threw unknown exception:" + ex);
+        LOG.warn(replicationEndpoint.getClass().getName() + " threw unknown exception:" +
+            org.apache.hadoop.util.StringUtils.stringifyException(ex));
         if (sleepForRetries("ReplicationEndpoint threw exception", sleepMultiplier)) {
           sleepMultiplier++;
         }

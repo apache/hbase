@@ -23,7 +23,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.NavigableSet;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.wal.WALSplitter.EntryBuffers;
+import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
 import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -128,10 +128,8 @@ public class TestWALMethods {
     Configuration conf = new Configuration();
     RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
       RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
-    WALSplitter splitter = new WALSplitter(WALFactory.getInstance(conf),
-      conf, mock(Path.class), mock(FileSystem.class), null, null, mode);
 
-    EntryBuffers sink = splitter.new EntryBuffers(1*1024*1024);
+    EntryBuffers sink = new EntryBuffers(new PipelineController(), 1*1024*1024);
     for (int i = 0; i < 1000; i++) {
       WAL.Entry entry = createTestLogEntry(i);
       sink.appendEntry(entry);

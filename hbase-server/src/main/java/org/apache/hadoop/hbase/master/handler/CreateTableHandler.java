@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 /**
  * Handler to create a table.
@@ -215,9 +216,8 @@ public class CreateTableHandler extends EventHandler {
    */
   protected void completed(final Throwable exception) {
     releaseTableLock();
-    String msg = exception == null ? null : exception.getMessage();
     LOG.info("Table, " + this.hTableDescriptor.getTableName() + ", creation " +
-        msg == null ? "successful" : "failed. " + msg);
+        (exception == null ? "successful" : "failed. " + exception));
     if (exception != null) {
       removeEnablingTable(this.assignmentManager, this.hTableDescriptor.getTableName());
     }
@@ -262,11 +262,16 @@ public class CreateTableHandler extends EventHandler {
       // 5. Add replicas if needed
       regionInfos = addReplicas(hTableDescriptor, regionInfos);
 
-      // 6. Trigger immediate assignment of the regions in round-robin fashion
+      // 6. Setup replication for region replicas if needed
+      if (hTableDescriptor.getRegionReplication() > 1) {
+        ServerRegionReplicaUtil.setupRegionReplicaReplication(conf);
+      }
+
+      // 7. Trigger immediate assignment of the regions in round-robin fashion
       ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);
     }
 
-    // 7. Set table enabled flag up in zk.
+    // 8. Set table enabled flag up in zk.
     try {
       assignmentManager.getTableStateManager().setTableState(tableName,
         ZooKeeperProtos.Table.State.ENABLED);

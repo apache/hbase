@@ -25,15 +25,35 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 
 /**
  * Similar to {@link RegionReplicaUtil} but for the server side
  */
 public class ServerRegionReplicaUtil extends RegionReplicaUtil {
+
+  /**
+   * Whether asynchronous WAL replication to the secondary region replicas is enabled or not.
+   * If this is enabled, a replication peer named "region_replica_replication" will be created
+   * which will tail the logs and replicate the mutatations to region replicas for tables that
+   * have region replication > 1. If this is enabled once, disabling this replication also
+   * requires disabling the replication peer using shell or ReplicationAdmin java class.
+   * Replication to secondary region replicas works over standard inter-cluster replication.·
+   * So replication, if disabled explicitly, also has to be enabled by setting "hbase.replication"·
+   * to true for this feature to work.
+   */
+  public static final String REGION_REPLICA_REPLICATION_CONF_KEY
+    = "hbase.region.replica.replication.enabled";
+  private static final boolean DEFAULT_REGION_REPLICA_REPLICATION = false;
+  private static final String REGION_REPLICA_REPLICATION_PEER = "region_replica_replication";
 
   /**
    * Returns the regionInfo object to use for interacting with the file system.
@@ -93,6 +113,37 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
             regionInfoForFs.getEncodedName(), familyName, status.getPath().getName());
     return new StoreFileInfo(conf, fs, status, link);
+  }
+
+  /**
+   * Create replication peer for replicating to region replicas if needed.
+   * @param conf configuration to use
+   * @throws IOException
+   */
+  public static void setupRegionReplicaReplication(Configuration conf) throws IOException {
+    if (!conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION)) {
+      return;
+    }
+    ReplicationAdmin repAdmin = new ReplicationAdmin(conf);
+    try {
+      if (repAdmin.getPeerConfig(REGION_REPLICA_REPLICATION_PEER) == null) {
+        ReplicationPeerConfig peerConfig = new ReplicationPeerConfig();
+        peerConfig.setClusterKey(ZKUtil.getZooKeeperClusterKey(conf));
+        peerConfig.setReplicationEndpointImpl(RegionReplicaReplicationEndpoint.class.getName());
+        repAdmin.addPeer(REGION_REPLICA_REPLICATION_PEER, peerConfig, null);
+      }
+    } catch (ReplicationException ex) {
+      throw new IOException(ex);
+    } finally {
+      repAdmin.close();
+    }
+  }
+
+  /**
+   * Return the peer id used for replicating to secondary region replicas
+   */
+  public static String getReplicationPeerId() {
+    return REGION_REPLICA_REPLICATION_PEER;
   }
 
 }

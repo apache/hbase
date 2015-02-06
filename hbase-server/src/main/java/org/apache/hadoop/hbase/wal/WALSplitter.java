@@ -151,6 +151,7 @@ public class WALSplitter {
 
   // Major subcomponents of the split process.
   // These are separated into inner classes to make testing easier.
+  PipelineController controller;
   OutputSink outputSink;
   EntryBuffers entryBuffers;
 
@@ -158,14 +159,6 @@ public class WALSplitter {
       new HashSet<TableName>();
   private BaseCoordinatedStateManager csm;
   private final WALFactory walFactory;
-
-  // If an exception is thrown by one of the other threads, it will be
-  // stored here.
-  protected AtomicReference<Throwable> thrown = new AtomicReference<Throwable>();
-
-  // Wait/notify for when data has been produced by the reader thread,
-  // consumed by the reader thread, or an exception occurred
-  final Object dataAvailable = new Object();
 
   private MonitoredTask status;
 
@@ -202,8 +195,9 @@ public class WALSplitter {
     this.sequenceIdChecker = idChecker;
     this.csm = (BaseCoordinatedStateManager)csm;
     this.walFactory = factory;
+    this.controller = new PipelineController();
 
-    entryBuffers = new EntryBuffers(
+    entryBuffers = new EntryBuffers(controller,
         this.conf.getInt("hbase.regionserver.hlog.splitlog.buffersize",
             128*1024*1024));
 
@@ -214,13 +208,13 @@ public class WALSplitter {
 
     this.numWriterThreads = this.conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
     if (csm != null && this.distributedLogReplay) {
-      outputSink = new LogReplayOutputSink(numWriterThreads);
+      outputSink = new LogReplayOutputSink(controller, entryBuffers, numWriterThreads);
     } else {
       if (this.distributedLogReplay) {
         LOG.info("ZooKeeperWatcher is passed in as NULL so disable distrubitedLogRepaly.");
       }
       this.distributedLogReplay = false;
-      outputSink = new LogRecoveredEditsOutputSink(numWriterThreads);
+      outputSink = new LogRecoveredEditsOutputSink(controller, entryBuffers, numWriterThreads);
     }
 
   }
@@ -828,22 +822,6 @@ public class WALSplitter {
     }
   }
 
-  private void writerThreadError(Throwable t) {
-    thrown.compareAndSet(null, t);
-  }
-
-  /**
-   * Check for errors in the writer threads. If any is found, rethrow it.
-   */
-  private void checkForErrors() throws IOException {
-    Throwable thrown = this.thrown.get();
-    if (thrown == null) return;
-    if (thrown instanceof IOException) {
-      throw new IOException(thrown);
-    } else {
-      throw new RuntimeException(thrown);
-    }
-  }
   /**
    * Create a new {@link Writer} for writing log splits.
    * @return a new Writer instance, caller should close
@@ -873,13 +851,45 @@ public class WALSplitter {
   }
 
   /**
+   * Contains some methods to control WAL-entries producer / consumer interactions
+   */
+  public static class PipelineController {
+    // If an exception is thrown by one of the other threads, it will be
+    // stored here.
+    AtomicReference<Throwable> thrown = new AtomicReference<Throwable>();
+
+    // Wait/notify for when data has been produced by the writer thread,
+    // consumed by the reader thread, or an exception occurred
+    public final Object dataAvailable = new Object();
+
+    void writerThreadError(Throwable t) {
+      thrown.compareAndSet(null, t);
+    }
+
+    /**
+     * Check for errors in the writer threads. If any is found, rethrow it.
+     */
+    void checkForErrors() throws IOException {
+      Throwable thrown = this.thrown.get();
+      if (thrown == null) return;
+      if (thrown instanceof IOException) {
+        throw new IOException(thrown);
+      } else {
+        throw new RuntimeException(thrown);
+      }
+    }
+  }
+
+  /**
    * Class which accumulates edits and separates them into a buffer per region
    * while simultaneously accounting RAM usage. Blocks if the RAM usage crosses
    * a predefined threshold.
    *
    * Writer threads then pull region-specific buffers from this class.
    */
-  class EntryBuffers {
+  public static class EntryBuffers {
+    PipelineController controller;
+
     Map<byte[], RegionEntryBuffer> buffers =
       new TreeMap<byte[], RegionEntryBuffer>(Bytes.BYTES_COMPARATOR);
 
@@ -891,7 +901,8 @@ public class WALSplitter {
     long totalBuffered = 0;
     long maxHeapUsage;
 
-    EntryBuffers(long maxHeapUsage) {
+    public EntryBuffers(PipelineController controller, long maxHeapUsage) {
+      this.controller = controller;
       this.maxHeapUsage = maxHeapUsage;
     }
 
@@ -902,7 +913,7 @@ public class WALSplitter {
      * @throws InterruptedException
      * @throws IOException
      */
-    void appendEntry(Entry entry) throws InterruptedException, IOException {
+    public void appendEntry(Entry entry) throws InterruptedException, IOException {
       WALKey key = entry.getKey();
 
       RegionEntryBuffer buffer;
@@ -917,15 +928,15 @@ public class WALSplitter {
       }
 
       // If we crossed the chunk threshold, wait for more space to be available
-      synchronized (dataAvailable) {
+      synchronized (controller.dataAvailable) {
         totalBuffered += incrHeap;
-        while (totalBuffered > maxHeapUsage && thrown.get() == null) {
+        while (totalBuffered > maxHeapUsage && controller.thrown.get() == null) {
           LOG.debug("Used " + totalBuffered + " bytes of buffered edits, waiting for IO threads...");
-          dataAvailable.wait(2000);
+          controller.dataAvailable.wait(2000);
         }
-        dataAvailable.notifyAll();
+        controller.dataAvailable.notifyAll();
       }
-      checkForErrors();
+      controller.checkForErrors();
     }
 
     /**
@@ -958,15 +969,29 @@ public class WALSplitter {
       }
       long size = buffer.heapSize();
 
-      synchronized (dataAvailable) {
+      synchronized (controller.dataAvailable) {
         totalBuffered -= size;
         // We may unblock writers
-        dataAvailable.notifyAll();
+        controller.dataAvailable.notifyAll();
       }
     }
 
     synchronized boolean isRegionCurrentlyWriting(byte[] region) {
       return currentlyWriting.contains(region);
+    }
+
+    public void waitUntilDrained() {
+      synchronized (controller.dataAvailable) {
+        while (totalBuffered > 0) {
+          try {
+            controller.dataAvailable.wait(2000);
+          } catch (InterruptedException e) {
+            LOG.warn("Got intrerrupted while waiting for EntryBuffers is drained");
+            Thread.interrupted();
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -976,7 +1001,7 @@ public class WALSplitter {
    * share a single byte array instance for the table and region name.
    * Also tracks memory usage of the accumulated edits.
    */
-  static class RegionEntryBuffer implements HeapSize {
+  public static class RegionEntryBuffer implements HeapSize {
     long heapInBuffer = 0;
     List<Entry> entryBuffer;
     TableName tableName;
@@ -1008,14 +1033,30 @@ public class WALSplitter {
     public long heapSize() {
       return heapInBuffer;
     }
+
+    public byte[] getEncodedRegionName() {
+      return encodedRegionName;
+    }
+
+    public List<Entry> getEntryBuffer() {
+      return entryBuffer;
+    }
+
+    public TableName getTableName() {
+      return tableName;
+    }
   }
 
-  class WriterThread extends Thread {
+  public static class WriterThread extends Thread {
     private volatile boolean shouldStop = false;
+    private PipelineController controller;
+    private EntryBuffers entryBuffers;
     private OutputSink outputSink = null;
 
-    WriterThread(OutputSink sink, int i) {
+    WriterThread(PipelineController controller, EntryBuffers entryBuffers, OutputSink sink, int i){
       super(Thread.currentThread().getName() + "-Writer-" + i);
+      this.controller = controller;
+      this.entryBuffers = entryBuffers;
       outputSink = sink;
     }
 
@@ -1025,7 +1066,7 @@ public class WALSplitter {
         doRun();
       } catch (Throwable t) {
         LOG.error("Exiting thread", t);
-        writerThreadError(t);
+        controller.writerThreadError(t);
       }
     }
 
@@ -1035,12 +1076,12 @@ public class WALSplitter {
         RegionEntryBuffer buffer = entryBuffers.getChunkToWrite();
         if (buffer == null) {
           // No data currently available, wait on some more to show up
-          synchronized (dataAvailable) {
+          synchronized (controller.dataAvailable) {
             if (shouldStop && !this.outputSink.flush()) {
               return;
             }
             try {
-              dataAvailable.wait(500);
+              controller.dataAvailable.wait(500);
             } catch (InterruptedException ie) {
               if (!shouldStop) {
                 throw new RuntimeException(ie);
@@ -1064,9 +1105,9 @@ public class WALSplitter {
     }
 
     void finish() {
-      synchronized (dataAvailable) {
+      synchronized (controller.dataAvailable) {
         shouldStop = true;
-        dataAvailable.notifyAll();
+        controller.dataAvailable.notifyAll();
       }
     }
   }
@@ -1075,7 +1116,10 @@ public class WALSplitter {
    * The following class is an abstraction class to provide a common interface to support both
    * existing recovered edits file sink and region server WAL edits replay sink
    */
-   abstract class OutputSink {
+  public static abstract class OutputSink {
+
+    protected PipelineController controller;
+    protected EntryBuffers entryBuffers;
 
     protected Map<byte[], SinkWriter> writers = Collections
         .synchronizedMap(new TreeMap<byte[], SinkWriter>(Bytes.BYTES_COMPARATOR));;
@@ -1101,8 +1145,10 @@ public class WALSplitter {
 
     protected List<Path> splits = null;
 
-    public OutputSink(int numWriters) {
+    public OutputSink(PipelineController controller, EntryBuffers entryBuffers, int numWriters) {
       numThreads = numWriters;
+      this.controller = controller;
+      this.entryBuffers = entryBuffers;
     }
 
     void setReporter(CancelableProgressable reporter) {
@@ -1112,9 +1158,9 @@ public class WALSplitter {
     /**
      * Start the threads that will pump data from the entryBuffers to the output files.
      */
-    synchronized void startWriterThreads() {
+    public synchronized void startWriterThreads() {
       for (int i = 0; i < numThreads; i++) {
-        WriterThread t = new WriterThread(this, i);
+        WriterThread t = new WriterThread(controller, entryBuffers, this, i);
         t.start();
         writerThreads.add(t);
       }
@@ -1173,34 +1219,34 @@ public class WALSplitter {
           throw iie;
         }
       }
-      checkForErrors();
+      controller.checkForErrors();
       LOG.info("Split writers finished");
       return (!progress_failed);
     }
 
-    abstract List<Path> finishWritingAndClose() throws IOException;
+    public abstract List<Path> finishWritingAndClose() throws IOException;
 
     /**
      * @return a map from encoded region ID to the number of edits written out for that region.
      */
-    abstract Map<byte[], Long> getOutputCounts();
+    public abstract Map<byte[], Long> getOutputCounts();
 
     /**
      * @return number of regions we've recovered
      */
-    abstract int getNumberOfRecoveredRegions();
+    public abstract int getNumberOfRecoveredRegions();
 
     /**
      * @param buffer A WAL Edit Entry
      * @throws IOException
      */
-    abstract void append(RegionEntryBuffer buffer) throws IOException;
+    public abstract void append(RegionEntryBuffer buffer) throws IOException;
 
     /**
      * WriterThread call this function to help flush internal remaining edits in buffer before close
      * @return true when underlying sink has something to flush
      */
-    protected boolean flush() throws IOException {
+    public boolean flush() throws IOException {
       return false;
     }
   }
@@ -1210,13 +1256,14 @@ public class WALSplitter {
    */
   class LogRecoveredEditsOutputSink extends OutputSink {
 
-    public LogRecoveredEditsOutputSink(int numWriters) {
+    public LogRecoveredEditsOutputSink(PipelineController controller, EntryBuffers entryBuffers,
+        int numWriters) {
       // More threads could potentially write faster at the expense
       // of causing more disk seeks as the logs are split.
       // 3. After a certain setting (probably around 3) the
       // process will be bound on the reader in the current
       // implementation anyway.
-      super(numWriters);
+      super(controller, entryBuffers, numWriters);
     }
 
     /**
@@ -1224,7 +1271,7 @@ public class WALSplitter {
      * @throws IOException
      */
     @Override
-    List<Path> finishWritingAndClose() throws IOException {
+    public List<Path> finishWritingAndClose() throws IOException {
       boolean isSuccessful = false;
       List<Path> result = null;
       try {
@@ -1442,7 +1489,7 @@ public class WALSplitter {
     }
 
     @Override
-    void append(RegionEntryBuffer buffer) throws IOException {
+    public void append(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.entryBuffer;
       if (entries.isEmpty()) {
         LOG.warn("got an empty buffer, skipping");
@@ -1483,7 +1530,7 @@ public class WALSplitter {
      * @return a map from encoded region ID to the number of edits written out for that region.
      */
     @Override
-    Map<byte[], Long> getOutputCounts() {
+    public Map<byte[], Long> getOutputCounts() {
       TreeMap<byte[], Long> ret = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
       synchronized (writers) {
         for (Map.Entry<byte[], SinkWriter> entry : writers.entrySet()) {
@@ -1494,7 +1541,7 @@ public class WALSplitter {
     }
 
     @Override
-    int getNumberOfRecoveredRegions() {
+    public int getNumberOfRecoveredRegions() {
       return writers.size();
     }
   }
@@ -1502,7 +1549,7 @@ public class WALSplitter {
   /**
    * Class wraps the actual writer which writes data out and related statistics
    */
-  private abstract static class SinkWriter {
+  public abstract static class SinkWriter {
     /* Count of edits written to this path */
     long editsWritten = 0;
     /* Number of nanos spent writing to this log */
@@ -1563,17 +1610,18 @@ public class WALSplitter {
     private LogRecoveredEditsOutputSink logRecoveredEditsOutputSink;
     private boolean hasEditsInDisablingOrDisabledTables = false;
 
-    public LogReplayOutputSink(int numWriters) {
-      super(numWriters);
-      this.waitRegionOnlineTimeOut =
-          conf.getInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT,
-            ZKSplitLogManagerCoordination.DEFAULT_TIMEOUT);
-      this.logRecoveredEditsOutputSink = new LogRecoveredEditsOutputSink(numWriters);
+    public LogReplayOutputSink(PipelineController controller, EntryBuffers entryBuffers,
+        int numWriters) {
+      super(controller, entryBuffers, numWriters);
+      this.waitRegionOnlineTimeOut = conf.getInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT,
+          ZKSplitLogManagerCoordination.DEFAULT_TIMEOUT);
+      this.logRecoveredEditsOutputSink = new LogRecoveredEditsOutputSink(controller,
+        entryBuffers, numWriters);
       this.logRecoveredEditsOutputSink.setReporter(reporter);
     }
 
     @Override
-    void append(RegionEntryBuffer buffer) throws IOException {
+    public void append(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.entryBuffer;
       if (entries.isEmpty()) {
         LOG.warn("got an empty buffer, skipping");
@@ -1889,7 +1937,7 @@ public class WALSplitter {
     }
 
     @Override
-    protected boolean flush() throws IOException {
+    public boolean flush() throws IOException {
       String curLoc = null;
       int curSize = 0;
       List<Pair<HRegionLocation, Entry>> curQueue = null;
@@ -1910,8 +1958,8 @@ public class WALSplitter {
       if (curSize > 0) {
         this.processWorkItems(curLoc, curQueue);
         // We should already have control of the monitor; ensure this is the case.
-        synchronized(dataAvailable) {
-          dataAvailable.notifyAll();
+        synchronized(controller.dataAvailable) {
+          controller.dataAvailable.notifyAll();
         }
         return true;
       }
@@ -1923,7 +1971,7 @@ public class WALSplitter {
     }
 
     @Override
-    List<Path> finishWritingAndClose() throws IOException {
+    public List<Path> finishWritingAndClose() throws IOException {
       try {
         if (!finishWriting()) {
           return null;
@@ -1998,7 +2046,7 @@ public class WALSplitter {
     }
 
     @Override
-    Map<byte[], Long> getOutputCounts() {
+    public Map<byte[], Long> getOutputCounts() {
       TreeMap<byte[], Long> ret = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
       synchronized (writers) {
         for (Map.Entry<String, RegionServerWriter> entry : writers.entrySet()) {
@@ -2009,7 +2057,7 @@ public class WALSplitter {
     }
 
     @Override
-    int getNumberOfRecoveredRegions() {
+    public int getNumberOfRecoveredRegions() {
       return this.recoveredRegions.size();
     }
 
@@ -2115,12 +2163,13 @@ public class WALSplitter {
    * @param cells
    * @param logEntry pair of WALKey and WALEdit instance stores WALKey and WALEdit instances
    *          extracted from the passed in WALEntry.
+   * @param durability
    * @return list of Pair<MutationType, Mutation> to be replayed
    * @throws IOException
    */
   public static List<MutationReplay> getMutationsFromWALEntry(WALEntry entry, CellScanner cells,
-      Pair<WALKey, WALEdit> logEntry) throws IOException {
-
+      Pair<WALKey, WALEdit> logEntry, Durability durability)
+          throws IOException {
     if (entry == null) {
       // return an empty array
       return new ArrayList<MutationReplay>();
@@ -2167,6 +2216,9 @@ public class WALSplitter {
         ((Delete) m).addDeleteMarker(cell);
       } else {
         ((Put) m).add(cell);
+      }
+      if (m != null) {
+        m.setDurability(durability);
       }
       previousCell = cell;
     }

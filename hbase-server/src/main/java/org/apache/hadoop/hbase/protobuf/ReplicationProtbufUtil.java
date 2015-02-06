@@ -59,7 +59,7 @@ public class ReplicationProtbufUtil {
   public static void replicateWALEntry(final AdminService.BlockingInterface admin,
       final Entry[] entries) throws IOException {
     Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
-      buildReplicateWALEntryRequest(entries);
+      buildReplicateWALEntryRequest(entries, null);
     PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
     try {
       admin.replicateWALEntry(controller, p.getFirst());
@@ -78,6 +78,20 @@ public class ReplicationProtbufUtil {
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
       buildReplicateWALEntryRequest(final Entry[] entries) {
     // Accumulate all the Cells seen in here.
+    return buildReplicateWALEntryRequest(entries, null);
+  }
+
+  /**
+   * Create a new ReplicateWALEntryRequest from a list of HLog entries
+   *
+   * @param entries the HLog entries to be replicated
+   * @param encodedRegionName alternative region name to use if not null
+   * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values
+   * found.
+   */
+  public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
+      buildReplicateWALEntryRequest(final Entry[] entries, byte[] encodedRegionName) {
+    // Accumulate all the KVs seen in here.
     List<List<? extends Cell>> allCells = new ArrayList<List<? extends Cell>>(entries.length);
     int size = 0;
     WALProtos.FamilyScope.Builder scopeBuilder = WALProtos.FamilyScope.newBuilder();
@@ -91,7 +105,9 @@ public class ReplicationProtbufUtil {
       WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
       WALKey key = entry.getKey();
       keyBuilder.setEncodedRegionName(
-        ByteStringer.wrap(key.getEncodedRegionName()));
+        ByteStringer.wrap(encodedRegionName == null
+            ? key.getEncodedRegionName()
+            : encodedRegionName));
       keyBuilder.setTableName(ByteStringer.wrap(key.getTablename().getName()));
       keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
       keyBuilder.setWriteTime(key.getWriteTime());
