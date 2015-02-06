@@ -4644,7 +4644,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
       }
     }
-    return region.mutateRow(rm);
+    region.mutateRow(rm);
+    return region.getRegionStats();
   }
 
   /**
