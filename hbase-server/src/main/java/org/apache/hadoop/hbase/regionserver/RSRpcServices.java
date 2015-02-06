@@ -382,7 +382,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
       }
     }
-    return region.mutateRow(rm);
+    region.mutateRow(rm);
+    return region.getRegionStats();
   }
 
   /**
