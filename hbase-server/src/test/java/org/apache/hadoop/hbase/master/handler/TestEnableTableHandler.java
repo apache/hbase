@@ -23,6 +23,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,6 +45,13 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 
 @Category({ MediumTests.class })
 public class TestEnableTableHandler {
@@ -98,4 +107,47 @@ public class TestEnableTableHandler {
     assertEquals(tableName, onlineRegions.get(1).getTable());
   }
 
+  /**
+   * We were only clearing rows that had a hregioninfo column in hbase:meta.  Mangled rows that
+   * were missing the hregioninfo because of error were being left behind messing up any
+   * subsequent table made with the same name. HBASE-12980
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test(timeout=60000)
+  public void testDeleteForSureClearsAllTableRowsFromMeta()
+  throws IOException, InterruptedException {
+    final TableName tableName = TableName.valueOf("testDeleteForSureClearsAllTableRowsFromMeta");
+    final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    final HMaster m = cluster.getMaster();
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(FAMILYNAME));
+    admin.createTable(desc, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    // Now I have a nice table, mangle it by removing the HConstants.REGIONINFO_QUALIFIER_STR
+    // content from a few of the rows.
+    Scan metaScannerForMyTable = MetaTableAccessor.getScanForTableName(tableName);
+    try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
+      try (ResultScanner scanner = metaTable.getScanner(metaScannerForMyTable)) {
+        for (Result result : scanner) {
+          // Just delete one row.
+          Delete d = new Delete(result.getRow());
+          d.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+          metaTable.delete(d);
+          break;
+        }
+      }
+      admin.disableTable(tableName);
+      TEST_UTIL.waitTableDisabled(tableName.getName());
+      // Presume this synchronous all is.
+      admin.deleteTable(tableName);
+      int rowCount = 0;
+      try (ResultScanner scanner = metaTable.getScanner(metaScannerForMyTable)) {
+        for (Result result : scanner) {
+          rowCount++;
+        }
+      }
+      assertEquals(0, rowCount);
+    }
+  }
 }
