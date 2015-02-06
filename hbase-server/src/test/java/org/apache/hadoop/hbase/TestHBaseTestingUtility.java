@@ -124,6 +124,18 @@ public class TestHBaseTestingUtility {
     }
   }
 
+  @Test
+  public void testMiniClusterBindToWildcard() throws Exception {
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    hbt.getConfiguration().set("hbase.regionserver.ipc.address", "0.0.0.0");
+    MiniHBaseCluster cluster = hbt.startMiniCluster();
+    try {
+      assertEquals(1, cluster.getLiveRegionServerThreads().size());
+    } finally {
+      hbt.shutdownMiniCluster();
+    }
+  }
+
   /**
    *  Test that we can start and stop multiple time a cluster
    *   with the same HBaseTestingUtility.
