@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -416,7 +417,7 @@ public class MobUtils {
   }
 
   /**
-   * Creates a directory of mob files for flushing.
+   * Creates a writer for the mob file in temp directory.
    * @param conf The current configuration.
    * @param fs The current file system.
    * @param family The descriptor of the current column family.
@@ -435,17 +436,110 @@ public class MobUtils {
       throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID().toString()
         .replaceAll("-", ""));
+    return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
+      cacheConfig);
+  }
+
+  /**
+   * Creates a writer for the ref file in temp directory.
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param family The descriptor of the current column family.
+   * @param basePath The basic path for a temp directory.
+   * @param maxKeyCount The key count.
+   * @param cacheConfig The current cache config.
+   * @return The writer for the mob file.
+   * @throws IOException
+   */
+  public static StoreFile.Writer createRefFileWriter(Configuration conf, FileSystem fs,
+    HColumnDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig)
+    throws IOException {
+    HFileContext hFileContext = new HFileContextBuilder().withIncludesMvcc(true)
+      .withIncludesTags(true).withCompression(family.getCompactionCompression())
+      .withCompressTags(family.shouldCompressTags()).withChecksumType(HStore.getChecksumType(conf))
+      .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(family.getBlocksize())
+      .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding()).build();
+    Path tempPath = new Path(basePath, UUID.randomUUID().toString().replaceAll("-", ""));
+    StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConfig, fs).withFilePath(tempPath)
+      .withComparator(KeyValue.COMPARATOR).withBloomType(family.getBloomFilterType())
+      .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
+    return w;
+  }
+
+  /**
+   * Creates a writer for the mob file in temp directory.
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param family The descriptor of the current column family.
+   * @param date The date string, its format is yyyymmmdd.
+   * @param basePath The basic path for a temp directory.
+   * @param maxKeyCount The key count.
+   * @param compression The compression algorithm.
+   * @param startKey The start key.
+   * @param cacheConfig The current cache config.
+   * @return The writer for the mob file.
+   * @throws IOException
+   */
+  public static StoreFile.Writer createWriter(Configuration conf, FileSystem fs,
+      HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
+      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig)
+      throws IOException {
+    MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID().toString()
+        .replaceAll("-", ""));
+    return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
+      cacheConfig);
+  }
+
+  /**
+   * Creates a writer for the del file in temp directory.
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param family The descriptor of the current column family.
+   * @param date The date string, its format is yyyymmmdd.
+   * @param basePath The basic path for a temp directory.
+   * @param maxKeyCount The key count.
+   * @param compression The compression algorithm.
+   * @param startKey The start key.
+   * @param cacheConfig The current cache config.
+   * @return The writer for the del file.
+   * @throws IOException
+   */
+  public static StoreFile.Writer createDelFileWriter(Configuration conf, FileSystem fs,
+      HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
+      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig)
+      throws IOException {
+    String suffix = UUID
+      .randomUUID().toString().replaceAll("-", "") + "_del";
+    MobFileName mobFileName = MobFileName.create(startKey, date, suffix);
+    return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
+      cacheConfig);
+  }
+
+  /**
+   * Creates a writer for the del file in temp directory.
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param family The descriptor of the current column family.
+   * @param mobFileName The mob file name.
+   * @param basePath The basic path for a temp directory.
+   * @param maxKeyCount The key count.
+   * @param compression The compression algorithm.
+   * @param cacheConfig The current cache config.
+   * @return The writer for the mob file.
+   * @throws IOException
+   */
+  private static StoreFile.Writer createWriter(Configuration conf, FileSystem fs,
+    HColumnDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
+    Compression.Algorithm compression, CacheConfig cacheConfig) throws IOException {
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-        .withIncludesMvcc(false).withIncludesTags(true)
-        .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
-        .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
-        .withBlockSize(family.getBlocksize()).withHBaseCheckSum(true)
-        .withDataBlockEncoding(family.getDataBlockEncoding()).build();
+      .withIncludesMvcc(false).withIncludesTags(true).withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+      .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).withBlockSize(family.getBlocksize())
+      .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding()).build();
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConfig, fs)
-        .withFilePath(new Path(basePath, mobFileName.getFileName()))
-        .withComparator(KeyValue.COMPARATOR).withBloomType(BloomType.NONE)
-        .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
+      .withFilePath(new Path(basePath, mobFileName.getFileName()))
+      .withComparator(KeyValue.COMPARATOR).withBloomType(BloomType.NONE)
+      .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
     return w;
   }
 
@@ -456,12 +550,13 @@ public class MobUtils {
    * @param path The path where the mob file is saved.
    * @param targetPath The directory path where the source file is renamed to.
    * @param cacheConfig The current cache config.
+   * @return The target file path the source file is renamed to.
    * @throws IOException
    */
-  public static void commitFile(Configuration conf, FileSystem fs, final Path sourceFile,
+  public static Path commitFile(Configuration conf, FileSystem fs, final Path sourceFile,
       Path targetPath, CacheConfig cacheConfig) throws IOException {
     if (sourceFile == null) {
-      return;
+      return null;
     }
     Path dstPath = new Path(targetPath, sourceFile.getName());
     validateMobFile(conf, fs, sourceFile, cacheConfig);
@@ -474,6 +569,7 @@ public class MobUtils {
     if (!fs.rename(sourceFile, dstPath)) {
       throw new IOException("Failed rename of " + sourceFile + " to " + dstPath);
     }
+    return dstPath;
   }
 
   /**

@@ -1517,4 +1517,55 @@ possible configurations would overwhelm and obscure the important.
       The default value is one day.
     </description>
   </property>
+  <property>
+    <name>hbase.mob.file.compaction.mergeable.threshold</name>
+    <value>201326592</value>
+    <description>
+      If the size of a mob file is less than this value, it's regarded as a small
+      file and needs to be merged in mob file compaction. The default value is 192MB.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.delfile.max.count</name>
+    <value>3</value>
+    <description>
+      The max number of del files that is allowed in the mob file compaction.
+      In the mob file compaction, when the number of existing del files is larger than
+      this value, they are merged until number of del files is not larger this value.
+      The default value is 3.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.file.compaction.batch.size</name>
+    <value>100</value>
+    <description>
+      The max number of the mob files that is allowed in a batch of the mob file compaction.
+      The mob file compaction merges the small mob files to bigger ones. If the number of the
+      small files is very large, it could lead to a "too many opened file handlers" in the merge.
+      And the merge has to be split into batches. This value limits the number of mob files
+      that are selected in a batch of the mob file compaction. The default value is 100.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.mob.file.compaction.chore.period</name>
+    <value>604800000</value>
+    <description>
+      The period that MobFileCompactionChore runs. The unit is millisecond.
+      The default value is one week.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.file.compactor.class</name>
+    <value>org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactor</value>
+    <description>
+      Implementation of mob file compactor, the default one is PartitionedMobFileCompactor.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.mob.file.compaction.chore.threads.max</name>
+    <value>1</value>
+    <description>
+      The max number of threads used in MobFileCompactionChore.
+    </description>
+  </property>
 </configuration>

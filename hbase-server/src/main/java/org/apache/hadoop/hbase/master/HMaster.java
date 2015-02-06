@@ -209,6 +209,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
   private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
+  private MobFileCompactionChore mobFileCompactChore;
 
   MasterCoprocessorHost cpHost;
 
@@ -613,6 +614,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     this.expiredMobFileCleanerChore = new ExpiredMobFileCleanerChore(this);
     Threads.setDaemonThreadRunning(expiredMobFileCleanerChore.getThread());
+    this.mobFileCompactChore = new MobFileCompactionChore(this);
+    Threads.setDaemonThreadRunning(mobFileCompactChore.getThread());
 
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
@@ -862,6 +865,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private void stopChores() {
     if (this.expiredMobFileCleanerChore != null) {
       this.expiredMobFileCleanerChore.interrupt();
+    }
+    if (this.mobFileCompactChore != null) {
+      this.mobFileCompactChore.interrupt();
     }
     if (this.balancerChore != null) {
       this.balancerChore.interrupt();

@@ -272,8 +272,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // 0 is passed as readpoint because the test bypasses Store
       0);
   }
-  
-  StoreScanner(final Scan scan, ScanInfo scanInfo,
+
+  public StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners, long earliestPutTs, long readPt)
           throws IOException {
