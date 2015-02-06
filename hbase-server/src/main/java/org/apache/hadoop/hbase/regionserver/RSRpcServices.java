@@ -779,6 +779,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       HConstants.DEFAULT_REGIONSERVER_PORT);
     // Creation of a HSA will force a resolve.
     InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
+    InetSocketAddress bindAddress = new InetSocketAddress(
+      rs.conf.get("hbase.regionserver.ipc.address", hostname), port);
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
@@ -787,7 +789,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // Set how many times to retry talking to another server over HConnection.
     ConnectionUtils.setServerSideHConnectionRetriesConfig(rs.conf, name, LOG);
     rpcServer = new RpcServer(rs, name, getServices(),
-      initialIsa, // BindAddress is IP we got for this server.
+      bindAddress, // use final bindAddress for this server.
       rs.conf,
       rpcSchedulerFactory.create(rs.conf, this, rs));
 
@@ -798,17 +800,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
 
-    // Set our address.
-    isa = rpcServer.getListenerAddress();
+    // Set our address, however we need the final port that was given to rpcServer
+    isa = new InetSocketAddress(initialIsa.getHostName(), rpcServer.getListenerAddress().getPort());
     rpcServer.setErrorHandler(this);
     rs.setName(name);
   }
 
   public static String getHostname(Configuration conf) throws UnknownHostException {
-    return conf.get("hbase.regionserver.ipc.address",
-        Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+    return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
             conf.get("hbase.regionserver.dns.interface", "default"),
-            conf.get("hbase.regionserver.dns.nameserver", "default"))));
+            conf.get("hbase.regionserver.dns.nameserver", "default")));
   }
 
   RegionScanner getScanner(long scannerId) {
