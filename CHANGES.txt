@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.0.0 02/11/2015
+Release Notes - HBase - Version 1.0.0 02/18/2015
 
 ** Sub-task
     * [HBASE-11852] - Still see "UnsupportedOperationException: CollectionUsage threshold is not supported"
@@ -19,6 +19,7 @@ Release Notes - HBase - Version 1.0.0 02/11/2015
     * [HBASE-12793] - [hbck] closeRegionSilentlyAndWait() should log cause of IOException and retry until  hbase.hbck.close.timeout expires
     * [HBASE-12802] - Remove unnecessary Table.flushCommits()
     * [HBASE-12926] - Backport HBASE-12688 (Update site with a bootstrap-based UI) for HBASE-12918
+    * [HBASE-12980] - Delete of a table may not clean all rows from hbase:meta
 
 ** Bug
     * [HBASE-8026] - HBase Shell docs for scan command does not reference VERSIONS
@@ -27,6 +28,7 @@ Release Notes - HBase - Version 1.0.0 02/11/2015
     * [HBASE-10528] - DefaultBalancer selects plans to move regions onto draining nodes
     * [HBASE-11979] - Compaction progress reporting is wrong
     * [HBASE-12028] - Abort the RegionServer, when it's handler threads die
+    * [HBASE-12108] - HBaseConfiguration: set classloader before loading xml files
     * [HBASE-12267] - Replace HTable constructor in mapreduce.* classes with ConnectionFactory 
     * [HBASE-12270] - A bug in the bucket cache, with cache blocks on write enabled
     * [HBASE-12339] - WAL performance evaluation tool doesn't roll logs
@@ -113,6 +115,7 @@ Release Notes - HBase - Version 1.0.0 02/11/2015
     * [HBASE-12881] - TestFastFail is not compatible with surefire.rerunFailingTestsCount
     * [HBASE-12886] - Correct tag option name in PerformanceEvaluation
     * [HBASE-12892] - Add a class to allow taking a snapshot from the command line
+    * [HBASE-12897] - Minimum memstore size is a percentage
     * [HBASE-12898] - Add in used undeclared dependencies
     * [HBASE-12901] - Possible deadlock while onlining a region and get region plan for other region run parallel
     * [HBASE-12904] - Threading issues in region_mover.rb
@@ -123,6 +126,11 @@ Release Notes - HBase - Version 1.0.0 02/11/2015
     * [HBASE-12919] - Compilation with Hadoop-2.4- is broken again
     * [HBASE-12925] - Use acl cache for doing access control checks in prepare and clean phases of Bulkloading.
     * [HBASE-12942] - After disabling the hfile block cache, Regionserver UI is throwing java.lang.NullPointerException
+    * [HBASE-12956] - Binding to 0.0.0.0 is broken after HBASE-10569
+    * [HBASE-12958] - SSH doing hbase:meta get but hbase:meta not assigned
+    * [HBASE-12962] - TestHFileBlockIndex.testBlockIndex() commented out during HBASE-10531
+    * [HBASE-12966] - NPE in HMaster while recovering tables in Enabling state
+    * [HBASE-12976] - Set default value for hbase.client.scanner.max.result.size
 
 ** Improvement
     * [HBASE-5699] - Run with > 1 WAL in HRegionServer
@@ -157,6 +165,7 @@ Release Notes - HBase - Version 1.0.0 02/11/2015
     * [HBASE-12893] - IntegrationTestBigLinkedListWithVisibility should use buffered writes
     * [HBASE-12899] - HBase should prefix htrace configuration keys with "hbase.htrace" rather than just "hbase."
     * [HBASE-12929] - TableMapReduceUtil.initTableMapperJob unnecessarily limits the types of outputKeyClass and outputValueClass
+    * [HBASE-12979] - Use setters instead of return values for handing back statistics from HRegion methods
 
 ** New Feature
     * [HBASE-10560] - Per cell TTLs
