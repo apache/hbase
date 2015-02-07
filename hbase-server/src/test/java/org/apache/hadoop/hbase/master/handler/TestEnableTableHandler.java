@@ -88,6 +88,7 @@ public class TestEnableTableHandler {
     // disable once more
     admin.disableTable(tableName);
 
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     // now stop region servers
     JVMClusterUtil.RegionServerThread rs = cluster.getRegionServerThreads().get(0);
     rs.getRegionServer().stop("stop");
