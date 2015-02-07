@@ -2770,6 +2770,48 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Waits for a table to be 'disabled'.  Disabled means that table is set as 'disabled'
+   * Will timeout after default period (30 seconds)
+   * @param table Table to wait on.
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  public void waitTableDisabled(byte[] table)
+      throws InterruptedException, IOException {
+    waitTableDisabled(getHBaseAdmin(), table, 30000);
+  }
+
+  public void waitTableDisabled(HBaseAdmin admin, byte[] table)
+      throws InterruptedException, IOException {
+    waitTableDisabled(admin, table, 30000);
+  }
+
+  /**
+   * Waits for a table to be 'disabled'.  Disabled means that table is set as 'disabled'
+   * @param table Table to wait on.
+   * @param timeoutMillis Time to wait on it being marked disabled.
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  public void waitTableDisabled(byte[] table, long timeoutMillis)
+      throws InterruptedException, IOException {
+    waitTableDisabled(getHBaseAdmin(), table, timeoutMillis);
+  }
+
+  public void waitTableDisabled(HBaseAdmin admin, byte[] table, long timeoutMillis)
+      throws InterruptedException, IOException {
+    TableName tableName = TableName.valueOf(table);
+    long startWait = System.currentTimeMillis();
+    while (!admin.isTableDisabled(tableName)) {
+      assertTrue("Timed out waiting for table to become disabled " +
+              Bytes.toStringBinary(table),
+          System.currentTimeMillis() - startWait < timeoutMillis);
+      Thread.sleep(200);
+    }
+  }
+
+  /**
+   * 
    * Make sure that at least the specified number of region servers
    * are running
    * @param num minimum number of region servers that should be running
@@ -3515,4 +3557,5 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     return supportedAlgos.toArray(new Algorithm[supportedAlgos.size()]);
   }
+
 }
