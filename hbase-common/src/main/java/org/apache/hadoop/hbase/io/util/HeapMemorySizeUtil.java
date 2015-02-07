@@ -79,10 +79,10 @@ public class HeapMemorySizeUtil {
   public static float getGlobalMemStorePercent(final Configuration c, final boolean logInvalid) {
     float limit = c.getFloat(MEMSTORE_SIZE_KEY,
         c.getFloat(MEMSTORE_SIZE_OLD_KEY, DEFAULT_MEMSTORE_SIZE));
-    if (limit > 0.8f || limit < 0.05f) {
+    if (limit > 0.8f || limit <= 0.0f) {
       if (logInvalid) {
         LOG.warn("Setting global memstore limit to default of " + DEFAULT_MEMSTORE_SIZE
-            + " because supplied value outside allowed range of 0.05 -> 0.8");
+            + " because supplied value outside allowed range of (0 -> 0.8]");
       }
       limit = DEFAULT_MEMSTORE_SIZE;
     }
