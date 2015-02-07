@@ -123,6 +123,12 @@ message FlushDescriptor {
   repeated StoreFlushDescriptor store_flushes = 5;
 }
 
+message StoreDescriptor {
+  required bytes family_name = 1;
+  required string store_home_dir = 2; //relative to region dir
+  repeated string store_file = 3; // relative to store dir
+}
+
 /**
  * Special WAL entry to hold all related to a region event (open/close).
  */
@@ -130,12 +136,6 @@ message RegionEventDescriptor {
   enum EventType {
     REGION_OPEN = 0;
     REGION_CLOSE = 1;
-  }
-
-  message StoreDescriptor {
-    required bytes family_name = 1;
-    required string store_home_dir = 2; //relative to region dir
-    repeated string store_file = 3; // relative to store dir
   }
 
   required EventType event_type = 1;
