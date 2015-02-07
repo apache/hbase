@@ -1648,20 +1648,9 @@ public class HBaseFsck extends Configured {
    */
   private void checkAndFixConsistency()
   throws IOException, KeeperException, InterruptedException {
-    List<WorkItemRegionConsistency> workItems =
-        Lists.newArrayListWithExpectedSize(regionInfoMap.size());
-    for (java.util.Map.Entry<String, HbckInfo> e : regionInfoMap.entrySet()) {
-      workItems.add(new WorkItemRegionConsistency(e.getKey(), e.getValue()));
+    for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
+      checkRegionConsistency(e.getKey(), e.getValue());
     }
-    List<Future<Void>> workFutures = executor.invokeAll(workItems);
-    for(Future<Void> f: workFutures) {
-      try {
-        f.get();
-      } catch(ExecutionException e) {
-        LOG.warn("Could not check region consistency " , e.getCause());
-      }
-    }
-    LOG.info("Completed checks for " + regionInfoMap.size() + " regions");
   }
 
   private void preCheckPermission() throws IOException, AccessDeniedException {
@@ -2238,22 +2227,6 @@ public class HBaseFsck extends Configured {
       return null;
     }
   };
-
-  class WorkItemRegionConsistency implements Callable<Void> {
-    private final String key;
-    private final HbckInfo hbi;
-
-    WorkItemRegionConsistency(String key, HbckInfo hbi) {
-      this.key = key;
-      this.hbi = hbi;
-    }
-
-    @Override
-    public synchronized Void call() throws Exception {
-      checkRegionConsistency(key, hbi);
-      return null;
-    }
-  }
 
 
   /**
