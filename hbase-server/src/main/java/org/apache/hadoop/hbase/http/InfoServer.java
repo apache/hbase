@@ -54,15 +54,25 @@ public class InfoServer {
   public InfoServer(String name, String bindAddress, int port, boolean findPort,
       final Configuration c)
   throws IOException {
+    HttpConfig httpConfig = new HttpConfig(c);
     HttpServer.Builder builder =
       new org.apache.hadoop.hbase.http.HttpServer.Builder();
-    builder
-      .setName(name)
-      .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
-      .setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
-    String logDir = System.getProperty("hbase.log.dir");
-    if (logDir != null) {
-      builder.setLogDir(logDir);
+
+      builder.setName(name).addEndpoint(URI.create(httpConfig.getSchemePrefix() +
+        bindAddress + ":" +
+        port)).setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
+      String logDir = System.getProperty("hbase.log.dir");
+      if (logDir != null) {
+        builder.setLogDir(logDir);
+      }
+    if (httpConfig.isSecure()) {
+    builder.keyPassword(c.get("ssl.server.keystore.keypassword"))
+      .keyStore(c.get("ssl.server.keystore.location"),
+        c.get("ssl.server.keystore.password"),
+        c.get("ssl.server.keystore.type", "jks"))
+      .trustStore(c.get("ssl.server.truststore.location"),
+        c.get("ssl.server.truststore.password"),
+        c.get("ssl.server.truststore.type", "jks"));
     }
     this.httpServer = builder.build();
   }
