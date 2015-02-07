@@ -1694,21 +1694,11 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void checkAndFixConsistency()
   throws IOException, KeeperException, InterruptedException {
-    // Divide the checks in two phases. One for default/primary replicas and another
-    // for the non-primary ones. Keeps code cleaner this way.
-    List<WorkItemRegionConsistency> workItems =
-        new ArrayList<WorkItemRegionConsistency>(regionInfoMap.size());
+	  // Divide the checks in two phases. One for default/primary replicas and another
+	  // for the non-primary ones. Keeps code cleaner this way.
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
       if (e.getValue().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
-        workItems.add(new WorkItemRegionConsistency(e.getKey(), e.getValue()));
-      }
-    }
-    List<Future<Void>> workFutures = executor.invokeAll(workItems);
-    for(Future<Void> f: workFutures) {
-      try {
-        f.get();
-      } catch(ExecutionException e1) {
-        LOG.warn("Could not check region consistency " , e1.getCause());
+        checkRegionConsistency(e.getKey(), e.getValue());
       }
     }
     boolean prevHdfsCheck = shouldCheckHdfs();
@@ -2358,22 +2348,6 @@ public class HBaseFsck extends Configured implements Closeable {
       return null;
     }
   };
-
-  class WorkItemRegionConsistency implements Callable<Void> {
-    private final String key;
-    private final HbckInfo hbi;
-
-    WorkItemRegionConsistency(String key, HbckInfo hbi) {
-      this.key = key;
-      this.hbi = hbi;
-    }
-
-    @Override
-    public synchronized Void call() throws Exception {
-      checkRegionConsistency(key, hbi);
-      return null;
-    }
-  }
 
 
   /**
