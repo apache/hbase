@@ -612,15 +612,29 @@ public abstract class SecureServer extends HBaseServer {
       DataInputStream dis =
         new DataInputStream(new ByteArrayInputStream(buf));
       int id = dis.readInt();                    // try to read an id
+      long callSize = buf.length;
 
       if (LOG.isTraceEnabled()) {
         LOG.trace(" got #" + id);
       }
 
+      // Enforcing the call queue size, this triggers a retry in the client
+      if ((callSize + callQueueSize.get()) > maxQueueSize) {
+        final SecureCall callTooBig =
+          new SecureCall(id, null, this, responder, callSize);
+        ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
+        setupResponse(responseBuffer, callTooBig, Status.FATAL, null,
+            IOException.class.getName(),
+            "Call queue is full, is ipc.server.max.callqueue.size too small?");
+        responder.doRespond(callTooBig);
+        return;
+      }
+
       Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
       param.readFields(dis);
 
-      SecureCall call = new SecureCall(id, param, this, responder, buf.length);
+      SecureCall call = new SecureCall(id, param, this, responder, callSize);
+      callQueueSize.add(callSize);
 
       if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
         priorityCallQueue.put(call);

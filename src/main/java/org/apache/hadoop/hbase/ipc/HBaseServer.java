@@ -204,7 +204,7 @@ public abstract class HBaseServer implements RpcServer {
   protected Configuration conf;
 
   private int maxQueueLength;
-  private int maxQueueSize;
+  protected int maxQueueSize;
   protected int socketSendBufferSize;
   protected final boolean tcpNoDelay;   // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
@@ -1606,7 +1606,7 @@ public abstract class HBaseServer implements RpcServer {
    * @param error error message, if the call failed
    * @throws IOException
    */
-  private void setupResponse(ByteArrayOutputStream response,
+  protected void setupResponse(ByteArrayOutputStream response,
                              Call call, Status status,
                              Writable rv, String errorClass, String error)
   throws IOException {
