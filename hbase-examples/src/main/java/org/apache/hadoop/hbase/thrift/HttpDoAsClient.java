@@ -248,12 +248,6 @@ public class HttpDoAsClient {
     System.out.println("row: " + utf8(rowResult.row.array()) + ", cols: " + rowStr);
   }
 
-  private void printRow(List<TRowResult> rows) {
-    for (TRowResult rowResult : rows) {
-      printRow(rowResult);
-    }
-  }
-
   static Subject getSubject() throws Exception {
     if (!secure) return new Subject();
     /*

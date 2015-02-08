@@ -82,7 +82,7 @@ public class WALCellCodec implements Codec {
   static String getWALCellCodecClass(Configuration conf) {
     return conf.get(WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
   }
-  
+
   /**
    * Create and setup a {@link WALCellCodec} from the {@code cellCodecClsName} and
    * CompressionContext, if {@code cellCodecClsName} is specified.
@@ -106,7 +106,7 @@ public class WALCellCodec implements Codec {
   }
 
   /**
-   * Create and setup a {@link WALCellCodec} from the 
+   * Create and setup a {@link WALCellCodec} from the
    * CompressionContext.
    * Cell Codec classname is read from {@link Configuration}.
    * Fully prepares the codec for use.
@@ -122,7 +122,7 @@ public class WALCellCodec implements Codec {
     return ReflectionUtils.instantiateWithCustomCtor(cellCodecClsName, new Class[]
         { Configuration.class, CompressionContext.class }, new Object[] { conf, compression });
   }
-  
+
   public interface ByteStringCompressor {
     ByteString compress(byte[] data, Dictionary dict) throws IOException;
   }
@@ -249,7 +249,7 @@ public class WALCellCodec implements Codec {
     protected Cell parseCell() throws IOException {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
-      
+
       int tagsLength = StreamUtils.readRawVarint32(in);
       int length = 0;
       if(tagsLength == 0) {
@@ -328,7 +328,7 @@ public class WALCellCodec implements Codec {
     }
   }
 
-  public class EnsureKvEncoder extends BaseEncoder {
+  public static class EnsureKvEncoder extends BaseEncoder {
     public EnsureKvEncoder(OutputStream out) {
       super(out);
     }

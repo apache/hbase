@@ -61,8 +61,8 @@ import com.google.common.collect.Sets;
 
 /**
  * The base class for load balancers. It provides the the functions used to by
- * {@link org.apache.hadoop.hbase.master.AssignmentManager} to assign regions 
- * in the edge cases. It doesn't provide an implementation of the 
+ * {@link org.apache.hadoop.hbase.master.AssignmentManager} to assign regions
+ * in the edge cases. It doesn't provide an implementation of the
  * actual balancing algorithm.
  *
  */
@@ -138,8 +138,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int numRegions;
 
     int numMovedRegions = 0; //num moved regions from the initial configuration
-    // num of moved regions away from master that should be on the master
-    int numMovedMetaRegions = 0;       //num of moved regions that are META
     Map<ServerName, List<HRegionInfo>> clusterState;
 
     protected final RackManager rackManager;

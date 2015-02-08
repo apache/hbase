@@ -85,7 +85,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
     if (keysParentZNode.equals(ZKUtil.getParent(path))) {
       String keyId = ZKUtil.getNodeName(path);
       try {
-        Integer id = new Integer(keyId);
+        Integer id = Integer.valueOf(keyId);
         secretManager.removeKey(id);
       } catch (NumberFormatException nfe) {
         LOG.error("Invalid znode name for key ID '"+keyId+"'", nfe);
