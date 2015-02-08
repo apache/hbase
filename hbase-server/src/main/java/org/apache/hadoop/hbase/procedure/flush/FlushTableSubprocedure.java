@@ -53,7 +53,7 @@ public class FlushTableSubprocedure extends Subprocedure {
     this.taskManager = taskManager;
   }
 
-  private class RegionFlushTask implements Callable<Void> {
+  private static class RegionFlushTask implements Callable<Void> {
     HRegion region;
     RegionFlushTask(HRegion region) {
       this.region = region;

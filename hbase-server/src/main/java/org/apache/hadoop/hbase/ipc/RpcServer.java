@@ -1869,8 +1869,9 @@ public class RpcServer implements RpcServerInterface {
    * instance else pass null for no authentication check.
    * @param name Used keying this rpc servers' metrics and for naming the Listener thread.
    * @param services A list of services.
-   * @param bindAddres Where to listen
-   * @throws IOException
+   * @param bindAddress Where to listen
+   * @param conf
+   * @param scheduler
    */
   public RpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,

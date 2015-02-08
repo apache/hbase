@@ -1452,7 +1452,7 @@ public class HRegionServer extends HasThread implements
     }
   }
 
-  class PeriodicMemstoreFlusher extends Chore {
+  static class PeriodicMemstoreFlusher extends Chore {
     final HRegionServer server;
     final static int RANGE_OF_DELAY = 20000; //millisec
     final static int MIN_DELAY_TIME = 3000; //millisec
