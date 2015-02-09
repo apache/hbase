@@ -1369,7 +1369,8 @@ public class FSHLog implements WAL {
             LOG.warn("HDFS pipeline error detected. " + "Found "
                 + numCurrentReplicas + " replicas but expecting no less than "
                 + this.minTolerableReplication + " replicas. "
-                + " Requesting close of wal.");
+                + " Requesting close of wal. current pipeline: "
+                + Arrays.toString(getPipeLine()));
             logRollNeeded = true;
             // If rollWriter is requested, increase consecutiveLogRolls. Once it
             // is larger than lowReplicationRollLimit, disable the
