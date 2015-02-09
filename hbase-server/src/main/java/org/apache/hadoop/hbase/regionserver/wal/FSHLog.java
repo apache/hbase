@@ -1403,7 +1403,8 @@ class FSHLog implements HLog, Syncable {
             LOG.warn("HDFS pipeline error detected. " + "Found "
                 + numCurrentReplicas + " replicas but expecting no less than "
                 + this.minTolerableReplication + " replicas. "
-                + " Requesting close of hlog.");
+                + " Requesting close of hlog. current pipeline: "
+                + Arrays.toString(getPipeLine()));
             logRollNeeded = true;
             // If rollWriter is requested, increase consecutiveLogRolls. Once it
             // is larger than lowReplicationRollLimit, disable the
