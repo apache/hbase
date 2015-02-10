@@ -167,11 +167,12 @@ public class TestBlockReorder {
           public void reorderBlocks(Configuration c, LocatedBlocks lbs, String src) {
             for (LocatedBlock lb : lbs.getLocatedBlocks()) {
               if (lb.getLocations().length > 1) {
-                if (lb.getLocations()[0].getHostName().equals(lookup)) {
+                DatanodeInfo[] infos = lb.getLocations();
+                if (infos[0].getHostName().equals(lookup)) {
                   LOG.info("HFileSystem bad host, inverting");
-                  DatanodeInfo tmp = lb.getLocations()[0];
-                  lb.getLocations()[0] = lb.getLocations()[1];
-                  lb.getLocations()[1] = tmp;
+                  DatanodeInfo tmp = infos[0];
+                  infos[0] = infos[1];
+                  infos[1] = tmp;
                 }
               }
             }
