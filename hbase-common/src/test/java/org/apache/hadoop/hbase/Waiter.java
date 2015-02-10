@@ -207,11 +207,11 @@ public final class Waiter {
         } else if (failIfTimeout) {
           String msg = getExplanation(predicate);
           fail(MessageFormat
-              .format("Waiting timed out after [{0}] msec" + msg, adjustedTimeout));
+              .format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
         } else {
           String msg = getExplanation(predicate);
           LOG.warn(
-              MessageFormat.format("Waiting timed out after [{0}] msec" + msg, adjustedTimeout));
+              MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout) + msg);
         }
       }
       return (eval || interrupted) ? (System.currentTimeMillis() - started) : -1;
