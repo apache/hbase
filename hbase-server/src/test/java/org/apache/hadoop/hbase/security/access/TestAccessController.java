@@ -927,11 +927,9 @@ public class TestAccessController extends SecureTestUtil {
       setPermission(loadPath, FsPermission.valueOf("-rwxrwxrwx"));
 
       try (HTable table = (HTable)TEST_UTIL.getConnection().getTable(tableName)) {
-        try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
-          TEST_UTIL.waitTableEnabled(admin, tableName.getName());
-          LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
-          loader.doBulkLoad(loadPath, table);
-        }
+        TEST_UTIL.waitTableEnabled(tableName);
+        LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+        loader.doBulkLoad(loadPath, table);
       }
     }
 

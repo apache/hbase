@@ -635,13 +635,7 @@ public class SnapshotTestingUtils {
       region.waitForFlushesAndCompactions();
     }
     // Wait up to 60 seconds for a table to be available.
-    final HBaseAdmin hBaseAdmin = util.getHBaseAdmin();
-    util.waitFor(60000, new Waiter.Predicate<IOException>() {
-      @Override
-      public boolean evaluate() throws IOException {
-        return hBaseAdmin.isTableAvailable(tableName);
-      }
-    });
+    util.waitFor(60000, util.predicateTableAvailable(tableName));
   }
 
   public static void createTable(final HBaseTestingUtility util, final TableName tableName,
