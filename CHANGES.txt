@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.0.0 02/18/2015
+Release Notes - HBase - Version 1.0.0 02/20/2015
 
 ** Sub-task
     * [HBASE-11852] - Still see "UnsupportedOperationException: CollectionUsage threshold is not supported"
@@ -131,6 +131,9 @@ Release Notes - HBase - Version 1.0.0 02/18/2015
     * [HBASE-12962] - TestHFileBlockIndex.testBlockIndex() commented out during HBASE-10531
     * [HBASE-12966] - NPE in HMaster while recovering tables in Enabling state
     * [HBASE-12976] - Set default value for hbase.client.scanner.max.result.size
+    * [HBASE-12984] - SSL cannot be used by the InfoPort after removing deprecated code in HBASE-10336
+    * [HBASE-12985] - Javadoc warning and findbugs fixes to get us green again
+    * [HBASE-12998] - Compilation with Hdfs-2.7.0-SNAPSHOT is broken after HDFS-7647
 
 ** Improvement
     * [HBASE-5699] - Run with > 1 WAL in HRegionServer
@@ -165,6 +168,7 @@ Release Notes - HBase - Version 1.0.0 02/18/2015
     * [HBASE-12893] - IntegrationTestBigLinkedListWithVisibility should use buffered writes
     * [HBASE-12899] - HBase should prefix htrace configuration keys with "hbase.htrace" rather than just "hbase."
     * [HBASE-12929] - TableMapReduceUtil.initTableMapperJob unnecessarily limits the types of outputKeyClass and outputValueClass
+    * [HBASE-12973] - RegionCoprocessorEnvironment should provide HRegionInfo directly
     * [HBASE-12979] - Use setters instead of return values for handing back statistics from HRegion methods
 
 ** New Feature
