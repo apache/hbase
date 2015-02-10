@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -229,6 +230,11 @@ public class TestTokenAuthentication {
         @Override
         public ClassLoader getClassLoader() {
           return Thread.currentThread().getContextClassLoader();
+        }
+
+        @Override
+        public HRegionInfo getRegionInfo() {
+          return null;
         }
       });
 
