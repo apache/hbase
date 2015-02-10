@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -35,15 +36,23 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 @InterfaceAudience.Private
 public class TableDescriptor {
   private HTableDescriptor hTableDescriptor;
+  /**
+   * Don't use, state was moved to meta, use MetaTableAccessor instead
+   * @deprecated state was moved to meta
+   */
+  @Deprecated
+  @Nullable
   private TableState.State tableState;
 
   /**
    * Creates TableDescriptor with all fields.
    * @param hTableDescriptor HTableDescriptor to use
    * @param tableState table state
+   * @deprecated state was moved to meta
    */
+  @Deprecated
   public TableDescriptor(HTableDescriptor hTableDescriptor,
-      TableState.State tableState) {
+      @Nullable TableState.State tableState) {
     this.hTableDescriptor = hTableDescriptor;
     this.tableState = tableState;
   }
@@ -69,22 +78,35 @@ public class TableDescriptor {
     this.hTableDescriptor = hTableDescriptor;
   }
 
+  /**
+   * @return table state
+   * @deprecated state was moved to meta
+   */
+  @Deprecated
+  @Nullable
   public TableState.State getTableState() {
     return tableState;
   }
 
-  public void setTableState(TableState.State tableState) {
+  /**
+   * @param tableState state to set for table
+   * @deprecated state was moved to meta
+   */
+  @Deprecated
+  public void setTableState(@Nullable TableState.State tableState) {
     this.tableState = tableState;
   }
 
   /**
    * Convert to PB.
    */
+  @SuppressWarnings("deprecation")
   public HBaseProtos.TableDescriptor convert() {
-    return HBaseProtos.TableDescriptor.newBuilder()
-        .setSchema(hTableDescriptor.convert())
-        .setState(tableState.convert())
-        .build();
+    HBaseProtos.TableDescriptor.Builder builder = HBaseProtos.TableDescriptor.newBuilder()
+        .setSchema(hTableDescriptor.convert());
+    if (tableState!= null)
+      builder.setState(tableState.convert());
+    return builder.build();
   }
 
   /**
@@ -92,7 +114,9 @@ public class TableDescriptor {
    */
   public static TableDescriptor convert(HBaseProtos.TableDescriptor proto) {
     HTableDescriptor hTableDescriptor = HTableDescriptor.convert(proto.getSchema());
-    TableState.State state = TableState.State.convert(proto.getState());
+    TableState.State state = proto.hasState()?
+        TableState.State.convert(proto.getState())
+        :null;
     return new TableDescriptor(hTableDescriptor, state);
   }
 
@@ -165,6 +189,17 @@ public class TableDescriptor {
                 .setInMemory(true)
                 .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
                     HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+                .setBloomFilterType(BloomType.NONE)
+                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                    // e.g. if using CombinedBlockCache (BucketCache).
+                .setCacheDataInL1(true),
+            new HColumnDescriptor(HConstants.TABLE_FAMILY)
+                // Ten is arbitrary number.  Keep versions to help debugging.
+                .setMaxVersions(10)
+                .setInMemory(true)
+                .setBlocksize(8 * 1024)
                 .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
                     // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
                 .setBloomFilterType(BloomType.NONE)

@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
@@ -171,20 +173,30 @@ public class TableState {
   public HBaseProtos.TableState convert() {
     return HBaseProtos.TableState.newBuilder()
         .setState(this.state.convert())
-        .setTable(ProtobufUtil.toProtoTableName(this.tableName))
+        .setTable(ProtobufUtil.toProtoTableName(this.tableName)) // set for backward compatibility
         .setTimestamp(this.timestamp)
             .build();
   }
 
   /**
    * Covert from PB version of TableState
+   *
+   * @param tableName table this state of
    * @param tableState convert from
    * @return POJO
    */
-  public static TableState convert(HBaseProtos.TableState tableState) {
+  public static TableState convert(TableName tableName, HBaseProtos.TableState tableState) {
     TableState.State state = State.convert(tableState.getState());
-    return new TableState(ProtobufUtil.toTableName(tableState.getTable()),
-        state, tableState.getTimestamp());
+    return new TableState(tableName, state, tableState.getTimestamp());
+  }
+
+  public static TableState parseFrom(TableName tableName, byte[] bytes)
+      throws DeserializationException {
+    try {
+      return convert(tableName, HBaseProtos.TableState.parseFrom(bytes));
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
   }
 
   /**
@@ -199,5 +211,37 @@ public class TableState {
         return true;
     }
     return false;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    TableState that = (TableState) o;
+
+    if (timestamp != that.timestamp) return false;
+    if (state != that.state) return false;
+    if (tableName != null ? !tableName.equals(that.tableName) : that.tableName != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = (int) (timestamp ^ (timestamp >>> 32));
+    result = 31 * result + (tableName != null ? tableName.hashCode() : 0);
+    result = 31 * result + (state != null ? state.hashCode() : 0);
+    return result;
+  }
+
+  @Override
+  public String toString() {
+    return "TableState{" +
+        "timestamp=" + timestamp +
+        ", tableName=" + tableName +
+        ", state=" + state +
+        '}';
   }
 }

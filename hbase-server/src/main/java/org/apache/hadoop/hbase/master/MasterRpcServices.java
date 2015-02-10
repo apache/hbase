@@ -850,8 +850,6 @@ public class MasterRpcServices extends RSRpcServices
       TableName tableName = ProtobufUtil.toTableName(request.getTableName());
       TableState.State state = master.getTableStateManager()
               .getTableState(tableName);
-      if (state == null)
-        throw new TableNotFoundException(tableName);
       MasterProtos.GetTableStateResponse.Builder builder =
               MasterProtos.GetTableStateResponse.newBuilder();
       builder.setTableState(new TableState(tableName, state).convert());

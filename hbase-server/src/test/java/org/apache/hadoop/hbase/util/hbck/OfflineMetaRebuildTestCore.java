@@ -285,16 +285,9 @@ public class OfflineMetaRebuildTestCore {
    * @return # of entries in meta.
    */
   protected int scanMeta() throws IOException {
-    int count = 0;
-    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
-    ResultScanner scanner = meta.getScanner(new Scan());
-    LOG.info("Table: " + meta.getName());
-    for (Result res : scanner) {
-      LOG.info(Bytes.toString(res.getRow()));
-      count++;
-    }
-    meta.close();
-    return count;
+    LOG.info("Scanning META");
+    MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
+    return MetaTableAccessor.fullScanRegions(TEST_UTIL.getConnection()).size();
   }
 
   protected HTableDescriptor[] getTables(final Configuration configuration) throws IOException {

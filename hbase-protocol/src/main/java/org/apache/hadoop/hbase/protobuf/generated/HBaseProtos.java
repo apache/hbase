@@ -3450,15 +3450,15 @@ public final class HBaseProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder getSchemaOrBuilder();
 
-    // optional .TableState.State state = 2 [default = ENABLED];
+    // optional .TableState.State state = 2 [default = ENABLED, deprecated = true];
     /**
-     * <code>optional .TableState.State state = 2 [default = ENABLED];</code>
+     * <code>optional .TableState.State state = 2 [default = ENABLED, deprecated = true];</code>
      */
-    boolean hasState();
+    @java.lang.Deprecated boolean hasState();
     /**
-     * <code>optional .TableState.State state = 2 [default = ENABLED];</code>
+     * <code>optional .TableState.State state = 2 [default = ENABLED, deprecated = true];</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State getState();
+    @java.lang.Deprecated org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State getState();
   }
   /**
    * Protobuf type {@code TableDescriptor}
@@ -3601,19 +3601,19 @@ public final class HBaseProtos {
       return schema_;
     }
 
-    // optional .TableState.State state = 2 [default = ENABLED];
+    // optional .TableState.State state = 2 [default = ENABLED, deprecated = true];
     public static final int STATE_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State state_;
     /**
-     * <code>optional .TableState.State state = 2 [default = ENABLED];</code>
+     * <code>optional .TableState.State state = 2 [default = ENABLED, deprecated = true];</code>
      */
-    public boolean hasState() {
+    @java.lang.Deprecated public boolean hasState() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .TableState.State state = 2 [default = ENABLED];</code>
+     * <code>optional .TableState.State state = 2 [default = ENABLED, deprecated = true];</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State getState() {
+    @java.lang.Deprecated public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State getState() {
       return state_;
     }
 
@@ -4054,24 +4054,24 @@ public final class HBaseProtos {
         return schemaBuilder_;
       }
 
-      // optional .TableState.State state = 2 [default = ENABLED];
+      // optional .TableState.State state = 2 [default = ENABLED, deprecated = true];
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State state_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State.ENABLED;
       /**
-       * <code>optional .TableState.State state = 2 [default = ENABLED];</code>
+       * <code>optional .TableState.State state = 2 [default = ENABLED, deprecated = true];</code>
        */
-      public boolean hasState() {
+      @java.lang.Deprecated public boolean hasState() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .TableState.State state = 2 [default = ENABLED];</code>
+       * <code>optional .TableState.State state = 2 [default = ENABLED, deprecated = true];</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State getState() {
+      @java.lang.Deprecated public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State getState() {
         return state_;
       }
       /**
-       * <code>optional .TableState.State state = 2 [default = ENABLED];</code>
+       * <code>optional .TableState.State state = 2 [default = ENABLED, deprecated = true];</code>
        */
-      public Builder setState(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State value) {
+      @java.lang.Deprecated public Builder setState(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State value) {
         if (value == null) {
           throw new NullPointerException();
         }
@@ -4081,9 +4081,9 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>optional .TableState.State state = 2 [default = ENABLED];</code>
+       * <code>optional .TableState.State state = 2 [default = ENABLED, deprecated = true];</code>
        */
-      public Builder clearState() {
+      @java.lang.Deprecated public Builder clearState() {
         bitField0_ = (bitField0_ & ~0x00000002);
         state_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableState.State.ENABLED;
         onChanged();
@@ -18197,52 +18197,52 @@ public final class HBaseProtos {
       "TableState.State\022\031\n\005table\030\002 \002(\0132\n.TableN" +
       "ame\022\021\n\ttimestamp\030\003 \001(\004\"?\n\005State\022\013\n\007ENABL" +
       "ED\020\000\022\014\n\010DISABLED\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENA",
-      "BLING\020\003\"Z\n\017TableDescriptor\022\034\n\006schema\030\001 \002" +
-      "(\0132\014.TableSchema\022)\n\005state\030\002 \001(\0162\021.TableS" +
-      "tate.State:\007ENABLED\"o\n\022ColumnFamilySchem" +
-      "a\022\014\n\004name\030\001 \002(\014\022#\n\nattributes\030\002 \003(\0132\017.By" +
-      "tesBytesPair\022&\n\rconfiguration\030\003 \003(\0132\017.Na" +
-      "meStringPair\"\232\001\n\nRegionInfo\022\021\n\tregion_id" +
-      "\030\001 \002(\004\022\036\n\ntable_name\030\002 \002(\0132\n.TableName\022\021" +
-      "\n\tstart_key\030\003 \001(\014\022\017\n\007end_key\030\004 \001(\014\022\017\n\007of" +
-      "fline\030\005 \001(\010\022\r\n\005split\030\006 \001(\010\022\025\n\nreplica_id" +
-      "\030\007 \001(\005:\0010\"1\n\014FavoredNodes\022!\n\014favored_nod",
-      "e\030\001 \003(\0132\013.ServerName\"\225\001\n\017RegionSpecifier" +
-      "\0222\n\004type\030\001 \002(\0162$.RegionSpecifier.RegionS" +
-      "pecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023RegionSpe" +
-      "cifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCODED_R" +
-      "EGION_NAME\020\002\"%\n\tTimeRange\022\014\n\004from\030\001 \001(\004\022" +
-      "\n\n\002to\030\002 \001(\004\"A\n\nServerName\022\021\n\thost_name\030\001" +
-      " \002(\t\022\014\n\004port\030\002 \001(\r\022\022\n\nstart_code\030\003 \001(\004\"\033" +
-      "\n\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-\n\016NameStrin" +
-      "gPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNa" +
-      "meBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014",
-      "\"/\n\016BytesBytesPair\022\r\n\005first\030\001 \002(\014\022\016\n\006sec" +
-      "ond\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n\004name\030\001 \001(\t" +
-      "\022\r\n\005value\030\002 \001(\003\"\314\001\n\023SnapshotDescription\022" +
-      "\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcreation" +
-      "_time\030\003 \001(\003:\0010\022.\n\004type\030\004 \001(\0162\031.SnapshotD" +
-      "escription.Type:\005FLUSH\022\017\n\007version\030\005 \001(\005\022" +
-      "\r\n\005owner\030\006 \001(\t\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005" +
-      "FLUSH\020\001\022\r\n\tSKIPFLUSH\020\002\"}\n\024ProcedureDescr" +
-      "iption\022\021\n\tsignature\030\001 \002(\t\022\020\n\010instance\030\002 " +
-      "\001(\t\022\030\n\rcreation_time\030\003 \001(\003:\0010\022&\n\rconfigu",
-      "ration\030\004 \003(\0132\017.NameStringPair\"\n\n\010EmptyMs" +
-      "g\"\033\n\007LongMsg\022\020\n\010long_msg\030\001 \002(\003\"\037\n\tDouble" +
-      "Msg\022\022\n\ndouble_msg\030\001 \002(\001\"\'\n\rBigDecimalMsg" +
-      "\022\026\n\016bigdecimal_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016leas" +
-      "t_sig_bits\030\001 \002(\004\022\025\n\rmost_sig_bits\030\002 \002(\004\"" +
-      "K\n\023NamespaceDescriptor\022\014\n\004name\030\001 \002(\014\022&\n\r" +
-      "configuration\030\002 \003(\0132\017.NameStringPair\"$\n\020" +
-      "RegionServerInfo\022\020\n\010infoPort\030\001 \001(\005*r\n\013Co" +
-      "mpareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t" +
-      "\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_E",
-      "QUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUn" +
-      "it\022\017\n\013NANOSECONDS\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n" +
-      "\014MILLISECONDS\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020" +
-      "\005\022\t\n\005HOURS\020\006\022\010\n\004DAYS\020\007B>\n*org.apache.had" +
-      "oop.hbase.protobuf.generatedB\013HBaseProto" +
-      "sH\001\240\001\001"
+      "BLING\020\003\"^\n\017TableDescriptor\022\034\n\006schema\030\001 \002" +
+      "(\0132\014.TableSchema\022-\n\005state\030\002 \001(\0162\021.TableS" +
+      "tate.State:\007ENABLEDB\002\030\001\"o\n\022ColumnFamilyS" +
+      "chema\022\014\n\004name\030\001 \002(\014\022#\n\nattributes\030\002 \003(\0132" +
+      "\017.BytesBytesPair\022&\n\rconfiguration\030\003 \003(\0132" +
+      "\017.NameStringPair\"\232\001\n\nRegionInfo\022\021\n\tregio" +
+      "n_id\030\001 \002(\004\022\036\n\ntable_name\030\002 \002(\0132\n.TableNa" +
+      "me\022\021\n\tstart_key\030\003 \001(\014\022\017\n\007end_key\030\004 \001(\014\022\017" +
+      "\n\007offline\030\005 \001(\010\022\r\n\005split\030\006 \001(\010\022\025\n\nreplic" +
+      "a_id\030\007 \001(\005:\0010\"1\n\014FavoredNodes\022!\n\014favored",
+      "_node\030\001 \003(\0132\013.ServerName\"\225\001\n\017RegionSpeci" +
+      "fier\0222\n\004type\030\001 \002(\0162$.RegionSpecifier.Reg" +
+      "ionSpecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023Regio" +
+      "nSpecifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCOD" +
+      "ED_REGION_NAME\020\002\"%\n\tTimeRange\022\014\n\004from\030\001 " +
+      "\001(\004\022\n\n\002to\030\002 \001(\004\"A\n\nServerName\022\021\n\thost_na" +
+      "me\030\001 \002(\t\022\014\n\004port\030\002 \001(\r\022\022\n\nstart_code\030\003 \001" +
+      "(\004\"\033\n\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-\n\016NameS" +
+      "tringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\"," +
+      "\n\rNameBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002",
+      " \001(\014\"/\n\016BytesBytesPair\022\r\n\005first\030\001 \002(\014\022\016\n" +
+      "\006second\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n\004name\030\001" +
+      " \001(\t\022\r\n\005value\030\002 \001(\003\"\314\001\n\023SnapshotDescript" +
+      "ion\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcrea" +
+      "tion_time\030\003 \001(\003:\0010\022.\n\004type\030\004 \001(\0162\031.Snaps" +
+      "hotDescription.Type:\005FLUSH\022\017\n\007version\030\005 " +
+      "\001(\005\022\r\n\005owner\030\006 \001(\t\".\n\004Type\022\014\n\010DISABLED\020\000" +
+      "\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH\020\002\"}\n\024ProcedureD" +
+      "escription\022\021\n\tsignature\030\001 \002(\t\022\020\n\010instanc" +
+      "e\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:\0010\022&\n\rcon",
+      "figuration\030\004 \003(\0132\017.NameStringPair\"\n\n\010Emp" +
+      "tyMsg\"\033\n\007LongMsg\022\020\n\010long_msg\030\001 \002(\003\"\037\n\tDo" +
+      "ubleMsg\022\022\n\ndouble_msg\030\001 \002(\001\"\'\n\rBigDecima" +
+      "lMsg\022\026\n\016bigdecimal_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016" +
+      "least_sig_bits\030\001 \002(\004\022\025\n\rmost_sig_bits\030\002 " +
+      "\002(\004\"K\n\023NamespaceDescriptor\022\014\n\004name\030\001 \002(\014" +
+      "\022&\n\rconfiguration\030\002 \003(\0132\017.NameStringPair" +
+      "\"$\n\020RegionServerInfo\022\020\n\010infoPort\030\001 \001(\005*r" +
+      "\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL" +
+      "\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_",
+      "OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*n\n\010Ti" +
+      "meUnit\022\017\n\013NANOSECONDS\020\001\022\020\n\014MICROSECONDS\020" +
+      "\002\022\020\n\014MILLISECONDS\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINU" +
+      "TES\020\005\022\t\n\005HOURS\020\006\022\010\n\004DAYS\020\007B>\n*org.apache" +
+      ".hadoop.hbase.protobuf.generatedB\013HBaseP" +
+      "rotosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

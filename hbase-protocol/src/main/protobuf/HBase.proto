@@ -55,14 +55,14 @@ message TableState {
   }
   // This is the table's state.
   required State state = 1;
-  required TableName table = 2;
+  required TableName table = 2 [deprecated = true];
   optional uint64 timestamp = 3;
 }
 
 /** On HDFS representation of table state. */
 message TableDescriptor {
   required TableSchema schema = 1;
-  optional TableState.State state = 2 [ default = ENABLED ];
+  optional TableState.State state = 2 [ default = ENABLED, deprecated = true ];
 }
 
 /**

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.junit.AfterClass;
@@ -130,7 +131,8 @@ public class TestReplicaWithCluster {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    HTU2.shutdownMiniCluster();
+    if (HTU2 != null)
+      HTU2.shutdownMiniCluster();
     HTU.shutdownMiniCluster();
   }
 
@@ -213,7 +215,6 @@ public class TestReplicaWithCluster {
       SlowMeCopro.sleepTime.set(0);
     }
 
-    HTU.getHBaseCluster().stopMaster(0);
     Admin admin = HTU.getHBaseAdmin();
     nHdt =admin.getTableDescriptor(hdt.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
@@ -221,7 +222,6 @@ public class TestReplicaWithCluster {
 
     admin.disableTable(hdt.getTableName());
     admin.deleteTable(hdt.getTableName());
-    HTU.getHBaseCluster().startMaster();
     admin.close();
   }
 

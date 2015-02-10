@@ -53,12 +53,16 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.TreeMultimap;
+import com.google.protobuf.ServiceException;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -85,15 +89,15 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
@@ -136,13 +140,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.TreeMultimap;
-import com.google.protobuf.ServiceException;
 
 /**
  * HBaseFsck (hbck) is a tool for checking and repairing region consistency and
@@ -245,7 +242,8 @@ public class HBaseFsck extends Configured implements Closeable {
   // hbase:meta are always checked
   private Set<TableName> tablesIncluded = new HashSet<TableName>();
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
-  private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE; // maximum number of overlapping regions to sideline
+  // maximum number of overlapping regions to sideline
+  private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE;
   private boolean sidelineBigOverlaps = false; // sideline overlaps with >maxMerge regions
   private Path sidelineDir = null;
 
@@ -267,8 +265,6 @@ public class HBaseFsck extends Configured implements Closeable {
    * to detect and correct consistency (hdfs/meta/deployment) problems.
    */
   private TreeMap<String, HbckInfo> regionInfoMap = new TreeMap<String, HbckInfo>();
-  private TreeSet<TableName> disabledTables =
-    new TreeSet<TableName>();
   // Empty regioninfo qualifiers in hbase:meta
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
 
@@ -292,6 +288,8 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private Map<TableName, Set<String>> orphanTableDirs =
       new HashMap<TableName, Set<String>>();
+  private Map<TableName, TableState> tableStates =
+      new HashMap<TableName, TableState>();
 
   /**
    * Constructor
@@ -493,7 +491,7 @@ public class HBaseFsck extends Configured implements Closeable {
     fixes = 0;
     regionInfoMap.clear();
     emptyRegionInfoQualifiers.clear();
-    disabledTables.clear();
+    tableStates.clear();
     errors.clear();
     tablesInfo.clear();
     orphanHdfsDirs.clear();
@@ -577,14 +575,14 @@ public class HBaseFsck extends Configured implements Closeable {
       reportTablesInFlux();
     }
 
+    // Get disabled tables states
+    loadTableStates();
+
     // load regiondirs and regioninfos from HDFS
     if (shouldCheckHdfs()) {
       loadHdfsRegionDirs();
       loadHdfsRegionInfos();
     }
-
-    // Get disabled tables from ZooKeeper
-    loadDisabledTables();
 
     // fix the orphan tables
     fixOrphanTables();
@@ -1140,7 +1138,7 @@ public class HBaseFsck extends Configured implements Closeable {
     for (String columnfamimly : columns) {
       htd.addFamily(new HColumnDescriptor(columnfamimly));
     }
-    fstd.createTableDescriptor(new TableDescriptor(htd, TableState.State.ENABLED), true);
+    fstd.createTableDescriptor(new TableDescriptor(htd), true);
     return true;
   }
 
@@ -1188,7 +1186,7 @@ public class HBaseFsck extends Configured implements Closeable {
           if (tableName.equals(htds[j].getTableName())) {
             HTableDescriptor htd = htds[j];
             LOG.info("fixing orphan table: " + tableName + " from cache");
-            fstd.createTableDescriptor(new TableDescriptor(htd, TableState.State.ENABLED), true);
+            fstd.createTableDescriptor(new TableDescriptor(htd), true);
             j++;
             iter.remove();
           }
@@ -1265,6 +1263,8 @@ public class HBaseFsck extends Configured implements Closeable {
       }
 
       TableInfo ti = e.getValue();
+      puts.add(MetaTableAccessor
+          .makePutFromTableState(new TableState(ti.tableName, TableState.State.ENABLED)));
       for (Entry<byte[], Collection<HbckInfo>> spl : ti.sc.getStarts().asMap()
           .entrySet()) {
         Collection<HbckInfo> his = spl.getValue();
@@ -1524,28 +1524,19 @@ public class HBaseFsck extends Configured implements Closeable {
    * @throws ZooKeeperConnectionException
    * @throws IOException
    */
-  private void loadDisabledTables()
+  private void loadTableStates()
   throws IOException {
-    HConnectionManager.execute(new HConnectable<Void>(getConf()) {
-      @Override
-      public Void connect(HConnection connection) throws IOException {
-        TableName[] tables = connection.listTableNames();
-        for (TableName table : tables) {
-          if (connection.getTableState(table)
-              .inStates(TableState.State.DISABLED, TableState.State.DISABLING)) {
-            disabledTables.add(table);
-          }
-        }
-        return null;
-      }
-    });
+    tableStates = MetaTableAccessor.getTableStates(connection);
   }
 
   /**
    * Check if the specified region's table is disabled.
+   * @param tableName table to check status of
    */
-  private boolean isTableDisabled(HRegionInfo regionInfo) {
-    return disabledTables.contains(regionInfo.getTable());
+  private boolean isTableDisabled(TableName tableName) {
+    return tableStates.containsKey(tableName)
+        && tableStates.get(tableName)
+        .inStates(TableState.State.DISABLED, TableState.State.DISABLING);
   }
 
   /**
@@ -1615,15 +1606,24 @@ public class HBaseFsck extends Configured implements Closeable {
         HConstants.EMPTY_START_ROW, false, false);
     if (rl == null) {
       errors.reportError(ERROR_CODE.NULL_META_REGION,
-          "META region or some of its attributes are null.");
+          "META region was not found in Zookeeper");
       return false;
     }
     for (HRegionLocation metaLocation : rl.getRegionLocations()) {
       // Check if Meta region is valid and existing
-      if (metaLocation == null || metaLocation.getRegionInfo() == null ||
-          metaLocation.getHostname() == null) {
+      if (metaLocation == null ) {
         errors.reportError(ERROR_CODE.NULL_META_REGION,
-            "META region or some of its attributes are null.");
+            "META region location is null");
+        return false;
+      }
+      if (metaLocation.getRegionInfo() == null) {
+        errors.reportError(ERROR_CODE.NULL_META_REGION,
+            "META location regionInfo is null");
+        return false;
+      }
+      if (metaLocation.getHostname() == null) {
+        errors.reportError(ERROR_CODE.NULL_META_REGION,
+            "META location hostName is null");
         return false;
       }
       ServerName sn = metaLocation.getServerName();
@@ -1718,6 +1718,55 @@ public class HBaseFsck extends Configured implements Closeable {
       }
     }
     setCheckHdfs(prevHdfsCheck);
+
+    if (shouldCheckHdfs()) {
+      checkAndFixTableStates();
+    }
+  }
+
+  /**
+   * Check and fix table states, assumes full info available:
+   * - tableInfos
+   * - empty tables loaded
+   */
+  private void checkAndFixTableStates() throws IOException {
+    // first check dangling states
+    for (Entry<TableName, TableState> entry : tableStates.entrySet()) {
+      TableName tableName = entry.getKey();
+      TableState tableState = entry.getValue();
+      TableInfo tableInfo = tablesInfo.get(tableName);
+      if (isTableIncluded(tableName)
+          && !tableName.isSystemTable()
+          && tableInfo == null) {
+        if (fixMeta) {
+          MetaTableAccessor.deleteTableState(connection, tableName);
+          TableState state = MetaTableAccessor.getTableState(connection, tableName);
+          if (state != null) {
+            errors.reportError(ERROR_CODE.ORPHAN_TABLE_STATE,
+                tableName + " unable to delete dangling table state " + tableState);
+          }
+        } else {
+          errors.reportError(ERROR_CODE.ORPHAN_TABLE_STATE,
+              tableName + " has dangling table state " + tableState);
+        }
+      }
+    }
+    // check that all tables have states
+    for (TableName tableName : tablesInfo.keySet()) {
+      if (isTableIncluded(tableName) && !tableStates.containsKey(tableName)) {
+        if (fixMeta) {
+          MetaTableAccessor.updateTableState(connection, tableName, TableState.State.ENABLED);
+          TableState newState = MetaTableAccessor.getTableState(connection, tableName);
+          if (newState == null) {
+            errors.reportError(ERROR_CODE.NO_TABLE_STATE,
+                "Unable to change state for table " + tableName + " in meta ");
+          }
+        } else {
+          errors.reportError(ERROR_CODE.NO_TABLE_STATE,
+              tableName + " has no state in meta ");
+        }
+      }
+    }
   }
 
   private void preCheckPermission() throws IOException, AccessDeniedException {
@@ -1961,8 +2010,8 @@ public class HBaseFsck extends Configured implements Closeable {
       hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
       hbi.metaEntry.regionServer.equals(hbi.deployedOn.get(0));
     boolean splitParent =
-      (hbi.metaEntry == null)? false: hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
-    boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry);
+        inMeta && hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
+    boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry.getTable());
     boolean recentlyModified = inHdfs &&
       hbi.getModTime() + timelag > System.currentTimeMillis();
 
@@ -2744,7 +2793,7 @@ public class HBaseFsck extends Configured implements Closeable {
       // When table is disabled no need to check for the region chain. Some of the regions
       // accidently if deployed, this below code might report some issues like missing start
       // or end regions or region hole in chain and may try to fix which is unwanted.
-      if (disabledTables.contains(this.tableName)) {
+      if (isTableDisabled(this.tableName)) {
         return true;
       }
       int originalErrorsCount = errors.getErrorList().size();
@@ -3534,12 +3583,14 @@ public class HBaseFsck extends Configured implements Closeable {
   public interface ErrorReporter {
     enum ERROR_CODE {
       UNKNOWN, NO_META_REGION, NULL_META_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
-      NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META, NOT_DEPLOYED,
+      NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META,
+      NOT_DEPLOYED,
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, BOUNDARIES_ERROR
+      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, BOUNDARIES_ERROR, ORPHAN_TABLE_STATE,
+      NO_TABLE_STATE
     }
     void clear();
     void report(String message);

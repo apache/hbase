@@ -157,6 +157,7 @@ public class TestHBaseFsck {
     conf.setInt("hbase.hconnection.threads.max", 2 * POOL_SIZE);
     conf.setInt("hbase.hconnection.threads.core", POOL_SIZE);
     conf.setInt("hbase.hbck.close.timeout", 2 * REGION_ONLINE_TIMEOUT);
+    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 2 * REGION_ONLINE_TIMEOUT);
     TEST_UTIL.startMiniCluster(3);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
@@ -1402,7 +1403,7 @@ public class TestHBaseFsck {
     HBaseFsck hbck = doFsck(conf, false);
     assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_HDFS,
         ERROR_CODE.NOT_IN_HDFS, ERROR_CODE.NOT_IN_HDFS,
-        ERROR_CODE.NOT_IN_HDFS,});
+        ERROR_CODE.NOT_IN_HDFS, ERROR_CODE.ORPHAN_TABLE_STATE, });
     // holes are separate from overlap groups
     assertEquals(0, hbck.getOverlapGroups(table).size());
 
@@ -1442,6 +1443,34 @@ public class TestHBaseFsck {
 
     // no version file fixed
     assertNoErrors(doFsck(conf, false));
+  }
+
+  /**
+   * when the hbase.version file missing, It is fix the fault.
+   */
+  @Test (timeout=180000)
+  public void testNoTableState() throws Exception {
+    // delete the hbase.version file
+    TableName table =
+        TableName.valueOf("testNoTableState");
+    try {
+      setupTable(table);
+      // make sure data in regions, if in wal only there is no data loss
+      admin.flush(table);
+
+      MetaTableAccessor.deleteTableState(TEST_UTIL.getConnection(), table);
+
+      // test
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_TABLE_STATE });
+      // fix table state missing
+      doFsck(conf, true);
+
+      assertNoErrors(doFsck(conf, false));
+      assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(table));
+    } finally {
+      cleanupTable(table);
+    }
   }
 
   /**

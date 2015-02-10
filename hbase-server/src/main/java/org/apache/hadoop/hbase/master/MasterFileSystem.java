@@ -471,7 +471,7 @@ public class MasterFileSystem {
     // we should get them from registry.
     FSTableDescriptors fsd = new FSTableDescriptors(c, fs, rd);
     fsd.createTableDescriptor(
-        new TableDescriptor(fsd.get(TableName.META_TABLE_NAME), TableState.State.ENABLING));
+        new TableDescriptor(fsd.get(TableName.META_TABLE_NAME)));
 
     return rd;
   }

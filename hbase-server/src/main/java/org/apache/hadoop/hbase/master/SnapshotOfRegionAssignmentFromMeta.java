@@ -141,7 +141,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
       }
     };
     // Scan hbase:meta to pick up user regions
-    MetaTableAccessor.fullScan(connection, v);
+    MetaTableAccessor.fullScanRegions(connection, v);
     //regionToRegionServerMap = regions;
     LOG.info("Finished to scan the hbase:meta for the current region assignment" +
       "snapshot");

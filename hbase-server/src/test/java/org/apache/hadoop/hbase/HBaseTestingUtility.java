@@ -18,6 +18,11 @@
 package org.apache.hadoop.hbase;
 
 import javax.annotation.Nullable;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -121,10 +126,6 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -2292,6 +2293,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Table meta = (HTable) getConnection().getTable(TableName.META_TABLE_NAME);
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
+    MetaTableAccessor
+        .updateTableState(getConnection(), htd.getTableName(), TableState.State.ENABLED);
     // add custom ones
     for (int i = 0; i < startKeys.length; i++) {
       int j = (i + 1) % startKeys.length;
@@ -2953,15 +2956,34 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public String explainTableState(final TableName table, TableState.State state)
       throws IOException {
-    TableState.State tableState =
-        getHBaseCluster().getMaster().getTableStateManager().getTableState(table);
+    TableState tableState = MetaTableAccessor.getTableState(connection, table);
     if (tableState == null) {
-      return "TableState: No state for table " + table;
-    } else if (!tableState.equals(state)) {
-      return "TableState: Not " + state + " state, but " + tableState;
+      return "TableState in META: No table state in META for table " + table
+          + " last state in meta (including deleted is " + findLastTableState(table) + ")";
+    } else if (!tableState.inStates(state)) {
+      return "TableState in META: Not " + state + " state, but " + tableState;
     } else {
-      return "TableState: OK";
+      return "TableState in META: OK";
     }
+  }
+
+  @Nullable
+  public TableState findLastTableState(final TableName table) throws IOException {
+    final AtomicReference<TableState> lastTableState = new AtomicReference<>(null);
+    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (!Arrays.equals(r.getRow(), table.getName()))
+          return false;
+        TableState state = MetaTableAccessor.getTableState(r);
+        if (state != null)
+          lastTableState.set(state);
+        return true;
+      }
+    };
+    MetaTableAccessor
+        .fullScan(connection, visitor, table.getName(), MetaTableAccessor.QueryType.TABLE, true);
+    return lastTableState.get();
   }
 
   /**

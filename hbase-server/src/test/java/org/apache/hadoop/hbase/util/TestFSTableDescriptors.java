@@ -76,7 +76,7 @@ public class TestFSTableDescriptors {
   public void testCreateAndUpdate() throws IOException {
     Path testdir = UTIL.getDataTestDir("testCreateAndUpdate");
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testCreate"));
-    TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
+    TableDescriptor td = new TableDescriptor(htd);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
     assertTrue(fstd.createTableDescriptor(td));
@@ -113,7 +113,7 @@ public class TestFSTableDescriptors {
     assertTrue(!fs.exists(p1));
     int i2 = FSTableDescriptors.getTableInfoSequenceId(p2);
     assertTrue(i2 == i1 + 1);
-    td = new TableDescriptor(htd, TableState.State.DISABLED);
+    td = new TableDescriptor(htd);
     Path p3 = fstd.updateTableDescriptor(td);
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p2));
@@ -172,7 +172,7 @@ public class TestFSTableDescriptors {
     final String name = "testReadingHTDFromFS";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
+    TableDescriptor td = new TableDescriptor(htd);
     Path rootdir = UTIL.getDataTestDir(name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     fstd.createTableDescriptor(td);
@@ -187,7 +187,7 @@ public class TestFSTableDescriptors {
     Path rootdir = UTIL.getDataTestDir(name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
+    TableDescriptor td = new TableDescriptor(htd);
     Path descriptorFile = fstd.updateTableDescriptor(td);
     try (FSDataOutputStream out = fs.create(descriptorFile, true)) {
       out.write(htd.toByteArray());
@@ -222,8 +222,8 @@ public class TestFSTableDescriptors {
     final int count = 10;
     // Write out table infos.
     for (int i = 0; i < count; i++) {
-      TableDescriptor htd = new TableDescriptor(new HTableDescriptor(name + i),
-          TableState.State.ENABLED);
+      TableDescriptor htd = new TableDescriptor(
+          new HTableDescriptor(TableName.valueOf(name + i)));
       htds.createTableDescriptor(htd);
     }
 
@@ -420,7 +420,7 @@ public class TestFSTableDescriptors {
     Path testdir = UTIL.getDataTestDir("testCreateTableDescriptorUpdatesIfThereExistsAlready");
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(
         "testCreateTableDescriptorUpdatesIfThereExistsAlready"));
-    TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
+    TableDescriptor td = new TableDescriptor(htd);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
     assertTrue(fstd.createTableDescriptor(td));

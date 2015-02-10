@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -99,7 +98,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class AssignmentManager {
   private static final Log LOG = LogFactory.getLog(AssignmentManager.class);
 
-  protected final Server server;
+  protected final MasterServices server;
 
   private ServerManager serverManager;
 
@@ -130,8 +129,8 @@ public class AssignmentManager {
   private final int maximumAttempts;
 
   /**
-   * The sleep time for which the assignment will wait before retrying in case of hbase:meta assignment
-   * failure due to lack of availability of region plan or bad region plan
+   * The sleep time for which the assignment will wait before retrying in case of
+   * hbase:meta assignment failure due to lack of availability of region plan or bad region plan
    */
   private final long sleepTimeBeforeRetryingMetaAssignment;
 
@@ -209,7 +208,7 @@ public class AssignmentManager {
    * @param tableLockManager TableLock manager
    * @throws IOException
    */
-  public AssignmentManager(Server server, ServerManager serverManager,
+  public AssignmentManager(MasterServices server, ServerManager serverManager,
       final LoadBalancer balancer,
       final ExecutorService service, MetricsMaster metricsMaster,
       final TableLockManager tableLockManager,
@@ -1570,7 +1569,7 @@ public class AssignmentManager {
             TableState.State.ENABLING);
 
     // Region assignment from META
-    List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getConnection());
+    List<Result> results = MetaTableAccessor.fullScanRegions(server.getConnection());
     // Get any new but slow to checkin region server that joined the cluster
     Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
     // Set of offline servers to be returned

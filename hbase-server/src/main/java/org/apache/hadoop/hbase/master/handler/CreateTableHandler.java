@@ -70,6 +70,7 @@ public class CreateTableHandler extends EventHandler {
   private final AssignmentManager assignmentManager;
   private final TableLockManager tableLockManager;
   private final HRegionInfo [] newRegions;
+  private final MasterServices masterServices;
   private final TableLock tableLock;
   private User activeUser;
 
@@ -82,6 +83,7 @@ public class CreateTableHandler extends EventHandler {
     this.hTableDescriptor = hTableDescriptor;
     this.conf = conf;
     this.newRegions = newRegions;
+    this.masterServices = masterServices;
     this.assignmentManager = masterServices.getAssignmentManager();
     this.tableLockManager = masterServices.getTableLockManager();
 
@@ -209,10 +211,11 @@ public class CreateTableHandler extends EventHandler {
     // 1. Create Table Descriptor
     // using a copy of descriptor, table will be created enabling first
     TableDescriptor underConstruction = new TableDescriptor(
-        this.hTableDescriptor, TableState.State.ENABLING);
+        this.hTableDescriptor);
     Path tempTableDir = FSUtils.getTableDir(tempdir, tableName);
-    new FSTableDescriptors(this.conf).createTableDescriptorForTableDirectory(
-      tempTableDir, underConstruction, false);
+    ((FSTableDescriptors)(masterServices.getTableDescriptors()))
+        .createTableDescriptorForTableDirectory(
+        tempTableDir, underConstruction, false);
     Path tableDir = FSUtils.getTableDir(fileSystemManager.getRootDir(), tableName);
 
     // 2. Create Regions
@@ -222,6 +225,12 @@ public class CreateTableHandler extends EventHandler {
       throw new IOException("Unable to move table from temp=" + tempTableDir +
         " to hbase root=" + tableDir);
     }
+
+    // populate descriptors cache to be visible in getAll
+    masterServices.getTableDescriptors().get(tableName);
+
+    MetaTableAccessor.updateTableState(this.server.getConnection(), hTableDescriptor.getTableName(),
+        TableState.State.ENABLING);
 
     if (regionInfos != null && regionInfos.size() > 0) {
       // 4. Add regions to META

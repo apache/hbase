@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptor;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest;
@@ -357,7 +356,7 @@ public class SnapshotManifest {
       // write a copy of descriptor to the snapshot directory
       new FSTableDescriptors(conf, fs, rootDir)
         .createTableDescriptorForTableDirectory(workingDir, new TableDescriptor(
-            htd, TableState.State.ENABLED), false);
+            htd), false);
     } else {
       LOG.debug("Convert to Single Snapshot Manifest");
       convertToV2SingleManifest();

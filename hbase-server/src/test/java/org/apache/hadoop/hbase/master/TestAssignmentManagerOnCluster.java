@@ -643,7 +643,8 @@ public class TestAssignmentManagerOnCluster {
       if (hri != null && serverName != null) {
         am.regionOnline(hri, serverName);
       }
-      am.getTableStateManager().setTableState(table, TableState.State.DISABLED);
+      am.getTableStateManager().setTableState(table, TableState.State.ENABLED);
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
       TEST_UTIL.deleteTable(table);
     }
   }
@@ -1164,7 +1165,7 @@ public class TestAssignmentManagerOnCluster {
         tableNameList.add(TableName.valueOf(name + "_" + i));
       }
     }
-    List<Result> metaRows = MetaTableAccessor.fullScanOfMeta(admin.getConnection());
+    List<Result> metaRows = MetaTableAccessor.fullScanRegions(admin.getConnection());
     int count = 0;
     // Check all 100 rows are in meta
     for (Result result : metaRows) {

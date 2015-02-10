@@ -1043,8 +1043,7 @@ public class TestCatalogJanitor {
   }
 
   private TableDescriptor createTableDescriptor() {
-    TableDescriptor htd = new TableDescriptor(createHTableDescriptor(), TableState.State.ENABLED);
-    return htd;
+    return new TableDescriptor(createHTableDescriptor());
   }
 
   private MultiResponse buildMultiResponse(MultiRequest req) {

@@ -430,6 +430,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return connector.getLocalPort();
   }
 
+  @Override
+  protected TableDescriptors getFsTableDescriptors() throws IOException {
+    return super.getFsTableDescriptors();
+  }
+
   /**
    * For compatibility, if failed with regionserver credentials, try the master one
    */
@@ -629,9 +634,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
-
     this.tableStateManager = new TableStateManager(this);
-    this.tableStateManager.start();
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -869,7 +872,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       assigned++;
     }
 
-    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableMeta(TableName.META_TABLE_NAME);
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID)
+      getTableStateManager().setTableState(TableName.META_TABLE_NAME, TableState.State.ENABLED);
+    // TODO: should we prevent from using state manager before meta was initialized?
+    // tableStateManager.start();
 
     if ((RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode())
         && (!previouslyFailedMetaRSs.isEmpty())) {
@@ -877,6 +883,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       status.setStatus("replaying log for Meta Region");
       this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
     }
+
+    this.assignmentManager.setEnabledTable(TableName.META_TABLE_NAME);
+    tableStateManager.start();
 
     // Make sure a hbase:meta location is set. We need to enable SSH here since
     // if the meta region server is died at this time, we need it to be re-assigned
@@ -931,13 +940,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     if (waitForMeta) {
       metaTableLocator.waitMetaRegionLocation(this.getZooKeeper());
-    }
-  }
-
-  private void enableMeta(TableName metaTableName) {
-    if (!this.tableStateManager.isTableState(metaTableName,
-            TableState.State.ENABLED)) {
-      this.assignmentManager.setEnabledTable(metaTableName);
     }
   }
 
@@ -1173,7 +1175,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           if (rpCount < plans.size() &&
               // if performing next balance exceeds cutoff time, exit the loop
               (System.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
-            //TODO: After balance, there should not be a cutoff time (keeping it as a security net for now)
+            //TODO: After balance, there should not be a cutoff time (keeping it as
+            // a security net for now)
             LOG.debug("No more balancing till next balance run; maximumBalanceTime=" +
               maximumBalanceTime);
             break;
@@ -1463,7 +1466,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           LOG.fatal("Failed to become active master", t);
           // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
           if (t instanceof NoClassDefFoundError &&
-              t.getMessage().contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
+              t.getMessage()
+                  .contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
             // improved error message for this special case
             abort("HBase is having a problem with its Hadoop jars.  You may need to "
               + "recompile HBase against Hadoop version "
@@ -2192,15 +2196,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         }
 
         for (HTableDescriptor desc: htds) {
-          if (includeSysTables || !desc.getTableName().isSystemTable()) {
+          if (tableStateManager.isTablePresent(desc.getTableName())
+              && (includeSysTables || !desc.getTableName().isSystemTable())) {
             descriptors.add(desc);
           }
         }
       } else {
         for (TableName s: tableNameList) {
-          HTableDescriptor desc = tableDescriptors.get(s);
-          if (desc != null) {
-            descriptors.add(desc);
+          if (tableStateManager.isTablePresent(s)) {
+            HTableDescriptor desc = tableDescriptors.get(s);
+            if (desc != null) {
+              descriptors.add(desc);
+            }
           }
         }
       }

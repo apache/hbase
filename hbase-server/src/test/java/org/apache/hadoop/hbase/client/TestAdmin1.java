@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -248,7 +249,8 @@ public class TestAdmin1 {
     this.admin.disableTable(ht.getName());
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getTableStateManager().isTableState(
-        ht.getName(), TableState.State.DISABLED));
+            ht.getName(), TableState.State.DISABLED));
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(table));
 
     // Test that table is disabled
     get = new Get(row);
@@ -275,7 +277,8 @@ public class TestAdmin1 {
     this.admin.enableTable(table);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getTableStateManager().isTableState(
-        ht.getName(), TableState.State.ENABLED));
+            ht.getName(), TableState.State.ENABLED));
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(table));
 
     // Test that table is enabled
     try {
@@ -285,6 +288,13 @@ public class TestAdmin1 {
     }
     assertTrue(ok);
     ht.close();
+  }
+
+  private TableState.State getStateFromMeta(TableName table) throws IOException {
+    TableState state =
+        MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), table);
+    assertNotNull(state);
+    return state.getState();
   }
 
   @Test (timeout=300000)
@@ -318,6 +328,10 @@ public class TestAdmin1 {
       ok = true;
     }
 
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(table1));
+    assertEquals(TableState.State.DISABLED, getStateFromMeta(table2));
+
+
     assertTrue(ok);
     this.admin.enableTables("testDisableAndEnableTable.*");
 
@@ -336,18 +350,23 @@ public class TestAdmin1 {
 
     ht1.close();
     ht2.close();
+
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(table1));
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(table2));
   }
 
   @Test (timeout=300000)
   public void testCreateTable() throws IOException {
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
-    TEST_UTIL.createTable(TableName.valueOf("testCreateTable"), HConstants.CATALOG_FAMILY).close();
+    TableName tableName = TableName.valueOf("testCreateTable");
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getTableStateManager().isTableState(
-        TableName.valueOf("testCreateTable"), TableState.State.ENABLED));
+            tableName, TableState.State.ENABLED));
+    assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
   }
 
   @Test (timeout=300000)
@@ -405,6 +424,7 @@ public class TestAdmin1 {
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     HTableDescriptor confirmedHtd = table.getTableDescriptor();
     assertEquals(htd.compareTo(confirmedHtd), 0);
+    MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
     table.close();
   }
 

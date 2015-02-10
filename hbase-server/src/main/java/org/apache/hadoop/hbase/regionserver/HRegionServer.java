@@ -528,8 +528,7 @@ public class HRegionServer extends HasThread implements
     boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
     this.fs = new HFileSystem(this.conf, useHBaseChecksum);
     this.rootDir = FSUtils.getRootDir(this.conf);
-    this.tableDescriptors = new FSTableDescriptors(this.conf,
-      this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
+    this.tableDescriptors = getFsTableDescriptors();
 
     service = new ExecutorService(getServerName().toShortString());
     spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
@@ -559,6 +558,11 @@ public class HRegionServer extends HasThread implements
     putUpWebUI();
     this.walRoller = new LogRoller(this, this);
     this.choreService = new ChoreService(getServerName().toString());
+  }
+
+  protected TableDescriptors getFsTableDescriptors() throws IOException {
+    return new FSTableDescriptors(this.conf,
+      this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
   }
 
   protected void login(UserProvider user, String host) throws IOException {

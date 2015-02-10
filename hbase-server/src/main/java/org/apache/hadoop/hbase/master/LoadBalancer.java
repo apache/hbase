@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -88,6 +89,7 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param servers
    * @return List of plans
    */
+  @Nullable
   Map<ServerName, List<HRegionInfo>> retainAssignment(
     Map<HRegionInfo, ServerName> regions,
     List<ServerName> servers

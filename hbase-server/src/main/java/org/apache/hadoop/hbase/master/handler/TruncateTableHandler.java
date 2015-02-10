@@ -95,10 +95,10 @@ public class TruncateTableHandler extends DeleteTableHandler {
     AssignmentManager assignmentManager = this.masterServices.getAssignmentManager();
 
     // 1. Create Table Descriptor
-    TableDescriptor underConstruction = new TableDescriptor(
-        this.hTableDescriptor, TableState.State.ENABLING);
+    TableDescriptor underConstruction = new TableDescriptor(this.hTableDescriptor);
     Path tempTableDir = FSUtils.getTableDir(tempdir, this.tableName);
-    new FSTableDescriptors(server.getConfiguration())
+
+    ((FSTableDescriptors)(masterServices.getTableDescriptors()))
       .createTableDescriptorForTableDirectory(tempTableDir, underConstruction, false);
     Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), this.tableName);
 
@@ -123,6 +123,11 @@ public class TruncateTableHandler extends DeleteTableHandler {
         " to hbase root=" + tableDir);
     }
 
+    // populate descriptors cache to be visible in getAll
+    masterServices.getTableDescriptors().get(tableName);
+
+    assignmentManager.getTableStateManager().setTableState(tableName,
+        TableState.State.ENABLING);
     // 4. Add regions to META
     MetaTableAccessor.addRegionsToMeta(masterServices.getConnection(),
       regionInfos, hTableDescriptor.getRegionReplication());

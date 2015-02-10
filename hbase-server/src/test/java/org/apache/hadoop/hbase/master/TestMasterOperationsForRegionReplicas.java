@@ -47,8 +47,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -134,7 +132,7 @@ public class TestMasterOperationsForRegionReplicas {
         }
       }
 
-      List<Result> metaRows = MetaTableAccessor.fullScanOfMeta(ADMIN.getConnection());
+      List<Result> metaRows = MetaTableAccessor.fullScanRegions(ADMIN.getConnection());
       int numRows = 0;
       for (Result result : metaRows) {
         RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
@@ -297,7 +295,7 @@ public class TestMasterOperationsForRegionReplicas {
         return true;
       }
     };
-    MetaTableAccessor.fullScan(connection, visitor);
+    MetaTableAccessor.fullScanRegions(connection, visitor);
     assert(count.get() == numRegions);
   }
 

@@ -33,7 +33,6 @@ import com.google.common.primitives.Ints;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -47,7 +46,7 @@ import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 
@@ -154,7 +153,7 @@ public class FSTableDescriptors implements TableDescriptors {
     invocations++;
     if (TableName.META_TABLE_NAME.equals(tablename)) {
       cachehits++;
-      return new TableDescriptor(metaTableDescritor, TableState.State.ENABLED);
+      return new TableDescriptor(metaTableDescritor);
     }
     // hbase:meta is already handled. If some one tries to get the descriptor for
     // .logs, .oldlogs or .corrupt throw an exception.
@@ -218,7 +217,7 @@ public class FSTableDescriptors implements TableDescriptors {
       }
       // add hbase:meta to the response
       tds.put(this.metaTableDescritor.getNameAsString(),
-        new TableDescriptor(metaTableDescritor, TableState.State.ENABLED));
+          new TableDescriptor(metaTableDescritor));
     } else {
       LOG.debug("Fetching table descriptors from the filesystem.");
       boolean allvisited = true;
@@ -592,7 +591,7 @@ public class FSTableDescriptors implements TableDescriptors {
         HTableDescriptor htd = HTableDescriptor.parseFrom(content);
         LOG.warn("Found old table descriptor, converting to new format for table " +
             htd.getTableName() + "; NOTE table will be in ENABLED state!");
-        td = new TableDescriptor(htd, TableState.State.ENABLED);
+        td = new TableDescriptor(htd);
         if (rewritePb) rewriteTableDescriptor(fs, status, td);
       } catch (DeserializationException e1) {
         throw new IOException("content=" + Bytes.toShort(content), e);

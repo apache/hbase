@@ -2520,6 +2520,7 @@ public class TestAccessController extends SecureTestUtil {
       assertTrue(existingPerms.size() > 1);
       TEST_UTIL.getHBaseAdmin().disableTable(TEST_TABLE.getTableName());
       TEST_UTIL.truncateTable(TEST_TABLE.getTableName());
+      TEST_UTIL.waitTableAvailable(TEST_TABLE.getTableName());
       List<UserPermission> perms = AccessControlClient.getUserPermissions(conf,
         TEST_TABLE.getTableName().getNameAsString());
       assertTrue(perms != null);

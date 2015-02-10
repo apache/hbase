@@ -1332,6 +1332,17 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
               .setBloomFilterType(BloomType.NONE)
               // Enable cache of data blocks in L1 if more than one caching tier deployed:
               // e.g. if using CombinedBlockCache (BucketCache).
+              .setCacheDataInL1(true),
+          new HColumnDescriptor(HConstants.TABLE_FAMILY)
+              // Ten is arbitrary number.  Keep versions to help debugging.
+              .setMaxVersions(10)
+              .setInMemory(true)
+              .setBlocksize(8 * 1024)
+              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+                  // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+              .setBloomFilterType(BloomType.NONE)
+                  // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                  // e.g. if using CombinedBlockCache (BucketCache).
               .setCacheDataInL1(true)
       });
 

@@ -56,7 +56,7 @@ public class TestRegionStates {
   @Test (timeout=10000)
   public void testCanMakeProgressThoughMetaIsDown()
   throws IOException, InterruptedException, BrokenBarrierException {
-    Server server = mock(Server.class);
+    MasterServices server = mock(MasterServices.class);
     when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Connection connection = mock(ClusterConnection.class);
     // Set up a table that gets 'stuck' when we try to fetch a row from the meta table.
@@ -101,7 +101,7 @@ public class TestRegionStates {
 
   @Test
   public void testWeDontReturnDrainingServersForOurBalancePlans() throws Exception {
-    Server server = mock(Server.class);
+    MasterServices server = mock(MasterServices.class);
     when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Configuration configuration = mock(Configuration.class);
     when(server.getConfiguration()).thenReturn(configuration);
