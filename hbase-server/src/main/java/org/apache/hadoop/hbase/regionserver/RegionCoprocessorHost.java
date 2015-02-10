@@ -169,6 +169,11 @@ public class RegionCoprocessorHost
       return latencies;
     }
 
+    @Override
+    public HRegionInfo getRegionInfo() {
+      return region.getRegionInfo();
+    }
+
   }
 
   static class TableCoprocessorAttribute {
