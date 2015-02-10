@@ -98,6 +98,21 @@ public final class Waiter {
   }
 
   /**
+   * A mixin interface, can be used with {@link Waiter} to explain failed state.
+   */
+  @InterfaceAudience.Private
+  public interface ExplainingPredicate<E extends Exception> extends Predicate<E> {
+
+    /**
+     * Perform a predicate evaluation.
+     *
+     * @return explanation of failed state
+     */
+    String explainFailure() throws E;
+
+  }
+
+  /**
    * Makes the current thread sleep for the duration equal to the specified time in milliseconds
    * multiplied by the {@link #getWaitForRatio(Configuration)}.
    * @param conf the configuration
@@ -190,14 +205,31 @@ public final class Waiter {
           LOG.warn(MessageFormat.format("Waiting interrupted after [{0}] msec",
             System.currentTimeMillis() - started));
         } else if (failIfTimeout) {
-          Assert.fail(MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout));
+          String msg = getExplanation(predicate);
+          Assert.fail(MessageFormat
+              .format("Waiting timed out after [{0}] msec" + msg, adjustedTimeout));
         } else {
-          LOG.warn(MessageFormat.format("Waiting timed out after [{0}] msec", adjustedTimeout));
+          String msg = getExplanation(predicate);
+          LOG.warn(
+              MessageFormat.format("Waiting timed out after [{0}] msec" + msg, adjustedTimeout));
         }
       }
       return (eval || interrupted) ? (System.currentTimeMillis() - started) : -1;
     } catch (Exception ex) {
       throw new RuntimeException(ex);
+    }
+  }
+
+  public static String getExplanation(Predicate explain) {
+    if (explain instanceof ExplainingPredicate) {
+      try {
+        return " " + ((ExplainingPredicate) explain).explainFailure();
+      } catch (Exception e) {
+        LOG.error("Failed to get explanation, ", e);
+        return e.getMessage();
+      }
+    } else {
+      return "";
     }
   }
 

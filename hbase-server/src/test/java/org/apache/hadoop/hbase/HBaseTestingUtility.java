@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -52,6 +48,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -64,7 +61,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -121,6 +117,10 @@ import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -2808,12 +2808,54 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void waitTableAvailable(TableName table)
       throws InterruptedException, IOException {
-    waitTableAvailable(getHBaseAdmin(), table.getName(), 30000);
+    waitTableAvailable(table.getName(), 30000);
   }
 
-  public void waitTableAvailable(Admin admin, byte[] table)
+  public void waitTableAvailable(TableName table, long timeoutMillis)
       throws InterruptedException, IOException {
-    waitTableAvailable(admin, table, 30000);
+    waitFor(timeoutMillis, predicateTableAvailable(table));
+  }
+
+  public String explainTableAvailability(TableName tableName) throws IOException {
+    String msg = explainTableState(tableName) + ",";
+    if (getHBaseCluster().getMaster().isAlive()) {
+      Map<HRegionInfo, ServerName> assignments =
+          getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+              .getRegionAssignments();
+      final List<Pair<HRegionInfo, ServerName>> metaLocations =
+          MetaTableAccessor
+              .getTableRegionsAndLocations(getZooKeeperWatcher(), connection, tableName);
+      for (Pair<HRegionInfo, ServerName> metaLocation : metaLocations) {
+        HRegionInfo hri = metaLocation.getFirst();
+        ServerName sn = metaLocation.getSecond();
+        if (!assignments.containsKey(hri)) {
+          msg += ", region " + hri
+              + " not assigned, but found in meta, it expected to be on " + sn;
+
+        } else if (sn == null) {
+          msg += ",  region " + hri
+              + " assigned,  but has no server in meta";
+        } else if (!sn.equals(assignments.get(hri))) {
+          msg += ",  region " + hri
+              + " assigned,  but has different servers in meta and AM ( " +
+              sn + " <> " + assignments.get(hri);
+        }
+      }
+    }
+    return msg;
+  }
+
+  public String explainTableState(TableName tableName) throws IOException {
+    try {
+      if (getHBaseAdmin().isTableEnabled(tableName))
+        return "table enabled in zk";
+      else if (getHBaseAdmin().isTableDisabled(tableName))
+        return "table disabled in zk";
+      else
+        return "table in uknown state";
+    } catch (TableNotFoundException e) {
+      return "table not exists";
+    }
   }
 
   /**
@@ -2850,12 +2892,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void waitTableEnabled(TableName table)
       throws InterruptedException, IOException {
-    waitTableEnabled(getHBaseAdmin(), table.getName(), 30000);
-  }
-
-  public void waitTableEnabled(Admin admin, byte[] table)
-      throws InterruptedException, IOException {
-    waitTableEnabled(admin, table, 30000);
+    waitTableEnabled(table, 30000);
   }
 
   /**
@@ -2869,30 +2906,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public void waitTableEnabled(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
-    waitTableEnabled(getHBaseAdmin(), table, timeoutMillis);
+    waitTableEnabled(TableName.valueOf(table), timeoutMillis);
   }
 
-  public void waitTableEnabled(Admin admin, byte[] table, long timeoutMillis)
-  throws InterruptedException, IOException {
-    TableName tableName = TableName.valueOf(table);
-    long startWait = System.currentTimeMillis();
-    waitTableAvailable(admin, table, timeoutMillis);
-    while (!admin.isTableEnabled(tableName)) {
-      assertTrue("Timed out waiting for table to become available and enabled " +
-         Bytes.toStringBinary(table),
-         System.currentTimeMillis() - startWait < timeoutMillis);
-      Thread.sleep(200);
-    }
-    // Finally make sure all regions are fully open and online out on the cluster. Regions may be
-    // in the hbase:meta table and almost open on all regionservers but there setting the region
-    // online in the regionserver is the very last thing done and can take a little while to happen.
-    // Below we do a get.  The get will retry if a NotServeringRegionException or a
-    // RegionOpeningException.  It is crass but when done all will be online.
-    try {
-      Canary.sniff(admin, tableName);
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+  public void waitTableEnabled(TableName table, long timeoutMillis)
+      throws IOException {
+    waitFor(timeoutMillis, predicateTableEnabled(table));
   }
 
   /**
@@ -3109,7 +3128,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           try {
             Result r;
             while ((r = s.next()) != null) {
-              byte [] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+              byte[] b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
               HRegionInfo info = HRegionInfo.parseFromOrNull(b);
               if (info != null && info.getTable().equals(tableName)) {
                 b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
@@ -3132,7 +3151,12 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       // returing -- sometimes this can lag.
       HMaster master = getHBaseCluster().getMaster();
       final RegionStates states = master.getAssignmentManager().getRegionStates();
-      waitFor(timeout, 200, new Predicate<IOException>() {
+      waitFor(timeout, 200, new ExplainingPredicate<IOException>() {
+        @Override
+        public String explainFailure() throws IOException {
+          return explainTableAvailability(tableName);
+        }
+
         @Override
         public boolean evaluate() throws IOException {
           List<HRegionInfo> hris = states.getRegionsOfTable(tableName);
@@ -3633,10 +3657,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Returns a {@link Predicate} for checking that there are no regions in transition in master
    */
-  public Waiter.Predicate<Exception> predicateNoRegionsInTransition() {
-    return new Waiter.Predicate<Exception>() {
+  public ExplainingPredicate<IOException> predicateNoRegionsInTransition() {
+    return new ExplainingPredicate<IOException>() {
       @Override
-      public boolean evaluate() throws Exception {
+      public String explainFailure() throws IOException {
+        final RegionStates regionStates = getMiniHBaseCluster().getMaster()
+            .getAssignmentManager().getRegionStates();
+        return "found in transition: " + regionStates.getRegionsInTransition().toString();
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
         final RegionStates regionStates = getMiniHBaseCluster().getMaster()
             .getAssignmentManager().getRegionStates();
         return !regionStates.isRegionsInTransition();
@@ -3647,11 +3678,58 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Returns a {@link Predicate} for checking that table is enabled
    */
-  public Waiter.Predicate<Exception> predicateTableEnabled(final TableName tableName) {
-    return new Waiter.Predicate<Exception>() {
-     @Override
-     public boolean evaluate() throws Exception {
-       return getHBaseAdmin().isTableEnabled(tableName);
+  public Waiter.Predicate<IOException> predicateTableEnabled(final TableName tableName) {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        return explainTableState(tableName);
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        return getHBaseAdmin().tableExists(tableName) && getHBaseAdmin().isTableEnabled(tableName);
+      }
+    };
+  }
+
+  /**
+   * Returns a {@link Predicate} for checking that table is enabled
+   */
+  public Waiter.Predicate<IOException> predicateTableDisabled(final TableName tableName) {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        return explainTableState(tableName);
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        return getHBaseAdmin().isTableDisabled(tableName);
+      }
+    };
+  }
+
+  /**
+   * Returns a {@link Predicate} for checking that table is enabled
+   */
+  public Waiter.Predicate<IOException> predicateTableAvailable(final TableName tableName) {
+    return new ExplainingPredicate<IOException>() {
+      @Override
+      public String explainFailure() throws IOException {
+        return explainTableAvailability(tableName);
+      }
+
+      @Override
+      public boolean evaluate() throws IOException {
+        boolean tableAvailable = getHBaseAdmin().isTableAvailable(tableName);
+        if (tableAvailable) {
+          try {
+            Canary.sniff(getHBaseAdmin(), tableName);
+          } catch (Exception e) {
+            throw new IOException("Canary sniff failed for table " + tableName, e);
+          }
+        }
+        return tableAvailable;
       }
     };
   }
