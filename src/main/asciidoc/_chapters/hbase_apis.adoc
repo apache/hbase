@@ -38,11 +38,9 @@ See <<external_apis>> for more information.
 
 .Create a Table Using Java
 ====
-This example has been tested on HBase 0.96.1.1.
 
 [source,java]
 ----
-
 package com.example.hbase.admin;
 
 import java.io.IOException;
@@ -51,7 +49,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.conf.Configuration;
 
@@ -59,7 +57,7 @@ import static com.example.hbase.Constants.*;
 
 public class CreateSchema {
 
-  public static void createOrOverwrite(HBaseAdmin admin, HTableDescriptor table) throws IOException {
+  public static void createOrOverwrite(Admin admin, HTableDescriptor table) throws IOException {
     if (admin.tableExists(table.getName())) {
       admin.disableTable(table.getName());
       admin.deleteTable(table.getName());
@@ -69,7 +67,7 @@ public class CreateSchema {
 
   public static void createSchemaTables (Configuration config) {
     try {
-      final HBaseAdmin admin = new HBaseAdmin(config);
+      final Admin admin = new Admin(config);
       HTableDescriptor table = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
       table.addFamily(new HColumnDescriptor(CF_DEFAULT).setCompressionType(Algorithm.SNAPPY));
 
@@ -90,14 +88,13 @@ public class CreateSchema {
 
 .Add, Modify, and Delete a Table
 ====
-This example has been tested on HBase 0.96.1.1.
 
 [source,java]
 ----
 public static void upgradeFrom0 (Configuration config) {
 
   try {
-    final HBaseAdmin admin = new HBaseAdmin(config);
+    final Admin admin = new Admin(config);
     TableName tableName = TableName.valueOf(TABLE_ASSETMETA);
     HTableDescriptor table_assetmeta = new HTableDescriptor(tableName);
     table_assetmeta.addFamily(new HColumnDescriptor(CF_DEFAULT).setCompressionType(Algorithm.SNAPPY));

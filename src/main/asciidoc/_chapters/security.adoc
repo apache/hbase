@@ -131,14 +131,19 @@ To do so, add the following to the `hbase-site.xml` file on every client:
 </property>
 ----
 
-This configuration property can also be set on a per connection basis.
-Set it in the `Configuration` supplied to `HTable`:
+This configuration property can also be set on a per-connection basis.
+Set it in the `Configuration` supplied to `Table`:
 
 [source,java]
 ----
 Configuration conf = HBaseConfiguration.create();
+Connection connection = ConnectionFactory.createConnection(conf);
 conf.set("hbase.rpc.protection", "privacy");
-HTable table = new HTable(conf, tablename);
+try (Connection connection = ConnectionFactory.createConnection(conf)) {
+  try (Table table = connection.getTable(TableName.valueOf(tablename)) {
+  .... do your stuff
+  }
+}
 ----
 
 Expect a ~10% performance penalty for encrypted communication.
@@ -881,18 +886,24 @@ public static void grantOnTable(final HBaseTestingUtility util, final String use
   SecureTestUtil.updateACLs(util, new Callable<Void>() {
     @Override
     public Void call() throws Exception {
-      HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-      try {
-        BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-        ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
-      } finally {
-        acl.close();
+      Configuration conf = HBaseConfiguration.create();
+      Connection connection = ConnectionFactory.createConnection(conf);
+      try (Connection connection = ConnectionFactory.createConnection(conf)) {
+        try (Table table = connection.getTable(TableName.valueOf(tablename)) {
+          AccessControlLists.ACL_TABLE_NAME);
+          try {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
+          } finally {
+            acl.close();
+          }
+          return null;
+        }
       }
-      return null;
     }
-  });
+  }
 }
 ----
 
@@ -931,7 +942,9 @@ public static void revokeFromTable(final HBaseTestingUtility util, final String 
   SecureTestUtil.updateACLs(util, new Callable<Void>() {
     @Override
     public Void call() throws Exception {
-      HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+      Configuration conf = HBaseConfiguration.create();
+      Connection connection = ConnectionFactory.createConnection(conf);
+      Table acl = connection.getTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
       try {
         BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
         AccessControlService.BlockingInterface protocol =
@@ -1215,9 +1228,11 @@ The correct way to apply cell level labels is to do so in the application code w
 ====
 [source,java]
 ----
-static HTable createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
+static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
     throws Exception {
-  HTable table = null;
+  Configuration conf = HBaseConfiguration.create();
+  Connection connection = ConnectionFactory.createConnection(conf);
+  Table table = NULL;
   try {
     table = TEST_UTIL.createTable(tableName, fam);
     int i = 1;

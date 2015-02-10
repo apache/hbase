@@ -626,7 +626,7 @@ Configuration config = HBaseConfiguration.create();
 config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zookeeper locally
 ----
 
-If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be specified in a comma-separated list (just as in the _hbase-site.xml_ file). This populated `Configuration` instance can then be passed to an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable], and so on.
+If multiple ZooKeeper instances make up your ZooKeeper ensemble, they may be specified in a comma-separated list (just as in the _hbase-site.xml_ file). This populated `Configuration` instance can then be passed to an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], and so on.
 
 [[example_config]]
 == Example Configurations
@@ -867,7 +867,7 @@ See the entry for `hbase.hregion.majorcompaction` in the <<compaction.parameters
 ====
 Major compactions are absolutely necessary for StoreFile clean-up.
 Do not disable them altogether.
-You can run major compactions manually via the HBase shell or via the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29[HBaseAdmin API].
+You can run major compactions manually via the HBase shell or via the http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact(org.apache.hadoop.hbase.TableName)[Admin API].
 ====
 
 For more information about compactions and the compaction file selection process, see <<compaction,compaction>>

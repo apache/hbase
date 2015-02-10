@@ -627,6 +627,7 @@ This issue is caused by bugs in the MIT Kerberos replay_cache component, link:ht
 These bugs caused the old version of krb5-server to erroneously block subsequent requests sent from a Principal.
 This caused krb5-server to block the connections sent from one Client (one HTable instance with multi-threading connection instances for each RegionServer); Messages, such as `Request is a replay (34)`, are logged in the client log You can ignore the messages, because HTable will retry 5 * 10 (50) times for each failed connection by default.
 HTable will throw IOException if any connection to the RegionServer fails after the retries, so that the user client code for HTable instance can handle it further.
+NOTE: `HTable` is deprecated in HBase 1.0, in favor of `Table`.
 
 Alternatively, update krb5-server to a version which solves these issues, such as krb5-server-1.10.3.
 See JIRA link:https://issues.apache.org/jira/browse/HBASE-10379[HBASE-10379] for more details.

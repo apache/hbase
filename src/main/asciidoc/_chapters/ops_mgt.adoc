@@ -106,7 +106,7 @@ private static final int ERROR_EXIT_CODE = 4;
 ----
 
 Here are some examples based on the following given case.
-There are two HTable called test-01 and test-02, they have two column family cf1 and cf2 respectively, and deployed on the 3 RegionServers.
+There are two Table objects called test-01 and test-02, they have two column family cf1 and cf2 respectively, and deployed on the 3 RegionServers.
 see following table.
 
 [cols="1,1,1", options="header"]
@@ -665,7 +665,7 @@ The LoadTestTool has received many updates in recent HBase releases, including s
 [[ops.regionmgt.majorcompact]]
 === Major Compaction
 
-Major compactions can be requested via the HBase shell or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29[HBaseAdmin.majorCompact].
+Major compactions can be requested via the HBase shell or link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact%28java.lang.String%29[Admin.majorCompact].
 
 Note: major compactions do NOT do region merges.
 See <<compaction,compaction>> for more information about compactions.
@@ -1352,7 +1352,7 @@ A single WAL edit goes through several steps in order to be replicated to a slav
 . The edit is tagged with the master's UUID and added to a buffer.
   When the buffer is filled, or the reader reaches the end of the file, the buffer is sent to a random region server on the slave cluster.
 . The region server reads the edits sequentially and separates them into buffers, one buffer per table.
-  After all edits are read, each buffer is flushed using link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable], HBase's normal client.
+  After all edits are read, each buffer is flushed using link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table], HBase's normal client.
   The master's UUID and the UUIDs of slaves which have already consumed the data are preserved in the edits they are applied, in order to prevent replication loops.
 . In the master, the offset for the WAL that is currently being replicated is registered in ZooKeeper.
 
@@ -1994,7 +1994,7 @@ or in code it would be as follows:
 
 [source,java]
 ----
-void rename(HBaseAdmin admin, String oldTableName, String newTableName) {
+void rename(Admin admin, String oldTableName, String newTableName) {
   String snapshotName = randomName();
   admin.disableTable(oldTableName);
   admin.snapshot(snapshotName, oldTableName);

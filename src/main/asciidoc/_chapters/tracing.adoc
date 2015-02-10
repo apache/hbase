@@ -124,8 +124,9 @@ For example, if you wanted to trace all of your get operations, you change this:
 
 [source,java]
 ----
-
-HTable table = new HTable(conf, "t1");
+Configuration config = HBaseConfiguration.create();
+Connection connection = ConnectionFactory.createConnection(config);
+Table table = connection.getTable(TableName.valueOf("t1"));
 Get get = new Get(Bytes.toBytes("r1"));
 Result res = table.get(get);
 ----
@@ -137,7 +138,7 @@ into:
 
 TraceScope ts = Trace.startSpan("Gets", Sampler.ALWAYS);
 try {
-  HTable table = new HTable(conf, "t1");
+  Table table = connection.getTable(TableName.valueOf("t1"));
   Get get = new Get(Bytes.toBytes("r1"));
   Result res = table.get(get);
 } finally {

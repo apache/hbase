@@ -42,7 +42,7 @@ This example will add unit tests to the following example class:
 
 public class MyHBaseDAO {
 
-    public static void insertRecord(HTableInterface table, HBaseTestObj obj)
+    public static void insertRecord(Table.getTable(table), HBaseTestObj obj)
     throws Exception {
         Put put = createPut(obj);
         table.put(put);
@@ -129,17 +129,19 @@ Next, add a `@RunWith` annotation to your test class, to direct it to use Mockit
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestMyHBaseDAO{
-  @Mock 
-  private HTableInterface table;
   @Mock
-  private HTablePool hTablePool;
+  Configuration config = HBaseConfiguration.create();
+  @Mock
+  Connection connection = ConnectionFactory.createConnection(config);
+  @Mock 
+  private Table table;
   @Captor
   private ArgumentCaptor putCaptor;
 
   @Test
   public void testInsertRecord() throws Exception {
     //return mock table when getTable is called
-    when(hTablePool.getTable("tablename")).thenReturn(table);
+    when(connection.getTable(TableName.valueOf("tablename")).thenReturn(table);
     //create test object and make a call to the DAO that needs testing
     HBaseTestObj obj = new HBaseTestObj();
     obj.setRowKey("ROWKEY-1");
@@ -162,7 +164,7 @@ This code populates `HBaseTestObj` with ``ROWKEY-1'', ``DATA-1'', ``DATA-2'' as 
 It then inserts the record into the mocked table.
 The Put that the DAO would have inserted is captured, and values are tested to verify that they are what you expected them to be.
 
-The key here is to manage htable pool and htable instance creation outside the DAO.
+The key here is to manage Connection and Table instance creation outside the DAO.
 This allows you to mock them cleanly and test Puts as shown above.
 Similarly, you can now expand into other operations such as Get, Scan, or Delete.
 
