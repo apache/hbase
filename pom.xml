@@ -1079,11 +1079,14 @@
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
     <test.exclude.pattern></test.exclude.pattern>
-    <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx1900m
+    <!-- default Xmx value is 1900m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
+    <surefire.Xmx>1900m</surefire.Xmx>
+    <surefire.cygwinXmx>1900m</surefire.cygwinXmx>
+    <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx${surefire.Xmx}
       -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true
     </hbase-surefire.argLine>
-    <hbase-surefire.cygwin-argline>-enableassertions -Xmx1900m -XX:MaxPermSize=256m
+    <hbase-surefire.cygwin-argline>-enableassertions -Xmx${surefire.cygwinXmx} -XX:MaxPermSize=256m
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
     </hbase-surefire.cygwin-argline>
