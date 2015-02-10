@@ -1,5 +1,11 @@
 HBase Change Log
 
+Release 0.98.10.1 - 2/13/2015
+
+** Improvement
+    * [HBASE-12979] - Use setters instead of return values for handing back statistics from HRegion methods
+
+
 Release 0.98.10 - 2/5/2015
 
 ** Sub-task
