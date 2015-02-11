@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -146,8 +147,8 @@ public class WALSplitter {
   OutputSink outputSink;
   EntryBuffers entryBuffers;
 
-  private Set<TableName> disablingOrDisabledTables =
-      new HashSet<TableName>();
+  private Map<TableName, TableState> tableStatesCache =
+      new ConcurrentHashMap<>();
   private BaseCoordinatedStateManager csm;
   private final WALFactory walFactory;
 
@@ -302,16 +303,6 @@ public class WALSplitter {
       if (in == null) {
         LOG.warn("Nothing to split in log file " + logPath);
         return true;
-      }
-      if(csm != null) {
-        HConnection scc = csm.getServer().getConnection();
-        TableName[] tables = scc.listTableNames();
-        for (TableName table : tables) {
-          if (scc.getTableState(table)
-              .inStates(TableState.State.DISABLED, TableState.State.DISABLING)) {
-            disablingOrDisabledTables.add(table);
-          }
-        }
       }
       int numOpenedFilesBeforeReporting = conf.getInt("hbase.splitlog.report.openedfiles", 3);
       int numOpenedFilesLastCheck = 0;
@@ -1625,7 +1616,7 @@ public class WALSplitter {
       }
 
       // check if current region in a disabling or disabled table
-      if (disablingOrDisabledTables.contains(buffer.tableName)) {
+      if (isTableDisabledOrDisabling(buffer.tableName)) {
         // need fall back to old way
         logRecoveredEditsOutputSink.append(buffer);
         hasEditsInDisablingOrDisabledTables = true;
@@ -2055,6 +2046,26 @@ public class WALSplitter {
     @Override
     public int getNumberOfRecoveredRegions() {
       return this.recoveredRegions.size();
+    }
+
+    private boolean isTableDisabledOrDisabling(TableName tableName) {
+      if (csm == null)
+        return false; // we can't get state without CoordinatedStateManager
+      if (tableName.isSystemTable())
+        return false; // assume that system tables never can be disabled
+      TableState tableState = tableStatesCache.get(tableName);
+      if (tableState == null) {
+        try {
+          tableState =
+              MetaTableAccessor.getTableState(csm.getServer().getConnection(), tableName);
+          if (tableState != null)
+            tableStatesCache.put(tableName, tableState);
+        } catch (IOException e) {
+          LOG.warn("State is not accessible for table " + tableName, e);
+        }
+      }
+      return tableState != null && tableState
+          .inStates(TableState.State.DISABLED, TableState.State.DISABLING);
     }
 
     /**
