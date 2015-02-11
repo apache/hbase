@@ -709,7 +709,7 @@ class ConnectionManager {
     @Override
     public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
       if (managed) {
-        throw new IOException("The connection has to be unmanaged.");
+        throw new NeedUnmanagedConnectionException();
       }
       return new HTable(tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, pool);
     }
@@ -744,7 +744,7 @@ class ConnectionManager {
     @Override
     public Admin getAdmin() throws IOException {
       if (managed) {
-        throw new IOException("The connection has to be unmanaged.");
+        throw new NeedUnmanagedConnectionException();
       }
       return new HBaseAdmin(this);
     }
