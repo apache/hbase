@@ -85,6 +85,12 @@
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
     </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/../hbase-rest/target/hbase-webapps</directory>
+      <outputDirectory>hbase-webapps/</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
     <!-- Include native libraries -->
     <fileSet>
         <directory>${project.basedir}/../hbase-server/target/native</directory>
