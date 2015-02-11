@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class Filter {
-  protected boolean reversed;
+  protected transient boolean reversed;
   /**
    * Reset the state of the filter between rows.
    * 
