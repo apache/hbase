@@ -162,9 +162,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     fsBlockWriter.writeHeaderAndData(outputStream);
     int onDiskSize = fsBlockWriter.getOnDiskSizeWithHeader();
 
-    // Rather than CellComparator, we should be making use of an Interface here with the
-    // implementation class serialized out to the HFile metadata. TODO.
-    Cell indexEntry = CellComparator.getMidpoint(lastCellOfPreviousBlock, firstCellInBlock);
+    Cell indexEntry =
+      CellComparator.getMidpoint(this.comparator, lastCellOfPreviousBlock, firstCellInBlock);
     dataBlockIndexWriter.addEntry(CellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
       lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
@@ -264,8 +263,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
       checkBlockBoundary();
     }
 
-    if (!fsBlockWriter.isWriting())
+    if (!fsBlockWriter.isWriting()) {
       newBlock();
+    }
 
     fsBlockWriter.write(cell);
 
