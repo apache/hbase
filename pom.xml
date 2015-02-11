@@ -675,6 +675,7 @@
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
+              <exclude>**/patchprocess/**</exclude>
             </excludes>
           </configuration>
         </plugin>
