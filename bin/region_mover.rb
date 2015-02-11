@@ -305,7 +305,7 @@ def unloadRegions(options, hostname, port)
     puts "No regions were moved - there was no server available"
     exit 4
   end
-  movedRegions = java.util.ArrayList.new()
+  movedRegions = java.util.Collections.synchronizedList(java.util.ArrayList.new())
   while true
     rs = getRegions(config, servername)
     # Remove those already tried to move
