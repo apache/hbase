@@ -177,10 +177,10 @@ public abstract class ScheduledChore implements Runnable {
   public synchronized void run() {
     timeOfLastRun = timeOfThisRun;
     timeOfThisRun = System.currentTimeMillis();
-    if (missedStartTime() && choreServicer != null) {
+    if (missedStartTime() && isScheduled()) {
       choreServicer.onChoreMissedStartTime(this);
       if (LOG.isInfoEnabled()) LOG.info("Chore: " + getName() + " missed its start time");
-    } else if (stopper.isStopped()) {
+    } else if (stopper.isStopped() || choreServicer == null || !isScheduled()) {
       cancel();
       cleanup();
       LOG.info("Chore: " + getName() + " was stopped");
@@ -252,7 +252,7 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   public synchronized void cancel(boolean mayInterruptIfRunning) {
-    if (choreServicer != null) choreServicer.cancelChore(this, mayInterruptIfRunning);
+    if (isScheduled()) choreServicer.cancelChore(this, mayInterruptIfRunning);
 
     choreServicer = null;
   }

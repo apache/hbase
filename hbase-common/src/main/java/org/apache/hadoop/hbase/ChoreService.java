@@ -330,7 +330,7 @@ public class ChoreService implements ChoreServicer {
       choresToCancel.add(chore);
     }
     for (ScheduledChore chore : choresToCancel) {
-      chore.cancel(mayInterruptIfRunning);
+      cancelChore(chore, mayInterruptIfRunning);
     }
     choresToCancel.clear();
   }
