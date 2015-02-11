@@ -39,7 +39,6 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestChoreService {
   private final Log LOG = LogFactory.getLog(this.getClass());
-  private final String TEST_SERVER_NAME = "testServerName";
 
   /**
    * A few ScheduledChore samples that are useful for testing with ChoreService
@@ -238,7 +237,7 @@ public class TestChoreService {
 
   @Test (timeout=20000)
   public void testInitialChorePrecedence() throws InterruptedException {
-    ChoreService service = ChoreService.getInstance(TEST_SERVER_NAME);
+    ChoreService service = ChoreService.getInstance("testInitialChorePrecedence");
 
     final int period = 100;
     final int failureThreshold = 5;
@@ -265,7 +264,7 @@ public class TestChoreService {
   public void testCancelChore() throws InterruptedException {
     final int period = 100;
     ScheduledChore chore1 = new DoNothingChore("chore1", period);
-    ChoreService service = ChoreService.getInstance(TEST_SERVER_NAME);
+    ChoreService service = ChoreService.getInstance("testCancelChore");
 
     service.scheduleChore(chore1);
     assertTrue(chore1.isScheduled());
@@ -314,13 +313,13 @@ public class TestChoreService {
     final int corePoolSize = 10;
     final int defaultCorePoolSize = ChoreService.MIN_CORE_POOL_SIZE;
 
-    ChoreService customInit = new ChoreService(TEST_SERVER_NAME, corePoolSize);
+    ChoreService customInit = new ChoreService("testChoreServiceConstruction_custom", corePoolSize);
     assertEquals(corePoolSize, customInit.getCorePoolSize());
 
-    ChoreService defaultInit = new ChoreService(TEST_SERVER_NAME);
+    ChoreService defaultInit = new ChoreService("testChoreServiceConstruction_default");
     assertEquals(defaultCorePoolSize, defaultInit.getCorePoolSize());
 
-    ChoreService invalidInit = new ChoreService(TEST_SERVER_NAME, -10);
+    ChoreService invalidInit = new ChoreService("testChoreServiceConstruction_invalid", -10);
     assertEquals(defaultCorePoolSize, invalidInit.getCorePoolSize());
 
     shutdownService(customInit);
@@ -334,7 +333,7 @@ public class TestChoreService {
     final int period = 100;
     // Small delta that acts as time buffer (allowing chores to complete if running slowly)
     final int delta = 5;
-    ChoreService service = ChoreService.getInstance(TEST_SERVER_NAME);
+    ChoreService service = ChoreService.getInstance("testFrequencyOfChores");
     CountingChore chore = new CountingChore("countingChore", period);
     service.scheduleChore(chore);
 
@@ -358,7 +357,7 @@ public class TestChoreService {
   public void testForceTrigger() throws InterruptedException {
     final int period = 100;
     final int delta = 5;
-    ChoreService service = ChoreService.getInstance(TEST_SERVER_NAME);
+    ChoreService service = ChoreService.getInstance("testForceTrigger");
     CountingChore chore = new CountingChore("countingChore", period);
     service.scheduleChore(chore);
     Thread.sleep(10 * period + delta);
@@ -390,7 +389,7 @@ public class TestChoreService {
   @Test (timeout=20000)
   public void testCorePoolIncrease() throws InterruptedException {
     final int initialCorePoolSize = 3;
-    ChoreService service = new ChoreService(TEST_SERVER_NAME, initialCorePoolSize);
+    ChoreService service = new ChoreService("testCorePoolIncrease", initialCorePoolSize);
     assertEquals("Should have a core pool of size: " + initialCorePoolSize, initialCorePoolSize,
         service.getCorePoolSize());
 
@@ -427,7 +426,7 @@ public class TestChoreService {
   @Test (timeout=20000)
   public void testCorePoolDecrease() throws InterruptedException {
     final int initialCorePoolSize = 3;
-    ChoreService service = new ChoreService(TEST_SERVER_NAME, initialCorePoolSize);
+    ChoreService service = new ChoreService("testCorePoolDecrease", initialCorePoolSize);
     final int chorePeriod = 100;
 
     // Slow chores always miss their start time and thus the core pool size should be at least as
@@ -530,7 +529,7 @@ public class TestChoreService {
 
   @Test (timeout=20000)
   public void testNumberOfRunningChores() throws InterruptedException {
-    ChoreService service = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service = new ChoreService("testNumberOfRunningChores");
 
     final int period = 100;
     final int sleepTime = 5;
@@ -569,7 +568,7 @@ public class TestChoreService {
 
   @Test (timeout=20000)
   public void testNumberOfChoresMissingStartTime() throws InterruptedException {
-    ChoreService service = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service = new ChoreService("testNumberOfChoresMissingStartTime");
 
     final int period = 100;
     final int sleepTime = 5 * period;
@@ -615,7 +614,7 @@ public class TestChoreService {
    */
   @Test (timeout=20000)
   public void testMaximumChoreServiceThreads() throws InterruptedException {
-    ChoreService service = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service = new ChoreService("testMaximumChoreServiceThreads");
 
     final int period = 100;
     final int sleepTime = 5 * period;
@@ -661,7 +660,7 @@ public class TestChoreService {
   @Test (timeout=20000)
   public void testScheduledChoreReset() throws InterruptedException {
     final int period = 100;
-    ChoreService service = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service = new ChoreService("testScheduledChoreReset");
     ScheduledChore chore = new DoNothingChore("sampleChore", period);
 
     // TRUE
@@ -691,8 +690,8 @@ public class TestChoreService {
   public void testChangingChoreServices() throws InterruptedException {
     final int period = 100;
     final int sleepTime = 10;
-    ChoreService service1 = new ChoreService(TEST_SERVER_NAME);
-    ChoreService service2 = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service1 = new ChoreService("testChangingChoreServices_1");
+    ChoreService service2 = new ChoreService("testChangingChoreServices_2");
     ScheduledChore chore = new DoNothingChore("sample", period);
 
     assertFalse(chore.isScheduled());
@@ -729,7 +728,7 @@ public class TestChoreService {
     final int period = 100;
     // Small sleep time buffer to allow CountingChore to complete
     final int sleep = 5;
-    ChoreService service = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service = new ChoreService("testTriggerNowFailsWhenNotScheduled");
     CountingChore chore = new CountingChore("dn", period);
 
     assertFalse(chore.triggerNow());
@@ -753,7 +752,7 @@ public class TestChoreService {
 
   @Test (timeout=20000)
   public void testStopperForScheduledChores() throws InterruptedException {
-    ChoreService service = ChoreService.getInstance(TEST_SERVER_NAME);
+    ChoreService service = ChoreService.getInstance("testStopperForScheduledChores");
     Stoppable stopperForGroup1 = new SampleStopper();
     Stoppable stopperForGroup2 = new SampleStopper();
     final int period = 100;
@@ -807,7 +806,7 @@ public class TestChoreService {
   @Test (timeout=20000)
   public void testShutdownCancelsScheduledChores() throws InterruptedException {
     final int period = 100;
-    ChoreService service = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service = new ChoreService("testShutdownCancelsScheduledChores");
     ScheduledChore successChore1 = new DoNothingChore("sc1", period);
     ScheduledChore successChore2 = new DoNothingChore("sc2", period);
     ScheduledChore successChore3 = new DoNothingChore("sc3", period);
@@ -830,7 +829,7 @@ public class TestChoreService {
   public void testShutdownWorksWhileChoresAreExecuting() throws InterruptedException {
     final int period = 100;
     final int sleep = 5 * period;
-    ChoreService service = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service = new ChoreService("testShutdownWorksWhileChoresAreExecuting");
     ScheduledChore slowChore1 = new SleepingChore("sc1", period, sleep);
     ScheduledChore slowChore2 = new SleepingChore("sc2", period, sleep);
     ScheduledChore slowChore3 = new SleepingChore("sc3", period, sleep);
@@ -856,7 +855,7 @@ public class TestChoreService {
   @Test (timeout=20000)
   public void testShutdownRejectsNewSchedules() throws InterruptedException {
     final int period = 100;
-    ChoreService service = new ChoreService(TEST_SERVER_NAME);
+    ChoreService service = new ChoreService("testShutdownRejectsNewSchedules");
     ScheduledChore successChore1 = new DoNothingChore("sc1", period);
     ScheduledChore successChore2 = new DoNothingChore("sc2", period);
     ScheduledChore successChore3 = new DoNothingChore("sc3", period);
