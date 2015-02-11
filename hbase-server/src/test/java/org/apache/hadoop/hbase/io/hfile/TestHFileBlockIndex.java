@@ -42,9 +42,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -138,7 +139,7 @@ public class TestHFileBlockIndex {
     fs = HFileSystem.get(conf);
   }
 
-  protected void testBlockIndexInternals(boolean useTags) throws IOException {
+  private void testBlockIndexInternals(boolean useTags) throws IOException {
     path = new Path(TEST_UTIL.getDataTestDir(), "block_index_" + compr + useTags);
     writeWholeIndex(useTags);
     readIndex(useTags);
@@ -186,7 +187,7 @@ public class TestHFileBlockIndex {
     }
   }
 
-  public void readIndex(boolean useTags) throws IOException {
+  private void readIndex(boolean useTags) throws IOException {
     long fileSize = fs.getFileStatus(path).getLen();
     LOG.info("Size of " + path + ": " + fileSize);
 
@@ -216,10 +217,10 @@ public class TestHFileBlockIndex {
     for (byte[] key : keys) {
       assertTrue(key != null);
       assertTrue(indexReader != null);
-      HFileBlock b = indexReader.seekToDataBlock(new KeyValue.KeyOnlyKeyValue(key, 0, key.length),
-          null,
-          true, true, false, null);
-      if (Bytes.BYTES_RAWCOMPARATOR.compare(key, firstKeyInFile) < 0) {
+      HFileBlock b =
+          indexReader.seekToDataBlock(new KeyValue.KeyOnlyKeyValue(key, 0, key.length), null, true,
+            true, false, null);
+      if (KeyValue.COMPARATOR.compareFlatKey(key, firstKeyInFile) < 0) {
         assertTrue(b == null);
         ++i;
         continue;
@@ -260,21 +261,26 @@ public class TestHFileBlockIndex {
         new HFileBlockIndex.BlockIndexWriter(hbw, null, null);
 
     for (int i = 0; i < NUM_DATA_BLOCKS; ++i) {
-      hbw.startWriting(BlockType.DATA).write(
-          String.valueOf(rand.nextInt(1000)).getBytes());
+      hbw.startWriting(BlockType.DATA).write(String.valueOf(rand.nextInt(1000)).getBytes());
       long blockOffset = outputStream.getPos();
       hbw.writeHeaderAndData(outputStream);
 
       byte[] firstKey = null;
+      byte[] family = Bytes.toBytes("f");
+      byte[] qualifier = Bytes.toBytes("q");
       for (int j = 0; j < 16; ++j) {
-        byte[] k = TestHFileWriterV2.randomOrderedKey(rand, i * 16 + j);
+        byte[] k =
+            new KeyValue(TestHFileWriterV2.randomOrderedKey(rand, i * 16 + j), family, qualifier,
+                EnvironmentEdgeManager.currentTime(), KeyValue.Type.Put).getKey();
         keys.add(k);
-        if (j == 8)
+        if (j == 8) {
           firstKey = k;
+        }
       }
       assertTrue(firstKey != null);
-      if (firstKeyInFile == null)
+      if (firstKeyInFile == null) {
         firstKeyInFile = firstKey;
+      }
       biw.addEntry(firstKey, blockOffset, hbw.getOnDiskSizeWithHeader());
 
       writeInlineBlocks(hbw, outputStream, biw, false);
@@ -439,7 +445,7 @@ public class TestHFileBlockIndex {
 
   }
 
-  //@Test
+  @Test
   public void testBlockIndexChunk() throws IOException {
     BlockIndexChunk c = new BlockIndexChunk();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -476,7 +482,7 @@ public class TestHFileBlockIndex {
   }
 
   /** Checks if the HeapSize calculator is within reason */
-  //@Test
+  @Test
   public void testHeapSizeForBlockIndex() throws IOException {
     Class<HFileBlockIndex.BlockIndexReader> cl =
         HFileBlockIndex.BlockIndexReader.class;
@@ -504,7 +510,7 @@ public class TestHFileBlockIndex {
    *
    * @throws IOException
    */
-  //@Test
+  @Test
   public void testHFileWriterAndReader() throws IOException {
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
         "hfile_for_block_index");
@@ -536,16 +542,19 @@ public class TestHFileBlockIndex {
                 .withFileContext(meta)
                 .create();
         Random rand = new Random(19231737);
-
+        byte[] family = Bytes.toBytes("f");
+        byte[] qualifier = Bytes.toBytes("q");
         for (int i = 0; i < NUM_KV; ++i) {
           byte[] row = TestHFileWriterV2.randomOrderedKey(rand, i);
 
           // Key will be interpreted by KeyValue.KEY_COMPARATOR
-          KeyValue kv = KeyValueUtil.createFirstOnRow(row, 0, row.length, row, 0, 0,
-              row, 0, 0);
+          KeyValue kv =
+              new KeyValue(row, family, qualifier, EnvironmentEdgeManager.currentTime(),
+                  TestHFileWriterV2.randomValue(rand));
           byte[] k = kv.getKey();
           writer.append(kv);
           keys[i] = k;
+          values[i] = CellUtil.cloneValue(kv);
           keyStrSet.add(Bytes.toStringBinary(k));
           if (i > 0) {
             assertTrue(KeyValue.COMPARATOR.compareFlatKey(keys[i - 1],
