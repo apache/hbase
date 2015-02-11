@@ -47,11 +47,10 @@ public class TestTableDescriptor {
     htd.setDurability(Durability.ASYNC_WAL);
     htd.setReadOnly(true);
     htd.setRegionReplication(2);
-    TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
+    TableDescriptor td = new TableDescriptor(htd);
     byte[] bytes = td.toByteArray();
     TableDescriptor deserializedTd = TableDescriptor.parseFrom(bytes);
     assertEquals(td, deserializedTd);
     assertEquals(td.getHTableDescriptor(), deserializedTd.getHTableDescriptor());
-    assertEquals(td.getTableState(), deserializedTd.getTableState());
   }
 }

@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -36,26 +34,6 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 @InterfaceAudience.Private
 public class TableDescriptor {
   private HTableDescriptor hTableDescriptor;
-  /**
-   * Don't use, state was moved to meta, use MetaTableAccessor instead
-   * @deprecated state was moved to meta
-   */
-  @Deprecated
-  @Nullable
-  private TableState.State tableState;
-
-  /**
-   * Creates TableDescriptor with all fields.
-   * @param hTableDescriptor HTableDescriptor to use
-   * @param tableState table state
-   * @deprecated state was moved to meta
-   */
-  @Deprecated
-  public TableDescriptor(HTableDescriptor hTableDescriptor,
-      @Nullable TableState.State tableState) {
-    this.hTableDescriptor = hTableDescriptor;
-    this.tableState = tableState;
-  }
 
   /**
    * Creates TableDescriptor with Enabled table.
@@ -63,7 +41,7 @@ public class TableDescriptor {
    */
   @VisibleForTesting
   public TableDescriptor(HTableDescriptor hTableDescriptor) {
-    this(hTableDescriptor, TableState.State.ENABLED);
+    this.hTableDescriptor = hTableDescriptor;
   }
 
   /**
@@ -79,33 +57,12 @@ public class TableDescriptor {
   }
 
   /**
-   * @return table state
-   * @deprecated state was moved to meta
-   */
-  @Deprecated
-  @Nullable
-  public TableState.State getTableState() {
-    return tableState;
-  }
-
-  /**
-   * @param tableState state to set for table
-   * @deprecated state was moved to meta
-   */
-  @Deprecated
-  public void setTableState(@Nullable TableState.State tableState) {
-    this.tableState = tableState;
-  }
-
-  /**
    * Convert to PB.
    */
   @SuppressWarnings("deprecation")
   public HBaseProtos.TableDescriptor convert() {
     HBaseProtos.TableDescriptor.Builder builder = HBaseProtos.TableDescriptor.newBuilder()
         .setSchema(hTableDescriptor.convert());
-    if (tableState!= null)
-      builder.setState(tableState.convert());
     return builder.build();
   }
 
@@ -113,11 +70,7 @@ public class TableDescriptor {
    * Convert from PB
    */
   public static TableDescriptor convert(HBaseProtos.TableDescriptor proto) {
-    HTableDescriptor hTableDescriptor = HTableDescriptor.convert(proto.getSchema());
-    TableState.State state = proto.hasState()?
-        TableState.State.convert(proto.getState())
-        :null;
-    return new TableDescriptor(hTableDescriptor, state);
+    return new TableDescriptor(HTableDescriptor.convert(proto.getSchema()));
   }
 
   /**
@@ -158,23 +111,18 @@ public class TableDescriptor {
     if (hTableDescriptor != null ?
         !hTableDescriptor.equals(that.hTableDescriptor) :
         that.hTableDescriptor != null) return false;
-    if (tableState != that.tableState) return false;
-
     return true;
   }
 
   @Override
   public int hashCode() {
-    int result = hTableDescriptor != null ? hTableDescriptor.hashCode() : 0;
-    result = 31 * result + (tableState != null ? tableState.hashCode() : 0);
-    return result;
+    return hTableDescriptor != null ? hTableDescriptor.hashCode() : 0;
   }
 
   @Override
   public String toString() {
     return "TableDescriptor{" +
         "hTableDescriptor=" + hTableDescriptor +
-        ", tableState=" + tableState +
         '}';
   }
 

@@ -22,7 +22,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
 /**
@@ -94,28 +93,17 @@ public class TableState {
 
   }
 
-  private final long timestamp;
   private final TableName tableName;
   private final State state;
 
   /**
    * Create instance of TableState.
+   * @param tableName name of the table
    * @param state table state
    */
-  public TableState(TableName tableName, State state, long timestamp) {
+  public TableState(TableName tableName, State state) {
     this.tableName = tableName;
     this.state = state;
-    this.timestamp = timestamp;
-  }
-
-  /**
-   * Create instance of TableState with current timestamp
-   *
-   * @param tableName table for which state is created
-   * @param state     state of the table
-   */
-  public TableState(TableName tableName, State state) {
-    this(tableName, state, System.currentTimeMillis());
   }
 
   /**
@@ -123,15 +111,6 @@ public class TableState {
    */
   public State getState() {
     return state;
-  }
-
-  /**
-   * Timestamp of table state
-   *
-   * @return milliseconds
-   */
-  public long getTimestamp() {
-    return timestamp;
   }
 
   /**
@@ -172,10 +151,7 @@ public class TableState {
    */
   public HBaseProtos.TableState convert() {
     return HBaseProtos.TableState.newBuilder()
-        .setState(this.state.convert())
-        .setTable(ProtobufUtil.toProtoTableName(this.tableName)) // set for backward compatibility
-        .setTimestamp(this.timestamp)
-            .build();
+        .setState(this.state.convert()).build();
   }
 
   /**
@@ -187,7 +163,7 @@ public class TableState {
    */
   public static TableState convert(TableName tableName, HBaseProtos.TableState tableState) {
     TableState.State state = State.convert(tableState.getState());
-    return new TableState(tableName, state, tableState.getTimestamp());
+    return new TableState(tableName, state);
   }
 
   public static TableState parseFrom(TableName tableName, byte[] bytes)
@@ -220,7 +196,6 @@ public class TableState {
 
     TableState that = (TableState) o;
 
-    if (timestamp != that.timestamp) return false;
     if (state != that.state) return false;
     if (tableName != null ? !tableName.equals(that.tableName) : that.tableName != null)
       return false;
@@ -230,8 +205,7 @@ public class TableState {
 
   @Override
   public int hashCode() {
-    int result = (int) (timestamp ^ (timestamp >>> 32));
-    result = 31 * result + (tableName != null ? tableName.hashCode() : 0);
+    int result = (tableName != null ? tableName.hashCode() : 0);
     result = 31 * result + (state != null ? state.hashCode() : 0);
     return result;
   }
@@ -239,7 +213,6 @@ public class TableState {
   @Override
   public String toString() {
     return "TableState{" +
-        "timestamp=" + timestamp +
         ", tableName=" + tableName +
         ", state=" + state +
         '}';

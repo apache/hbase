@@ -214,20 +214,9 @@ public class TableStateManager {
       if (table.equals(TableName.META_TABLE_NAME.getNameAsString()))
         continue;
       if (!states.containsKey(table)) {
-        LOG.warn("Found table without state " + table);
-        TableDescriptor td = entry.getValue();
-        TableState.State tds = td.getTableState();
-        if (tds != null) {
-          LOG.warn("Found table with state in descriptor, using that state");
-          MetaTableAccessor.updateTableState(connection, TableName.valueOf(table), tds);
-          LOG.warn("Updating table descriptor");
-          td.setTableState(null);
-          tableDescriptors.add(td);
-        } else {
-          LOG.warn("Found table with no state in descriptor, assuming ENABLED");
-          MetaTableAccessor.updateTableState(connection, TableName.valueOf(table),
-              TableState.State.ENABLED);
-        }
+        LOG.warn("Found table with no state, assuming ENABLED");
+        MetaTableAccessor.updateTableState(connection, TableName.valueOf(table),
+            TableState.State.ENABLED);
       }
     }
   }
