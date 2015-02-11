@@ -178,11 +178,19 @@ public class CellComparator implements Comparator<Cell>, Serializable {
     return compareWithoutRow(left, right);
   }
 
+  /**
+   * Do not use comparing rows from hbase:meta. Meta table Cells have schema (table,startrow,hash)
+   * so can't be treated as plain byte arrays as this method does.
+   */
   public static int compareRows(final Cell left, final Cell right) {
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
         right.getRowArray(), right.getRowOffset(), right.getRowLength());
   }
 
+  /**
+   * Do not use comparing rows from hbase:meta. Meta table Cells have schema (table,startrow,hash)
+   * so can't be treated as plain byte arrays as this method does.
+   */
   public static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
       int rlength) {
     return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
@@ -375,20 +383,28 @@ public class CellComparator implements Comparator<Cell>, Serializable {
 
   /**
    * Try to return a Cell that falls between <code>left</code> and <code>right</code> but that is
-   * shorter; i.e. takes up less space. This is trick is used building HFile block index.
+   * shorter; i.e. takes up less space. This trick is used building HFile block index.
    * Its an optimization. It does not always work.  In this case we'll just return the
    * <code>right</code> cell.
+   * @param comparator Comparator to use.
    * @param left
    * @param right
    * @return A cell that sorts between <code>left</code> and <code>right</code>.
    */
-  public static Cell getMidpoint(final Cell left, final Cell right) {
+  public static Cell getMidpoint(final KeyValue.KVComparator comparator, final Cell left,
+      final Cell right) {
     // TODO: Redo so only a single pass over the arrays rather than one to compare and then a
     // second composing midpoint.
     if (right == null) {
       throw new IllegalArgumentException("right cell can not be null");
     }
     if (left == null) {
+      return right;
+    }
+    // If Cells from meta table, don't mess around. meta table Cells have schema
+    // (table,startrow,hash) so can't be treated as plain byte arrays. Just skip out without
+    // trying to do this optimization.
+    if (comparator != null && comparator instanceof KeyValue.MetaComparator) {
       return right;
     }
     int diff = compareRows(left, right);
