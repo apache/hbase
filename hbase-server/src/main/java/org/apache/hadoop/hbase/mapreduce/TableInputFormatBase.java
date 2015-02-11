@@ -39,7 +39,9 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -69,28 +71,38 @@ import org.apache.hadoop.util.StringUtils;
  *
  *     private JobConf job;
  *
+ *     {@literal @}Override
  *     public void configure(JobConf job) {
  *       this.job = job;
- *       Text[] inputColumns = new byte [][] { Bytes.toBytes("cf1:columnA"),
- *         Bytes.toBytes("cf2") };
- *       // mandatory
- *       setInputColumns(inputColumns);
- *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");
- *       // optional
- *       setRowFilter(exampleFilter);
+ *       byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+ *         Bytes.toBytes("columnB") };
+ *       // optional, by default we'll get everything for the table.
+ *       Scan scan = new Scan();
+ *       for (byte[] family : inputColumns) {
+ *         scan.addFamily(family);
+ *       }
+ *       Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+ *       scan.setFilter(exampleFilter);
+ *       setScan(scan);
  *     }
- *     
- *     protected void initialize() {
- *       Connection connection =
- *          ConnectionFactory.createConnection(HBaseConfiguration.create(job));
- *       TableName tableName = TableName.valueOf("exampleTable");
- *       // mandatory
- *       initializeTable(connection, tableName);
- *    }
  *
- *     public void validateInput(JobConf job) throws IOException {
+ *     {@literal @}Override
+ *     protected void initialize() {
+ *       if (job == null) {
+ *         throw new IllegalStateException("must have already gotten the JobConf before " +
+ *             "initialize is called.");
+ *       }
+ *       try {
+ *         Connection connection =
+ *            ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+ *         TableName tableName = TableName.valueOf("exampleTable");
+ *         // mandatory
+ *         initializeTable(connection, tableName);
+ *       } catch (IOException exception) {
+ *         throw new RuntimeException("Failed to initialize.", exception);
+ *       }
  *     }
- *  }
+ *   }
  * </pre>
  */
 @InterfaceAudience.Public
@@ -582,15 +594,31 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   @Deprecated
   protected void setHTable(HTable table) throws IOException {
     this.table = table;
-    this.regionLocator = table.getRegionLocator();
     this.connection = table.getConnection();
-    this.admin = this.connection.getAdmin();
+    try {
+      this.regionLocator = table.getRegionLocator();
+      this.admin = this.connection.getAdmin();
+    } catch (NeedUnmanagedConnectionException exception) {
+      LOG.warn("You are using an HTable instance that relies on an HBase-managed Connection. " +
+          "This is usually due to directly creating an HTable, which is deprecated. Instead, you " +
+          "should create a Connection object and then request a Table instance from it. If you " +
+          "don't need the Table instance for your own use, you should instead use the " +
+          "TableInputFormatBase.initalizeTable method directly.");
+      LOG.info("Creating an additional unmanaged connection because user provided one can't be " +
+          "used for administrative actions. We'll close it when we close out the table.");
+      LOG.debug("Details about our failure to request an administrative interface.", exception);
+      // Do we need a "copy the settings from this Connection" method? are things like the User
+      // properly maintained by just looking again at the Configuration?
+      this.connection = ConnectionFactory.createConnection(this.connection.getConfiguration());
+      this.regionLocator = this.connection.getRegionLocator(table.getName());
+      this.admin = this.connection.getAdmin();
+    }
   }
 
   /**
    * Allows subclasses to initialize the table information.
    *
-   * @param connection  The {@link Connection} to the HBase cluster.
+   * @param connection  The Connection to the HBase cluster. MUST be unmanaged. We will close.
    * @param tableName  The {@link TableName} of the table to process. 
    * @throws IOException 
    */
