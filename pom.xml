@@ -535,6 +535,7 @@
               <!--  exclude source control files -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
+              <exclude>**/patchprocess/**</exclude>
             </excludes>
           </configuration>
 	</plugin>
