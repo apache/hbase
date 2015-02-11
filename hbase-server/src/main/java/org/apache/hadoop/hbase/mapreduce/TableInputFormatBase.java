@@ -58,25 +58,30 @@ import org.apache.hadoop.util.StringUtils;
  * <p>
  * An example of a subclass:
  * <pre>
- *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
- *
+ *   public static class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
+ *  
+ *     @Override
  *     public void configure(JobConf job) {
- *       HTable exampleTable = new HTable(HBaseConfiguration.create(job),
- *         Bytes.toBytes("exampleTable"));
- *       // mandatory
- *       setHTable(exampleTable);
- *       Text[] inputColumns = new byte [][] { Bytes.toBytes("cf1:columnA"),
- *         Bytes.toBytes("cf2") };
- *       // mandatory
- *       setInputColumns(inputColumns);
- *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");
- *       // optional
- *       setRowFilter(exampleFilter);
+ *       try {
+ *         HTable exampleTable = new HTable(HBaseConfiguration.create(job),
+ *           Bytes.toBytes("exampleTable"));
+ *         // mandatory
+ *         setHTable(exampleTable);
+ *         byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+ *           Bytes.toBytes("columnB") };
+ *         // optional
+ *         Scan scan = new Scan();
+ *         for (byte[] family : inputColumns) {
+ *           scan.addFamily(family);
+ *         }
+ *         Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+ *         scan.setFilter(exampleFilter);
+ *         setScan(scan);
+ *       } catch (IOException exception) {
+ *         throw new RuntimeException("Failed to configure for job.", exception);
+ *       }
  *     }
- *
- *     public void validateInput(JobConf job) throws IOException {
- *     }
- *  }
+ *   }
  * </pre>
  */
 @InterfaceAudience.Public

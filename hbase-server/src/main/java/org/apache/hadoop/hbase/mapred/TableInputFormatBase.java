@@ -45,23 +45,25 @@ import org.apache.hadoop.mapred.Reporter;
  * <pre>
  *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
  *
+ *     @Override
  *     public void configure(JobConf job) {
- *       HTable exampleTable = new HTable(HBaseConfiguration.create(job),
- *         Bytes.toBytes("exampleTable"));
- *       // mandatory
- *       setHTable(exampleTable);
- *       Text[] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
- *         Bytes.toBytes("columnB") };
- *       // mandatory
- *       setInputColumns(inputColumns);
- *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");
- *       // optional
- *       setRowFilter(exampleFilter);
+ *       try {
+ *         HTable exampleTable = new HTable(HBaseConfiguration.create(job),
+ *           Bytes.toBytes("exampleTable"));
+ *         // mandatory
+ *         setHTable(exampleTable);
+ *         byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+ *           Bytes.toBytes("columnB") };
+ *         // mandatory
+ *         setInputColumns(inputColumns);
+ *         // optional
+ *         Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+ *         setRowFilter(exampleFilter);
+ *       } catch (IOException exception) {
+ *         throw new RuntimeException("Failed to configure for job.", exception);
+ *       }
  *     }
- *
- *     public void validateInput(JobConf job) throws IOException {
- *     }
- *  }
+ *   }
  * </pre>
  */
 
