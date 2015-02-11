@@ -52,6 +52,8 @@ abstract public class MapreduceTestingShim {
 
   abstract public JobContext newJobContext(Configuration jobConf)
       throws IOException;
+
+  abstract public Job newJob(Configuration conf) throws IOException;
   
   abstract public JobConf obtainJobConf(MiniMRCluster cluster);
 
@@ -64,6 +66,10 @@ abstract public class MapreduceTestingShim {
   
   public static JobConf getJobConf(MiniMRCluster cluster) {
     return instance.obtainJobConf(cluster);
+  }
+
+  public static Job createJob(Configuration conf) throws IOException {
+    return instance.newJob(conf);
   }
 
   public static String getMROutputDirProp() {
@@ -82,6 +88,20 @@ abstract public class MapreduceTestingShim {
       } catch (Exception e) {
         throw new IllegalStateException(
             "Failed to instantiate new JobContext(jobConf, new JobID())", e);
+      }
+    }
+
+    @Override
+    public Job newJob(Configuration conf) throws IOException {
+      // Implementing:
+      // return new Job(conf);
+      Constructor<Job> c;
+      try {
+        c = Job.class.getConstructor(Configuration.class);
+        return c.newInstance(conf);
+      } catch (Exception e) {
+        throw new IllegalStateException(
+            "Failed to instantiate new Job(conf)", e);
       }
     }
     
@@ -110,11 +130,16 @@ abstract public class MapreduceTestingShim {
 
   private static class MapreduceV2Shim extends MapreduceTestingShim {
     public JobContext newJobContext(Configuration jobConf) {
+      return newJob(jobConf);
+    }
+
+    @Override
+    public Job newJob(Configuration jobConf) {
       // Implementing:
       // return Job.getInstance(jobConf);
       try {
         Method m = Job.class.getMethod("getInstance", Configuration.class);
-        return (JobContext) m.invoke(null, jobConf); // static method, then arg
+        return (Job) m.invoke(null, jobConf); // static method, then arg
       } catch (Exception e) {
         e.printStackTrace();
         throw new IllegalStateException(

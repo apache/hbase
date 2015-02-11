@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mapred;
+package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -35,7 +35,8 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -46,19 +47,17 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
-import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.mapred.lib.NullOutputFormat;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -69,7 +68,7 @@ import org.mockito.stubbing.Answer;
 
 /**
  * This tests the TableInputFormat and its recovery semantics
- * 
+ *
  */
 @Category(LargeTests.class)
 public class TestTableInputFormat {
@@ -103,7 +102,7 @@ public class TestTableInputFormat {
 
   /**
    * Setup a table with two rows and values.
-   * 
+   *
    * @param tableName
    * @return
    * @throws IOException
@@ -114,7 +113,7 @@ public class TestTableInputFormat {
 
   /**
    * Setup a table with two rows and values per column family.
-   * 
+   *
    * @param tableName
    * @return
    * @throws IOException
@@ -136,7 +135,7 @@ public class TestTableInputFormat {
 
   /**
    * Verify that the result and key have expected values.
-   * 
+   *
    * @param r
    * @param key
    * @param expectedKey
@@ -154,39 +153,47 @@ public class TestTableInputFormat {
 
   /**
    * Create table data and run tests on specified htable using the
-   * o.a.h.hbase.mapred API.
-   * 
+   * o.a.h.hbase.mapreduce API.
+   *
    * @param table
    * @throws IOException
+   * @throws InterruptedException
    */
-  static void runTestMapred(Table table) throws IOException {
-    org.apache.hadoop.hbase.mapred.TableRecordReader trr = 
-        new org.apache.hadoop.hbase.mapred.TableRecordReader();
-    trr.setStartRow("aaa".getBytes());
-    trr.setEndRow("zzz".getBytes());
+  static void runTestMapreduce(Table table) throws IOException,
+      InterruptedException {
+    org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr =
+        new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
+    Scan s = new Scan();
+    s.setStartRow("aaa".getBytes());
+    s.setStopRow("zzz".getBytes());
+    s.addFamily(FAMILY);
+    trr.setScan(s);
     trr.setHTable(table);
-    trr.setInputColumns(columns);
 
-    trr.init();
+    trr.initialize(null, null);
     Result r = new Result();
     ImmutableBytesWritable key = new ImmutableBytesWritable();
 
-    boolean more = trr.next(key, r);
+    boolean more = trr.nextKeyValue();
     assertTrue(more);
+    key = trr.getCurrentKey();
+    r = trr.getCurrentValue();
     checkResult(r, key, "aaa".getBytes(), "value aaa".getBytes());
 
-    more = trr.next(key, r);
+    more = trr.nextKeyValue();
     assertTrue(more);
+    key = trr.getCurrentKey();
+    r = trr.getCurrentValue();
     checkResult(r, key, "bbb".getBytes(), "value bbb".getBytes());
 
     // no more data
-    more = trr.next(key, r);
+    more = trr.nextKeyValue();
     assertFalse(more);
   }
 
   /**
    * Create a table that IOE's on first scanner next call
-   * 
+   *
    * @throws IOException
    */
   static Table createIOEScannerTable(byte[] name, final int failCnt)
@@ -221,7 +228,7 @@ public class TestTableInputFormat {
   /**
    * Create a table that throws a DoNoRetryIOException on first scanner next
    * call
-   * 
+   *
    * @throws IOException
    */
   static Table createDNRIOEScannerTable(byte[] name, final int failCnt)
@@ -257,137 +264,157 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Run test assuming no errors using mapred api.
-   * 
+   * Run test assuming no errors using newer mapreduce api
+   *
    * @throws IOException
+   * @throws InterruptedException
    */
   @Test
-  public void testTableRecordReader() throws IOException {
-    Table table = createTable("table1".getBytes());
-    runTestMapred(table);
+  public void testTableRecordReaderMapreduce() throws IOException,
+      InterruptedException {
+    Table table = createTable("table1-mr".getBytes());
+    runTestMapreduce(table);
   }
 
   /**
-   * Run test assuming Scanner IOException failure using mapred api,
+   * Run test assuming Scanner IOException failure using newer mapreduce api
    * 
    * @throws IOException
+   * @throws InterruptedException
    */
   @Test
-  public void testTableRecordReaderScannerFail() throws IOException {
-    Table htable = createIOEScannerTable("table2".getBytes(), 1);
-    runTestMapred(htable);
+  public void testTableRecordReaderScannerFailMapreduce() throws IOException,
+      InterruptedException {
+    Table htable = createIOEScannerTable("table2-mr".getBytes(), 1);
+    runTestMapreduce(htable);
   }
 
   /**
-   * Run test assuming Scanner IOException failure using mapred api,
+   * Run test assuming Scanner IOException failure using newer mapreduce api
    * 
    * @throws IOException
+   * @throws InterruptedException
    */
   @Test(expected = IOException.class)
-  public void testTableRecordReaderScannerFailTwice() throws IOException {
-    Table htable = createIOEScannerTable("table3".getBytes(), 2);
-    runTestMapred(htable);
+  public void testTableRecordReaderScannerFailMapreduceTwice() throws IOException,
+      InterruptedException {
+    Table htable = createIOEScannerTable("table3-mr".getBytes(), 2);
+    runTestMapreduce(htable);
   }
 
   /**
    * Run test assuming UnknownScannerException (which is a type of
-   * DoNotRetryIOException) using mapred api.
+   * DoNotRetryIOException) using newer mapreduce api
    * 
+   * @throws InterruptedException
    * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
   @Test
-  public void testTableRecordReaderScannerTimeout() throws IOException {
-    Table htable = createDNRIOEScannerTable("table4".getBytes(), 1);
-    runTestMapred(htable);
+  public void testTableRecordReaderScannerTimeoutMapreduce()
+      throws IOException, InterruptedException {
+    Table htable = createDNRIOEScannerTable("table4-mr".getBytes(), 1);
+    runTestMapreduce(htable);
   }
 
   /**
    * Run test assuming UnknownScannerException (which is a type of
-   * DoNotRetryIOException) using mapred api.
+   * DoNotRetryIOException) using newer mapreduce api
    * 
+   * @throws InterruptedException
    * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
   @Test(expected = org.apache.hadoop.hbase.DoNotRetryIOException.class)
-  public void testTableRecordReaderScannerTimeoutTwice() throws IOException {
-    Table htable = createDNRIOEScannerTable("table5".getBytes(), 2);
-    runTestMapred(htable);
+  public void testTableRecordReaderScannerTimeoutMapreduceTwice()
+      throws IOException, InterruptedException {
+    Table htable = createDNRIOEScannerTable("table5-mr".getBytes(), 2);
+    runTestMapreduce(htable);
   }
 
   /**
    * Verify the example we present in javadocs on TableInputFormatBase
    */
   @Test
-  public void testExtensionOfTableInputFormatBase() throws IOException {
+  public void testExtensionOfTableInputFormatBase()
+      throws IOException, InterruptedException, ClassNotFoundException {
     LOG.info("testing use of an InputFormat taht extends InputFormatBase");
-    final Table table = createTable(Bytes.toBytes("exampleTable"),
+    final Table htable = createTable(Bytes.toBytes("exampleTable"),
       new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
-    final JobConf job = MapreduceTestingShim.getJobConf(mrCluster);
-    job.setInputFormat(ExampleTIF.class);
-    job.setOutputFormat(NullOutputFormat.class);
-    job.setMapperClass(ExampleVerifier.class);
-    job.setNumReduceTasks(0);
-    LOG.debug("submitting job.");
-    final RunningJob run = JobClient.runJob(job);
-    assertTrue("job failed!", run.isSuccessful());
-    assertEquals("Saw the wrong number of instances of the filtered-for row.", 2, run.getCounters()
-        .findCounter(TestTableInputFormat.class.getName() + ":row", "aaa").getCounter());
-    assertEquals("Saw any instances of the filtered out row.", 0, run.getCounters()
-        .findCounter(TestTableInputFormat.class.getName() + ":row", "bbb").getCounter());
-    assertEquals("Saw the wrong number of instances of columnA.", 1, run.getCounters()
-        .findCounter(TestTableInputFormat.class.getName() + ":family", "columnA").getCounter());
-    assertEquals("Saw the wrong number of instances of columnB.", 1, run.getCounters()
-        .findCounter(TestTableInputFormat.class.getName() + ":family", "columnB").getCounter());
-    assertEquals("Saw the wrong count of values for the filtered-for row.", 2, run.getCounters()
-        .findCounter(TestTableInputFormat.class.getName() + ":value", "value aaa").getCounter());
-    assertEquals("Saw the wrong count of values for the filtered-out row.", 0, run.getCounters()
-        .findCounter(TestTableInputFormat.class.getName() + ":value", "value bbb").getCounter());
+    testInputFormat(ExampleTIF.class);
   }
 
-  public static class ExampleVerifier implements TableMap<NullWritable, NullWritable> {
+  @Test
+  public void testDeprecatedExtensionOfTableInputFormatBase()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    LOG.info("testing use of an InputFormat taht extends InputFormatBase, " +
+        "using the approach documented in 0.98.");
+    final Table htable = createTable(Bytes.toBytes("exampleDeprecatedTable"),
+      new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
+    testInputFormat(ExampleDeprecatedTIF.class);
+  }
+
+  void testInputFormat(Class<? extends InputFormat> clazz)
+      throws IOException, InterruptedException, ClassNotFoundException {
+    final Job job = MapreduceTestingShim.createJob(UTIL.getConfiguration());
+    job.setInputFormatClass(clazz);
+    job.setOutputFormatClass(NullOutputFormat.class);
+    job.setMapperClass(ExampleVerifier.class);
+    job.setNumReduceTasks(0);
+
+    LOG.debug("submitting job.");
+    assertTrue("job failed!", job.waitForCompletion(true));
+    assertEquals("Saw the wrong number of instances of the filtered-for row.", 2, job.getCounters()
+        .findCounter(TestTableInputFormat.class.getName() + ":row", "aaa").getValue());
+    assertEquals("Saw any instances of the filtered out row.", 0, job.getCounters()
+        .findCounter(TestTableInputFormat.class.getName() + ":row", "bbb").getValue());
+    assertEquals("Saw the wrong number of instances of columnA.", 1, job.getCounters()
+        .findCounter(TestTableInputFormat.class.getName() + ":family", "columnA").getValue());
+    assertEquals("Saw the wrong number of instances of columnB.", 1, job.getCounters()
+        .findCounter(TestTableInputFormat.class.getName() + ":family", "columnB").getValue());
+    assertEquals("Saw the wrong count of values for the filtered-for row.", 2, job.getCounters()
+        .findCounter(TestTableInputFormat.class.getName() + ":value", "value aaa").getValue());
+    assertEquals("Saw the wrong count of values for the filtered-out row.", 0, job.getCounters()
+        .findCounter(TestTableInputFormat.class.getName() + ":value", "value bbb").getValue());
+  }
+
+  public static class ExampleVerifier extends TableMapper<NullWritable, NullWritable> {
 
     @Override
-    public void configure(JobConf conf) {
-    }
-
-    @Override
-    public void map(ImmutableBytesWritable key, Result value,
-        OutputCollector<NullWritable,NullWritable> output,
-        Reporter reporter) throws IOException {
+    public void map(ImmutableBytesWritable key, Result value, Context context)
+        throws IOException {
       for (Cell cell : value.listCells()) {
-        reporter.getCounter(TestTableInputFormat.class.getName() + ":row",
+        context.getCounter(TestTableInputFormat.class.getName() + ":row",
             Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()))
             .increment(1l);
-        reporter.getCounter(TestTableInputFormat.class.getName() + ":family",
+        context.getCounter(TestTableInputFormat.class.getName() + ":family",
             Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()))
             .increment(1l);
-        reporter.getCounter(TestTableInputFormat.class.getName() + ":value",
+        context.getCounter(TestTableInputFormat.class.getName() + ":value",
             Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()))
             .increment(1l);
       }
     }
 
-    @Override
-    public void close() {
-    }
-
   }
 
-  public static class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
+  public static class ExampleDeprecatedTIF extends TableInputFormatBase implements JobConfigurable {
 
     @Override
     public void configure(JobConf job) {
       try {
         HTable exampleTable = new HTable(HBaseConfiguration.create(job),
-          Bytes.toBytes("exampleTable"));
+          Bytes.toBytes("exampleDeprecatedTable"));
         // mandatory
         setHTable(exampleTable);
         byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
           Bytes.toBytes("columnB") };
-        // mandatory
-        setInputColumns(inputColumns);
-        Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
         // optional
-        setRowFilter(exampleFilter);
+        Scan scan = new Scan();
+        for (byte[] family : inputColumns) {
+          scan.addFamily(family);
+        }
+        Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+        scan.setFilter(exampleFilter);
+        setScan(scan);
       } catch (IOException exception) {
         throw new RuntimeException("Failed to configure for job.", exception);
       }
@@ -395,5 +422,41 @@ public class TestTableInputFormat {
 
   }
 
+  public static class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
+
+    private JobConf job;
+
+    @Override
+    public void configure(JobConf job) {
+      this.job = job;
+      byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+        Bytes.toBytes("columnB") };
+      //optional
+      Scan scan = new Scan();
+      for (byte[] family : inputColumns) {
+        scan.addFamily(family);
+      }
+      Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+      scan.setFilter(exampleFilter);
+      setScan(scan);
+    }
+
+    @Override
+    protected void initialize() {
+      if (job == null) {
+        throw new IllegalStateException("must have already gotten the JobConf before initialize " +
+            "is called.");
+      }
+      try {
+        Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+        TableName tableName = TableName.valueOf("exampleTable");
+        // mandatory
+        initializeTable(connection, tableName);
+      } catch (IOException exception) {
+        throw new RuntimeException("Failed to initialize.", exception);
+      }
+    }
+
+  }
 }
 
