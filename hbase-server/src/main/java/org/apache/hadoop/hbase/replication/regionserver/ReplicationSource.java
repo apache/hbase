@@ -869,4 +869,12 @@ public class ReplicationSource extends Thread
       ", currently replicating from: " + this.currentPath +
       " at position: " + position;
   }
+
+  /**
+   * Get Replication Source Metrics
+   * @return sourceMetrics
+   */
+  public MetricsSource getSourceMetrics() {
+    return this.metrics;
+  }
 }

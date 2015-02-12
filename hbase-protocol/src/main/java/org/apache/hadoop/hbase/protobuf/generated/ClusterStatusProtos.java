@@ -4438,6 +4438,1455 @@ public final class ClusterStatusProtos {
     // @@protoc_insertion_point(class_scope:RegionLoad)
   }
 
+  public interface ReplicationLoadSinkOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required uint64 ageOfLastAppliedOp = 1;
+    /**
+     * <code>required uint64 ageOfLastAppliedOp = 1;</code>
+     */
+    boolean hasAgeOfLastAppliedOp();
+    /**
+     * <code>required uint64 ageOfLastAppliedOp = 1;</code>
+     */
+    long getAgeOfLastAppliedOp();
+
+    // required uint64 timeStampsOfLastAppliedOp = 2;
+    /**
+     * <code>required uint64 timeStampsOfLastAppliedOp = 2;</code>
+     */
+    boolean hasTimeStampsOfLastAppliedOp();
+    /**
+     * <code>required uint64 timeStampsOfLastAppliedOp = 2;</code>
+     */
+    long getTimeStampsOfLastAppliedOp();
+  }
+  /**
+   * Protobuf type {@code ReplicationLoadSink}
+   */
+  public static final class ReplicationLoadSink extends
+      com.google.protobuf.GeneratedMessage
+      implements ReplicationLoadSinkOrBuilder {
+    // Use ReplicationLoadSink.newBuilder() to construct.
+    private ReplicationLoadSink(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ReplicationLoadSink(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ReplicationLoadSink defaultInstance;
+    public static ReplicationLoadSink getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ReplicationLoadSink getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ReplicationLoadSink(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              ageOfLastAppliedOp_ = input.readUInt64();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              timeStampsOfLastAppliedOp_ = input.readUInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSink_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSink_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ReplicationLoadSink> PARSER =
+        new com.google.protobuf.AbstractParser<ReplicationLoadSink>() {
+      public ReplicationLoadSink parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ReplicationLoadSink(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ReplicationLoadSink> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required uint64 ageOfLastAppliedOp = 1;
+    public static final int AGEOFLASTAPPLIEDOP_FIELD_NUMBER = 1;
+    private long ageOfLastAppliedOp_;
+    /**
+     * <code>required uint64 ageOfLastAppliedOp = 1;</code>
+     */
+    public boolean hasAgeOfLastAppliedOp() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required uint64 ageOfLastAppliedOp = 1;</code>
+     */
+    public long getAgeOfLastAppliedOp() {
+      return ageOfLastAppliedOp_;
+    }
+
+    // required uint64 timeStampsOfLastAppliedOp = 2;
+    public static final int TIMESTAMPSOFLASTAPPLIEDOP_FIELD_NUMBER = 2;
+    private long timeStampsOfLastAppliedOp_;
+    /**
+     * <code>required uint64 timeStampsOfLastAppliedOp = 2;</code>
+     */
+    public boolean hasTimeStampsOfLastAppliedOp() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required uint64 timeStampsOfLastAppliedOp = 2;</code>
+     */
+    public long getTimeStampsOfLastAppliedOp() {
+      return timeStampsOfLastAppliedOp_;
+    }
+
+    private void initFields() {
+      ageOfLastAppliedOp_ = 0L;
+      timeStampsOfLastAppliedOp_ = 0L;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasAgeOfLastAppliedOp()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasTimeStampsOfLastAppliedOp()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt64(1, ageOfLastAppliedOp_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(2, timeStampsOfLastAppliedOp_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(1, ageOfLastAppliedOp_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, timeStampsOfLastAppliedOp_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink other = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink) obj;
+
+      boolean result = true;
+      result = result && (hasAgeOfLastAppliedOp() == other.hasAgeOfLastAppliedOp());
+      if (hasAgeOfLastAppliedOp()) {
+        result = result && (getAgeOfLastAppliedOp()
+            == other.getAgeOfLastAppliedOp());
+      }
+      result = result && (hasTimeStampsOfLastAppliedOp() == other.hasTimeStampsOfLastAppliedOp());
+      if (hasTimeStampsOfLastAppliedOp()) {
+        result = result && (getTimeStampsOfLastAppliedOp()
+            == other.getTimeStampsOfLastAppliedOp());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasAgeOfLastAppliedOp()) {
+        hash = (37 * hash) + AGEOFLASTAPPLIEDOP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getAgeOfLastAppliedOp());
+      }
+      if (hasTimeStampsOfLastAppliedOp()) {
+        hash = (37 * hash) + TIMESTAMPSOFLASTAPPLIEDOP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getTimeStampsOfLastAppliedOp());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ReplicationLoadSink}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSinkOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSink_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSink_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        ageOfLastAppliedOp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        timeStampsOfLastAppliedOp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSink_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink build() {
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink result = new org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.ageOfLastAppliedOp_ = ageOfLastAppliedOp_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.timeStampsOfLastAppliedOp_ = timeStampsOfLastAppliedOp_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.getDefaultInstance()) return this;
+        if (other.hasAgeOfLastAppliedOp()) {
+          setAgeOfLastAppliedOp(other.getAgeOfLastAppliedOp());
+        }
+        if (other.hasTimeStampsOfLastAppliedOp()) {
+          setTimeStampsOfLastAppliedOp(other.getTimeStampsOfLastAppliedOp());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasAgeOfLastAppliedOp()) {
+          
+          return false;
+        }
+        if (!hasTimeStampsOfLastAppliedOp()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required uint64 ageOfLastAppliedOp = 1;
+      private long ageOfLastAppliedOp_ ;
+      /**
+       * <code>required uint64 ageOfLastAppliedOp = 1;</code>
+       */
+      public boolean hasAgeOfLastAppliedOp() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required uint64 ageOfLastAppliedOp = 1;</code>
+       */
+      public long getAgeOfLastAppliedOp() {
+        return ageOfLastAppliedOp_;
+      }
+      /**
+       * <code>required uint64 ageOfLastAppliedOp = 1;</code>
+       */
+      public Builder setAgeOfLastAppliedOp(long value) {
+        bitField0_ |= 0x00000001;
+        ageOfLastAppliedOp_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint64 ageOfLastAppliedOp = 1;</code>
+       */
+      public Builder clearAgeOfLastAppliedOp() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        ageOfLastAppliedOp_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // required uint64 timeStampsOfLastAppliedOp = 2;
+      private long timeStampsOfLastAppliedOp_ ;
+      /**
+       * <code>required uint64 timeStampsOfLastAppliedOp = 2;</code>
+       */
+      public boolean hasTimeStampsOfLastAppliedOp() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required uint64 timeStampsOfLastAppliedOp = 2;</code>
+       */
+      public long getTimeStampsOfLastAppliedOp() {
+        return timeStampsOfLastAppliedOp_;
+      }
+      /**
+       * <code>required uint64 timeStampsOfLastAppliedOp = 2;</code>
+       */
+      public Builder setTimeStampsOfLastAppliedOp(long value) {
+        bitField0_ |= 0x00000002;
+        timeStampsOfLastAppliedOp_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint64 timeStampsOfLastAppliedOp = 2;</code>
+       */
+      public Builder clearTimeStampsOfLastAppliedOp() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        timeStampsOfLastAppliedOp_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ReplicationLoadSink)
+    }
+
+    static {
+      defaultInstance = new ReplicationLoadSink(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:ReplicationLoadSink)
+  }
+
+  public interface ReplicationLoadSourceOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string peerID = 1;
+    /**
+     * <code>required string peerID = 1;</code>
+     */
+    boolean hasPeerID();
+    /**
+     * <code>required string peerID = 1;</code>
+     */
+    java.lang.String getPeerID();
+    /**
+     * <code>required string peerID = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getPeerIDBytes();
+
+    // required uint64 ageOfLastShippedOp = 2;
+    /**
+     * <code>required uint64 ageOfLastShippedOp = 2;</code>
+     */
+    boolean hasAgeOfLastShippedOp();
+    /**
+     * <code>required uint64 ageOfLastShippedOp = 2;</code>
+     */
+    long getAgeOfLastShippedOp();
+
+    // required uint32 sizeOfLogQueue = 3;
+    /**
+     * <code>required uint32 sizeOfLogQueue = 3;</code>
+     */
+    boolean hasSizeOfLogQueue();
+    /**
+     * <code>required uint32 sizeOfLogQueue = 3;</code>
+     */
+    int getSizeOfLogQueue();
+
+    // required uint64 timeStampOfLastShippedOp = 4;
+    /**
+     * <code>required uint64 timeStampOfLastShippedOp = 4;</code>
+     */
+    boolean hasTimeStampOfLastShippedOp();
+    /**
+     * <code>required uint64 timeStampOfLastShippedOp = 4;</code>
+     */
+    long getTimeStampOfLastShippedOp();
+
+    // required uint64 replicationLag = 5;
+    /**
+     * <code>required uint64 replicationLag = 5;</code>
+     */
+    boolean hasReplicationLag();
+    /**
+     * <code>required uint64 replicationLag = 5;</code>
+     */
+    long getReplicationLag();
+  }
+  /**
+   * Protobuf type {@code ReplicationLoadSource}
+   */
+  public static final class ReplicationLoadSource extends
+      com.google.protobuf.GeneratedMessage
+      implements ReplicationLoadSourceOrBuilder {
+    // Use ReplicationLoadSource.newBuilder() to construct.
+    private ReplicationLoadSource(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ReplicationLoadSource(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ReplicationLoadSource defaultInstance;
+    public static ReplicationLoadSource getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ReplicationLoadSource getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ReplicationLoadSource(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              peerID_ = input.readBytes();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              ageOfLastShippedOp_ = input.readUInt64();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              sizeOfLogQueue_ = input.readUInt32();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              timeStampOfLastShippedOp_ = input.readUInt64();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              replicationLag_ = input.readUInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSource_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSource_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ReplicationLoadSource> PARSER =
+        new com.google.protobuf.AbstractParser<ReplicationLoadSource>() {
+      public ReplicationLoadSource parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ReplicationLoadSource(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ReplicationLoadSource> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required string peerID = 1;
+    public static final int PEERID_FIELD_NUMBER = 1;
+    private java.lang.Object peerID_;
+    /**
+     * <code>required string peerID = 1;</code>
+     */
+    public boolean hasPeerID() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string peerID = 1;</code>
+     */
+    public java.lang.String getPeerID() {
+      java.lang.Object ref = peerID_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          peerID_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string peerID = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getPeerIDBytes() {
+      java.lang.Object ref = peerID_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        peerID_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required uint64 ageOfLastShippedOp = 2;
+    public static final int AGEOFLASTSHIPPEDOP_FIELD_NUMBER = 2;
+    private long ageOfLastShippedOp_;
+    /**
+     * <code>required uint64 ageOfLastShippedOp = 2;</code>
+     */
+    public boolean hasAgeOfLastShippedOp() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required uint64 ageOfLastShippedOp = 2;</code>
+     */
+    public long getAgeOfLastShippedOp() {
+      return ageOfLastShippedOp_;
+    }
+
+    // required uint32 sizeOfLogQueue = 3;
+    public static final int SIZEOFLOGQUEUE_FIELD_NUMBER = 3;
+    private int sizeOfLogQueue_;
+    /**
+     * <code>required uint32 sizeOfLogQueue = 3;</code>
+     */
+    public boolean hasSizeOfLogQueue() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required uint32 sizeOfLogQueue = 3;</code>
+     */
+    public int getSizeOfLogQueue() {
+      return sizeOfLogQueue_;
+    }
+
+    // required uint64 timeStampOfLastShippedOp = 4;
+    public static final int TIMESTAMPOFLASTSHIPPEDOP_FIELD_NUMBER = 4;
+    private long timeStampOfLastShippedOp_;
+    /**
+     * <code>required uint64 timeStampOfLastShippedOp = 4;</code>
+     */
+    public boolean hasTimeStampOfLastShippedOp() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required uint64 timeStampOfLastShippedOp = 4;</code>
+     */
+    public long getTimeStampOfLastShippedOp() {
+      return timeStampOfLastShippedOp_;
+    }
+
+    // required uint64 replicationLag = 5;
+    public static final int REPLICATIONLAG_FIELD_NUMBER = 5;
+    private long replicationLag_;
+    /**
+     * <code>required uint64 replicationLag = 5;</code>
+     */
+    public boolean hasReplicationLag() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>required uint64 replicationLag = 5;</code>
+     */
+    public long getReplicationLag() {
+      return replicationLag_;
+    }
+
+    private void initFields() {
+      peerID_ = "";
+      ageOfLastShippedOp_ = 0L;
+      sizeOfLogQueue_ = 0;
+      timeStampOfLastShippedOp_ = 0L;
+      replicationLag_ = 0L;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasPeerID()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasAgeOfLastShippedOp()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasSizeOfLogQueue()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasTimeStampOfLastShippedOp()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasReplicationLag()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getPeerIDBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(2, ageOfLastShippedOp_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt32(3, sizeOfLogQueue_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt64(4, timeStampOfLastShippedOp_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt64(5, replicationLag_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getPeerIDBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, ageOfLastShippedOp_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(3, sizeOfLogQueue_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, timeStampOfLastShippedOp_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(5, replicationLag_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource other = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource) obj;
+
+      boolean result = true;
+      result = result && (hasPeerID() == other.hasPeerID());
+      if (hasPeerID()) {
+        result = result && getPeerID()
+            .equals(other.getPeerID());
+      }
+      result = result && (hasAgeOfLastShippedOp() == other.hasAgeOfLastShippedOp());
+      if (hasAgeOfLastShippedOp()) {
+        result = result && (getAgeOfLastShippedOp()
+            == other.getAgeOfLastShippedOp());
+      }
+      result = result && (hasSizeOfLogQueue() == other.hasSizeOfLogQueue());
+      if (hasSizeOfLogQueue()) {
+        result = result && (getSizeOfLogQueue()
+            == other.getSizeOfLogQueue());
+      }
+      result = result && (hasTimeStampOfLastShippedOp() == other.hasTimeStampOfLastShippedOp());
+      if (hasTimeStampOfLastShippedOp()) {
+        result = result && (getTimeStampOfLastShippedOp()
+            == other.getTimeStampOfLastShippedOp());
+      }
+      result = result && (hasReplicationLag() == other.hasReplicationLag());
+      if (hasReplicationLag()) {
+        result = result && (getReplicationLag()
+            == other.getReplicationLag());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasPeerID()) {
+        hash = (37 * hash) + PEERID_FIELD_NUMBER;
+        hash = (53 * hash) + getPeerID().hashCode();
+      }
+      if (hasAgeOfLastShippedOp()) {
+        hash = (37 * hash) + AGEOFLASTSHIPPEDOP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getAgeOfLastShippedOp());
+      }
+      if (hasSizeOfLogQueue()) {
+        hash = (37 * hash) + SIZEOFLOGQUEUE_FIELD_NUMBER;
+        hash = (53 * hash) + getSizeOfLogQueue();
+      }
+      if (hasTimeStampOfLastShippedOp()) {
+        hash = (37 * hash) + TIMESTAMPOFLASTSHIPPEDOP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getTimeStampOfLastShippedOp());
+      }
+      if (hasReplicationLag()) {
+        hash = (37 * hash) + REPLICATIONLAG_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getReplicationLag());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ReplicationLoadSource}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSource_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSource_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.class, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        peerID_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        ageOfLastShippedOp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        sizeOfLogQueue_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        timeStampOfLastShippedOp_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        replicationLag_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.internal_static_ReplicationLoadSource_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource build() {
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource result = new org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.peerID_ = peerID_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.ageOfLastShippedOp_ = ageOfLastShippedOp_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.sizeOfLogQueue_ = sizeOfLogQueue_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.timeStampOfLastShippedOp_ = timeStampOfLastShippedOp_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.replicationLag_ = replicationLag_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.getDefaultInstance()) return this;
+        if (other.hasPeerID()) {
+          bitField0_ |= 0x00000001;
+          peerID_ = other.peerID_;
+          onChanged();
+        }
+        if (other.hasAgeOfLastShippedOp()) {
+          setAgeOfLastShippedOp(other.getAgeOfLastShippedOp());
+        }
+        if (other.hasSizeOfLogQueue()) {
+          setSizeOfLogQueue(other.getSizeOfLogQueue());
+        }
+        if (other.hasTimeStampOfLastShippedOp()) {
+          setTimeStampOfLastShippedOp(other.getTimeStampOfLastShippedOp());
+        }
+        if (other.hasReplicationLag()) {
+          setReplicationLag(other.getReplicationLag());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasPeerID()) {
+          
+          return false;
+        }
+        if (!hasAgeOfLastShippedOp()) {
+          
+          return false;
+        }
+        if (!hasSizeOfLogQueue()) {
+          
+          return false;
+        }
+        if (!hasTimeStampOfLastShippedOp()) {
+          
+          return false;
+        }
+        if (!hasReplicationLag()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string peerID = 1;
+      private java.lang.Object peerID_ = "";
+      /**
+       * <code>required string peerID = 1;</code>
+       */
+      public boolean hasPeerID() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string peerID = 1;</code>
+       */
+      public java.lang.String getPeerID() {
+        java.lang.Object ref = peerID_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          peerID_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string peerID = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getPeerIDBytes() {
+        java.lang.Object ref = peerID_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          peerID_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string peerID = 1;</code>
+       */
+      public Builder setPeerID(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        peerID_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string peerID = 1;</code>
+       */
+      public Builder clearPeerID() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        peerID_ = getDefaultInstance().getPeerID();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string peerID = 1;</code>
+       */
+      public Builder setPeerIDBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        peerID_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required uint64 ageOfLastShippedOp = 2;
+      private long ageOfLastShippedOp_ ;
+      /**
+       * <code>required uint64 ageOfLastShippedOp = 2;</code>
+       */
+      public boolean hasAgeOfLastShippedOp() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required uint64 ageOfLastShippedOp = 2;</code>
+       */
+      public long getAgeOfLastShippedOp() {
+        return ageOfLastShippedOp_;
+      }
+      /**
+       * <code>required uint64 ageOfLastShippedOp = 2;</code>
+       */
+      public Builder setAgeOfLastShippedOp(long value) {
+        bitField0_ |= 0x00000002;
+        ageOfLastShippedOp_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint64 ageOfLastShippedOp = 2;</code>
+       */
+      public Builder clearAgeOfLastShippedOp() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        ageOfLastShippedOp_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // required uint32 sizeOfLogQueue = 3;
+      private int sizeOfLogQueue_ ;
+      /**
+       * <code>required uint32 sizeOfLogQueue = 3;</code>
+       */
+      public boolean hasSizeOfLogQueue() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required uint32 sizeOfLogQueue = 3;</code>
+       */
+      public int getSizeOfLogQueue() {
+        return sizeOfLogQueue_;
+      }
+      /**
+       * <code>required uint32 sizeOfLogQueue = 3;</code>
+       */
+      public Builder setSizeOfLogQueue(int value) {
+        bitField0_ |= 0x00000004;
+        sizeOfLogQueue_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint32 sizeOfLogQueue = 3;</code>
+       */
+      public Builder clearSizeOfLogQueue() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        sizeOfLogQueue_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // required uint64 timeStampOfLastShippedOp = 4;
+      private long timeStampOfLastShippedOp_ ;
+      /**
+       * <code>required uint64 timeStampOfLastShippedOp = 4;</code>
+       */
+      public boolean hasTimeStampOfLastShippedOp() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required uint64 timeStampOfLastShippedOp = 4;</code>
+       */
+      public long getTimeStampOfLastShippedOp() {
+        return timeStampOfLastShippedOp_;
+      }
+      /**
+       * <code>required uint64 timeStampOfLastShippedOp = 4;</code>
+       */
+      public Builder setTimeStampOfLastShippedOp(long value) {
+        bitField0_ |= 0x00000008;
+        timeStampOfLastShippedOp_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint64 timeStampOfLastShippedOp = 4;</code>
+       */
+      public Builder clearTimeStampOfLastShippedOp() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        timeStampOfLastShippedOp_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // required uint64 replicationLag = 5;
+      private long replicationLag_ ;
+      /**
+       * <code>required uint64 replicationLag = 5;</code>
+       */
+      public boolean hasReplicationLag() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>required uint64 replicationLag = 5;</code>
+       */
+      public long getReplicationLag() {
+        return replicationLag_;
+      }
+      /**
+       * <code>required uint64 replicationLag = 5;</code>
+       */
+      public Builder setReplicationLag(long value) {
+        bitField0_ |= 0x00000010;
+        replicationLag_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint64 replicationLag = 5;</code>
+       */
+      public Builder clearReplicationLag() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        replicationLag_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ReplicationLoadSource)
+    }
+
+    static {
+      defaultInstance = new ReplicationLoadSource(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:ReplicationLoadSource)
+  }
+
   public interface ServerLoadOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -4685,6 +6134,85 @@ public final class ClusterStatusProtos {
      * </pre>
      */
     int getInfoServerPort();
+
+    // repeated .ReplicationLoadSource replLoadSource = 10;
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource> 
+        getReplLoadSourceList();
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource getReplLoadSource(int index);
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    int getReplLoadSourceCount();
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder> 
+        getReplLoadSourceOrBuilderList();
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder getReplLoadSourceOrBuilder(
+        int index);
+
+    // optional .ReplicationLoadSink replLoadSink = 11;
+    /**
+     * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSink for the replication Sink status of this region server.
+     * </pre>
+     */
+    boolean hasReplLoadSink();
+    /**
+     * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSink for the replication Sink status of this region server.
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink getReplLoadSink();
+    /**
+     * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSink for the replication Sink status of this region server.
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSinkOrBuilder getReplLoadSinkOrBuilder();
   }
   /**
    * Protobuf type {@code ServerLoad}
@@ -4788,6 +6316,27 @@ public final class ClusterStatusProtos {
               infoServerPort_ = input.readUInt32();
               break;
             }
+            case 82: {
+              if (!((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
+                replLoadSource_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource>();
+                mutable_bitField0_ |= 0x00000200;
+              }
+              replLoadSource_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.PARSER, extensionRegistry));
+              break;
+            }
+            case 90: {
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000080) == 0x00000080)) {
+                subBuilder = replLoadSink_.toBuilder();
+              }
+              replLoadSink_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(replLoadSink_);
+                replLoadSink_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000080;
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -4801,6 +6350,9 @@ public final class ClusterStatusProtos {
         }
         if (((mutable_bitField0_ & 0x00000020) == 0x00000020)) {
           coprocessors_ = java.util.Collections.unmodifiableList(coprocessors_);
+        }
+        if (((mutable_bitField0_ & 0x00000200) == 0x00000200)) {
+          replLoadSource_ = java.util.Collections.unmodifiableList(replLoadSource_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -5143,6 +6695,104 @@ public final class ClusterStatusProtos {
       return infoServerPort_;
     }
 
+    // repeated .ReplicationLoadSource replLoadSource = 10;
+    public static final int REPLLOADSOURCE_FIELD_NUMBER = 10;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource> replLoadSource_;
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource> getReplLoadSourceList() {
+      return replLoadSource_;
+    }
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder> 
+        getReplLoadSourceOrBuilderList() {
+      return replLoadSource_;
+    }
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    public int getReplLoadSourceCount() {
+      return replLoadSource_.size();
+    }
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource getReplLoadSource(int index) {
+      return replLoadSource_.get(index);
+    }
+    /**
+     * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSource for the replication Source status of this region server.
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder getReplLoadSourceOrBuilder(
+        int index) {
+      return replLoadSource_.get(index);
+    }
+
+    // optional .ReplicationLoadSink replLoadSink = 11;
+    public static final int REPLLOADSINK_FIELD_NUMBER = 11;
+    private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink replLoadSink_;
+    /**
+     * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSink for the replication Sink status of this region server.
+     * </pre>
+     */
+    public boolean hasReplLoadSink() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSink for the replication Sink status of this region server.
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink getReplLoadSink() {
+      return replLoadSink_;
+    }
+    /**
+     * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+     *
+     * <pre>
+     **
+     * The replicationLoadSink for the replication Sink status of this region server.
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSinkOrBuilder getReplLoadSinkOrBuilder() {
+      return replLoadSink_;
+    }
+
     private void initFields() {
       numberOfRequests_ = 0;
       totalNumberOfRequests_ = 0;
@@ -5153,6 +6803,8 @@ public final class ClusterStatusProtos {
       reportStartTime_ = 0L;
       reportEndTime_ = 0L;
       infoServerPort_ = 0;
+      replLoadSource_ = java.util.Collections.emptyList();
+      replLoadSink_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5167,6 +6819,18 @@ public final class ClusterStatusProtos {
       }
       for (int i = 0; i < getCoprocessorsCount(); i++) {
         if (!getCoprocessors(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getReplLoadSourceCount(); i++) {
+        if (!getReplLoadSource(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      if (hasReplLoadSink()) {
+        if (!getReplLoadSink().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -5204,6 +6868,12 @@ public final class ClusterStatusProtos {
       }
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeUInt32(9, infoServerPort_);
+      }
+      for (int i = 0; i < replLoadSource_.size(); i++) {
+        output.writeMessage(10, replLoadSource_.get(i));
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeMessage(11, replLoadSink_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -5249,6 +6919,14 @@ public final class ClusterStatusProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(9, infoServerPort_);
+      }
+      for (int i = 0; i < replLoadSource_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(10, replLoadSource_.get(i));
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(11, replLoadSink_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -5312,6 +6990,13 @@ public final class ClusterStatusProtos {
         result = result && (getInfoServerPort()
             == other.getInfoServerPort());
       }
+      result = result && getReplLoadSourceList()
+          .equals(other.getReplLoadSourceList());
+      result = result && (hasReplLoadSink() == other.hasReplLoadSink());
+      if (hasReplLoadSink()) {
+        result = result && getReplLoadSink()
+            .equals(other.getReplLoadSink());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -5360,6 +7045,14 @@ public final class ClusterStatusProtos {
       if (hasInfoServerPort()) {
         hash = (37 * hash) + INFO_SERVER_PORT_FIELD_NUMBER;
         hash = (53 * hash) + getInfoServerPort();
+      }
+      if (getReplLoadSourceCount() > 0) {
+        hash = (37 * hash) + REPLLOADSOURCE_FIELD_NUMBER;
+        hash = (53 * hash) + getReplLoadSourceList().hashCode();
+      }
+      if (hasReplLoadSink()) {
+        hash = (37 * hash) + REPLLOADSINK_FIELD_NUMBER;
+        hash = (53 * hash) + getReplLoadSink().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -5464,6 +7157,8 @@ public final class ClusterStatusProtos {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getRegionLoadsFieldBuilder();
           getCoprocessorsFieldBuilder();
+          getReplLoadSourceFieldBuilder();
+          getReplLoadSinkFieldBuilder();
         }
       }
       private static Builder create() {
@@ -5498,6 +7193,18 @@ public final class ClusterStatusProtos {
         bitField0_ = (bitField0_ & ~0x00000080);
         infoServerPort_ = 0;
         bitField0_ = (bitField0_ & ~0x00000100);
+        if (replLoadSourceBuilder_ == null) {
+          replLoadSource_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000200);
+        } else {
+          replLoadSourceBuilder_.clear();
+        }
+        if (replLoadSinkBuilder_ == null) {
+          replLoadSink_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.getDefaultInstance();
+        } else {
+          replLoadSinkBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000400);
         return this;
       }
 
@@ -5572,6 +7279,23 @@ public final class ClusterStatusProtos {
           to_bitField0_ |= 0x00000040;
         }
         result.infoServerPort_ = infoServerPort_;
+        if (replLoadSourceBuilder_ == null) {
+          if (((bitField0_ & 0x00000200) == 0x00000200)) {
+            replLoadSource_ = java.util.Collections.unmodifiableList(replLoadSource_);
+            bitField0_ = (bitField0_ & ~0x00000200);
+          }
+          result.replLoadSource_ = replLoadSource_;
+        } else {
+          result.replLoadSource_ = replLoadSourceBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        if (replLoadSinkBuilder_ == null) {
+          result.replLoadSink_ = replLoadSink_;
+        } else {
+          result.replLoadSink_ = replLoadSinkBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5661,6 +7385,35 @@ public final class ClusterStatusProtos {
         if (other.hasInfoServerPort()) {
           setInfoServerPort(other.getInfoServerPort());
         }
+        if (replLoadSourceBuilder_ == null) {
+          if (!other.replLoadSource_.isEmpty()) {
+            if (replLoadSource_.isEmpty()) {
+              replLoadSource_ = other.replLoadSource_;
+              bitField0_ = (bitField0_ & ~0x00000200);
+            } else {
+              ensureReplLoadSourceIsMutable();
+              replLoadSource_.addAll(other.replLoadSource_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.replLoadSource_.isEmpty()) {
+            if (replLoadSourceBuilder_.isEmpty()) {
+              replLoadSourceBuilder_.dispose();
+              replLoadSourceBuilder_ = null;
+              replLoadSource_ = other.replLoadSource_;
+              bitField0_ = (bitField0_ & ~0x00000200);
+              replLoadSourceBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getReplLoadSourceFieldBuilder() : null;
+            } else {
+              replLoadSourceBuilder_.addAllMessages(other.replLoadSource_);
+            }
+          }
+        }
+        if (other.hasReplLoadSink()) {
+          mergeReplLoadSink(other.getReplLoadSink());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -5674,6 +7427,18 @@ public final class ClusterStatusProtos {
         }
         for (int i = 0; i < getCoprocessorsCount(); i++) {
           if (!getCoprocessors(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getReplLoadSourceCount(); i++) {
+          if (!getReplLoadSource(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        if (hasReplLoadSink()) {
+          if (!getReplLoadSink().isInitialized()) {
             
             return false;
           }
@@ -6747,6 +8512,498 @@ public final class ClusterStatusProtos {
         infoServerPort_ = 0;
         onChanged();
         return this;
+      }
+
+      // repeated .ReplicationLoadSource replLoadSource = 10;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource> replLoadSource_ =
+        java.util.Collections.emptyList();
+      private void ensureReplLoadSourceIsMutable() {
+        if (!((bitField0_ & 0x00000200) == 0x00000200)) {
+          replLoadSource_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource>(replLoadSource_);
+          bitField0_ |= 0x00000200;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder> replLoadSourceBuilder_;
+
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource> getReplLoadSourceList() {
+        if (replLoadSourceBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(replLoadSource_);
+        } else {
+          return replLoadSourceBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public int getReplLoadSourceCount() {
+        if (replLoadSourceBuilder_ == null) {
+          return replLoadSource_.size();
+        } else {
+          return replLoadSourceBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource getReplLoadSource(int index) {
+        if (replLoadSourceBuilder_ == null) {
+          return replLoadSource_.get(index);
+        } else {
+          return replLoadSourceBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder setReplLoadSource(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource value) {
+        if (replLoadSourceBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureReplLoadSourceIsMutable();
+          replLoadSource_.set(index, value);
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder setReplLoadSource(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder builderForValue) {
+        if (replLoadSourceBuilder_ == null) {
+          ensureReplLoadSourceIsMutable();
+          replLoadSource_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder addReplLoadSource(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource value) {
+        if (replLoadSourceBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureReplLoadSourceIsMutable();
+          replLoadSource_.add(value);
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder addReplLoadSource(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource value) {
+        if (replLoadSourceBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureReplLoadSourceIsMutable();
+          replLoadSource_.add(index, value);
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder addReplLoadSource(
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder builderForValue) {
+        if (replLoadSourceBuilder_ == null) {
+          ensureReplLoadSourceIsMutable();
+          replLoadSource_.add(builderForValue.build());
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder addReplLoadSource(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder builderForValue) {
+        if (replLoadSourceBuilder_ == null) {
+          ensureReplLoadSourceIsMutable();
+          replLoadSource_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder addAllReplLoadSource(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource> values) {
+        if (replLoadSourceBuilder_ == null) {
+          ensureReplLoadSourceIsMutable();
+          super.addAll(values, replLoadSource_);
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder clearReplLoadSource() {
+        if (replLoadSourceBuilder_ == null) {
+          replLoadSource_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000200);
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public Builder removeReplLoadSource(int index) {
+        if (replLoadSourceBuilder_ == null) {
+          ensureReplLoadSourceIsMutable();
+          replLoadSource_.remove(index);
+          onChanged();
+        } else {
+          replLoadSourceBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder getReplLoadSourceBuilder(
+          int index) {
+        return getReplLoadSourceFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder getReplLoadSourceOrBuilder(
+          int index) {
+        if (replLoadSourceBuilder_ == null) {
+          return replLoadSource_.get(index);  } else {
+          return replLoadSourceBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder> 
+           getReplLoadSourceOrBuilderList() {
+        if (replLoadSourceBuilder_ != null) {
+          return replLoadSourceBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(replLoadSource_);
+        }
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder addReplLoadSourceBuilder() {
+        return getReplLoadSourceFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder addReplLoadSourceBuilder(
+          int index) {
+        return getReplLoadSourceFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .ReplicationLoadSource replLoadSource = 10;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSource for the replication Source status of this region server.
+       * </pre>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder> 
+           getReplLoadSourceBuilderList() {
+        return getReplLoadSourceFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder> 
+          getReplLoadSourceFieldBuilder() {
+        if (replLoadSourceBuilder_ == null) {
+          replLoadSourceBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSource.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSourceOrBuilder>(
+                  replLoadSource_,
+                  ((bitField0_ & 0x00000200) == 0x00000200),
+                  getParentForChildren(),
+                  isClean());
+          replLoadSource_ = null;
+        }
+        return replLoadSourceBuilder_;
+      }
+
+      // optional .ReplicationLoadSink replLoadSink = 11;
+      private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink replLoadSink_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSinkOrBuilder> replLoadSinkBuilder_;
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      public boolean hasReplLoadSink() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink getReplLoadSink() {
+        if (replLoadSinkBuilder_ == null) {
+          return replLoadSink_;
+        } else {
+          return replLoadSinkBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      public Builder setReplLoadSink(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink value) {
+        if (replLoadSinkBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          replLoadSink_ = value;
+          onChanged();
+        } else {
+          replLoadSinkBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000400;
+        return this;
+      }
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      public Builder setReplLoadSink(
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.Builder builderForValue) {
+        if (replLoadSinkBuilder_ == null) {
+          replLoadSink_ = builderForValue.build();
+          onChanged();
+        } else {
+          replLoadSinkBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000400;
+        return this;
+      }
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      public Builder mergeReplLoadSink(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink value) {
+        if (replLoadSinkBuilder_ == null) {
+          if (((bitField0_ & 0x00000400) == 0x00000400) &&
+              replLoadSink_ != org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.getDefaultInstance()) {
+            replLoadSink_ =
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.newBuilder(replLoadSink_).mergeFrom(value).buildPartial();
+          } else {
+            replLoadSink_ = value;
+          }
+          onChanged();
+        } else {
+          replLoadSinkBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000400;
+        return this;
+      }
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      public Builder clearReplLoadSink() {
+        if (replLoadSinkBuilder_ == null) {
+          replLoadSink_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.getDefaultInstance();
+          onChanged();
+        } else {
+          replLoadSinkBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000400);
+        return this;
+      }
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.Builder getReplLoadSinkBuilder() {
+        bitField0_ |= 0x00000400;
+        onChanged();
+        return getReplLoadSinkFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSinkOrBuilder getReplLoadSinkOrBuilder() {
+        if (replLoadSinkBuilder_ != null) {
+          return replLoadSinkBuilder_.getMessageOrBuilder();
+        } else {
+          return replLoadSink_;
+        }
+      }
+      /**
+       * <code>optional .ReplicationLoadSink replLoadSink = 11;</code>
+       *
+       * <pre>
+       **
+       * The replicationLoadSink for the replication Sink status of this region server.
+       * </pre>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSinkOrBuilder> 
+          getReplLoadSinkFieldBuilder() {
+        if (replLoadSinkBuilder_ == null) {
+          replLoadSinkBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSink.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ReplicationLoadSinkOrBuilder>(
+                  replLoadSink_,
+                  getParentForChildren(),
+                  isClean());
+          replLoadSink_ = null;
+        }
+        return replLoadSinkBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:ServerLoad)
@@ -10527,6 +12784,16 @@ public final class ClusterStatusProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_RegionLoad_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ReplicationLoadSink_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ReplicationLoadSink_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ReplicationLoadSource_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ReplicationLoadSource_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_ServerLoad_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -10575,26 +12842,34 @@ public final class ClusterStatusProtos {
       "(\r\022\"\n\032total_static_bloom_size_KB\030\016 \001(\r\022\034" +
       "\n\024complete_sequence_id\030\017 \001(\004\022\025\n\rdata_loc" +
       "ality\030\020 \001(\002\022#\n\030last_major_compaction_ts\030" +
-      "\021 \001(\004:\0010\"\212\002\n\nServerLoad\022\032\n\022number_of_req" +
-      "uests\030\001 \001(\r\022 \n\030total_number_of_requests\030" +
-      "\002 \001(\r\022\024\n\014used_heap_MB\030\003 \001(\r\022\023\n\013max_heap_" +
-      "MB\030\004 \001(\r\022!\n\014region_loads\030\005 \003(\0132\013.RegionL" +
-      "oad\022\"\n\014coprocessors\030\006 \003(\0132\014.Coprocessor\022",
-      "\031\n\021report_start_time\030\007 \001(\004\022\027\n\017report_end" +
-      "_time\030\010 \001(\004\022\030\n\020info_server_port\030\t \001(\r\"O\n" +
-      "\016LiveServerInfo\022\033\n\006server\030\001 \002(\0132\013.Server" +
-      "Name\022 \n\013server_load\030\002 \002(\0132\013.ServerLoad\"\340" +
-      "\002\n\rClusterStatus\022/\n\rhbase_version\030\001 \001(\0132" +
-      "\030.HBaseVersionFileContent\022%\n\014live_server" +
-      "s\030\002 \003(\0132\017.LiveServerInfo\022!\n\014dead_servers" +
-      "\030\003 \003(\0132\013.ServerName\0222\n\025regions_in_transi" +
-      "tion\030\004 \003(\0132\023.RegionInTransition\022\036\n\nclust" +
-      "er_id\030\005 \001(\0132\n.ClusterId\022)\n\023master_coproc",
-      "essors\030\006 \003(\0132\014.Coprocessor\022\033\n\006master\030\007 \001" +
-      "(\0132\013.ServerName\022#\n\016backup_masters\030\010 \003(\0132" +
-      "\013.ServerName\022\023\n\013balancer_on\030\t \001(\010BF\n*org" +
-      ".apache.hadoop.hbase.protobuf.generatedB" +
-      "\023ClusterStatusProtosH\001\240\001\001"
+      "\021 \001(\004:\0010\"T\n\023ReplicationLoadSink\022\032\n\022ageOf" +
+      "LastAppliedOp\030\001 \002(\004\022!\n\031timeStampsOfLastA" +
+      "ppliedOp\030\002 \002(\004\"\225\001\n\025ReplicationLoadSource" +
+      "\022\016\n\006peerID\030\001 \002(\t\022\032\n\022ageOfLastShippedOp\030\002" +
+      " \002(\004\022\026\n\016sizeOfLogQueue\030\003 \002(\r\022 \n\030timeStam",
+      "pOfLastShippedOp\030\004 \002(\004\022\026\n\016replicationLag" +
+      "\030\005 \002(\004\"\346\002\n\nServerLoad\022\032\n\022number_of_reque" +
+      "sts\030\001 \001(\r\022 \n\030total_number_of_requests\030\002 " +
+      "\001(\r\022\024\n\014used_heap_MB\030\003 \001(\r\022\023\n\013max_heap_MB" +
+      "\030\004 \001(\r\022!\n\014region_loads\030\005 \003(\0132\013.RegionLoa" +
+      "d\022\"\n\014coprocessors\030\006 \003(\0132\014.Coprocessor\022\031\n" +
+      "\021report_start_time\030\007 \001(\004\022\027\n\017report_end_t" +
+      "ime\030\010 \001(\004\022\030\n\020info_server_port\030\t \001(\r\022.\n\016r" +
+      "eplLoadSource\030\n \003(\0132\026.ReplicationLoadSou" +
+      "rce\022*\n\014replLoadSink\030\013 \001(\0132\024.ReplicationL",
+      "oadSink\"O\n\016LiveServerInfo\022\033\n\006server\030\001 \002(" +
+      "\0132\013.ServerName\022 \n\013server_load\030\002 \002(\0132\013.Se" +
+      "rverLoad\"\340\002\n\rClusterStatus\022/\n\rhbase_vers" +
+      "ion\030\001 \001(\0132\030.HBaseVersionFileContent\022%\n\014l" +
+      "ive_servers\030\002 \003(\0132\017.LiveServerInfo\022!\n\014de" +
+      "ad_servers\030\003 \003(\0132\013.ServerName\0222\n\025regions" +
+      "_in_transition\030\004 \003(\0132\023.RegionInTransitio" +
+      "n\022\036\n\ncluster_id\030\005 \001(\0132\n.ClusterId\022)\n\023mas" +
+      "ter_coprocessors\030\006 \003(\0132\014.Coprocessor\022\033\n\006" +
+      "master\030\007 \001(\0132\013.ServerName\022#\n\016backup_mast",
+      "ers\030\010 \003(\0132\013.ServerName\022\023\n\013balancer_on\030\t " +
+      "\001(\010BF\n*org.apache.hadoop.hbase.protobuf." +
+      "generatedB\023ClusterStatusProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -10619,20 +12894,32 @@ public final class ClusterStatusProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionLoad_descriptor,
               new java.lang.String[] { "RegionSpecifier", "Stores", "Storefiles", "StoreUncompressedSizeMB", "StorefileSizeMB", "MemstoreSizeMB", "StorefileIndexSizeMB", "ReadRequestsCount", "WriteRequestsCount", "TotalCompactingKVs", "CurrentCompactedKVs", "RootIndexSizeKB", "TotalStaticIndexSizeKB", "TotalStaticBloomSizeKB", "CompleteSequenceId", "DataLocality", "LastMajorCompactionTs", });
-          internal_static_ServerLoad_descriptor =
+          internal_static_ReplicationLoadSink_descriptor =
             getDescriptor().getMessageTypes().get(3);
+          internal_static_ReplicationLoadSink_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ReplicationLoadSink_descriptor,
+              new java.lang.String[] { "AgeOfLastAppliedOp", "TimeStampsOfLastAppliedOp", });
+          internal_static_ReplicationLoadSource_descriptor =
+            getDescriptor().getMessageTypes().get(4);
+          internal_static_ReplicationLoadSource_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ReplicationLoadSource_descriptor,
+              new java.lang.String[] { "PeerID", "AgeOfLastShippedOp", "SizeOfLogQueue", "TimeStampOfLastShippedOp", "ReplicationLag", });
+          internal_static_ServerLoad_descriptor =
+            getDescriptor().getMessageTypes().get(5);
           internal_static_ServerLoad_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ServerLoad_descriptor,
-              new java.lang.String[] { "NumberOfRequests", "TotalNumberOfRequests", "UsedHeapMB", "MaxHeapMB", "RegionLoads", "Coprocessors", "ReportStartTime", "ReportEndTime", "InfoServerPort", });
+              new java.lang.String[] { "NumberOfRequests", "TotalNumberOfRequests", "UsedHeapMB", "MaxHeapMB", "RegionLoads", "Coprocessors", "ReportStartTime", "ReportEndTime", "InfoServerPort", "ReplLoadSource", "ReplLoadSink", });
           internal_static_LiveServerInfo_descriptor =
-            getDescriptor().getMessageTypes().get(4);
+            getDescriptor().getMessageTypes().get(6);
           internal_static_LiveServerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_LiveServerInfo_descriptor,
               new java.lang.String[] { "Server", "ServerLoad", });
           internal_static_ClusterStatus_descriptor =
-            getDescriptor().getMessageTypes().get(5);
+            getDescriptor().getMessageTypes().get(7);
           internal_static_ClusterStatus_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ClusterStatus_descriptor,

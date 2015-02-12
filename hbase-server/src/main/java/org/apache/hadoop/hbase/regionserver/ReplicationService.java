@@ -22,11 +22,12 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 /**
- * Gateway to Cluster Replication.  
+ * Gateway to Cluster Replication.
  * Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  * One such application is a cross-datacenter
  * replication service that can keep two hbase clusters in sync.
@@ -52,4 +53,9 @@ public interface ReplicationService {
    * Stops replication service.
    */
   void stopReplicationService();
+
+  /**
+   * Refresh and Get ReplicationLoad
+   */
+  public ReplicationLoad refreshAndGetReplicationLoad();
 }

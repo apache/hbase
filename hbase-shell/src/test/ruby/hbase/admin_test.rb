@@ -356,5 +356,17 @@ module Hbase
       assert_not_equal(nil, table)
       table.close
     end
+
+    define_test "Get replication status" do
+      replication_status("replication", "both")
+    end
+
+    define_test "Get replication source metrics information" do
+      replication_status("replication", "source")
+    end
+
+    define_test "Get replication sink metrics information" do
+      replication_status("replication", "sink")
+    end
   end
 end
