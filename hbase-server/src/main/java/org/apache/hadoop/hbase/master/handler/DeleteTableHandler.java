@@ -128,12 +128,13 @@ public class DeleteTableHandler extends TableEventHandler {
     LOG.debug("Removing '" + tableName + "' from region states.");
     am.getRegionStates().tableDeleted(tableName);
 
-    // 5. If entry for this table states, remove it.
+
+    // 5.Clean any remaining rows for this table.
+    cleanAnyRemainingRows();
+
+    // 6. If entry for this table states, remove it.
     LOG.debug("Marking '" + tableName + "' as deleted.");
     am.getTableStateManager().setDeletedTable(tableName);
-
-    // 6.Clean any remaining rows for this table.
-    cleanAnyRemainingRows();
   }
 
   /**
