@@ -377,17 +377,21 @@ checkTests () {
 ### Check there are no compilation errors, passing a file to be parsed.
 checkCompilationErrors() {
   local file=$1
+  hadoopVersion=""
+  if [ "$#" -ne 1 ]; then
+    hadoopVersion="with Hadoop version $2"
+  fi
   COMPILATION_ERROR=false
   eval $(awk '/ERROR/ {print "COMPILATION_ERROR=true"}' $file)
   if $COMPILATION_ERROR ; then
     ERRORS=$($AWK '/ERROR/ { print $0 }' $file)
     echo "======================================================================"
-    echo "There are compilation errors."
+    echo "There are compilation errors $hadoopVersion."
     echo "======================================================================"
     echo "$ERRORS"
     JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 javac{color}.  The patch appears to cause mvn compile goal to fail.
+    {color:red}-1 javac{color}.  The patch appears to cause mvn compile goal to fail $hadoopVersion.
 
     Compilation errors resume:
     $ERRORS
@@ -501,6 +505,30 @@ $JIRA_COMMENT_FOOTER"
   JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 javadoc{color}.  The javadoc tool did not generate any warning messages."
+  return 0
+}
+
+checkBuildWithHadoopVersions() {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Building with all supported Hadoop versions ."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  export MAVEN_OPTS="${MAVEN_OPTS}"
+  for HADOOP2_VERSION in $HADOOP2_VERSIONS ; do
+	echo "$MVN clean install -DskipTests -D${PROJECT_NAME}PatchProcess -Dhadoop-two.version=$HADOOP2_VERSION > $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt 2>&1"
+    $MVN clean install -DskipTests -D${PROJECT_NAME}PatchProcess -Dhadoop-two.version=$HADOOP2_VERSION > $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt 2>&1
+    checkCompilationErrors $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt $HADOOP2_VERSION
+  done
+
+  # TODO: add Hadoop3 versions and compilation here when we get the hadoop.profile=3.0 working
+
+  JIRA_COMMENT="$JIRA_COMMENT
+    {color:green}+1 hadoop versions{color}. The patch compiles with all supported hadoop versions ($HADOOP2_VERSIONS)"
   return 0
 }
 
@@ -955,6 +983,8 @@ if [[ $? != 0 ]] ; then
 fi
 
 checkAntiPatterns
+(( RESULT = RESULT + $? ))
+checkBuildWithHadoopVersions
 (( RESULT = RESULT + $? ))
 checkJavacWarnings
 (( RESULT = RESULT + $? ))
