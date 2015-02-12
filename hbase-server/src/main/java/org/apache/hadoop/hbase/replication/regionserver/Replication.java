@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.HConstants.REPLICATION_ENABLE_KEY;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -66,7 +67,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * Gateway to Replication.  Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  */
 @InterfaceAudience.Private
-public class Replication extends WALActionsListener.Base implements 
+public class Replication extends WALActionsListener.Base implements
   ReplicationSourceService, ReplicationSinkService {
   private static final Log LOG =
       LogFactory.getLog(Replication.class);
@@ -82,6 +83,8 @@ public class Replication extends WALActionsListener.Base implements
   /** Statistics thread schedule pool */
   private ScheduledExecutorService scheduleThreadPool;
   private int statsThreadPeriod;
+  // ReplicationLoad to access replication metrics
+  private ReplicationLoad replicationLoad;
 
   /**
    * Instantiate the replication management (if rep is enabled).
@@ -138,11 +141,13 @@ public class Replication extends WALActionsListener.Base implements
       this.statsThreadPeriod =
           this.conf.getInt("replication.stats.thread.period.seconds", 5 * 60);
       LOG.debug("ReplicationStatisticsThread " + this.statsThreadPeriod);
+      this.replicationLoad = new ReplicationLoad();
     } else {
       this.replicationManager = null;
       this.replicationQueues = null;
       this.replicationPeers = null;
       this.replicationTracker = null;
+      this.replicationLoad = null;
     }
   }
 
@@ -309,5 +314,30 @@ public class Replication extends WALActionsListener.Base implements
         LOG.info(stats);
       }
     }
+  }
+
+  @Override
+  public ReplicationLoad refreshAndGetReplicationLoad() {
+    if (this.replicationLoad == null) {
+      return null;
+    }
+    // always build for latest data
+    buildReplicationLoad();
+    return this.replicationLoad;
+  }
+
+  private void buildReplicationLoad() {
+    // get source
+    List<ReplicationSourceInterface> sources = this.replicationManager.getSources();
+    List<MetricsSource> sourceMetricsList = new ArrayList<MetricsSource>();
+
+    for (ReplicationSourceInterface source : sources) {
+      if (source instanceof ReplicationSource) {
+        sourceMetricsList.add(((ReplicationSource) source).getSourceMetrics());
+      }
+    }
+    // get sink
+    MetricsSink sinkMetrics = this.replicationSink.getSinkMetrics();
+    this.replicationLoad.buildReplicationLoad(sourceMetricsList, sinkMetrics);
   }
 }

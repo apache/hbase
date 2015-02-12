@@ -131,6 +131,7 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -1130,6 +1131,22 @@ public class HRegionServer extends HasThread implements
     } else {
       serverLoad.setInfoServerPort(-1);
     }
+
+    // for the replicationLoad purpose. Only need to get from one service
+    // either source or sink will get the same info
+    ReplicationSourceService rsources = getReplicationSourceService();
+
+    if (rsources != null) {
+      // always refresh first to get the latest value
+      ReplicationLoad rLoad = rsources.refreshAndGetReplicationLoad();
+      if (rLoad != null) {
+        serverLoad.setReplLoadSink(rLoad.getReplicationLoadSink());
+        for (ClusterStatusProtos.ReplicationLoadSource rLS : rLoad.getReplicationLoadSourceList()) {
+          serverLoad.addReplLoadSource(rLS);
+        }
+      }
+    }
+
     return serverLoad.build();
   }
 

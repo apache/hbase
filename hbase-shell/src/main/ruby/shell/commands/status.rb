@@ -22,18 +22,21 @@ module Shell
     class Status < Command
       def help
         return <<-EOF
-Show cluster status. Can be 'summary', 'simple', or 'detailed'. The
+Show cluster status. Can be 'summary', 'simple', 'detailed', or 'replication'. The
 default is 'summary'. Examples:
 
   hbase> status
   hbase> status 'simple'
   hbase> status 'summary'
   hbase> status 'detailed'
+  hbase> status 'replication'
+  hbase> status 'replication', 'source'
+  hbase> status 'replication', 'sink'
 EOF
       end
 
-      def command(format = 'summary')
-        admin.status(format)
+      def command(format = 'summary',type = 'both')
+        admin.status(format, type)
       end
     end
   end

@@ -119,6 +119,19 @@ message RegionLoad {
 
 /* Server-level protobufs */
 
+message ReplicationLoadSink {
+  required uint64 ageOfLastAppliedOp = 1;
+  required uint64 timeStampsOfLastAppliedOp = 2;
+}
+
+message ReplicationLoadSource {
+  required string peerID = 1;
+  required uint64 ageOfLastShippedOp = 2;
+  required uint32 sizeOfLogQueue = 3;
+  required uint64 timeStampOfLastShippedOp = 4;
+  required uint64 replicationLag = 5;
+}
+
 message ServerLoad {
   /** Number of requests since last report. */
   optional uint32 number_of_requests = 1;
@@ -160,6 +173,16 @@ message ServerLoad {
    * The port number that this region server is hosing an info server on.
    */
   optional uint32 info_server_port = 9;
+
+  /**
+   * The replicationLoadSource for the replication Source status of this region server.
+   */
+  repeated ReplicationLoadSource replLoadSource = 10;
+
+  /**
+   * The replicationLoadSink for the replication Sink status of this region server.
+   */
+  optional ReplicationLoadSink replLoadSink = 11;
 }
 
 message LiveServerInfo {

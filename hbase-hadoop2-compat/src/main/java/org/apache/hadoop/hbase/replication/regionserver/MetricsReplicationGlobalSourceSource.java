@@ -95,4 +95,9 @@ public class MetricsReplicationGlobalSourceSource implements MetricsReplicationS
 
   @Override public void clear() {
   }
+
+  @Override
+  public long getLastShippedAge() {
+    return ageOfLastShippedOpGauge.value();
+  }
 }
