@@ -910,6 +910,29 @@ The WAL resides in HDFS in the _/hbase/WALs/_ directory (prior to HBase 0.94, th
 
 For more general information about the concept of write ahead logs, see the Wikipedia link:http://en.wikipedia.org/wiki/Write-ahead_logging[Write-Ahead Log] article.
 
+==== MultiWAL
+With a single WAL per RegionServer, the RegionServer must write to the WAL serially, because HDFS files must be sequential. This causes the WAL to be a performance bottleneck.
+
+HBase 1.0 introduces support MultiWal in link:https://issues.apache.org/jira/browse/HBASE-5699[HBASE-5699]. MultiWAL allows a RegionServer to write multiple WAL streams in parallel, by using multiple pipelines in the underlying HDFS instance, which increases total throughput during writes. This parallelization is done by partitioning incoming edits by their Region. Thus, the current implementation will not help with increasing the throughput to a single Region.
+
+RegionServers using the original WAL implementation and those using the MultiWAL implementation can each handle recovery of either set of WALs, so a zero-downtime configuration update is possible through a rolling restart.
+
+.Configure MultiWAL
+To configure MultiWAL for a RegionServer, set the value of the property `hbase.wal.provider` to `multiwal` by pasting in the following XML:
+
+[source,xml]
+----
+<property>
+  <name>hbase.wal.provider</name>
+  <value>multiwal</value>
+</property>
+----
+
+Restart the RegionServer for the changes to take effect. 
+
+To disable MultiWAL for a RegionServer, unset the property and restart the RegionServer.
+
+
 [[wal_flush]]
 ==== WAL Flushing
 
