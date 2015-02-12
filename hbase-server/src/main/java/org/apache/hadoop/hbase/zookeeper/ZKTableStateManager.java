@@ -146,7 +146,23 @@ public class ZKTableStateManager implements TableStateManager {
     throws CoordinatedStateException {
     synchronized (this.cache) {
       if (isTableState(tableName, states)) {
-        return false;
+        // If the table is in the one of the states from the states list, the cache
+        // might be out-of-date, try to find it out from the master source (zookeeper server).
+        //
+        // Note: this adds extra zookeeper server calls and might have performance impact.
+        // However, this is not the happy path so we should not reach here often. Therefore,
+        // the performance impact should be minimal to none.
+        try {
+          ZooKeeperProtos.Table.State curstate = getTableState(watcher, tableName);
+
+          if (isTableInState(Arrays.asList(states), curstate)) {
+            return false;
+          }
+        } catch (KeeperException e) {
+          throw new CoordinatedStateException(e);
+        } catch (InterruptedException e) {
+          throw new CoordinatedStateException(e);
+        }
       }
       try {
         setTableStateInZK(tableName, newState);

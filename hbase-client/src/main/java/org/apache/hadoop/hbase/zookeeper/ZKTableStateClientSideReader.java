@@ -120,18 +120,52 @@ public class ZKTableStateClientSideReader {
    */
   public static Set<TableName> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
       throws KeeperException, InterruptedException {
-    Set<TableName> disabledTables = new HashSet<TableName>();
-    List<String> children =
-      ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
+    return
+        getTablesInStates(
+          zkw,
+          ZooKeeperProtos.Table.State.DISABLED,
+          ZooKeeperProtos.Table.State.DISABLING);
+  }
+
+  /**
+   * Gets a list of all the tables set as enabling in zookeeper.
+   * @param zkw ZooKeeperWatcher instance to use
+   * @return Set of enabling tables, empty Set if none
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  public static Set<TableName> getEnablingTables(ZooKeeperWatcher zkw)
+      throws KeeperException, InterruptedException {
+    return getTablesInStates(zkw, ZooKeeperProtos.Table.State.ENABLING);
+  }
+
+  /**
+   * Gets a list of tables that are set as one of the passing in states in zookeeper.
+   * @param zkw ZooKeeperWatcher instance to use
+   * @param states the list of states that a table could be in
+   * @return Set of tables in one of the states, empty Set if none
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  private static Set<TableName> getTablesInStates(
+    ZooKeeperWatcher zkw,
+    ZooKeeperProtos.Table.State... states)
+      throws KeeperException, InterruptedException {
+    Set<TableName> tableNameSet = new HashSet<TableName>();
+    List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
+    TableName tableName;
+    ZooKeeperProtos.Table.State tableState;
     for (String child: children) {
-      TableName tableName =
-          TableName.valueOf(child);
-      ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
-      if (state == ZooKeeperProtos.Table.State.DISABLED ||
-          state == ZooKeeperProtos.Table.State.DISABLING)
-        disabledTables.add(tableName);
+      tableName = TableName.valueOf(child);
+      tableState = getTableState(zkw, tableName);
+      for (ZooKeeperProtos.Table.State state : states) {
+         if (tableState == state) {
+           tableNameSet.add(tableName);
+           break;
+         }
+      }
     }
-    return disabledTables;
+    return tableNameSet;
   }
 
   static boolean isTableState(final ZooKeeperProtos.Table.State expectedState,

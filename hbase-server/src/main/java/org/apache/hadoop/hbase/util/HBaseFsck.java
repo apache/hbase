@@ -54,7 +54,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -71,6 +70,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -110,6 +110,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -124,6 +125,7 @@ import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
+import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -238,6 +240,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private boolean fixReferenceFiles = false; // fix lingering reference store file
   private boolean fixEmptyMetaCells = false; // fix (remove) empty REGIONINFO_QUALIFIER rows
   private boolean fixTableLocks = false; // fix table locks which are expired
+  private boolean fixTableZNodes = false; // fix table Znodes which are orphaned
   private boolean fixAny = false; // Set to true if any of the fix is required.
 
   // limit checking/fixes to listed tables, if empty attempt to check/fix all
@@ -291,6 +294,11 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private Map<TableName, Set<String>> orphanTableDirs =
       new HashMap<TableName, Set<String>>();
+
+  /**
+   * List of orphaned table ZNodes
+   */
+  private Set<TableName> orphanedTableZNodes = new HashSet<TableName>();
 
   /**
    * Constructor
@@ -621,6 +629,9 @@ public class HBaseFsck extends Configured implements Closeable {
     offlineReferenceFileRepair();
 
     checkAndFixTableLocks();
+
+    // Check (and fix if requested) orphaned table ZNodes
+    checkAndFixOrphanedTableZNodes();
 
     // Remove the hbck lock
     unlockHbck();
@@ -3011,11 +3022,69 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void checkAndFixTableLocks() throws IOException {
-    TableLockChecker checker = new TableLockChecker(createZooKeeperWatcher(), errors);
-    checker.checkTableLocks();
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
 
-    if (this.fixTableLocks) {
-      checker.fixExpiredTableLocks();
+    try {
+      TableLockChecker checker = new TableLockChecker(zkw, errors);
+      checker.checkTableLocks();
+
+      if (this.fixTableLocks) {
+        checker.fixExpiredTableLocks();
+      }
+    } finally {
+      zkw.close();
+    }
+  }
+
+  /**
+   * Check whether a orphaned table ZNode exists and fix it if requested.
+   * @throws IOException
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  private void checkAndFixOrphanedTableZNodes()
+      throws IOException, KeeperException, InterruptedException {
+    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+
+    try {
+      Set<TableName> enablingTables = ZKTableStateClientSideReader.getEnablingTables(zkw);
+      String msg;
+      TableInfo tableInfo;
+
+      for (TableName tableName : enablingTables) {
+        // Check whether the table exists in hbase
+        tableInfo = tablesInfo.get(tableName);
+        if (tableInfo != null) {
+          // Table exists.  This table state is in transit.  No problem for this table.
+          continue;
+        }
+
+        msg = "Table " + tableName + " not found in hbase:meta. Orphaned table ZNode found.";
+        LOG.warn(msg);
+        orphanedTableZNodes.add(tableName);
+        errors.reportError(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY, msg);
+      }
+
+      if (orphanedTableZNodes.size() > 0 && this.fixTableZNodes) {
+        ZKTableStateManager zkTableStateMgr = new ZKTableStateManager(zkw);
+
+        for (TableName tableName : orphanedTableZNodes) {
+          try {
+            // Set the table state to be disabled so that if we made mistake, we can trace
+            // the history and figure it out.
+            // Another choice is to call checkAndRemoveTableState() to delete the orphaned ZNode.
+            // Both approaches works.
+            zkTableStateMgr.setTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
+          } catch (CoordinatedStateException e) {
+            // This exception should not happen here
+            LOG.error(
+              "Got a CoordinatedStateException while fixing the ENABLING table znode " + tableName,
+              e);
+          }
+        }
+      }
+    } finally {
+      zkw.close();
     }
   }
 
@@ -3533,7 +3602,7 @@ public class HBaseFsck extends Configured implements Closeable {
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, BOUNDARIES_ERROR
+      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR
     }
     void clear();
     void report(String message);
@@ -3901,6 +3970,15 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   /**
+   * Set orphaned table ZNodes fix mode.
+   * Set the table state to disable in the orphaned table ZNode.
+   */
+  public void setFixTableZNodes(boolean shouldFix) {
+    fixTableZNodes = shouldFix;
+    fixAny |= shouldFix;
+  }
+
+  /**
    * Check if we should rerun fsck again. This checks if we've tried to
    * fix something and we should rerun fsck tool again.
    * Display the full report from fsck. This displays all live and dead
@@ -4150,12 +4228,17 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("");
     out.println("  Metadata Repair shortcuts");
     out.println("   -repair           Shortcut for -fixAssignments -fixMeta -fixHdfsHoles " +
-        "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps -fixReferenceFiles -fixTableLocks");
+        "-fixHdfsOrphans -fixHdfsOverlaps -fixVersionFile -sidelineBigOverlaps " +
+        "-fixReferenceFiles -fixTableLocks -fixOrphanedTableZnodes");
     out.println("   -repairHoles      Shortcut for -fixAssignments -fixMeta -fixHdfsHoles");
 
     out.println("");
     out.println("  Table lock options");
     out.println("   -fixTableLocks    Deletes table locks held for a long time (hbase.table.lock.expire.ms, 10min by default)");
+
+    out.println("");
+    out.println("  Table Znode options");
+    out.println("   -fixOrphanedTableZnodes    Set table state in ZNode to disabled if table does not exists");
 
     out.flush();
     errors.reportError(ERROR_CODE.WRONG_USAGE, sw.toString());
@@ -4290,6 +4373,7 @@ public class HBaseFsck extends Configured implements Closeable {
         setCheckHdfs(true);
         setFixReferenceFiles(true);
         setFixTableLocks(true);
+        setFixTableZNodes(true);
       } else if (cmd.equals("-repairHoles")) {
         // this will make all missing hdfs regions available but may lose data
         setFixHdfsHoles(true);
@@ -4338,6 +4422,8 @@ public class HBaseFsck extends Configured implements Closeable {
         setRegionBoundariesCheck();
       } else if (cmd.equals("-fixTableLocks")) {
         setFixTableLocks(true);
+      } else if (cmd.equals("-fixOrphanedTableZnodes")) {
+        setFixTableZNodes(true);
       } else if (cmd.startsWith("-")) {
         errors.reportError(ERROR_CODE.WRONG_USAGE, "Unrecognized option:" + cmd);
         return printUsageAndExit();
