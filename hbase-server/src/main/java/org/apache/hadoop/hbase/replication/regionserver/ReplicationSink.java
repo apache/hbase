@@ -255,4 +255,12 @@ public class ReplicationSink {
       "age in ms of last applied edit: " + this.metrics.refreshAgeOfLastAppliedOp() +
       ", total replicated edits: " + this.totalReplicatedEdits;
   }
+
+  /**
+   * Get replication Sink Metrics
+   * @return MetricsSink
+   */
+  public MetricsSink getSinkMetrics() {
+    return this.metrics;
+  }
 }

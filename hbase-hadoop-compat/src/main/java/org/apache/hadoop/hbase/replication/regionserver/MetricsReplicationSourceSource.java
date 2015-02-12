@@ -43,4 +43,5 @@ public interface MetricsReplicationSourceSource {
   void incrLogReadInBytes(long size);
   void incrLogReadInEdits(long size);
   void clear();
+  long getLastShippedAge();
 }

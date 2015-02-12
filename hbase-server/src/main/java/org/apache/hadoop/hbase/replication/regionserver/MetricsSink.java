@@ -78,4 +78,21 @@ public class MetricsSink {
     mss.incrAppliedOps(batchSize);
   }
 
+  /**
+   * Get the Age of Last Applied Op
+   * @return ageOfLastAppliedOp
+   */
+  public long getAgeOfLastAppliedOp() {
+    return mss.getLastAppliedOpAge();
+  }
+
+  /**
+   * Get the TimeStampOfLastAppliedOp. If no replication Op applied yet, the value is the timestamp
+   * at which hbase instance starts
+   * @return timeStampsOfLastAppliedOp;
+   */
+  public long getTimeStampOfLastAppliedOp() {
+    return this.lastTimestampForAge;
+  }
+
 }

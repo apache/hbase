@@ -25,4 +25,5 @@ public interface MetricsReplicationSinkSource {
   void setLastAppliedOpAge(long age);
   void incrAppliedBatches(long batches);
   void incrAppliedOps(long batchsize);
+  long getLastAppliedOpAge();
 }
