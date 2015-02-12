@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.client.Client;
@@ -101,7 +100,7 @@ public class TestGzipFilter {
     Response response = client.put(path, headers, value_1_gzip);
     assertEquals(response.getCode(), 200);
 
-    Table table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+    Table table = TEST_UTIL.getConnection().getTable(TABLE);
     Get get = new Get(Bytes.toBytes(ROW_1));
     get.addColumn(Bytes.toBytes(CFA), Bytes.toBytes("1"));
     Result result = table.get(get);

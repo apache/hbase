@@ -19,14 +19,18 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -35,11 +39,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -47,6 +52,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -61,22 +67,17 @@ import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 
 /**
  * HTable interface to remote tables accessed via REST gateway
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class RemoteHTable implements HTableInterface {
+public class RemoteHTable implements Table {
 
   private static final Log LOG = LogFactory.getLog(RemoteHTable.class);
 
@@ -806,21 +807,6 @@ public class RemoteHTable implements HTableInterface {
   }
 
   @Override
-  public void setAutoFlush(boolean autoFlush) {
-    throw new UnsupportedOperationException("setAutoFlush not implemented");
-  }
-
-  @Override
-  public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
-    throw new UnsupportedOperationException("setAutoFlush not implemented");
-  }
-
-  @Override
-  public void setAutoFlushTo(boolean autoFlush) {
-    throw new UnsupportedOperationException("setAutoFlushTo not implemented");
-  }
-
-  @Override
   public long getWriteBufferSize() {
     throw new UnsupportedOperationException("getWriteBufferSize not implemented");
   }
@@ -828,12 +814,6 @@ public class RemoteHTable implements HTableInterface {
   @Override
   public void setWriteBufferSize(long writeBufferSize) throws IOException {
     throw new IOException("setWriteBufferSize not supported");
-  }
-
-  @Override
-  public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-      long amount, boolean writeToWAL) throws IOException {
-    throw new IOException("incrementColumnValue not supported");
   }
 
   @Override
