@@ -36,6 +36,7 @@ public class MetricsSource {
 
   private long lastTimestamp = 0;
   private int lastQueueSize = 0;
+  private String id;
 
   private final MetricsReplicationSourceSource singleSourceSource;
   private final MetricsReplicationSourceSource globalSourceSource;
@@ -46,6 +47,7 @@ public class MetricsSource {
    * @param id Name of the source this class is monitoring
    */
   public MetricsSource(String id) {
+    this.id = id;
     singleSourceSource =
         CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class)
             .getSource(id);
@@ -142,5 +144,37 @@ public class MetricsSource {
     singleSourceSource.clear();
     globalSourceSource.decrSizeOfLogQueue(lastQueueSize);
     lastQueueSize = 0;
+  }
+
+  /**
+   * Get AgeOfLastShippedOp
+   * @return AgeOfLastShippedOp
+   */
+  public Long getAgeOfLastShippedOp() {
+    return singleSourceSource.getLastShippedAge();
+  }
+
+  /**
+   * Get the sizeOfLogQueue
+   * @return sizeOfLogQueue
+   */
+  public int getSizeOfLogQueue() {
+    return this.lastQueueSize;
+  }
+
+  /**
+   * Get the timeStampsOfLastShippedOp
+   * @return lastTimestampForAge
+   */
+  public long getTimeStampOfLastShippedOp() {
+    return lastTimestamp;
+  }
+
+  /**
+   * Get the slave peer ID
+   * @return peerID
+   */
+  public String getPeerID() {
+    return id;
   }
 }

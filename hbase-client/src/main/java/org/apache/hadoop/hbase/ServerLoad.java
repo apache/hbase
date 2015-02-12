@@ -22,8 +22,11 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
+import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
+import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 
@@ -52,7 +55,7 @@ public class ServerLoad {
   private int totalStaticBloomSizeKB = 0;
   private long totalCompactingKVs = 0;
   private long currentCompactedKVs = 0;
-  
+
   public ServerLoad(ClusterStatusProtos.ServerLoad serverLoad) {
     this.serverLoad = serverLoad;
     for (ClusterStatusProtos.RegionLoad rl: serverLoad.getRegionLoadsList()) {
@@ -70,7 +73,7 @@ public class ServerLoad {
       totalCompactingKVs += rl.getTotalCompactingKVs();
       currentCompactedKVs += rl.getCurrentCompactedKVs();
     }
-    
+
   }
 
   // NOTE: Function name cannot start with "get" because then an OpenDataException is thrown because
@@ -175,6 +178,26 @@ public class ServerLoad {
 
   public int getInfoServerPort() {
     return serverLoad.getInfoServerPort();
+  }
+
+  /**
+   * Call directly from client such as hbase shell
+   * @return the list of ReplicationLoadSource
+   */
+  public List<ReplicationLoadSource> getReplicationLoadSourceList() {
+    return ProtobufUtil.toReplicationLoadSourceList(serverLoad.getReplLoadSourceList());
+  }
+
+  /**
+   * Call directly from client such as hbase shell
+   * @return ReplicationLoadSink
+   */
+  public ReplicationLoadSink getReplicationLoadSink() {
+    if (serverLoad.hasReplLoadSink()) {
+      return ProtobufUtil.toReplicationLoadSink(serverLoad.getReplLoadSink());
+    } else {
+      return null;
+    }
   }
 
   /**

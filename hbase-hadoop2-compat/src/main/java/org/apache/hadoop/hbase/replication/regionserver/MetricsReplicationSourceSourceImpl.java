@@ -125,4 +125,9 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
     rms.removeMetric(logEditsFilteredKey);
   }
+
+  @Override
+  public long getLastShippedAge() {
+    return ageOfLastShippedOpGauge.value();
+  }
 }

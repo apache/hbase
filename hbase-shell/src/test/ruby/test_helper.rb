@@ -94,6 +94,10 @@ module Hbase
         puts "IGNORING DROP TABLE ERROR: #{e}"
       end
     end
+
+    def replication_status(format,type)
+      return admin.status(format,type)
+    end
   end
 end
 
