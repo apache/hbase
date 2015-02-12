@@ -66,11 +66,13 @@ public class TestDeleteTableHandler {
   @Test(timeout=60000)
   public void testDeleteForSureClearsAllTableRowsFromMeta()
   throws IOException, InterruptedException {
+    // Create a test table
     final TableName tableName = TableName.valueOf("testDeleteForSureClearsAllTableRowsFromMeta");
     final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     admin.createTable(desc, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+
     // Now I have a nice table, mangle it by removing the HConstants.REGIONINFO_QUALIFIER_STR
     // content from a few of the rows.
     Scan metaScannerForMyTable = MetaReader.getScanForTableName(tableName);
@@ -88,11 +90,20 @@ public class TestDeleteTableHandler {
       } finally {
         scanner.close();
       }
-      admin.disableTable(tableName);
-      TEST_UTIL.waitTableDisabled(tableName.getName());
-      admin.deleteTable(tableName);
-      int rowCount = 0;
-      scanner = metaTable.getScanner(metaScannerForMyTable);
+    } finally {
+      metaTable.close();
+    }
+
+    // Now delete the table
+    admin.disableTable(tableName);
+    TEST_UTIL.waitTableDisabled(tableName.getName());
+    admin.deleteTable(tableName);
+
+    // Check that all META rows for the deleted table have really been removed
+    metaTable = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
+    int rowCount = 0;
+    try {
+      ResultScanner scanner = metaTable.getScanner(metaScannerForMyTable);
       try {
         for (Result result : scanner) {
           rowCount++;
@@ -100,10 +111,10 @@ public class TestDeleteTableHandler {
       } finally {
         scanner.close();
       }
-      assertEquals(0, rowCount);
     } finally {
       metaTable.close();
     }
+    assertEquals(0, rowCount);
   }
 }
 
