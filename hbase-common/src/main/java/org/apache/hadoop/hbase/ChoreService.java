@@ -161,7 +161,7 @@ public class ChoreService implements ChoreServicer {
 
   @Override
   public synchronized void cancelChore(ScheduledChore chore) {
-    cancelChore(chore, false);
+    cancelChore(chore, true);
   }
 
   @Override
