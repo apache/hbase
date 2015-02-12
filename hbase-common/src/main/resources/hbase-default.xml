@@ -330,6 +330,15 @@ possible configurations would overwhelm and obscure the important.
       DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.  
     </description>
   </property>
+  <property>
+    <name>hbase.regionserver.regionSplitLimit</name>
+    <value>1000</value>
+    <description>
+      Limit for the number of regions after which no more region splitting should take place.
+      This is not hard limit for the number of regions but acts as a guideline for the regionserver
+      to stop splitting after a certain limit. Default is set to 1000.
+    </description>
+  </property>
 
   <!--ZooKeeper configuration-->
   <property>
