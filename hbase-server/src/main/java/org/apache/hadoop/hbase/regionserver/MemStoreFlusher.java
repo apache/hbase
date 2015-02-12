@@ -141,9 +141,9 @@ class MemStoreFlusher implements FlushRequester {
   static long getMemStoreLimit(final long max, final float limit,
       final float defaultLimit) {
     float effectiveLimit = limit;
-    if (limit >= 0.9f || limit < 0.1f) {
+    if (limit >= 0.8f || limit <= 0f) {
       LOG.warn("Setting global memstore limit to default of " + defaultLimit +
-        " because supplied value outside allowed range of 0.1 -> 0.9");
+          " because supplied value outside allowed range of (0 -> 0.8]");
       effectiveLimit = defaultLimit;
     }
     return (long)(max * effectiveLimit);
