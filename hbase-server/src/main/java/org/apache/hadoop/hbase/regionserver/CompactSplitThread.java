@@ -56,6 +56,10 @@ import com.google.common.base.Preconditions;
 public class CompactSplitThread implements CompactionRequestor {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
 
+  public static final String REGION_SERVER_REGION_SPLIT_LIMIT =
+      "hbase.regionserver.regionSplitLimit";
+  public static final int DEFAULT_REGION_SERVER_REGION_SPLIT_LIMIT= 1000;
+  
   private final HRegionServer server;
   private final Configuration conf;
 
@@ -78,8 +82,8 @@ public class CompactSplitThread implements CompactionRequestor {
     super();
     this.server = server;
     this.conf = server.getConfiguration();
-    this.regionSplitLimit = conf.getInt("hbase.regionserver.regionSplitLimit",
-        Integer.MAX_VALUE);
+    this.regionSplitLimit = conf.getInt(REGION_SERVER_REGION_SPLIT_LIMIT,
+        DEFAULT_REGION_SERVER_REGION_SPLIT_LIMIT);
 
     int largeThreads = Math.max(1, conf.getInt(
         "hbase.regionserver.thread.compaction.large", 1));
@@ -407,6 +411,10 @@ public class CompactSplitThread implements CompactionRequestor {
   }
 
   private boolean shouldSplitRegion() {
+    if(server.getNumberOfOnlineRegions() > 0.9*regionSplitLimit) {
+      LOG.warn("Total number of regions is approaching the upper limit " + regionSplitLimit + ". "
+          + "Please consider taking a look at http://hbase.apache.org/book.html#ops.regionmgt");
+    }
     return (regionSplitLimit > server.getNumberOfOnlineRegions());
   }
 
