@@ -19,36 +19,46 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.List;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
-import org.apache.hadoop.hbase.rest.model.TableModel;
 import org.apache.hadoop.hbase.rest.model.TableInfoModel;
 import org.apache.hadoop.hbase.rest.model.TableListModel;
+import org.apache.hadoop.hbase.rest.model.TableModel;
 import org.apache.hadoop.hbase.rest.model.TableRegionModel;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
-
-import static org.junit.Assert.*;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,7 +71,7 @@ public class TestTableResource {
   private static TableName TABLE = TableName.valueOf("TestTableResource");
   private static String COLUMN_FAMILY = "test";
   private static String COLUMN = COLUMN_FAMILY + ":qualifier";
-  private static Map<HRegionInfo, ServerName> regionMap;
+  private static List<HRegionLocation> regionMap;
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL =
@@ -87,9 +97,9 @@ public class TestTableResource {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
     admin.createTable(htd);
-    HTable table = (HTable) TEST_UTIL.getConnection().getTable(TABLE);
     byte[] k = new byte[3];
     byte [][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(COLUMN));
+    List<Put> puts = new ArrayList<>();
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
       for (byte b2 = 'a'; b2 < 'z'; b2++) {
         for (byte b3 = 'a'; b3 < 'z'; b3++) {
@@ -99,13 +109,19 @@ public class TestTableResource {
           Put put = new Put(k);
           put.setDurability(Durability.SKIP_WAL);
           put.add(famAndQf[0], famAndQf[1], k);
-          table.put(put);
+          puts.add(put);
         }
       }
     }
-    table.flushCommits();
+    Connection connection = TEST_UTIL.getConnection();
+    
+    Table table =  connection.getTable(TABLE);
+    table.put(puts);
+    table.close();
     // get the initial layout (should just be one region)
-    Map<HRegionInfo, ServerName> m = table.getRegionLocations();
+    
+    RegionLocator regionLocator = connection.getRegionLocator(TABLE);
+    List<HRegionLocation> m = regionLocator.getAllRegionLocations();
     assertEquals(m.size(), 1);
     // tell the master to split the table
     admin.split(TABLE);
@@ -119,14 +135,14 @@ public class TestTableResource {
         LOG.warn(StringUtils.stringifyException(e));
       }
       // check again
-      m = table.getRegionLocations();
+      m = regionLocator.getAllRegionLocations();
     }
 
     // should have two regions now
     assertEquals(m.size(), 2);
     regionMap = m;
     LOG.info("regions: " + regionMap);
-    table.close();
+    regionLocator.close();
   }
 
   @AfterClass
@@ -156,15 +172,17 @@ public class TestTableResource {
     while (regions.hasNext()) {
       TableRegionModel region = regions.next();
       boolean found = false;
-      for (Map.Entry<HRegionInfo, ServerName> e: regionMap.entrySet()) {
-        HRegionInfo hri = e.getKey();
+      for (HRegionLocation e: regionMap) {
+        HRegionInfo hri = e.getRegionInfo();
         String hriRegionName = hri.getRegionNameAsString();
         String regionName = region.getName();
         if (hriRegionName.equals(regionName)) {
           found = true;
           byte[] startKey = hri.getStartKey();
           byte[] endKey = hri.getEndKey();
-          InetSocketAddress sa = new InetSocketAddress(e.getValue().getHostname(), e.getValue().getPort());
+          ServerName serverName = e.getServerName();
+          InetSocketAddress sa =
+              new InetSocketAddress(serverName.getHostname(), serverName.getPort());
           String location = sa.getHostName() + ":" +
             Integer.valueOf(sa.getPort());
           assertEquals(hri.getRegionId(), region.getId());
