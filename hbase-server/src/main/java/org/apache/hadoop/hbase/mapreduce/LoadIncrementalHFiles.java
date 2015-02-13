@@ -622,7 +622,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   /**
-   * @deprecated Use {@link #tryAtomicRegionLoad(HConnection, TableName, byte[], Collection)}
+   * @deprecated Use {@link #tryAtomicRegionLoad(Connection, TableName, byte[], Collection)}
    */
   @Deprecated
   protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
