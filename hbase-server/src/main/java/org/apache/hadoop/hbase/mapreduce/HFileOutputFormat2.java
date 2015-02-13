@@ -80,7 +80,7 @@ import com.google.common.annotations.VisibleForTesting;
  * all HFiles being written.
  * <p>
  * Using this class as part of a MapReduce job is best done
- * using {@link #configureIncrementalLoad(Job, Table, RegionLocator, Class)}.
+ * using {@link #configureIncrementalLoad(Job, Table, RegionLocator)}.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
