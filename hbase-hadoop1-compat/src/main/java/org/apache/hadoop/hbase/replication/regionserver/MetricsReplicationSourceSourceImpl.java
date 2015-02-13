@@ -35,6 +35,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
   private final String logReadInBytesKey;
 
   private final MetricMutableGaugeLong ageOfLastShippedOpGauge;
+  private long ageOfLastShipped; // Hadoop 1 metrics don't let you read from gauges
   private final MetricMutableGaugeLong sizeOfLogQueueGauge;
   private final MetricMutableCounterLong logReadInEditsCounter;
   private final MetricMutableCounterLong logEditsFilteredCounter;
@@ -74,6 +75,7 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
 
   @Override public void setLastShippedAge(long age) {
     ageOfLastShippedOpGauge.set(age);
+    ageOfLastShipped = age;
   }
 
   @Override public void setSizeOfLogQueue(int size) {
@@ -125,5 +127,10 @@ public class MetricsReplicationSourceSourceImpl implements MetricsReplicationSou
     rms.removeMetric(logReadInEditsKey);
 
     rms.removeMetric(logEditsFilteredKey);
+  }
+
+  @Override
+  public long getLastShippedAge() {
+    return ageOfLastShipped;
   }
 }

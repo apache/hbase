@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics2.lib.MetricMutableGaugeLong;
 public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkSource {
 
   private final MetricMutableGaugeLong ageGauge;
+  private long ageOfLastApplied; // Hadoop 1 metrics don't let you read from gauges
   private final MetricMutableCounterLong batchesCounter;
   private final MetricMutableCounterLong opsCounter;
 
@@ -35,6 +36,7 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
 
   @Override public void setLastAppliedOpAge(long age) {
     ageGauge.set(age);
+    ageOfLastApplied = age;
   }
 
   @Override public void incrAppliedBatches(long batches) {
@@ -43,5 +45,10 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
 
   @Override public void incrAppliedOps(long batchsize) {
     opsCounter.incr(batchsize);
+  }
+
+  @Override
+  public long getLastAppliedOpAge() {
+    return ageOfLastApplied;
   }
 }
