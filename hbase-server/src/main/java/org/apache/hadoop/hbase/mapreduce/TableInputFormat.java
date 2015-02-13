@@ -175,7 +175,9 @@ implements Configurable {
   }
 
   @Override
-  protected void initialize() {
+  protected void initialize(JobContext context) throws IOException {
+    // Do we have to worry about mis-matches between the Configuration from setConf and the one
+    // in this context?
     TableName tableName = TableName.valueOf(conf.get(INPUT_TABLE));
     try {
       initializeTable(ConnectionFactory.createConnection(new Configuration(conf)), tableName);

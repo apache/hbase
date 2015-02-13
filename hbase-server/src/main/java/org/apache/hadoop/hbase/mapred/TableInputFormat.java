@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
@@ -50,6 +49,15 @@ public class TableInputFormat extends TableInputFormatBase implements
   public static final String COLUMN_LIST = "hbase.mapred.tablecolumns";
 
   public void configure(JobConf job) {
+    try {
+      initialize(job);
+    } catch (Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+    }
+  }
+
+  @Override
+  protected void initialize(JobConf job) throws IOException {
     Path[] tableNames = FileInputFormat.getInputPaths(job);
     String colArg = job.get(COLUMN_LIST);
     String[] colNames = colArg.split(" ");
@@ -58,12 +66,8 @@ public class TableInputFormat extends TableInputFormatBase implements
       m_cols[i] = Bytes.toBytes(colNames[i]);
     }
     setInputColumns(m_cols);
-    try {
-      Connection connection = ConnectionFactory.createConnection(job);
-      setHTable((HTable) connection.getTable(TableName.valueOf(tableNames[0].getName())));
-    } catch (Exception e) {
-      LOG.error(StringUtils.stringifyException(e));
-    }
+    Connection connection = ConnectionFactory.createConnection(job);
+    initializeTable(connection, TableName.valueOf(tableNames[0].getName()));
   }
 
   public void validateInput(JobConf job) throws IOException {

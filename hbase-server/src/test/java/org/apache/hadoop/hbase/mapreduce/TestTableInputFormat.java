@@ -56,6 +56,7 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.junit.AfterClass;
@@ -343,6 +344,16 @@ public class TestTableInputFormat {
   }
 
   @Test
+  public void testJobConfigurableExtensionOfTableInputFormatBase()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    LOG.info("testing use of an InputFormat taht extends InputFormatBase, " +
+        "using JobConfigurable.");
+    final Table htable = createTable(Bytes.toBytes("exampleJobConfigurableTable"),
+      new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
+    testInputFormat(ExampleJobConfigurableTIF.class);
+  }
+
+  @Test
   public void testDeprecatedExtensionOfTableInputFormatBase()
       throws IOException, InterruptedException, ClassNotFoundException {
     LOG.info("testing use of an InputFormat taht extends InputFormatBase, " +
@@ -422,13 +433,43 @@ public class TestTableInputFormat {
 
   }
 
-  public static class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
 
-    private JobConf job;
+  public static class ExampleJobConfigurableTIF extends TableInputFormatBase
+      implements JobConfigurable {
 
     @Override
     public void configure(JobConf job) {
-      this.job = job;
+      try {
+        Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+        TableName tableName = TableName.valueOf("exampleJobConfigurableTable");
+        // mandatory
+        initializeTable(connection, tableName);
+        byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+          Bytes.toBytes("columnB") };
+        //optional
+        Scan scan = new Scan();
+        for (byte[] family : inputColumns) {
+          scan.addFamily(family);
+        }
+        Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+        scan.setFilter(exampleFilter);
+        setScan(scan);
+      } catch (IOException exception) {
+        throw new RuntimeException("Failed to initialize.", exception);
+      }
+    }
+  }
+
+
+  public static class ExampleTIF extends TableInputFormatBase {
+
+    @Override
+    protected void initialize(JobContext job) throws IOException {
+      Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create(
+          job.getConfiguration()));
+      TableName tableName = TableName.valueOf("exampleTable");
+      // mandatory
+      initializeTable(connection, tableName);
       byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
         Bytes.toBytes("columnB") };
       //optional
@@ -439,22 +480,6 @@ public class TestTableInputFormat {
       Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
       scan.setFilter(exampleFilter);
       setScan(scan);
-    }
-
-    @Override
-    protected void initialize() {
-      if (job == null) {
-        throw new IllegalStateException("must have already gotten the JobConf before initialize " +
-            "is called.");
-      }
-      try {
-        Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create(job));
-        TableName tableName = TableName.valueOf("exampleTable");
-        // mandatory
-        initializeTable(connection, tableName);
-      } catch (IOException exception) {
-        throw new RuntimeException("Failed to initialize.", exception);
-      }
     }
 
   }

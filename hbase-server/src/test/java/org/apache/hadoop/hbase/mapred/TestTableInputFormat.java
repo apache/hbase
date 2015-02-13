@@ -36,6 +36,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
@@ -322,8 +325,30 @@ public class TestTableInputFormat {
     LOG.info("testing use of an InputFormat taht extends InputFormatBase");
     final Table table = createTable(Bytes.toBytes("exampleTable"),
       new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
+    testInputFormat(ExampleTIF.class);
+  }
+
+  @Test
+  public void testDeprecatedExtensionOfTableInputFormatBase() throws IOException {
+    LOG.info("testing use of an InputFormat taht extends InputFormatBase, "
+        + "as it was given in 0.98.");
+    final Table table = createTable(Bytes.toBytes("exampleDeprecatedTable"),
+      new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
+    testInputFormat(ExampleDeprecatedTIF.class);
+  }
+
+  @Test
+  public void testJobConfigurableExtensionOfTableInputFormatBase() throws IOException {
+    LOG.info("testing use of an InputFormat taht extends InputFormatBase, "
+        + "using JobConfigurable.");
+    final Table table = createTable(Bytes.toBytes("exampleJobConfigurableTable"),
+      new byte[][] { Bytes.toBytes("columnA"), Bytes.toBytes("columnB") });
+    testInputFormat(ExampleJobConfigurableTIF.class);
+  }
+
+  void testInputFormat(Class<? extends InputFormat> clazz) throws IOException {
     final JobConf job = MapreduceTestingShim.getJobConf(mrCluster);
-    job.setInputFormat(ExampleTIF.class);
+    job.setInputFormat(clazz);
     job.setOutputFormat(NullOutputFormat.class);
     job.setMapperClass(ExampleVerifier.class);
     job.setNumReduceTasks(0);
@@ -373,13 +398,13 @@ public class TestTableInputFormat {
 
   }
 
-  public static class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
+  public static class ExampleDeprecatedTIF extends TableInputFormatBase implements JobConfigurable {
 
     @Override
     public void configure(JobConf job) {
       try {
         HTable exampleTable = new HTable(HBaseConfiguration.create(job),
-          Bytes.toBytes("exampleTable"));
+          Bytes.toBytes("exampleDeprecatedTable"));
         // mandatory
         setHTable(exampleTable);
         byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
@@ -392,6 +417,47 @@ public class TestTableInputFormat {
       } catch (IOException exception) {
         throw new RuntimeException("Failed to configure for job.", exception);
       }
+    }
+
+  }
+
+  public static class ExampleJobConfigurableTIF extends ExampleTIF implements JobConfigurable {
+
+    @Override
+    public void configure(JobConf job) {
+      try {
+        initialize(job);
+      } catch (IOException exception) {
+        throw new RuntimeException("Failed to initialize.", exception);
+      }
+    }
+
+    @Override
+    protected void initialize(JobConf job) throws IOException {
+      initialize(job, "exampleJobConfigurableTable");
+    }
+  }
+
+
+  public static class ExampleTIF extends TableInputFormatBase {
+
+    @Override
+    protected void initialize(JobConf job) throws IOException {
+      initialize(job, "exampleTable");
+    }
+
+    protected void initialize(JobConf job, String table) throws IOException {
+      Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+      TableName tableName = TableName.valueOf(table);
+      // mandatory
+      initializeTable(connection, tableName);
+      byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+        Bytes.toBytes("columnB") };
+      // mandatory
+      setInputColumns(inputColumns);
+      Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+      // optional
+      setRowFilter(exampleFilter);
     }
 
   }
