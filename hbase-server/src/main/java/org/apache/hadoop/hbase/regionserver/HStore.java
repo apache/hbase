@@ -399,6 +399,11 @@ public class HStore implements Store {
   }
 
   @Override
+  public long getSnapshotSize() {
+    return this.memstore.getSnapshotSize();
+  }
+
+  @Override
   public long getCompactionCheckMultiplier() {
     return this.compactionCheckMultiplier;
   }
@@ -448,7 +453,8 @@ public class HStore implements Store {
   /**
    * @return The maximum sequence id in all store files. Used for log replay.
    */
-  long getMaxSequenceId() {
+  @Override
+  public long getMaxSequenceId() {
     return StoreFile.getMaxSequenceIdInList(this.getStorefiles());
   }
 
@@ -576,11 +582,31 @@ public class HStore implements Store {
    */
   @Override
   public void refreshStoreFiles() throws IOException {
+    Collection<StoreFileInfo> newFiles = fs.getStoreFiles(getColumnFamilyName());
+    refreshStoreFilesInternal(newFiles);
+  }
+
+  @Override
+  public void refreshStoreFiles(Collection<String> newFiles) throws IOException {
+    List<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>(newFiles.size());
+    for (String file : newFiles) {
+      storeFiles.add(fs.getStoreFileInfo(getColumnFamilyName(), file));
+    }
+    refreshStoreFilesInternal(storeFiles);
+  }
+
+  /**
+   * Checks the underlying store files, and opens the files that  have not
+   * been opened, and removes the store file readers for store files no longer
+   * available. Mainly used by secondary region replicas to keep up to date with
+   * the primary region files.
+   * @throws IOException
+   */
+  private void refreshStoreFilesInternal(Collection<StoreFileInfo> newFiles) throws IOException {
     StoreFileManager sfm = storeEngine.getStoreFileManager();
     Collection<StoreFile> currentFiles = sfm.getStorefiles();
     if (currentFiles == null) currentFiles = new ArrayList<StoreFile>(0);
 
-    Collection<StoreFileInfo> newFiles = fs.getStoreFiles(getColumnFamilyName());
     if (newFiles == null) newFiles = new ArrayList<StoreFileInfo>(0);
 
     HashMap<StoreFileInfo, StoreFile> currentFilesSet = new HashMap<StoreFileInfo, StoreFile>(currentFiles.size());
@@ -1011,7 +1037,9 @@ public class HStore implements Store {
     this.lock.writeLock().lock();
     try {
       this.storeEngine.getStoreFileManager().insertNewFiles(sfs);
-      this.memstore.clearSnapshot(snapshotId);
+      if (snapshotId > 0) {
+        this.memstore.clearSnapshot(snapshotId);
+      }
     } finally {
       // We need the lock, as long as we are updating the storeFiles
       // or changing the memstore. Let us release it before calling
@@ -1311,10 +1339,12 @@ public class HStore implements Store {
    * @param compaction
    */
   @Override
-  public void completeCompactionMarker(CompactionDescriptor compaction)
+  public void replayCompactionMarker(CompactionDescriptor compaction,
+      boolean pickCompactionFiles, boolean removeFiles)
       throws IOException {
     LOG.debug("Completing compaction from the WAL marker");
     List<String> compactionInputs = compaction.getCompactionInputList();
+    List<String> compactionOutputs = Lists.newArrayList(compaction.getCompactionOutputList());
 
     // The Compaction Marker is written after the compaction is completed,
     // and the files moved into the region/family folder.
@@ -1331,22 +1361,40 @@ public class HStore implements Store {
     // being in the store's folder) or they may be missing due to a compaction.
 
     String familyName = this.getColumnFamilyName();
-    List<Path> inputPaths = new ArrayList<Path>(compactionInputs.size());
+    List<String> inputFiles = new ArrayList<String>(compactionInputs.size());
     for (String compactionInput : compactionInputs) {
       Path inputPath = fs.getStoreFilePath(familyName, compactionInput);
-      inputPaths.add(inputPath);
+      inputFiles.add(inputPath.getName());
     }
 
     //some of the input files might already be deleted
     List<StoreFile> inputStoreFiles = new ArrayList<StoreFile>(compactionInputs.size());
     for (StoreFile sf : this.getStorefiles()) {
-      if (inputPaths.contains(sf.getQualifiedPath())) {
+      if (inputFiles.contains(sf.getPath().getName())) {
         inputStoreFiles.add(sf);
       }
     }
 
-    this.replaceStoreFiles(inputStoreFiles, Collections.<StoreFile>emptyList());
-    this.completeCompaction(inputStoreFiles);
+    // check whether we need to pick up the new files
+    List<StoreFile> outputStoreFiles = new ArrayList<StoreFile>(compactionOutputs.size());
+
+    if (pickCompactionFiles) {
+      for (StoreFile sf : this.getStorefiles()) {
+        compactionOutputs.remove(sf.getPath().getName());
+      }
+      for (String compactionOutput : compactionOutputs) {
+        StoreFileInfo storeFileInfo = fs.getStoreFileInfo(getColumnFamilyName(), compactionOutput);
+        StoreFile storeFile = createStoreFileAndReader(storeFileInfo);
+        outputStoreFiles.add(storeFile);
+      }
+    }
+
+    if (!inputStoreFiles.isEmpty() || !outputStoreFiles.isEmpty()) {
+      LOG.info("Replaying compaction marker, replacing input files: " +
+          inputStoreFiles + " with output files : " + outputStoreFiles);
+      this.replaceStoreFiles(inputStoreFiles, outputStoreFiles);
+      this.completeCompaction(inputStoreFiles, removeFiles);
+    }
   }
 
   /**
@@ -2174,6 +2222,47 @@ public class HStore implements Store {
     @Override
     public List<Path> getCommittedFiles() {
       return committedFiles;
+    }
+
+    /**
+     * Similar to commit, but called in secondary region replicas for replaying the
+     * flush cache from primary region. Adds the new files to the store, and drops the
+     * snapshot depending on dropMemstoreSnapshot argument.
+     * @param fileNames names of the flushed files
+     * @param dropMemstoreSnapshot whether to drop the prepared memstore snapshot
+     * @throws IOException
+     */
+    @Override
+    public void replayFlush(List<String> fileNames, boolean dropMemstoreSnapshot)
+        throws IOException {
+      List<StoreFile> storeFiles = new ArrayList<StoreFile>(fileNames.size());
+      for (String file : fileNames) {
+        // open the file as a store file (hfile link, etc)
+        StoreFileInfo storeFileInfo = fs.getStoreFileInfo(getColumnFamilyName(), file);
+        StoreFile storeFile = createStoreFileAndReader(storeFileInfo);
+        storeFiles.add(storeFile);
+        if (LOG.isInfoEnabled()) {
+          LOG.info("Region: " + HStore.this.getRegionInfo().getEncodedName() +
+            " added " + storeFile + ", entries=" + storeFile.getReader().getEntries() +
+            ", sequenceid=" +  + storeFile.getReader().getSequenceID() +
+            ", filesize=" + StringUtils.humanReadableInt(storeFile.getReader().length()));
+        }
+      }
+
+      long snapshotId = dropMemstoreSnapshot ? snapshot.getId() : -1; // -1 means do not drop
+      HStore.this.updateStorefiles(storeFiles, snapshotId);
+    }
+
+    /**
+     * Abort the snapshot preparation. Drops the snapshot if any.
+     * @throws IOException
+     */
+    @Override
+    public void abort() throws IOException {
+      if (snapshot == null) {
+        return;
+      }
+      HStore.this.updateStorefiles(new ArrayList<StoreFile>(0), snapshot.getId());
     }
   }
 

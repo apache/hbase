@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
@@ -96,23 +96,24 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @throws IOException
    */
   public static StoreFileInfo getStoreFileInfo(Configuration conf, FileSystem fs,
-      HRegionInfo regionInfo, HRegionInfo regionInfoForFs, String familyName, FileStatus status)
+      HRegionInfo regionInfo, HRegionInfo regionInfoForFs, String familyName, Path path)
       throws IOException {
 
     // if this is a primary region, just return the StoreFileInfo constructed from path
     if (regionInfo.equals(regionInfoForFs)) {
-      return new StoreFileInfo(conf, fs, status);
-    }
-
-    if (StoreFileInfo.isReference(status.getPath())) {
-      Reference reference = Reference.read(fs, status.getPath());
-      return new StoreFileInfo(conf, fs, status, reference);
+      return new StoreFileInfo(conf, fs, path);
     }
 
     // else create a store file link. The link file does not exists on filesystem though.
     HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
-            regionInfoForFs.getEncodedName(), familyName, status.getPath().getName());
-    return new StoreFileInfo(conf, fs, status, link);
+            regionInfoForFs.getEncodedName(), familyName, path.getName());
+
+    if (StoreFileInfo.isReference(path)) {
+      Reference reference = Reference.read(fs, path);
+      return new StoreFileInfo(conf, fs, link.getFileStatus(fs), reference);
+    }
+
+    return new StoreFileInfo(conf, fs, link.getFileStatus(fs), link);
   }
 
   /**

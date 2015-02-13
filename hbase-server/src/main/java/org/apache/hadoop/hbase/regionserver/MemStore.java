@@ -60,6 +60,12 @@ public interface MemStore extends HeapSize {
   long getFlushableSize();
 
   /**
+   * Return the size of the snapshot(s) if any
+   * @return size of the memstore snapshot
+   */
+  long getSnapshotSize();
+
+  /**
    * Write an update
    * @param cell
    * @return approximate size of the passed KV and the newly added KV which maybe different from the

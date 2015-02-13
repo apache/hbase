@@ -61,6 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -4655,7 +4656,7 @@ public class TestHRegion {
     // create a primary region, load some data and flush
     // create a secondary region, and do a get against that
     Path rootDir = new Path(dir + "testRegionReplicaSecondary");
-    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir); 
+    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families = new byte[][] {
         Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3")
@@ -4755,6 +4756,14 @@ public class TestHRegion {
     }
   }
 
+  static WALFactory createWALFactory(Configuration conf, Path rootDir) throws IOException {
+    Configuration confForWAL = new Configuration(conf);
+    confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
+    return new WALFactory(confForWAL,
+        Collections.<WALActionsListener>singletonList(new MetricsWAL()),
+        "hregion-" + RandomStringUtils.randomNumeric(8));
+  }
+
   @Test
   public void testCompactionFromPrimary() throws IOException {
     Path rootDir = new Path(dir + "testRegionReplicaSecondary");
@@ -4815,9 +4824,14 @@ public class TestHRegion {
 
   private void putData(HRegion region,
       int startRow, int numRows, byte[] qf, byte[]... families) throws IOException {
+    putData(region, Durability.SKIP_WAL, startRow, numRows, qf, families);
+  }
+
+  static void putData(HRegion region, Durability durability,
+      int startRow, int numRows, byte[] qf, byte[]... families) throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
       Put put = new Put(Bytes.toBytes("" + i));
-      put.setDurability(Durability.SKIP_WAL);
+      put.setDurability(durability);
       for (byte[] family : families) {
         put.add(family, qf, null);
       }
@@ -4825,7 +4839,7 @@ public class TestHRegion {
     }
   }
 
-  private void verifyData(HRegion newReg, int startRow, int numRows, byte[] qf, byte[]... families)
+  static void verifyData(HRegion newReg, int startRow, int numRows, byte[] qf, byte[]... families)
       throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
       byte[] row = Bytes.toBytes("" + i);
@@ -4844,7 +4858,7 @@ public class TestHRegion {
     }
   }
 
-  private void assertGet(final HRegion r, final byte[] family, final byte[] k) throws IOException {
+  static void assertGet(final HRegion r, final byte[] family, final byte[] k) throws IOException {
     // Now I have k, get values out and assert they are as expected.
     Get get = new Get(k).addFamily(family).setMaxVersions();
     Cell[] results = r.get(get).rawCells();
@@ -4991,7 +5005,7 @@ public class TestHRegion {
     return initHRegion(tableName, null, null, callingMethod, conf, isReadOnly, families);
   }
 
-  private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
+  public static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, byte[]... families)
       throws IOException {
     Path logDir = TEST_UTIL.getDataTestDirOnTestFS(callingMethod + ".log");
@@ -5013,7 +5027,7 @@ public class TestHRegion {
    * @return A region on which you must call
    *         {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} when done.
    */
-  private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
+  public static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
       WAL wal, byte[]... families) throws IOException {
     return TEST_UTIL.createLocalHRegion(tableName, startKey, stopKey, callingMethod, conf,
@@ -6028,7 +6042,7 @@ public class TestHRegion {
     }
   }
 
-  private static HRegion initHRegion(byte[] tableName, String callingMethod,
+  static HRegion initHRegion(byte[] tableName, String callingMethod,
       byte[]... families) throws IOException {
     return initHRegion(tableName, callingMethod, HBaseConfiguration.create(),
         families);

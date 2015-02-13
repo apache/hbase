@@ -65,6 +65,22 @@ interface StoreFlushContext {
   boolean commit(MonitoredTask status) throws IOException;
 
   /**
+   * Similar to commit, but called in secondary region replicas for replaying the
+   * flush cache from primary region. Adds the new files to the store, and drops the
+   * snapshot depending on dropMemstoreSnapshot argument.
+   * @param fileNames names of the flushed files
+   * @param dropMemstoreSnapshot whether to drop the prepared memstore snapshot
+   * @throws IOException
+   */
+  void replayFlush(List<String> fileNames, boolean dropMemstoreSnapshot) throws IOException;
+
+  /**
+   * Abort the snapshot preparation. Drops the snapshot if any.
+   * @throws IOException
+   */
+  void abort() throws IOException;
+
+  /**
    * Returns the newly committed files from the flush. Called only if commit returns true
    * @return a list of Paths for new files
    */
