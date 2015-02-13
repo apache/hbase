@@ -1201,12 +1201,18 @@ public class WALSplitter {
      * @return true when there is no error
      * @throws IOException
      */
-    protected boolean finishWriting() throws IOException {
+    protected boolean finishWriting(boolean interrupt) throws IOException {
       LOG.debug("Waiting for split writer threads to finish");
       boolean progress_failed = false;
       for (WriterThread t : writerThreads) {
         t.finish();
       }
+      if (interrupt) {
+        for (WriterThread t : writerThreads) {
+          t.interrupt(); // interrupt the writer threads. We are stopping now.
+        }
+      }
+
       for (WriterThread t : writerThreads) {
         if (!progress_failed && reporter != null && !reporter.progress()) {
           progress_failed = true;
@@ -1275,7 +1281,7 @@ public class WALSplitter {
       boolean isSuccessful = false;
       List<Path> result = null;
       try {
-        isSuccessful = finishWriting();
+        isSuccessful = finishWriting(false);
       } finally {
         result = close();
         List<IOException> thrown = closeLogWriters(null);
@@ -1973,7 +1979,7 @@ public class WALSplitter {
     @Override
     public List<Path> finishWritingAndClose() throws IOException {
       try {
-        if (!finishWriting()) {
+        if (!finishWriting(false)) {
           return null;
         }
         if (hasEditsInDisablingOrDisabledTables) {

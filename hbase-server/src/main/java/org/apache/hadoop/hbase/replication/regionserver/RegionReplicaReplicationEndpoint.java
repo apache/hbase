@@ -288,7 +288,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
     @Override
     public List<Path> finishWritingAndClose() throws IOException {
-      finishWriting();
+      finishWriting(true);
       return null;
     }
 

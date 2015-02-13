@@ -327,8 +327,7 @@ public class TestPerColumnFamilyFlush {
     return null;
   }
 
-  @Test (timeout=180000)
-  public void testLogReplay() throws Exception {
+  public void doTestLogReplay() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 20000);
     // Carefully chosen limits so that the memstore just flushes when we're done
@@ -418,7 +417,14 @@ public class TestPerColumnFamilyFlush {
   @Test (timeout=180000)
   public void testLogReplayWithDistributedReplay() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    testLogReplay();
+    doTestLogReplay();
+  }
+
+  // Test Log Replay with Distributed log split on.
+  @Test (timeout=180000)
+  public void testLogReplayWithDistributedLogSplit() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
+    doTestLogReplay();
   }
 
   /**

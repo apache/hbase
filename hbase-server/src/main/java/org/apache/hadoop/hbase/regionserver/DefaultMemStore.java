@@ -208,6 +208,11 @@ public class DefaultMemStore implements MemStore {
     return this.snapshotSize > 0 ? this.snapshotSize : keySize();
   }
 
+  @Override
+  public long getSnapshotSize() {
+    return this.snapshotSize;
+  }
+
   /**
    * Write an update
    * @param cell
@@ -462,6 +467,7 @@ public class DefaultMemStore implements MemStore {
    * @param now
    * @return  Timestamp
    */
+  @Override
   public long updateColumnValue(byte[] row,
                                 byte[] family,
                                 byte[] qualifier,
@@ -524,7 +530,7 @@ public class DefaultMemStore implements MemStore {
    * atomically.  Scans will only see each KeyValue update as atomic.
    *
    * @param cells
-   * @param readpoint readpoint below which we can safely remove duplicate KVs 
+   * @param readpoint readpoint below which we can safely remove duplicate KVs
    * @return change in memstore size
    */
   @Override
@@ -1031,7 +1037,7 @@ public class DefaultMemStore implements MemStore {
   public long size() {
     return heapSize();
   }
- 
+
   /**
    * Code to help figure if our approximation of object heap sizes is close
    * enough.  See hbase-900.  Fills memstores then waits so user can heap
