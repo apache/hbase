@@ -23,14 +23,12 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Helper class for custom client scanners.
  */
 @InterfaceAudience.Private
 public abstract class AbstractClientScanner implements ResultScanner {
-
   protected ScanMetrics scanMetrics;
 
   /**
@@ -38,14 +36,19 @@ public abstract class AbstractClientScanner implements ResultScanner {
    */
   protected void initScanMetrics(Scan scan) {
     // check if application wants to collect scan metrics
-    byte[] enableMetrics = scan.getAttribute(
-      Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
-    if (enableMetrics != null && Bytes.toBoolean(enableMetrics)) {
+    if (scan.isScanMetricsEnabled()) {
       scanMetrics = new ScanMetrics();
     }
   }
 
-  // TODO: should this be at ResultScanner? ScanMetrics is not public API it seems.
+  /**
+   * Used internally accumulating metrics on scan. To
+   * enable collection of metrics on a Scanner, call {@link Scan#setScanMetricsEnabled(boolean)}.
+   * These metrics are cleared at key transition points. Metrics are accumulated in the
+   * {@link Scan} object itself.
+   * @see Scan#getScanMetrics()
+   * @return Returns the running {@link ScanMetrics} instance or null if scan metrics not enabled.
+   */
   public ScanMetrics getScanMetrics() {
     return scanMetrics;
   }

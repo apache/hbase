@@ -361,6 +361,9 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Get the latest version of the specified column.
+   * Note: this call clones the value content of the hosting Cell. See
+   * {@link #getValueAsByteBuffer(byte[], byte[])}, etc., or {@link #listCells()} if you would
+   * avoid the cloning.
    * @param family family name
    * @param qualifier column qualifier
    * @return value of latest version of column, null if none found
@@ -388,7 +391,8 @@ public class Result implements CellScannable, CellScanner {
     if (kv == null) {
       return null;
     }
-    return ByteBuffer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
+    return ByteBuffer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()).
+      asReadOnlyBuffer();
   }
 
   /**
@@ -411,7 +415,8 @@ public class Result implements CellScannable, CellScanner {
     if (kv == null) {
       return null;
     }
-    return ByteBuffer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
+    return ByteBuffer.wrap(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()).
+      asReadOnlyBuffer();
   }
 
   /**

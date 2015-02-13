@@ -61,6 +61,10 @@ public final class CellUtil {
       cell.getQualifierLength());
   }
 
+  public static ByteRange fillValueRange(Cell cell, ByteRange range) {
+    return range.set(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+  }
+
   public static ByteRange fillTagRange(Cell cell, ByteRange range) {
     return range.set(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
   }
