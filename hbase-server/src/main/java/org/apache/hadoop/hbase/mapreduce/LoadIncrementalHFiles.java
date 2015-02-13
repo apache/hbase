@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -270,15 +271,22 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       discoverLoadQueue(queue, hfofDir);
       // check whether there is invalid family name in HFiles to be bulkloaded
       Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
-      ArrayList<String> familyNames = new ArrayList<String>();
+      ArrayList<String> familyNames = new ArrayList<String>(families.size());
       for (HColumnDescriptor family : families) {
         familyNames.add(family.getNameAsString());
       }
       ArrayList<String> unmatchedFamilies = new ArrayList<String>();
-      for (LoadQueueItem lqi : queue) {
+      Iterator<LoadQueueItem> queueIter = queue.iterator();
+      while (queueIter.hasNext()) {
+        LoadQueueItem lqi = queueIter.next();
         String familyNameInHFile = Bytes.toString(lqi.family);
         if (!familyNames.contains(familyNameInHFile)) {
-          unmatchedFamilies.add(familyNameInHFile);
+          if (HFile.isHFileFormat(lqi.hfilePath.getFileSystem(getConf()), lqi.hfilePath)) {
+            unmatchedFamilies.add(familyNameInHFile);
+          } else {
+            LOG.warn("the file " + lqi + " doesn't seems to be an hfile. skipping");
+            queueIter.remove();
+          }
         }
       }
       if (unmatchedFamilies.size() > 0) {
@@ -717,7 +725,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       throw e;
     }
   }
-  
+
   private boolean isSecureBulkLoadEndpointAvailable() {
     String classes = getConf().get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
     return classes.contains("org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint");

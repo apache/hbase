@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -270,7 +271,7 @@ public class TestLoadIncrementalHFiles {
           file.getPath().getName() != "DONOTERASE");
       }
     }
-    
+
     util.deleteTable(tableName);
   }
 
@@ -303,6 +304,61 @@ public class TestLoadIncrementalHFiles {
       assertTrue("Incorrect exception message, expected message: ["
           + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY + "], current message: [" + errMsg + "]",
           errMsg.contains(EXPECTED_MSG_FOR_NON_EXISTING_FAMILY));
+    }
+  }
+
+  /**
+   * Write a random data file in a dir with a valid family name but not part of the table families
+   * we should we able to bulkload without getting the unmatched family exception. HBASE-13037
+   */
+  @Test(timeout = 60000)
+  public void testNonHfileFolderWithUnmatchedFamilyName() throws Exception {
+    Path dir = util.getDataTestDirOnTestFS("testNonHfileFolderWithUnmatchedFamilyName");
+    FileSystem fs = util.getTestFileSystem();
+    dir = dir.makeQualified(fs);
+
+    Path familyDir = new Path(dir, Bytes.toString(FAMILY));
+    HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_0"),
+        FAMILY, QUALIFIER, Bytes.toBytes("begin"), Bytes.toBytes("end"), 500);
+
+    final String NON_FAMILY_FOLDER = "_logs";
+    Path nonFamilyDir = new Path(dir, NON_FAMILY_FOLDER);
+    fs.mkdirs(nonFamilyDir);
+    createRandomDataFile(fs, new Path(nonFamilyDir, "012356789"), 16 * 1024);
+
+    Table table = null;
+    try {
+      final String TABLE_NAME = "mytable_testNonHfileFolderWithUnmatchedFamilyName";
+      table = util.createTable(TableName.valueOf(TABLE_NAME), FAMILY);
+
+      final String[] args = {dir.toString(), TABLE_NAME};
+      new LoadIncrementalHFiles(util.getConfiguration()).run(args);
+      assertEquals(500, util.countRows(table));
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+      fs.delete(dir, true);
+    }
+  }
+
+  private static void createRandomDataFile(FileSystem fs, Path path, int size)
+      throws IOException {
+    FSDataOutputStream stream = fs.create(path);
+    try {
+      byte[] data = new byte[1024];
+      for (int i = 0; i < data.length; ++i) {
+        data[i] = (byte)(i & 0xff);
+      }
+      while (size >= data.length) {
+        stream.write(data, 0, data.length);
+        size -= data.length;
+      }
+      if (size > 0) {
+        stream.write(data, 0, size);
+      }
+    } finally {
+      stream.close();
     }
   }
 
