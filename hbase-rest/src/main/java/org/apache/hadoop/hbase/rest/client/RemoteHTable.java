@@ -250,10 +250,12 @@ public class RemoteHTable implements Table {
     return TableName.valueOf(name);
   }
 
+  @Override
   public Configuration getConfiguration() {
     return conf;
   }
 
+  @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
     StringBuilder sb = new StringBuilder();
     sb.append('/');
@@ -282,10 +284,12 @@ public class RemoteHTable implements Table {
     throw new IOException("schema request timed out");
   }
 
+  @Override
   public void close() throws IOException {
     client.shutdown();
   }
 
+  @Override
   public Result get(Get get) throws IOException {
     TimeRange range = get.getTimeRange();
     String spec = buildRowSpec(get.getRow(), get.getFamilyMap(),
@@ -304,6 +308,7 @@ public class RemoteHTable implements Table {
     }
   }
 
+  @Override
   public Result[] get(List<Get> gets) throws IOException {
     byte[][] rows = new byte[gets.size()][];
     int maxVersions = 1;
@@ -360,6 +365,7 @@ public class RemoteHTable implements Table {
     throw new IOException("get request timed out");
   }
 
+  @Override
   public boolean exists(Get get) throws IOException {
     LOG.warn("exists() is really get(), just use get()");
     Result result = get(get);
@@ -370,6 +376,7 @@ public class RemoteHTable implements Table {
    * exists(List) is really a list of get() calls. Just use get().
    * @param gets list of Get to test for the existence
    */
+  @Override
   public boolean[] existsAll(List<Get> gets) throws IOException {
     LOG.warn("exists(List<Get>) is really list of get() calls, just use get()");
     boolean[] results = new boolean[gets.size()];
@@ -389,6 +396,7 @@ public class RemoteHTable implements Table {
     return objectResults;
   }
 
+  @Override
   public void put(Put put) throws IOException {
     CellSetModel model = buildModelFromPut(put);
     StringBuilder sb = new StringBuilder();
@@ -417,6 +425,7 @@ public class RemoteHTable implements Table {
     throw new IOException("put request timed out");
   }
 
+  @Override
   public void put(List<Put> puts) throws IOException {
     // this is a trick: The gateway accepts multiple rows in a cell set and
     // ignores the row specification in the URI
@@ -472,6 +481,7 @@ public class RemoteHTable implements Table {
     throw new IOException("multiput request timed out");
   }
 
+  @Override
   public void delete(Delete delete) throws IOException {
     String spec = buildRowSpec(delete.getRow(), delete.getFamilyCellMap(),
       delete.getTimeStamp(), delete.getTimeStamp(), 1);
@@ -495,6 +505,7 @@ public class RemoteHTable implements Table {
     throw new IOException("delete request timed out");
   }
 
+  @Override
   public void delete(List<Delete> deletes) throws IOException {
     for (Delete delete: deletes) {
       delete(delete);
@@ -632,19 +643,21 @@ public class RemoteHTable implements Table {
         LOG.warn(StringUtils.stringifyException(e));
       }
     }
-
   }
 
+  @Override
   public ResultScanner getScanner(Scan scan) throws IOException {
     return new Scanner(scan);
   }
 
+  @Override
   public ResultScanner getScanner(byte[] family) throws IOException {
     Scan scan = new Scan();
     scan.addFamily(family);
     return new Scanner(scan);
   }
 
+  @Override
   public ResultScanner getScanner(byte[] family, byte[] qualifier)
       throws IOException {
     Scan scan = new Scan();
@@ -660,6 +673,7 @@ public class RemoteHTable implements Table {
     throw new IOException("getRowOrBefore not supported");
   }
 
+  @Override
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Put put) throws IOException {
     // column to check-the-value
@@ -696,11 +710,13 @@ public class RemoteHTable implements Table {
     throw new IOException("checkAndPut request timed out");
   }
 
+  @Override
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Put put) throws IOException {
     throw new IOException("checkAndPut for non-equal comparison not implemented");
   }
 
+  @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) throws IOException {
     Put put = new Put(row);
@@ -737,24 +753,29 @@ public class RemoteHTable implements Table {
     throw new IOException("checkAndDelete request timed out");
   }
 
+  @Override
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       CompareOp compareOp, byte[] value, Delete delete) throws IOException {
     throw new IOException("checkAndDelete for non-equal comparison not implemented");
   }
 
+  @Override
   public Result increment(Increment increment) throws IOException {
     throw new IOException("Increment not supported");
   }
 
+  @Override
   public Result append(Append append) throws IOException {
     throw new IOException("Append not supported");
   }
 
+  @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount) throws IOException {
     throw new IOException("incrementColumnValue not supported");
   }
 
+  @Override
   public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
       long amount, Durability durability) throws IOException {
     throw new IOException("incrementColumnValue not supported");

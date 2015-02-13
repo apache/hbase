@@ -34,9 +34,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -117,9 +119,18 @@ public class Scan extends Query {
   private int storeOffset = 0;
   private boolean getScan;
 
-  // If application wants to collect scan metrics, it needs to
-  // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
+  /**
+   * @deprecated since 1.0.0. Use {@link #setScanMetricsEnabled(boolean)}
+   */
+  // Make private or remove.
+  @Deprecated
   static public final String SCAN_ATTRIBUTES_METRICS_ENABLE = "scan.attributes.metrics.enable";
+
+  /**
+   * Use {@link #getScanMetrics()}
+   */
+  // Make this private or remove.
+  @Deprecated
   static public final String SCAN_ATTRIBUTES_METRICS_DATA = "scan.attributes.metrics.data";
 
   // If an application wants to use multiple scans over different tables each scan must
@@ -911,5 +922,32 @@ public class Scan extends Query {
     scan.setReversed(true);
     scan.setCaching(1);
     return scan;
+  }
+
+  /**
+   * Enable collection of {@link ScanMetrics}. For advanced users.
+   * @param enabled Set to true to enable accumulating scan metrics
+   */
+  public Scan setScanMetricsEnabled(final boolean enabled) {
+    setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.valueOf(enabled)));
+    return this;
+  }
+
+  /**
+   * @return True if collection of scan metrics is enabled. For advanced users.
+   */
+  public boolean isScanMetricsEnabled() {
+    byte[] attr = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
+    return attr == null ? false : Bytes.toBoolean(attr);
+  }
+
+  /**
+   * @return Metrics on this Scan, if metrics were enabled.
+   * @see #setScanMetricsEnabled(boolean)
+   */
+  public ScanMetrics getScanMetrics() {
+    byte [] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
+    if (bytes == null) return null;
+    return ProtobufUtil.toScanMetrics(bytes);
   }
 }

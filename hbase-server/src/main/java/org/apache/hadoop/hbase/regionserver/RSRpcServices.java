@@ -2029,7 +2029,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         if (!isLoadingCfsOnDemandSet) {
           scan.setLoadColumnFamiliesOnDemand(region.isLoadingCfsOnDemandDefault());
         }
-        scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
         region.prepareScanner(scan);
         if (region.getCoprocessorHost() != null) {
           scanner = region.getCoprocessorHost().preScannerOpen(scan);
