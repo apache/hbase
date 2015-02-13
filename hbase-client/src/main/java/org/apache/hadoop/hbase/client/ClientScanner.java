@@ -318,9 +318,9 @@ public class ClientScanner extends AbstractClientScanner {
      * machine; for scan/map reduce scenarios, we will have multiple scans running at the same time.
      *
      * By default, scan metrics are disabled; if the application wants to collect them, this
-     * behavior can be turned on by calling calling:
-     *
-     * scan.setAttribute(SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE))
+     * behavior can be turned on by calling calling {@link Scan#setScanMetricsEnabled(boolean)}
+     * 
+     * <p>This invocation clears the scan metrics. Metrics are aggregated in the Scan instance.
      */
     protected void writeScanMetrics() {
       if (this.scanMetrics == null || scanMetricsPublished) {

@@ -111,7 +111,7 @@ public class TestRegionObserverInterface {
     util.shutdownMiniCluster();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testRegionObserver() throws IOException {
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testRegionObserver");
     // recreate table every time in order to reset the status of the
@@ -175,7 +175,7 @@ public class TestRegionObserverInterface {
         new Integer[] {1, 1, 1, 1});
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testRowMutation() throws IOException {
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testRowMutation");
     Table table = util.createTable(tableName, new byte[][] {A, B, C});
@@ -212,7 +212,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testIncrementHook() throws IOException {
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testIncrementHook");
     Table table = util.createTable(tableName, new byte[][] {A, B, C});
@@ -239,7 +239,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCheckAndPutHooks() throws IOException {
     TableName tableName =
         TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndPutHooks");
@@ -267,7 +267,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testCheckAndDeleteHooks() throws IOException {
     TableName tableName =
         TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndDeleteHooks");
@@ -297,7 +297,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testAppendHook() throws IOException {
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testAppendHook");
     Table table = util.createTable(tableName, new byte[][] {A, B, C});
@@ -324,7 +324,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   // HBase-3583
   public void testHBase3583() throws IOException {
     TableName tableName =
@@ -376,7 +376,7 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  @Test
+  @Test (timeout=300000)
   // HBase-3758
   public void testHBase3758() throws IOException {
     TableName tableName =
@@ -482,7 +482,7 @@ public class TestRegionObserverInterface {
    * Tests overriding compaction handling via coprocessor hooks
    * @throws Exception
    */
-  @Test
+  @Test (timeout=300000)
   public void testCompactionOverride() throws Exception {
     TableName compactTable = TableName.valueOf("TestCompactionOverride");
     Admin admin = util.getHBaseAdmin();
@@ -553,7 +553,7 @@ public class TestRegionObserverInterface {
     table.close();
   }
 
-  @Test
+  @Test (timeout=300000)
   public void bulkLoadHFileTest() throws Exception {
     String testName = TestRegionObserverInterface.class.getName()+".bulkLoadHFileTest";
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".bulkLoadHFileTest");
@@ -586,7 +586,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() +".testRecovery");
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testRecovery");
@@ -636,7 +636,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testLegacyRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() +".testLegacyRecovery");
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testLegacyRecovery");
@@ -686,7 +686,7 @@ public class TestRegionObserverInterface {
     }
   }
 
-  @Test
+  @Test (timeout=300000)
   public void testPreWALRestoreSkip() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() + ".testPreWALRestoreSkip");
     TableName tableName = TableName.valueOf(SimpleRegionObserver.TABLE_SKIPPED);
@@ -771,5 +771,4 @@ public class TestRegionObserverInterface {
       writer.close();
     }
   }
-
 }
