@@ -2273,7 +2273,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * @param leftKey
      * @param rightKey
      * @return 0 if equal, <0 if left smaller, >0 if right smaller
-     * @deprecated Since 0.99.2; Use {@link CellComparator#getMidpoint(Cell, Cell)} instead.
+     * @deprecated Since 0.99.2; Use
+     *             {@link CellComparator#getMidpoint(KeyValue.KVComparator, Cell, Cell) instead}
      */
     @Deprecated
     public byte[] getShortMidpointKey(final byte[] leftKey, final byte[] rightKey) {
