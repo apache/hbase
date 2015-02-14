@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.Message;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellScanner;
@@ -29,7 +31,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.ipc.RemoteException;
 
-import java.io.IOException;
+import com.google.protobuf.Message;
 
 /**
  * Handles Hbase responses
@@ -52,16 +54,12 @@ public class AsyncServerResponseHandler extends ChannelInboundHandlerAdapter {
   @Override public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
     ByteBuf inBuffer = (ByteBuf) msg;
     ByteBufInputStream in = new ByteBufInputStream(inBuffer);
-
-    if (channel.shouldCloseConnection) {
-      return;
-    }
     int totalSize = inBuffer.readableBytes();
     try {
       // Read the header
       RPCProtos.ResponseHeader responseHeader = RPCProtos.ResponseHeader.parseDelimitedFrom(in);
       int id = responseHeader.getCallId();
-      AsyncCall call = channel.calls.get(id);
+      AsyncCall call = channel.removePendingCall(id);
       if (call == null) {
         // So we got a response for which we have no corresponding 'call' here on the client-side.
         // We probably timed out waiting, cleaned up all references, and now the server decides
@@ -85,7 +83,7 @@ public class AsyncServerResponseHandler extends ChannelInboundHandlerAdapter {
             equals(FatalConnectionException.class.getName())) {
           channel.close(re);
         } else {
-          channel.failCall(call, re);
+          call.setFailed(re);
         }
       } else {
         Message value = null;
@@ -104,13 +102,11 @@ public class AsyncServerResponseHandler extends ChannelInboundHandlerAdapter {
         }
         call.setSuccess(value, cellBlockScanner);
       }
-      channel.calls.remove(id);
     } catch (IOException e) {
       // Treat this as a fatal condition and close this connection
       channel.close(e);
     } finally {
       inBuffer.release();
-      channel.cleanupCalls(false);
     }
   }
 

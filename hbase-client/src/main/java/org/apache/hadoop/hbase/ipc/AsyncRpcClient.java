@@ -17,12 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -38,6 +32,16 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
@@ -49,13 +53,12 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.Threads;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
 
 /**
  * Netty client for the requests and responses
@@ -169,16 +172,16 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * @throws InterruptedException if call is interrupted
    * @throws java.io.IOException  if a connection failure is encountered
    */
-  @Override protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
+  @Override
+  protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
       Descriptors.MethodDescriptor md, Message param, Message returnType, User ticket,
       InetSocketAddress addr) throws IOException, InterruptedException {
-
     final AsyncRpcChannel connection = createRpcChannel(md.getService().getName(), addr, ticket);
 
-    Promise<Message> promise = connection.callMethodWithPromise(md, pcrc, param, returnType);
-
+    Promise<Message> promise = connection.callMethod(md, pcrc, param, returnType);
+    long timeout = pcrc.hasCallTimeout() ? pcrc.getCallTimeout() : 0;
     try {
-      Message response = promise.get();
+      Message response = timeout > 0 ? promise.get(timeout, TimeUnit.MILLISECONDS) : promise.get();
       return new Pair<>(response, pcrc.cellScanner());
     } catch (ExecutionException e) {
       if (e.getCause() instanceof IOException) {
@@ -186,6 +189,8 @@ public class AsyncRpcClient extends AbstractRpcClient {
       } else {
         throw new IOException(e.getCause());
       }
+    } catch (TimeoutException e) {
+      throw new CallTimeoutException(promise.toString());
     }
   }
 
@@ -337,12 +342,20 @@ public class AsyncRpcClient extends AbstractRpcClient {
 
   /**
    * Remove connection from pool
-   *
-   * @param connectionHashCode of connection
    */
-  public void removeConnection(int connectionHashCode) {
+  public void removeConnection(AsyncRpcChannel connection) {
+    int connectionHashCode = connection.getConnectionHashCode();
     synchronized (connections) {
-      this.connections.remove(connectionHashCode);
+      // we use address as cache key, so we should check here to prevent removing the
+      // wrong connection
+      AsyncRpcChannel connectionInPool = this.connections.get(connectionHashCode);
+      if (connectionInPool == connection) {
+        this.connections.remove(connectionHashCode);
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("%s already removed, expected instance %08x, actual %08x",
+          connection.toString(), System.identityHashCode(connection),
+          System.identityHashCode(connectionInPool)));
+      }
     }
   }
 
