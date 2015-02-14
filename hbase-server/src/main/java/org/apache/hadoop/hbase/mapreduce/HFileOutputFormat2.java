@@ -584,17 +584,17 @@ public class HFileOutputFormat2
    */
   static void configurePartitioner(Job job, List<ImmutableBytesWritable> splitPoints)
       throws IOException {
-
+    Configuration conf = job.getConfiguration();
     // create the partitions file
-    FileSystem fs = FileSystem.get(job.getConfiguration());
-    Path partitionsPath = new Path("/tmp", "partitions_" + UUID.randomUUID());
+    FileSystem fs = FileSystem.get(conf);
+    Path partitionsPath = new Path(conf.get("hadoop.tmp.dir"), "partitions_" + UUID.randomUUID());
     fs.makeQualified(partitionsPath);
-    writePartitions(job.getConfiguration(), partitionsPath, splitPoints);
+    writePartitions(conf, partitionsPath, splitPoints);
     fs.deleteOnExit(partitionsPath);
 
     // configure job to use it
     job.setPartitionerClass(TotalOrderPartitioner.class);
-    TotalOrderPartitioner.setPartitionFile(job.getConfiguration(), partitionsPath);
+    TotalOrderPartitioner.setPartitionFile(conf, partitionsPath);
   }
 
   /**
