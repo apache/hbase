@@ -76,9 +76,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
     super.init(context);
     this.conf = HBaseConfiguration.create(ctx.getConfiguration());
     decorateConf();
-    this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 10);
+    this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 300);
     this.socketTimeoutMultiplier = this.conf.getInt("replication.source.socketTimeoutMultiplier",
-        maxRetriesMultiplier * maxRetriesMultiplier);
+        maxRetriesMultiplier);
     // TODO: This connection is replication specific or we should make it particular to
     // replication and make replication specific settings such as compression or codec to use
     // passing Cells.
