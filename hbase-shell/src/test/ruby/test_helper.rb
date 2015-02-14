@@ -68,10 +68,6 @@ module Hbase
       @shell.hbase_visibility_labels_admin
     end
 
-    def replication_admin
-      @shell.hbase_replication_admin
-    end
-
     def create_test_table(name)
       # Create the table if needed
       unless admin.exists?(name)

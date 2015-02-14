@@ -65,11 +65,6 @@ module HBaseConstants
   AUTHORIZATIONS = "AUTHORIZATIONS"
   SKIP_FLUSH = 'SKIP_FLUSH'
   CONSISTENCY = "CONSISTENCY"
-  ENDPOINT_CLASSNAME = 'ENDPOINT_CLASSNAME'
-  CLUSTER_KEY = 'CLUSTER_KEY'
-  TABLE_CFS = 'TABLE_CFS'
-  CONFIG = 'CONFIG'
-  DATA = 'DATA'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
