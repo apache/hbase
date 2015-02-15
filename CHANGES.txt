@@ -24,10 +24,12 @@ Release Notes - HBase - Version 1.0.0 02/20/2015
 ** Bug
     * [HBASE-8026] - HBase Shell docs for scan command does not reference VERSIONS
     * [HBASE-9431] - Set  'hbase.bulkload.retries.number' to 10 as HBASE-8450 claims
+    * [HBASE-9910] - TestHFilePerformance and HFilePerformanceEvaluation should be merged in a single HFile performance test class.
     * [HBASE-10499] - In write heavy scenario one of the regions does not get flushed causing RegionTooBusyException
     * [HBASE-10528] - DefaultBalancer selects plans to move regions onto draining nodes
     * [HBASE-11979] - Compaction progress reporting is wrong
     * [HBASE-12028] - Abort the RegionServer, when it's handler threads die
+    * [HBASE-12070] - Add an option to hbck to fix ZK inconsistencies
     * [HBASE-12108] - HBaseConfiguration: set classloader before loading xml files
     * [HBASE-12267] - Replace HTable constructor in mapreduce.* classes with ConnectionFactory 
     * [HBASE-12270] - A bug in the bucket cache, with cache blocks on write enabled
@@ -42,6 +44,7 @@ Release Notes - HBase - Version 1.0.0 02/20/2015
     * [HBASE-12564] - consolidate the getTableDescriptors() semantic
     * [HBASE-12565] - Race condition in HRegion.batchMutate()  causes partial data to be written when region closes
     * [HBASE-12574] - Update replication metrics to not do so many map look ups.
+    * [HBASE-12585] - Fix refguide so it does hbase 1.0 style API everywhere with callout on how we used to do it in pre-1.0
     * [HBASE-12607] - TestHBaseFsck#testParallelHbck fails running against hadoop 2.6.0
     * [HBASE-12611] - Create autoCommit() method and remove clearBufferOnFail
     * [HBASE-12617] - Running IntegrationTestBigLinkedList against cluster getting not an instance of org.apache.hadoop.hbase.MiniHBaseCluster
@@ -85,6 +88,7 @@ Release Notes - HBase - Version 1.0.0 02/20/2015
     * [HBASE-12742] - ClusterStatusPublisher crashes with a IPv6 network interface.
     * [HBASE-12744] - hbase-default.xml lists hbase.regionserver.global.memstore.size twice
     * [HBASE-12746] - [1.0.0RC0] Distributed Log Replay is on (HBASE-12577 was insufficient)
+    * [HBASE-12747] - IntegrationTestMTTR will OOME if launched with mvn verify
     * [HBASE-12750] - getRequestsCount() in ClusterStatus returns total number of request
     * [HBASE-12767] - Fix a StoreFileScanner NPE in reverse scan flow
     * [HBASE-12771] - TestFailFast#testFastFail failing
@@ -130,10 +134,25 @@ Release Notes - HBase - Version 1.0.0 02/20/2015
     * [HBASE-12958] - SSH doing hbase:meta get but hbase:meta not assigned
     * [HBASE-12962] - TestHFileBlockIndex.testBlockIndex() commented out during HBASE-10531
     * [HBASE-12966] - NPE in HMaster while recovering tables in Enabling state
+    * [HBASE-12971] - Replication stuck due to large default value for replication.source.maxretriesmultiplier
     * [HBASE-12976] - Set default value for hbase.client.scanner.max.result.size
+    * [HBASE-12978] - Region goes permanently offline (WAS: hbase:meta has a row missing hregioninfo and it causes my long-running job to fail)
     * [HBASE-12984] - SSL cannot be used by the InfoPort after removing deprecated code in HBASE-10336
     * [HBASE-12985] - Javadoc warning and findbugs fixes to get us green again
+    * [HBASE-12989] - region_mover.rb unloadRegions method uses ArrayList concurrently resulting in errors
+    * [HBASE-12991] - Use HBase 1.0 interfaces in hbase-rest
+    * [HBASE-12996] - Reversed field on Filter should be transient
     * [HBASE-12998] - Compilation with Hdfs-2.7.0-SNAPSHOT is broken after HDFS-7647
+    * [HBASE-13003] - Get tests in TestHFileBlockIndex back
+    * [HBASE-13009] - HBase REST UI inaccessible
+    * [HBASE-13010] - HFileOutputFormat2 partitioner's path is hard-coded as '/tmp'
+    * [HBASE-13026] - Wrong error message in case incorrect snapshot name OR Incorrect table name
+    * [HBASE-13027] - mapreduce.TableInputFormatBase should create its own Connection if needed
+    * [HBASE-13028] - Cleanup mapreduce API changes
+    * [HBASE-13030] - [1.0.0 polish] Make ScanMetrics public again and align Put 'add' with Get, Delete, etc., addColumn
+    * [HBASE-13037] - LoadIncrementalHFile should try to verify the content of unmatched families
+    * [HBASE-13038] - Fix the java doc warning continuously reported by Hadoop QA
+    * [HBASE-13039] - Add patchprocess/* to .gitignore to fix builds of branches
 
 ** Improvement
     * [HBASE-5699] - Run with > 1 WAL in HRegionServer
@@ -170,8 +189,11 @@ Release Notes - HBase - Version 1.0.0 02/20/2015
     * [HBASE-12929] - TableMapReduceUtil.initTableMapperJob unnecessarily limits the types of outputKeyClass and outputValueClass
     * [HBASE-12973] - RegionCoprocessorEnvironment should provide HRegionInfo directly
     * [HBASE-12979] - Use setters instead of return values for handing back statistics from HRegion methods
+    * [HBASE-12997] - FSHLog should print pipeline on low replication
+    * [HBASE-13008] - Better default for hbase.regionserver.regionSplitLimit parameter.
 
 ** New Feature
+    * [HBASE-9531] - a command line (hbase shell) interface to retreive the replication metrics and show replication lag
     * [HBASE-10560] - Per cell TTLs
     * [HBASE-12709] - [mvn] Add unit test excludes command line flag to the build. 
     * [HBASE-12731] - Heap occupancy based client pushback
