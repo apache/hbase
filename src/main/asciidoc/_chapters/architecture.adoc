@@ -202,24 +202,24 @@ HBaseConfiguration conf2 = HBaseConfiguration.create();
 HTable table2 = new HTable(conf2, "myTable");
 ----
 
-For more information about how connections are handled in the HBase client, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnectionManager.html[HConnectionManager].
+For more information about how connections are handled in the HBase client, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ConnectionFactory.html[ConnectionFactory].
 
 [[client.connection.pooling]]
 ===== Connection Pooling
 
-For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads in a single JVM), you can pre-create an `HConnection`, as shown in the following example:
+For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads in a single JVM), you can pre-create a `Connection`, as shown in the following example:
 
-.Pre-Creating a `HConnection`
+.Pre-Creating a `Connection`
 ====
 [source,java]
 ----
 // Create a connection to the cluster.
-HConnection connection = HConnectionManager.createConnection(Configuration);
-HTableInterface table = connection.getTable("myTable");
-// use table as needed, the table returned is lightweight
-table.close();
-// use the connection for other access to the cluster
-connection.close();
+Configuration conf = HBaseConfiguration.create();
+try (Connection connection = ConnectionFactory.createConnection(conf)) {
+  try (Table table = connection.getTable(TableName.valueOf(tablename)) {
+    // use table as needed, the table returned is lightweight
+  }
+}
 ----
 ====
 
@@ -228,22 +228,20 @@ Constructing HTableInterface implementation is very lightweight and resources ar
 .`HTablePool` is Deprecated
 [WARNING]
 ====
-Previous versions of this guide discussed `HTablePool`, which was deprecated in HBase 0.94, 0.95, and 0.96, and removed in 0.98.1, by link:https://issues.apache.org/jira/browse/HBASE-6580[HBASE-6500].
-Please use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnection.html[HConnection] instead.
+Previous versions of this guide discussed `HTablePool`, which was deprecated in HBase 0.94, 0.95, and 0.96, and removed in 0.98.1, by link:https://issues.apache.org/jira/browse/HBASE-6580[HBASE-6500], or `HConnection`, which is deprecated in HBase 1.0 by `Connection`.
+Please use link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Connection.html[Connection] instead.
 ====
 
 [[client.writebuffer]]
 === WriteBuffer and Batch Methods
 
-If <<perf.hbase.client.autoflush>> is turned off on link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable], ``Put``s are sent to RegionServers when the writebuffer is filled.
-The writebuffer is 2MB by default.
-Before an (H)Table instance is discarded, either `close()` or `flushCommits()` should be invoked so Puts will not be lost.
+In HBase 1.0 and later, link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] is deprecated in favor of link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table]. `Table` does not use autoflush. To do buffered writes, use the BufferedMutator class.
 
-NOTE: `htable.delete(Delete);` does not go in the writebuffer! This only applies to Puts.
+Before a `Table` or `HTable` instance is discarded, invoke either `close()` or `flushCommits()`, so `Put`s will not be lost.
 
 For additional information on write durability, review the link:../acid-semantics.html[ACID semantics] page.
 
-For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29[batch] methods on HTable.
+For fine-grained control of batching of ``Put``s or ``Delete``s, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#batch%28java.util.List%29[batch] methods on Table.
 
 [[client.external]]
 === External Clients
@@ -523,7 +521,7 @@ The methods exposed by `HMasterInterface` are primarily metadata-oriented method
 
 * Table (createTable, modifyTable, removeTable, enable, disable)
 * ColumnFamily (addColumn, modifyColumn, removeColumn)
-* Region (move, assign, unassign) For example, when the `HBaseAdmin` method `disableTable` is invoked, it is serviced by the Master server.
+* Region (move, assign, unassign) For example, when the `Admin` method `disableTable` is invoked, it is serviced by the Master server.
 
 [[master.processes]]
 === Processes
@@ -557,7 +555,7 @@ In a distributed cluster, a RegionServer runs on a <<arch.hdfs.dn>>.
 The methods exposed by `HRegionRegionInterface` contain both data-oriented and region-maintenance methods:
 
 * Data (get, put, delete, next, etc.)
-* Region (splitRegion, compactRegion, etc.) For example, when the `HBaseAdmin` method `majorCompact` is invoked on a table, the client is actually iterating through all regions for the specified table and requesting a major compaction directly to each region.
+* Region (splitRegion, compactRegion, etc.) For example, when the `Admin` method `majorCompact` is invoked on a table, the client is actually iterating through all regions for the specified table and requesting a major compaction directly to each region.
 
 [[regionserver.arch.processes]]
 === Processes
@@ -1331,6 +1329,35 @@ The RegionServer splits a region, offlines the split region and then adds the da
 See <<disable.splitting>> for how to manually manage splits (and for why you might do this).
 
 ==== Custom Split Policies
+ou can override the default split policy using a custom link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy](HBase 0.94+). Typically a custom split policy should extend
+HBase's default split policy: link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html[IncreasingToUpperBoundRegionSplitPolicy].
+
+The policy can set globally through the HBase configuration or on a per-table
+basis.
+
+.Configuring the Split Policy Globally in _hbase-site.xml_
+[source,xml]
+----
+<property>
+  <name>hbase.regionserver.region.split.policy</name>
+  <value>org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy</value>
+</property>
+----
+
+.Configuring a Split Policy On a Table Using the Java API
+[source,java]
+HTableDescriptor tableDesc = new HTableDescriptor("test");
+tableDesc.setValue(HTableDescriptor.SPLIT_POLICY, ConstantSizeRegionSplitPolicy.class.getName());
+tableDesc.addFamily(new HColumnDescriptor(Bytes.toBytes("cf1")));
+admin.createTable(tableDesc);              
+----
+
+[source]
+.Configuring the Split Policy On a Table Using HBase Shell
+----
+hbase> create 'test', {METHOD => 'table_att', CONFIG => {'SPLIT_POLICY' => 'org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy'}},
+{NAME => 'cf1'}
+----
 
 The default split policy can be overwritten using a custom link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy(HBase 0.94+)]. Typically a custom split policy should extend HBase's default split policy: link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html[ConstantSizeRegionSplitPolicy].
 
@@ -2281,7 +2308,7 @@ Ensure to set the following for all clients (and servers) that will use region r
   <name>hbase.client.primaryCallTimeout.multiget</name>
   <value>10000</value>
   <description>
-      The timeout (in microseconds), before secondary fallback RPC’s are submitted for multi-get requests (HTable.get(List<Get>)) with Consistency.TIMELINE to the secondary replicas of the regions. Defaults to 10ms. Setting this lower will increase the number of RPC’s, but will lower the p99 latencies.
+      The timeout (in microseconds), before secondary fallback RPC’s are submitted for multi-get requests (Table.get(List<Get>)) with Consistency.TIMELINE to the secondary replicas of the regions. Defaults to 10ms. Setting this lower will increase the number of RPC’s, but will lower the p99 latencies.
   </description>
 </property>
 <property>
@@ -2317,7 +2344,7 @@ flush 't1'
 
 [source,java]
 ----
-HTableDescriptor htd = new HTableDesctiptor(TableName.valueOf(“test_table”));
+HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(“test_table”));
 htd.setRegionReplication(2);
 ...
 admin.createTable(htd);

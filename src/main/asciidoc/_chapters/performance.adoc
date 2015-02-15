@@ -100,6 +100,17 @@ Using 10Gbe links between racks will greatly increase performance, and assuming 
 
 Are all the network interfaces functioning correctly? Are you sure? See the Troubleshooting Case Study in <<casestudies.slownode>>.
 
+[[perf.network.call_me_maybe]]
+=== Network Consistency and Partition Tolerance
+The link:http://en.wikipedia.org/wiki/CAP_theorem[CAP Theorem] states that a distributed system can maintain two out of the following three charateristics: 
+- *C*onsistency -- all nodes see the same data. 
+- *A*vailability -- every request receives a response about whether it succeeded or failed.
+- *P*artition tolerance -- the system continues to operate even if some of its components become unavailable to the others.
+
+HBase favors consistency and partition tolerance, where a decision has to be made. Coda Hale explains why partition tolerance is so important, in http://codahale.com/you-cant-sacrifice-partition-tolerance/. 
+
+Robert Yokota used an automated testing framework called link:https://aphyr.com/tags/jepsen[Jepson] to test HBase's partition tolerance in the face of network partitions, using techniques modeled after Aphyr's link:https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions[Call Me Maybe] series. The results, available as a link:http://eng.yammer.com/call-me-maybe-hbase/[blog post] and an link:http://eng.yammer.com/call-me-maybe-hbase-addendum/[addendum], show that HBase performs correctly.
+
 [[jvm]]
 == Java
 
@@ -439,7 +450,7 @@ When people get started with HBase they have a tendency to write code that looks
 [source,java]
 ----
 Get get = new Get(rowkey);
-Result r = htable.get(get);
+Result r = table.get(get);
 byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
 ----
 
@@ -452,7 +463,7 @@ public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
 Get get = new Get(rowkey);
-Result r = htable.get(get);
+Result r = table.get(get);
 byte[] b = r.getValue(CF, ATTR);  // returns current version of value
 ----
 
@@ -475,7 +486,7 @@ A useful pattern to speed up the bulk import process is to pre-create empty regi
 Be somewhat conservative in this, because too-many regions can actually degrade performance.
 
 There are two different approaches to pre-creating splits.
-The first approach is to rely on the default `HBaseAdmin` strategy (which is implemented in `Bytes.split`)...
+The first approach is to rely on the default `Admin` strategy (which is implemented in `Bytes.split`)...
 
 [source,java]
 ----
@@ -511,12 +522,12 @@ The default value of `hbase.regionserver.optionallogflushinterval` is 1000ms.
 [[perf.hbase.client.autoflush]]
 === HBase Client: AutoFlush
 
-When performing a lot of Puts, make sure that setAutoFlush is set to false on your link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html[HTable] instance.
+When performing a lot of Puts, make sure that setAutoFlush is set to false on your link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html[Table] instance.
 Otherwise, the Puts will be sent one at a time to the RegionServer.
-Puts added via `htable.add(Put)` and `htable.add( <List> Put)` wind up in the same write buffer.
+Puts added via `table.add(Put)` and `table.add( <List> Put)` wind up in the same write buffer.
 If `autoFlush = false`, these messages are not sent until the write-buffer is filled.
 To explicitly flush the messages, call `flushCommits`.
-Calling `close` on the `HTable` instance will invoke `flushCommits`.
+Calling `close` on the `Table` instance will invoke `flushCommits`.
 
 [[perf.hbase.client.putwal]]
 === HBase Client: Turn off WAL on Puts
@@ -553,7 +564,7 @@ If all your data is being written to one region at a time, then re-read the sect
 
 Also, if you are pre-splitting regions and all your data is _still_ winding up in a single region even though your keys aren't monotonically increasing, confirm that your keyspace actually works with the split strategy.
 There are a variety of reasons that regions may appear "well split" but won't work with your data.
-As the HBase client communicates directly with the RegionServers, this can be obtained via link:hhttp://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#getRegionLocation(byte[])[HTable.getRegionLocation].
+As the HBase client communicates directly with the RegionServers, this can be obtained via link:hhttp://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#getRegionLocation(byte[])[Table.getRegionLocation].
 
 See <<precreate.regions>>, as well as <<perf.configurations>>
 
@@ -622,14 +633,14 @@ Always have ResultScanner processing enclosed in try/catch blocks.
 ----
 Scan scan = new Scan();
 // set attrs...
-ResultScanner rs = htable.getScanner(scan);
+ResultScanner rs = table.getScanner(scan);
 try {
   for (Result r = rs.next(); r != null; r = rs.next()) {
   // process result...
 } finally {
   rs.close();  // always close the ResultScanner!
 }
-htable.close();
+table.close();
 ----
 
 [[perf.hbase.client.blockcache]]
@@ -761,16 +772,16 @@ In this case, special care must be taken to regularly perform major compactions 
 As is documented in <<datamodel>>, marking rows as deleted creates additional StoreFiles which then need to be processed on reads.
 Tombstones only get cleaned up with major compactions.
 
-See also <<compaction>> and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html#majorCompact%28java.lang.String%29[HBaseAdmin.majorCompact].
+See also <<compaction>> and link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html#majorCompact%28java.lang.String%29[Admin.majorCompact].
 
 [[perf.deleting.rpc]]
 === Delete RPC Behavior
 
-Be aware that `htable.delete(Delete)` doesn't use the writeBuffer.
+Be aware that `Table.delete(Delete)` doesn't use the writeBuffer.
 It will execute an RegionServer RPC with each invocation.
-For a large number of deletes, consider `htable.delete(List)`.
+For a large number of deletes, consider `Table.delete(List)`.
 
-See http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29
+See http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#delete%28org.apache.hadoop.hbase.client.Delete%29
 
 [[perf.hdfs]]
 == HDFS

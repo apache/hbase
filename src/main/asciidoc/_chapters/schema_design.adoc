@@ -32,7 +32,7 @@ A good general introduction on the strength and weaknesses modelling on the vari
 [[schema.creation]]
 ==  Schema Creation
 
-HBase schemas can be created or updated using the <<shell>> or by using link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html[HBaseAdmin] in the Java API.
+HBase schemas can be created or updated using the <<shell>> or by using link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Admin.html[Admin] in the Java API.
 
 Tables must be disabled when making ColumnFamily modifications, for example:
 
@@ -40,7 +40,7 @@ Tables must be disabled when making ColumnFamily modifications, for example:
 ----
 
 Configuration config = HBaseConfiguration.create();
-HBaseAdmin admin = new HBaseAdmin(conf);
+Admin admin = new Admin(conf);
 String table = "myTable";
 
 admin.disableTable(table);
@@ -308,7 +308,7 @@ This is a fairly common question on the HBase dist-list so it pays to get the ro
 === Relationship Between RowKeys and Region Splits
 
 If you pre-split your table, it is _critical_ to understand how your rowkey will be distributed across the region boundaries.
-As an example of why this is important, consider the example of using displayable hex characters as the lead position of the key (e.g., "0000000000000000" to "ffffffffffffffff"). Running those key ranges through `Bytes.split` (which is the split strategy used when creating regions in `HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)` for 10 regions will generate the following splits...
+As an example of why this is important, consider the example of using displayable hex characters as the lead position of the key (e.g., "0000000000000000" to "ffffffffffffffff"). Running those key ranges through `Bytes.split` (which is the split strategy used when creating regions in `Admin.createTable(byte[] startKey, byte[] endKey, numRegions)` for 10 regions will generate the following splits...
 
 ----
 
@@ -340,7 +340,7 @@ To conclude this example, the following is an example of how appropriate splits 
 
 [source,java]
 ----
-public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
+public static boolean createTable(Admin admin, HTableDescriptor table, byte[][] splits)
 throws IOException {
   try {
     admin.createTable( table, splits );
@@ -400,7 +400,7 @@ Take that into consideration when making your design, as well as block size for 
 
 === Counters
 
-One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers). See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#increment%28org.apache.hadoop.hbase.client.Increment%29[Increment] in HTable.
+One supported datatype that deserves special mention are "counters" (i.e., the ability to do atomic increments of numbers). See link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#increment%28org.apache.hadoop.hbase.client.Increment%29[Increment] in `Table`.
 
 Synchronization on counters are done on the RegionServer, not in the client.
 
@@ -630,7 +630,7 @@ The rowkey of LOG_TYPES would be:
 * [type] (e.g., byte indicating hostname vs. event-type)
 * [bytes] variable length bytes for raw hostname or event-type.
 
-A column for this rowkey could be a long with an assigned number, which could be obtained by using an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#incrementColumnValue%28byte[],%20byte[],%20byte[],%20long%29[HBase counter].
+A column for this rowkey could be a long with an assigned number, which could be obtained by using an link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Table.html#incrementColumnValue%28byte[],%20byte[],%20byte[],%20long%29[HBase counter].
 
 So the resulting composite rowkey would be:
 

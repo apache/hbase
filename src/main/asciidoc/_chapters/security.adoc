@@ -131,14 +131,19 @@ To do so, add the following to the `hbase-site.xml` file on every client:
 </property>
 ----
 
-This configuration property can also be set on a per connection basis.
-Set it in the `Configuration` supplied to `HTable`:
+This configuration property can also be set on a per-connection basis.
+Set it in the `Configuration` supplied to `Table`:
 
 [source,java]
 ----
 Configuration conf = HBaseConfiguration.create();
+Connection connection = ConnectionFactory.createConnection(conf);
 conf.set("hbase.rpc.protection", "privacy");
-HTable table = new HTable(conf, tablename);
+try (Connection connection = ConnectionFactory.createConnection(conf)) {
+  try (Table table = connection.getTable(TableName.valueOf(tablename)) {
+  .... do your stuff
+  }
+}
 ----
 
 Expect a ~10% performance penalty for encrypted communication.
@@ -265,8 +270,6 @@ Add the following to the `hbase-site.xml` file for every REST gateway:
 Substitute the appropriate credential and keytab for _$USER_ and _$KEYTAB_ respectively.
 
 The REST gateway will authenticate with HBase using the supplied credential.
-No authentication will be performed by the REST gateway itself.
-All client access via the REST gateway will use the REST gateway's credential and have its privilege.
 
 In order to use the REST API principal to interact with HBase, it is also necessary to add the `hbase.rest.kerberos.principal` to the `_acl_` table.
 For example, to give the REST API principal, `rest_server`, administrative access, a command such as this one will suffice:
@@ -278,8 +281,30 @@ grant 'rest_server', 'RWCA'
 
 For more information about ACLs, please see the <<hbase.accesscontrol.configuration>> section
 
-It should be possible for clients to authenticate with the HBase cluster through the REST gateway in a pass-through manner via SPNEGO HTTP authentication.
-This is future work.
+HBase REST gateway supports link:http://hadoop.apache.org/docs/stable/hadoop-auth/index.html[SPNEGO HTTP authentication] for client access to the gateway.
+To enable REST gateway Kerberos authentication for client access, add the following to the `hbase-site.xml` file for every REST gateway.
+
+[source,xml]
+----
+<property>
+  <name>hbase.rest.authentication.type</name>
+  <value>kerberos</value>
+</property>
+<property>
+  <name>hbase.rest.authentication.kerberos.principal</name>
+  <value>HTTP/_HOST@HADOOP.LOCALDOMAIN</value>
+</property>
+<property>
+  <name>hbase.rest.authentication.kerberos.keytab</name>
+  <value>$KEYTAB</value>
+</property>
+----
+
+Substitute the keytab for HTTP for _$KEYTAB_.
+
+HBase REST gateway supports different 'hbase.rest.authentication.type': simple, kerberos.
+You can also implement a custom authentication by implemening Hadoop AuthenticationHandler, then specify the full class name as 'hbase.rest.authentication.type' value.
+For more information, refer to link:http://hadoop.apache.org/docs/stable/hadoop-auth/index.html[SPNEGO HTTP authentication].
 
 [[security.rest.gateway]]
 === REST Gateway Impersonation Configuration
@@ -881,18 +906,24 @@ public static void grantOnTable(final HBaseTestingUtility util, final String use
   SecureTestUtil.updateACLs(util, new Callable<Void>() {
     @Override
     public Void call() throws Exception {
-      HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-      try {
-        BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-        AccessControlService.BlockingInterface protocol =
-            AccessControlService.newBlockingStub(service);
-        ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
-      } finally {
-        acl.close();
+      Configuration conf = HBaseConfiguration.create();
+      Connection connection = ConnectionFactory.createConnection(conf);
+      try (Connection connection = ConnectionFactory.createConnection(conf)) {
+        try (Table table = connection.getTable(TableName.valueOf(tablename)) {
+          AccessControlLists.ACL_TABLE_NAME);
+          try {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
+          } finally {
+            acl.close();
+          }
+          return null;
+        }
       }
-      return null;
     }
-  });
+  }
 }
 ----
 
@@ -931,7 +962,9 @@ public static void revokeFromTable(final HBaseTestingUtility util, final String 
   SecureTestUtil.updateACLs(util, new Callable<Void>() {
     @Override
     public Void call() throws Exception {
-      HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+      Configuration conf = HBaseConfiguration.create();
+      Connection connection = ConnectionFactory.createConnection(conf);
+      Table acl = connection.getTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
       try {
         BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
         AccessControlService.BlockingInterface protocol =
@@ -1215,9 +1248,11 @@ The correct way to apply cell level labels is to do so in the application code w
 ====
 [source,java]
 ----
-static HTable createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
+static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
     throws Exception {
-  HTable table = null;
+  Configuration conf = HBaseConfiguration.create();
+  Connection connection = ConnectionFactory.createConnection(conf);
+  Table table = NULL;
   try {
     table = TEST_UTIL.createTable(tableName, fam);
     int i = 1;
