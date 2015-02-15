@@ -846,6 +846,22 @@ possible configurations would overwhelm and obscure the important.
       authentication, and will abort the connection.</description>
   </property>
   <property>
+    <name>hbase.coprocessor.enabled</name>
+    <value>true</value>
+    <description>Enables or disables coprocessor loading. If 'false'
+    (disabled), any other coprocessor related configuration will be ignored.
+    </description>
+  </property>
+  <property>
+    <name>hbase.coprocessor.user.enabled</name>
+    <value>true</value>
+    <description>Enables or disables user (aka. table) coprocessor loading.
+    If 'false' (disabled), any table coprocessor attributes in table
+    descriptors will be ignored. If "hbase.coprocessor.enabled" is 'false'
+    this setting has no effect.
+    </description>
+  </property>
+  <property>
     <name>hbase.coprocessor.region.classes</name>
     <value></value>
     <description>A comma-separated list of Coprocessors that are loaded by

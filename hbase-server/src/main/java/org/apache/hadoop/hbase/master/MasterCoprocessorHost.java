@@ -19,9 +19,20 @@
 
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
@@ -36,6 +47,8 @@ import java.util.List;
 @InterfaceAudience.Private
 public class MasterCoprocessorHost
     extends CoprocessorHost<MasterCoprocessorHost.MasterEnvironment> {
+
+  private static final Log LOG = LogFactory.getLog(MasterCoprocessorHost.class);
 
   /**
    * Coprocessor environment extension providing access to master related
@@ -59,10 +72,16 @@ public class MasterCoprocessorHost
 
   private MasterServices masterServices;
 
-  MasterCoprocessorHost(final MasterServices services, final Configuration conf) {
+  public MasterCoprocessorHost(final MasterServices services, final Configuration conf) {
     super(services);
     this.conf = conf;
     this.masterServices = services;
+    // Log the state of coprocessor loading here; should appear only once or
+    // twice in the daemon log, depending on HBase version, because there is
+    // only one MasterCoprocessorHost instance in the master process
+    boolean coprocessorsEnabled = conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY,
+      DEFAULT_COPROCESSORS_ENABLED);
+    LOG.info("System coprocessor loading is " + (coprocessorsEnabled ? "enabled" : "disabled"));
     loadSystemCoprocessors(conf, MASTER_COPROCESSOR_CONF_KEY);
   }
 
