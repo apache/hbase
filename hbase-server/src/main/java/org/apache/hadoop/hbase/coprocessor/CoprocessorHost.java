@@ -74,6 +74,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     "hbase.coprocessor.wal.classes";
   public static final String ABORT_ON_ERROR_KEY = "hbase.coprocessor.abortonerror";
   public static final boolean DEFAULT_ABORT_ON_ERROR = true;
+  public static final String COPROCESSORS_ENABLED_CONF_KEY = "hbase.coprocessor.enabled";
+  public static final boolean DEFAULT_COPROCESSORS_ENABLED = true;
+  public static final String USER_COPROCESSORS_ENABLED_CONF_KEY =
+    "hbase.coprocessor.user.enabled";
+  public static final boolean DEFAULT_USER_COPROCESSORS_ENABLED = true;
 
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   protected Abortable abortable;
@@ -124,6 +129,12 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * Called by constructor.
    */
   protected void loadSystemCoprocessors(Configuration conf, String confKey) {
+    boolean coprocessorsEnabled = conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY,
+      DEFAULT_COPROCESSORS_ENABLED);
+    if (!coprocessorsEnabled) {
+      return;
+    }
+
     Class<?> implClass = null;
 
     // load default coprocessors from configure file
