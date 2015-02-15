@@ -328,6 +328,14 @@ public class RegionCoprocessorHost
   }
 
   void loadTableCoprocessors(final Configuration conf) {
+    boolean coprocessorsEnabled = conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY,
+      DEFAULT_COPROCESSORS_ENABLED);
+    boolean tableCoprocessorsEnabled = conf.getBoolean(USER_COPROCESSORS_ENABLED_CONF_KEY,
+      DEFAULT_USER_COPROCESSORS_ENABLED);
+    if (!(coprocessorsEnabled && tableCoprocessorsEnabled)) {
+      return;
+    }
+
     // scan the table attributes for coprocessor load specifications
     // initialize the coprocessors
     List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
