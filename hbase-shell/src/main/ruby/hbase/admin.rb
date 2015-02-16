@@ -77,9 +77,9 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Requests a regionserver's HLog roll
+    # Requests a regionserver's WAL roll
     def hlog_roll(server_name)
-      @admin.rollHLogWriter(server_name)
+      @admin.rollWALWriter(ServerName.valueOf(server_name))
     end
 
     #----------------------------------------------------------------------------------------------
