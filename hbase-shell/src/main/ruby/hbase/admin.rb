@@ -84,7 +84,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Requests a regionserver's WAL roll
     def wal_roll(server_name)
-      @admin.rollWALWriter(server_name)
+      @admin.rollWALWriter(ServerName.valueOf(server_name))
     end
     # TODO remove older hlog_roll version
     alias :hlog_roll :wal_roll
