@@ -184,11 +184,6 @@
       <artifactId>guava</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-client</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
       <groupId>com.yammer.metrics</groupId>
       <artifactId>metrics-core</artifactId>
     </dependency>
