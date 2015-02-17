@@ -4690,6 +4690,49 @@ public class TestFromClientSide {
   }
 
   @Test
+  public void testIncrementOnSameColumn() throws Exception {
+    LOG.info("Starting testIncrementOnSameColumn");
+    final byte[] TABLENAME = Bytes.toBytes("testIncrementOnSameColumn");
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+
+    byte[][] QUALIFIERS =
+        new byte[][] { Bytes.toBytes("A"), Bytes.toBytes("B"), Bytes.toBytes("C") };
+
+    Increment inc = new Increment(ROW);
+    for (int i = 0; i < QUALIFIERS.length; i++) {
+      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
+      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
+    }
+    ht.increment(inc);
+
+    // Verify expected results
+    Result r = ht.get(new Get(ROW));
+    Cell[] kvs = r.rawCells();
+    assertEquals(3, kvs.length);
+    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 1);
+    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 1);
+    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 1);
+
+    // Now try multiple columns again
+    inc = new Increment(ROW);
+    for (int i = 0; i < QUALIFIERS.length; i++) {
+      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
+      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
+    }
+    ht.increment(inc);
+
+    // Verify
+    r = ht.get(new Get(ROW));
+    kvs = r.rawCells();
+    assertEquals(3, kvs.length);
+    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 2);
+    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 2);
+    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 2);
+    
+    ht.close();
+  }
+
+  @Test
   public void testIncrement() throws Exception {
     LOG.info("Starting testIncrement");
     final byte [] TABLENAME = Bytes.toBytes("testIncrement");

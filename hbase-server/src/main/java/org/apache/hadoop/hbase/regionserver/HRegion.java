@@ -5600,17 +5600,19 @@ public class HRegion implements HeapSize { // , Writable{
             // Iterate the input columns and update existing values if they were
             // found, otherwise add new column initialized to the increment amount
             int idx = 0;
-            for (Cell cell: family.getValue()) {
+            List<Cell> edits = family.getValue();
+            for (int i = 0; i < edits.size(); i++) {
+              Cell cell = edits.get(i);
               long amount = Bytes.toLong(CellUtil.cloneValue(cell));
               boolean noWriteBack = (amount == 0);
               List<Tag> newTags = new ArrayList<Tag>();
 
               // Carry forward any tags that might have been added by a coprocessor
               if (cell.getTagsLengthUnsigned() > 0) {
-                Iterator<Tag> i = CellUtil.tagsIterator(cell.getTagsArray(),
+                Iterator<Tag> itr = CellUtil.tagsIterator(cell.getTagsArray(),
                   cell.getTagsOffset(), cell.getTagsLengthUnsigned());
-                while (i.hasNext()) {
-                  newTags.add(i.next());
+                while (itr.hasNext()) {
+                  newTags.add(itr.next());
                 }
               }
 
@@ -5628,13 +5630,14 @@ public class HRegion implements HeapSize { // , Writable{
                 }
                 // Carry tags forward from previous version
                 if (c.getTagsLength() > 0) {
-                  Iterator<Tag> i = CellUtil.tagsIterator(c.getTagsArray(),
+                  Iterator<Tag> itr = CellUtil.tagsIterator(c.getTagsArray(),
                     c.getTagsOffset(), c.getTagsLength());
-                  while (i.hasNext()) {
-                    newTags.add(i.next());
+                  while (itr.hasNext()) {
+                    newTags.add(itr.next());
                   }
                 }
-                idx++;
+                if (i < ( edits.size() - 1) && !CellUtil.matchingQualifier(cell, edits.get(i + 1)))
+                  idx++;
               }
 
               // Append new incremented KeyValue to list
