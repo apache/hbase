@@ -23,7 +23,6 @@ import java.util.Map;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
@@ -53,8 +52,8 @@ public class TestTableName extends TestWatcher {
   public TableName getTableName() {
     return tableName;
   }
-  
-  String emptyTableNames[] ={"", " "};
+
+  String emptyNames[] ={"", " "};
   String invalidNamespace[] = {":a", "%:a"};
   String legalTableNames[] = { "foo", "with-dash_under.dot", "_under_start_ok",
       "with-dash.with_underscore", "02-01-2012.my_table_01-02", "xyz._mytable_", "9_9_0.table_02"
@@ -74,8 +73,16 @@ public class TestTableName extends TestWatcher {
   }
 
   @Test(expected = IllegalArgumentException.class)
+  public void testEmptyNamespaceName() {
+    for (String nn : emptyNames) {
+      TableName.isLegalNamespaceName(Bytes.toBytes(nn));
+      fail("invalid Namespace name " + nn + " should have failed with IllegalArgumentException");
+    }
+  }
+
+  @Test(expected = IllegalArgumentException.class)
   public void testEmptyTableName() {
-    for (String tn : emptyTableNames) {
+    for (String tn : emptyNames) {
       TableName.isLegalFullyQualifiedTableName(Bytes.toBytes(tn));
       fail("invalid tablename " + tn + " should have failed with IllegalArgumentException");
     }

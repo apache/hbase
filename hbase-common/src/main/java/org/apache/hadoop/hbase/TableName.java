@@ -208,21 +208,21 @@ public final class TableName implements Comparable<TableName> {
   /**
    * Valid namespace characters are [a-zA-Z_0-9]
    */
-  public static void isLegalNamespaceName(byte[] namespaceName, int offset, int length) {
-    for (int i = offset; i < length; i++) {
+  public static void isLegalNamespaceName(final byte[] namespaceName,
+                                           final int start,
+                                           final int end) {
+    if(end - start < 1) {
+      throw new IllegalArgumentException("Namespace name must not be empty");
+    }
+    for (int i = start; i < end; i++) {
       if (Character.isLetterOrDigit(namespaceName[i])|| namespaceName[i] == '_') {
         continue;
       }
       throw new IllegalArgumentException("Illegal character <" + namespaceName[i] +
         "> at " + i + ". Namespaces can only contain " +
         "'alphanumeric characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(namespaceName,
-          offset, length));
+          start, end));
     }
-    if(offset == length)
-      throw new IllegalArgumentException("Illegal character <" + namespaceName[offset] +
-          "> at " + offset + ". Namespaces can only contain " +
-          "'alphanumeric characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(namespaceName,
-            offset, length));
   }
 
   public byte[] getName() {
