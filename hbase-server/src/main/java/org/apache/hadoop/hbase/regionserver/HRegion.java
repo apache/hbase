@@ -6734,7 +6734,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       ClassSize.ARRAY +
       45 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (12 * Bytes.SIZEOF_LONG) +
-      4 * Bytes.SIZEOF_BOOLEAN);
+      5 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
   // 1 x HashMap - coprocessorServiceHandlers
