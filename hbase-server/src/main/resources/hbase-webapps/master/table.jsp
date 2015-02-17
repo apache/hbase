@@ -188,6 +188,9 @@
                 <li><a href="/logLevel">Log Level</a></li>
                 <li><a href="/dump">Debug Dump</a></li>
                 <li><a href="/jmx">Metrics Dump</a></li>
+                <% if (HBaseConfiguration.isShowConfInServlet()) { %>
+                <li><a href="/conf">HBase Configuration</a></li>
+                <% } %>
             </ul>
         </div><!--/.nav-collapse -->
     </div>
