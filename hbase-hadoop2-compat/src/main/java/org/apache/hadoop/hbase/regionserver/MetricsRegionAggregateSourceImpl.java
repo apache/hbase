@@ -80,8 +80,7 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
   public void getMetrics(MetricsCollector collector, boolean all) {
 
 
-    MetricsRecordBuilder mrb = collector.addRecord(metricsName)
-        .setContext(metricsContext);
+    MetricsRecordBuilder mrb = collector.addRecord(metricsName);
 
     if (regionSources != null) {
       lock.readLock().lock();
