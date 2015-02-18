@@ -1058,8 +1058,8 @@
     <surefire.timeout>900</surefire.timeout>
     <test.exclude.pattern></test.exclude.pattern>
     <!-- default Xmx value is 2800m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
-    <surefire.Xmx>2800</surefire.Xmx>
-    <surefire.cygwinXmx>2800</surefire.cygwinXmx>
+    <surefire.Xmx>2800m</surefire.Xmx>
+    <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
     <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx${surefire.Xmx}
       -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true
