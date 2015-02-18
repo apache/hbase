@@ -426,7 +426,9 @@ public class RegionStates {
         if (oldServerName == null) {
           oldServerName = oldAssignments.remove(encodedName);
         }
-        if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
+        if (oldServerName != null
+            && !oldServerName.equals(serverName)
+            && serverHoldings.containsKey(oldServerName)) {
           LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
           removeFromServerHoldings(oldServerName, hri);
         }
