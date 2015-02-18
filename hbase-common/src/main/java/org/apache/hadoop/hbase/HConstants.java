@@ -931,7 +931,7 @@ public final class HConstants {
    *  NONE: no preference in destination of replicas
    *  ONE_SSD: place only one replica in SSD and the remaining in default storage
    *  and ALL_SSD: place all replica on SSD
-   *  
+   *
    * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html*/
   public static final String WAL_STORAGE_POLICY = "hbase.wal.storage.policy";
   public static final String DEFAULT_WAL_STORAGE_POLICY = "NONE";
@@ -1043,6 +1043,9 @@ public final class HConstants {
 
   public static final long NO_NONCE = 0;
 
+  /** Default cipher for encryption */
+  public static final String CIPHER_AES = "AES";
+
   /** Configuration key for the crypto algorithm provider, a class name */
   public static final String CRYPTO_CIPHERPROVIDER_CONF_KEY = "hbase.crypto.cipherprovider";
 
@@ -1065,6 +1068,13 @@ public final class HConstants {
 
   /** Configuration key for the name of the master WAL encryption key for the cluster, a string */
   public static final String CRYPTO_WAL_KEY_NAME_CONF_KEY = "hbase.crypto.wal.key.name";
+
+  /** Configuration key for the algorithm used for creating jks key, a string */
+  public static final String CRYPTO_KEY_ALGORITHM_CONF_KEY = "hbase.crypto.key.algorithm";
+
+  /** Configuration key for the name of the alternate cipher algorithm for the cluster, a string */
+  public static final String CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY =
+      "hbase.crypto.alternate.key.algorithm";
 
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
