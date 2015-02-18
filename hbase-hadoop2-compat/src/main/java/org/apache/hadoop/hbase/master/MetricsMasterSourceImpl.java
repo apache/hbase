@@ -68,8 +68,7 @@ public class MetricsMasterSourceImpl
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
 
-    MetricsRecordBuilder metricsRecordBuilder = metricsCollector.addRecord(metricsName)
-        .setContext(metricsContext);
+    MetricsRecordBuilder metricsRecordBuilder = metricsCollector.addRecord(metricsName).setContext(metricsContext);
 
     // masterWrapper can be null because this function is called inside of init.
     if (masterWrapper != null) {

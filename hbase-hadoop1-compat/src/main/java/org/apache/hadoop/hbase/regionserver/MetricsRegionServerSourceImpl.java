@@ -172,8 +172,7 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void getMetrics(MetricsBuilder metricsBuilder, boolean all) {
 
-    MetricsRecordBuilder mrb = metricsBuilder.addRecord(metricsName)
-        .setContext(metricsContext);
+    MetricsRecordBuilder mrb = metricsBuilder.addRecord(metricsName);
 
     // rsWrap can be null because this function is called inside of init.
     if (rsWrap != null) {

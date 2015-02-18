@@ -107,8 +107,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
 
   @Override
   public void getMetrics(MetricsBuilder metricsBuilder, boolean all) {
-    MetricsRecordBuilder mrb = metricsBuilder.addRecord(metricsName)
-        .setContext(metricsContext);
+    MetricsRecordBuilder mrb = metricsBuilder.addRecord(metricsName);
     if (wrapper != null) {
       mrb.addGauge(QUEUE_SIZE_NAME, QUEUE_SIZE_DESC, wrapper.getTotalQueueSize())
           .addGauge(GENERAL_QUEUE_NAME, GENERAL_QUEUE_DESC, wrapper.getGeneralQueueLength())
