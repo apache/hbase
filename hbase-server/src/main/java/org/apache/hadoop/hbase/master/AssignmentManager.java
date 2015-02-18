@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,9 +42,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.LinkedHashMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,18 +55,17 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTransition;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TableStateManager;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.coordination.RegionMergeCoordination;
@@ -89,12 +88,10 @@ import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.ConfigUtil;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
@@ -102,6 +99,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -112,9 +110,6 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.data.Stat;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.LinkedHashMultimap;
 
 /**
  * Manages and performs region assignment.
@@ -134,7 +129,7 @@ public class AssignmentManager extends ZooKeeperListener {
     = "hbase.assignment.already.intransition.waittime";
   static final int DEFAULT_ALREADY_IN_TRANSITION_WAITTIME = 60000; // 1 minute
 
-  protected final Server server;
+  protected final MasterServices server;
 
   private ServerManager serverManager;
 
@@ -267,10 +262,11 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws KeeperException
    * @throws IOException
    */
-  public AssignmentManager(Server server, ServerManager serverManager,
+  public AssignmentManager(MasterServices server, ServerManager serverManager,
       final LoadBalancer balancer,
       final ExecutorService service, MetricsMaster metricsMaster,
-      final TableLockManager tableLockManager) throws KeeperException,
+      final TableLockManager tableLockManager,
+      final TableStateManager tableStateManager) throws KeeperException,
         IOException, CoordinatedStateException {
     super(server.getZooKeeper());
     this.server = server;
@@ -284,15 +280,6 @@ public class AssignmentManager extends ZooKeeperListener {
     this.shouldAssignRegionsWithFavoredNodes = conf.getClass(
            HConstants.HBASE_MASTER_LOADBALANCER_CLASS, Object.class).equals(
            FavoredNodeLoadBalancer.class);
-    try {
-      if (server.getCoordinatedStateManager() != null) {
-        this.tableStateManager = server.getCoordinatedStateManager().getTableStateManager();
-      } else {
-        this.tableStateManager = null;
-      }
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException();
-    }
     // This is the max attempts, not retries, so it should be at least 1.
     this.maximumAttempts = Math.max(1,
       this.server.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10));
@@ -302,6 +289,7 @@ public class AssignmentManager extends ZooKeeperListener {
     int maxThreads = conf.getInt("hbase.assignment.threads.max", 30);
     this.threadPoolExecutorService = Threads.getBoundedCachedThreadPool(
       maxThreads, 60L, TimeUnit.SECONDS, Threads.newDaemonThreadFactory("AM."));
+    this.tableStateManager = tableStateManager;
     this.regionStates = new RegionStates(
       server, tableStateManager, serverManager, regionStateStore);
 
@@ -601,8 +589,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
     if (!failover) {
       disabledOrDisablingOrEnabling = tableStateManager.getTablesInStates(
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING,
-        ZooKeeperProtos.Table.State.ENABLING);
+          TableState.State.DISABLED, TableState.State.DISABLING,
+          TableState.State.ENABLING);
 
       // Clean re/start, mark all user regions closed before reassignment
       allRegions = regionStates.closeAllUserRegions(
@@ -1337,7 +1325,7 @@ public class AssignmentManager extends ZooKeeperListener {
             LOG.debug("Znode " + regionNameStr + " deleted, state: " + rs);
 
             boolean disabled = getTableStateManager().isTableState(regionInfo.getTable(),
-                ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING);
+                TableState.State.DISABLED, TableState.State.DISABLING);
 
             ServerName serverName = rs.getServerName();
             if (serverManager.isServerOnline(serverName)) {
@@ -2085,7 +2073,7 @@ public class AssignmentManager extends ZooKeeperListener {
             // will not be in ENABLING or ENABLED state.
             TableName tableName = region.getTable();
             if (!tableStateManager.isTableState(tableName,
-              ZooKeeperProtos.Table.State.ENABLED, ZooKeeperProtos.Table.State.ENABLING)) {
+                TableState.State.ENABLED, TableState.State.ENABLING)) {
               LOG.debug("Setting table " + tableName + " to ENABLED state.");
               setEnabledTable(tableName);
             }
@@ -2279,8 +2267,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private boolean isDisabledorDisablingRegionInRIT(final HRegionInfo region) {
     if (this.tableStateManager.isTableState(region.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED,
-        ZooKeeperProtos.Table.State.DISABLING) || replicasToClose.contains(region)) {
+        TableState.State.DISABLED,
+        TableState.State.DISABLING) || replicasToClose.contains(region)) {
       LOG.info("Table " + region.getTable() + " is disabled or disabling;"
         + " skipping assign of " + region.getRegionNameAsString());
       offlineDisabledRegion(region);
@@ -2771,7 +2759,7 @@ public class AssignmentManager extends ZooKeeperListener {
     for (HRegionInfo hri : regionsFromMetaScan) {
       TableName tableName = hri.getTable();
       if (!tableStateManager.isTableState(tableName,
-          ZooKeeperProtos.Table.State.ENABLED)) {
+          TableState.State.ENABLED)) {
         setEnabledTable(tableName);
       }
     }
@@ -2842,15 +2830,15 @@ public class AssignmentManager extends ZooKeeperListener {
   Set<ServerName> rebuildUserRegions() throws
       IOException, KeeperException, CoordinatedStateException {
     Set<TableName> disabledOrEnablingTables = tableStateManager.getTablesInStates(
-      ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.ENABLING);
+        TableState.State.DISABLED, TableState.State.ENABLING);
 
     Set<TableName> disabledOrDisablingOrEnabling = tableStateManager.getTablesInStates(
-      ZooKeeperProtos.Table.State.DISABLED,
-      ZooKeeperProtos.Table.State.DISABLING,
-      ZooKeeperProtos.Table.State.ENABLING);
+        TableState.State.DISABLED,
+        TableState.State.DISABLING,
+        TableState.State.ENABLING);
 
     // Region assignment from META
-    List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getConnection());
+    List<Result> results = MetaTableAccessor.fullScanRegions(server.getConnection());
     // Get any new but slow to checkin region server that joined the cluster
     Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
     // Set of offline servers to be returned
@@ -2917,7 +2905,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // this will be used in rolling restarts
         if (!disabledOrDisablingOrEnabling.contains(tableName)
           && !getTableStateManager().isTableState(tableName,
-            ZooKeeperProtos.Table.State.ENABLED)) {
+            TableState.State.ENABLED)) {
           setEnabledTable(tableName);
         }
       }
@@ -2936,7 +2924,7 @@ public class AssignmentManager extends ZooKeeperListener {
   private void recoverTableInDisablingState()
       throws KeeperException, IOException, CoordinatedStateException {
     Set<TableName> disablingTables =
-      tableStateManager.getTablesInStates(ZooKeeperProtos.Table.State.DISABLING);
+        tableStateManager.getTablesInStates(TableState.State.DISABLING);
     if (disablingTables.size() != 0) {
       for (TableName tableName : disablingTables) {
         // Recover by calling DisableTableHandler
@@ -2960,7 +2948,7 @@ public class AssignmentManager extends ZooKeeperListener {
   private void recoverTableInEnablingState()
       throws KeeperException, IOException, CoordinatedStateException {
     Set<TableName> enablingTables = tableStateManager.
-      getTablesInStates(ZooKeeperProtos.Table.State.ENABLING);
+        getTablesInStates(TableState.State.ENABLING);
     if (enablingTables.size() != 0) {
       for (TableName tableName : enablingTables) {
         // Recover by calling EnableTableHandler
@@ -3368,7 +3356,7 @@ public class AssignmentManager extends ZooKeeperListener {
             server.abort("Unexpected ZK exception deleting node " + hri, ke);
           }
           if (tableStateManager.isTableState(hri.getTable(),
-              ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+              TableState.State.DISABLED, TableState.State.DISABLING)) {
             regionStates.regionOffline(hri);
             it.remove();
             continue;
@@ -3390,7 +3378,7 @@ public class AssignmentManager extends ZooKeeperListener {
     HRegionInfo hri = plan.getRegionInfo();
     TableName tableName = hri.getTable();
     if (tableStateManager.isTableState(tableName,
-      ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
       LOG.info("Ignored moving region of disabling/disabled table "
         + tableName);
       return;
@@ -3437,11 +3425,11 @@ public class AssignmentManager extends ZooKeeperListener {
   protected void setEnabledTable(TableName tableName) {
     try {
       this.tableStateManager.setTableState(tableName,
-        ZooKeeperProtos.Table.State.ENABLED);
-    } catch (CoordinatedStateException e) {
+          TableState.State.ENABLED);
+    } catch (IOException e) {
       // here we can abort as it is the start up flow
       String errorMsg = "Unable to ensure that the table " + tableName
-          + " will be" + " enabled because of a ZooKeeper issue";
+          + " will be" + " enabled because of a IOException issue";
       LOG.error(errorMsg);
       this.server.abort(errorMsg, e);
     }
@@ -3450,6 +3438,8 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Set region as OFFLINED up in zookeeper asynchronously.
    * @param state
+   * @param cb
+   * @param destination
    * @return True if we succeeded, false otherwise (State was incorrect or failed
    * updating zk).
    */
@@ -3537,7 +3527,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // When there are more than one region server a new RS is selected as the
         // destination and the same is updated in the region plan. (HBASE-5546)
         if (getTableStateManager().isTableState(hri.getTable(),
-            ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+            TableState.State.DISABLED, TableState.State.DISABLING) ||
             replicasToClose.contains(hri)) {
           offlineDisabledRegion(hri);
           return;
@@ -3571,14 +3561,14 @@ public class AssignmentManager extends ZooKeeperListener {
     // reset the count, if any
     failedOpenTracker.remove(hri.getEncodedName());
     if (getTableStateManager().isTableState(hri.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
       invokeUnAssign(hri);
     }
   }
 
   private void onRegionClosed(final HRegionInfo hri) {
     if (getTableStateManager().isTableState(hri.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+        TableState.State.DISABLED, TableState.State.DISABLING) ||
         replicasToClose.contains(hri)) {
       offlineDisabledRegion(hri);
       return;
@@ -3615,7 +3605,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
       // User could disable the table before master knows the new region.
       if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+          TableState.State.DISABLED, TableState.State.DISABLING)) {
         invokeUnAssign(a);
         invokeUnAssign(b);
       } else {
@@ -3641,7 +3631,7 @@ public class AssignmentManager extends ZooKeeperListener {
       regionOffline(b);
 
       if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+          TableState.State.DISABLED, TableState.State.DISABLING)) {
         invokeUnAssign(p);
       }
     }
@@ -3674,7 +3664,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
       // User could disable the table before master knows the new region.
       if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+          TableState.State.DISABLED, TableState.State.DISABLING)) {
         invokeUnAssign(p);
       } else {
         Callable<Object> mergeReplicasCallable = new Callable<Object>() {
@@ -3700,7 +3690,7 @@ public class AssignmentManager extends ZooKeeperListener {
       regionOffline(p);
 
       if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+          TableState.State.DISABLED, TableState.State.DISABLING)) {
         invokeUnAssign(a);
         invokeUnAssign(b);
       }
@@ -3816,7 +3806,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
       // User could disable the table before master knows the new region.
       if (tableStateManager.isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+          TableState.State.DISABLED, TableState.State.DISABLING)) {
         unassign(p);
       }
     }
@@ -3946,7 +3936,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
       // User could disable the table before master knows the new region.
       if (tableStateManager.isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+          TableState.State.DISABLED, TableState.State.DISABLING)) {
         unassign(hri_a);
         unassign(hri_b);
       }

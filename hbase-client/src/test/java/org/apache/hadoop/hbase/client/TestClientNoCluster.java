@@ -129,12 +129,6 @@ public class TestClientNoCluster extends Configured implements Tool {
     }
 
     @Override
-    public boolean isTableOnlineState(TableName tableName, boolean enabled)
-    throws IOException {
-      return enabled;
-    }
-
-    @Override
     public int getCurrentNrHRS() throws IOException {
       return 1;
     }

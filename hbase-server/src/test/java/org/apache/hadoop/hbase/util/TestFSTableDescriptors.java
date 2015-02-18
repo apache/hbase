@@ -261,7 +261,7 @@ public class TestFSTableDescriptors {
       htds.createTableDescriptor(htd);
     }
     // add hbase:meta
-    HTableDescriptor htd = new HTableDescriptor(HTableDescriptor.META_TABLEDESC.getTableName());
+    HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
     htds.createTableDescriptor(htd);
 
     assertTrue(htds.getAll().size() == count + 1);

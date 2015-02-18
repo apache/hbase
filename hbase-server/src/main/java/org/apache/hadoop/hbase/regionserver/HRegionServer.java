@@ -560,6 +560,11 @@ public class HRegionServer extends HasThread implements
     this.choreService = new ChoreService(getServerName().toString());
   }
 
+  protected TableDescriptors getFsTableDescriptors() throws IOException {
+    return new FSTableDescriptors(this.conf,
+      this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
+  }
+
   protected void login(UserProvider user, String host) throws IOException {
     user.login("hbase.regionserver.keytab.file",
       "hbase.regionserver.kerberos.principal", host);

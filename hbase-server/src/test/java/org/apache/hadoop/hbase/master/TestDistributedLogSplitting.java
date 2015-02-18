@@ -807,6 +807,7 @@ public class TestDistributedLogSplitting {
 
     LOG.info("Disabling table\n");
     TEST_UTIL.getHBaseAdmin().disableTable(TableName.valueOf("disableTable"));
+    TEST_UTIL.waitTableDisabled(TableName.valueOf("disableTable").getName());
 
     // abort RS
     LOG.info("Aborting region server: " + hrs.getServerName());

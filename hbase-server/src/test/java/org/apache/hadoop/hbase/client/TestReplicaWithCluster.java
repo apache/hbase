@@ -129,7 +129,8 @@ public class TestReplicaWithCluster {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    HTU2.shutdownMiniCluster();
+    if (HTU2 != null)
+      HTU2.shutdownMiniCluster();
     HTU.shutdownMiniCluster();
   }
 
@@ -220,7 +221,6 @@ public class TestReplicaWithCluster {
 
     admin.disableTable(hdt.getTableName());
     admin.deleteTable(hdt.getTableName());
-    HTU.getHBaseCluster().startMaster();
     admin.close();
   }
 

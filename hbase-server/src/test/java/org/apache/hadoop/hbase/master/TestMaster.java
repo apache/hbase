@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
@@ -84,7 +84,7 @@ public class TestMaster {
 
     try (HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME)) {
       assertTrue(m.assignmentManager.getTableStateManager().isTableState(TABLENAME,
-        ZooKeeperProtos.Table.State.ENABLED));
+        TableState.State.ENABLED));
       TEST_UTIL.loadTable(ht, FAMILYNAME, false);
     }
 

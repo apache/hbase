@@ -149,7 +149,7 @@ public class MetaMigrationConvertingToPB {
   static long updateMeta(final MasterServices masterServices) throws IOException {
     LOG.info("Starting update of META");
     ConvertToPBMetaVisitor v = new ConvertToPBMetaVisitor(masterServices);
-    MetaTableAccessor.fullScan(masterServices.getConnection(), v);
+    MetaTableAccessor.fullScanRegions(masterServices.getConnection(), v);
     LOG.info("Finished update of META. Total rows updated:" + v.numMigratedRows);
     return v.numMigratedRows;
   }
@@ -160,7 +160,7 @@ public class MetaMigrationConvertingToPB {
    * @throws IOException
    */
   static boolean isMetaTableUpdated(final HConnection hConnection) throws IOException {
-    List<Result> results = MetaTableAccessor.fullScanOfMeta(hConnection);
+    List<Result> results = MetaTableAccessor.fullScanRegions(hConnection);
     if (results == null || results.isEmpty()) {
       LOG.info("hbase:meta doesn't have any entries to update.");
       return true;

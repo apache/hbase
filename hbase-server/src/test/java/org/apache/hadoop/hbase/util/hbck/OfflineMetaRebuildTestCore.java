@@ -35,6 +35,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -229,7 +232,6 @@ public class OfflineMetaRebuildTestCore {
     out.write(hri.toDelimitedByteArray());
     out.close();
 
-    // add to meta.
     MetaTableAccessor.addRegionToMeta(meta, hri);
     meta.close();
     return hri;
@@ -284,16 +286,9 @@ public class OfflineMetaRebuildTestCore {
    * @return # of entries in meta.
    */
   protected int scanMeta() throws IOException {
-    int count = 0;
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
-    ResultScanner scanner = meta.getScanner(new Scan());
-    LOG.info("Table: " + Bytes.toString(meta.getTableName()));
-    for (Result res : scanner) {
-      LOG.info(Bytes.toString(res.getRow()));
-      count++;
-    }
-    meta.close();
-    return count;
+    LOG.info("Scanning META");
+    MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
+    return MetaTableAccessor.fullScanRegions(TEST_UTIL.getConnection()).size();
   }
 
   protected HTableDescriptor[] getTables(final Configuration configuration) throws IOException {

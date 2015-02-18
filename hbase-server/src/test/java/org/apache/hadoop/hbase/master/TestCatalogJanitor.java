@@ -450,6 +450,11 @@ public class TestCatalogJanitor {
       // Auto-generated method stub
       return 0;
     }
+
+    @Override
+    public TableStateManager getTableStateManager() {
+      return null;
+    }
   }
 
   @Test

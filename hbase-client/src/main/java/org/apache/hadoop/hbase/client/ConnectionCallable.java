@@ -15,39 +15,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.RegionLocations;
-
 /**
- * Cluster registry.
- * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc.
- * Internal use only.
+ * A RetryingCallable for generic connection operations.
+ * @param <V> return type
  */
-@InterfaceAudience.Private
-interface Registry {
-  /**
-   * @param connection
-   */
-  void init(Connection connection);
+abstract class ConnectionCallable<V> implements RetryingCallable<V>, Closeable {
+  protected Connection connection;
 
-  /**
-   * @return Meta region location
-   * @throws IOException
-   */
-  RegionLocations getMetaRegionLocation() throws IOException;
+  public ConnectionCallable(final Connection connection) {
+    this.connection = connection;
+  }
 
-  /**
-   * @return Cluster id.
-   */
-  String getClusterId();
+  @Override
+  public void prepare(boolean reload) throws IOException {
+  }
 
-  /**
-   * @return Count of 'running' regionservers
-   * @throws IOException
-   */
-  int getCurrentNrHRS() throws IOException;
+  @Override
+  public void close() throws IOException {
+  }
+
+  @Override
+  public void throwable(Throwable t, boolean retrying) {
+  }
+
+  @Override
+  public String getExceptionMessageAdditionalDetail() {
+    return "";
+  }
+
+  @Override
+  public long sleep(long pause, int tries) {
+    return ConnectionUtils.getPauseTime(pause, tries);
+  }
 }

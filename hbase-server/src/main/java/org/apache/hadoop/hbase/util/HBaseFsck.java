@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
@@ -85,17 +85,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectable;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
@@ -104,6 +99,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -124,8 +120,6 @@ import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
-import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -137,7 +131,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -247,7 +240,8 @@ public class HBaseFsck extends Configured implements Closeable {
   // hbase:meta are always checked
   private Set<TableName> tablesIncluded = new HashSet<TableName>();
   private int maxMerge = DEFAULT_MAX_MERGE; // maximum number of overlapping regions to merge
-  private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE; // maximum number of overlapping regions to sideline
+  // maximum number of overlapping regions to sideline
+  private int maxOverlapsToSideline = DEFAULT_OVERLAPS_TO_SIDELINE;
   private boolean sidelineBigOverlaps = false; // sideline overlaps with >maxMerge regions
   private Path sidelineDir = null;
 
@@ -269,8 +263,6 @@ public class HBaseFsck extends Configured implements Closeable {
    * to detect and correct consistency (hdfs/meta/deployment) problems.
    */
   private TreeMap<String, HbckInfo> regionInfoMap = new TreeMap<String, HbckInfo>();
-  private TreeSet<TableName> disabledTables =
-    new TreeSet<TableName>();
   // Empty regioninfo qualifiers in hbase:meta
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
 
@@ -294,6 +286,8 @@ public class HBaseFsck extends Configured implements Closeable {
 
   private Map<TableName, Set<String>> orphanTableDirs =
       new HashMap<TableName, Set<String>>();
+  private Map<TableName, TableState> tableStates =
+      new HashMap<TableName, TableState>();
 
   /**
    * List of orphaned table ZNodes
@@ -500,7 +494,7 @@ public class HBaseFsck extends Configured implements Closeable {
     fixes = 0;
     regionInfoMap.clear();
     emptyRegionInfoQualifiers.clear();
-    disabledTables.clear();
+    tableStates.clear();
     errors.clear();
     tablesInfo.clear();
     orphanHdfsDirs.clear();
@@ -584,14 +578,14 @@ public class HBaseFsck extends Configured implements Closeable {
       reportTablesInFlux();
     }
 
+    // Get disabled tables states
+    loadTableStates();
+
     // load regiondirs and regioninfos from HDFS
     if (shouldCheckHdfs()) {
       loadHdfsRegionDirs();
       loadHdfsRegionInfos();
     }
-
-    // Get disabled tables from ZooKeeper
-    loadDisabledTables();
 
     // fix the orphan tables
     fixOrphanTables();
@@ -629,9 +623,6 @@ public class HBaseFsck extends Configured implements Closeable {
     offlineReferenceFileRepair();
 
     checkAndFixTableLocks();
-
-    // Check (and fix if requested) orphaned table ZNodes
-    checkAndFixOrphanedTableZNodes();
 
     // Remove the hbck lock
     unlockHbck();
@@ -762,6 +753,15 @@ public class HBaseFsck extends Configured implements Closeable {
       adoptHdfsOrphan(hi);
     }
   }
+
+  /**
+   * Load the list of disabled tables in ZK into local set.
+   * @throws IOException
+   */
+  private void loadTableStates() throws IOException {
+    tableStates = MetaTableAccessor.getTableStates(connection);
+  }
+
 
   /**
    * Orphaned regions are regions without a .regioninfo file in them.  We "adopt"
@@ -1266,6 +1266,8 @@ public class HBaseFsck extends Configured implements Closeable {
       }
 
       TableInfo ti = e.getValue();
+      puts.add(MetaTableAccessor
+          .makePutFromTableState(new TableState(ti.tableName, TableState.State.ENABLED)));
       for (Entry<byte[], Collection<HbckInfo>> spl : ti.sc.getStarts().asMap()
           .entrySet()) {
         Collection<HbckInfo> his = spl.getValue();
@@ -1517,39 +1519,13 @@ public class HBaseFsck extends Configured implements Closeable {
     return backupDir;
   }
 
-  /**
-   * Load the list of disabled tables in ZK into local set.
-   * @throws ZooKeeperConnectionException
-   * @throws IOException
-   */
-  private void loadDisabledTables()
-  throws ZooKeeperConnectionException, IOException {
-    HConnectionManager.execute(new HConnectable<Void>(getConf()) {
-      @Override
-      public Void connect(HConnection connection) throws IOException {
-        ZooKeeperWatcher zkw = createZooKeeperWatcher();
-        try {
-          for (TableName tableName :
-              ZKTableStateClientSideReader.getDisabledOrDisablingTables(zkw)) {
-            disabledTables.add(tableName);
-          }
-        } catch (KeeperException ke) {
-          throw new IOException(ke);
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException();
-        } finally {
-          zkw.close();
-        }
-        return null;
-      }
-    });
-  }
 
   /**
    * Check if the specified region's table is disabled.
    */
-  private boolean isTableDisabled(HRegionInfo regionInfo) {
-    return disabledTables.contains(regionInfo.getTable());
+  private boolean isTableDisabled(@Nonnull TableName tableName) {
+    TableState state = tableStates.get(tableName);
+    return state != null && state.inStates(TableState.State.DISABLED, TableState.State.DISABLING);
   }
 
   /**
@@ -1619,15 +1595,24 @@ public class HBaseFsck extends Configured implements Closeable {
         HConstants.EMPTY_START_ROW, false, false);
     if (rl == null) {
       errors.reportError(ERROR_CODE.NULL_META_REGION,
-          "META region or some of its attributes are null.");
+          "META region was not found in Zookeeper");
       return false;
     }
     for (HRegionLocation metaLocation : rl.getRegionLocations()) {
       // Check if Meta region is valid and existing
-      if (metaLocation == null || metaLocation.getRegionInfo() == null ||
-          metaLocation.getHostname() == null) {
+      if (metaLocation == null ) {
         errors.reportError(ERROR_CODE.NULL_META_REGION,
-            "META region or some of its attributes are null.");
+            "META region location is null");
+        return false;
+      }
+      if (metaLocation.getRegionInfo() == null) {
+        errors.reportError(ERROR_CODE.NULL_META_REGION,
+            "META location regionInfo is null");
+        return false;
+      }
+      if (metaLocation.getHostname() == null) {
+        errors.reportError(ERROR_CODE.NULL_META_REGION,
+            "META location hostName is null");
         return false;
       }
       ServerName sn = metaLocation.getServerName();
@@ -1722,6 +1707,55 @@ public class HBaseFsck extends Configured implements Closeable {
       }
     }
     setCheckHdfs(prevHdfsCheck);
+
+    if (shouldCheckHdfs()) {
+      checkAndFixTableStates();
+    }
+  }
+
+  /**
+   * Check and fix table states, assumes full info available:
+   * - tableInfos
+   * - empty tables loaded
+   */
+  private void checkAndFixTableStates() throws IOException {
+    // first check dangling states
+    for (Entry<TableName, TableState> entry : tableStates.entrySet()) {
+      TableName tableName = entry.getKey();
+      TableState tableState = entry.getValue();
+      TableInfo tableInfo = tablesInfo.get(tableName);
+      if (isTableIncluded(tableName)
+          && !tableName.isSystemTable()
+          && tableInfo == null) {
+        if (fixMeta) {
+          MetaTableAccessor.deleteTableState(connection, tableName);
+          TableState state = MetaTableAccessor.getTableState(connection, tableName);
+          if (state != null) {
+            errors.reportError(ERROR_CODE.ORPHAN_TABLE_STATE,
+                tableName + " unable to delete dangling table state " + tableState);
+          }
+        } else {
+          errors.reportError(ERROR_CODE.ORPHAN_TABLE_STATE,
+              tableName + " has dangling table state " + tableState);
+        }
+      }
+    }
+    // check that all tables have states
+    for (TableName tableName : tablesInfo.keySet()) {
+      if (isTableIncluded(tableName) && !tableStates.containsKey(tableName)) {
+        if (fixMeta) {
+          MetaTableAccessor.updateTableState(connection, tableName, TableState.State.ENABLED);
+          TableState newState = MetaTableAccessor.getTableState(connection, tableName);
+          if (newState == null) {
+            errors.reportError(ERROR_CODE.NO_TABLE_STATE,
+                "Unable to change state for table " + tableName + " in meta ");
+          }
+        } else {
+          errors.reportError(ERROR_CODE.NO_TABLE_STATE,
+              tableName + " has no state in meta ");
+        }
+      }
+    }
   }
 
   private void preCheckPermission() throws IOException, AccessDeniedException {
@@ -1965,8 +1999,8 @@ public class HBaseFsck extends Configured implements Closeable {
       hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
       hbi.metaEntry.regionServer.equals(hbi.deployedOn.get(0));
     boolean splitParent =
-      (hbi.metaEntry == null)? false: hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
-    boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry);
+        inMeta && hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
+    boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry.getTable());
     boolean recentlyModified = inHdfs &&
       hbi.getModTime() + timelag > System.currentTimeMillis();
 
@@ -2749,7 +2783,7 @@ public class HBaseFsck extends Configured implements Closeable {
       // When table is disabled no need to check for the region chain. Some of the regions
       // accidently if deployed, this below code might report some issues like missing start
       // or end regions or region hole in chain and may try to fix which is unwanted.
-      if (disabledTables.contains(this.tableName)) {
+      if (isTableDisabled(this.tableName)) {
         return true;
       }
       int originalErrorsCount = errors.getErrorList().size();
@@ -3030,58 +3064,6 @@ public class HBaseFsck extends Configured implements Closeable {
 
       if (this.fixTableLocks) {
         checker.fixExpiredTableLocks();
-      }
-    } finally {
-      zkw.close();
-    }
-  }
-
-  /**
-   * Check whether a orphaned table ZNode exists and fix it if requested.
-   * @throws IOException
-   * @throws KeeperException
-   * @throws InterruptedException
-   */
-  private void checkAndFixOrphanedTableZNodes()
-      throws IOException, KeeperException, InterruptedException {
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
-
-    try {
-      Set<TableName> enablingTables = ZKTableStateClientSideReader.getEnablingTables(zkw);
-      String msg;
-      TableInfo tableInfo;
-
-      for (TableName tableName : enablingTables) {
-        // Check whether the table exists in hbase
-        tableInfo = tablesInfo.get(tableName);
-        if (tableInfo != null) {
-          // Table exists.  This table state is in transit.  No problem for this table.
-          continue;
-        }
-
-        msg = "Table " + tableName + " not found in hbase:meta. Orphaned table ZNode found.";
-        LOG.warn(msg);
-        orphanedTableZNodes.add(tableName);
-        errors.reportError(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY, msg);
-      }
-
-      if (orphanedTableZNodes.size() > 0 && this.fixTableZNodes) {
-        ZKTableStateManager zkTableStateMgr = new ZKTableStateManager(zkw);
-
-        for (TableName tableName : orphanedTableZNodes) {
-          try {
-            // Set the table state to be disabled so that if we made mistake, we can trace
-            // the history and figure it out.
-            // Another choice is to call checkAndRemoveTableState() to delete the orphaned ZNode.
-            // Both approaches works.
-            zkTableStateMgr.setTableState(tableName, ZooKeeperProtos.Table.State.DISABLED);
-          } catch (CoordinatedStateException e) {
-            // This exception should not happen here
-            LOG.error(
-              "Got a CoordinatedStateException while fixing the ENABLING table znode " + tableName,
-              e);
-          }
-        }
       }
     } finally {
       zkw.close();
@@ -3597,12 +3579,15 @@ public class HBaseFsck extends Configured implements Closeable {
   public interface ErrorReporter {
     enum ERROR_CODE {
       UNKNOWN, NO_META_REGION, NULL_META_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
-      NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META, NOT_DEPLOYED,
+      NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META,
+      NOT_DEPLOYED,
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
       FIRST_REGION_STARTKEY_NOT_EMPTY, LAST_REGION_ENDKEY_NOT_EMPTY, DUPE_STARTKEYS,
       HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION,
       ORPHAN_HDFS_REGION, LINGERING_SPLIT_PARENT, NO_TABLEINFO_FILE, LINGERING_REFERENCE_HFILE,
-      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR
+      WRONG_USAGE, EMPTY_META_CELL, EXPIRED_TABLE_LOCK, 
+      ORPHANED_ZK_TABLE_ENTRY, BOUNDARIES_ERROR,
+      ORPHAN_TABLE_STATE, NO_TABLE_STATE
     }
     void clear();
     void report(String message);
@@ -3759,10 +3744,10 @@ public class HBaseFsck extends Configured implements Closeable {
     private HBaseFsck hbck;
     private ServerName rsinfo;
     private ErrorReporter errors;
-    private HConnection connection;
+    private ClusterConnection connection;
 
     WorkItemRegion(HBaseFsck hbck, ServerName info,
-                   ErrorReporter errors, HConnection connection) {
+                   ErrorReporter errors, ClusterConnection connection) {
       this.hbck = hbck;
       this.rsinfo = info;
       this.errors = errors;

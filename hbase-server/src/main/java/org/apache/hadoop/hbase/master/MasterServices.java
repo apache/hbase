@@ -266,4 +266,9 @@ public interface MasterServices extends Server {
    * @throws IOException
    */
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException;
+
+  /**
+   * @return table state manager
+   */
+  public TableStateManager getTableStateManager();
 }

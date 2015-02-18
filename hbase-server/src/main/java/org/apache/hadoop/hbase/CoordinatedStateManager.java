@@ -55,12 +55,4 @@ public interface CoordinatedStateManager {
    * @return instance of Server coordinated state manager runs within
    */
   Server getServer();
-
-  /**
-   * Returns implementation of TableStateManager.
-   * @throws InterruptedException if operation is interrupted
-   * @throws CoordinatedStateException if error happens in underlying coordination mechanism
-   */
-  TableStateManager getTableStateManager() throws InterruptedException,
-    CoordinatedStateException;
 }

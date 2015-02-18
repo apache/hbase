@@ -1414,27 +1414,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * HBaseAdmin#getTableDescriptor(TableName.META_TABLE_NAME) instead.
    */
   @Deprecated
-  public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
-      TableName.META_TABLE_NAME,
-      new HColumnDescriptor[] {
-          new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-              // Ten is arbitrary number.  Keep versions to help debugging.
-              .setMaxVersions(HConstants.DEFAULT_HBASE_META_VERSIONS)
-              .setInMemory(true)
-              .setBlocksize(HConstants.DEFAULT_HBASE_META_BLOCK_SIZE)
-              .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-              // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-              .setBloomFilterType(BloomType.NONE)
-              // Enable cache of data blocks in L1 if more than one caching tier deployed:
-              // e.g. if using CombinedBlockCache (BucketCache).
-              .setCacheDataInL1(true)
-      });
+  public static final HTableDescriptor META_TABLEDESC;
 
   static {
     try {
-      META_TABLEDESC.addCoprocessor(
-          "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
-          null, Coprocessor.PRIORITY_SYSTEM, null);
+      META_TABLEDESC = metaTableDescriptor(new Configuration());
     } catch (IOException ex) {
       //LOG.warn("exception in loading coprocessor for the hbase:meta table");
       throw new RuntimeException(ex);
@@ -1604,21 +1588,32 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static HTableDescriptor metaTableDescriptor(final Configuration conf)
       throws IOException {
     HTableDescriptor metaDescriptor = new HTableDescriptor(
-      TableName.META_TABLE_NAME,
-      new HColumnDescriptor[] {
-        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
-          .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
-            HConstants.DEFAULT_HBASE_META_VERSIONS))
-          .setInMemory(true)
-          .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
-            HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
-          .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
-          // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
-          .setBloomFilterType(BloomType.NONE)
-         });
+        TableName.META_TABLE_NAME,
+        new HColumnDescriptor[] {
+            new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+                .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+                    HConstants.DEFAULT_HBASE_META_VERSIONS))
+                .setInMemory(true)
+                .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+                    HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+                .setBloomFilterType(BloomType.NONE),
+            new HColumnDescriptor(HConstants.TABLE_FAMILY)
+                // Ten is arbitrary number.  Keep versions to help debugging.
+                .setMaxVersions(10)
+                .setInMemory(true)
+                .setBlocksize(8 * 1024)
+                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+                .setBloomFilterType(BloomType.NONE)
+                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                    // e.g. if using CombinedBlockCache (BucketCache).
+                .setCacheDataInL1(true)
+        });
     metaDescriptor.addCoprocessor(
-      "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
-      null, Coprocessor.PRIORITY_SYSTEM, null);
+        "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
+        null, Coprocessor.PRIORITY_SYSTEM, null);
     return metaDescriptor;
   }
 

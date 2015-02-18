@@ -17,12 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
@@ -41,17 +37,19 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionTransition;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
@@ -74,7 +72,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -99,8 +96,11 @@ import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 
 /**
@@ -120,7 +120,7 @@ public class TestAssignmentManager {
   private static boolean enabling = false;
 
   // Mocked objects or; get redone for each test.
-  private Server server;
+  private MasterServices server;
   private ServerManager serverManager;
   private ZooKeeperWatcher watcher;
   private CoordinatedStateManager cp;
@@ -128,6 +128,7 @@ public class TestAssignmentManager {
   private LoadBalancer balancer;
   private HMaster master;
   private ClusterConnection connection;
+  private TableStateManager tableStateManager;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -148,9 +149,11 @@ public class TestAssignmentManager {
     // Mock a Server.  Have it return a legit Configuration and ZooKeeperWatcher.
     // If abort is called, be sure to fail the test (don't just swallow it
     // silently as is mockito default).
-    this.server = Mockito.mock(Server.class);
+    this.tableStateManager = new TableStateManager.InMemoryTableStateManager();
+    this.server = Mockito.mock(MasterServices.class);
     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Mockito.when(server.getConfiguration()).thenReturn(HTU.getConfiguration());
+    Mockito.when(server.getTableStateManager()).thenReturn(tableStateManager);
     this.watcher =
       new ZooKeeperWatcher(HTU.getConfiguration(), "mockedServer", this.server, true);
     Mockito.when(server.getZooKeeper()).thenReturn(this.watcher);
@@ -229,7 +232,8 @@ public class TestAssignmentManager {
       throws IOException, KeeperException, InterruptedException, ServiceException,
       DeserializationException, CoordinatedStateException {
     AssignmentManagerWithExtrasForTesting am =
-      setUpMockedAssignmentManager(this.server, this.serverManager);
+        setUpMockedAssignmentManager(this.server, this.serverManager,
+            tableStateManager);
     try {
       createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
       startFakeFailedOverMasterAssignmentManager(am, this.watcher);
@@ -278,7 +282,8 @@ public class TestAssignmentManager {
       throws IOException, KeeperException, InterruptedException, ServiceException,
         DeserializationException, CoordinatedStateException {
     AssignmentManagerWithExtrasForTesting am =
-      setUpMockedAssignmentManager(this.server, this.serverManager);
+        setUpMockedAssignmentManager(this.server, this.serverManager,
+            tableStateManager);
     try {
       createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
       startFakeFailedOverMasterAssignmentManager(am, this.watcher);
@@ -328,7 +333,8 @@ public class TestAssignmentManager {
       throws IOException, KeeperException, InterruptedException, ServiceException,
       DeserializationException, CoordinatedStateException {
     AssignmentManagerWithExtrasForTesting am =
-      setUpMockedAssignmentManager(this.server, this.serverManager);
+        setUpMockedAssignmentManager(this.server, this.serverManager,
+            tableStateManager);
     try {
       createRegionPlanAndBalance(am, SERVERNAME_A, SERVERNAME_B, REGIONINFO);
       startFakeFailedOverMasterAssignmentManager(am, this.watcher);
@@ -402,7 +408,8 @@ public class TestAssignmentManager {
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, balancer, executor, null, master.getTableLockManager());
+        this.serverManager, balancer, executor, null, master.getTableLockManager(),
+        tableStateManager);
     am.failoverCleanupDone.set(true);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
@@ -473,7 +480,8 @@ public class TestAssignmentManager {
 
     // Create an AM.
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
-        this.server, this.serverManager);
+        this.server, this.serverManager,
+        tableStateManager);
     try {
       processServerShutdownHandler(am, false);
     } finally {
@@ -496,8 +504,8 @@ public class TestAssignmentManager {
   @Test (timeout=180000)
   public void testSSHWhenDisableTableInProgress() throws KeeperException, IOException,
     CoordinatedStateException, ServiceException {
-    testCaseWithPartiallyDisabledState(Table.State.DISABLING);
-    testCaseWithPartiallyDisabledState(Table.State.DISABLED);
+    testCaseWithPartiallyDisabledState(TableState.State.DISABLING);
+    testCaseWithPartiallyDisabledState(TableState.State.DISABLED);
   }
 
 
@@ -527,14 +535,15 @@ public class TestAssignmentManager {
 
     // Create an AM.
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
-      this.server, this.serverManager);
+        this.server, this.serverManager,
+        tableStateManager);
     // adding region to regions and servers maps.
     am.regionOnline(REGIONINFO, SERVERNAME_A);
     // adding region in pending close.
     am.getRegionStates().updateRegionState(
       REGIONINFO, State.SPLITTING, SERVERNAME_A);
     am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-      Table.State.ENABLED);
+      TableState.State.ENABLED);
     RegionTransition data = RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_SPLITTING,
         REGIONINFO.getRegionName(), SERVERNAME_A);
     String node = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
@@ -565,7 +574,7 @@ public class TestAssignmentManager {
     }
   }
 
-  private void testCaseWithPartiallyDisabledState(Table.State state) throws KeeperException,
+  private void testCaseWithPartiallyDisabledState(TableState.State state) throws KeeperException,
       IOException, CoordinatedStateException, ServiceException {
     // Create and startup an executor. This is used by AssignmentManager
     // handling zk callbacks.
@@ -575,17 +584,18 @@ public class TestAssignmentManager {
 
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, balancer, executor, null, master.getTableLockManager());
+        this.serverManager, balancer, executor, null, master.getTableLockManager(),
+        tableStateManager);
     // adding region to regions and servers maps.
     am.regionOnline(REGIONINFO, SERVERNAME_A);
     // adding region in pending close.
     am.getRegionStates().updateRegionState(REGIONINFO, State.PENDING_CLOSE);
-    if (state == Table.State.DISABLING) {
+    if (state == TableState.State.DISABLING) {
       am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-        Table.State.DISABLING);
+        TableState.State.DISABLING);
     } else {
       am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-        Table.State.DISABLED);
+        TableState.State.DISABLED);
     }
     RegionTransition data = RegionTransition.createRegionTransition(EventType.M_ZK_REGION_CLOSING,
         REGIONINFO.getRegionName(), SERVERNAME_A);
@@ -604,7 +614,7 @@ public class TestAssignmentManager {
       // check whether in rit or not. In the DISABLING case also the below
       // assert will be true but the piece of code added for HBASE-5927 will not
       // do that.
-      if (state == Table.State.DISABLED) {
+      if (state == TableState.State.DISABLED) {
         assertFalse("Region state of region in pending close should be removed from rit.",
             am.getRegionStates().isRegionsInTransition());
       }
@@ -658,7 +668,7 @@ public class TestAssignmentManager {
     // Get a connection w/ mocked up common methods.
     ClusterConnection connection =
       HConnectionTestingUtility.getMockedConnectionAndDecorate(HTU.getConfiguration(),
-        null, implementation, SERVERNAME_B, REGIONINFO);
+          null, implementation, SERVERNAME_B, REGIONINFO);
     // These mocks were done up when all connections were managed.  World is different now we
     // moved to unmanaged connections.  It messes up the intercepts done in these tests.
     // Just mark connections as marked and then down in MetaTableAccessor, it will go the path
@@ -726,7 +736,8 @@ public class TestAssignmentManager {
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, balancer, null, null, master.getTableLockManager());
+        this.serverManager, balancer, null, null, master.getTableLockManager(),
+        tableStateManager);
     try {
       // First make sure my mock up basically works.  Unassign a region.
       unassign(am, SERVERNAME_A, hri);
@@ -763,7 +774,8 @@ public class TestAssignmentManager {
     final RecoverableZooKeeper recoverableZk = Mockito
         .mock(RecoverableZooKeeper.class);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
-      this.server, this.serverManager);
+        this.server, this.serverManager,
+        tableStateManager);
     Watcher zkw = new ZooKeeperWatcher(HBaseConfiguration.create(), "unittest",
         null) {
       @Override
@@ -797,7 +809,8 @@ public class TestAssignmentManager {
       HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockedLoadBalancer.class,
       LoadBalancer.class);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
-      this.server, this.serverManager);
+        this.server, this.serverManager,
+        tableStateManager);
     try {
       // Boolean variable used for waiting until randomAssignment is called and
       // new
@@ -892,7 +905,8 @@ public class TestAssignmentManager {
   public void testRegionInOpeningStateOnDeadRSWhileMasterFailover() throws IOException,
       KeeperException, ServiceException, CoordinatedStateException, InterruptedException {
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
-      this.server, this.serverManager);
+        this.server, this.serverManager,
+        tableStateManager);
     ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_A);
     int version = ZKAssign.getVersion(this.watcher, REGIONINFO);
     ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_A, EventType.M_ZK_REGION_OFFLINE,
@@ -916,7 +930,7 @@ public class TestAssignmentManager {
     zkOrd.setVersion(version);
 
     assertFalse(am.processRegionsInTransition(rt, REGIONINFO, orc, zkOrd));
-    am.getTableStateManager().setTableState(REGIONINFO.getTable(), Table.State.ENABLED);
+    am.getTableStateManager().setTableState(REGIONINFO.getTable(), TableState.State.ENABLED);
     processServerShutdownHandler(am, false);
     // Waiting for the assignment to get completed.
     while (!am.gate.get()) {
@@ -950,9 +964,12 @@ public class TestAssignmentManager {
 
     CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), csm);
+    HMaster server = new HMaster(HTU.getConfiguration(), csm);
+    Whitebox.setInternalState(server, "tableStateManager", tableStateManager);
+
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
-        this.serverManager);
+        this.serverManager,
+        tableStateManager);
 
     Whitebox.setInternalState(server, "metaTableLocator", Mockito.mock(MetaTableLocator.class));
 
@@ -967,7 +984,7 @@ public class TestAssignmentManager {
     try{
       // set table in disabling state.
       am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-        Table.State.DISABLING);
+        TableState.State.DISABLING);
       am.joinCluster();
       // should not call retainAssignment if we get empty regions in assignAllUserRegions.
       assertFalse(
@@ -976,13 +993,13 @@ public class TestAssignmentManager {
       // need to change table state from disabling to disabled.
       assertTrue("Table should be disabled.",
           am.getTableStateManager().isTableState(REGIONINFO.getTable(),
-            Table.State.DISABLED));
+            TableState.State.DISABLED));
     } finally {
       this.server.getConfiguration().setClass(
         HConstants.HBASE_MASTER_LOADBALANCER_CLASS, SimpleLoadBalancer.class,
         LoadBalancer.class);
       am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-        Table.State.ENABLED);
+        TableState.State.ENABLED);
       am.shutdown();
     }
   }
@@ -1004,10 +1021,16 @@ public class TestAssignmentManager {
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
     CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), csm);
+    HMaster server = new HMaster(HTU.getConfiguration(), csm);
+    Whitebox.setInternalState(server, "tableStateManager", this.tableStateManager);
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
+    TableDescriptors tableDescriptors = Mockito.mock(TableDescriptors.class);
+    Mockito.when(tableDescriptors.get(REGIONINFO.getTable()))
+        .thenReturn(new HTableDescriptor(REGIONINFO.getTable()));
+    Whitebox.setInternalState(server, "tableDescriptors", tableDescriptors);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
-        this.serverManager);
+        this.serverManager,
+        this.tableStateManager);
 
     Whitebox.setInternalState(server, "metaTableLocator", Mockito.mock(MetaTableLocator.class));
 
@@ -1018,64 +1041,24 @@ public class TestAssignmentManager {
     try {
       // set table in enabling state.
       am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-        Table.State.ENABLING);
+        TableState.State.ENABLING);
       new EnableTableHandler(server, REGIONINFO.getTable(),
           am, new NullTableLockManager(), true).prepare()
           .process();
       assertEquals("Number of assignments should be 1.", 1, assignmentCount);
       assertTrue("Table should be enabled.",
           am.getTableStateManager().isTableState(REGIONINFO.getTable(),
-            Table.State.ENABLED));
+            TableState.State.ENABLED));
     } finally {
       enabling = false;
       assignmentCount = 0;
       am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-        Table.State.ENABLED);
+        TableState.State.ENABLED);
       am.shutdown();
       ZKAssign.deleteAllNodes(this.watcher);
     }
   }
 
-  /**
-   * Test verifies whether stale znodes of unknown tables as for the hbase:meta will be removed or
-   * not.
-   * @throws KeeperException
-   * @throws IOException
-   * @throws Exception
-   */
-  @Test (timeout=180000)
-  public void testMasterRestartShouldRemoveStaleZnodesOfUnknownTableAsForMeta()
-      throws Exception {
-    List<ServerName> destServers = new ArrayList<ServerName>(1);
-    destServers.add(SERVERNAME_A);
-    Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
-    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
-    HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
-      HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), csm);
-    Whitebox.setInternalState(server, "serverManager", this.serverManager);
-    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
-        this.serverManager);
-
-    Whitebox.setInternalState(server, "metaTableLocator", Mockito.mock(MetaTableLocator.class));
-
-    // Make it so we can get a catalogtracker from servermanager.. .needed
-    // down in guts of server shutdown handler.
-    Whitebox.setInternalState(server, "clusterConnection", am.getConnection());
-
-    try {
-      TableName tableName = TableName.valueOf("dummyTable");
-      // set table in enabling state.
-      am.getTableStateManager().setTableState(tableName,
-        Table.State.ENABLING);
-      am.joinCluster();
-      assertFalse("Table should not be present in zookeeper.",
-        am.getTableStateManager().isTablePresent(tableName));
-    } finally {
-      am.shutdown();
-    }
-  }
   /**
    * When a region is in transition, if the region server opening the region goes down,
    * the region assignment takes a long time normally (waiting for timeout monitor to trigger assign).
@@ -1086,7 +1069,8 @@ public class TestAssignmentManager {
       throws KeeperException, IOException, CoordinatedStateException, ServiceException {
     // Create an AM.
     AssignmentManagerWithExtrasForTesting am =
-      setUpMockedAssignmentManager(this.server, this.serverManager);
+        setUpMockedAssignmentManager(this.server, this.serverManager,
+            tableStateManager);
     // adding region in pending open.
     RegionState state = new RegionState(REGIONINFO,
       State.OPENING, System.currentTimeMillis(), SERVERNAME_A);
@@ -1096,7 +1080,7 @@ public class TestAssignmentManager {
     am.regionPlans.put(REGIONINFO.getEncodedName(),
       new RegionPlan(REGIONINFO, SERVERNAME_B, SERVERNAME_A));
     am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-      Table.State.ENABLED);
+      TableState.State.ENABLED);
 
     try {
       am.assignInvoked = false;
@@ -1122,7 +1106,8 @@ public class TestAssignmentManager {
   public void testClosingFailureDuringRecovery() throws Exception {
 
     AssignmentManagerWithExtrasForTesting am =
-        setUpMockedAssignmentManager(this.server, this.serverManager);
+        setUpMockedAssignmentManager(this.server, this.serverManager,
+            tableStateManager);
     ZKAssign.createNodeClosing(this.watcher, REGIONINFO, SERVERNAME_A);
     try {
       am.getRegionStates().createRegionState(REGIONINFO);
@@ -1196,8 +1181,10 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws KeeperException
    */
-  private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final Server server,
-      final ServerManager manager) throws IOException, KeeperException,
+  private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(
+      final MasterServices server,
+      final ServerManager manager,
+      final TableStateManager stateManager) throws IOException, KeeperException,
         ServiceException, CoordinatedStateException {
     // Make an RS Interface implementation. Make it so a scanner can go against
     // it and a get to return the single region, REGIONINFO, this test is
@@ -1252,7 +1239,8 @@ public class TestAssignmentManager {
     ExecutorService executor = startupMasterExecutor("mockedAMExecutor");
     this.balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
     AssignmentManagerWithExtrasForTesting am = new AssignmentManagerWithExtrasForTesting(
-      server, connection, manager, this.balancer, executor, new NullTableLockManager());
+        server, connection, manager, this.balancer, executor, new NullTableLockManager(),
+        tableStateManager);
     return am;
   }
 
@@ -1268,11 +1256,13 @@ public class TestAssignmentManager {
     private ClusterConnection connection;
 
     public AssignmentManagerWithExtrasForTesting(
-        final Server master, ClusterConnection connection, final ServerManager serverManager,
+        final MasterServices master, ClusterConnection connection, final ServerManager serverManager,
         final LoadBalancer balancer,
-        final ExecutorService service, final TableLockManager tableLockManager)
+        final ExecutorService service, final TableLockManager tableLockManager,
+        final TableStateManager tableStateManager)
             throws KeeperException, IOException, CoordinatedStateException {
-      super(master, serverManager, balancer, service, null, tableLockManager);
+      super(master, serverManager, balancer, service, null, tableLockManager,
+          tableStateManager);
       this.es = service;
       this.connection = connection;
     }
@@ -1394,7 +1384,8 @@ public class TestAssignmentManager {
       server.getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, balancer, null, null, master.getTableLockManager());
+        this.serverManager, balancer, null, null, master.getTableLockManager(),
+        tableStateManager);
     RegionStates regionStates = am.getRegionStates();
     try {
       // First set the state of the region to merging
@@ -1428,7 +1419,8 @@ public class TestAssignmentManager {
     final AtomicBoolean zkEventProcessed = new AtomicBoolean(false);
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, balancer, null, null, master.getTableLockManager()) {
+        this.serverManager, balancer, null, null, master.getTableLockManager(),
+        tableStateManager) {
 
       @Override
       void handleRegion(final RegionTransition rt, OpenRegionCoordination coordination,
@@ -1470,7 +1462,8 @@ public class TestAssignmentManager {
   @Test (timeout=180000)
   public void testBalanceRegionOfDeletedTable() throws Exception {
     AssignmentManager am = new AssignmentManager(this.server, this.serverManager,
-      balancer, null, null, master.getTableLockManager());
+        balancer, null, null, master.getTableLockManager(),
+        tableStateManager);
     RegionStates regionStates = am.getRegionStates();
     HRegionInfo hri = REGIONINFO;
     regionStates.createRegionState(hri);
@@ -1501,7 +1494,8 @@ public class TestAssignmentManager {
       server.getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, balancer, null, null, master.getTableLockManager());
+        this.serverManager, balancer, null, null, master.getTableLockManager(),
+        tableStateManager);
     RegionStates regionStates = am.getRegionStates();
     try {
       am.regionPlans.put(REGIONINFO.getEncodedName(),

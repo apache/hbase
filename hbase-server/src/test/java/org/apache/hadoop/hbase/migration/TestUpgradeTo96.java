@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.io.FileLink;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -136,7 +137,7 @@ public class TestUpgradeTo96 {
     // add table znode, data of its children would be protobuffized
     tableAZnode = ZKUtil.joinZNode(zkw.tableZNode, "a");
     ZKUtil.createWithParents(zkw, tableAZnode,
-      Bytes.toBytes(ZooKeeperProtos.Table.State.ENABLED.toString()));
+      Bytes.toBytes(TableState.State.ENABLED.toString()));
     // add replication znodes, data of its children would be protobuffized
     String replicationZnode = ZKUtil.joinZNode(zkw.baseZNode, "replication");
     replicationPeerZnode = ZKUtil.joinZNode(replicationZnode, "peers");

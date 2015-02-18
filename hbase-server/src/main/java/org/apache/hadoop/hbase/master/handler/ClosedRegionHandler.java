@@ -23,11 +23,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 
 /**
  * Handles CLOSED region event on Master.
@@ -93,7 +93,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
     LOG.debug("Handling CLOSED event for " + regionInfo.getEncodedName());
     // Check if this table is being disabled or not
     if (this.assignmentManager.getTableStateManager().isTableState(this.regionInfo.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+        TableState.State.DISABLED, TableState.State.DISABLING) ||
         assignmentManager.getReplicasToClose().contains(regionInfo)) {
       assignmentManager.offlineDisabledRegion(regionInfo);
       return;

@@ -38,15 +38,12 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableStateManager;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -153,13 +150,13 @@ public class RegionStates {
   private final TableStateManager tableStateManager;
   private final RegionStateStore regionStateStore;
   private final ServerManager serverManager;
-  private final Server server;
+  private final MasterServices server;
 
   // The maximum time to keep a log split info in region states map
   static final String LOG_SPLIT_TIME = "hbase.master.maximum.logsplit.keeptime";
   static final long DEFAULT_LOG_SPLIT_TIME = 7200000L; // 2 hours
 
-  RegionStates(final Server master, final TableStateManager tableStateManager,
+  RegionStates(final MasterServices master, final TableStateManager tableStateManager,
       final ServerManager serverManager, final RegionStateStore regionStateStore) {
     this.tableStateManager = tableStateManager;
     this.regionStateStore = regionStateStore;
@@ -594,7 +591,7 @@ public class RegionStates {
       if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
         if (newState == State.MERGED || newState == State.SPLIT
             || hri.isMetaRegion() || tableStateManager.isTableState(hri.getTable(),
-              ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+              TableState.State.DISABLED, TableState.State.DISABLING)) {
           // Offline the region only if it's merged/split, or the table is disabled/disabling.
           // Otherwise, offline it from this server only when it is online on a different server.
           LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);

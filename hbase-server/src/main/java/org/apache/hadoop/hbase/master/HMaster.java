@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -108,7 +109,6 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -243,6 +244,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   // manager of assignment nodes in zookeeper
   AssignmentManager assignmentManager;
+
+  // handle table states
+  private TableStateManager tableStateManager;
 
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
@@ -421,6 +425,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return connector.getLocalPort();
   }
 
+  @Override
+  protected TableDescriptors getFsTableDescriptors() throws IOException {
+    return super.getFsTableDescriptors();
+  }
+
   /**
    * For compatibility, if failed with regionserver credentials, try the master one
    */
@@ -524,7 +533,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.loadBalancerTracker.start();
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.balancer, this.service, this.metricsMaster,
-      this.tableLockManager);
+      this.tableLockManager, this.tableStateManager);
     zooKeeper.registerListenerFirst(assignmentManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
@@ -613,6 +622,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
+    this.tableStateManager = new TableStateManager(this);
+
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -688,6 +699,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
     if(isStopped()) return;
+
+    // migrating existent table state from zk
+    for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
+        .queryForTableStates(getZooKeeper()).entrySet()) {
+      LOG.info("Converting state from zk to new states:" + entry);
+      tableStateManager.setTableState(entry.getKey(), entry.getValue());
+    }
+    ZKUtil.deleteChildrenRecursively(getZooKeeper(), getZooKeeper().tableZNode);
 
     status.setStatus("Submitting log splitting work for previously failed region servers");
     // Master has recovered hbase:meta region server and we put
@@ -880,6 +899,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
     }
 
+    this.assignmentManager.setEnabledTable(TableName.META_TABLE_NAME);
+    tableStateManager.start();
+
     // Make sure a hbase:meta location is set. We need to enable SSH here since
     // if the meta region server is died at this time, we need it to be re-assigned
     // by SSH so that system tables can be assigned.
@@ -955,7 +977,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private void enableMeta(TableName metaTableName) {
     if (!this.assignmentManager.getTableStateManager().isTableState(metaTableName,
-        ZooKeeperProtos.Table.State.ENABLED)) {
+        TableState.State.ENABLED)) {
       this.assignmentManager.setEnabledTable(metaTableName);
     }
   }
@@ -1186,7 +1208,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           if (rpCount < plans.size() &&
               // if performing next balance exceeds cutoff time, exit the loop
               (System.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
-            //TODO: After balance, there should not be a cutoff time (keeping it as a security net for now)
+            //TODO: After balance, there should not be a cutoff time (keeping it as
+            // a security net for now)
             LOG.debug("No more balancing till next balance run; maximumBalanceTime=" +
               maximumBalanceTime);
             break;
@@ -1474,7 +1497,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           LOG.fatal("Failed to become active master", t);
           // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
           if (t instanceof NoClassDefFoundError &&
-              t.getMessage().contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
+              t.getMessage()
+                  .contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
             // improved error message for this special case
             abort("HBase is having a problem with its Hadoop jars.  You may need to "
               + "recompile HBase against Hadoop version "
@@ -1718,11 +1742,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
+    if (!tableStateManager.isTableExists(tableName)) {
       throw new TableNotFoundException(tableName);
     }
-    if (!getAssignmentManager().getTableStateManager().
-        isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED)) {
+    if (!tableStateManager.isTableState(tableName, TableState.State.DISABLED)) {
       throw new TableNotDisabledException(tableName);
     }
   }
@@ -2200,15 +2223,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         }
 
         for (HTableDescriptor desc: htds) {
-          if (includeSysTables || !desc.getTableName().isSystemTable()) {
+          if (tableStateManager.isTablePresent(desc.getTableName())
+              && (includeSysTables || !desc.getTableName().isSystemTable())) {
             descriptors.add(desc);
           }
         }
       } else {
         for (TableName s: tableNameList) {
-          HTableDescriptor desc = tableDescriptors.get(s);
-          if (desc != null) {
-            descriptors.add(desc);
+          if (tableStateManager.isTablePresent(s)) {
+            HTableDescriptor desc = tableDescriptors.get(s);
+            if (desc != null) {
+              descriptors.add(desc);
+            }
           }
         }
       }
@@ -2306,5 +2332,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
     return getClusterStatus().getLastMajorCompactionTsForRegion(regionName);
+  }
+
+  @Override
+  public TableStateManager getTableStateManager() {
+    return tableStateManager;
   }
 }

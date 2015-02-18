@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -309,7 +310,7 @@ public class ZkOpenRegionCoordination implements OpenRegionCoordination {
     }
     if (!openedNodeDeleted) {
       if (assignmentManager.getTableStateManager().isTableState(regionInfo.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+          TableState.State.DISABLED, TableState.State.DISABLING)) {
         debugLog(regionInfo, "Opened region "
           + regionInfo.getShortNameToLog() + " but "
           + "this table is disabled, triggering close of region");
