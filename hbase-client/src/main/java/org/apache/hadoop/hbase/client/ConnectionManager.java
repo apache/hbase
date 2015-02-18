@@ -579,6 +579,9 @@ final class ConnectionManager {
     // thread executor shared by all HTableInterface instances created
     // by this connection
     private volatile ExecutorService batchPool = null;
+    // meta thread executor shared by all HTableInterface instances created
+    // by this connection
+    private volatile ExecutorService metaLookupPool = null;
     private volatile boolean cleanupPool = false;
 
     private final Configuration conf;
@@ -765,52 +768,84 @@ final class ConnectionManager {
 
     private ExecutorService getBatchPool() {
       if (batchPool == null) {
-        // shared HTable thread executor not yet initialized
         synchronized (this) {
           if (batchPool == null) {
-            int maxThreads = conf.getInt("hbase.hconnection.threads.max", 256);
-            int coreThreads = conf.getInt("hbase.hconnection.threads.core", 256);
-            if (maxThreads == 0) {
-              maxThreads = Runtime.getRuntime().availableProcessors() * 8;
-            }
-            if (coreThreads == 0) {
-              coreThreads = Runtime.getRuntime().availableProcessors() * 8;
-            }
-            long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
-            LinkedBlockingQueue<Runnable> workQueue =
-              new LinkedBlockingQueue<Runnable>(maxThreads *
-                conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
-                  HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
-            ThreadPoolExecutor tpe = new ThreadPoolExecutor(
-                coreThreads,
-                maxThreads,
-                keepAliveTime,
-                TimeUnit.SECONDS,
-                workQueue,
-                Threads.newDaemonThreadFactory(toString() + "-shared-"));
-            tpe.allowCoreThreadTimeOut(true);
-            this.batchPool = tpe;
+            this.batchPool = getThreadPool(conf.getInt("hbase.hconnection.threads.max", 256),
+                conf.getInt("hbase.hconnection.threads.core", 256), "-shared-");
+            this.cleanupPool = true;
           }
-          this.cleanupPool = true;
         }
       }
       return this.batchPool;
+    }
+
+    private ExecutorService getThreadPool(int maxThreads, int coreThreads, String nameHint) {
+      // shared HTable thread executor not yet initialized
+      if (maxThreads == 0) {
+        maxThreads = Runtime.getRuntime().availableProcessors() * 8;
+      }
+      if (coreThreads == 0) {
+        coreThreads = Runtime.getRuntime().availableProcessors() * 8;
+      }
+      long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
+      LinkedBlockingQueue<Runnable> workQueue =
+          new LinkedBlockingQueue<Runnable>(maxThreads *
+              conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
+                  HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS));
+      ThreadPoolExecutor tpe = new ThreadPoolExecutor(
+          coreThreads,
+          maxThreads,
+          keepAliveTime,
+          TimeUnit.SECONDS,
+          workQueue,
+          Threads.newDaemonThreadFactory(toString() + "-shared-"));
+      tpe.allowCoreThreadTimeOut(true);
+      return tpe;
+    }
+
+    private ExecutorService getMetaLookupPool() {
+      if (this.metaLookupPool == null) {
+        synchronized (this) {
+          if (this.metaLookupPool == null) {
+            //The meta lookup can happen on replicas of the meta (if the appropriate configs
+            //are enabled).In a replicated-meta setup, the number '3' is assumed as the max
+            //number of replicas by default (unless it is configured to be of a higher value).
+            //In a non-replicated-meta setup, only one thread would be active.
+            this.metaLookupPool = getThreadPool(
+               conf.getInt("hbase.hconnection.meta.lookup.threads.max", 3),
+               conf.getInt("hbase.hconnection.meta.lookup.threads.max.core", 3),
+               "-metaLookup-shared-");
+          }
+        }
+      }
+      return this.metaLookupPool;
+    }
+
+    protected ExecutorService getCurrentMetaLookupPool() {
+      return metaLookupPool;
     }
 
     protected ExecutorService getCurrentBatchPool() {
       return batchPool;
     }
 
-    private void shutdownBatchPool() {
+    private void shutdownPools() {
       if (this.cleanupPool && this.batchPool != null && !this.batchPool.isShutdown()) {
-        this.batchPool.shutdown();
-        try {
-          if (!this.batchPool.awaitTermination(10, TimeUnit.SECONDS)) {
-            this.batchPool.shutdownNow();
-          }
-        } catch (InterruptedException e) {
-          this.batchPool.shutdownNow();
+        shutdownBatchPool(this.batchPool);
+      }
+      if (this.metaLookupPool != null && !this.metaLookupPool.isShutdown()) {
+        shutdownBatchPool(this.metaLookupPool);
+      }
+    }
+
+    private void shutdownBatchPool(ExecutorService pool) {
+      pool.shutdown();
+      try {
+        if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
+          pool.shutdownNow();
         }
+      } catch (InterruptedException e) {
+        pool.shutdownNow();
       }
     }
 
@@ -1206,7 +1241,7 @@ final class ConnectionManager {
           ReversedClientScanner rcs = null;
           try {
             rcs = new ClientSmallReversedScanner(conf, s, TableName.META_TABLE_NAME, this,
-              rpcCallerFactory, rpcControllerFactory, getBatchPool(), 0);
+              rpcCallerFactory, rpcControllerFactory, getMetaLookupPool(), 0);
             regionInfoRow = rcs.next();
           } finally {
             if (rcs != null) {
@@ -2327,7 +2362,7 @@ final class ConnectionManager {
         return;
       }
       closeMaster();
-      shutdownBatchPool();
+      shutdownPools();
       this.closed = true;
       closeZooKeeperWatcher();
       this.stubs.clear();
