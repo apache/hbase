@@ -78,7 +78,9 @@ public class TestHBaseFsckEncryption {
     SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
     rng.nextBytes(keyBytes);
-    cfKey = new SecretKeySpec(keyBytes, "AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    cfKey = new SecretKeySpec(keyBytes,algorithm);
 
     // Start the minicluster
     TEST_UTIL.startMiniCluster(3);
@@ -86,7 +88,7 @@ public class TestHBaseFsckEncryption {
     // Create the table
     htd = new HTableDescriptor(TableName.valueOf("default", "TestHBaseFsckEncryption"));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    hcd.setEncryptionType("AES");
+    hcd.setEncryptionType(algorithm);
     hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf,
       conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
       cfKey));

@@ -387,7 +387,7 @@ public final class HConstants {
 
   /**
    * The hbase:meta table's name.
-   * 
+   *
    */
   @Deprecated  // for compat from 0.94 -> 0.96.
   public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
@@ -939,7 +939,7 @@ public final class HConstants {
    *  NONE: no preference in destination of replicas
    *  ONE_SSD: place only one replica in SSD and the remaining in default storage
    *  and ALL_SSD: place all replica on SSD
-   *  
+   *
    * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html*/
   public static final String WAL_STORAGE_POLICY = "hbase.wal.storage.policy";
   public static final String DEFAULT_WAL_STORAGE_POLICY = "NONE";
@@ -1051,6 +1051,9 @@ public final class HConstants {
 
   public static final long NO_NONCE = 0;
 
+  /** Default cipher for encryption */
+  public static final String CIPHER_AES = "AES";
+
   /** Configuration key for the crypto algorithm provider, a class name */
   public static final String CRYPTO_CIPHERPROVIDER_CONF_KEY = "hbase.crypto.cipherprovider";
 
@@ -1073,6 +1076,13 @@ public final class HConstants {
 
   /** Configuration key for the name of the master WAL encryption key for the cluster, a string */
   public static final String CRYPTO_WAL_KEY_NAME_CONF_KEY = "hbase.crypto.wal.key.name";
+
+  /** Configuration key for the algorithm used for creating jks key, a string */
+  public static final String CRYPTO_KEY_ALGORITHM_CONF_KEY = "hbase.crypto.key.algorithm";
+
+  /** Configuration key for the name of the alternate cipher algorithm for the cluster, a string */
+  public static final String CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY =
+      "hbase.crypto.alternate.key.algorithm";
 
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
@@ -1126,7 +1136,7 @@ public final class HConstants {
 
   public static final String HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS =
       "hbase.client.fastfail.threshold";
-  
+
   public static final long HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT =
       60000;
 
@@ -1137,7 +1147,7 @@ public final class HConstants {
       600000;
 
   public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
-      "hbase.client.fast.fail.interceptor.impl"; 
+      "hbase.client.fast.fail.interceptor.impl";
 
   /** Config key for if the server should send backpressure and if the client should listen to
    * that backpressure from the server */

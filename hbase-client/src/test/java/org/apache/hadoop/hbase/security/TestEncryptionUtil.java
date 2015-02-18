@@ -49,7 +49,9 @@ public class TestEncryptionUtil {
     // generate a test key
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
     new SecureRandom().nextBytes(keyBytes);
-    Key key = new SecretKeySpec(keyBytes, "AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key key = new SecretKeySpec(keyBytes, algorithm);
 
     // wrap the test key
     byte[] wrappedKeyBytes = EncryptionUtil.wrapKey(conf, "hbase", key);

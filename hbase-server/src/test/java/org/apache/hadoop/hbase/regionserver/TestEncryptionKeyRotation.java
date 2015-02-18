@@ -67,9 +67,11 @@ public class TestEncryptionKeyRotation {
     SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
     rng.nextBytes(keyBytes);
-    initialCFKey = new SecretKeySpec(keyBytes, "AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    initialCFKey = new SecretKeySpec(keyBytes, algorithm);
     rng.nextBytes(keyBytes);
-    secondCFKey = new SecretKeySpec(keyBytes, "AES");
+    secondCFKey = new SecretKeySpec(keyBytes, algorithm);
   }
 
   @BeforeClass
@@ -95,7 +97,9 @@ public class TestEncryptionKeyRotation {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("default",
       "testCFKeyRotation"));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    hcd.setEncryptionType("AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    hcd.setEncryptionType(algorithm);
     hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf, "hbase", initialCFKey));
     htd.addFamily(hcd);
 
@@ -154,7 +158,9 @@ public class TestEncryptionKeyRotation {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("default",
       "testMasterKeyRotation"));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    hcd.setEncryptionType("AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    hcd.setEncryptionType(algorithm);
     hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf, "hbase", initialCFKey));
     htd.addFamily(hcd);
 

@@ -43,8 +43,6 @@ import org.apache.hadoop.hbase.security.User;
 public class SecureProtobufLogWriter extends ProtobufLogWriter {
 
   private static final Log LOG = LogFactory.getLog(SecureProtobufLogWriter.class);
-  private static final String DEFAULT_CIPHER = "AES";
-
   private Encryptor encryptor = null;
 
   @Override
@@ -56,7 +54,8 @@ public class SecureProtobufLogWriter extends ProtobufLogWriter {
       EncryptionTest.testCipherProvider(conf);
 
       // Get an instance of our cipher
-      final String cipherName = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, DEFAULT_CIPHER);
+      final String cipherName =
+          conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
       Cipher cipher = Encryption.getCipher(conf, cipherName);
       if (cipher == null) {
         throw new RuntimeException("Cipher '" + cipherName + "' is not available");
