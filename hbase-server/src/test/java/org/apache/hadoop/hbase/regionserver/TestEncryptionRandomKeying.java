@@ -90,7 +90,9 @@ public class TestEncryptionRandomKeying {
     // Specify an encryption algorithm without a key
     htd = new HTableDescriptor(TableName.valueOf("default", "TestEncryptionRandomKeying"));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    hcd.setEncryptionType("AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    hcd.setEncryptionType(algorithm);
     htd.addFamily(hcd);
 
     // Start the minicluster

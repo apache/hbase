@@ -309,7 +309,7 @@ public class HStore implements Store {
         // Use the algorithm the key wants
         cipher = Encryption.getCipher(conf, key.getAlgorithm());
         if (cipher == null) {
-          throw new RuntimeException("Cipher '" + cipher + "' is not available");
+          throw new RuntimeException("Cipher '" + key.getAlgorithm() + "' is not available");
         }
         // Fail if misconfigured
         // We use the encryption type specified in the column schema as a sanity check on
@@ -323,7 +323,7 @@ public class HStore implements Store {
         // Family does not provide key material, create a random key
         cipher = Encryption.getCipher(conf, cipherName);
         if (cipher == null) {
-          throw new RuntimeException("Cipher '" + cipher + "' is not available");
+          throw new RuntimeException("Cipher '" + cipherName + "' is not available");
         }
         key = cipher.getRandomKey();
       }
