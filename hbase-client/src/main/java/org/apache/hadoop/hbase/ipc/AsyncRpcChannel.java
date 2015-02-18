@@ -189,10 +189,11 @@ public class AsyncRpcChannel {
               if (ticket == null) {
                 throw new FatalConnectionException("ticket/user is null");
               }
+              final UserGroupInformation realTicket = ticket;
               saslHandler = ticket.doAs(new PrivilegedExceptionAction<SaslClientHandler>() {
                 @Override
                 public SaslClientHandler run() throws IOException {
-                  return getSaslHandler(bootstrap);
+                  return getSaslHandler(realTicket, bootstrap);
                 }
               });
               if (saslHandler != null) {
@@ -244,20 +245,21 @@ public class AsyncRpcChannel {
 
   /**
    * Get SASL handler
-   *
    * @param bootstrap to reconnect to
    * @return new SASL handler
    * @throws java.io.IOException if handler failed to create
    */
-  private SaslClientHandler getSaslHandler(final Bootstrap bootstrap) throws IOException {
-    return new SaslClientHandler(authMethod, token, serverPrincipal, client.fallbackAllowed,
-        client.conf.get("hbase.rpc.protection", SaslUtil.QualityOfProtection.AUTHENTICATION.name()
-            .toLowerCase()), new SaslClientHandler.SaslExceptionHandler() {
+  private SaslClientHandler getSaslHandler(final UserGroupInformation realTicket,
+      final Bootstrap bootstrap) throws IOException {
+    return new SaslClientHandler(realTicket, authMethod, token, serverPrincipal,
+        client.fallbackAllowed, client.conf.get("hbase.rpc.protection",
+          SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()),
+        new SaslClientHandler.SaslExceptionHandler() {
           @Override
           public void handle(int retryCount, Random random, Throwable cause) {
             try {
               // Handle Sasl failure. Try to potentially get new credentials
-              handleSaslConnectionFailure(retryCount, cause, ticket.getUGI());
+              handleSaslConnectionFailure(retryCount, cause, realTicket);
 
               // Try to reconnect
               AsyncRpcClient.WHEEL_TIMER.newTimeout(new TimerTask() {
