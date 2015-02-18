@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.exceptions.LockTimeoutException;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -103,6 +104,9 @@ public class MobFileCompactionChore extends Chore{
             }
             tableLocked = true;
             compactor.compact();
+          } catch (LockTimeoutException e) {
+            LOG.info("Fail to acquire the lock because of timeout, maybe a major compaction or an"
+              + " ExpiredMobFileCleanerChore is running", e);
           } catch (Exception e) {
             LOG.error("Fail to compact the mob files for the column " + hcd.getNameAsString()
               + " in the table " + htd.getNameAsString(), e);
