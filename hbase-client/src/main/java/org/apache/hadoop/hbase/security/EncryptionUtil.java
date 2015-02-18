@@ -63,8 +63,7 @@ public class EncryptionUtil {
 
   /**
    * Protect a key by encrypting it with the secret key of the given subject.
-   * The configuration must be set up correctly for key alias resolution. Keys
-   * are always wrapped using AES.
+   * The configuration must be set up correctly for key alias resolution.
    * @param conf configuration
    * @param subject subject key alias
    * @param key the key
@@ -72,10 +71,12 @@ public class EncryptionUtil {
    */
   public static byte[] wrapKey(Configuration conf, String subject, Key key)
       throws IOException {
-    // Wrap the key with AES
-    Cipher cipher = Encryption.getCipher(conf, "AES");
+    // Wrap the key with the configured encryption algorithm.
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Cipher cipher = Encryption.getCipher(conf, algorithm);
     if (cipher == null) {
-      throw new RuntimeException("Cipher 'AES' not available");
+      throw new RuntimeException("Cipher '" + algorithm + "' not available");
     }
     EncryptionProtos.WrappedKey.Builder builder = EncryptionProtos.WrappedKey.newBuilder();
     builder.setAlgorithm(key.getAlgorithm());
@@ -100,8 +101,7 @@ public class EncryptionUtil {
 
   /**
    * Unwrap a key by decrypting it with the secret key of the given subject.
-   * The configuration must be set up correctly for key alias resolution. Keys
-   * are always unwrapped using AES.
+   * The configuration must be set up correctly for key alias resolution.
    * @param conf configuration
    * @param subject subject key alias
    * @param value the encrypted key bytes
@@ -113,9 +113,11 @@ public class EncryptionUtil {
       throws IOException, KeyException {
     EncryptionProtos.WrappedKey wrappedKey = EncryptionProtos.WrappedKey.PARSER
         .parseDelimitedFrom(new ByteArrayInputStream(value));
-    Cipher cipher = Encryption.getCipher(conf, "AES");
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY,
+      HConstants.CIPHER_AES);
+    Cipher cipher = Encryption.getCipher(conf, algorithm);
     if (cipher == null) {
-      throw new RuntimeException("Algorithm 'AES' not available");
+      throw new RuntimeException("Cipher '" + algorithm + "' not available");
     }
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] iv = wrappedKey.hasIv() ? wrappedKey.getIv().toByteArray() : null;

@@ -1017,6 +1017,9 @@ public final class HConstants {
 
   public static final long NO_NONCE = 0;
 
+  /** Default cipher for encryption */
+  public static final String CIPHER_AES = "AES";
+
   /** Configuration key for the crypto algorithm provider, a class name */
   public static final String CRYPTO_CIPHERPROVIDER_CONF_KEY = "hbase.crypto.cipherprovider";
 
@@ -1039,6 +1042,13 @@ public final class HConstants {
 
   /** Configuration key for the name of the master WAL encryption key for the cluster, a string */
   public static final String CRYPTO_WAL_KEY_NAME_CONF_KEY = "hbase.crypto.wal.key.name";
+
+  /** Configuration key for the algorithm used for creating jks key, a string */
+  public static final String CRYPTO_KEY_ALGORITHM_CONF_KEY = "hbase.crypto.key.algorithm";
+
+  /** Configuration key for the name of the alternate cipher algorithm for the cluster, a string */
+  public static final String CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY =
+      "hbase.crypto.alternate.key.algorithm";
 
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
