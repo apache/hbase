@@ -607,7 +607,7 @@ public class AsyncRpcChannel {
     }
     for (AsyncCall call : toCleanup) {
       call.setFailed(new CallTimeoutException("Call id=" + call.id + ", waitTime="
-          + (currentTime - call.getRpcTimeout()) + ", rpcTimeout=" + call.getRpcTimeout()));
+          + (currentTime - call.getStartTime()) + ", rpcTimeout=" + call.getRpcTimeout()));
     }
   }
 
