@@ -451,30 +451,36 @@ public class BucketCache implements BlockCache, HeapSize {
       this.heapSize.addAndGet(-1 * removedBlock.getData().heapSize());
     }
     BucketEntry bucketEntry = backingMap.get(cacheKey);
-    if (bucketEntry != null) {
-      IdLock.Entry lockEntry = null;
-      try {
-        lockEntry = offsetLock.getLockEntry(bucketEntry.offset());
-        if (bucketEntry.equals(backingMap.remove(cacheKey))) {
-          bucketAllocator.freeBlock(bucketEntry.offset());
-          realCacheSize.addAndGet(-1 * bucketEntry.getLength());
-          blocksByHFile.remove(cacheKey.getHfileName(), cacheKey);
-          if (removedBlock == null) {
-            this.blockNumber.decrementAndGet();
-          }
-        } else {
-          return false;
-        }
-      } catch (IOException ie) {
-        LOG.warn("Failed evicting block " + cacheKey);
+    if (bucketEntry == null) {
+      if (removedBlock != null) {
+        cacheStats.evicted(0);
+        return true;
+      } else {
         return false;
-      } finally {
-        if (lockEntry != null) {
-          offsetLock.releaseLockEntry(lockEntry);
-        }
       }
     }
-    cacheStats.evicted(bucketEntry == null? 0: bucketEntry.getCachedTime());
+    IdLock.Entry lockEntry = null;
+    try {
+      lockEntry = offsetLock.getLockEntry(bucketEntry.offset());
+      if (bucketEntry.equals(backingMap.remove(cacheKey))) {
+        bucketAllocator.freeBlock(bucketEntry.offset());
+        realCacheSize.addAndGet(-1 * bucketEntry.getLength());
+        blocksByHFile.remove(cacheKey.getHfileName(), cacheKey);
+        if (removedBlock == null) {
+          this.blockNumber.decrementAndGet();
+        }
+      } else {
+        return false;
+      }
+    } catch (IOException ie) {
+      LOG.warn("Failed evicting block " + cacheKey);
+      return false;
+    } finally {
+      if (lockEntry != null) {
+        offsetLock.releaseLockEntry(lockEntry);
+      }
+    }
+    cacheStats.evicted(bucketEntry.getCachedTime());
     return true;
   }
 
