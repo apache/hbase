@@ -443,7 +443,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * @throws IOException 
    */
   protected void initializeTable(Connection connection, TableName tableName) throws IOException {
-    if (table != null || connection != null) {
+    if (this.table != null || this.connection != null) {
       LOG.warn("initializeTable called multiple times. Overwriting connection and table " +
           "reference; TableInputFormatBase will not close these old references when done.");
     }
