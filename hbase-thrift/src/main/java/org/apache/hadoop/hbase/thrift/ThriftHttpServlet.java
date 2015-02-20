@@ -83,6 +83,7 @@ public class ThriftHttpServlet extends TServlet {
         // Send a 401 to the client
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.getWriter().println("Authentication Error: " + e.getMessage());
+        return;
       }
     }
     String doAsUserFromQuery = request.getHeader("doAs");
