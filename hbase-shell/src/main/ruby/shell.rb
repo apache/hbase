@@ -342,6 +342,8 @@ Shell.load_command_group(
     list_replicated_tables
     append_peer_tableCFs
     remove_peer_tableCFs
+    enable_table_replication
+    disable_table_replication
   ]
 )
 

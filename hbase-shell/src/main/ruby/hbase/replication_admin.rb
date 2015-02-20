@@ -23,6 +23,7 @@ java_import org.apache.hadoop.hbase.client.replication.ReplicationAdmin
 java_import org.apache.hadoop.hbase.replication.ReplicationPeerConfig
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.zookeeper.ZKUtil
+java_import org.apache.hadoop.hbase.TableName
 
 # Wrapper for org.apache.hadoop.hbase.client.replication.ReplicationAdmin
 
@@ -156,6 +157,18 @@ module Hbase
     # Remove some tableCFs from the tableCFs config of the specified peer
     def remove_peer_tableCFs(id, tableCFs)
       @replication_admin.removePeerTableCFs(id, tableCFs)
+    end
+    #----------------------------------------------------------------------------------------------
+    # Enables a table's replication switch
+    def enable_tablerep(table_name)
+      tableName = TableName.valueOf(table_name)
+      @replication_admin.enableTableRep(tableName)
+    end
+    #----------------------------------------------------------------------------------------------
+    # Disables a table's replication switch
+    def disable_tablerep(table_name)
+      tableName = TableName.valueOf(table_name)
+      @replication_admin.disableTableRep(tableName)
     end
   end
 end
