@@ -40,18 +40,26 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.replication.ReplicationPeerZKImpl;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.data.Stat;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -518,5 +526,203 @@ public class ReplicationAdmin implements Closeable {
     }
 
     return replicationColFams;
+  }
+
+  /**
+   * Enable a table's replication switch.
+   * @param tableName name of the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void enableTableRep(final TableName tableName) throws IOException {
+    if (tableName == null) {
+      throw new IllegalArgumentException("Table name cannot be null");
+    }
+    try (Admin admin = this.connection.getAdmin()) {
+      if (!admin.tableExists(tableName)) {
+        throw new TableNotFoundException("Table '" + tableName.getNameAsString()
+            + "' does not exists.");
+      }
+    }
+    byte[][] splits = getTableSplitRowKeys(tableName);
+    checkAndSyncTableDescToPeers(tableName, splits);
+    setTableRep(tableName, true);
+  }
+
+  /**
+   * Disable a table's replication switch.
+   * @param tableName name of the table
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void disableTableRep(final TableName tableName) throws IOException {
+    if (tableName == null) {
+      throw new IllegalArgumentException("Table name is null");
+    }
+    try (Admin admin = this.connection.getAdmin()) {
+      if (!admin.tableExists(tableName)) {
+        throw new TableNotFoundException("Table '" + tableName.getNamespaceAsString()
+            + "' does not exists.");
+      }
+    }
+    setTableRep(tableName, false);
+  }
+
+  /**
+   * Get the split row keys of table
+   * @param tableName table name
+   * @return array of split row keys
+   * @throws IOException
+   */
+  private byte[][] getTableSplitRowKeys(TableName tableName) throws IOException {
+    try (RegionLocator locator = connection.getRegionLocator(tableName);) {
+      byte[][] startKeys = locator.getStartKeys();
+      if (startKeys.length == 1) {
+        return null;
+      }
+      byte[][] splits = new byte[startKeys.length - 1][];
+      for (int i = 1; i < startKeys.length; i++) {
+        splits[i - 1] = startKeys[i];
+      }
+      return splits;
+    }
+  }
+
+  /**
+   * Connect to peer and check the table descriptor on peer:
+   * <ol>
+   * <li>Create the same table on peer when not exist.</li>
+   * <li>Throw exception if the table exists on peer cluster but descriptors are not same.</li>
+   * </ol>
+   * @param tableName name of the table to sync to the peer
+   * @param splits table split keys
+   * @throws IOException
+   */
+  private void checkAndSyncTableDescToPeers(final TableName tableName, final byte[][] splits)
+      throws IOException {
+    List<ReplicationPeer> repPeers = listValidReplicationPeers();
+    if (repPeers == null || repPeers.size() <= 0) {
+      throw new IllegalArgumentException("Found no peer cluster for replication.");
+    }
+    for (ReplicationPeer repPeer : repPeers) {
+      Configuration peerConf = repPeer.getConfiguration();
+      HTableDescriptor htd = null;
+      try (Connection conn = ConnectionFactory.createConnection(peerConf);
+          Admin admin = this.connection.getAdmin();
+          Admin repHBaseAdmin = conn.getAdmin()) {
+        htd = admin.getTableDescriptor(tableName);
+        HTableDescriptor peerHtd = null;
+        if (!repHBaseAdmin.tableExists(tableName)) {
+          repHBaseAdmin.createTable(htd, splits);
+        } else {
+          peerHtd = repHBaseAdmin.getTableDescriptor(tableName);
+          if (peerHtd == null) {
+            throw new IllegalArgumentException("Failed to get table descriptor for table "
+                + tableName.getNameAsString() + " from peer cluster " + repPeer.getId());
+          } else if (!peerHtd.equals(htd)) {
+            throw new IllegalArgumentException("Table " + tableName.getNameAsString()
+                + " exists in peer cluster " + repPeer.getId()
+                + ", but the table descriptors are not same when comapred with source cluster."
+                + " Thus can not enable the table's replication switch.");
+          }
+        }
+      }
+    }
+  }
+
+  private List<ReplicationPeer> listValidReplicationPeers() {
+    Map<String, ReplicationPeerConfig> peers = listPeerConfigs();
+    if (peers == null || peers.size() <= 0) {
+      return null;
+    }
+    List<ReplicationPeer> validPeers = new ArrayList<ReplicationPeer>(peers.size());
+    for (Entry<String, ReplicationPeerConfig> peerEntry : peers.entrySet()) {
+      String peerId = peerEntry.getKey();
+      String clusterKey = peerEntry.getValue().getClusterKey();
+      Configuration peerConf = new Configuration(this.connection.getConfiguration());
+      Stat s = null;
+      try {
+        ZKUtil.applyClusterKeyToConf(peerConf, clusterKey);
+        Pair<ReplicationPeerConfig, Configuration> pair = this.replicationPeers.getPeerConf(peerId);
+        ReplicationPeer peer = new ReplicationPeerZKImpl(peerConf, peerId, pair.getFirst());
+        s =
+            zkw.getRecoverableZooKeeper().exists(peerConf.get(HConstants.ZOOKEEPER_ZNODE_PARENT),
+              null);
+        if (null == s) {
+          LOG.info(peerId + ' ' + clusterKey + " is invalid now.");
+          continue;
+        }
+        validPeers.add(peer);
+      } catch (ReplicationException e) {
+        LOG.warn("Failed to get valid replication peers. "
+            + "Error connecting to peer cluster with peerId=" + peerId);
+        LOG.debug("Failure details to get valid replication peers.", e);
+        continue;
+      } catch (KeeperException e) {
+        LOG.warn("Failed to get valid replication peers. KeeperException code="
+            + e.code().intValue());
+        LOG.debug("Failure details to get valid replication peers.", e);
+        continue;
+      } catch (InterruptedException e) {
+        LOG.warn("Failed to get valid replication peers due to InterruptedException.");
+        LOG.debug("Failure details to get valid replication peers.", e);
+        continue;
+      } catch (IOException e) {
+        LOG.warn("Failed to get valid replication peers due to IOException.");
+        LOG.debug("Failure details to get valid replication peers.", e);
+        continue;
+      }
+    }
+    return validPeers;
+  }
+
+  /**
+   * Set the table's replication switch if the table's replication switch is already not set.
+   * @param tableName name of the table
+   * @param isRepEnabled is replication switch enable or disable
+   * @throws IOException if a remote or network exception occurs
+   */
+  private void setTableRep(final TableName tableName, boolean isRepEnabled) throws IOException {
+    Admin admin = null;
+    try {
+      admin = this.connection.getAdmin();
+      HTableDescriptor htd = admin.getTableDescriptor(tableName);
+      if (isTableRepEnabled(htd) ^ isRepEnabled) {
+        boolean isOnlineSchemaUpdateEnabled =
+            this.connection.getConfiguration()
+                .getBoolean("hbase.online.schema.update.enable", true);
+        if (!isOnlineSchemaUpdateEnabled) {
+          admin.disableTable(tableName);
+        }
+        for (HColumnDescriptor hcd : htd.getFamilies()) {
+          hcd.setScope(isRepEnabled ? HConstants.REPLICATION_SCOPE_GLOBAL
+              : HConstants.REPLICATION_SCOPE_LOCAL);
+        }
+        admin.modifyTable(tableName, htd);
+        if (!isOnlineSchemaUpdateEnabled) {
+          admin.enableTable(tableName);
+        }
+      }
+    } finally {
+      if (admin != null) {
+        try {
+          admin.close();
+        } catch (IOException e) {
+          LOG.warn("Failed to close admin connection.");
+          LOG.debug("Details on failure to close admin connection.", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * @param htd table descriptor details for the table to check
+   * @return true if table's replication switch is enabled
+   */
+  private boolean isTableRepEnabled(HTableDescriptor htd) {
+    for (HColumnDescriptor hcd : htd.getFamilies()) {
+      if (hcd.getScope() != HConstants.REPLICATION_SCOPE_GLOBAL) {
+        return false;
+      }
+    }
+    return true;
   }
 }
