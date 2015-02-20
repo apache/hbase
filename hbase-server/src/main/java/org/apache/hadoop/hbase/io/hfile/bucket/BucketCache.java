@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 import org.apache.hadoop.hbase.io.hfile.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -59,10 +60,8 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -455,27 +454,33 @@ public class BucketCache implements BlockCache, HeapSize {
       this.heapSize.addAndGet(-1 * removedBlock.getData().heapSize());
     }
     BucketEntry bucketEntry = backingMap.get(cacheKey);
-    if (bucketEntry != null) {
-      IdLock.Entry lockEntry = null;
-      try {
-        lockEntry = offsetLock.getLockEntry(bucketEntry.offset());
-        if (bucketEntry.equals(backingMap.remove(cacheKey))) {
-          bucketAllocator.freeBlock(bucketEntry.offset());
-          realCacheSize.addAndGet(-1 * bucketEntry.getLength());
-          blocksByHFile.remove(cacheKey.getHfileName(), cacheKey);
-          if (removedBlock == null) {
-            this.blockNumber.decrementAndGet();
-          }
-        } else {
-          return false;
-        }
-      } catch (IOException ie) {
-        LOG.warn("Failed evicting block " + cacheKey);
+    if (bucketEntry == null) {
+      if (removedBlock != null) {
+        cacheStats.evicted();
+        return true;
+      } else {
         return false;
-      } finally {
-        if (lockEntry != null) {
-          offsetLock.releaseLockEntry(lockEntry);
+      }
+    }
+    IdLock.Entry lockEntry = null;
+    try {
+      lockEntry = offsetLock.getLockEntry(bucketEntry.offset());
+      if (bucketEntry.equals(backingMap.remove(cacheKey))) {
+        bucketAllocator.freeBlock(bucketEntry.offset());
+        realCacheSize.addAndGet(-1 * bucketEntry.getLength());
+        blocksByHFile.remove(cacheKey.getHfileName(), cacheKey);
+        if (removedBlock == null) {
+          this.blockNumber.decrementAndGet();
         }
+      } else {
+        return false;
+      }
+    } catch (IOException ie) {
+      LOG.warn("Failed evicting block " + cacheKey);
+      return false;
+    } finally {
+      if (lockEntry != null) {
+        offsetLock.releaseLockEntry(lockEntry);
       }
     }
     cacheStats.evicted();
@@ -530,10 +535,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
   private long acceptableSize() {
     return (long) Math.floor(bucketAllocator.getTotalSize() * DEFAULT_ACCEPT_FACTOR);
-  }
-
-  private long minSize() {
-    return (long) Math.floor(bucketAllocator.getTotalSize() * DEFAULT_MIN_FACTOR);
   }
 
   private long singleSize() {
