@@ -997,6 +997,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
   @VisibleForTesting
   public void clearCache() {
     map.clear();
+    elements.set(0);
   }
 
   /**
