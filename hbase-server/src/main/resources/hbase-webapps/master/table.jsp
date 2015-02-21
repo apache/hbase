@@ -43,15 +43,9 @@
 
   MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
-  HTable table = (HTable) master.getConnection().getTable(fqtn);
+  HTable table = null;
   String tableHeader;
   boolean withReplica = false;
-  if (table.getTableDescriptor().getRegionReplication() > 1) {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr>";
-    withReplica = true;
-  } else {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th></tr>";
-  }
   ServerName rl = metaTableLocator.getMetaRegionLocation(master.getZooKeeper());
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
@@ -84,7 +78,7 @@
       <link href="/static/css/bootstrap.min.css" rel="stylesheet">
       <link href="/static/css/bootstrap-theme.min.css" rel="stylesheet">
       <link href="/static/css/hbase.css" rel="stylesheet">
-      <% if ( !readOnly && action != null ) { %>
+      <% if ( ( !readOnly && action != null ) || fqtn == null ) { %>
 	  <script type="text/javascript">
       <!--
 		  setTimeout("history.back()",5000);
@@ -123,7 +117,15 @@
     </div>
 </div>
 <% 
-if ( !readOnly && action != null ) { 
+if ( fqtn != null ) { 
+  table = (HTable) master.getConnection().getTable(fqtn);
+  if (table.getTableDescriptor().getRegionReplication() > 1) {
+    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr>";
+    withReplica = true;
+  } else {
+    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th></tr>";
+  }
+  if ( !readOnly && action != null ) { 
 %>
 <div class="container">
 
@@ -156,11 +158,8 @@ if ( !readOnly && action != null ) {
 %>
 <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
 </div>
-<script src="/static/js/jquery.min.js" type="text/javascript"></script>
-<script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
-</body>
 <%
-} else {
+  } else {
 %>
 <div class="container">
 
@@ -358,12 +357,22 @@ Actions:
 </table>
 </center>
 </p>
+<% } %>
 </div>
+</div>
+<% } 
+} else { // handle the case for fqtn is null with error message + redirect 
+%>
+<div class="container">
+    <div class="row inner_header">
+        <div class="page-header">
+            <h1>Table not ready</h1>
+        </div>
+    </div>
+<p><hr><p>
+<p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
 </div>
 <% } %>
-<%
-}
-%>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
