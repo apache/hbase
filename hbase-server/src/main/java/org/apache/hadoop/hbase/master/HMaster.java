@@ -566,13 +566,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
 
-    // migrating existent table state from zk
-    for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
-        .queryForTableStates(getZooKeeper()).entrySet()) {
-      LOG.info("Converting state from zk to new states:" + entry);
-      tableStateManager.setTableState(entry.getKey(), entry.getValue());
-    }
-    ZKUtil.deleteChildrenRecursively(getZooKeeper(), getZooKeeper().tableZNode);
   }
 
   /**
@@ -710,6 +703,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
     if(isStopped()) return;
+
+    // migrating existent table state from zk, so splitters
+    // and recovery process treat states properly.
+    for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
+        .queryForTableStates(getZooKeeper()).entrySet()) {
+      LOG.info("Converting state from zk to new states:" + entry);
+      tableStateManager.setTableState(entry.getKey(), entry.getValue());
+    }
+    ZKUtil.deleteChildrenRecursively(getZooKeeper(), getZooKeeper().tableZNode);
 
     status.setStatus("Submitting log splitting work for previously failed region servers");
     // Master has recovered hbase:meta region server and we put
