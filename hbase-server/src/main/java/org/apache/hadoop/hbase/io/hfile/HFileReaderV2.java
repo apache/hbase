@@ -400,6 +400,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
           HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
             updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
+            if (Trace.isTracing()) {
+              traceScope.getSpan().addTimelineAnnotation("blockCacheHit");
+            }
             assert cachedBlock.isUnpacked() : "Packed block leak.";
             if (cachedBlock.getBlockType().isData()) {
               if (updateCacheMetrics) {

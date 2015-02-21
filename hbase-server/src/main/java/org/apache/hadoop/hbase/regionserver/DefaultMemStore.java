@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.htrace.Trace;
 
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
@@ -730,6 +731,9 @@ public class DefaultMemStore implements MemStore {
       if (snapshotAllocator != null) {
         this.snapshotAllocatorAtCreation = snapshotAllocator;
         this.snapshotAllocatorAtCreation.incScannerCount();
+      }
+      if (Trace.isTracing() && Trace.currentSpan() != null) {
+        Trace.currentSpan().addTimelineAnnotation("Creating MemStoreScanner");
       }
     }
 
