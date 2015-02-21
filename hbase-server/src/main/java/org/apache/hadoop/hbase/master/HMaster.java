@@ -700,7 +700,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // assigned when master is shutting down
     if(isStopped()) return;
 
-    // migrating existent table state from zk
+    // migrating existent table state from zk, so splitters
+    // and recovery process treat states properly.
     for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
         .queryForTableStates(getZooKeeper()).entrySet()) {
       LOG.info("Converting state from zk to new states:" + entry);
