@@ -230,8 +230,9 @@ checkoutBranch() {
   echo ""
   if [[ $JENKINS == "true" ]] ; then
     if [[ "$BRANCH_NAME" != "master" ]]; then
-      echo "${GIT} checkout ${BRANCH_NAME}"
-      ${GIT} checkout ${BRANCH_NAME}
+      echo "origin/${BRANCH_NAME} HEAD is commit `${GIT} rev-list origin/${BRANCH_NAME} -1`"
+      echo "${GIT} checkout -f  `${GIT} rev-list origin/${BRANCH_NAME} -1`"
+      ${GIT} checkout -f  `${GIT} rev-list origin/${BRANCH_NAME} -1`
       echo "${GIT} status"
       ${GIT} status
     fi
