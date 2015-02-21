@@ -363,6 +363,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
             if (cacheConf.shouldCacheCompressed(cachedBlock.getBlockType().getCategory())) {
               cachedBlock = cachedBlock.unpack(hfileContext, fsBlockReader);
             }
+            if (Trace.isTracing()) {
+              traceScope.getSpan().addTimelineAnnotation("blockCacheHit");
+            }
             assert cachedBlock.isUnpacked() : "Packed block leak.";
             if (cachedBlock.getBlockType().isData()) {
               HFile.dataBlockReadCnt.incrementAndGet();

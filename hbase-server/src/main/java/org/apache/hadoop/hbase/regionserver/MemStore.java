@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.MemStoreLAB.Allocation;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.cloudera.htrace.Trace;
 
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
@@ -740,6 +741,9 @@ public class MemStore implements HeapSize {
       if (snapshotAllocator != null) {
         this.snapshotAllocatorAtCreation = snapshotAllocator;
         this.snapshotAllocatorAtCreation.incScannerCount();
+      }
+      if (Trace.isTracing() && Trace.currentSpan() != null) {
+        Trace.currentSpan().addTimelineAnnotation("Creating MemStoreScanner");
       }
     }
 

@@ -152,6 +152,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
+import org.cloudera.htrace.Trace;
+import org.cloudera.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -3681,15 +3683,26 @@ public class HRegion implements HeapSize { // , Writable{
         if (!waitForLock) {
           return null;
         }
+        TraceScope traceScope = null;
         try {
+          if (Trace.isTracing()) {
+            traceScope = Trace.startSpan("HRegion.getRowLockInternal");
+          }
           if (!existingContext.latch.await(this.rowLockWaitDuration, TimeUnit.MILLISECONDS)) {
+            if(traceScope != null) {
+              traceScope.getSpan().addTimelineAnnotation("Failed to get row lock");
+            }
             throw new IOException("Timed out waiting for lock for row: " + rowKey);
           }
+          if (traceScope != null) traceScope.close();
+          traceScope = null;
         } catch (InterruptedException ie) {
           LOG.warn("Thread interrupted waiting for lock on row: " + rowKey);
           InterruptedIOException iie = new InterruptedIOException();
           iie.initCause(ie);
           throw iie;
+        } finally {
+          if (traceScope != null) traceScope.close();
         }
       }
     }
