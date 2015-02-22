@@ -168,7 +168,7 @@ module Hbase
     #---------------------------------------------------------------------------------------------
     # Throw exception if table doesn't exist
     def tableExists(table_name)
-      raise ArgumentError, "Table #{table_name} does not exist.'" unless exists?(table_name)
+      raise ArgumentError, "Table #{table_name} does not exist." unless exists?(table_name)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -181,7 +181,7 @@ module Hbase
     # Drops a table
     def drop(table_name)
       tableExists(table_name)
-      raise ArgumentError, "Table #{table_name} is enabled. Disable it first.'" if enabled?(table_name)
+      raise ArgumentError, "Table #{table_name} is enabled. Disable it first." if enabled?(table_name)
 
       @admin.deleteTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
     end
@@ -372,7 +372,7 @@ module Hbase
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name, conf = @conf)
       table_description = @admin.getTableDescriptor(TableName.valueOf(table_name))
-      raise ArgumentError, "Table #{table_name} is not enabled. Enable it first.'" unless enabled?(table_name)
+      raise ArgumentError, "Table #{table_name} is not enabled. Enable it first." unless enabled?(table_name)
       yield 'Disabling table...' if block_given?
       @admin.disableTable(table_name)
 
