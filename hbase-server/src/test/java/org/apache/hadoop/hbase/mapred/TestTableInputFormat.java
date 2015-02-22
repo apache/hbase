@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
@@ -342,7 +342,7 @@ public class TestTableInputFormat {
         .findCounter(TestTableInputFormat.class.getName() + ":value", "value bbb").getCounter());
   }
 
-  public static class ExampleVerifier implements TableMap<NullWritable, NullWritable> {
+  public static class ExampleVerifier implements TableMap<Text, Text> {
 
     @Override
     public void configure(JobConf conf) {
@@ -350,7 +350,7 @@ public class TestTableInputFormat {
 
     @Override
     public void map(ImmutableBytesWritable key, Result value,
-        OutputCollector<NullWritable,NullWritable> output,
+        OutputCollector<Text,Text> output,
         Reporter reporter) throws IOException {
       for (Cell cell : value.listCells()) {
         reporter.getCounter(TestTableInputFormat.class.getName() + ":row",
