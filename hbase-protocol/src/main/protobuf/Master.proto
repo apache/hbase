@@ -28,6 +28,7 @@ option optimize_for = SPEED;
 import "HBase.proto";
 import "Client.proto";
 import "ClusterStatus.proto";
+import "Quota.proto";
 
 /* Column-level protobufs */
 
@@ -313,6 +314,9 @@ message GetSchemaAlterStatusResponse {
 
 message GetTableDescriptorsRequest {
   repeated TableName table_names = 1;
+  optional string regex = 2;
+  optional bool include_sys_tables = 3 [default=false];
+  optional string namespace = 4;
 }
 
 message GetTableDescriptorsResponse {
@@ -320,10 +324,21 @@ message GetTableDescriptorsResponse {
 }
 
 message GetTableNamesRequest {
+  optional string regex = 1;
+  optional bool include_sys_tables = 2 [default=false];
+  optional string namespace = 3;
 }
 
 message GetTableNamesResponse {
   repeated TableName table_names = 1;
+}
+
+message GetTableStateRequest {
+  required TableName table_name = 1;
+}
+
+message GetTableStateResponse {
+  required TableState table_state = 1;
 }
 
 message GetClusterStatusRequest {
@@ -356,6 +371,32 @@ message IsProcedureDoneRequest {
 message IsProcedureDoneResponse {
         optional bool done = 1 [default = false];
         optional ProcedureDescription snapshot = 2;
+}
+
+message SetQuotaRequest {
+  optional string user_name = 1;
+  optional string user_group = 2;
+  optional string namespace = 3;
+  optional TableName table_name = 4;
+
+  optional bool remove_all = 5;
+  optional bool bypass_globals = 6;
+  optional ThrottleRequest throttle = 7;
+}
+
+message SetQuotaResponse {
+}
+
+message MajorCompactionTimestampRequest {
+  required TableName table_name = 1;
+}
+
+message MajorCompactionTimestampForRegionRequest {
+  required RegionSpecifier region = 1;
+}
+
+message MajorCompactionTimestampResponse {
+  required int64 compaction_timestamp = 1;
 }
 
 service MasterService {
@@ -396,7 +437,7 @@ service MasterService {
 
  /** Master dispatch merging the regions */
   rpc DispatchMergingRegions(DispatchMergingRegionsRequest)
-    returns(DispatchMergingRegionsResponse);    
+    returns(DispatchMergingRegionsResponse);
 
   /** Assign a region to a server chosen at random. */
   rpc AssignRegion(AssignRegionRequest)
@@ -489,7 +530,7 @@ service MasterService {
   rpc ExecMasterService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 
-  /** 
+  /**
    * Create a snapshot for the given table.
    */
   rpc Snapshot(SnapshotRequest) returns(SnapshotResponse);
@@ -565,4 +606,19 @@ service MasterService {
   /** returns a list of tables for a given namespace*/
   rpc ListTableNamesByNamespace(ListTableNamesByNamespaceRequest)
     returns(ListTableNamesByNamespaceResponse);
+
+  /** returns table state */
+  rpc GetTableState(GetTableStateRequest)
+    returns(GetTableStateResponse);
+
+  /** Apply the new quota settings */
+  rpc SetQuota(SetQuotaRequest) returns(SetQuotaResponse);
+
+  /** Returns the timestamp of the last major compaction */
+  rpc getLastMajorCompactionTimestamp(MajorCompactionTimestampRequest)
+    returns(MajorCompactionTimestampResponse);
+
+  /** Returns the timestamp of the last major compaction */
+  rpc getLastMajorCompactionTimestampForRegion(MajorCompactionTimestampForRegionRequest)
+    returns(MajorCompactionTimestampResponse);
 }

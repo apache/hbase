@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
@@ -61,7 +60,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -70,12 +71,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-
 /**
  * Testing of HRegion.incrementColumnValue, HRegion.increment,
  * and HRegion.append
  */
-@Category(MediumTests.class) // Starts 100 threads
+@Category({VerySlowRegionServerTests.class, MediumTests.class}) // Starts 100 threads
 public class TestAtomicOperation {
   static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
   @Rule public TestName name = new TestName();
@@ -237,6 +237,7 @@ public class TestAtomicOperation {
           inc.addColumn(fam1, qual1, amount);
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
+          inc.setDurability(Durability.ASYNC_WAL);
           region.increment(inc);
 
           // verify: Make sure we only see completed increments
@@ -274,6 +275,7 @@ public class TestAtomicOperation {
               a.add(fam1, qual1, val);
               a.add(fam1, qual2, val);
               a.add(fam2, qual3, val);
+              a.setDurability(Durability.ASYNC_WAL);
               region.append(a);
 
               Get g = new Get(row);
@@ -349,16 +351,20 @@ public class TestAtomicOperation {
               if (op) {
                 Put p = new Put(row, ts);
                 p.add(fam1, qual1, value1);
+                p.setDurability(Durability.ASYNC_WAL);
                 rm.add(p);
                 Delete d = new Delete(row);
                 d.deleteColumns(fam1, qual2, ts);
+                d.setDurability(Durability.ASYNC_WAL);
                 rm.add(d);
               } else {
                 Delete d = new Delete(row);
                 d.deleteColumns(fam1, qual1, ts);
+                d.setDurability(Durability.ASYNC_WAL);
                 rm.add(d);
                 Put p = new Put(row, ts);
                 p.add(fam1, qual2, value2);
+                p.setDurability(Durability.ASYNC_WAL);
                 rm.add(p);
               }
               region.mutateRow(rm);
@@ -438,15 +444,19 @@ public class TestAtomicOperation {
               if (op) {
                 Put p = new Put(row2, ts);
                 p.add(fam1, qual1, value1);
+                p.setDurability(Durability.ASYNC_WAL);
                 mrm.add(p);
                 Delete d = new Delete(row);
                 d.deleteColumns(fam1, qual1, ts);
+                d.setDurability(Durability.ASYNC_WAL);
                 mrm.add(d);
               } else {
                 Delete d = new Delete(row2);
                 d.deleteColumns(fam1, qual1, ts);
+                d.setDurability(Durability.ASYNC_WAL);
                 mrm.add(d);
                 Put p = new Put(row, ts);
+                p.setDurability(Durability.ASYNC_WAL);
                 p.add(fam1, qual1, value2);
                 mrm.add(p);
               }
@@ -528,8 +538,9 @@ public class TestAtomicOperation {
     final String tableName = "testPutAndCheckAndPut";
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setClass(HConstants.REGION_IMPL, MockHRegion.class, HeapSize.class);
-    final MockHRegion region = (MockHRegion) TEST_UTIL.createLocalHRegion(Bytes.toBytes(tableName),
-        null, null, tableName, conf, false, Durability.SYNC_WAL, null, Bytes.toBytes(family));
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName))
+        .addFamily(new HColumnDescriptor(family));
+    final MockHRegion region = (MockHRegion) TEST_UTIL.createLocalHRegion(htd, null, null);
 
     Put[] puts = new Put[1];
     Put put = new Put(Bytes.toBytes("r1"));
@@ -597,17 +608,17 @@ public class TestAtomicOperation {
 
   public static class MockHRegion extends HRegion {
 
-    public MockHRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
+    public MockHRegion(Path tableDir, WAL log, FileSystem fs, Configuration conf,
         final HRegionInfo regionInfo, final HTableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, conf, regionInfo, htd, rsServices);
     }
 
     @Override
-    public RowLock getRowLock(final byte[] row, boolean waitForLock) throws IOException {
+    public RowLock getRowLockInternal(final byte[] row, boolean waitForLock) throws IOException {
       if (testStep == TestStep.CHECKANDPUT_STARTED) {
         latch.countDown();
       }
-      return new WrappedRowLock(super.getRowLock(row, waitForLock));
+      return new WrappedRowLock(super.getRowLockInternal(row, waitForLock));
     }
     
     public class WrappedRowLock extends RowLock {

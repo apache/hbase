@@ -25,12 +25,13 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestCompoundConfiguration extends TestCase {
   private Configuration baseConf;
   private int baseConfSize;
@@ -114,23 +115,23 @@ public class TestCompoundConfiguration extends TestCase {
     assertEquals(baseConfSize + 1, cnt);
   }
 
-  private ImmutableBytesWritable strToIbw(String s) {
-    return new ImmutableBytesWritable(Bytes.toBytes(s));
+  private Bytes strToIb(String s) {
+    return new Bytes(Bytes.toBytes(s));
   }
 
   @Test
   public void testWithIbwMap() {
-    Map<ImmutableBytesWritable, ImmutableBytesWritable> map =
-      new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
-    map.put(strToIbw("B"), strToIbw("2b"));
-    map.put(strToIbw("C"), strToIbw("33"));
-    map.put(strToIbw("D"), strToIbw("4"));
+    Map<Bytes, Bytes> map =
+      new HashMap<Bytes, Bytes>();
+    map.put(strToIb("B"), strToIb("2b"));
+    map.put(strToIb("C"), strToIb("33"));
+    map.put(strToIb("D"), strToIb("4"));
     // unlike config, note that IBW Maps can accept null values
-    map.put(strToIbw("G"), null);
+    map.put(strToIb("G"), null);
 
     CompoundConfiguration compoundConf = new CompoundConfiguration()
       .add(baseConf)
-      .addWritableMap(map);
+      .addBytesMap(map);
     assertEquals("1", compoundConf.get("A"));
     assertEquals("2b", compoundConf.get("B"));
     assertEquals(33, compoundConf.getInt("C", 0));
@@ -155,7 +156,7 @@ public class TestCompoundConfiguration extends TestCase {
     conf2.set("D", "not4");
     assertEquals("modification", conf2.get("X"));
     assertEquals("not4", conf2.get("D"));
-    conf2.addWritableMap(map);
+    conf2.addBytesMap(map);
     assertEquals("4", conf2.get("D")); // map overrides
   }
 

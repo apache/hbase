@@ -25,11 +25,11 @@ import java.net.SocketTimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   // Public because used outside of this package over in ipc.
   static final Log LOG = LogFactory.getLog(RegionServerCallable.class);
-  protected final HConnection connection;
+  protected final Connection connection;
   protected final TableName tableName;
   protected final byte[] row;
   protected HRegionLocation location;
@@ -61,7 +61,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    * @param tableName Table name to which <code>row</code> belongs.
    * @param row The row we want in <code>tableName</code>.
    */
-  public RegionServerCallable(HConnection connection, TableName tableName, byte [] row) {
+  public RegionServerCallable(Connection connection, TableName tableName, byte [] row) {
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
@@ -75,7 +75,9 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    */
   @Override
   public void prepare(final boolean reload) throws IOException {
-    this.location = connection.getRegionLocation(tableName, row, reload);
+    try (RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
+      this.location = regionLocator.getRegionLocation(row, reload);
+    }
     if (this.location == null) {
       throw new IOException("Failed to find location, tableName=" + tableName +
         ", row=" + Bytes.toString(row) + ", reload=" + reload);
@@ -87,7 +89,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
    * @return {@link HConnection} instance used by this Callable.
    */
   HConnection getConnection() {
-    return this.connection;
+    return (HConnection) this.connection;
   }
 
   protected ClientService.BlockingInterface getStub() {
@@ -135,7 +137,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
 
   @Override
   public String getExceptionMessageAdditionalDetail() {
-    return "row '" + Bytes.toString(row) + "' on table '" + tableName;
+    return "row '" + Bytes.toString(row) + "' on table '" + tableName + "' at " + location;
   }
 
   @Override

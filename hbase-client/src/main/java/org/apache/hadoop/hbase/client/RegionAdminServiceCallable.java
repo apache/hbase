@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 
@@ -34,6 +35,9 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
  * Similar to {@link RegionServerCallable} but for the AdminService interface. This service callable
  * assumes a Table and row and thus does region locating similar to RegionServerCallable.
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD",
+  justification="stub used by ipc")
+@InterfaceAudience.Private
 public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<T> {
 
   protected final ClusterConnection connection;

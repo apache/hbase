@@ -24,8 +24,9 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Base class for cell sink that separates the provided cells into multiple files.
  */
+@InterfaceAudience.Private
 public abstract class StripeMultiFileWriter implements Compactor.CellSink {
   private static final Log LOG = LogFactory.getLog(StripeMultiFileWriter.class);
 
@@ -157,8 +159,8 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
     private StoreFile.Writer currentWriter;
     private byte[] currentWriterEndKey;
 
-    private KeyValue lastKv;
-    private long kvsInCurrentWriter = 0;
+    private Cell lastCell;
+    private long cellsInCurrentWriter = 0;
     private int majorRangeFromIndex = -1, majorRangeToIndex = -1;
     private boolean hasAnyWriter = false;
 
@@ -191,21 +193,21 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
     }
 
     @Override
-    public void append(KeyValue kv) throws IOException {
+    public void append(Cell cell) throws IOException {
       if (currentWriter == null && existingWriters.isEmpty()) {
         // First append ever, do a sanity check.
         sanityCheckLeft(this.boundaries.get(0),
-            kv.getRowArray(), kv.getRowOffset(), kv.getRowLength());
+            cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
       }
-      prepareWriterFor(kv);
-      currentWriter.append(kv);
-      lastKv = kv; // for the sanity check
-      ++kvsInCurrentWriter;
+      prepareWriterFor(cell);
+      currentWriter.append(cell);
+      lastCell = cell; // for the sanity check
+      ++cellsInCurrentWriter;
     }
 
-    private boolean isKvAfterCurrentWriter(KeyValue kv) {
+    private boolean isCellAfterCurrentWriter(Cell cell) {
       return ((currentWriterEndKey != StripeStoreFileManager.OPEN_KEY) &&
-            (comparator.compareRows(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+            (comparator.compareRows(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
                 currentWriterEndKey, 0, currentWriterEndKey.length) >= 0));
     }
 
@@ -215,18 +217,18 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       while (existingWriters.size() < boundaries.size() - 1) {
         createEmptyWriter();
       }
-      if (lastKv != null) {
+      if (lastCell != null) {
         sanityCheckRight(boundaries.get(boundaries.size() - 1),
-            lastKv.getRowArray(), lastKv.getRowOffset(), lastKv.getRowLength());
+            lastCell.getRowArray(), lastCell.getRowOffset(), lastCell.getRowLength());
       }
     }
 
-    private void prepareWriterFor(KeyValue kv) throws IOException {
-      if (currentWriter != null && !isKvAfterCurrentWriter(kv)) return; // Use same writer.
+    private void prepareWriterFor(Cell cell) throws IOException {
+      if (currentWriter != null && !isCellAfterCurrentWriter(cell)) return; // Use same writer.
 
       stopUsingCurrentWriter();
       // See if KV will be past the writer we are about to create; need to add another one.
-      while (isKvAfterCurrentWriter(kv)) {
+      while (isCellAfterCurrentWriter(cell)) {
         checkCanCreateWriter();
         createEmptyWriter();
       }
@@ -271,9 +273,9 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       if (currentWriter != null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Stopping to use a writer after [" + Bytes.toString(currentWriterEndKey)
-              + "] row; wrote out " + kvsInCurrentWriter + " kvs");
+              + "] row; wrote out " + cellsInCurrentWriter + " kvs");
         }
-        kvsInCurrentWriter = 0;
+        cellsInCurrentWriter = 0;
       }
       currentWriter = null;
       currentWriterEndKey = (existingWriters.size() + 1 == boundaries.size())
@@ -289,16 +291,16 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
    */
   public static class SizeMultiWriter extends StripeMultiFileWriter {
     private int targetCount;
-    private long targetKvs;
+    private long targetCells;
     private byte[] left;
     private byte[] right;
 
-    private KeyValue lastKv;
+    private Cell lastCell;
     private StoreFile.Writer currentWriter;
     protected byte[] lastRowInCurrentWriter = null;
-    private long kvsInCurrentWriter = 0;
-    private long kvsSeen = 0;
-    private long kvsSeenInPrevious = 0;
+    private long cellsInCurrentWriter = 0;
+    private long cellsSeen = 0;
+    private long cellsSeenInPrevious = 0;
 
     /**
      * @param targetCount The maximum count of writers that can be created.
@@ -309,7 +311,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
     public SizeMultiWriter(int targetCount, long targetKvs, byte[] left, byte[] right) {
       super();
       this.targetCount = targetCount;
-      this.targetKvs = targetKvs;
+      this.targetCells = targetKvs;
       this.left = left;
       this.right = right;
       int preallocate = Math.min(this.targetCount, 64);
@@ -318,28 +320,28 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
     }
 
     @Override
-    public void append(KeyValue kv) throws IOException {
+    public void append(Cell cell) throws IOException {
       // If we are waiting for opportunity to close and we started writing different row,
       // discard the writer and stop waiting.
       boolean doCreateWriter = false;
       if (currentWriter == null) {
         // First append ever, do a sanity check.
-        sanityCheckLeft(left, kv.getRowArray(), kv.getRowOffset(), kv.getRowLength());
+        sanityCheckLeft(left, cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
         doCreateWriter = true;
       } else if (lastRowInCurrentWriter != null
-          && !comparator.matchingRows(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+          && !comparator.matchingRows(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
               lastRowInCurrentWriter, 0, lastRowInCurrentWriter.length)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Stopping to use a writer after [" + Bytes.toString(lastRowInCurrentWriter)
-              + "] row; wrote out "  + kvsInCurrentWriter + " kvs");
+              + "] row; wrote out "  + cellsInCurrentWriter + " kvs");
         }
         lastRowInCurrentWriter = null;
-        kvsInCurrentWriter = 0;
-        kvsSeenInPrevious += kvsSeen;
+        cellsInCurrentWriter = 0;
+        cellsSeenInPrevious += cellsSeen;
         doCreateWriter = true;
       }
       if (doCreateWriter) {
-        byte[] boundary = existingWriters.isEmpty() ? left : kv.getRow(); // make a copy
+        byte[] boundary = existingWriters.isEmpty() ? left : cell.getRow(); // make a copy
         if (LOG.isDebugEnabled()) {
           LOG.debug("Creating new writer starting at [" + Bytes.toString(boundary) + "]");
         }
@@ -348,25 +350,25 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
         existingWriters.add(currentWriter);
       }
 
-      currentWriter.append(kv);
-      lastKv = kv; // for the sanity check
-      ++kvsInCurrentWriter;
-      kvsSeen = kvsInCurrentWriter;
+      currentWriter.append(cell);
+      lastCell = cell; // for the sanity check
+      ++cellsInCurrentWriter;
+      cellsSeen = cellsInCurrentWriter;
       if (this.sourceScanner != null) {
-        kvsSeen = Math.max(kvsSeen,
-            this.sourceScanner.getEstimatedNumberOfKvsScanned() - kvsSeenInPrevious);
+        cellsSeen = Math.max(cellsSeen,
+            this.sourceScanner.getEstimatedNumberOfKvsScanned() - cellsSeenInPrevious);
       }
 
       // If we are not already waiting for opportunity to close, start waiting if we can
       // create any more writers and if the current one is too big.
       if (lastRowInCurrentWriter == null
           && existingWriters.size() < targetCount
-          && kvsSeen >= targetKvs) {
-        lastRowInCurrentWriter = kv.getRow(); // make a copy
+          && cellsSeen >= targetCells) {
+        lastRowInCurrentWriter = cell.getRow(); // make a copy
         if (LOG.isDebugEnabled()) {
           LOG.debug("Preparing to start a new writer after [" + Bytes.toString(
-              lastRowInCurrentWriter) + "] row; observed " + kvsSeen + " kvs and wrote out "
-              + kvsInCurrentWriter + " kvs");
+              lastRowInCurrentWriter) + "] row; observed " + cellsSeen + " kvs and wrote out "
+              + cellsInCurrentWriter + " kvs");
         }
       }
     }
@@ -374,13 +376,13 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
     @Override
     protected void commitWritersInternal() throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Stopping with "  + kvsInCurrentWriter + " kvs in last writer" +
+        LOG.debug("Stopping with "  + cellsInCurrentWriter + " kvs in last writer" +
             ((this.sourceScanner == null) ? "" : ("; observed estimated "
                 + this.sourceScanner.getEstimatedNumberOfKvsScanned() + " KVs total")));
       }
-      if (lastKv != null) {
+      if (lastCell != null) {
         sanityCheckRight(
-            right, lastKv.getRowArray(), lastKv.getRowOffset(), lastKv.getRowLength());
+            right, lastCell.getRowArray(), lastCell.getRowOffset(), lastCell.getRowLength());
       }
 
       // When expired stripes were going to be merged into one, and if no writer was created during

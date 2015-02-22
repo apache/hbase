@@ -124,9 +124,7 @@ public class IndexBuilder {
     conf.set("index.tablename", tableName);
     conf.set("index.familyname", columnFamily);
     String[] fields = new String[args.length - 2];
-    for(int i = 0; i < fields.length; i++) {
-      fields[i] = args[i + 2];
-    }
+    System.arraycopy(args, 2, fields, 0, fields.length);
     conf.setStrings("index.fields", fields);
     Job job = new Job(conf, tableName);
     job.setJarByClass(IndexBuilder.class);

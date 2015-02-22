@@ -29,18 +29,19 @@ import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -52,7 +53,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 /*
  * This test verifies that the scenarios illustrated by HBASE-10850 work
  * w.r.t. essential column family optimization
@@ -66,7 +67,7 @@ public class TestSCVFWithMiniCluster {
   private static final byte[] QUALIFIER_FOO = Bytes.toBytes("foo");
   private static final byte[] QUALIFIER_BAR = Bytes.toBytes("bar");
 
-  private static HTable htable;
+  private static Table htable;
 
   private static Filter scanFilter;
 
@@ -82,7 +83,7 @@ public class TestSCVFWithMiniCluster {
     destroy(admin, HBASE_TABLE_NAME);
     create(admin, HBASE_TABLE_NAME, FAMILY_A, FAMILY_B);
     admin.close();
-    htable = new HTable(util.getConfiguration(), HBASE_TABLE_NAME);
+    htable = util.getConnection().getTable(HBASE_TABLE_NAME);
 
     /* Add some values */
     List<Put> puts = new ArrayList<Put>();

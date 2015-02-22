@@ -18,11 +18,14 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -46,7 +49,7 @@ import org.apache.hadoop.hbase.Stoppable;
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
 @InterfaceAudience.Private
-public interface LoadBalancer extends Configurable, Stoppable {
+public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObserver {
 
   /**
    * Set the current cluster status.  This allows a LoadBalancer to map host name to a server
@@ -86,6 +89,7 @@ public interface LoadBalancer extends Configurable, Stoppable {
    * @param servers
    * @return List of plans
    */
+  @Nullable
   Map<ServerName, List<HRegionInfo>> retainAssignment(
     Map<HRegionInfo, ServerName> regions,
     List<ServerName> servers
@@ -130,4 +134,10 @@ public interface LoadBalancer extends Configurable, Stoppable {
    * @param regionInfo
    */
   void regionOffline(HRegionInfo regionInfo);
+
+  /*
+   * Notification that config has changed
+   * @param conf
+   */
+  void onConfigurationChange(Configuration conf);
 }

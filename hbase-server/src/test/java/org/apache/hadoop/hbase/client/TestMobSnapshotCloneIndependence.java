@@ -31,12 +31,12 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -199,7 +199,7 @@ public class TestMobSnapshotCloneIndependence {
     HTable original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
     try {
 
-      SnapshotTestingUtils.loadData(UTIL, original, 500, TEST_FAM);
+      SnapshotTestingUtils.loadData(UTIL, localTableName, 500, TEST_FAM);
       final int origTableRowCount = MobSnapshotTestingUtils.countMobRows(original);
 
       // Take a snapshot
@@ -274,7 +274,7 @@ public class TestMobSnapshotCloneIndependence {
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
     HTable original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
-    SnapshotTestingUtils.loadData(UTIL, original, 500, TEST_FAM);
+    SnapshotTestingUtils.loadData(UTIL, localTableName, 500, TEST_FAM);
     final int loadedTableCount = MobSnapshotTestingUtils.countMobRows(original);
     System.out.println("Original table has: " + loadedTableCount + " rows");
 
@@ -330,7 +330,7 @@ public class TestMobSnapshotCloneIndependence {
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
     HTable original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
-    SnapshotTestingUtils.loadData(UTIL, original, 500, TEST_FAM);
+    SnapshotTestingUtils.loadData(UTIL, localTableName, 500, TEST_FAM);
 
     final String snapshotNameAsString = "snapshot_" + localTableName;
 

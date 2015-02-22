@@ -18,20 +18,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.UUID;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -40,14 +28,21 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -61,6 +56,16 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
+
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.UUID;
 
 
 /**
@@ -77,6 +82,8 @@ public class Import extends Configured implements Tool {
   public final static String FILTER_ARGS_CONF_KEY = "import.filter.args";
   public final static String TABLE_NAME = "import.table.name";
   public final static String WAL_DURABILITY = "import.wal.durability";
+
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   /**
    * A mapper that just writes out KeyValues.
@@ -170,7 +177,22 @@ public class Import extends Configured implements Tool {
 
         kv = convertKv(kv, cfRenameMap);
         // Deletes and Puts are gathered and written when finished
-        if (CellUtil.isDelete(kv)) {
+        /*
+         * If there are sequence of mutations and tombstones in an Export, and after Import the same
+         * sequence should be restored as it is. If we combine all Delete tombstones into single
+         * request then there is chance of ignoring few DeleteFamily tombstones, because if we
+         * submit multiple DeleteFamily tombstones in single Delete request then we are maintaining
+         * only newest in hbase table and ignoring other. Check - HBASE-12065
+         */
+        if (CellUtil.isDeleteFamily(kv)) {
+          Delete deleteFamily = new Delete(key.get());
+          deleteFamily.addDeleteMarker(kv);
+          if (durability != null) {
+            deleteFamily.setDurability(durability);
+          }
+          deleteFamily.setClusterIds(clusterIds);
+          context.write(key, deleteFamily);
+        } else if (CellUtil.isDelete(kv)) {
           if (delete == null) {
             delete = new Delete(key.get());
           }
@@ -213,17 +235,25 @@ public class Import extends Configured implements Tool {
       }
       // TODO: This is kind of ugly doing setup of ZKW just to read the clusterid.
       ZooKeeperWatcher zkw = null;
+      Exception ex = null;
       try {
         zkw = new ZooKeeperWatcher(conf, context.getTaskAttemptID().toString(), null);
         clusterIds = Collections.singletonList(ZKClusterId.getUUIDForCluster(zkw));
       } catch (ZooKeeperConnectionException e) {
+        ex = e;
         LOG.error("Problem connecting to ZooKeper during task setup", e);
       } catch (KeeperException e) {
+        ex = e;
         LOG.error("Problem reading ZooKeeper data during task setup", e);
       } catch (IOException e) {
+        ex = e;
         LOG.error("Problem setting up task", e);
       } finally {
         if (zkw != null) zkw.close();
+      }
+      if (clusterIds == null) {
+        // exit early if setup fails
+        throw new RuntimeException(ex);
       }
     }
   }
@@ -399,10 +429,10 @@ public class Import extends Configured implements Tool {
    */
   public static Job createSubmittableJob(Configuration conf, String[] args)
   throws IOException {
-    String tableName = args[0];
-    conf.set(TABLE_NAME, tableName);
+    TableName tableName = TableName.valueOf(args[0]);
+    conf.set(TABLE_NAME, tableName.getNameAsString());
     Path inputDir = new Path(args[1]);
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(Importer.class);
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(SequenceFileInputFormat.class);
@@ -420,20 +450,23 @@ public class Import extends Configured implements Tool {
 
     if (hfileOutPath != null) {
       job.setMapperClass(KeyValueImporter.class);
-      HTable table = new HTable(conf, tableName);
-      job.setReducerClass(KeyValueSortReducer.class);
-      Path outputDir = new Path(hfileOutPath);
-      FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-      job.setMapOutputValueClass(KeyValue.class);
-      HFileOutputFormat.configureIncrementalLoad(job, table);
-      TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
-          com.google.common.base.Preconditions.class);
+      try (Connection conn = ConnectionFactory.createConnection(conf); 
+          Table table = conn.getTable(tableName);
+          RegionLocator regionLocator = conn.getRegionLocator(tableName)){
+        job.setReducerClass(KeyValueSortReducer.class);
+        Path outputDir = new Path(hfileOutPath);
+        FileOutputFormat.setOutputPath(job, outputDir);
+        job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+        job.setMapOutputValueClass(KeyValue.class);
+        HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
+        TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+            com.google.common.base.Preconditions.class);
+      }
     } else {
       // No reducers.  Just write straight to table.  Call initTableReducerJob
       // because it sets up the TableOutputFormat.
       job.setMapperClass(Importer.class);
-      TableMapReduceUtil.initTableReducerJob(tableName, null, job);
+      TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null, job);
       job.setNumReduceTasks(0);
     }
     return job;
@@ -461,6 +494,8 @@ public class Import extends Configured implements Tool {
         + " Filter#filterKeyValue(KeyValue) method to determine if the KeyValue should be added;"
         + " Filter.ReturnCode#INCLUDE and #INCLUDE_AND_NEXT_COL will be considered as including"
         + " the KeyValue.");
+    System.err.println("   -D " + JOB_NAME_CONF_KEY
+        + "=jobName - use the specified mapreduce job name for the import");
     System.err.println("For performance consider the following options:\n"
         + "  -Dmapreduce.map.speculative=false\n"
         + "  -Dmapreduce.reduce.speculative=false\n"
@@ -478,17 +513,22 @@ public class Import extends Configured implements Tool {
   public static void flushRegionsIfNecessary(Configuration conf) throws IOException,
       InterruptedException {
     String tableName = conf.get(TABLE_NAME);
-    HBaseAdmin hAdmin = null;
+    Admin hAdmin = null;
+    Connection connection = null;
     String durability = conf.get(WAL_DURABILITY);
     // Need to flush if the data is written to hbase and skip wal is enabled.
     if (conf.get(BULK_OUTPUT_CONF_KEY) == null && durability != null
         && Durability.SKIP_WAL.name().equalsIgnoreCase(durability)) {
       try {
-        hAdmin = new HBaseAdmin(conf);
-        hAdmin.flush(tableName);
+        connection = ConnectionFactory.createConnection(conf);
+        hAdmin = connection.getAdmin();
+        hAdmin.flush(TableName.valueOf(tableName));
       } finally {
         if (hAdmin != null) {
           hAdmin.close();
+        }
+        if (connection != null) {
+          connection.close();
         }
       }
     }

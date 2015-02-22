@@ -23,17 +23,16 @@
   import="java.util.Map"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
-  import="org.apache.hadoop.hbase.client.HBaseAdmin"
-  import="org.apache.hadoop.hbase.client.HConnectionManager"
+  import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.ServerLoad"
   import="org.apache.hadoop.hbase.RegionLoad"
+  import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
-  import="org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest"
   import="org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState"
   import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
@@ -41,21 +40,23 @@
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
-  HBaseAdmin hbadmin = new HBaseAdmin(conf);
+
   MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
-  HTable table = new HTable(conf, fqtn);
+  HTable table = (HTable) master.getConnection().getTable(fqtn);
   String tableHeader;
   boolean withReplica = false;
   if (table.getTableDescriptor().getRegionReplication() > 1) {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th><th>ReplicaID</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr>";
     withReplica = true;
   } else {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th></tr>";
   }
   ServerName rl = metaTableLocator.getMetaRegionLocation(master.getZooKeeper());
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
+  int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
+                        HConstants.DEFAULT_META_REPLICA_NUM);
   Map<String, Integer> frags = null;
   if (showFragmentation) {
       frags = FSUtils.getTableFragmentation(master);
@@ -125,21 +126,23 @@
         </div>
 <p><hr><p>
 <%
-  if (action.equals("split")) {
-    if (key != null && key.length() > 0) {
-      hbadmin.split(key);
-    } else {
-      hbadmin.split(fqtn);
-    }
+  try (Admin admin = master.getConnection().getAdmin()) {
+    if (action.equals("split")) {
+      if (key != null && key.length() > 0) {
+        admin.splitRegion(Bytes.toBytes(key));
+      } else {
+        admin.split(TableName.valueOf(fqtn));
+      }
     
     %> Split request accepted. <%
-  } else if (action.equals("compact")) {
-    if (key != null && key.length() > 0) {
-      hbadmin.compact(key);
-    } else {
-      hbadmin.compact(fqtn);
-    }
+    } else if (action.equals("compact")) {
+      if (key != null && key.length() > 0) {
+        admin.compactRegion(Bytes.toBytes(key));
+      } else {
+        admin.compact(TableName.valueOf(fqtn));
+      }
     %> Compact request accepted. <%
+    }
   }
 %>
 <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
@@ -203,22 +206,28 @@
 %>
 <%= tableHeader %>
 <%
-  // NOTE: Presumes one meta region only.
-  HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
-  ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), 1);
-  for (int i = 0; i < 1; i++) {
-    String url = "//" + metaLocation.getHostname() + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
+  // NOTE: Presumes meta with one or more replicas
+  for (int j = 0; j < numMetaReplicas; j++) {
+    HRegionInfo meta = RegionReplicaUtil.getRegionInfoForReplica(
+                            HRegionInfo.FIRST_META_REGIONINFO, j);
+    ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), j, 1);
+    for (int i = 0; i < 1; i++) {
+      String url = "//" + metaLocation.getHostname() + ":" +
+                   master.getRegionServerInfoPort(metaLocation) + "/";
 %>
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
     <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
-    <td>-</td>
     <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
+    <td>-</td>
+    <td>-</td>
 </tr>
 <%  } %>
+<%} %>
 </table>
 <%} else {
+  Admin admin = master.getConnection().getAdmin();
   try { %>
 <h2>Table Attributes</h2>
 <table class="table table-striped">
@@ -229,7 +238,7 @@
   </tr>
   <tr>
       <td>Enabled</td>
-      <td><%= hbadmin.isTableEnabled(table.getTableName()) %></td>
+      <td><%= admin.isTableEnabled(table.getName()) %></td>
       <td>Is the table enabled</td>
   </tr>
   <tr>
@@ -237,7 +246,7 @@
       <td>
 <%
   try {
-    CompactionState compactionState = hbadmin.getCompactionState(table.getTableName());
+    CompactionState compactionState = admin.getCompactionState(table.getName());
 %>
 <%= compactionState %>
 <%
@@ -268,7 +277,7 @@
     HRegionInfo regionInfo = hriEntry.getKey();
     ServerName addr = hriEntry.getValue();
     long req = 0;
-
+    float locality = 0.0f;
     String urlRegionServer = null;
 
     if (addr != null) {
@@ -277,6 +286,7 @@
         Map<byte[], RegionLoad> map = sl.getRegionsLoad();
         if (map.containsKey(regionInfo.getRegionName())) {
           req = map.get(regionInfo.getRegionName()).getRequestsCount();
+          locality = map.get(regionInfo.getRegionName()).getDataLocality();
         }
         Integer i = regDistribution.get(addr);
         if (null == i) i = Integer.valueOf(0);
@@ -305,6 +315,7 @@
                     conf))) %></td>
   <td><%= escapeXml(Bytes.toStringBinary(HRegionInfo.getEndKeyForDisplay(regionInfo,
                     conf))) %></td>
+  <td><%= locality%></td>
   <td><%= req%></td>
   <%
   if (withReplica) {
@@ -332,10 +343,10 @@
 <% }
 } catch(Exception ex) {
   ex.printStackTrace(System.err);
+} finally {
+  admin.close();
 }
 } // end else
-
-HConnectionManager.deleteConnection(hbadmin.getConfiguration());
 %>
 
 

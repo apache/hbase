@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataNumberString
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataQualifierByteOrdering;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataRandomKeyValues;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataRandomKeyValuesWithTags;
+import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataSearchWithPrefix;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataSearcherRowMiss;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataSimple;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataSingleQualifier;
@@ -56,7 +57,7 @@ public interface TestRowData {
 
   void individualSearcherAssertions(CellSearcher searcher);
 
-  class InMemory {
+  static class InMemory {
 
     /*
      * The following are different styles of data that the codec may encounter.  Having these small
@@ -87,6 +88,9 @@ public interface TestRowData {
       all.add(new TestRowDataExerciseFInts());
       all.add(new TestRowDataRandomKeyValues());
       all.add(new TestRowDataRandomKeyValuesWithTags());
+      
+      //test data for HBase-12078
+      all.add(new TestRowDataSearchWithPrefix());
       return all;
     }
 

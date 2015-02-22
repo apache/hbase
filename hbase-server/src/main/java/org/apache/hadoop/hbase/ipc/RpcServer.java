@@ -44,6 +44,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -66,8 +67,8 @@ import javax.security.sasl.SaslServer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -119,7 +120,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.htrace.TraceInfo;
+import org.apache.htrace.TraceInfo;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.BlockingService;
@@ -146,9 +147,9 @@ import com.google.protobuf.TextFormat;
  * and keep taking while the server is up.
  *
  * CallRunner#run executes the call.  When done, asks the included Call to put itself on new
- * queue for {@link Responder} to pull from and return result to client.
+ * queue for Responder to pull from and return result to client.
  *
- * @see RpcClient
+ * @see RpcClientImpl
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
@@ -195,8 +196,9 @@ public class RpcServer implements RpcServerInterface {
   static final ThreadLocal<MonitoredRPCHandler> MONITORED_RPC
       = new ThreadLocal<MonitoredRPCHandler>();
 
-  protected final InetSocketAddress isa;
+  protected final InetSocketAddress bindAddress;
   protected int port;                             // port we listen on
+  protected InetSocketAddress address;            // inet address we listen on
   private int readThreads;                        // number of read threads
   protected int maxIdleTime;                      // the maximum idle time after
                                                   // which a client may be
@@ -495,6 +497,10 @@ public class RpcServer implements RpcServerInterface {
         this.responder.doRespond(this);
       }
     }
+
+    public UserGroupInformation getRemoteUser() {
+      return connection.user;
+    }
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
@@ -520,16 +526,18 @@ public class RpcServer implements RpcServerInterface {
       acceptChannel = ServerSocketChannel.open();
       acceptChannel.configureBlocking(false);
 
-      // Bind the server socket to the local host and port
-      bind(acceptChannel.socket(), isa, backlogLength);
+      // Bind the server socket to the binding addrees (can be different from the default interface)
+      bind(acceptChannel.socket(), bindAddress, backlogLength);
       port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
+      address = (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
       // create a selector;
       selector= Selector.open();
 
       readers = new Reader[readThreads];
       readPool = Executors.newFixedThreadPool(readThreads,
         new ThreadFactoryBuilder().setNameFormat(
-          "RpcServer.reader=%d,port=" + port).setDaemon(true).build());
+          "RpcServer.reader=%d,bindAddress=" + bindAddress.getHostName() +
+          ",port=" + port).setDaemon(true).build());
       for (int i = 0; i < readThreads; ++i) {
         Reader reader = new Reader();
         readers[i] = reader;
@@ -551,6 +559,7 @@ public class RpcServer implements RpcServerInterface {
       Reader() throws IOException {
         this.readSelector = Selector.open();
       }
+      @Override
       public void run() {
         try {
           doRunLoop();
@@ -680,6 +689,7 @@ public class RpcServer implements RpcServerInterface {
                   doAccept(key);
               }
             } catch (IOException ignored) {
+              if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
             }
             key = null;
           }
@@ -717,7 +727,9 @@ public class RpcServer implements RpcServerInterface {
         try {
           acceptChannel.close();
           selector.close();
-        } catch (IOException ignored) { }
+        } catch (IOException ignored) {
+          if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
+        }
 
         selector= null;
         acceptChannel= null;
@@ -744,7 +756,7 @@ public class RpcServer implements RpcServerInterface {
     }
 
     InetSocketAddress getAddress() {
-      return (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
+      return address;
     }
 
     void doAccept(SelectionKey key) throws IOException, OutOfMemoryError {
@@ -865,22 +877,28 @@ public class RpcServer implements RpcServerInterface {
 
     /**
      * Take the list of the connections that want to write, and register them
-     *  in the selector.
+     * in the selector.
      */
-    private void registerWrites(){
+    private void registerWrites() {
       Iterator<Connection> it = writingCons.iterator();
-      while (it.hasNext()){
+      while (it.hasNext()) {
         Connection c = it.next();
         it.remove();
         SelectionKey sk = c.channel.keyFor(writeSelector);
-        if (sk == null){
-          try {
-            c.channel.register(writeSelector, SelectionKey.OP_WRITE, c);
-          } catch (ClosedChannelException e) {
-            // ignore: the client went away.
+        try {
+          if (sk == null) {
+            try {
+              c.channel.register(writeSelector, SelectionKey.OP_WRITE, c);
+            } catch (ClosedChannelException e) {
+              // ignore: the client went away.
+              if (LOG.isTraceEnabled()) LOG.trace("ignored", e);
+            }
+          } else {
+            sk.interestOps(SelectionKey.OP_WRITE);
           }
-        } else {
-          sk.interestOps(SelectionKey.OP_WRITE);
+        } catch (CancelledKeyException e) {
+          // ignore: the client went away.
+          if (LOG.isTraceEnabled()) LOG.trace("ignored", e);
         }
       }
     }
@@ -1043,15 +1061,17 @@ public class RpcServer implements RpcServerInterface {
     /**
      * Process all the responses for this connection
      *
-     * @return true if all the calls were processed or that someone else is doing it. false if there
-     * is still some work to do. In this case, we expect the caller to delay us.
+     * @return true if all the calls were processed or that someone else is doing it.
+     * false if there * is still some work to do. In this case, we expect the caller to
+     * delay us.
      * @throws IOException
      */
     private boolean processAllResponses(final Connection connection) throws IOException {
       // We want only one writer on the channel for a connection at a time.
       connection.responseWriteLock.lock();
       try {
-        for (int i = 0; i < 20; i++) { // protection if some handlers manage to need all the responder
+        for (int i = 0; i < 20; i++) {
+          // protection if some handlers manage to need all the responder
           Call call = connection.responseQueue.pollFirst();
           if (call == null) {
             return true;
@@ -1248,8 +1268,8 @@ public class RpcServer implements RpcServerInterface {
     private void saslReadAndProcess(byte[] saslToken) throws IOException,
         InterruptedException {
       if (saslContextEstablished) {
-        if (LOG.isDebugEnabled())
-          LOG.debug("Have read input token of size " + saslToken.length
+        if (LOG.isTraceEnabled())
+          LOG.trace("Have read input token of size " + saslToken.length
               + " for processing by saslServer.unwrap()");
 
         if (!useWrap) {
@@ -1274,8 +1294,7 @@ public class RpcServer implements RpcServerInterface {
                       secretManager, this));
               break;
             default:
-              UserGroupInformation current = UserGroupInformation
-              .getCurrentUser();
+              UserGroupInformation current = UserGroupInformation.getCurrentUser();
               String fullName = current.getUserName();
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Kerberos principal name is " + fullName);
@@ -1397,9 +1416,9 @@ public class RpcServer implements RpcServerInterface {
       int count;
       // Check for 'HBas' magic.
       this.dataLengthBuffer.flip();
-      if (!HConstants.RPC_HEADER.equals(dataLengthBuffer)) {
+      if (!Arrays.equals(HConstants.RPC_HEADER, dataLengthBuffer.array())) {
         return doBadPreambleHandling("Expected HEADER=" +
-            Bytes.toStringBinary(HConstants.RPC_HEADER.array()) +
+            Bytes.toStringBinary(HConstants.RPC_HEADER) +
             " but received HEADER=" + Bytes.toStringBinary(dataLengthBuffer.array()) +
             " from " + toString());
       }
@@ -1704,7 +1723,8 @@ public class RpcServer implements RpcServerInterface {
             responder, totalRequestSize, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, callTooBig, new CallQueueTooBigException(),
-          "Call queue is full, is hbase.ipc.server.max.callqueue.size too small?");
+          "Call queue is full on " + getListenerAddress() +
+          ", is hbase.ipc.server.max.callqueue.size too small?");
         responder.doRespond(callTooBig);
         return;
       }
@@ -1730,7 +1750,8 @@ public class RpcServer implements RpcServerInterface {
             buf, offset, buf.length);
         }
       } catch (Throwable t) {
-        String msg = "Unable to read call parameter from client " + getHostAddress();
+        String msg = getListenerAddress() + " is unable to read call parameter from client " +
+            getHostAddress();
         LOG.warn(msg, t);
 
         // probably the hbase hadoop version does not match the running hadoop version
@@ -1855,17 +1876,19 @@ public class RpcServer implements RpcServerInterface {
    * instance else pass null for no authentication check.
    * @param name Used keying this rpc servers' metrics and for naming the Listener thread.
    * @param services A list of services.
-   * @param isa Where to listen
-   * @throws IOException
+   * @param bindAddress Where to listen
+   * @param conf
+   * @param scheduler
    */
   public RpcServer(final Server server, final String name,
       final List<BlockingServiceAndInterface> services,
-      final InetSocketAddress isa, Configuration conf,
+      final InetSocketAddress bindAddress, Configuration conf,
       RpcScheduler scheduler)
-  throws IOException {
+      throws IOException {
+
     this.server = server;
     this.services = services;
-    this.isa = isa;
+    this.bindAddress = bindAddress;
     this.conf = conf;
     this.socketSendBufferSize = 0;
     this.maxQueueSize =
@@ -2000,6 +2023,7 @@ public class RpcServer implements RpcServerInterface {
    * the return response has protobuf response payload. On failure, the
    * exception name and the stack trace are returned in the protobuf response.
    */
+  @Override
   public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
   throws IOException {
@@ -2154,6 +2178,7 @@ public class RpcServer implements RpcServerInterface {
   /**
    * Returns the metrics instance for reporting RPC call statistics
    */
+  @Override
   public MetricsHBaseServer getMetrics() {
     return metrics;
   }
@@ -2366,6 +2391,7 @@ public class RpcServer implements RpcServerInterface {
     }
   }
 
+  @Override
   public RpcScheduler getScheduler() {
     return scheduler;
   }

@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.fs;
 
-
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.ServerSocket;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,14 +38,19 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -64,7 +72,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests for the hdfs fix from HBASE-6435.
  */
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 public class TestBlockReorder {
   private static final Log LOG = LogFactory.getLog(TestBlockReorder.class);
 
@@ -167,11 +175,12 @@ public class TestBlockReorder {
           public void reorderBlocks(Configuration c, LocatedBlocks lbs, String src) {
             for (LocatedBlock lb : lbs.getLocatedBlocks()) {
               if (lb.getLocations().length > 1) {
-                if (lb.getLocations()[0].getHostName().equals(lookup)) {
+                DatanodeInfo[] infos = lb.getLocations();
+                if (infos[0].getHostName().equals(lookup)) {
                   LOG.info("HFileSystem bad host, inverting");
-                  DatanodeInfo tmp = lb.getLocations()[0];
-                  lb.getLocations()[0] = lb.getLocations()[1];
-                  lb.getLocations()[1] = tmp;
+                  DatanodeInfo tmp = infos[0];
+                  infos[0] = infos[1];
+                  infos[1] = tmp;
                 }
               }
             }
@@ -243,7 +252,7 @@ public class TestBlockReorder {
     byte[] sb = "sb".getBytes();
     htu.startMiniZKCluster();
 
-    MiniHBaseCluster hbm = htu.startMiniHBaseCluster(1, 0);
+    MiniHBaseCluster hbm = htu.startMiniHBaseCluster(1, 1);
     hbm.waitForActiveAndReadyMaster();
     HRegionServer targetRs = hbm.getMaster();
 
@@ -259,7 +268,7 @@ public class TestBlockReorder {
     // We use the regionserver file system & conf as we expect it to have the hook.
     conf = targetRs.getConfiguration();
     HFileSystem rfs = (HFileSystem) targetRs.getFileSystem();
-    HTable h = htu.createTable("table".getBytes(), sb);
+    Table h = htu.createTable(TableName.valueOf("table"), sb);
 
     // Now, we have 4 datanodes and a replication count of 3. So we don't know if the datanode
     // with the same node will be used. We can't really stop an existing datanode, this would
@@ -276,7 +285,32 @@ public class TestBlockReorder {
 
     int nbTest = 0;
     while (nbTest < 10) {
-      htu.getHBaseAdmin().rollHLogWriter(targetRs.getServerName().toString());
+      final List<HRegion> regions = targetRs.getOnlineRegions(h.getName());
+      final CountDownLatch latch = new CountDownLatch(regions.size());
+      // listen for successful log rolls
+      final WALActionsListener listener = new WALActionsListener.Base() {
+            @Override
+            public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
+              latch.countDown();
+            }
+          };
+      for (HRegion region : regions) {
+        region.getWAL().registerWALActionsListener(listener);
+      }
+
+      htu.getHBaseAdmin().rollWALWriter(targetRs.getServerName());
+
+      // wait
+      try {
+        latch.await();
+      } catch (InterruptedException exception) {
+        LOG.warn("Interrupted while waiting for the wal of '" + targetRs + "' to roll. If later " +
+            "tests fail, it's probably because we should still be waiting.");
+        Thread.currentThread().interrupt();
+      }
+      for (HRegion region : regions) {
+        region.getWAL().unregisterWALActionsListener(listener);
+      }
 
       // We need a sleep as the namenode is informed asynchronously
       Thread.sleep(100);
@@ -292,37 +326,52 @@ public class TestBlockReorder {
       // As we wrote a put, we should have at least one log file.
       Assert.assertTrue(hfs.length >= 1);
       for (HdfsFileStatus hf : hfs) {
-        LOG.info("Log file found: " + hf.getLocalName() + " in " + rootDir);
-        String logFile = rootDir + "/" + hf.getLocalName();
-        FileStatus fsLog = rfs.getFileStatus(new Path(logFile));
+        // Because this is a live cluster, log files might get archived while we're processing
+        try {
+          LOG.info("Log file found: " + hf.getLocalName() + " in " + rootDir);
+          String logFile = rootDir + "/" + hf.getLocalName();
+          FileStatus fsLog = rfs.getFileStatus(new Path(logFile));
 
-        LOG.info("Checking log file: " + logFile);
-        // Now checking that the hook is up and running
-        // We can't call directly getBlockLocations, it's not available in HFileSystem
-        // We're trying multiple times to be sure, as the order is random
+          LOG.info("Checking log file: " + logFile);
+          // Now checking that the hook is up and running
+          // We can't call directly getBlockLocations, it's not available in HFileSystem
+          // We're trying multiple times to be sure, as the order is random
 
-        BlockLocation[] bls = rfs.getFileBlockLocations(fsLog, 0, 1);
-        if (bls.length > 0) {
-          BlockLocation bl = bls[0];
+          BlockLocation[] bls = rfs.getFileBlockLocations(fsLog, 0, 1);
+          if (bls.length > 0) {
+            BlockLocation bl = bls[0];
 
-          LOG.info(bl.getHosts().length + " replicas for block 0 in " + logFile + " ");
-          for (int i = 0; i < bl.getHosts().length - 1; i++) {
-            LOG.info(bl.getHosts()[i] + "    " + logFile);
-            Assert.assertNotSame(bl.getHosts()[i], host4);
-          }
-          String last = bl.getHosts()[bl.getHosts().length - 1];
-          LOG.info(last + "    " + logFile);
-          if (host4.equals(last)) {
-            nbTest++;
-            LOG.info(logFile + " is on the new datanode and is ok");
-            if (bl.getHosts().length == 3) {
-              // We can test this case from the file system as well
-              // Checking the underlying file system. Multiple times as the order is random
-              testFromDFS(dfs, logFile, repCount, host4);
-
-              // now from the master
-              testFromDFS(mdfs, logFile, repCount, host4);
+            LOG.info(bl.getHosts().length + " replicas for block 0 in " + logFile + " ");
+            for (int i = 0; i < bl.getHosts().length - 1; i++) {
+              LOG.info(bl.getHosts()[i] + "    " + logFile);
+              Assert.assertNotSame(bl.getHosts()[i], host4);
             }
+            String last = bl.getHosts()[bl.getHosts().length - 1];
+            LOG.info(last + "    " + logFile);
+            if (host4.equals(last)) {
+              nbTest++;
+              LOG.info(logFile + " is on the new datanode and is ok");
+              if (bl.getHosts().length == 3) {
+                // We can test this case from the file system as well
+                // Checking the underlying file system. Multiple times as the order is random
+                testFromDFS(dfs, logFile, repCount, host4);
+
+                // now from the master
+                testFromDFS(mdfs, logFile, repCount, host4);
+              }
+            }
+          }
+        } catch (FileNotFoundException exception) {
+          LOG.debug("Failed to find log file '" + hf.getLocalName() + "'; it probably was " +
+              "archived out from under us so we'll ignore and retry. If this test hangs " +
+              "indefinitely you should treat this failure as a symptom.", exception);
+        } catch (RemoteException exception) {
+          if (exception.unwrapRemoteException() instanceof FileNotFoundException) {
+            LOG.debug("Failed to find log file '" + hf.getLocalName() + "'; it probably was " +
+                "archived out from under us so we'll ignore and retry. If this test hangs " +
+                "indefinitely you should treat this failure as a symptom.", exception);
+          } else {
+            throw exception;
           }
         }
       }
@@ -412,7 +461,7 @@ public class TestBlockReorder {
 
       // Check that it will be possible to extract a ServerName from our construction
       Assert.assertNotNull("log= " + pseudoLogFile,
-          HLogUtil.getServerNameFromHLogDirectoryName(dfs.getConf(), pseudoLogFile));
+          DefaultWALProvider.getServerNameFromWALDirectoryName(dfs.getConf(), pseudoLogFile));
 
       // And check we're doing the right reorder.
       lrb.reorderBlocks(conf, l, pseudoLogFile);

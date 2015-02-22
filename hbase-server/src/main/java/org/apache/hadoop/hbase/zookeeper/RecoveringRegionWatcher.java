@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.zookeeper.KeeperException;
@@ -63,7 +63,7 @@ public class RecoveringRegionWatcher extends ZooKeeperListener {
       region.setRecovering(false);
     }
 
-    LOG.info(path + " znode deleted. Region: " + regionName + " completes recovery.");
+    LOG.info(path + " deleted; " + regionName + " recovered.");
   }
 
   @Override

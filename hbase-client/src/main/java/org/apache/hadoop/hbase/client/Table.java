@@ -18,33 +18,38 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+
 /**
  * Used to communicate with a single HBase table.
- * Obtain an instance from an {@link HConnection}.
+ * Obtain an instance from a {@link Connection} and call {@link #close()} afterwards.
  *
+ * <p>Table can be used to get, put, delete or scan data from a table.
+ * @see ConnectionFactory
+ * @see Connection
+ * @see Admin
+ * @see RegionLocator
  * @since 0.99.0
  */
-
 @InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public interface Table extends Closeable {
   /**
    * Gets the fully qualified table name instance of this table.
@@ -214,9 +219,7 @@ public interface Table extends Closeable {
 
   /**
    * Puts some data in the table.
-   * <p>
-   * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
-   * until the internal buffer is full.
+   * 
    * @param put The data to put.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0
@@ -225,9 +228,6 @@ public interface Table extends Closeable {
 
   /**
    * Puts some data in the table, in batch.
-   * <p>
-   * If {@link #isAutoFlush isAutoFlush} is false, the update is buffered
-   * until the internal buffer is full.
    * <p>
    * This can be used for group commit, or for submitting user defined
    * batches.  The writeBuffer will be periodically inspected while the List
@@ -493,30 +493,6 @@ public interface Table extends Closeable {
     final Batch.Callback<R> callback) throws ServiceException, Throwable;
 
   /**
-   * Tells whether or not 'auto-flush' is turned on.
-   *
-   * @return {@code true} if 'auto-flush' is enabled (default), meaning
-   * {@link Put} operations don't get buffered/delayed and are immediately
-   * executed.
-   */
-  boolean isAutoFlush();
-
-  /**
-   * Executes all the buffered {@link Put} operations.
-   * <p>
-   * This method gets called once automatically for every {@link Put} or batch
-   * of {@link Put}s (when <code>put(List<Put>)</code> is used) when
-   * {@link #isAutoFlush} is {@code true}.
-   * @throws IOException if a remote or network exception occurs.
-   */
-  void flushCommits() throws IOException;
-
-  /**
-   * Set the autoFlush behavior, without changing the value of {@code clearBufferOnFail}
-   */
-  void setAutoFlushTo(boolean autoFlush);
-
-  /**
    * Returns the maximum size in bytes of the write buffer for this HTable.
    * <p>
    * The default value comes from the configuration parameter
@@ -534,7 +510,6 @@ public interface Table extends Closeable {
    * @throws IOException if a remote or network exception occurs.
    */
   void setWriteBufferSize(long writeBufferSize) throws IOException;
-
 
   /**
    * Creates an instance of the given {@link com.google.protobuf.Service} subclass for each table
@@ -598,4 +573,21 @@ public interface Table extends Closeable {
   <R extends Message> void batchCoprocessorService(Descriptors.MethodDescriptor methodDescriptor,
     Message request, byte[] startKey, byte[] endKey, R responsePrototype,
     Batch.Callback<R> callback) throws ServiceException, Throwable;
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value.
+   * If it does, it performs the row mutations.  If the passed value is null, the check
+   * is for the lack of column (ie: non-existence)
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param compareOp the comparison operator
+   * @param value the expected value
+   * @param mutation  mutations to perform if check succeeds
+   * @throws IOException e
+   * @return true if the new put was executed, false otherwise
+   */
+  boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareFilter.CompareOp compareOp, byte[] value, RowMutations mutation) throws IOException;
 }

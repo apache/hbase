@@ -29,11 +29,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
@@ -42,13 +44,14 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * TestGet is a medley of tests of get all done up as a single test.
  * This class
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestGetClosestAtOrBefore extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
 
@@ -64,14 +67,15 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
 
 
 
+  @Test
   public void testUsingMetaAndBinary() throws IOException {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = testDir;
     // Up flush size else we bind up when we use default catalog flush of 16k.
-    HTableDescriptor.META_TABLEDESC.setMemStoreFlushSize(64 * 1024 * 1024);
+    fsTableDescriptors.get(TableName.META_TABLE_NAME).setMemStoreFlushSize(64 * 1024 * 1024);
 
-    HRegion mr = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-      rootdir, this.conf, HTableDescriptor.META_TABLEDESC);
+    HRegion mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
+        rootdir, this.conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
     try {
     // Write rows for three tables 'A', 'B', and 'C'.
     for (char c = 'A'; c < 'D'; c++) {
@@ -133,14 +137,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     findRow(mr, 'C', 46, -1);
     findRow(mr, 'C', 43, -1);
     } finally {
-      if (mr != null) {
-        try {
-          mr.close();
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-        mr.getLog().closeAndDelete();
-      }
+      HBaseTestingUtility.closeRegionAndWAL(mr);
     }
   }
 
@@ -187,6 +184,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
    * Test file of multiple deletes and with deletes as final key.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-751">HBASE-751</a>
    */
+  @Test
   public void testGetClosestRowBefore3() throws IOException{
     HRegion region = null;
     byte [] c0 = COLUMNS[0];
@@ -289,12 +287,13 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
-        region.getLog().closeAndDelete();
+        region.getWAL().close();
       }
     }
   }
 
   /** For HBASE-694 */
+  @Test
   public void testGetClosestRowBefore2() throws IOException{
     HRegion region = null;
     byte [] c0 = COLUMNS[0];
@@ -344,7 +343,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
-        region.getLog().closeAndDelete();
+        region.getWAL().close();
       }
     }
   }

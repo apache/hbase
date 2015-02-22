@@ -19,14 +19,25 @@
 
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.coprocessor.*;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-
 import java.io.IOException;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.MasterObserver;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 
 /**
  * Provides the coprocessor framework and environment for master oriented
@@ -135,6 +146,50 @@ public class MasterCoprocessorHost
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postModifyNamespace(ctx, ns);
+      }
+    });
+  }
+
+  public void preGetNamespaceDescriptor(final String namespaceName)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preGetNamespaceDescriptor(ctx, namespaceName);
+      }
+    });
+  }
+
+  public void postGetNamespaceDescriptor(final NamespaceDescriptor ns)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postGetNamespaceDescriptor(ctx, ns);
+      }
+    });
+  }
+
+  public boolean preListNamespaceDescriptors(final List<NamespaceDescriptor> descriptors)
+      throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preListNamespaceDescriptors(ctx, descriptors);
+      }
+    });
+  }
+
+  public void postListNamespaceDescriptors(final List<NamespaceDescriptor> descriptors)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postListNamespaceDescriptors(ctx, descriptors);
       }
     });
   }
@@ -716,6 +771,26 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preListSnapshot(final SnapshotDescription snapshot) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preListSnapshot(ctx, snapshot);
+      }
+    });
+  }
+
+  public void postListSnapshot(final SnapshotDescription snapshot) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postListSnapshot(ctx, snapshot);
+      }
+    });
+  }
+
   public void preCloneSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
@@ -781,23 +856,45 @@ public class MasterCoprocessorHost
   }
 
   public boolean preGetTableDescriptors(final List<TableName> tableNamesList,
-      final List<HTableDescriptor> descriptors) throws IOException {
+      final List<HTableDescriptor> descriptors, final String regex) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.preGetTableDescriptors(ctx, tableNamesList, descriptors);
+        oserver.preGetTableDescriptors(ctx, tableNamesList, descriptors, regex);
       }
     });
   }
 
-  public void postGetTableDescriptors(final List<HTableDescriptor> descriptors)
-      throws IOException {
+  public void postGetTableDescriptors(final List<TableName> tableNamesList,
+      final List<HTableDescriptor> descriptors, final String regex) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
       @Override
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.postGetTableDescriptors(ctx, descriptors);
+        oserver.postGetTableDescriptors(ctx, tableNamesList, descriptors, regex);
+      }
+    });
+  }
+
+  public boolean preGetTableNames(final List<HTableDescriptor> descriptors,
+      final String regex) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preGetTableNames(ctx, descriptors, regex);
+      }
+    });
+  }
+
+  public void postGetTableNames(final List<HTableDescriptor> descriptors,
+      final String regex) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postGetTableNames(ctx, descriptors, regex);
       }
     });
   }
@@ -818,6 +915,110 @@ public class MasterCoprocessorHost
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postTableFlush(ctx, tableName);
+      }
+    });
+  }
+
+  public void preSetUserQuota(final String user, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetUserQuota(ctx, user, quotas);
+      }
+    });
+  }
+
+  public void postSetUserQuota(final String user, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetUserQuota(ctx, user, quotas);
+      }
+    });
+  }
+
+  public void preSetUserQuota(final String user, final TableName table, final Quotas quotas)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetUserQuota(ctx, user, table, quotas);
+      }
+    });
+  }
+
+  public void postSetUserQuota(final String user, final TableName table, final Quotas quotas)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetUserQuota(ctx, user, table, quotas);
+      }
+    });
+  }
+
+  public void preSetUserQuota(final String user, final String namespace, final Quotas quotas)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetUserQuota(ctx, user, namespace, quotas);
+      }
+    });
+  }
+
+  public void postSetUserQuota(final String user, final String namespace, final Quotas quotas)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetUserQuota(ctx, user, namespace, quotas);
+      }
+    });
+  }
+
+  public void preSetTableQuota(final TableName table, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetTableQuota(ctx, table, quotas);
+      }
+    });
+  }
+
+  public void postSetTableQuota(final TableName table, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetTableQuota(ctx, table, quotas);
+      }
+    });
+  }
+
+  public void preSetNamespaceQuota(final String namespace, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetNamespaceQuota(ctx, namespace, quotas);
+      }
+    });
+  }
+
+  public void postSetNamespaceQuota(final String namespace, final Quotas quotas) throws IOException{
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetNamespaceQuota(ctx, namespace, quotas);
       }
     });
   }

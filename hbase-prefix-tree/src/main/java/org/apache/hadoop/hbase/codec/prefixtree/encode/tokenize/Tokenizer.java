@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -179,7 +179,7 @@ public class Tokenizer{
   }
 
 
-	/********************** write ***************************/
+  /********************** write ***************************/
 
   public Tokenizer setNodeFirstInsertionIndexes() {
     root.setInsertionIndexes(0);

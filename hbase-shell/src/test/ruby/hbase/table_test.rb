@@ -29,9 +29,13 @@ module Hbase
       setup_hbase
     end
 
+    def teardown
+      shutdown
+    end
+
     define_test "Hbase::Table constructor should not fail for existent tables" do
       assert_nothing_raised do
-        table('hbase:meta')
+        table('hbase:meta').close()
       end
     end
   end
@@ -46,6 +50,11 @@ module Hbase
       @test_name = "hbase_shell_tests_table"
       create_test_table(@test_name)
       @test_table = table(@test_name)
+    end
+
+    def tearDown
+      @test_table.close()
+      shutdown
     end
 
     define_test "is_meta_table? method should return true for the meta table" do
@@ -111,6 +120,11 @@ module Hbase
       
       @test_table.put(105, "x:a", "3")
       @test_table.put(105, "x:a", "4")
+    end
+
+    def teardown
+      @test_table.close
+      shutdown
     end
 
     define_test "put should work without timestamp" do
@@ -203,7 +217,11 @@ module Hbase
       
       @test_table.put(3, "x:a", 21, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
       @test_table.put(3, "x:b", 22, @test_ts, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
+    end
 
+    def teardown
+      @test_table.close
+      shutdown
     end
 
     define_test "count should work w/o a block passed" do
@@ -412,6 +430,26 @@ module Hbase
       assert_nil(res['2'])
     end
 
+    define_test "scan should support ROWPREFIXFILTER parameter (test 1)" do
+      res = @test_table._scan_internal ROWPREFIXFILTER => '1'
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_not_nil(res['1'])
+      assert_not_nil(res['1']['x:a'])
+      assert_not_nil(res['1']['x:b'])
+      assert_nil(res['2'])
+    end
+
+    define_test "scan should support ROWPREFIXFILTER parameter (test 2)" do
+      res = @test_table._scan_internal ROWPREFIXFILTER => '2'
+      assert_not_nil(res)
+      assert_kind_of(Hash, res)
+      assert_nil(res['1'])
+      assert_not_nil(res['2'])
+      assert_not_nil(res['2']['x:a'])
+      assert_not_nil(res['2']['x:b'])
+    end
+
     define_test "scan should support LIMIT parameter" do
       res = @test_table._scan_internal LIMIT => 1
       assert_not_nil(res)
@@ -478,6 +516,36 @@ module Hbase
       assert_nil(res['2']['x:b'])
     end
 
+    define_test "scan should work with raw and version parameter" do
+      # Create test table if it does not exist
+      @test_name_raw = "hbase_shell_tests_raw_scan"
+      create_test_table(@test_name_raw)
+      @test_table = table(@test_name_raw)
+
+      # Instert test data
+      @test_table.put(1, "x:a", 1)
+      @test_table.put(2, "x:raw1", 11)
+      @test_table.put(2, "x:raw1", 11)
+      @test_table.put(2, "x:raw1", 11)
+      @test_table.put(2, "x:raw1", 11)
+
+      args = {}
+      numRows = 0
+      count = @test_table._scan_internal(args) do |row, cells| # Normal Scan
+        numRows += 1
+      end
+      assert_equal(numRows, 2, "Num rows scanned without RAW/VERSIONS are not 2") 
+
+      args = {VERSIONS=>10,RAW=>true} # Since 4 versions of row with rowkey 2 is been added, we can use any number >= 4 for VERSIONS to scan all 4 versions.
+      numRows = 0
+      count = @test_table._scan_internal(args) do |row, cells| # Raw Scan
+        numRows += 1
+      end
+      assert_equal(numRows, 5, "Num rows scanned without RAW/VERSIONS are not 5") # 5 since , 1 from row key '1' and other 4 from row key '4'
+    end
+
+
+
     define_test "scan should fail on invalid COLUMNS parameter types" do
       assert_raise(ArgumentError) do
         @test_table._scan_internal COLUMNS => {}
@@ -527,6 +595,19 @@ module Hbase
       ensure
         # clean up newly added columns for this test only.
         @test_table.delete(1, "x:v")
+      end
+    end
+
+    define_test "mutation with TTL should expire" do
+      @test_table.put('ttlTest', 'x:a', 'foo', { TTL => 1000 } )
+      begin
+        res = @test_table._get_internal('ttlTest', 'x:a')
+        assert_not_nil(res)
+        sleep 2
+        res = @test_table._get_internal('ttlTest', 'x:a')
+        assert_nil(res)
+      ensure
+        @test_table.delete('ttlTest', 'x:a')
       end
     end
 

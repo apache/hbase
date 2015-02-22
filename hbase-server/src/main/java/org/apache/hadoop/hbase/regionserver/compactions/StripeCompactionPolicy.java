@@ -27,7 +27,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
@@ -396,7 +396,8 @@ public class StripeCompactionPolicy extends CompactionPolicy {
      * @param compactor Compactor.
      * @return result of compact(...)
      */
-    public abstract List<Path> execute(StripeCompactor compactor) throws IOException;
+    public abstract List<Path> execute(StripeCompactor compactor,
+        CompactionThroughputController throughputController) throws IOException;
 
     public StripeCompactionRequest(CompactionRequest request) {
       this.request = request;
@@ -447,9 +448,10 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     }
 
     @Override
-    public List<Path> execute(StripeCompactor compactor) throws IOException {
-      return compactor.compact(
-          this.request, this.targetBoundaries, this.majorRangeFromRow, this.majorRangeToRow);
+    public List<Path> execute(StripeCompactor compactor,
+        CompactionThroughputController throughputController) throws IOException {
+      return compactor.compact(this.request, this.targetBoundaries, this.majorRangeFromRow,
+        this.majorRangeToRow, throughputController);
     }
   }
 
@@ -497,9 +499,10 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     }
 
     @Override
-    public List<Path> execute(StripeCompactor compactor) throws IOException {
-      return compactor.compact(this.request, this.targetCount, this.targetKvs,
-          this.startRow, this.endRow, this.majorRangeFromRow, this.majorRangeToRow);
+    public List<Path> execute(StripeCompactor compactor,
+        CompactionThroughputController throughputController) throws IOException {
+      return compactor.compact(this.request, this.targetCount, this.targetKvs, this.startRow,
+        this.endRow, this.majorRangeFromRow, this.majorRangeToRow, throughputController);
     }
 
     /** Set major range of the compaction to the entire compaction range.

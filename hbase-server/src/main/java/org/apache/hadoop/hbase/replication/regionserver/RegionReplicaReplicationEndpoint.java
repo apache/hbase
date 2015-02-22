@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
@@ -60,16 +60,14 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.PipelineController;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.RegionEntryBuffer;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.SinkWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.EntryBuffers;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.OutputSink;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALSplitter.EntryBuffers;
+import org.apache.hadoop.hbase.wal.WALSplitter.OutputSink;
+import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
+import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
+import org.apache.hadoop.hbase.wal.WALSplitter.SinkWriter;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -81,8 +79,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.protobuf.ServiceException;
 
 /**
- * A {@link ReplicationEndpoint} endpoint which receives the WAL edits from the
- * WAL, and sends the edits to replicas of regions.
+ * A {@link org.apache.hadoop.hbase.replication.ReplicationEndpoint} endpoint 
+ * which receives the WAL edits from the WAL, and sends the edits to replicas 
+ * of regions.
  */
 @InterfaceAudience.Private
 public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
@@ -92,7 +91,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   private Configuration conf;
   private ClusterConnection connection;
 
-  // Reuse HLogSplitter constructs as a WAL pipe
+  // Reuse WALSplitter constructs as a WAL pipe
   private PipelineController controller;
   private RegionReplicaOutputSink outputSink;
   private EntryBuffers entryBuffers;
@@ -211,7 +210,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
      * WAL file filling up a buffer of heap size "replication.source.size.capacity"(64MB) or at most
      * "replication.source.nb.capacity" entries or until it sees the end of file (in live tailing).
      * Then RS passes all the buffered edits in this replicate() call context. RRRE puts the edits
-     * to the HLogSplitter.EntryBuffers which is a blocking buffer space of up to
+     * to the WALSplitter.EntryBuffers which is a blocking buffer space of up to
      * "hbase.region.replica.replication.buffersize" (128MB) in size. This buffer splits the edits
      * based on regions.
      *
@@ -270,12 +269,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     public void append(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.getEntryBuffer();
 
-      if (entries.isEmpty() || entries.get(0).getEdit().getKeyValues().isEmpty()) {
+      if (entries.isEmpty() || entries.get(0).getEdit().getCells().isEmpty()) {
         return;
       }
 
       sinkWriter.append(buffer.getTableName(), buffer.getEncodedRegionName(),
-        entries.get(0).getEdit().getKeyValues().get(0).getRow(), entries);
+        entries.get(0).getEdit().getCells().get(0).getRow(), entries);
     }
 
     @Override
@@ -456,7 +455,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     // replicaId of the region replica that we want to replicate to
     private final int replicaId;
 
-    private final List<HLog.Entry> entries;
+    private final List<Entry> entries;
     private final byte[] initialEncodedRegionName;
     private final AtomicLong skippedEntries;
     private final RpcControllerFactory rpcControllerFactory;
@@ -464,7 +463,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
     public RegionReplicaReplayCallable(ClusterConnection connection,
         RpcControllerFactory rpcControllerFactory, TableName tableName,
-        HRegionLocation location, HRegionInfo regionInfo, byte[] row,List<HLog.Entry> entries,
+        HRegionLocation location, HRegionInfo regionInfo, byte[] row,List<Entry> entries,
         AtomicLong skippedEntries) {
       super(connection, location, tableName, row);
       this.replicaId = regionInfo.getReplicaId();
@@ -502,14 +501,14 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       return replayToServer(this.entries, timeout);
     }
 
-    private ReplicateWALEntryResponse replayToServer(List<HLog.Entry> entries, int timeout)
+    private ReplicateWALEntryResponse replayToServer(List<Entry> entries, int timeout)
         throws IOException {
       if (entries.isEmpty() || skip) {
         skippedEntries.incrementAndGet();
         return ReplicateWALEntryResponse.newBuilder().build();
       }
 
-      HLog.Entry[] entriesArray = new HLog.Entry[entries.size()];
+      Entry[] entriesArray = new Entry[entries.size()];
       entriesArray = entries.toArray(entriesArray);
 
       // set the region name for the target region replica

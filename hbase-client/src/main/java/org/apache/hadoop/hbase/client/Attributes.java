@@ -19,10 +19,10 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.util.Map;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -34,7 +34,7 @@ public interface Attributes {
    * @param name attribute name
    * @param value attribute value
    */
-  void setAttribute(String name, byte[] value);
+  Attributes setAttribute(String name, byte[] value);
 
   /**
    * Gets an attribute

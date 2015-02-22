@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.ByteRangeUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -289,7 +289,7 @@ public class TokenizerNode{
   }
 
 
-	/************************ byte[] utils *************************/
+  /************************ byte[] utils *************************/
 
   protected boolean partiallyMatchesToken(ByteRange bytes) {
     return numIdenticalBytes(bytes) > 0;
@@ -304,7 +304,7 @@ public class TokenizerNode{
   }
 
 
-	/***************** moving nodes around ************************/
+  /***************** moving nodes around ************************/
 
   public void appendNodesToExternalList(List<TokenizerNode> appendTo, boolean includeNonLeaves,
       boolean includeLeaves) {
@@ -462,7 +462,7 @@ public class TokenizerNode{
   }
 
 
-	/********************** count different node types ********************/
+  /********************** count different node types ********************/
 
   public int getNumBranchNodesIncludingThisNode() {
     if (isLeaf()) {

@@ -26,14 +26,13 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.Cell;
@@ -44,9 +43,9 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.CompoundBloomFilterWriter;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -55,9 +54,9 @@ import org.apache.hadoop.util.StringUtils;
  * ({@link BlockIndexReader}) single-level and multi-level block indexes.
  *
  * Examples of how to use the block index writer can be found in
- * {@link CompoundBloomFilterWriter} and {@link HFileWriterV2}. Examples of how
- * to use the reader can be found in {@link HFileReaderV2} and
- * TestHFileBlockIndex.
+ * {@link org.apache.hadoop.hbase.util.CompoundBloomFilterWriter} and
+ *  {@link HFileWriterV2}. Examples of how to use the reader can be
+ *  found in {@link HFileReaderV2} and TestHFileBlockIndex.
  */
 @InterfaceAudience.Private
 public class HFileBlockIndex {
@@ -345,10 +344,9 @@ public class HFileBlockIndex {
         int keyRelOffset = b.getInt(Bytes.SIZEOF_INT * (midKeyEntry + 1));
         int keyLen = b.getInt(Bytes.SIZEOF_INT * (midKeyEntry + 2)) -
             keyRelOffset;
-        int keyOffset = b.arrayOffset() +
-            Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset +
-            SECONDARY_INDEX_ENTRY_OVERHEAD;
-        targetMidKey = Arrays.copyOfRange(b.array(), keyOffset, keyOffset + keyLen);
+        int keyOffset = Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset
+            + SECONDARY_INDEX_ENTRY_OVERHEAD;
+        targetMidKey = ByteBufferUtils.toBytes(b, keyOffset, keyLen);
       } else {
         // The middle of the root-level index.
         targetMidKey = blockKeys[rootCount / 2];
@@ -489,9 +487,7 @@ public class HFileBlockIndex {
       int targetKeyLength = nonRootIndex.getInt(Bytes.SIZEOF_INT * (i + 2)) -
         targetKeyRelOffset - SECONDARY_INDEX_ENTRY_OVERHEAD;
 
-      int from = nonRootIndex.arrayOffset() + targetKeyOffset;
-      int to = from + targetKeyLength;
-      return Arrays.copyOfRange(nonRootIndex.array(), from, to);
+      return ByteBufferUtils.toBytes(nonRootIndex, targetKeyOffset, targetKeyLength);
     }
 
     /**
@@ -546,6 +542,8 @@ public class HFileBlockIndex {
 
         // we have to compare in this order, because the comparator order
         // has special logic when the 'left side' is a special key.
+        // TODO make KeyOnlyKeyValue to be Buffer backed and avoid array() call. This has to be
+        // done after HBASE-12224 & HBASE-12282
         nonRootIndexKV.setKey(nonRootIndex.array(),
             nonRootIndex.arrayOffset() + midKeyOffset, midLength);
         int cmp = comparator.compareOnlyKeyPortion(key, nonRootIndexKV);
@@ -772,7 +770,7 @@ public class HFileBlockIndex {
      * {@link #writeIndexBlocks(FSDataOutputStream)} has been called. The
      * initial value accounts for the root level, and will be increased to two
      * as soon as we find out there is a leaf-level in
-     * {@link #blockWritten(long, int)}.
+     * {@link #blockWritten(long, int, int)}.
      */
     private int numLevels = 1;
 
@@ -798,8 +796,8 @@ public class HFileBlockIndex {
     /** Whether we require this block index to always be single-level. */
     private boolean singleLevelOnly;
 
-    /** Block cache, or null if cache-on-write is disabled */
-    private BlockCache blockCache;
+    /** CacheConfig, or null if cache-on-write is disabled */
+    private CacheConfig cacheConf;
 
     /** Name to use for computing cache keys */
     private String nameForCaching;
@@ -814,18 +812,17 @@ public class HFileBlockIndex {
      * Creates a multi-level block index writer.
      *
      * @param blockWriter the block writer to use to write index blocks
-     * @param blockCache if this is not null, index blocks will be cached
-     *    on write into this block cache.
+     * @param cacheConf used to determine when and how a block should be cached-on-write.
      */
     public BlockIndexWriter(HFileBlock.Writer blockWriter,
-        BlockCache blockCache, String nameForCaching) {
-      if ((blockCache == null) != (nameForCaching == null)) {
+        CacheConfig cacheConf, String nameForCaching) {
+      if ((cacheConf == null) != (nameForCaching == null)) {
         throw new IllegalArgumentException("Block cache and file name for " +
             "caching must be both specified or both null");
       }
 
       this.blockWriter = blockWriter;
-      this.blockCache = blockCache;
+      this.cacheConf = cacheConf;
       this.nameForCaching = nameForCaching;
       this.maxChunkSize = HFileBlockIndex.DEFAULT_MAX_CHUNK_SIZE;
     }
@@ -979,9 +976,9 @@ public class HFileBlockIndex {
       byte[] curFirstKey = curChunk.getBlockKey(0);
       blockWriter.writeHeaderAndData(out);
 
-      if (blockCache != null) {
-        HFileBlock blockForCaching = blockWriter.getBlockForCaching();
-        blockCache.cacheBlock(new BlockCacheKey(nameForCaching,
+      if (cacheConf != null) {
+        HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
+        cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(nameForCaching,
           beginOffset), blockForCaching);
       }
 
@@ -1090,8 +1087,7 @@ public class HFileBlockIndex {
      * entry referring to that block to the parent-level index.
      */
     @Override
-    public void blockWritten(long offset, int onDiskSize, int uncompressedSize)
-    {
+    public void blockWritten(long offset, int onDiskSize, int uncompressedSize) {
       // Add leaf index block size
       totalBlockOnDiskSize += onDiskSize;
       totalBlockUncompressedSize += uncompressedSize;
@@ -1132,8 +1128,7 @@ public class HFileBlockIndex {
      *          format version 2), or the uncompressed size of the data block (
      *          {@link HFile} format version 1).
      */
-    public void addEntry(byte[] firstKey, long blockOffset, int blockDataSize)
-    {
+    public void addEntry(byte[] firstKey, long blockOffset, int blockDataSize) {
       curInlineChunk.add(firstKey, blockOffset, blockDataSize);
       ++totalNumEntries;
     }
@@ -1156,7 +1151,7 @@ public class HFileBlockIndex {
      */
     @Override
     public boolean getCacheOnWrite() {
-      return blockCache != null;
+      return cacheConf != null && cacheConf.shouldCacheIndexesOnWrite();
     }
 
     /**

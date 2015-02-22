@@ -21,11 +21,12 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *      /hbase/archive/table/region/cf/.links-hfile/ref-region.ref-table
  * To check if the hfile can be deleted the back references folder must be empty.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
   private static final Log LOG = LogFactory.getLog(HFileLinkCleaner.class);
 
@@ -54,21 +55,29 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
     // The back ref can be deleted only if the referenced file doesn't exists.
     Path parentDir = filePath.getParent();
     if (HFileLink.isBackReferencesDir(parentDir)) {
+      Path hfilePath = null;
       try {
-        Path hfilePath = HFileLink.getHFileFromBackReference(getConf(), filePath);
+        hfilePath = HFileLink.getHFileFromBackReference(getConf(), filePath);
         return !fs.exists(hfilePath);
       } catch (IOException e) {
-        LOG.error("Couldn't verify if the referenced file still exists, keep it just in case");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: "
+              + hfilePath);
+        }
         return false;
       }
     }
 
     // HFile is deletable only if has no links
+    Path backRefDir = null;
     try {
-      Path backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
+      backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
       return FSUtils.listStatus(fs, backRefDir) == null;
     } catch (IOException e) {
-      LOG.error("Couldn't get the references, not deleting file, just in case");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Couldn't get the references, not deleting file, just in case. filePath="
+            + filePath + ", backRefDir=" + backRefDir);
+      }
       return false;
     }
   }
@@ -81,7 +90,11 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
     try {
       this.fs = FileSystem.get(this.getConf());
     } catch (IOException e) {
-      LOG.error("Couldn't instantiate the file system, not deleting file, just in case");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Couldn't instantiate the file system, not deleting file, just in case. "
+            + FileSystem.FS_DEFAULT_NAME_KEY + "="
+            + getConf().get(FileSystem.FS_DEFAULT_NAME_KEY, FileSystem.DEFAULT_FS));
+      }
     }
   }
 }

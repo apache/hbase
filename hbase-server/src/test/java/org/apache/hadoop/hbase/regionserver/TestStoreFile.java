@@ -40,7 +40,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -57,6 +58,9 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
@@ -67,7 +71,7 @@ import com.google.common.collect.Lists;
 /**
  * Test HStoreFile
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestStoreFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -77,12 +81,12 @@ public class TestStoreFile extends HBaseTestCase {
   private static final int CKBYTES = 512;
   private static String TEST_FAMILY = "cf";
 
-  @Override
+  @Before
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  @Override
+  @After
   public void tearDown() throws Exception {
     super.tearDown();
   }
@@ -92,11 +96,12 @@ public class TestStoreFile extends HBaseTestCase {
    * using two HalfMapFiles.
    * @throws Exception
    */
+  @Test
   public void testBasicHalfMapFile() throws Exception {
     final HRegionInfo hri =
         new HRegionInfo(TableName.valueOf("testBasicHalfMapFileTb"));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-      conf, fs, new Path(this.testDir, hri.getTable().getNameAsString()), hri);
+      conf, fs, new Path(testDir, hri.getTable().getNameAsString()), hri);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(2*1024).build();
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
@@ -144,10 +149,11 @@ public class TestStoreFile extends HBaseTestCase {
    * store files in other regions works.
    * @throws IOException
    */
+  @Test
   public void testReference() throws IOException {
     final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testReferenceTb"));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-      conf, fs, new Path(this.testDir, hri.getTable().getNameAsString()), hri);
+      conf, fs, new Path(testDir, hri.getTable().getNameAsString()), hri);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
@@ -187,13 +193,14 @@ public class TestStoreFile extends HBaseTestCase {
     assertTrue(Bytes.equals(kv.getRow(), finalRow));
   }
 
+  @Test
   public void testHFileLink() throws IOException {
     final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testHFileLinkTb"));
     // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
     Configuration testConf = new Configuration(this.conf);
-    FSUtils.setRootDir(testConf, this.testDir);
+    FSUtils.setRootDir(testConf, testDir);
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-      testConf, fs, FSUtils.getTableDir(this.testDir, hri.getTable()), hri);
+      testConf, fs, FSUtils.getTableDir(testDir, hri.getTable()), hri);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
 
     // Make a store file and write data to it.
@@ -229,15 +236,16 @@ public class TestStoreFile extends HBaseTestCase {
    * This test creates an hfile and then the dir structures and files to verify that references
    * to hfilelinks (created by snapshot clones) can be properly interpreted.
    */
+  @Test
   public void testReferenceToHFileLink() throws IOException {
     // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
     Configuration testConf = new Configuration(this.conf);
-    FSUtils.setRootDir(testConf, this.testDir);
+    FSUtils.setRootDir(testConf, testDir);
 
     // adding legal table name chars to verify regex handles it.
     HRegionInfo hri = new HRegionInfo(TableName.valueOf("_original-evil-name"));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-      testConf, fs, FSUtils.getTableDir(this.testDir, hri.getTable()), hri);
+      testConf, fs, FSUtils.getTableDir(testDir, hri.getTable()), hri);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it. <root>/<tablename>/<rgn>/<cf>/<file>
@@ -251,7 +259,7 @@ public class TestStoreFile extends HBaseTestCase {
     // create link to store file. <root>/clone/region/<cf>/<hfile>-<region>-<table>
     HRegionInfo hriClone = new HRegionInfo(TableName.valueOf("clone"));
     HRegionFileSystem cloneRegionFs = HRegionFileSystem.createRegionOnFileSystem(
-      testConf, fs, FSUtils.getTableDir(this.testDir, hri.getTable()),
+      testConf, fs, FSUtils.getTableDir(testDir, hri.getTable()),
         hriClone);
     Path dstPath = cloneRegionFs.getStoreDir(TEST_FAMILY);
     HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
@@ -268,7 +276,7 @@ public class TestStoreFile extends HBaseTestCase {
     Path pathB = splitStoreFile(cloneRegionFs, splitHriB, TEST_FAMILY, f, SPLITKEY, false);// bottom
 
     // OK test the thing
-    FSUtils.logFileSystemState(fs, this.testDir, LOG);
+    FSUtils.logFileSystemState(fs, testDir, LOG);
 
     // There is a case where a file with the hfilelink pattern is actually a daughter
     // reference to a hfile link.  This code in StoreFile that handles this case.
@@ -493,6 +501,7 @@ public class TestStoreFile extends HBaseTestCase {
   
   private static final int BLOCKSIZE_SMALL = 8192;
 
+  @Test
   public void testBloomFilter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, (float) 0.01);
@@ -513,6 +522,7 @@ public class TestStoreFile extends HBaseTestCase {
     bloomWriteRead(writer, fs);
   }
 
+  @Test
   public void testDeleteFamilyBloomFilter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, (float) 0.01);
@@ -575,6 +585,7 @@ public class TestStoreFile extends HBaseTestCase {
   /**
    * Test for HBASE-8012
    */
+  @Test
   public void testReseek() throws Exception {
     // write the file
     Path f = new Path(ROOT_DIR, getName());
@@ -599,6 +610,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertNotNull("Intial reseek should position at the beginning of the file", s.peek());
   }
 
+  @Test
   public void testBloomTypes() throws Exception {
     float err = (float) 0.01;
     FileSystem fs = FileSystem.getLocal(conf);
@@ -687,6 +699,7 @@ public class TestStoreFile extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testSeqIdComparator() {
     assertOrdering(StoreFile.Comparators.SEQ_ID,
         mockStoreFile(true,  100,   1000, -1, "/foo/123"),
@@ -765,6 +778,7 @@ public class TestStoreFile extends HBaseTestCase {
    * Test to ensure correctness when using StoreFile with multiple timestamps
    * @throws IOException
    */
+  @Test
   public void testMultipleTimestamps() throws IOException {
     byte[] family = Bytes.toBytes("familyname");
     byte[] qualifier = Bytes.toBytes("qualifier");
@@ -773,7 +787,7 @@ public class TestStoreFile extends HBaseTestCase {
     Scan scan = new Scan();
 
     // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
-    Path storedir = new Path(new Path(this.testDir, "7e0102"), "familyname");
+    Path storedir = new Path(new Path(testDir, "7e0102"), "familyname");
     Path dir = new Path(storedir, "1234567890");
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
@@ -815,11 +829,12 @@ public class TestStoreFile extends HBaseTestCase {
     assertTrue(!scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
   }
 
+  @Test
   public void testCacheOnWriteEvictOnClose() throws Exception {
     Configuration conf = this.conf;
 
     // Find a home for our files (regiondir ("7e0102") and familyname).
-    Path baseDir = new Path(new Path(this.testDir, "7e0102"),"twoCOWEOC");
+    Path baseDir = new Path(new Path(testDir, "7e0102"),"twoCOWEOC");
 
     // Grab the block cache and get the initial hit/miss counts
     BlockCache bc = new CacheConfig(conf).getBlockCache();
@@ -940,7 +955,7 @@ public class TestStoreFile extends HBaseTestCase {
       final String family, final StoreFile sf, final byte[] splitKey, boolean isTopRef)
       throws IOException {
     FileSystem fs = regionFs.getFileSystem();
-    Path path = regionFs.splitStoreFile(hri, family, sf, splitKey, isTopRef);
+    Path path = regionFs.splitStoreFile(hri, family, sf, splitKey, isTopRef, null);
     if (null == path) {
       return null;
     }
@@ -987,9 +1002,10 @@ public class TestStoreFile extends HBaseTestCase {
    * Check if data block encoding information is saved correctly in HFile's
    * file info.
    */
+  @Test
   public void testDataBlockEncodingMetaData() throws IOException {
     // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
-    Path dir = new Path(new Path(this.testDir, "7e0102"), "familyname");
+    Path dir = new Path(new Path(testDir, "7e0102"), "familyname");
     Path path = new Path(dir, "1234567890");
 
     DataBlockEncoding dataBlockEncoderAlgo =

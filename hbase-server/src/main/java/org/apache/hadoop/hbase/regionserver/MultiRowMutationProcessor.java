@@ -23,10 +23,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * A <code>MultiRowProcessor</code> that performs multiple puts and deletes.
  */
+@InterfaceAudience.Private
 class MultiRowMutationProcessor extends BaseRowProcessor<MultiRowMutationProcessorRequest,
 MultiRowMutationProcessorResponse> {
   Collection<byte[]> rowsToLock;
@@ -78,7 +78,7 @@ MultiRowMutationProcessorResponse> {
         Map<byte[], List<Cell>> familyMap = m.getFamilyCellMap();
         region.checkFamilies(familyMap.keySet());
         region.checkTimestamps(familyMap, now);
-        region.updateKVTimestamps(familyMap.values(), byteNow);
+        region.updateCellTimestamps(familyMap.values(), byteNow);
       } else if (m instanceof Delete) {
         Delete d = (Delete) m;
         region.prepareDelete(d);
@@ -94,8 +94,7 @@ MultiRowMutationProcessorResponse> {
       for (List<Cell> cells : m.getFamilyCellMap().values()) {
         boolean writeToWAL = m.getDurability() != Durability.SKIP_WAL;
         for (Cell cell : cells) {
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          if (writeToWAL) walEdit.add(kv);
+          if (writeToWAL) walEdit.add(cell);
         }
       }
     }
@@ -144,8 +143,8 @@ MultiRowMutationProcessorResponse> {
         // itself. No need to apply again to region
         if (walEditsFromCP[i] != null) {
           // Add the WALEdit created by CP hook
-          for (KeyValue walKv : walEditsFromCP[i].getKeyValues()) {
-            walEdit.add(walKv);
+          for (Cell walCell : walEditsFromCP[i].getCells()) {
+            walEdit.add(walCell);
           }
         }
       }

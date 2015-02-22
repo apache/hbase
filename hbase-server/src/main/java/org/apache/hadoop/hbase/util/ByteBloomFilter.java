@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 import java.text.NumberFormat;
 import java.util.Random;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.io.Writable;
@@ -415,12 +415,11 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
           + " theBloom.limit()=" + theBloom.limit() + ", byteSize=" + byteSize);
     }
 
-    return contains(buf, offset, length, theBloom.array(),
-        theBloom.arrayOffset(), (int) byteSize, hash, hashCount);
+    return contains(buf, offset, length, theBloom, 0, (int) byteSize, hash, hashCount);
   }
 
   public static boolean contains(byte[] buf, int offset, int length,
-      byte[] bloomArray, int bloomOffset, int bloomSize, Hash hash,
+      ByteBuffer bloomBuf, int bloomOffset, int bloomSize, Hash hash,
       int hashCount) {
 
     int hash1 = hash.hash(buf, offset, length, 0);
@@ -433,7 +432,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
       for (int i = 0; i < hashCount; i++) {
         int hashLoc = Math.abs(compositeHash % bloomBitSize);
         compositeHash += hash2;
-        if (!get(hashLoc, bloomArray, bloomOffset)) {
+        if (!get(hashLoc, bloomBuf, bloomOffset)) {
           return false;
         }
       }
@@ -441,7 +440,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
       // Test mode with "fake lookups" to estimate "ideal false positive rate".
       for (int i = 0; i < hashCount; i++) {
         int hashLoc = randomGeneratorForTest.nextInt(bloomBitSize);
-        if (!get(hashLoc, bloomArray, bloomOffset)){
+        if (!get(hashLoc, bloomBuf, bloomOffset)){
           return false;
         }
       }
@@ -471,10 +470,11 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
    * @param pos index of bit
    * @return true if bit at specified index is 1, false if 0.
    */
-  static boolean get(int pos, byte[] bloomArray, int bloomOffset) {
+  static boolean get(int pos, ByteBuffer bloomBuf, int bloomOffset) {
     int bytePos = pos >> 3; //pos / 8
     int bitPos = pos & 0x7; //pos % 8
-    byte curByte = bloomArray[bloomOffset + bytePos];
+    // TODO access this via Util API which can do Unsafe access if possible(?)
+    byte curByte = bloomBuf.get(bloomOffset + bytePos);
     curByte &= bitvals[bitPos];
     return (curByte != 0);
   }

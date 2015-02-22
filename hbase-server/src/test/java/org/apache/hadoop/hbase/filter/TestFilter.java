@@ -38,19 +38,19 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Assert;
@@ -63,7 +63,7 @@ import com.google.common.base.Throwables;
 /**
  * Test filters at the HRegion doorstep.
  */
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestFilter {
   private final static Log LOG = LogFactory.getLog(TestFilter.class);
   private HRegion region;
@@ -141,10 +141,9 @@ public class TestFilter {
     htd.addFamily(new HColumnDescriptor(FAMILIES_1[1]));
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(NEW_FAMILIES[1]));
-    htd.addFamily(new HColumnDescriptor(FAMILIES_1[1]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
-            TEST_UTIL.getConfiguration(), htd);
+    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
 
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {
@@ -218,9 +217,7 @@ public class TestFilter {
 
   @After
   public void tearDown() throws Exception {
-    HLog hlog = region.getLog();
-    region.close();
-    hlog.closeAndDelete();
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @Test
@@ -657,8 +654,7 @@ public class TestFilter {
 
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
-   * {@link Filter} that uses the
-   * {@link Filter#filterKeyValue(org.apache.hadoop.hbase.KeyValue)} method.
+   * {@link Filter} that uses the {@link Filter#filterKeyValue(Cell)} method.
    *
    * See HBASE-2258.
    *
@@ -1454,7 +1450,7 @@ public class TestFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion testRegion = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
+    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);
 
     for(int i=0; i<5; i++) {
@@ -1489,9 +1485,9 @@ public class TestFilter {
     assertEquals(2, resultCount);
     scanner.close();
 
-    HLog hlog = testRegion.getLog();
+    WAL wal = testRegion.getWAL();
     testRegion.close();
-    hlog.closeAndDelete();
+    wal.close();
   }
 
   @Test
@@ -2008,13 +2004,14 @@ public class TestFilter {
     }
   }
 
+  // TODO: intentionally disabled?
   public void testNestedFilterListWithSCVF() throws IOException {
     byte[] columnStatus = Bytes.toBytes("S");
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testNestedFilterListWithSCVF"));
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion testRegion = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
-      TEST_UTIL.getConfiguration(), htd);
+    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+        TEST_UTIL.getConfiguration(), htd);
     for(int i=0; i<10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
       p.setDurability(Durability.SKIP_WAL);
@@ -2097,8 +2094,8 @@ public class TestFilter {
       results.clear();
     }
     assertFalse(scanner.next(results));
-    HLog hlog = testRegion.getLog();
+    WAL wal = testRegion.getWAL();
     testRegion.close();
-    hlog.closeAndDelete();
+    wal.close();
   }      
 }

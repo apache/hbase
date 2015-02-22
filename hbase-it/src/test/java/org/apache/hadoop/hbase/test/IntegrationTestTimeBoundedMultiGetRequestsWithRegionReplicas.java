@@ -23,7 +23,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedReader;
 import org.apache.hadoop.util.ToolRunner;
@@ -55,8 +55,7 @@ public class IntegrationTestTimeBoundedMultiGetRequestsWithRegionReplicas
       mode, modeSpecificArg, startKey, numKeys));
     String clazz = this.getClass().getSimpleName();
     args.add("-" + LoadTestTool.OPT_MULTIGET);
-    args.add(conf.get(String.format("%s.%s", clazz, LoadTestTool.OPT_MULTIGET),
-        Integer.toString(MultiThreadedReader.DEFAULT_BATCH_SIZE)));
+    args.add(conf.get(String.format("%s.%s", clazz, LoadTestTool.OPT_MULTIGET), "100"));
 
     args.add("-" + LoadTestTool.OPT_NUM_REGIONS_PER_SERVER);
     args.add(conf.get(String.format("%s.%s", clazz, LoadTestTool.OPT_NUM_REGIONS_PER_SERVER),

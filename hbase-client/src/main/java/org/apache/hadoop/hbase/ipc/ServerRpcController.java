@@ -18,23 +18,22 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
+import java.io.IOException;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
 
-import java.io.IOException;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
 
 /**
  * Used for server-side protobuf RPC service invocations.  This handler allows
  * invocation exceptions to easily be passed through to the RPC server from coprocessor
- * {@link Service} implementations.
+ * {@link com.google.protobuf.Service} implementations.
  *
  * <p>
- * When implementing {@link Service} defined methods, coprocessor endpoints can use the following
- * pattern to pass exceptions back to the RPC client:
+ * When implementing {@link com.google.protobuf.Service} defined methods, 
+ * coprocessor endpoints can use the following pattern to pass exceptions back to the RPC client:
  * <code>
  * public void myMethod(RpcController controller, MyRequest request, RpcCallback<MyResponse> done) {
  *   MyResponse response = null;
@@ -50,10 +49,12 @@ import java.io.IOException;
  * </code>
  * </p>
  */
+@InterfaceAudience.Private
 public class ServerRpcController implements RpcController {
   /**
    * The exception thrown within
-   * {@link Service#callMethod(Descriptors.MethodDescriptor, RpcController, Message, RpcCallback)},
+   * {@link com.google.protobuf.Service#callMethod(
+   *   Descriptors.MethodDescriptor, RpcController, Message, RpcCallback)},
    * if any.
    */
   // TODO: it would be good widen this to just Throwable, but IOException is what we allow now
@@ -97,7 +98,7 @@ public class ServerRpcController implements RpcController {
   }
 
   /**
-   * Sets an exception to be communicated back to the {@link Service} client.
+   * Sets an exception to be communicated back to the {@link com.google.protobuf.Service} client.
    * @param ioe the exception encountered during execution of the service method
    */
   public void setFailedOn(IOException ioe) {

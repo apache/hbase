@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.util;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Certain JVM versions are known to be unstable with HBase. This

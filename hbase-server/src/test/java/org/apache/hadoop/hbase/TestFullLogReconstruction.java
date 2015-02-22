@@ -23,6 +23,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -31,13 +33,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 public class TestFullLogReconstruction {
 
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();
 
-  private final static byte[] TABLE_NAME = Bytes.toBytes("tabletest");
+  private final static TableName TABLE_NAME = TableName.valueOf("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
 
   /**
@@ -89,10 +91,7 @@ public class TestFullLogReconstruction {
    */
   @Test (timeout=300000)
   public void testReconstruction() throws Exception {
-
-    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
-
-    TEST_UTIL.createMultiRegions(table, Bytes.toBytes("family"));
+    HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAMILY);
 
     // Load up the table with simple rows and count them
     int initialCount = TEST_UTIL.loadTable(table, FAMILY);

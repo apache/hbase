@@ -21,20 +21,21 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 
 import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -57,7 +58,7 @@ public class HeapMemoryManager {
       "hbase.regionserver.global.memstore.size.min.range";
   public static final String HBASE_RS_HEAP_MEMORY_TUNER_PERIOD = 
       "hbase.regionserver.heapmemory.tuner.period";
-  public static final int HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD = 5 * 60 * 1000;
+  public static final int HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD = 60 * 1000;
   public static final String HBASE_RS_HEAP_MEMORY_TUNER_CLASS = 
       "hbase.regionserver.heapmemory.tuner.class";
 
@@ -70,12 +71,16 @@ public class HeapMemoryManager {
   private float blockCachePercentMaxRange;
   private float l2BlockCachePercent;
 
+  private float heapOccupancyPercent;
+
   private final ResizableBlockCache blockCache;
   private final FlushRequester memStoreFlusher;
   private final Server server;
 
   private HeapMemoryTunerChore heapMemTunerChore = null;
   private final boolean tunerOn;
+  private final int defaultChorePeriod;
+  private final float heapOccupancyLowWatermark;
 
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
 
@@ -91,10 +96,15 @@ public class HeapMemoryManager {
   @VisibleForTesting
   HeapMemoryManager(ResizableBlockCache blockCache, FlushRequester memStoreFlusher,
       Server server) {
+    Configuration conf = server.getConfiguration();
     this.blockCache = blockCache;
     this.memStoreFlusher = memStoreFlusher;
     this.server = server;
-    this.tunerOn = doInit(server.getConfiguration());
+    this.tunerOn = doInit(conf);
+    this.defaultChorePeriod = conf.getInt(HBASE_RS_HEAP_MEMORY_TUNER_PERIOD,
+      HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD);
+    this.heapOccupancyLowWatermark = conf.getFloat(HConstants.HEAP_OCCUPANCY_LOW_WATERMARK_KEY,
+      HConstants.DEFAULT_HEAP_OCCUPANCY_LOW_WATERMARK);
   }
 
   private boolean doInit(Configuration conf) {
@@ -173,11 +183,11 @@ public class HeapMemoryManager {
     return true;
   }
 
-  public void start() {
-    if (tunerOn) {
+  public void start(ChoreService service) {
       LOG.info("Starting HeapMemoryTuner chore.");
       this.heapMemTunerChore = new HeapMemoryTunerChore();
-      Threads.setDaemonThreadRunning(heapMemTunerChore.getThread());
+      service.scheduleChore(heapMemTunerChore);
+      if (tunerOn) {
       // Register HeapMemoryTuner as a memstore flush listener
       memStoreFlusher.registerFlushRequestListener(heapMemTunerChore);
     }
@@ -185,10 +195,9 @@ public class HeapMemoryManager {
 
   public void stop() {
     // The thread is Daemon. Just interrupting the ongoing process.
-    if (tunerOn) {
-      LOG.info("Stoping HeapMemoryTuner chore.");
-      this.heapMemTunerChore.interrupt();
-    }
+    LOG.info("Stoping HeapMemoryTuner chore.");
+    this.heapMemTunerChore.cancel(true);
+    
   }
 
   // Used by the test cases.
@@ -196,16 +205,23 @@ public class HeapMemoryManager {
     return this.tunerOn;
   }
 
-  private class HeapMemoryTunerChore extends Chore implements FlushRequestListener {
+  /**
+   * @return heap occupancy percentage, 0 <= n <= 1
+   */
+  public float getHeapOccupancyPercent() {
+    return this.heapOccupancyPercent;
+  }
+
+  private class HeapMemoryTunerChore extends ScheduledChore implements FlushRequestListener {
     private HeapMemoryTuner heapMemTuner;
     private AtomicLong blockedFlushCount = new AtomicLong();
     private AtomicLong unblockedFlushCount = new AtomicLong();
     private long evictCount = 0L;
     private TunerContext tunerContext = new TunerContext();
+    private boolean alarming = false;
 
     public HeapMemoryTunerChore() {
-      super(server.getServerName() + "-HeapMemoryTunerChore", server.getConfiguration().getInt(
-          HBASE_RS_HEAP_MEMORY_TUNER_PERIOD, HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD), server);
+      super(server.getServerName() + "-HeapMemoryTunerChore", server, defaultChorePeriod);
       Class<? extends HeapMemoryTuner> tunerKlass = server.getConfiguration().getClass(
           HBASE_RS_HEAP_MEMORY_TUNER_CLASS, DefaultHeapMemoryTuner.class, HeapMemoryTuner.class);
       heapMemTuner = ReflectionUtils.newInstance(tunerKlass, server.getConfiguration());
@@ -213,6 +229,41 @@ public class HeapMemoryManager {
 
     @Override
     protected void chore() {
+      // Sample heap occupancy
+      MemoryUsage memUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+      heapOccupancyPercent = (float)memUsage.getUsed() / (float)memUsage.getCommitted();
+      // If we are above the heap occupancy alarm low watermark, switch to short
+      // sleeps for close monitoring. Stop autotuning, we are in a danger zone.
+      if (heapOccupancyPercent >= heapOccupancyLowWatermark) {
+        if (!alarming) {
+          LOG.warn("heapOccupancyPercent " + heapOccupancyPercent +
+            " is above heap occupancy alarm watermark (" + heapOccupancyLowWatermark + ")");
+          alarming = true;
+        }
+        triggerNow();
+        try {
+          // Need to sleep ourselves since we've told the chore's sleeper
+          // to skip the next sleep cycle.
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // Interrupted, propagate
+          Thread.currentThread().interrupt();
+        }
+      } else {
+        if (alarming) {
+          LOG.info("heapOccupancyPercent " + heapOccupancyPercent +
+            " is now below the heap occupancy alarm watermark (" +
+            heapOccupancyLowWatermark + ")");
+          alarming = false;
+        }
+      }
+      // Autotune if tuning is enabled and allowed
+      if (tunerOn && !alarming) {
+        tune();
+      }
+    }
+
+    private void tune() {
       evictCount = blockCache.getStats().getEvictedCount() - evictCount;
       tunerContext.setBlockedFlushCount(blockedFlushCount.getAndSet(0));
       tunerContext.setUnblockedFlushCount(unblockedFlushCount.getAndSet(0));

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.master.handler;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -49,7 +49,7 @@ public class TableModifyFamilyHandler extends TableEventHandler {
   @Override
   protected void prepareWithTableLock() throws IOException {
     super.prepareWithTableLock();
-    HTableDescriptor htd = getTableDescriptor();
+    HTableDescriptor htd = getTableDescriptor().getHTableDescriptor();
     hasColumnFamily(htd, familyDesc.getName());
   }
 

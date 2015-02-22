@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -35,8 +35,6 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 public class MetricsRegionServerSourceImpl
     extends BaseSourceImpl implements MetricsRegionServerSource {
 
-
-
   final MetricsRegionServerWrapper rsWrap;
   private final MetricHistogram putHisto;
   private final MetricHistogram deleteHisto;
@@ -50,7 +48,11 @@ public class MetricsRegionServerSourceImpl
   private final MutableCounterLong slowGet;
   private final MutableCounterLong slowIncrement;
   private final MutableCounterLong slowAppend;
+  private final MutableCounterLong splitRequest;
+  private final MutableCounterLong splitSuccess;
 
+  private final MetricHistogram splitTimeHisto;
+  private final MetricHistogram flushTimeHisto;
 
   public MetricsRegionServerSourceImpl(MetricsRegionServerWrapper rsWrap) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, rsWrap);
@@ -80,6 +82,12 @@ public class MetricsRegionServerSourceImpl
     slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0l);
     
     replayHisto = getMetricsRegistry().newHistogram(REPLAY_KEY);
+
+    splitTimeHisto = getMetricsRegistry().newHistogram(SPLIT_KEY);
+    flushTimeHisto = getMetricsRegistry().newHistogram(FLUSH_KEY);
+
+    splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0l);
+    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0l);
   }
 
   @Override
@@ -137,6 +145,26 @@ public class MetricsRegionServerSourceImpl
     slowAppend.incr();
   }
 
+  @Override
+  public void incrSplitRequest() {
+    splitRequest.incr();
+  }
+
+  @Override
+  public void incrSplitSuccess() {
+    splitSuccess.incr();
+  }
+
+  @Override
+  public void updateSplitTime(long t) {
+    splitTimeHisto.add(t);
+  }
+
+  @Override
+  public void updateFlushTime(long t) {
+    flushTimeHisto.add(t);
+  }
+
   /**
    * Yes this is a get function that doesn't return anything.  Thanks Hadoop for breaking all
    * expectations of java programmers.  Instead of returning anything Hadoop metrics expects
@@ -155,8 +183,8 @@ public class MetricsRegionServerSourceImpl
     if (rsWrap != null) {
       mrb.addGauge(Interns.info(REGION_COUNT, REGION_COUNT_DESC), rsWrap.getNumOnlineRegions())
           .addGauge(Interns.info(STORE_COUNT, STORE_COUNT_DESC), rsWrap.getNumStores())
-          .addGauge(Interns.info(HLOGFILE_COUNT, HLOGFILE_COUNT_DESC), rsWrap.getNumHLogFiles())
-          .addGauge(Interns.info(HLOGFILE_SIZE, HLOGFILE_SIZE_DESC), rsWrap.getHLogFileSize())
+          .addGauge(Interns.info(WALFILE_COUNT, WALFILE_COUNT_DESC), rsWrap.getNumWALFiles())
+          .addGauge(Interns.info(WALFILE_SIZE, WALFILE_SIZE_DESC), rsWrap.getWALFileSize())
           .addGauge(Interns.info(STOREFILE_COUNT, STOREFILE_COUNT_DESC), rsWrap.getNumStoreFiles())
           .addGauge(Interns.info(MEMSTORE_SIZE, MEMSTORE_SIZE_DESC), rsWrap.getMemstoreSize())
           .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
@@ -185,6 +213,8 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getDataInMemoryWithoutWAL())
           .addGauge(Interns.info(PERCENT_FILES_LOCAL, PERCENT_FILES_LOCAL_DESC),
               rsWrap.getPercentFileLocal())
+          .addGauge(Interns.info(SPLIT_QUEUE_LENGTH, SPLIT_QUEUE_LENGTH_DESC),
+              rsWrap.getSplitQueueSize())
           .addGauge(Interns.info(COMPACTION_QUEUE_LENGTH, COMPACTION_QUEUE_LENGTH_DESC),
               rsWrap.getCompactionQueueSize())
           .addGauge(Interns.info(FLUSH_QUEUE_LENGTH, FLUSH_QUEUE_LENGTH_DESC),
@@ -219,6 +249,7 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getCompactedCellsSize())
           .addCounter(Interns.info(MAJOR_COMPACTED_CELLS_SIZE, MAJOR_COMPACTED_CELLS_SIZE_DESC),
               rsWrap.getMajorCompactedCellsSize())
+
           .addCounter(Interns.info(MOB_COMPACTED_FROM_MOB_CELLS_COUNT, MOB_COMPACTED_FROM_MOB_CELLS_COUNT_DESC),
               rsWrap.getMobCompactedFromMobCellsCount())
           .addCounter(Interns.info(MOB_COMPACTED_INTO_MOB_CELLS_COUNT, MOB_COMPACTED_INTO_MOB_CELLS_COUNT_DESC),
@@ -248,6 +279,14 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getMobFileCacheEvictedCount())
           .addGauge(Interns.info(MOB_FILE_CACHE_HIT_PERCENT, MOB_FILE_CACHE_HIT_PERCENT_DESC),
               rsWrap.getMobFileCacheHitPercent())
+
+          .addCounter(Interns.info(HEDGED_READS, HEDGED_READS_DESC), rsWrap.getHedgedReadOps())
+          .addCounter(Interns.info(HEDGED_READ_WINS, HEDGED_READ_WINS_DESC),
+              rsWrap.getHedgedReadWins())
+
+          .addCounter(Interns.info(BLOCKED_REQUESTS_COUNT, BLOCKED_REQUESTS_COUNT_DESC),
+            rsWrap.getBlockedRequestsCount())
+
           .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
               rsWrap.getZookeeperQuorum())
           .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), rsWrap.getServerName())

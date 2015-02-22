@@ -17,11 +17,19 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestWatcher;
@@ -30,7 +38,7 @@ import org.junit.runner.Description;
 /**
  * Returns a {@code byte[]} containing the name of the currently running test method.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestTableName extends TestWatcher {
   private TableName tableName;
 
@@ -91,5 +99,85 @@ public class TestTableName extends TestWatcher {
       }
     }
   }
-  
+
+  class Names {
+    String ns;
+    byte[] nsb;
+    String tn;
+    byte[] tnb;
+    String nn;
+    byte[] nnb;
+
+    Names(String ns, String tn) {
+      this.ns = ns;
+      nsb = ns.getBytes();
+      this.tn = tn;
+      tnb = tn.getBytes();
+      nn = this.ns + ":" + this.tn;
+      nnb = nn.getBytes();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      Names names = (Names) o;
+
+      if (!ns.equals(names.ns)) return false;
+      if (!tn.equals(names.tn)) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = ns.hashCode();
+      result = 31 * result + tn.hashCode();
+      return result;
+    }
+  }
+
+  Names[] names = new Names[] {
+      new Names("n1", "n1"),
+      new Names("n2", "n2"),
+      new Names("table1", "table1"),
+      new Names("table2", "table2"),
+      new Names("table2", "table1"),
+      new Names("table1", "table2"),
+      new Names("n1", "table1"),
+      new Names("n1", "table1"),
+      new Names("n2", "table2"),
+      new Names("n2", "table2")
+  };
+
+  @Test
+  public void testValueOf() {
+
+    Map<String, TableName> inCache = new HashMap<>();
+    // fill cache
+    for (Names name : names) {
+      inCache.put(name.nn, TableName.valueOf(name.ns, name.tn));
+    }
+    for (Names name : names) {
+      assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(name.ns, name.tn), name));
+      assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(name.nsb, name.tnb), name));
+      assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(name.nn), name));
+      assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(name.nnb), name));
+      assertSame(inCache.get(name.nn), validateNames(TableName.valueOf(
+          ByteBuffer.wrap(name.nsb), ByteBuffer.wrap(name.tnb)), name));
+    }
+
+  }
+
+  private TableName validateNames(TableName expected, Names names) {
+    assertEquals(expected.getNameAsString(), names.nn);
+    assertArrayEquals(expected.getName(), names.nnb);
+    assertEquals(expected.getQualifierAsString(), names.tn);
+    assertArrayEquals(expected.getQualifier(), names.tnb);
+    assertEquals(expected.getNamespaceAsString(), names.ns);
+    assertArrayEquals(expected.getNamespace(), names.nsb);
+    return expected;
+  }
+
 }

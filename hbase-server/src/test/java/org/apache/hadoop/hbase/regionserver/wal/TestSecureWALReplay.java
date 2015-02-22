@@ -19,13 +19,16 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.wal.WAL.Reader;
+import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestSecureWALReplay extends TestWALReplay {
 
   @BeforeClass
@@ -34,9 +37,9 @@ public class TestSecureWALReplay extends TestWALReplay {
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,
-      HLog.Reader.class);
+      Reader.class);
     conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
-      HLog.Writer.class);
+      Writer.class);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
     TestWALReplay.setUpBeforeClass();
   }

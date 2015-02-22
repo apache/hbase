@@ -25,6 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,10 +37,9 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -51,7 +53,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationSink {
   private static final Log LOG = LogFactory.getLog(TestReplicationSink.class);
   private static final int BATCH_SIZE = 10;
@@ -61,15 +63,15 @@ public class TestReplicationSink {
 
   private static ReplicationSink SINK;
 
-  private static final byte[] TABLE_NAME1 =
-      Bytes.toBytes("table1");
-  private static final byte[] TABLE_NAME2 =
-      Bytes.toBytes("table2");
+  private static final TableName TABLE_NAME1 =
+      TableName.valueOf("table1");
+  private static final TableName TABLE_NAME2 =
+      TableName.valueOf("table2");
 
   private static final byte[] FAM_NAME1 = Bytes.toBytes("info1");
   private static final byte[] FAM_NAME2 = Bytes.toBytes("info2");
 
-  private static HTable table1;
+  private static Table table1;
   private static Stoppable STOPPABLE = new Stoppable() {
     final AtomicBoolean stop = new AtomicBoolean(false);
 
@@ -86,7 +88,7 @@ public class TestReplicationSink {
     
   };
 
-  private static HTable table2;
+  private static Table table2;
 
    /**
    * @throws java.lang.Exception
@@ -232,8 +234,8 @@ public class TestReplicationSink {
     assertEquals(0, res.size());
   }
 
-  private WALEntry createEntry(byte [] table, int row,  KeyValue.Type type, List<Cell> cells) {
-    byte[] fam = Bytes.equals(table, TABLE_NAME1) ? FAM_NAME1 : FAM_NAME2;
+  private WALEntry createEntry(TableName table, int row,  KeyValue.Type type, List<Cell> cells) {
+    byte[] fam = table.equals(TABLE_NAME1) ? FAM_NAME1 : FAM_NAME2;
     byte[] rowBytes = Bytes.toBytes(row);
     // Just make sure we don't get the same ts for two consecutive rows with
     // same key
@@ -261,7 +263,7 @@ public class TestReplicationSink {
     uuidBuilder.setLeastSigBits(HConstants.DEFAULT_CLUSTER_ID.getLeastSignificantBits());
     uuidBuilder.setMostSigBits(HConstants.DEFAULT_CLUSTER_ID.getMostSignificantBits());
     keyBuilder.setClusterId(uuidBuilder.build());
-    keyBuilder.setTableName(ByteStringer.wrap(table));
+    keyBuilder.setTableName(ByteStringer.wrap(table.getName()));
     keyBuilder.setWriteTime(now);
     keyBuilder.setEncodedRegionName(ByteStringer.wrap(HConstants.EMPTY_BYTE_ARRAY));
     keyBuilder.setLogSequenceNumber(-1);

@@ -32,11 +32,13 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -52,7 +54,7 @@ import org.junit.Test;
 public abstract class TestTableMapReduceBase {
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  protected static final byte[] MULTI_REGION_TABLE_NAME = Bytes.toBytes("mrtest");
+  protected static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");
   protected static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   protected static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
 
@@ -69,14 +71,14 @@ public abstract class TestTableMapReduceBase {
   /**
    * Handles API-specifics for setting up and executing the job.
    */
-  protected abstract void runTestOnTable(HTable table) throws IOException;
+  protected abstract void runTestOnTable(Table table) throws IOException;
 
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
     HTable table =
-        UTIL.createTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY, OUTPUT_FAMILY });
-    UTIL.createMultiRegions(table, INPUT_FAMILY);
+        UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY,
+            OUTPUT_FAMILY });
     UTIL.loadTable(table, INPUT_FAMILY, false);
     UTIL.startMiniMapReduceCluster();
   }
@@ -93,7 +95,7 @@ public abstract class TestTableMapReduceBase {
    */
   @Test
   public void testMultiRegionTable() throws IOException {
-    runTestOnTable(new HTable(UTIL.getConfiguration(), MULTI_REGION_TABLE_NAME));
+    runTestOnTable(UTIL.getConnection().getTable(MULTI_REGION_TABLE_NAME));
   }
 
   @Test
@@ -101,7 +103,7 @@ public abstract class TestTableMapReduceBase {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     // force use of combiner for testing purposes
     conf.setInt("mapreduce.map.combine.minspills", 1);
-    runTestOnTable(new HTable(conf, MULTI_REGION_TABLE_NAME));
+    runTestOnTable(UTIL.getConnection().getTable(MULTI_REGION_TABLE_NAME));
   }
 
   /**
@@ -131,8 +133,8 @@ public abstract class TestTableMapReduceBase {
     return outval;
   }
 
-  protected void verify(String tableName) throws IOException {
-    HTable table = new HTable(UTIL.getConfiguration(), tableName);
+  protected void verify(TableName tableName) throws IOException {
+    Table table = UTIL.getConnection().getTable(tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
     int numRetries = UTIL.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
@@ -163,7 +165,7 @@ public abstract class TestTableMapReduceBase {
    * @throws IOException
    * @throws NullPointerException if we failed to find a cell value
    */
-  private void verifyAttempt(final HTable table) throws IOException, NullPointerException {
+  private void verifyAttempt(final Table table) throws IOException, NullPointerException {
     Scan scan = new Scan();
     TableInputFormat.addColumns(scan, columns);
     ResultScanner scanner = table.getScanner(scan);

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Security related generic utility methods.
@@ -36,6 +36,14 @@ public class SecurityUtil {
     if (i == -1) {
       i = principal.indexOf("@");
     }
+    return (i > -1) ? principal.substring(0, i) : principal;
+  }
+
+  /**
+   * Get the user name from a principal
+   */
+  public static String getPrincipalWithoutRealm(final String principal) {
+    int i = principal.indexOf("@");
     return (i > -1) ? principal.substring(0, i) : principal;
   }
 }

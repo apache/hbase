@@ -31,19 +31,23 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -60,8 +64,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
-import com.google.common.collect.Lists;
-
 @InterfaceAudience.Private
 public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService {
 
@@ -72,11 +74,13 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private static final Tag[] LABELS_TABLE_TAGS = new Tag[1];
   private static final byte[] DUMMY_VALUE = new byte[0];
 
-  private volatile int ordinalCounter = -1;
+  private AtomicInteger ordinalCounter = new AtomicInteger(-1);
   private Configuration conf;
   private HRegion labelsRegion;
   private VisibilityLabelsCache labelsCache;
   private List<ScanLabelGenerator> scanLabelGenerators;
+  private List<String> superUsers;
+  private List<String> superGroups;
 
   static {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -113,6 +117,10 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       throw ioe;
     }
     this.scanLabelGenerators = VisibilityUtils.getScanLabelGenerators(this.conf);
+    Pair<List<String>, List<String>> superUsersAndGroups =
+        VisibilityUtils.getSystemAndSuperUsers(this.conf);
+    this.superUsers = superUsersAndGroups.getFirst();
+    this.superGroups = superUsersAndGroups.getSecond();
     if (e.getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = e.getRegion();
       Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths =
@@ -127,7 +135,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
           ordinal = i;
         }
       }
-      this.ordinalCounter = ordinal + 1;
+      this.ordinalCounter.set(ordinal + 1);
       if (labels.size() > 0) {
         // If there is no data need not write to zk
         byte[] serialized = VisibilityUtils.getDataToWriteToZooKeeper(labels);
@@ -193,38 +201,9 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     if (!labels.containsKey(SYSTEM_LABEL)) {
       Put p = new Put(Bytes.toBytes(SYSTEM_LABEL_ORDINAL));
       p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, Bytes.toBytes(SYSTEM_LABEL));
-      // Set auth for "system" label for all super users.
-      List<String> superUsers = getSystemAndSuperUsers();
-      for (String superUser : superUsers) {
-        p.addImmutable(LABELS_TABLE_FAMILY, Bytes.toBytes(superUser), DUMMY_VALUE,
-            LABELS_TABLE_TAGS);
-      }
       region.put(p);
       labels.put(SYSTEM_LABEL, SYSTEM_LABEL_ORDINAL);
-      for (String superUser : superUsers) {
-        List<Integer> auths = userAuths.get(superUser);
-        if (auths == null) {
-          auths = new ArrayList<Integer>(1);
-          userAuths.put(superUser, auths);
-        }
-        auths.add(SYSTEM_LABEL_ORDINAL);
-      }
     }
-  }
-
-  protected List<String> getSystemAndSuperUsers() throws IOException {
-    User user = User.getCurrent();
-    if (user == null) {
-      throw new IOException("Unable to obtain the current user, "
-          + "authorization checks for internal operations will not work correctly!");
-    }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Current user name is " + user.getShortName());
-    }
-    String currentUser = user.getShortName();
-    List<String> superUsers = Lists.asList(currentUser,
-        this.conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
-    return superUsers;
   }
 
   @Override
@@ -239,13 +218,13 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         finalOpStatus[i] = new OperationStatus(OperationStatusCode.FAILURE,
             new LabelAlreadyExistsException("Label '" + labelStr + "' already exists"));
       } else {
-        Put p = new Put(Bytes.toBytes(ordinalCounter));
+        Put p = new Put(Bytes.toBytes(ordinalCounter.get()));
         p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Adding the label " + labelStr);
         }
         puts.add(p);
-        ordinalCounter++;
+        ordinalCounter.incrementAndGet();
       }
       i++;
     }
@@ -285,7 +264,14 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   public OperationStatus[] clearAuths(byte[] user, List<byte[]> authLabels) throws IOException {
     assert labelsRegion != null;
     OperationStatus[] finalOpStatus = new OperationStatus[authLabels.size()];
-    List<String> currentAuths = this.getAuths(user, true);
+    List<String> currentAuths;
+    if (AccessControlLists.isGroupPrincipal(Bytes.toString(user))) {
+      String group = AccessControlLists.getGroupName(Bytes.toString(user));
+      currentAuths = this.getGroupAuths(new String[]{group}, true);
+    }
+    else {
+      currentAuths = this.getUserAuths(user, true);
+    }
     List<Mutation> deletes = new ArrayList<Mutation>(authLabels.size());
     int i = 0;
     for (byte[] authLabel : authLabels) {
@@ -338,39 +324,105 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   }
 
   @Override
-  public List<String> getAuths(byte[] user, boolean systemCall) throws IOException {
+  public List<String> getUserAuths(byte[] user, boolean systemCall)
+      throws IOException {
     assert (labelsRegion != null || systemCall);
     if (systemCall || labelsRegion == null) {
-      return this.labelsCache.getAuths(Bytes.toString(user));
+      return this.labelsCache.getUserAuths(Bytes.toString(user));
     }
     Scan s = new Scan();
-    s.addColumn(LABELS_TABLE_FAMILY, user);
+    if (user != null && user.length > 0) {
+      s.addColumn(LABELS_TABLE_FAMILY, user);
+    }
     Filter filter = VisibilityUtils.createVisibilityLabelFilter(this.labelsRegion,
         new Authorizations(SYSTEM_LABEL));
     s.setFilter(filter);
-    List<String> auths = new ArrayList<String>();
+    ArrayList<String> auths = new ArrayList<String>();
     RegionScanner scanner = this.labelsRegion.getScanner(s);
-    List<Cell> results = new ArrayList<Cell>(1);
-    while (true) {
-      scanner.next(results);
-      if (results.isEmpty()) break;
-      Cell cell = results.get(0);
-      int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-      String label = this.labelsCache.getLabel(ordinal);
-      if (label != null) {
-        auths.add(label);
+    try {
+      List<Cell> results = new ArrayList<Cell>(1);
+      while (true) {
+        scanner.next(results);
+        if (results.isEmpty()) break;
+        Cell cell = results.get(0);
+        int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        String label = this.labelsCache.getLabel(ordinal);
+        if (label != null) {
+          auths.add(label);
+        }
+        results.clear();
       }
-      results.clear();
+    } finally {
+      scanner.close();
     }
     return auths;
   }
 
   @Override
+  public List<String> getGroupAuths(String[] groups, boolean systemCall)
+      throws IOException {
+    assert (labelsRegion != null || systemCall);
+    if (systemCall || labelsRegion == null) {
+      return this.labelsCache.getGroupAuths(groups);
+    }
+    Scan s = new Scan();
+    if (groups != null && groups.length > 0) {
+      for (String group : groups) {
+        s.addColumn(LABELS_TABLE_FAMILY, Bytes.toBytes(AccessControlLists.toGroupEntry(group)));
+      }
+    }
+    Filter filter = VisibilityUtils.createVisibilityLabelFilter(this.labelsRegion,
+        new Authorizations(SYSTEM_LABEL));
+    s.setFilter(filter);
+    Set<String> auths = new HashSet<String>();
+    RegionScanner scanner = this.labelsRegion.getScanner(s);
+    try {
+      List<Cell> results = new ArrayList<Cell>(1);
+      while (true) {
+        scanner.next(results);
+        if (results.isEmpty()) break;
+        Cell cell = results.get(0);
+        int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        String label = this.labelsCache.getLabel(ordinal);
+        if (label != null) {
+          auths.add(label);
+        }
+        results.clear();
+      }
+    } finally {
+      scanner.close();
+    }
+    return new ArrayList<String>(auths);
+  }
+
+  @Override
+  public List<String> listLabels(String regex) throws IOException {
+    assert (labelsRegion != null);
+    Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths =
+        extractLabelsAndAuths(getExistingLabelsWithAuths());
+    Map<String, Integer> labels = labelsAndUserAuths.getFirst();
+    labels.remove(SYSTEM_LABEL);
+    if (regex != null) {
+      Pattern pattern = Pattern.compile(regex);
+      ArrayList<String> matchedLabels = new ArrayList<String>();
+      for (String label : labels.keySet()) {
+        if (pattern.matcher(label).matches()) {
+          matchedLabels.add(label);
+        }
+      }
+      return matchedLabels;
+    }
+    return new ArrayList<String>(labels.keySet());
+  }
+
+  @Override
   public List<Tag> createVisibilityExpTags(String visExpression, boolean withSerializationFormat,
       boolean checkAuths) throws IOException {
-    Set<Integer> auths = null;
+    Set<Integer> auths = new HashSet<Integer>();
     if (checkAuths) {
-      auths = this.labelsCache.getAuthsAsOrdinals(VisibilityUtils.getActiveUser().getShortName());
+      User user = VisibilityUtils.getActiveUser();
+      auths.addAll(this.labelsCache.getUserAuthsAsOrdinals(user.getShortName()));
+      auths.addAll(this.labelsCache.getGroupAuthsAsOrdinals(user.getGroupNames()));
     }
     return VisibilityUtils.createVisibilityExpTags(visExpression, withSerializationFormat,
         checkAuths, auths, labelsCache);
@@ -399,7 +451,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       throws IOException {
     // If a super user issues a get/scan, he should be able to scan the cells
     // irrespective of the Visibility labels
-    if (isReadFromSuperUser()) {
+    if (isReadFromSystemAuthUser()) {
       return new VisibilityExpEvaluator() {
         @Override
         public boolean evaluate(Cell cell) throws IOException {
@@ -478,18 +530,45 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     };
   }
 
-  protected boolean isReadFromSuperUser() throws IOException {
-    byte[] user = Bytes.toBytes(VisibilityUtils.getActiveUser().getShortName());
+  protected boolean isReadFromSystemAuthUser() throws IOException {
+    User user = VisibilityUtils.getActiveUser();
     return havingSystemAuth(user);
   }
 
   @Override
-  public boolean havingSystemAuth(byte[] user) throws IOException {
-    List<String> auths = this.getAuths(user, true);
+  public boolean havingSystemAuth(User user) throws IOException {
+    // A super user has 'system' auth.
+    if (isSystemOrSuperUser(user)) {
+      return true;
+    }
+    // A user can also be explicitly granted 'system' auth.
+    List<String> auths = this.getUserAuths(Bytes.toBytes(user.getShortName()), true);
     if (LOG.isTraceEnabled()) {
-      LOG.trace("The auths for user " + Bytes.toString(user) + " are " + auths);
+      LOG.trace("The auths for user " + user.getShortName() + " are " + auths);
+    }
+    if (auths.contains(SYSTEM_LABEL)) {
+      return true;
+    }
+    auths = this.getGroupAuths(user.getGroupNames(), true);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("The auths for groups of user " + user.getShortName() + " are " + auths);
     }
     return auths.contains(SYSTEM_LABEL);
+  }
+
+  private boolean isSystemOrSuperUser(User user) throws IOException {
+    if (this.superUsers.contains(user.getShortName())) {
+      return true;
+    }
+    String[] groups = user.getGroupNames();
+    if (groups != null && groups.length > 0) {
+      for (String group : groups) {
+        if (this.superGroups.contains(group)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Override
@@ -592,5 +671,70 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
       }
     }
     return matchFound;
+  }
+
+  @Override
+  public byte[] encodeVisibilityForReplication(final List<Tag> tags, final Byte serializationFormat)
+      throws IOException {
+    if (tags.size() > 0
+        && (serializationFormat == null ||
+        serializationFormat == SORTED_ORDINAL_SERIALIZATION_FORMAT)) {
+      return createModifiedVisExpression(tags);
+    }
+    return null;
+  }
+
+  /**
+   * @param tags
+   *          - all the visibility tags associated with the current Cell
+   * @return - the modified visibility expression as byte[]
+   */
+  private byte[] createModifiedVisExpression(final List<Tag> tags)
+      throws IOException {
+    StringBuilder visibilityString = new StringBuilder();
+    for (Tag tag : tags) {
+      if (tag.getType() == TagType.VISIBILITY_TAG_TYPE) {
+        if (visibilityString.length() != 0) {
+          visibilityString.append(VisibilityConstants.CLOSED_PARAN).append(
+              VisibilityConstants.OR_OPERATOR);
+        }
+        int offset = tag.getTagOffset();
+        int endOffset = offset + tag.getTagLength();
+        boolean expressionStart = true;
+        while (offset < endOffset) {
+          Pair<Integer, Integer> result = StreamUtils.readRawVarint32(tag.getBuffer(), offset);
+          int currLabelOrdinal = result.getFirst();
+          if (currLabelOrdinal < 0) {
+            int temp = -currLabelOrdinal;
+            String label = this.labelsCache.getLabel(temp);
+            if (expressionStart) {
+              // Quote every label in case of unicode characters if present
+              visibilityString.append(VisibilityConstants.OPEN_PARAN)
+                  .append(VisibilityConstants.NOT_OPERATOR).append(CellVisibility.quote(label));
+            } else {
+              visibilityString.append(VisibilityConstants.AND_OPERATOR)
+                  .append(VisibilityConstants.NOT_OPERATOR).append(CellVisibility.quote(label));
+            }
+          } else {
+            String label = this.labelsCache.getLabel(currLabelOrdinal);
+            if (expressionStart) {
+              visibilityString.append(VisibilityConstants.OPEN_PARAN).append(
+                  CellVisibility.quote(label));
+            } else {
+              visibilityString.append(VisibilityConstants.AND_OPERATOR).append(
+                  CellVisibility.quote(label));
+            }
+          }
+          expressionStart = false;
+          offset += result.getSecond();
+        }
+      }
+    }
+    if (visibilityString.length() != 0) {
+      visibilityString.append(VisibilityConstants.CLOSED_PARAN);
+      // Return the string formed as byte[]
+      return Bytes.toBytes(visibilityString.toString());
+    }
+    return null;
   }
 }

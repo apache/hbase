@@ -18,15 +18,16 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.DoNotRetryRegionException;
 
 /**
  * Thrown when we are asked to operate on a region we know nothing about.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class UnknownRegionException extends RegionException {
+public class UnknownRegionException extends DoNotRetryRegionException {
   private static final long serialVersionUID = 1968858760475205392L;
 
   public UnknownRegionException(String regionName) {

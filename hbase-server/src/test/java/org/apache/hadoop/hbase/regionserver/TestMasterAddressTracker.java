@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -26,6 +27,8 @@ import java.util.concurrent.Semaphore;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -35,7 +38,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestMasterAddressTracker {
   private static final Log LOG = LogFactory.getLog(TestMasterAddressTracker.class);
 
@@ -75,9 +78,10 @@ public class TestMasterAddressTracker {
     // Create the master node with a dummy address
     String host = "localhost";
     int port = 1234;
+    int infoPort = 1235;
     ServerName sn = ServerName.valueOf(host, port, System.currentTimeMillis());
     LOG.info("Creating master node");
-    MasterAddressTracker.setMasterAddress(zk, zk.getMasterAddressZNode(), sn);
+    MasterAddressTracker.setMasterAddress(zk, zk.getMasterAddressZNode(), sn, infoPort);
 
     // Wait for the node to be created
     LOG.info("Waiting for master address manager to be notified");
@@ -86,7 +90,7 @@ public class TestMasterAddressTracker {
     assertTrue(addressTracker.hasMaster());
     ServerName pulledAddress = addressTracker.getMasterAddress();
     assertTrue(pulledAddress.equals(sn));
-
+    assertEquals(infoPort, addressTracker.getMasterInfoPort());
   }
 
   public static class NodeCreationListener extends ZooKeeperListener {

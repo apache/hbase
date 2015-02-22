@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.hbase;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.hadoop.classification.InterfaceAudience;
+import java.util.UUID;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.util.UUID;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * The identifier for this cluster.

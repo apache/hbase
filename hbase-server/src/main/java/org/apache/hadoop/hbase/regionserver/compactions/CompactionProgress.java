@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * This class holds information relevant for tracking the progress of a

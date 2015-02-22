@@ -23,7 +23,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaComparator;
@@ -161,14 +162,14 @@ public class PrefixTreeCodec implements DataBlockEncoder{
   }
 
   @Override
-  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
     PrefixTreeEncodingState state = (PrefixTreeEncodingState) encodingCtx.getEncodingState();
     PrefixTreeEncoder builder = state.builder;
-    builder.write(kv);
-    int size = kv.getLength();
+    builder.write(cell);
+    int size = KeyValueUtil.length(cell);
     if (encodingCtx.getHFileContext().isIncludesMvcc()) {
-      size += WritableUtils.getVIntSize(kv.getMvccVersion());
+      size += WritableUtils.getVIntSize(cell.getSequenceId());
     }
     return size;
   }

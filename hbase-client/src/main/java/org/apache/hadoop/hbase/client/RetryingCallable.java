@@ -20,9 +20,8 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A Callable<T> that will be retried.  If {@link #call(int)} invocation throws exceptions,

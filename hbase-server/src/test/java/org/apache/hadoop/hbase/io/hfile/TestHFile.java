@@ -37,13 +37,17 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -54,7 +58,7 @@ import org.junit.experimental.categories.Category;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestHFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHFile.class);
 
@@ -66,12 +70,12 @@ public class TestHFile extends HBaseTestCase {
   private static CacheConfig cacheConf = null;
   private Map<String, Long> startingMetrics;
 
-  @Override
+  @Before
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  @Override
+  @After
   public void tearDown() throws Exception {
     super.tearDown();
   }
@@ -82,6 +86,7 @@ public class TestHFile extends HBaseTestCase {
    * Test all features work reasonably when hfile is empty of entries.
    * @throws IOException
    */
+  @Test
   public void testEmptyHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
@@ -98,6 +103,7 @@ public class TestHFile extends HBaseTestCase {
   /**
    * Create 0-length hfile and show that it fails
    */
+  @Test
   public void testCorrupt0LengthHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
@@ -131,6 +137,7 @@ public class TestHFile extends HBaseTestCase {
   /**
    * Create a truncated hfile and verify that exception thrown.
    */
+  @Test
   public void testCorruptTruncatedHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     Path f = new Path(ROOT_DIR, getName());
@@ -280,11 +287,13 @@ public class TestHFile extends HBaseTestCase {
     fs.delete(ncTFile, true);
   }
 
+  @Test
   public void testTFileFeatures() throws IOException {
     testTFilefeaturesInternals(false);
     testTFilefeaturesInternals(true);
   }
 
+  @Test
   protected void testTFilefeaturesInternals(boolean useTags) throws IOException {
     basicWithSomeCodec("none", useTags);
     basicWithSomeCodec("gz", useTags);
@@ -316,7 +325,8 @@ public class TestHFile extends HBaseTestCase {
       ByteBuffer actual = reader.getMetaBlock("HFileMeta" + i, false);
       ByteBuffer expected = 
         ByteBuffer.wrap(("something to test" + i).getBytes());
-      assertTrue("failed to match metadata", actual.compareTo(expected) == 0);
+      assertEquals("failed to match metadata",
+        Bytes.toStringBinary(expected), Bytes.toStringBinary(actual));
     }
   }
 
@@ -351,11 +361,13 @@ public class TestHFile extends HBaseTestCase {
   }
 
   // test meta blocks for tfiles
+  @Test
   public void testMetaBlocks() throws Exception {
     metablocks("none");
     metablocks("gz");
   }
 
+  @Test
   public void testNullMetaBlocks() throws Exception {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
     for (Compression.Algorithm compressAlgo : 
@@ -368,7 +380,8 @@ public class TestHFile extends HBaseTestCase {
           .withOutputStream(fout)
           .withFileContext(meta)
           .create();
-      writer.append("foo".getBytes(), "value".getBytes());
+      KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
+      writer.append(kv);
       writer.close();
       fout.close();
       Reader reader = HFile.createReader(fs, mFile, cacheConf, conf);

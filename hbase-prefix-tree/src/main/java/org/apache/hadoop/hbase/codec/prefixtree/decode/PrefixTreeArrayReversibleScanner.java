@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.codec.prefixtree.decode;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.ReversibleCellScanner;
 
@@ -115,6 +115,7 @@ public class PrefixTreeArrayReversibleScanner extends PrefixTreeArrayScanner imp
         }
       }
       if (currentRowNode.hasOccurrences()) {// escape clause
+        currentRowNode.resetFanIndex();
         return true;// found some values
       }
     }

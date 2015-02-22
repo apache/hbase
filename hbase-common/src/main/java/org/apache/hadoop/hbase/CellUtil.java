@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -25,9 +26,11 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -37,6 +40,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class CellUtil {
+
+  /**
+   * Private constructor to keep this class from being instantiated.
+   */
+  private CellUtil(){}
 
   /******************* ByteRange *******************************/
 
@@ -159,8 +167,20 @@ public final class CellUtil {
     // I need a Cell Factory here.  Using KeyValue for now. TODO.
     // TODO: Make a new Cell implementation that just carries these
     // byte arrays.
-    return new KeyValue(row, family, qualifier, timestamp,
-      KeyValue.Type.codeToType(type), value);
+    // TODO: Call factory to create Cell
+    return new KeyValue(row, family, qualifier, timestamp, KeyValue.Type.codeToType(type), value);
+  }
+
+  public static Cell createCell(final byte [] rowArray, final int rowOffset, final int rowLength,
+      final byte [] familyArray, final int familyOffset, final int familyLength,
+      final byte [] qualifierArray, final int qualifierOffset, final int qualifierLength) {
+    // See createCell(final byte [] row, final byte [] value) for why we default Maximum type.
+    return new KeyValue(rowArray, rowOffset, rowLength,
+        familyArray, familyOffset, familyLength,
+        qualifierArray, qualifierOffset, qualifierLength,
+        HConstants.LATEST_TIMESTAMP,
+        KeyValue.Type.Maximum,
+        HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length);
   }
 
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
@@ -172,7 +192,8 @@ public final class CellUtil {
   }
 
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value, byte[] tags, final long memstoreTS) {
+      final long timestamp, final byte type, final byte[] value, byte[] tags,
+      final long memstoreTS) {
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
         KeyValue.Type.codeToType(type), value, tags);
     keyValue.setSequenceId(memstoreTS);
@@ -186,10 +207,48 @@ public final class CellUtil {
   }
 
   /**
+   * Create a Cell with specific row.  Other fields defaulted.
+   * @param row
+   * @return Cell with passed row but all other fields are arbitrary
+   */
+  public static Cell createCell(final byte [] row) {
+    return createCell(row, HConstants.EMPTY_BYTE_ARRAY);
+  }
+
+  /**
+   * Create a Cell with specific row and value.  Other fields are defaulted.
+   * @param row
+   * @param value
+   * @return Cell with passed row and value but all other fields are arbitrary
+   */
+  public static Cell createCell(final byte [] row, final byte [] value) {
+    // An empty family + empty qualifier + Type.Minimum is used as flag to indicate last on row.
+    // See the CellComparator and KeyValue comparator.  Search for compareWithoutRow.
+    // Lets not make a last-on-row key as default but at same time, if you are making a key
+    // without specifying type, etc., flag it as weird by setting type to be Maximum.
+    return createCell(row, HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
+      HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum.getCode(), value);
+  }
+
+  /**
+   * Create a Cell with specific row.  Other fields defaulted.
+   * @param row
+   * @param family
+   * @param qualifier
+   * @return Cell with passed row but all other fields are arbitrary
+   */
+  public static Cell createCell(final byte [] row, final byte [] family, final byte [] qualifier) {
+    // See above in createCell(final byte [] row, final byte [] value) why we set type to Maximum.
+    return createCell(row, family, qualifier,
+        HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum.getCode(), HConstants.EMPTY_BYTE_ARRAY);
+  }
+
+  /**
    * @param cellScannerables
    * @return CellScanner interface over <code>cellIterables</code>
    */
-  public static CellScanner createCellScanner(final List<? extends CellScannable> cellScannerables) {
+  public static CellScanner createCellScanner(
+      final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
       private final Iterator<? extends CellScannable> iterator = cellScannerables.iterator();
       private CellScanner cellScanner = null;
@@ -449,28 +508,66 @@ public final class CellUtil {
    * @param cell
    * @return Estimate of the <code>cell</code> size in bytes.
    */
-  public static int estimatedSizeOf(final Cell cell) {
+  public static int estimatedSerializedSizeOf(final Cell cell) {
     // If a KeyValue, we can give a good estimate of size.
     if (cell instanceof KeyValue) {
       return ((KeyValue)cell).getLength() + Bytes.SIZEOF_INT;
     }
     // TODO: Should we add to Cell a sizeOf?  Would it help? Does it make sense if Cell is
     // prefix encoded or compressed?
-    return cell.getRowLength() + cell.getFamilyLength() +
-      cell.getQualifierLength() +
-      cell.getValueLength() +
+    return getSumOfCellElementLengths(cell) +
       // Use the KeyValue's infrastructure size presuming that another implementation would have
       // same basic cost.
       KeyValue.KEY_INFRASTRUCTURE_SIZE +
       // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
       Bytes.SIZEOF_INT;
   }
-  
-  
+
+  /**
+   * @param cell
+   * @return Sum of the lengths of all the elements in a Cell; does not count in any infrastructure
+   */
+  private static int getSumOfCellElementLengths(final Cell cell) {
+    return getSumOfCellKeyElementLengths(cell) + cell.getValueLength() + cell.getTagsLength();
+  }
+
+  /**
+   * @param cell
+   * @return Sum of all elements that make up a key; does not include infrastructure, tags or
+   * values.
+   */
+  private static int getSumOfCellKeyElementLengths(final Cell cell) {
+    return cell.getRowLength() + cell.getFamilyLength() +
+    cell.getQualifierLength() +
+    KeyValue.TIMESTAMP_TYPE_SIZE;
+  }
+
+  public static int estimatedSerializedSizeOfKey(final Cell cell) {
+    if (cell instanceof KeyValue) return ((KeyValue)cell).getKeyLength();
+    // This will be a low estimate.  Will do for now.
+    return getSumOfCellKeyElementLengths(cell);
+  }
+
+  /**
+   * This is an estimate of the heap space occupied by a cell. When the cell is of type
+   * {@link HeapSize} we call {@link HeapSize#heapSize()} so cell can give a correct value. In other
+   * cases we just consider the bytes occupied by the cell components ie. row, CF, qualifier,
+   * timestamp, type, value and tags.
+   * @param cell
+   * @return estimate of the heap space
+   */
+  public static long estimatedHeapSizeOf(final Cell cell) {
+    if (cell instanceof HeapSize) {
+      return ((HeapSize) cell).heapSize();
+    }
+    // TODO: Add sizing of references that hold the row, family, etc., arrays.
+    return estimatedSerializedSizeOf(cell);
+  }
+
   /********************* tags *************************************/
   /**
    * Util method to iterate through the tags
-   * 
+   *
    * @param tags
    * @param offset
    * @param length
@@ -529,5 +626,261 @@ public final class CellUtil {
       throw new IOException(new UnsupportedOperationException("Cell is not of type "
           + SettableSequenceId.class.getName()));
     }
+  }
+
+  /**
+   * Sets the given timestamp to the cell.
+   * @param cell
+   * @param ts
+   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   */
+  public static void setTimestamp(Cell cell, long ts) throws IOException {
+    if (cell instanceof SettableTimestamp) {
+      ((SettableTimestamp) cell).setTimestamp(ts);
+    } else {
+      throw new IOException(new UnsupportedOperationException("Cell is not of type "
+          + SettableTimestamp.class.getName()));
+    }
+  }
+
+  /**
+   * Sets the given timestamp to the cell.
+   * @param cell
+   * @param ts buffer containing the timestamp value
+   * @param tsOffset offset to the new timestamp
+   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   */
+  public static void setTimestamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
+    if (cell instanceof SettableTimestamp) {
+      ((SettableTimestamp) cell).setTimestamp(ts, tsOffset);
+    } else {
+      throw new IOException(new UnsupportedOperationException("Cell is not of type "
+          + SettableTimestamp.class.getName()));
+    }
+  }
+
+  /**
+   * Sets the given timestamp to the cell iff current timestamp is
+   * {@link HConstants#LATEST_TIMESTAMP}.
+   * @param cell
+   * @param ts
+   * @return True if cell timestamp is modified.
+   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   */
+  public static boolean updateLatestStamp(Cell cell, long ts) throws IOException {
+    if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
+      setTimestamp(cell, ts);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Sets the given timestamp to the cell iff current timestamp is
+   * {@link HConstants#LATEST_TIMESTAMP}.
+   * @param cell
+   * @param ts buffer containing the timestamp value
+   * @param tsOffset offset to the new timestamp
+   * @return True if cell timestamp is modified.
+   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   */
+  public static boolean updateLatestStamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
+    if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
+      setTimestamp(cell, ts, tsOffset);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Writes the Cell's key part as it would have serialized in a KeyValue. The format is &lt;2 bytes
+   * rk len&gt;&lt;rk&gt;&lt;1 byte cf len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes
+   * timestamp&gt;&lt;1 byte type&gt;
+   * @param cell
+   * @param out
+   * @throws IOException
+   */
+  public static void writeFlatKey(Cell cell, DataOutputStream out) throws IOException {
+    short rowLen = cell.getRowLength();
+    out.writeShort(rowLen);
+    out.write(cell.getRowArray(), cell.getRowOffset(), rowLen);
+    byte fLen = cell.getFamilyLength();
+    out.writeByte(fLen);
+    out.write(cell.getFamilyArray(), cell.getFamilyOffset(), fLen);
+    out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+    out.writeLong(cell.getTimestamp());
+    out.writeByte(cell.getTypeByte());
+  }
+
+  /**
+   * @param cell
+   * @return The Key portion of the passed <code>cell</code> as a String.
+   */
+  public static String getCellKeyAsString(Cell cell) {
+    StringBuilder sb = new StringBuilder(Bytes.toStringBinary(
+      cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    sb.append('/');
+    sb.append(cell.getFamilyLength() == 0? "":
+      Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()));
+    // KeyValue only added ':' if family is non-null.  Do same.
+    if (cell.getFamilyLength() > 0) sb.append(':');
+    sb.append(cell.getQualifierLength() == 0? "":
+      Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength()));
+    sb.append('/');
+    sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
+    sb.append('/');
+    sb.append(Type.codeToType(cell.getTypeByte()));
+    sb.append("/vlen=");
+    sb.append(cell.getValueLength());
+    sb.append("/seqid=");
+    sb.append(cell.getSequenceId());
+    return sb.toString();
+  }
+
+  /**
+   * This method exists just to encapsulate how we serialize keys.  To be replaced by a factory
+   * that we query to figure what the Cell implementation is and then, what serialization engine
+   * to use and further, how to serialize the key for inclusion in hfile index. TODO.
+   * @param cell
+   * @return The key portion of the Cell serialized in the old-school KeyValue way or null if
+   * passed a null <code>cell</code>
+   */
+  public static byte [] getCellKeySerializedAsKeyValueKey(final Cell cell) {
+    if (cell == null) return null;
+    byte [] b = new byte[KeyValueUtil.keyLength(cell)];
+    KeyValueUtil.appendKeyTo(cell, b, 0);
+    return b;
+  }
+
+  /**
+   * Write rowkey excluding the common part.
+   * @param cell
+   * @param rLen
+   * @param commonPrefix
+   * @param out
+   * @throws IOException
+   */
+  public static void writeRowKeyExcludingCommon(Cell cell, short rLen, int commonPrefix,
+      DataOutputStream out) throws IOException {
+    if (commonPrefix == 0) {
+      out.writeShort(rLen);
+    } else if (commonPrefix == 1) {
+      out.writeByte((byte) rLen);
+      commonPrefix--;
+    } else {
+      commonPrefix -= KeyValue.ROW_LENGTH_SIZE;
+    }
+    if (rLen > commonPrefix) {
+      out.write(cell.getRowArray(), cell.getRowOffset() + commonPrefix, rLen - commonPrefix);
+    }
+  }
+
+  /**
+   * Find length of common prefix in keys of the cells, considering key as byte[] if serialized in
+   * {@link KeyValue}. The key format is &lt;2 bytes rk len&gt;&lt;rk&gt;&lt;1 byte cf
+   * len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes timestamp&gt;&lt;1 byte type&gt;
+   * @param c1
+   *          the cell
+   * @param c2
+   *          the cell
+   * @param bypassFamilyCheck
+   *          when true assume the family bytes same in both cells. Pass it as true when dealing
+   *          with Cells in same CF so as to avoid some checks
+   * @param withTsType
+   *          when true check timestamp and type bytes also.
+   * @return length of common prefix
+   */
+  public static int findCommonPrefixInFlatKey(Cell c1, Cell c2, boolean bypassFamilyCheck,
+      boolean withTsType) {
+    // Compare the 2 bytes in RK length part
+    short rLen1 = c1.getRowLength();
+    short rLen2 = c2.getRowLength();
+    int commonPrefix = KeyValue.ROW_LENGTH_SIZE;
+    if (rLen1 != rLen2) {
+      // early out when the RK length itself is not matching
+      return ByteBufferUtils.findCommonPrefix(Bytes.toBytes(rLen1), 0, KeyValue.ROW_LENGTH_SIZE,
+          Bytes.toBytes(rLen2), 0, KeyValue.ROW_LENGTH_SIZE);
+    }
+    // Compare the RKs
+    int rkCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getRowArray(), c1.getRowOffset(),
+        rLen1, c2.getRowArray(), c2.getRowOffset(), rLen2);
+    commonPrefix += rkCommonPrefix;
+    if (rkCommonPrefix != rLen1) {
+      // Early out when RK is not fully matching.
+      return commonPrefix;
+    }
+    // Compare 1 byte CF length part
+    byte fLen1 = c1.getFamilyLength();
+    if (bypassFamilyCheck) {
+      // This flag will be true when caller is sure that the family will be same for both the cells
+      // Just make commonPrefix to increment by the family part
+      commonPrefix += KeyValue.FAMILY_LENGTH_SIZE + fLen1;
+    } else {
+      byte fLen2 = c2.getFamilyLength();
+      if (fLen1 != fLen2) {
+        // early out when the CF length itself is not matching
+        return commonPrefix;
+      }
+      // CF lengths are same so there is one more byte common in key part
+      commonPrefix += KeyValue.FAMILY_LENGTH_SIZE;
+      // Compare the CF names
+      int fCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getFamilyArray(),
+          c1.getFamilyOffset(), fLen1, c2.getFamilyArray(), c2.getFamilyOffset(), fLen2);
+      commonPrefix += fCommonPrefix;
+      if (fCommonPrefix != fLen1) {
+        return commonPrefix;
+      }
+    }
+    // Compare the Qualifiers
+    int qLen1 = c1.getQualifierLength();
+    int qLen2 = c2.getQualifierLength();
+    int qCommon = ByteBufferUtils.findCommonPrefix(c1.getQualifierArray(), c1.getQualifierOffset(),
+        qLen1, c2.getQualifierArray(), c2.getQualifierOffset(), qLen2);
+    commonPrefix += qCommon;
+    if (!withTsType || Math.max(qLen1, qLen2) != qCommon) {
+      return commonPrefix;
+    }
+    // Compare the timestamp parts
+    int tsCommonPrefix = ByteBufferUtils.findCommonPrefix(Bytes.toBytes(c1.getTimestamp()), 0,
+        KeyValue.TIMESTAMP_SIZE, Bytes.toBytes(c2.getTimestamp()), 0, KeyValue.TIMESTAMP_SIZE);
+    commonPrefix += tsCommonPrefix;
+    if (tsCommonPrefix != KeyValue.TIMESTAMP_SIZE) {
+      return commonPrefix;
+    }
+    // Compare the type
+    if (c1.getTypeByte() == c2.getTypeByte()) {
+      commonPrefix += KeyValue.TYPE_SIZE;
+    }
+    return commonPrefix;
+  }
+
+  /** Returns a string representation of the cell */
+  public static String toString(Cell cell, boolean verbose) {
+    if (cell == null) {
+      return "";
+    }
+    StringBuilder builder = new StringBuilder();
+    String keyStr = getCellKeyAsString(cell);
+
+    String tag = null;
+    String value = null;
+    if (verbose) {
+      // TODO: pretty print tags as well
+      tag = Bytes.toStringBinary(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+      value = Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength());
+    }
+
+    builder
+      .append(keyStr);
+    if (tag != null && !tag.isEmpty()) {
+      builder.append("/").append(tag);
+    }
+    if (value != null) {
+      builder.append("/").append(value);
+    }
+
+    return builder.toString();
   }
 }

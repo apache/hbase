@@ -30,14 +30,14 @@ import java.util.NavigableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
@@ -55,7 +55,7 @@ import com.google.protobuf.ServiceException;
  * Test MetaTableAccessor but without spinning up a cluster.
  * We mock regionserver back and forth (we do spin up a zk cluster).
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestMetaTableAccessorNoCluster {
   private static final Log LOG = LogFactory.getLog(TestMetaTableAccessorNoCluster.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -128,7 +128,7 @@ public class TestMetaTableAccessorNoCluster {
     // This is a servername we use in a few places below.
     ServerName sn = ServerName.valueOf("example.com", 1234, System.currentTimeMillis());
 
-    HConnection connection;
+    ClusterConnection connection = null;
     try {
       // Mock an ClientProtocol. Our mock implementation will fail a few
       // times when we go to open a scanner.
@@ -204,7 +204,7 @@ public class TestMetaTableAccessorNoCluster {
       Mockito.verify(implementation, Mockito.times(6)).
         scan((RpcController)Mockito.any(), (ScanRequest)Mockito.any());
     } finally {
-      HConnectionManager.deleteConnection(UTIL.getConfiguration());
+      if (connection != null && !connection.isClosed()) connection.close();
       zkw.close();
     }
   }

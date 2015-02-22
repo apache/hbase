@@ -28,13 +28,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -45,7 +47,7 @@ import org.junit.Test;
 
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestAssignmentListener {
   private static final Log LOG = LogFactory.getLog(TestAssignmentListener.class);
 
@@ -203,7 +205,7 @@ public class TestAssignmentListener {
       assertEquals(0, listener.getCloseCount());
 
       // Add some data
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
+      Table table = TEST_UTIL.getConnection().getTable(TABLE_NAME);
       try {
         for (int i = 0; i < 10; ++i) {
           byte[] key = Bytes.toBytes("row-" + i);

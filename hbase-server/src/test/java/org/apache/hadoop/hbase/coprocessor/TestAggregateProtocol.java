@@ -23,17 +23,21 @@ import static org.junit.Assert.assertEquals;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -44,7 +48,7 @@ import org.junit.experimental.categories.Category;
  * A test class to cover aggregate functions, that can be implemented using
  * Coprocessors.
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestAggregateProtocol {
   protected static Log myLog = LogFactory.getLog(TestAggregateProtocol.class);
 
@@ -78,10 +82,9 @@ public class TestAggregateProtocol {
         "org.apache.hadoop.hbase.coprocessor.AggregateImplementation");
 
     util.startMiniCluster(2);
-    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY);
-    util.createMultiRegions(util.getConfiguration(), table, TEST_FAMILY,
-        new byte[][] { HConstants.EMPTY_BYTE_ARRAY, ROWS[rowSeperator1],
-            ROWS[rowSeperator2] });
+    final byte[][] SPLIT_KEYS = new byte[][] { ROWS[rowSeperator1],
+        ROWS[rowSeperator2] };
+    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
     /**
      * The testtable has one CQ which is always populated and one variable CQ
      * for each row rowkey1: CF:CQ CF:CQ1 rowKey2: CF:CQ CF:CQ2

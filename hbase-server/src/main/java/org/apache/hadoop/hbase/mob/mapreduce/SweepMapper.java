@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.mob.mapreduce;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
@@ -71,14 +73,14 @@ public class SweepMapper extends TableMapper<Text, KeyValue> {
     if (columns == null) {
       return;
     }
-    KeyValue[] kvList = columns.raw();
-    if (kvList == null || kvList.length == 0) {
+    Cell[] cells = columns.rawCells();
+    if (cells == null || cells.length == 0) {
       return;
     }
-    for (KeyValue kv : kvList) {
-      if (MobUtils.hasValidMobRefCellValue(kv)) {
-        String fileName = MobUtils.getMobFileName(kv);
-        context.write(new Text(fileName), kv);
+    for (Cell c : cells) {
+      if (MobUtils.hasValidMobRefCellValue(c)) {
+        String fileName = MobUtils.getMobFileName(c);
+        context.write(new Text(fileName), KeyValueUtil.ensureKeyValue(c));
       }
     }
   }

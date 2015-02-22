@@ -33,20 +33,28 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.base.Joiner;
@@ -54,7 +62,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /** memstore test case */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestDefaultMemStore extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private DefaultMemStore memstore;
@@ -78,8 +86,8 @@ public class TestDefaultMemStore extends TestCase {
     byte [] other = Bytes.toBytes("somethingelse");
     KeyValue samekey = new KeyValue(bytes, bytes, bytes, other);
     this.memstore.add(samekey);
-    KeyValue found = this.memstore.kvset.first();
-    assertEquals(1, this.memstore.kvset.size());
+    Cell found = this.memstore.cellSet.first();
+    assertEquals(1, this.memstore.cellSet.size());
     assertTrue(Bytes.toString(found.getValue()), CellUtil.matchingValue(samekey, found));
   }
 
@@ -92,8 +100,9 @@ public class TestDefaultMemStore extends TestCase {
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners(0);
     Scan scan = new Scan();
     List<Cell> result = new ArrayList<Cell>();
-    ScanInfo scanInfo = new ScanInfo(null, 0, 1, HConstants.LATEST_TIMESTAMP, false,
-        0, this.memstore.comparator);
+    ScanInfo scanInfo =
+        new ScanInfo(null, 0, 1, HConstants.LATEST_TIMESTAMP, KeepDeletedCells.FALSE, 0,
+            this.memstore.comparator);
     ScanType scanType = ScanType.USER_SCAN;
     StoreScanner s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     int count = 0;
@@ -482,7 +491,7 @@ public class TestDefaultMemStore extends TestCase {
     m.add(key2);
 
     assertTrue("Expected memstore to hold 3 values, actually has " +
-        m.kvset.size(), m.kvset.size() == 3);
+        m.cellSet.size(), m.cellSet.size() == 3);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -497,11 +506,11 @@ public class TestDefaultMemStore extends TestCase {
     // Add more versions to make it a little more interesting.
     Thread.sleep(1);
     addRows(this.memstore);
-    KeyValue closestToEmpty = this.memstore.getNextRow(KeyValue.LOWESTKEY);
+    Cell closestToEmpty = this.memstore.getNextRow(KeyValue.LOWESTKEY);
     assertTrue(KeyValue.COMPARATOR.compareRows(closestToEmpty,
       new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
-      KeyValue nr = this.memstore.getNextRow(new KeyValue(Bytes.toBytes(i),
+      Cell nr = this.memstore.getNextRow(new KeyValue(Bytes.toBytes(i),
         System.currentTimeMillis()));
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
@@ -512,7 +521,7 @@ public class TestDefaultMemStore extends TestCase {
     }
     //starting from each row, validate results should contain the starting row
     for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
-      ScanInfo scanInfo = new ScanInfo(FAMILY, 0, 1, Integer.MAX_VALUE, false,
+      ScanInfo scanInfo = new ScanInfo(FAMILY, 0, 1, Integer.MAX_VALUE, KeepDeletedCells.FALSE,
           0, this.memstore.comparator);
       ScanType scanType = ScanType.USER_SCAN;
       InternalScanner scanner = new StoreScanner(new Scan(
@@ -557,10 +566,10 @@ public class TestDefaultMemStore extends TestCase {
     memstore.snapshot();
     assertEquals(3, memstore.snapshot.size());
     //Adding value to "new" memstore
-    assertEquals(0, memstore.kvset.size());
+    assertEquals(0, memstore.cellSet.size());
     memstore.add(new KeyValue(row, fam ,qf4, val));
     memstore.add(new KeyValue(row, fam ,qf5, val));
-    assertEquals(2, memstore.kvset.size());
+    assertEquals(2, memstore.cellSet.size());
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -582,7 +591,7 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(put2);
     memstore.add(put3);
 
-    assertEquals(3, memstore.kvset.size());
+    assertEquals(3, memstore.cellSet.size());
 
     KeyValue del2 = new KeyValue(row, fam, qf1, ts2, KeyValue.Type.Delete, val);
     memstore.delete(del2);
@@ -593,10 +602,10 @@ public class TestDefaultMemStore extends TestCase {
     expected.add(put2);
     expected.add(put1);
 
-    assertEquals(4, memstore.kvset.size());
+    assertEquals(4, memstore.cellSet.size());
     int i = 0;
-    for(KeyValue kv : memstore.kvset) {
-      assertEquals(expected.get(i++), kv);
+    for(Cell cell : memstore.cellSet) {
+      assertEquals(expected.get(i++), cell);
     }
   }
 
@@ -616,7 +625,7 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(put2);
     memstore.add(put3);
 
-    assertEquals(3, memstore.kvset.size());
+    assertEquals(3, memstore.cellSet.size());
 
     KeyValue del2 =
       new KeyValue(row, fam, qf1, ts2, KeyValue.Type.DeleteColumn, val);
@@ -629,10 +638,10 @@ public class TestDefaultMemStore extends TestCase {
     expected.add(put1);
 
 
-    assertEquals(4, memstore.kvset.size());
+    assertEquals(4, memstore.cellSet.size());
     int i = 0;
-    for (KeyValue kv: memstore.kvset) {
-      assertEquals(expected.get(i++), kv);
+    for (Cell cell: memstore.cellSet) {
+      assertEquals(expected.get(i++), cell);
     }
   }
 
@@ -669,10 +678,10 @@ public class TestDefaultMemStore extends TestCase {
 
 
 
-    assertEquals(5, memstore.kvset.size());
+    assertEquals(5, memstore.cellSet.size());
     int i = 0;
-    for (KeyValue kv: memstore.kvset) {
-      assertEquals(expected.get(i++), kv);
+    for (Cell cell: memstore.cellSet) {
+      assertEquals(expected.get(i++), cell);
     }
   }
 
@@ -685,8 +694,8 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(new KeyValue(row, fam, qf, ts, val));
     KeyValue delete = new KeyValue(row, fam, qf, ts, KeyValue.Type.Delete, val);
     memstore.delete(delete);
-    assertEquals(2, memstore.kvset.size());
-    assertEquals(delete, memstore.kvset.first());
+    assertEquals(2, memstore.cellSet.size());
+    assertEquals(delete, memstore.cellSet.first());
   }
 
   public void testRetainsDeleteVersion() throws IOException {
@@ -698,8 +707,8 @@ public class TestDefaultMemStore extends TestCase {
         "row1", "fam", "a", 100, KeyValue.Type.Delete, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.kvset.size());
-    assertEquals(delete, memstore.kvset.first());
+    assertEquals(2, memstore.cellSet.size());
+    assertEquals(delete, memstore.cellSet.first());
   }
   public void testRetainsDeleteColumn() throws IOException {
     // add a put to memstore
@@ -710,8 +719,8 @@ public class TestDefaultMemStore extends TestCase {
         KeyValue.Type.DeleteColumn, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.kvset.size());
-    assertEquals(delete, memstore.kvset.first());
+    assertEquals(2, memstore.cellSet.size());
+    assertEquals(delete, memstore.cellSet.first());
   }
   public void testRetainsDeleteFamily() throws IOException {
     // add a put to memstore
@@ -722,8 +731,8 @@ public class TestDefaultMemStore extends TestCase {
         KeyValue.Type.DeleteFamily, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.kvset.size());
-    assertEquals(delete, memstore.kvset.first());
+    assertEquals(2, memstore.cellSet.size());
+    assertEquals(delete, memstore.cellSet.first());
   }
 
   ////////////////////////////////////
@@ -923,6 +932,36 @@ public class TestDefaultMemStore extends TestCase {
     } finally {
       EnvironmentEdgeManager.reset();
     }
+  }
+
+  public void testShouldFlushMeta() throws Exception {
+    // write an edit in the META and ensure the shouldFlush (that the periodic memstore
+    // flusher invokes) returns true after META_CACHE_FLUSH_INTERVAL (even though
+    // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
+    Configuration conf = new Configuration();
+    conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.META_CACHE_FLUSH_INTERVAL * 10);
+    HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
+    Path testDir = hbaseUtility.getDataTestDir();
+    EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
+    EnvironmentEdgeManager.injectEdge(edge);
+    edge.setCurrentTimeMillis(1234);
+    WALFactory wFactory = new WALFactory(conf, null, "1234");
+    HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
+        conf, TableDescriptor.metaTableDescriptor(conf),
+        wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
+            getEncodedNameAsBytes()));
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf("testShouldFlushMeta"),
+        Bytes.toBytes("row_0200"), Bytes.toBytes("row_0300"));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("testShouldFlushMeta"));
+    desc.addFamily(new HColumnDescriptor("foo".getBytes()));
+    HRegion r =
+        HRegion.createHRegion(hri, testDir, conf, desc,
+            wFactory.getWAL(hri.getEncodedNameAsBytes()));
+    HRegion.addRegionToMETA(meta, r);
+    edge.setCurrentTimeMillis(1234 + 100);
+    assertTrue(meta.shouldFlush() == false);
+    edge.setCurrentTimeMillis(edge.currentTime() + HRegion.META_CACHE_FLUSH_INTERVAL + 1);
+    assertTrue(meta.shouldFlush() == true);
   }
 
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {

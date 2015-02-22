@@ -24,7 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -33,7 +34,7 @@ import org.junit.experimental.categories.Category;
  * Ensures that it uses no more memory than it's supposed to,
  * and that it properly deals with multibyte encodings.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestMemoryBoundedLogMessageBuffer {
 
   private static final long TEN_KB = 10 * 1024;

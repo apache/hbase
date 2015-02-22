@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.metrics;
 
 import javax.management.ObjectName;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 /**

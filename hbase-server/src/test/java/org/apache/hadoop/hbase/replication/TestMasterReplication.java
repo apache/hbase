@@ -35,8 +35,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -44,12 +44,15 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -58,7 +61,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({ReplicationTests.class, LargeTests.class})
 public class TestMasterReplication {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
@@ -72,7 +75,7 @@ public class TestMasterReplication {
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 10;
 
-  private static final byte[] tableName = Bytes.toBytes("test");
+  private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] famName = Bytes.toBytes("f");
   private static final byte[] row = Bytes.toBytes("row");
   private static final byte[] row1 = Bytes.toBytes("row1");
@@ -105,7 +108,7 @@ public class TestMasterReplication {
         CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         CoprocessorCounter.class.getName());
 
-    table = new HTableDescriptor(TableName.valueOf(tableName));
+    table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);
@@ -123,7 +126,7 @@ public class TestMasterReplication {
   public void testCyclicReplication1() throws Exception {
     LOG.info("testSimplePutDelete");
     int numClusters = 2;
-    HTable[] htables = null;
+    Table[] htables = null;
     try {
       startMiniClusters(numClusters);
       createTableOnClusters(table);
@@ -163,7 +166,7 @@ public class TestMasterReplication {
   public void testCyclicReplication2() throws Exception {
     LOG.info("testCyclicReplication1");
     int numClusters = 3;
-    HTable[] htables = null;
+    Table[] htables = null;
     try {
       startMiniClusters(numClusters);
       createTableOnClusters(table);
@@ -214,7 +217,7 @@ public class TestMasterReplication {
   public void testCyclicReplication3() throws Exception {
     LOG.info("testCyclicReplication2");
     int numClusters = 3;
-    HTable[] htables = null;
+    Table[] htables = null;
     try {
       startMiniClusters(numClusters);
       createTableOnClusters(table);
@@ -285,7 +288,7 @@ public class TestMasterReplication {
   private void createTableOnClusters(HTableDescriptor table) throws Exception {
     int numClusters = configurations.length;
     for (int i = 0; i < numClusters; i++) {
-      HBaseAdmin hbaseAdmin = null;
+      Admin hbaseAdmin = null;
       try {
         hbaseAdmin = new HBaseAdmin(configurations[i]);
         hbaseAdmin.createTable(table);
@@ -343,18 +346,18 @@ public class TestMasterReplication {
   }
 
   @SuppressWarnings("resource")
-  private HTable[] getHTablesOnClusters(byte[] tableName) throws Exception {
+  private Table[] getHTablesOnClusters(TableName tableName) throws Exception {
     int numClusters = utilities.length;
-    HTable[] htables = new HTable[numClusters];
+    Table[] htables = new Table[numClusters];
     for (int i = 0; i < numClusters; i++) {
-      HTable htable = new HTable(configurations[i], tableName);
+      Table htable = new HTable(configurations[i], tableName);
       htable.setWriteBufferSize(1024);
       htables[i] = htable;
     }
     return htables;
   }
 
-  private void validateCounts(HTable[] htables, byte[] type,
+  private void validateCounts(Table[] htables, byte[] type,
       int[] expectedCounts) throws IOException {
     for (int i = 0; i < htables.length; i++) {
       assertEquals(Bytes.toString(type) + " were replicated back ",
@@ -362,21 +365,21 @@ public class TestMasterReplication {
     }
   }
 
-  private int getCount(HTable t, byte[] type) throws IOException {
+  private int getCount(Table t, byte[] type) throws IOException {
     Get test = new Get(row);
     test.setAttribute("count", new byte[] {});
     Result res = t.get(test);
     return Bytes.toInt(res.getValue(count, type));
   }
 
-  private void deleteAndWait(byte[] row, HTable source, HTable target)
+  private void deleteAndWait(byte[] row, Table source, Table target)
       throws Exception {
     Delete del = new Delete(row);
     source.delete(del);
     wait(row, target, true);
   }
 
-  private void putAndWait(byte[] row, byte[] fam, HTable source, HTable target)
+  private void putAndWait(byte[] row, byte[] fam, Table source, Table target)
       throws Exception {
     Put put = new Put(row);
     put.add(fam, row, row);
@@ -384,7 +387,7 @@ public class TestMasterReplication {
     wait(row, target, false);
   }
 
-  private void wait(byte[] row, HTable target, boolean isDeleted)
+  private void wait(byte[] row, Table target, boolean isDeleted)
       throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {

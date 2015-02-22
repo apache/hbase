@@ -18,21 +18,18 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -57,10 +54,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * HConnections awkward.  See {@link HConnectionManager} for cleanup discussion.
  *
  * @see HConnectionManager
+ * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public interface HConnection extends Abortable, Closeable {
+@Deprecated
+public interface HConnection extends Connection {
   /**
    * Key for configuration in Configuration whose value is the class we implement making a
    * new HConnection instance.
@@ -70,6 +69,7 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * @return Configuration instance being used by this HConnection instance.
    */
+  @Override
   Configuration getConfiguration();
 
   /**
@@ -109,6 +109,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param tableName
    * @return an HTable to use for interactions with this table
    */
+  @Override
   public HTableInterface getTable(TableName tableName) throws IOException;
 
   /**
@@ -151,6 +152,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
    */
+  @Override
   public HTableInterface getTable(TableName tableName, ExecutorService pool)  throws IOException;
 
   /**
@@ -166,6 +168,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param tableName Name of the table who's region is to be examined
    * @return A RegionLocator instance
    */
+  @Override
   public RegionLocator getRegionLocator(TableName tableName) throws IOException;
 
   /**
@@ -176,6 +179,7 @@ public interface HConnection extends Abortable, Closeable {
    *
    * @return an Admin instance for cluster administration
    */
+  @Override
   Admin getAdmin() throws IOException;
 
   /** @return - true if the master server is running
@@ -194,6 +198,9 @@ public interface HConnection extends Abortable, Closeable {
    */
   boolean isTableEnabled(TableName tableName) throws IOException;
 
+  /**
+   * @deprecated instead use {@link #isTableEnabled(TableName)}
+   */
   @Deprecated
   boolean isTableEnabled(byte[] tableName) throws IOException;
 
@@ -204,8 +211,18 @@ public interface HConnection extends Abortable, Closeable {
    */
   boolean isTableDisabled(TableName tableName) throws IOException;
 
+  /**
+   * @deprecated instead use {@link #isTableDisabled(TableName)}
+   */
   @Deprecated
   boolean isTableDisabled(byte[] tableName) throws IOException;
+
+  /**
+   * Retrieve TableState, represent current table state.
+   * @param tableName table state for
+   * @return state of the table
+   */
+  public TableState getTableState(TableName tableName)  throws IOException;
 
   /**
    * @param tableName table name
@@ -214,6 +231,9 @@ public interface HConnection extends Abortable, Closeable {
    */
   boolean isTableAvailable(TableName tableName) throws IOException;
 
+  /**
+   * @deprecated instead use {@link #isTableAvailable(TableName)}
+   */
   @Deprecated
   boolean isTableAvailable(byte[] tableName) throws IOException;
 
@@ -222,50 +242,58 @@ public interface HConnection extends Abortable, Closeable {
    * splitkeys which was used while creating the given table.
    * Note : If this api is used after a table's region gets splitted, the api may return
    * false.
-   * @param tableName
-   *          tableName
-   * @param splitKeys
-   *          splitKeys used while creating table
-   * @throws IOException
-   *           if a remote or network exception occurs
-   * @deprecated internal method, do not use thru HConnection */
+   * @param tableName tableName
+   * @param splitKeys splitKeys used while creating table
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated internal method, do not use through HConnection */
   @Deprecated
-  boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws
-      IOException;
+  boolean isTableAvailable(TableName tableName, byte[][] splitKeys) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
-  boolean isTableAvailable(byte[] tableName, byte[][] splitKeys) throws
-      IOException;
+  boolean isTableAvailable(byte[] tableName, byte[][] splitKeys) throws IOException;
 
   /**
    * List all the userspace tables.  In other words, scan the hbase:meta table.
    *
-   * If we wanted this to be really fast, we could implement a special
-   * catalog table that just contains table names and their descriptors.
-   * Right now, it only exists as part of the hbase:meta table's region info.
-   *
    * @return - returns an array of HTableDescriptors
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link Admin#listTables()} instead.
    */
+  @Deprecated
   HTableDescriptor[] listTables() throws IOException;
 
   // This is a bit ugly - We call this getTableNames in 0.94 and the
   // successor function, returning TableName, listTableNames in later versions
   // because Java polymorphism doesn't consider return value types
 
+  /**
+   * @deprecated Use {@link Admin#listTableNames()} instead.
+   */
   @Deprecated
   String[] getTableNames() throws IOException;
 
+  /**
+   * @deprecated Use {@link Admin#listTables()} instead.
+   */
+  @Deprecated
   TableName[] listTableNames() throws IOException;
 
   /**
    * @param tableName table name
    * @return table metadata
    * @throws IOException if a remote or network exception occurs
+   * @deprecated internal method, do not use through HConnection
    */
+  @Deprecated
   HTableDescriptor getHTableDescriptor(TableName tableName)
   throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   HTableDescriptor getHTableDescriptor(byte[] tableName)
   throws IOException;
@@ -278,19 +306,22 @@ public interface HConnection extends Abortable, Closeable {
    * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
-   * @deprecated internal method, do not use thru HConnection
+   * @deprecated internal method, do not use through HConnection
    */
   @Deprecated
   public HRegionLocation locateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   public HRegionLocation locateRegion(final byte[] tableName,
       final byte [] row) throws IOException;
 
   /**
    * Allows flushing the region cache.
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use through HConnection */
   @Deprecated
   void clearRegionCache();
 
@@ -299,10 +330,13 @@ public interface HConnection extends Abortable, Closeable {
    * <code>tableName</code>
    * @param tableName Name of the table whose regions we are to remove from
    * cache.
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use through HConnection */
   @Deprecated
   void clearRegionCache(final TableName tableName);
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   void clearRegionCache(final byte[] tableName);
 
@@ -321,15 +355,21 @@ public interface HConnection extends Abortable, Closeable {
    * @return HRegionLocation that describes where to find the region in
    * question
    * @throws IOException if a remote or network exception occurs
-   * @deprecated internal method, do not use thru HConnection */
+   * @deprecated internal method, do not use through HConnection */
   @Deprecated
   HRegionLocation relocateRegion(final TableName tableName,
       final byte [] row) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   HRegionLocation relocateRegion(final byte[] tableName,
       final byte [] row) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   void updateCachedLocations(TableName tableName, byte[] rowkey,
                                     Object exception, HRegionLocation source);
@@ -342,12 +382,14 @@ public interface HConnection extends Abortable, Closeable {
    * @param rowkey the row
    * @param exception the exception if any. Can be null.
    * @param source the previous location
-   * @deprecated internal method, do not use thru HConnection
+   * @deprecated internal method, do not use through HConnection
    */
   @Deprecated
   void updateCachedLocations(TableName tableName, byte[] regionName, byte[] rowkey,
                                     Object exception, ServerName source);
-
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   void updateCachedLocations(byte[] tableName, byte[] rowkey,
                                     Object exception, HRegionLocation source);
@@ -372,6 +414,9 @@ public interface HConnection extends Abortable, Closeable {
   @Deprecated
   List<HRegionLocation> locateRegions(final TableName tableName) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   List<HRegionLocation> locateRegions(final byte[] tableName) throws IOException;
 
@@ -390,6 +435,9 @@ public interface HConnection extends Abortable, Closeable {
       final boolean useCache,
       final boolean offlined) throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   public List<HRegionLocation> locateRegions(final byte[] tableName,
       final boolean useCache,
@@ -447,6 +495,9 @@ public interface HConnection extends Abortable, Closeable {
     boolean reload)
   throws IOException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   HRegionLocation getRegionLocation(byte[] tableName, byte [] row,
     boolean reload)
@@ -471,6 +522,9 @@ public interface HConnection extends Abortable, Closeable {
   void processBatch(List<? extends Row> actions, final TableName tableName,
       ExecutorService pool, Object[] results) throws IOException, InterruptedException;
 
+  /**
+   * @deprecated internal method, do not use through HConnection
+   */
   @Deprecated
   void processBatch(List<? extends Row> actions, final byte[] tableName,
       ExecutorService pool, Object[] results) throws IOException, InterruptedException;
@@ -487,6 +541,9 @@ public interface HConnection extends Abortable, Closeable {
       Object[] results,
       Batch.Callback<R> callback) throws IOException, InterruptedException;
 
+  /**
+   * @deprecated Unsupported API
+   */
   @Deprecated
   public <R> void processBatchCallback(List<? extends Row> list,
       final byte[] tableName,
@@ -532,9 +589,14 @@ public interface HConnection extends Abortable, Closeable {
    * @param tableNames List of table names
    * @return HTD[] table metadata
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link Admin#getTableDescriptor(TableName)} instead.
    */
+  @Deprecated
   HTableDescriptor[] getHTableDescriptorsByTableName(List<TableName> tableNames) throws IOException;
 
+  /**
+   * @deprecated since 0.96.0
+   */
   @Deprecated
   HTableDescriptor[] getHTableDescriptors(List<String> tableNames) throws
       IOException;
@@ -542,6 +604,7 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * @return true if this connection is closed
    */
+  @Override
   boolean isClosed();
 
 

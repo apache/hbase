@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 

@@ -25,19 +25,18 @@ import java.net.SocketTimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -46,9 +45,9 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This worker is spawned in every regionserver, including master. The Worker waits for log
- * splitting tasks to be put up by the {@link SplitLogManager} running in the master and races with
- * other workers in other serves to acquire those tasks. The coordination is done via coordination
- * engine.
+ * splitting tasks to be put up by the {@link org.apache.hadoop.hbase.master.SplitLogManager} 
+ * running in the master and races with other workers in other serves to acquire those tasks. 
+ * The coordination is done via coordination engine.
  * <p>
  * If a worker has successfully moved the task from state UNASSIGNED to OWNED then it owns the task.
  * It keeps heart beating the manager by periodically moving the task from UNASSIGNED to OWNED
@@ -71,6 +70,7 @@ public class SplitLogWorker implements Runnable {
   private SplitLogWorkerCoordination coordination;
   private Configuration conf;
   private RegionServerServices server;
+
   public SplitLogWorker(Server hserver, Configuration conf, RegionServerServices server,
       TaskExecutor splitTaskExecutor) {
     this.server = server;
@@ -83,7 +83,8 @@ public class SplitLogWorker implements Runnable {
   }
 
   public SplitLogWorker(final Server hserver, final Configuration conf,
-      final RegionServerServices server, final LastSequenceId sequenceIdChecker) {
+      final RegionServerServices server, final LastSequenceId sequenceIdChecker,
+      final WALFactory factory) {
     this(server, conf, server, new TaskExecutor() {
       @Override
       public Status exec(String filename, RecoveryMode mode, CancelableProgressable p) {
@@ -100,8 +101,8 @@ public class SplitLogWorker implements Runnable {
         // interrupted or has encountered a transient error and when it has
         // encountered a bad non-retry-able persistent error.
         try {
-          if (!HLogSplitter.splitLogFile(rootdir, fs.getFileStatus(new Path(rootdir, filename)),
-            fs, conf, p, sequenceIdChecker, server.getCoordinatedStateManager(), mode)) {
+          if (!WALSplitter.splitLogFile(rootdir, fs.getFileStatus(new Path(rootdir, filename)),
+            fs, conf, p, sequenceIdChecker, server.getCoordinatedStateManager(), mode, factory)) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
@@ -113,7 +114,7 @@ public class SplitLogWorker implements Runnable {
                   || cause instanceof ConnectException
                   || cause instanceof SocketTimeoutException)) {
             LOG.warn("log replaying of " + filename + " can't connect to the target regionserver, "
-            		+ "resigning", e);
+                + "resigning", e);
             return Status.RESIGNED;
           } else if (cause instanceof InterruptedException) {
             LOG.warn("log splitting of " + filename + " interrupted, resigning", e);
@@ -132,9 +133,6 @@ public class SplitLogWorker implements Runnable {
     try {
       LOG.info("SplitLogWorker " + server.getServerName() + " starting");
       coordination.registerListener();
-      // pre-initialize a new connection for splitlogworker configuration
-      HConnectionManager.getConnection(conf);
-
       // wait for Coordination Engine is ready
       boolean res = false;
       while (!res && !coordination.isStop()) {
@@ -157,6 +155,7 @@ public class SplitLogWorker implements Runnable {
       LOG.info("SplitLogWorker " + server.getServerName() + " exiting");
     }
   }
+
   /**
    * If the worker is doing a task i.e. splitting a log file then stop the task.
    * It doesn't exit the worker thread.
@@ -170,7 +169,7 @@ public class SplitLogWorker implements Runnable {
    * start the SplitLogWorker thread
    */
   public void start() {
-    worker = new Thread(null, this, "SplitLogWorker-" + server.getServerName());
+    worker = new Thread(null, this, "SplitLogWorker-" + server.getServerName().toShortString());
     worker.start();
   }
 
@@ -187,7 +186,8 @@ public class SplitLogWorker implements Runnable {
    * acquired by a {@link SplitLogWorker}. Since there isn't a water-tight
    * guarantee that two workers will not be executing the same task therefore it
    * is better to have workers prepare the task and then have the
-   * {@link SplitLogManager} commit the work in SplitLogManager.TaskFinisher
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} commit the work in 
+   * SplitLogManager.TaskFinisher
    */
   public interface TaskExecutor {
     enum Status {

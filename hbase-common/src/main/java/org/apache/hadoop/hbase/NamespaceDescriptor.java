@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -29,6 +25,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Namespace POJO class. Used to represent and define namespaces.
@@ -161,6 +161,8 @@ public class NamespaceDescriptor {
     return new Builder(ns);
   }
 
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class Builder {
     private String bName;
     private Map<String, String> bConfiguration = new TreeMap<String, String>();
@@ -173,7 +175,7 @@ public class NamespaceDescriptor {
     private Builder(String name) {
       this.bName = name;
     }
-    
+
     public Builder addConfiguration(Map<String, String> configuration) {
       this.bConfiguration.putAll(configuration);
       return this;
@@ -193,7 +195,7 @@ public class NamespaceDescriptor {
       if (this.bName == null){
          throw new IllegalArgumentException("A name has to be specified in a namespace.");
       }
-      
+
       NamespaceDescriptor desc = new NamespaceDescriptor(this.bName);
       desc.configuration = this.bConfiguration;
       return desc;

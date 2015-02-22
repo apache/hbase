@@ -18,11 +18,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-
 import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Factory for creating HTable instances.
@@ -37,7 +38,7 @@ public class HTableFactory implements HTableInterfaceFactory {
   public HTableInterface createHTableInterface(Configuration config,
       byte[] tableName) {
     try {
-      return new HTable(config, tableName);
+      return new HTable(config, TableName.valueOf(tableName));
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     }

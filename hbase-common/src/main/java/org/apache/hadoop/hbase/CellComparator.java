@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase;
 import java.io.Serializable;
 import java.util.Comparator;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.primitives.Longs;
@@ -40,15 +40,25 @@ import com.google.common.primitives.Longs;
     justification="Findbugs doesn't like the way we are negating the result of a compare in below")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class CellComparator implements Comparator<Cell>, Serializable{
+public class CellComparator implements Comparator<Cell>, Serializable {
   private static final long serialVersionUID = -8760041766259623329L;
 
   @Override
   public int compare(Cell a, Cell b) {
-    return compareStatic(a, b, false);
+    return compare(a, b, false);
   }
 
-  public static int compareStatic(Cell a, Cell b, boolean onlyKey) {
+  /**
+   * Compare cells.
+   * TODO: Replace with dynamic rather than static comparator so can change comparator
+   * implementation.
+   * @param a
+   * @param b
+   * @param ignoreSequenceid True if we are to compare the key portion only and ignore
+   * the sequenceid. Set to false to compare key and consider sequenceid.
+   * @return 0 if equal, -1 if a < b, and +1 if a > b.
+   */
+  public static int compare(final Cell a, final Cell b, boolean ignoreSequenceid) {
     // row
     int c = compareRows(a, b);
     if (c != 0) return c;
@@ -56,42 +66,13 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     c = compareWithoutRow(a, b);
     if(c != 0) return c;
 
-    if (!onlyKey) {
+    if (!ignoreSequenceid) {
       // Negate following comparisons so later edits show up first
-
-      // compare log replay tag value if there is any
-      // when either keyvalue tagged with log replay sequence number, we need to compare them:
-      // 1) when both keyvalues have the tag, then use the tag values for comparison
-      // 2) when one has and the other doesn't have, the one without the log
-      // replay tag wins because
-      // it means the edit isn't from recovery but new one coming from clients during recovery
-      // 3) when both doesn't have, then skip to the next mvcc comparison
-      long leftChangeSeqNum = getReplaySeqNum(a);
-      long RightChangeSeqNum = getReplaySeqNum(b);
-      if (leftChangeSeqNum != Long.MAX_VALUE || RightChangeSeqNum != Long.MAX_VALUE) {
-        return Longs.compare(RightChangeSeqNum, leftChangeSeqNum);
-      }
       // mvccVersion: later sorts first
       return Longs.compare(b.getMvccVersion(), a.getMvccVersion());
     } else {
       return c;
     }
-  }
-
-  /**
-   * Return replay log sequence number for the cell
-   *
-   * @param c
-   * @return Long.MAX_VALUE if there is no LOG_REPLAY_TAG
-   */
-  private static long getReplaySeqNum(final Cell c) {
-    Tag tag = Tag.getTag(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength(),
-        TagType.LOG_REPLAY_TAG_TYPE);
-
-    if (tag != null) {
-      return Bytes.toLong(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
-    }
-    return Long.MAX_VALUE;
   }
 
   public static int findCommonPrefixInRowPart(Cell left, Cell right, int rowCommonPrefix) {
@@ -197,19 +178,34 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     return compareWithoutRow(left, right);
   }
 
+  /**
+   * Do not use comparing rows from hbase:meta. Meta table Cells have schema (table,startrow,hash)
+   * so can't be treated as plain byte arrays as this method does.
+   */
   public static int compareRows(final Cell left, final Cell right) {
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
         right.getRowArray(), right.getRowOffset(), right.getRowLength());
   }
 
+  /**
+   * Do not use comparing rows from hbase:meta. Meta table Cells have schema (table,startrow,hash)
+   * so can't be treated as plain byte arrays as this method does.
+   */
   public static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
       int rlength) {
     return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
   }
 
   public static int compareWithoutRow(final Cell leftCell, final Cell rightCell) {
+    // If the column is not specified, the "minimum" key type appears the
+    // latest in the sorted order, regardless of the timestamp. This is used
+    // for specifying the last key/value in a given row, because there is no
+    // "lexicographically last column" (it would be infinitely long). The
+    // "maximum" key type does not need this behavior.
+    // Copied from KeyValue. This is bad in that we can't do memcmp w/ special rules like this.
+    // TODO
     if (leftCell.getFamilyLength() + leftCell.getQualifierLength() == 0
-        && leftCell.getTypeByte() == Type.Minimum.getCode()) {
+          && leftCell.getTypeByte() == Type.Minimum.getCode()) {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
@@ -255,6 +251,29 @@ public class CellComparator implements Comparator<Cell>, Serializable{
       return 0;
     }
 
+    int hash = calculateHashForKeyValue(cell);
+    hash = 31 * hash + (int)cell.getMvccVersion();
+    return hash;
+  }
+
+  /**
+   * Returns a hash code that is always the same for two Cells having a matching
+   * equals(..) result. Currently does not guard against nulls, but it could if
+   * necessary. Note : Ignore mvcc while calculating the hashcode
+   * 
+   * @param cell
+   * @return hashCode
+   */
+  public static int hashCodeIgnoreMvcc(Cell cell) {
+    if (cell == null) {// return 0 for empty Cell
+      return 0;
+    }
+
+    int hash = calculateHashForKeyValue(cell);
+    return hash;
+  }
+
+  private static int calculateHashForKeyValue(Cell cell) {
     //pre-calculate the 3 hashes made of byte ranges
     int rowHash = Bytes.hashCode(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
     int familyHash =
@@ -267,7 +286,6 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     hash = 31 * hash + qualifierHash;
     hash = 31 * hash + (int)cell.getTimestamp();
     hash = 31 * hash + cell.getTypeByte();
-    hash = 31 * hash + (int)cell.getMvccVersion();
     return hash;
   }
 
@@ -363,4 +381,120 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     }
   }
 
+  /**
+   * Try to return a Cell that falls between <code>left</code> and <code>right</code> but that is
+   * shorter; i.e. takes up less space. This trick is used building HFile block index.
+   * Its an optimization. It does not always work.  In this case we'll just return the
+   * <code>right</code> cell.
+   * @param comparator Comparator to use.
+   * @param left
+   * @param right
+   * @return A cell that sorts between <code>left</code> and <code>right</code>.
+   */
+  public static Cell getMidpoint(final KeyValue.KVComparator comparator, final Cell left,
+      final Cell right) {
+    // TODO: Redo so only a single pass over the arrays rather than one to compare and then a
+    // second composing midpoint.
+    if (right == null) {
+      throw new IllegalArgumentException("right cell can not be null");
+    }
+    if (left == null) {
+      return right;
+    }
+    // If Cells from meta table, don't mess around. meta table Cells have schema
+    // (table,startrow,hash) so can't be treated as plain byte arrays. Just skip out without
+    // trying to do this optimization.
+    if (comparator != null && comparator instanceof KeyValue.MetaComparator) {
+      return right;
+    }
+    int diff = compareRows(left, right);
+    if (diff > 0) {
+      throw new IllegalArgumentException("Left row sorts after right row; left=" +
+        CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
+    }
+    if (diff < 0) {
+      // Left row is < right row.
+      byte [] midRow = getMinimumMidpointArray(left.getRowArray(), left.getRowOffset(),
+          left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
+      // If midRow is null, just return 'right'.  Can't do optimization.
+      if (midRow == null) return right;
+      return CellUtil.createCell(midRow);
+    }
+    // Rows are same. Compare on families.
+    diff = compareFamilies(left, right);
+    if (diff > 0) {
+      throw new IllegalArgumentException("Left family sorts after right family; left=" +
+          CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
+    }
+    if (diff < 0) {
+      byte [] midRow = getMinimumMidpointArray(left.getFamilyArray(), left.getFamilyOffset(),
+          left.getFamilyLength(),
+        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+      // If midRow is null, just return 'right'.  Can't do optimization.
+      if (midRow == null) return right;
+      // Return new Cell where we use right row and then a mid sort family.
+      return CellUtil.createCell(right.getRowArray(), right.getRowOffset(), right.getRowLength(),
+        midRow, 0, midRow.length, HConstants.EMPTY_BYTE_ARRAY, 0,
+        HConstants.EMPTY_BYTE_ARRAY.length);
+    }
+    // Families are same. Compare on qualifiers.
+    diff = compareQualifiers(left, right);
+    if (diff > 0) {
+      throw new IllegalArgumentException("Left qualifier sorts after right qualifier; left=" +
+          CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
+    }
+    if (diff < 0) {
+      byte [] midRow = getMinimumMidpointArray(left.getQualifierArray(), left.getQualifierOffset(),
+          left.getQualifierLength(),
+        right.getQualifierArray(), right.getQualifierOffset(), right.getQualifierLength());
+      // If midRow is null, just return 'right'.  Can't do optimization.
+      if (midRow == null) return right;
+      // Return new Cell where we use right row and family and then a mid sort qualifier.
+      return CellUtil.createCell(right.getRowArray(), right.getRowOffset(), right.getRowLength(),
+        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength(),
+        midRow, 0, midRow.length);
+    }
+    // No opportunity for optimization. Just return right key.
+    return right;
+  }
+
+  /**
+   * @param leftArray
+   * @param leftOffset
+   * @param leftLength
+   * @param rightArray
+   * @param rightOffset
+   * @param rightLength
+   * @return Return a new array that is between left and right and minimally sized else just return
+   * null as indicator that we could not create a mid point.
+   */
+  private static byte [] getMinimumMidpointArray(final byte [] leftArray, final int leftOffset,
+        final int leftLength,
+      final byte [] rightArray, final int rightOffset, final int rightLength) {
+    // rows are different
+    int minLength = leftLength < rightLength ? leftLength : rightLength;
+    short diffIdx = 0;
+    while (diffIdx < minLength &&
+        leftArray[leftOffset + diffIdx] == rightArray[rightOffset + diffIdx]) {
+      diffIdx++;
+    }
+    byte [] minimumMidpointArray = null;
+    if (diffIdx >= minLength) {
+      // leftKey's row is prefix of rightKey's.
+      minimumMidpointArray = new byte[diffIdx + 1];
+      System.arraycopy(rightArray, rightOffset, minimumMidpointArray, 0, diffIdx + 1);
+    } else {
+      int diffByte = leftArray[leftOffset + diffIdx];
+      if ((0xff & diffByte) < 0xff && (diffByte + 1) < (rightArray[rightOffset + diffIdx] & 0xff)) {
+        minimumMidpointArray = new byte[diffIdx + 1];
+        System.arraycopy(leftArray, leftOffset, minimumMidpointArray, 0, diffIdx);
+        minimumMidpointArray[diffIdx] = (byte) (diffByte + 1);
+      } else {
+        minimumMidpointArray = new byte[diffIdx + 1];
+        System.arraycopy(rightArray, rightOffset, minimumMidpointArray, 0, diffIdx + 1);
+      }
+    }
+    return minimumMidpointArray;
+  }
 }

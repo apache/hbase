@@ -18,17 +18,22 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Counter;
@@ -58,6 +63,8 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
   protected Configuration conf;
 
   protected String cellVisibilityExpr;
+
+  protected long ttl;
 
   protected CellCreator kvCreator;
 
@@ -144,11 +151,13 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
       // Retrieve timestamp if exists
       ts = parsed.getTimestamp(ts);
       cellVisibilityExpr = parsed.getCellVisibility();
+      ttl = parsed.getCellTTL();
 
       Put put = new Put(rowKey.copyBytes());
       for (int i = 0; i < parsed.getColumnCount(); i++) {
         if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
-            || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()) {
+            || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()
+            || i == parser.getCellTTLColumnIndex()) {
           continue;
         }
         populatePut(lineBytes, parsed, put, i);
@@ -192,13 +201,26 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
         // the validation
         put.setCellVisibility(new CellVisibility(cellVisibilityExpr));
       }
+      if (ttl > 0) {
+        put.setTTL(ttl);
+      }
     } else {
       // Creating the KV which needs to be directly written to HFiles. Using the Facade
       // KVCreator for creation of kvs.
+      List<Tag> tags = new ArrayList<Tag>();
+      if (cellVisibilityExpr != null) {
+        tags.addAll(kvCreator.getVisibilityExpressionResolver()
+          .createVisibilityExpTags(cellVisibilityExpr));
+      }
+      // Add TTL directly to the KV so we can vary them when packing more than one KV
+      // into puts
+      if (ttl > 0) {
+        tags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
+      }
       cell = this.kvCreator.create(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
           parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
           parser.getQualifier(i).length, ts, lineBytes, parsed.getColumnOffset(i),
-          parsed.getColumnLength(i), cellVisibilityExpr);
+          parsed.getColumnLength(i), tags);
     }
     put.add(cell);
   }

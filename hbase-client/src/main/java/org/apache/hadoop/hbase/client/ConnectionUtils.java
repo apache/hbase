@@ -19,20 +19,27 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
+import org.apache.hadoop.hbase.security.User;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Utility used by client connections.
  */
 @InterfaceAudience.Private
-public class ConnectionUtils {
+public final class ConnectionUtils {
+
+  private ConnectionUtils() {}
 
   private static final Random RANDOM = new Random();
   /**
@@ -67,14 +74,14 @@ public class ConnectionUtils {
     }
     return newPause;
   }
-  
+
   /**
    * @param conn The connection for which to replace the generator.
    * @param cnm Replaces the nonce generator used, for testing.
    * @return old nonce generator.
    */
   public static NonceGenerator injectNonceGeneratorForTesting(
-      HConnection conn, NonceGenerator cnm) {
+      ClusterConnection conn, NonceGenerator cnm) {
     return ConnectionManager.injectNonceGeneratorForTesting(conn, cnm);
   }
 
@@ -99,14 +106,14 @@ public class ConnectionUtils {
 
   /**
    * Adapt a HConnection so that it can bypass the RPC layer (serialization,
-   * deserialization, networking, etc..) when it talks to a local server.
+   * deserialization, networking, etc..) -- i.e. short-circuit -- when talking to a local server.
    * @param conn the connection to adapt
    * @param serverName the local server name
    * @param admin the admin interface of the local server
    * @param client the client interface of the local server
    * @return an adapted/decorated HConnection
    */
-  public static HConnection createShortCircuitHConnection(final HConnection conn,
+  public static ClusterConnection createShortCircuitHConnection(final Connection conn,
       final ServerName serverName, final AdminService.BlockingInterface admin,
       final ClientService.BlockingInterface client) {
     return new ConnectionAdapter(conn) {
@@ -122,5 +129,32 @@ public class ConnectionUtils {
         return serverName.equals(sn) ? client : super.getClient(sn);
       }
     };
+  }
+
+  /**
+   * Setup the connection class, so that it will not depend on master being online. Used for testing
+   * @param conf configuration to set
+   */
+  @VisibleForTesting
+  public static void setupMasterlessConnection(Configuration conf) {
+    conf.set(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
+      MasterlessConnection.class.getName());
+  }
+
+  /**
+   * Some tests shut down the master. But table availability is a master RPC which is performed on
+   * region re-lookups.
+   */
+  static class MasterlessConnection extends ConnectionManager.HConnectionImplementation {
+    MasterlessConnection(Configuration conf, boolean managed,
+      ExecutorService pool, User user) throws IOException {
+      super(conf, managed, pool, user);
+    }
+
+    @Override
+    public boolean isTableDisabled(TableName tableName) throws IOException {
+      // treat all tables as enabled
+      return false;
+    }
   }
 }

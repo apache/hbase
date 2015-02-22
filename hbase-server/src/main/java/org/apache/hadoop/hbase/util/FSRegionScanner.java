@@ -25,12 +25,12 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * Thread that walks over the filesystem, and computes the mappings
@@ -79,7 +79,7 @@ class FSRegionScanner implements Runnable {
       int totalBlkCount = 0;
 
       // ignore null
-      FileStatus[] cfList = fs.listStatus(regionPath);
+      FileStatus[] cfList = fs.listStatus(regionPath, new FSUtils.FamilyDirFilter(fs));
       if (null == cfList) {
         return;
       }
@@ -90,10 +90,7 @@ class FSRegionScanner implements Runnable {
           // skip because this is not a CF directory
           continue;
         }
-        if (cfStatus.getPath().getName().startsWith(".") ||
-            HConstants.HBASE_NON_USER_TABLE_DIRS.contains(cfStatus.getPath().getName())) {
-          continue;
-        }
+
         FileStatus[] storeFileLists = fs.listStatus(cfStatus.getPath());
         if (null == storeFileLists) {
           continue;

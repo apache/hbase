@@ -19,15 +19,16 @@
 package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 /**
- * Run the same test as TestReplicationKillMasterRS but with HLog compression enabled
+ * Run the same test as TestReplicationKillMasterRS but with WAL compression enabled
  * Do not add other tests in this class.
  */
-@Category(LargeTests.class)
+@Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationKillMasterRSCompressed extends TestReplicationKillMasterRS {
 
   /**

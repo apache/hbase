@@ -245,7 +245,7 @@ public class MobUtils {
         if (!HFileLink.isHFileLink(file.getPath())) {
           mobFileName = MobFileName.create(fileName);
         } else {
-          HFileLink hfileLink = new HFileLink(conf, file.getPath());
+          HFileLink hfileLink = HFileLink.buildFromHFileLinkPattern(conf, file.getPath());
           mobFileName = MobFileName.create(hfileLink.getOriginPath().getName());
         }
         Date fileDate = parseDate(mobFileName.getDate());

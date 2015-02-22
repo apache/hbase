@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Manages a singleton instance of the environment edge. This class shall

@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -44,7 +45,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
    * Maps user with Table instance. Because the table instance has to be created
    * per user inorder to work in that user's context
    */
-  private Map<String, HTableInterface> userVsTable = new HashMap<String, HTableInterface>();
+  private Map<String, Table> userVsTable = new HashMap<String, Table>();
   private Map<String, User> users = new HashMap<String, User>();
   private String[] userNames;
 
@@ -75,7 +76,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
 
     @Override
     protected void closeTable() {
-      for (HTableInterface table : userVsTable.values()) {
+      for (Table table : userVsTable.values()) {
         try {
           table.close();
         } catch (Exception e) {
@@ -94,13 +95,13 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
       PrivilegedExceptionAction<Object> action = new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
-          HTableInterface localTable = null;
+          Table localTable = null;
           try {
             Result result = null;
             int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[2]);
             int mod = ((int) keyToRead % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
-              localTable = new HTable(conf, tableName);
+              localTable = connection.getTable(tableName);
               userVsTable.put(userNames[mod], localTable);
               result = localTable.get(get);
             } else {

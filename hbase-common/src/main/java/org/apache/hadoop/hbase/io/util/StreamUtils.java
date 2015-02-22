@@ -23,7 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.base.Preconditions;
@@ -177,6 +177,24 @@ public class StreamUtils {
 
   public static void writeShort(OutputStream out, short v) throws IOException {
     Preconditions.checkArgument(v >= 0);
+    out.write((byte) (0xff & (v >> 8)));
+    out.write((byte) (0xff & v));
+  }
+
+  public static void writeInt(OutputStream out, int v) throws IOException {
+    out.write((byte) (0xff & (v >> 24)));
+    out.write((byte) (0xff & (v >> 16)));
+    out.write((byte) (0xff & (v >> 8)));
+    out.write((byte) (0xff & v));
+  }
+
+  public static void writeLong(OutputStream out, long v) throws IOException {
+    out.write((byte) (0xff & (v >> 56)));
+    out.write((byte) (0xff & (v >> 48)));
+    out.write((byte) (0xff & (v >> 40)));
+    out.write((byte) (0xff & (v >> 32)));
+    out.write((byte) (0xff & (v >> 24)));
+    out.write((byte) (0xff & (v >> 16)));
     out.write((byte) (0xff & (v >> 8)));
     out.write((byte) (0xff & v));
   }

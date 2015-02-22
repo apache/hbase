@@ -48,7 +48,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -83,8 +82,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache}
  *
  * <p>BucketCache can be used as mainly a block cache (see
- * {@link CombinedBlockCache}), combined with LruBlockCache to decrease CMS GC and
- * heap fragmentation.
+ * {@link org.apache.hadoop.hbase.io.hfile.CombinedBlockCache}), combined with 
+ * LruBlockCache to decrease CMS GC and heap fragmentation.
  *
  * <p>It also can be used as a secondary cache (e.g. using a file on ssd/fusionio to store
  * blocks) to enlarge cache space via
@@ -256,8 +255,9 @@ public class BucketCache implements BlockCache, HeapSize {
       writerThreads[i] = new WriterThread(writerQueues.get(i), i);
       writerThreads[i].setName(threadName + "-BucketCacheWriter-" + i);
       writerThreads[i].setDaemon(true);
-      writerThreads[i].start();
     }
+    startWriterThreads();
+
     // Run the statistics thread periodically to print the cache statistics log
     // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
     // every five minutes.
@@ -267,7 +267,18 @@ public class BucketCache implements BlockCache, HeapSize {
         ", capacity=" + StringUtils.byteDesc(capacity) +
       ", blockSize=" + StringUtils.byteDesc(blockSize) + ", writerThreadNum=" +
         writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath=" +
-      persistencePath + ", bucketAllocator=" + this.bucketAllocator);
+      persistencePath + ", bucketAllocator=" + this.bucketAllocator.getClass().getName());
+  }
+
+  /**
+   * Called by the constructor to start the writer threads. Used by tests that need to override
+   * starting the threads.
+   */
+  @VisibleForTesting
+  protected void startWriterThreads() {
+    for (WriterThread thread : writerThreads) {
+      thread.start();
+    }
   }
 
   @VisibleForTesting
@@ -1223,11 +1234,13 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketEntry.setDeserialiserReference(data.getDeserializer(), deserialiserMap);
       try {
         if (data instanceof HFileBlock) {
-          ByteBuffer sliceBuf = ((HFileBlock) data).getBufferReadOnlyWithHeader();
+          HFileBlock block = (HFileBlock) data;
+          ByteBuffer sliceBuf = block.getBufferReadOnlyWithHeader();
           sliceBuf.rewind();
-          assert len == sliceBuf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE;
+          assert len == sliceBuf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE ||
+            len == sliceBuf.limit() + block.headerSize() + HFileBlock.EXTRA_SERIALIZATION_SPACE;
           ByteBuffer extraInfoBuffer = ByteBuffer.allocate(HFileBlock.EXTRA_SERIALIZATION_SPACE);
-          ((HFileBlock) data).serializeExtraInfo(extraInfoBuffer);
+          block.serializeExtraInfo(extraInfoBuffer);
           ioEngine.write(sliceBuf, offset);
           ioEngine.write(extraInfoBuffer, offset + len - HFileBlock.EXTRA_SERIALIZATION_SPACE);
         } else {

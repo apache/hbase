@@ -18,9 +18,10 @@
 package org.apache.hadoop.hbase.security.visibility.expression;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class NonLeafExpressionNode implements ExpressionNode {
@@ -46,9 +47,7 @@ public class NonLeafExpressionNode implements ExpressionNode {
   public NonLeafExpressionNode(Operator op, ExpressionNode... exps) {
     this.op = op;
     List<ExpressionNode> expLst = new ArrayList<ExpressionNode>();
-    for (ExpressionNode exp : exps) {
-      expLst.add(exp);
-    }
+    Collections.addAll(expLst, exps);
     this.childExps = expLst;
   }
 

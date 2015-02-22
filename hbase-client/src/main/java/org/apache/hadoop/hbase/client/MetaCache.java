@@ -25,15 +25,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -61,6 +62,7 @@ public class MetaCache {
   /**
    * Search the cache for a location that fits our table and row key.
    * Return null if no suitable region is located.
+   *
    *
    * @param tableName
    * @param row
@@ -254,7 +256,8 @@ public class MetaCache {
               if (updatedLocations.isEmpty()) {
                 deletedSomething |= tableLocations.remove(e.getKey(), regionLocations);
               } else {
-                deletedSomething |= tableLocations.replace(e.getKey(), regionLocations, updatedLocations);
+                deletedSomething |= tableLocations.replace(e.getKey(), regionLocations,
+                    updatedLocations);
               }
             }
           }
@@ -387,7 +390,8 @@ public class MetaCache {
         if (updatedLocations.isEmpty()) {
           removed = tableLocations.remove(location.getRegionInfo().getStartKey(), regionLocations);
         } else {
-          removed = tableLocations.replace(location.getRegionInfo().getStartKey(), regionLocations, updatedLocations);
+          removed = tableLocations.replace(location.getRegionInfo().getStartKey(), regionLocations,
+              updatedLocations);
         }
         if (removed && LOG.isTraceEnabled()) {
           LOG.trace("Removed " + location + " from cache");

@@ -27,7 +27,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
@@ -35,7 +34,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.TimeoutException;
@@ -51,7 +51,7 @@ import org.mockito.stubbing.Answer;
 /**
  * Test the procedure member, and it's error handling mechanisms.
  */
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestProcedureMember {
   private static final long WAKE_FREQUENCY = 100;
   private static final long TIMEOUT = 100000;

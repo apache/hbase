@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -32,6 +33,7 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Default implementation of StoreFlusher.
  */
+@InterfaceAudience.Private
 public class DefaultStoreFlusher extends StoreFlusher {
   private static final Log LOG = LogFactory.getLog(DefaultStoreFlusher.class);
   private final Object flushLock = new Object();
@@ -64,10 +66,19 @@ public class DefaultStoreFlusher extends StoreFlusher {
         writer = store.createWriterInTmp(
             cellsCount, store.getFamily().getCompression(), false, true, true);
         writer.setTimeRangeTracker(snapshot.getTimeRangeTracker());
+        IOException e = null;
         try {
           performFlush(scanner, writer, smallestReadPoint);
+        } catch (IOException ioe) {
+          e = ioe;
+          // throw the exception out
+          throw ioe;
         } finally {
-          finalizeWriter(writer, cacheFlushId, status);
+          if (e != null) {
+            writer.close();
+          } else {
+            finalizeWriter(writer, cacheFlushId, status);
+          }
         }
       }
     } finally {

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 

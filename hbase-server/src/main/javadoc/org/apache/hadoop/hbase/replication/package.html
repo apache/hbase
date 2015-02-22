@@ -99,7 +99,7 @@ to another.
     </li>
     <li>Run the following command in the master's shell while it's running
     <pre>add_peer 'ID' 'CLUSTER_KEY'</pre>
-    The ID must be a short integer. To compose the CLUSTER_KEY, use the following template:
+    The ID is a string, which must not contain a hyphen. To compose the CLUSTER_KEY, use the following template:
     <pre>hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent</pre>
     This will show you the help to setup the replication stream between
     both clusters. If both clusters use the same Zookeeper cluster, you have

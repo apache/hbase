@@ -17,252 +17,101 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationPeer;
-import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.NoNodeException;
 
 /**
- * Tool to migrate zookeeper data of older hbase versions(<0.95.0) to PB.
+ * utlity method to migrate zookeeper data across HBase versions.
  */
-public class ZKDataMigrator extends Configured implements Tool {
+@InterfaceAudience.Private
+public class ZKDataMigrator {
 
   private static final Log LOG = LogFactory.getLog(ZKDataMigrator.class);
 
-  @Override
-  public int run(String[] as) throws Exception {
-    Configuration conf = getConf();
-    ZooKeeperWatcher zkw = null;
+  /**
+   * Method for table states migration.
+   * Used when upgrading from pre-2.0 to 2.0
+   * Reading state from zk, applying them to internal state
+   * and delete.
+   * Used by master to clean migration from zk based states to
+   * table descriptor based states.
+   */
+  @Deprecated
+  public static Map<TableName, TableState.State> queryForTableStates(ZooKeeperWatcher zkw)
+      throws KeeperException, InterruptedException {
+    Map<TableName, TableState.State> rv = new HashMap<>();
+    List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
+    if (children == null)
+      return rv;
+    for (String child: children) {
+      TableName tableName = TableName.valueOf(child);
+      ZooKeeperProtos.DeprecatedTableState.State state = getTableState(zkw, tableName);
+      TableState.State newState = TableState.State.ENABLED;
+      if (state != null) {
+        switch (state) {
+        case ENABLED:
+          newState = TableState.State.ENABLED;
+          break;
+        case DISABLED:
+          newState = TableState.State.DISABLED;
+          break;
+        case DISABLING:
+          newState = TableState.State.DISABLING;
+          break;
+        case ENABLING:
+          newState = TableState.State.ENABLING;
+          break;
+        default:
+        }
+      }
+      rv.put(tableName, newState);
+    }
+    return rv;
+  }
+
+  /**
+   * Gets table state from ZK.
+   * @param zkw ZooKeeperWatcher instance to use
+   * @param tableName table we're checking
+   * @return Null or {@link ZooKeeperProtos.DeprecatedTableState.State} found in znode.
+   * @throws KeeperException
+   */
+  @Deprecated
+  private static  ZooKeeperProtos.DeprecatedTableState.State getTableState(
+      final ZooKeeperWatcher zkw, final TableName tableName)
+      throws KeeperException, InterruptedException {
+    String znode = ZKUtil.joinZNode(zkw.tableZNode, tableName.getNameAsString());
+    byte [] data = ZKUtil.getData(zkw, znode);
+    if (data == null || data.length <= 0) return null;
     try {
-      zkw = new ZooKeeperWatcher(getConf(), "Migrate ZK data to PB.",
-        new ZKDataMigratorAbortable());
-      if (ZKUtil.checkExists(zkw, zkw.baseZNode) == -1) {
-        LOG.info("No hbase related data available in zookeeper. returning..");
-        return 0;
-      }
-      List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.baseZNode);
-      if (children == null) {
-        LOG.info("No child nodes to mirgrate. returning..");
-        return 0;
-      }
-      String childPath = null;
-      for (String child : children) {
-        childPath = ZKUtil.joinZNode(zkw.baseZNode, child);
-        if (child.equals(conf.get("zookeeper.znode.rootserver", "root-region-server"))) {
-          // -ROOT- region no longer present from 0.95.0, so we can remove this
-          // znode
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-          // TODO delete root table path from file system.
-        } else if (child.equals(conf.get("zookeeper.znode.rs", "rs"))) {
-          // Since there is no live region server instance during migration, we
-          // can remove this znode as well.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.draining.rs", "draining"))) {
-          // If we want to migrate to 0.95.0 from older versions we need to stop
-          // the existing cluster. So there wont be any draining servers so we
-          // can
-          // remove it.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.master", "master"))) {
-          // Since there is no live master instance during migration, we can
-          // remove this znode as well.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.backup.masters", "backup-masters"))) {
-          // Since there is no live backup master instances during migration, we
-          // can remove this znode as well.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.state", "shutdown"))) {
-          // shutdown node is not present from 0.95.0 onwards. Its renamed to
-          // "running". We can delete it.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.unassigned", "unassigned"))) {
-          // Any way during clean cluster startup we will remove all unassigned
-          // region nodes. we can delete all children nodes as well. This znode
-          // is
-          // renamed to "regions-in-transition" from 0.95.0 onwards.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.tableEnableDisable", "table"))
-            || child.equals(conf.get("zookeeper.znode.masterTableEnableDisable", "table"))) {
-          checkAndMigrateTableStatesToPB(zkw);
-        } else if (child.equals(conf.get("zookeeper.znode.masterTableEnableDisable92",
-          "table92"))) {
-          // This is replica of table states from tableZnode so we can remove
-          // this.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.splitlog", "splitlog"))) {
-          // This znode no longer available from 0.95.0 onwards, we can remove
-          // it.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.replication", "replication"))) {
-          checkAndMigrateReplicationNodesToPB(zkw);
-        } else if (child.equals(conf.get("zookeeper.znode.clusterId", "hbaseid"))) {
-          // it will be re-created by master.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION)) {
-          // not needed as it is transient.
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        } else if (child.equals(conf.get("zookeeper.znode.acl.parent", "acl"))) {
-          // it will be re-created when hbase:acl is re-opened
-          ZKUtil.deleteNodeRecursively(zkw, childPath);
-        }
-      }
-    } catch (Exception e) {
-      LOG.error("Got exception while updating znodes ", e);
-      throw new IOException(e);
-    } finally {
-      if (zkw != null) {
-        zkw.close();
-      }
-    }
-    return 0;
-  }
-
-  private void checkAndMigrateTableStatesToPB(ZooKeeperWatcher zkw) throws KeeperException,
-      InterruptedException {
-    List<String> tables = ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
-    if (tables == null) {
-      LOG.info("No table present to migrate table state to PB. returning..");
-      return;
-    }
-    for (String table : tables) {
-      String znode = ZKUtil.joinZNode(zkw.tableZNode, table);
-      // Delete -ROOT- table state znode since its no longer present in 0.95.0
-      // onwards.
-      if (table.equals("-ROOT-") || table.equals(".META.")) {
-        ZKUtil.deleteNode(zkw, znode);
-        continue;
-      }
-      byte[] data = ZKUtil.getData(zkw, znode);
-      if (ProtobufUtil.isPBMagicPrefix(data)) continue;
-      ZooKeeperProtos.Table.Builder builder = ZooKeeperProtos.Table.newBuilder();
-      builder.setState(ZooKeeperProtos.Table.State.valueOf(Bytes.toString(data)));
-      data = ProtobufUtil.prependPBMagic(builder.build().toByteArray());
-      ZKUtil.setData(zkw, znode, data);
+      ProtobufUtil.expectPBMagicPrefix(data);
+      ZooKeeperProtos.DeprecatedTableState.Builder builder =
+          ZooKeeperProtos.DeprecatedTableState.newBuilder();
+      int magicLen = ProtobufUtil.lengthOfPBMagic();
+      ZooKeeperProtos.DeprecatedTableState t = builder.mergeFrom(data,
+          magicLen, data.length - magicLen).build();
+      return t.getState();
+    } catch (InvalidProtocolBufferException e) {
+      KeeperException ke = new KeeperException.DataInconsistencyException();
+      ke.initCause(e);
+      throw ke;
+    } catch (DeserializationException e) {
+      throw ZKUtil.convert(e);
     }
   }
 
-  private void checkAndMigrateReplicationNodesToPB(ZooKeeperWatcher zkw) throws KeeperException,
-      InterruptedException {
-    String replicationZnodeName = getConf().get("zookeeper.znode.replication", "replication");
-    String replicationPath = ZKUtil.joinZNode(zkw.baseZNode, replicationZnodeName);
-    List<String> replicationZnodes = ZKUtil.listChildrenNoWatch(zkw, replicationPath);
-    if (replicationZnodes == null) {
-      LOG.info("No replication related znodes present to migrate. returning..");
-      return;
-    }
-    for (String child : replicationZnodes) {
-      String znode = ZKUtil.joinZNode(replicationPath, child);
-      if (child.equals(getConf().get("zookeeper.znode.replication.peers", "peers"))) {
-        List<String> peers = ZKUtil.listChildrenNoWatch(zkw, znode);
-        if (peers == null || peers.isEmpty()) {
-          LOG.info("No peers present to migrate. returning..");
-          continue;
-        }
-        checkAndMigratePeerZnodesToPB(zkw, znode, peers);
-      } else if (child.equals(getConf().get("zookeeper.znode.replication.state", "state"))) {
-        // This is no longer used in >=0.95.x
-        ZKUtil.deleteNodeRecursively(zkw, znode);
-      } else if (child.equals(getConf().get("zookeeper.znode.replication.rs", "rs"))) {
-        List<String> rsList = ZKUtil.listChildrenNoWatch(zkw, znode);
-        if (rsList == null || rsList.isEmpty()) continue;
-        for (String rs : rsList) {
-          checkAndMigrateQueuesToPB(zkw, znode, rs);
-        }
-      }
-    }
-  }
-
-  private void checkAndMigrateQueuesToPB(ZooKeeperWatcher zkw, String znode, String rs)
-      throws KeeperException, NoNodeException, InterruptedException {
-    String rsPath = ZKUtil.joinZNode(znode, rs);
-    List<String> peers = ZKUtil.listChildrenNoWatch(zkw, rsPath);
-    if (peers == null || peers.isEmpty()) return;
-    String peerPath = null;
-    for (String peer : peers) {
-      peerPath = ZKUtil.joinZNode(rsPath, peer);
-      List<String> files = ZKUtil.listChildrenNoWatch(zkw, peerPath);
-      if (files == null || files.isEmpty()) continue;
-      String filePath = null;
-      for (String file : files) {
-        filePath = ZKUtil.joinZNode(peerPath, file);
-        byte[] data = ZKUtil.getData(zkw, filePath);
-        if (data == null || Bytes.equals(data, HConstants.EMPTY_BYTE_ARRAY)) continue;
-        if (ProtobufUtil.isPBMagicPrefix(data)) continue;
-        ZKUtil.setData(zkw, filePath,
-          ZKUtil.positionToByteArray(Long.parseLong(Bytes.toString(data))));
-      }
-    }
-  }
-
-  private void checkAndMigratePeerZnodesToPB(ZooKeeperWatcher zkw, String znode,
-      List<String> peers) throws KeeperException, NoNodeException, InterruptedException {
-    for (String peer : peers) {
-      String peerZnode = ZKUtil.joinZNode(znode, peer);
-      byte[] data = ZKUtil.getData(zkw, peerZnode);
-      if (!ProtobufUtil.isPBMagicPrefix(data)) {
-        migrateClusterKeyToPB(zkw, peerZnode, data);
-      }
-      String peerStatePath = ZKUtil.joinZNode(peerZnode,
-        getConf().get("zookeeper.znode.replication.peers.state", "peer-state"));
-      if (ZKUtil.checkExists(zkw, peerStatePath) != -1) {
-        data = ZKUtil.getData(zkw, peerStatePath);
-        if (ProtobufUtil.isPBMagicPrefix(data)) continue;
-        migratePeerStateToPB(zkw, data, peerStatePath);
-      }
-    }
-  }
-
-  private void migrateClusterKeyToPB(ZooKeeperWatcher zkw, String peerZnode, byte[] data)
-      throws KeeperException, NoNodeException {
-    ReplicationPeer peer = ZooKeeperProtos.ReplicationPeer.newBuilder()
-        .setClusterkey(Bytes.toString(data)).build();
-    ZKUtil.setData(zkw, peerZnode, ProtobufUtil.prependPBMagic(peer.toByteArray()));
-  }
-
-  private void migratePeerStateToPB(ZooKeeperWatcher zkw, byte[] data,
- String peerStatePath)
-      throws KeeperException, NoNodeException {
-    String state = Bytes.toString(data);
-    if (ZooKeeperProtos.ReplicationState.State.ENABLED.name().equals(state)) {
-      ZKUtil.setData(zkw, peerStatePath, ReplicationStateZKBase.ENABLED_ZNODE_BYTES);
-    } else if (ZooKeeperProtos.ReplicationState.State.DISABLED.name().equals(state)) {
-      ZKUtil.setData(zkw, peerStatePath, ReplicationStateZKBase.DISABLED_ZNODE_BYTES);
-    }
-  }
-
-  public static void main(String args[]) throws Exception {
-    System.exit(ToolRunner.run(HBaseConfiguration.create(), new ZKDataMigrator(), args));
-  }
-
-  static class ZKDataMigratorAbortable implements Abortable {
-    private boolean aborted = false;
-
-    @Override
-    public void abort(String why, Throwable e) {
-      LOG.error("Got aborted with reason: " + why + ", and error: " + e);
-      this.aborted = true;
-    }
-
-    @Override
-    public boolean isAborted() {
-      return this.aborted;
-    }
-  }
 }

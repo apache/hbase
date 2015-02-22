@@ -19,8 +19,11 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
@@ -42,28 +45,28 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
-    int klength = kv.getKeyLength();
-    int vlength = kv.getValueLength();
+    int klength = KeyValueUtil.keyLength(cell);
+    int vlength = cell.getValueLength();
 
     out.writeInt(klength);
     out.writeInt(vlength);
-    out.write(kv.getBuffer(), kv.getKeyOffset(), klength);
-    out.write(kv.getValueArray(), kv.getValueOffset(), vlength);
+    CellUtil.writeFlatKey(cell, out);
+    out.write(cell.getValueArray(), cell.getValueOffset(), vlength);
     int encodedKvSize = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     // Write the additional tag into the stream
     if (encodingCtx.getHFileContext().isIncludesTags()) {
-      int tagsLength = kv.getTagsLength();
+      int tagsLength = cell.getTagsLength();
       out.writeShort(tagsLength);
       if (tagsLength > 0) {
-        out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
+        out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
       }
       encodedKvSize += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
     }
     if (encodingCtx.getHFileContext().isIncludesMvcc()) {
-      WritableUtils.writeVLong(out, kv.getMvccVersion());
-      encodedKvSize += WritableUtils.getVIntSize(kv.getMvccVersion());
+      WritableUtils.writeVLong(out, cell.getSequenceId());
+      encodedKvSize += WritableUtils.getVIntSize(cell.getSequenceId());
     }
     return encodedKvSize;
   }

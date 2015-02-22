@@ -35,7 +35,28 @@
     </description>
 
     <build>
-        <plugins>
+      <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <configuration>
+              <compilerId>${java.default.compiler}</compilerId>
+              <forceJavacCompilerUse>true</forceJavacCompilerUse>
+              <useIncrementalCompilation>false</useIncrementalCompilation>
+            </configuration>
+          </execution>
+          <execution>
+            <id>default-testCompile</id>
+            <configuration>
+              <compilerId>${java.default.compiler}</compilerId>
+              <forceJavacCompilerUse>true</forceJavacCompilerUse>
+              <useIncrementalCompilation>false</useIncrementalCompilation>
+            </configuration>
+          </execution>
+       </executions>
+      </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>

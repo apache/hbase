@@ -24,7 +24,7 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;

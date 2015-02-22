@@ -35,22 +35,25 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.security.SecurityUtil;
@@ -62,6 +65,7 @@ import org.apache.hadoop.util.ToolRunner;
  * {@link PerformanceEvaluation}, this tool validates the data written,
  * and supports simultaneously writing and reading the same set of keys.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class LoadTestTool extends AbstractHBaseTool {
 
   private static final Log LOG = LogFactory.getLog(LoadTestTool.class);
@@ -120,7 +124,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   public static final String OPT_INMEMORY = "in_memory";
   public static final String OPT_USAGE_IN_MEMORY = "Tries to keep the HFiles of the CF " +
-  		"inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
+      "inmemory as far as possible.  Not guaranteed that reads are always served from inmemory";
 
   public static final String OPT_GENERATOR = "generator";
   public static final String OPT_GENERATOR_USAGE = "The class which generates load for the tool."
@@ -247,7 +251,7 @@ public class LoadTestTool extends AbstractHBaseTool {
    */
   protected void applyColumnFamilyOptions(TableName tableName,
       byte[][] columnFamilies) throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = new HBaseAdmin(conf);
     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
     LOG.info("Disabling table " + tableName);
     admin.disableTable(tableName);
@@ -571,9 +575,9 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     if (userOwner != null) {
       LOG.info("Granting permissions for user " + userOwner.getShortName());
-      AccessControlProtos.Permission.Action[] actions = {
-        AccessControlProtos.Permission.Action.ADMIN, AccessControlProtos.Permission.Action.CREATE,
-        AccessControlProtos.Permission.Action.READ, AccessControlProtos.Permission.Action.WRITE };
+      Permission.Action[] actions = {
+        Permission.Action.ADMIN, Permission.Action.CREATE,
+        Permission.Action.READ, Permission.Action.WRITE };
       try {
         AccessControlClient.grant(conf, tableName, userOwner.getShortName(), null, null, actions);
       } catch (Throwable e) {
@@ -756,9 +760,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       newArgs = new String[cmdLineArgs.length + 2];
       newArgs[0] = "-" + LoadTestTool.OPT_TABLE_NAME;
       newArgs[1] = LoadTestTool.DEFAULT_TABLE_NAME;
-      for (int i = 0; i < cmdLineArgs.length; i++) {
-        newArgs[i + 2] = cmdLineArgs[i];
-      }
+      System.arraycopy(cmdLineArgs, 0, newArgs, 2, cmdLineArgs.length);
     } else {
       newArgs = cmdLineArgs;
     }

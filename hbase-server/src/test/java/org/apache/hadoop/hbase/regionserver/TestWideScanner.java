@@ -30,17 +30,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestWideScanner extends HBaseTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
 
@@ -84,6 +87,7 @@ public class TestWideScanner extends HBaseTestCase {
     return count;
   }
 
+  @Test
   public void testWideScanBatching() throws IOException {
     final int batch = 256;
     try {
@@ -135,7 +139,7 @@ public class TestWideScanner extends HBaseTestCase {
 
       s.close();
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 

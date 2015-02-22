@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -25,16 +28,22 @@ import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -43,20 +52,17 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
-
 /**
  * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
  * on our tables is simple - take every row in the table, reverse the value of
  * a particular cell, and write it back to the table.
  */
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestMultithreadedTableMapper {
   private static final Log LOG = LogFactory.getLog(TestMultithreadedTableMapper.class);
   private static final HBaseTestingUtility UTIL =
       new HBaseTestingUtility();
-  static final byte[] MULTI_REGION_TABLE_NAME = Bytes.toBytes("mrtest");
+  static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
   static final int    NUMBER_OF_THREADS = 10;
@@ -64,10 +70,12 @@ public class TestMultithreadedTableMapper {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
-    HTable table = UTIL.createTable(MULTI_REGION_TABLE_NAME, new byte[][] {INPUT_FAMILY, OUTPUT_FAMILY});
-    UTIL.createMultiRegions(table, INPUT_FAMILY);
+    HTable table =
+        UTIL.createMultiRegionTable(MULTI_REGION_TABLE_NAME, new byte[][] { INPUT_FAMILY,
+            OUTPUT_FAMILY });
     UTIL.loadTable(table, INPUT_FAMILY, false);
     UTIL.startMiniMapReduceCluster();
+    UTIL.waitUntilAllRegionsAssigned(MULTI_REGION_TABLE_NAME);
   }
 
   @AfterClass
@@ -122,11 +130,10 @@ public class TestMultithreadedTableMapper {
   @Test
   public void testMultithreadedTableMapper()
       throws IOException, InterruptedException, ClassNotFoundException {
-    runTestOnTable(new HTable(new Configuration(UTIL.getConfiguration()),
-        MULTI_REGION_TABLE_NAME));
+    runTestOnTable(UTIL.getConnection().getTable(MULTI_REGION_TABLE_NAME));
   }
 
-  private void runTestOnTable(HTable table)
+  private void runTestOnTable(Table table)
       throws IOException, InterruptedException, ClassNotFoundException {
     Job job = null;
     try {
@@ -136,20 +143,20 @@ public class TestMultithreadedTableMapper {
       Scan scan = new Scan();
       scan.addFamily(INPUT_FAMILY);
       TableMapReduceUtil.initTableMapperJob(
-          Bytes.toString(table.getTableName()), scan,
+          table.getName(), scan,
           MultithreadedTableMapper.class, ImmutableBytesWritable.class,
           Put.class, job);
       MultithreadedTableMapper.setMapperClass(job, ProcessContentsMapper.class);
       MultithreadedTableMapper.setNumberOfThreads(job, NUMBER_OF_THREADS);
       TableMapReduceUtil.initTableReducerJob(
-          Bytes.toString(table.getTableName()),
+          table.getName().getNameAsString(),
           IdentityTableReducer.class, job);
       FileOutputFormat.setOutputPath(job, new Path("test"));
-      LOG.info("Started " + Bytes.toString(table.getTableName()));
+      LOG.info("Started " + table.getName());
       assertTrue(job.waitForCompletion(true));
       LOG.info("After map/reduce completion");
       // verify map-reduce results
-      verify(Bytes.toString(table.getTableName()));
+      verify(table.getName());
     } finally {
       table.close();
       if (job != null) {
@@ -159,8 +166,8 @@ public class TestMultithreadedTableMapper {
     }
   }
 
-  private void verify(String tableName) throws IOException {
-    HTable table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
+  private void verify(TableName tableName) throws IOException {
+    Table table = UTIL.getConnection().getTable(tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
     int numRetries = UTIL.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
@@ -193,7 +200,7 @@ public class TestMultithreadedTableMapper {
    * @throws IOException
    * @throws NullPointerException if we failed to find a cell value
    */
-  private void verifyAttempt(final HTable table)
+  private void verifyAttempt(final Table table)
       throws IOException, NullPointerException {
     Scan scan = new Scan();
     scan.addFamily(INPUT_FAMILY);

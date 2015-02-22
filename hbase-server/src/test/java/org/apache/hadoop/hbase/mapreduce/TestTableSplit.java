@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,7 +31,7 @@ import java.util.HashSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestTableSplit {
   @Test
   public void testHashCode() {
@@ -85,5 +86,21 @@ public class TestTableSplit {
     Assert.assertEquals(666, deserialized.getLength());
   }
 
+  @Test
+  public void testToString() {
+    TableSplit split =
+        new TableSplit(TableName.valueOf("table"), "row-start".getBytes(), "row-end".getBytes(),
+            "location");
+    String str =
+        "HBase table split(table name: table, scan: , start row: row-start, "
+            + "end row: row-end, region location: location)";
+    Assert.assertEquals(str, split.toString());
+
+    split = new TableSplit((TableName) null, null, null, null);
+    str =
+        "HBase table split(table name: null, scan: , start row: null, "
+            + "end row: null, region location: null)";
+    Assert.assertEquals(str, split.toString());
+  }
 }
 

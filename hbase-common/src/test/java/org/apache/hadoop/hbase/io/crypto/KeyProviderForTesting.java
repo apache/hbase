@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.io.crypto;
 
 import java.security.Key;
+
 import javax.crypto.spec.SecretKeySpec;
 
 /**

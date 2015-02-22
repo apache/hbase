@@ -26,7 +26,7 @@ import java.lang.management.MemoryUsage;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -64,11 +64,10 @@ public class CacheConfig {
       "hfile.block.bloom.cacheonwrite";
 
   /**
-   * TODO: Implement this (jgray)
-   * Configuration key to cache data blocks in compressed format.
+   * Configuration key to cache data blocks in compressed and/or encrypted format.
    */
   public static final String CACHE_DATA_BLOCKS_COMPRESSED_KEY =
-      "hbase.rs.blockcache.cachedatacompressed";
+      "hbase.block.data.cachecompressed";
 
   /**
    * Configuration key to evict all blocks of a given file from the block cache
@@ -119,6 +118,14 @@ public class CacheConfig {
   public static final String PREFETCH_BLOCKS_ON_OPEN_KEY =
       "hbase.rs.prefetchblocksonopen";
 
+  /**
+   * The target block size used by blockcache instances. Defaults to
+   * {@link HConstants#DEFAULT_BLOCKSIZE}.
+   * TODO: this config point is completely wrong, as it's used to determine the
+   * target block size of BlockCache instances. Rename.
+   */
+  public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
+
   // Defaults
 
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
@@ -127,7 +134,7 @@ public class CacheConfig {
   public static final boolean DEFAULT_CACHE_INDEXES_ON_WRITE = false;
   public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
   public static final boolean DEFAULT_EVICT_ON_CLOSE = false;
-  public static final boolean DEFAULT_COMPRESSED_CACHE = false;
+  public static final boolean DEFAULT_CACHE_DATA_COMPRESSED = false;
   public static final boolean DEFAULT_PREFETCH_ON_OPEN = false;
 
   /** Local reference to the block cache, null if completely disabled */
@@ -156,8 +163,8 @@ public class CacheConfig {
   /** Whether blocks of a file should be evicted when the file is closed */
   private boolean evictOnClose;
 
-  /** Whether data blocks should be stored in compressed form in the cache */
-  private final boolean cacheCompressed;
+  /** Whether data blocks should be stored in compressed and/or encrypted form in the cache */
+  private final boolean cacheDataCompressed;
 
   /** Whether data blocks should be prefetched into the cache */
   private final boolean prefetchOnOpen;
@@ -182,18 +189,18 @@ public class CacheConfig {
         // For the following flags we enable them regardless of per-schema settings
         // if they are enabled in the global configuration.
         conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY,
-            DEFAULT_CACHE_DATA_ON_WRITE) || family.shouldCacheDataOnWrite(),
+            DEFAULT_CACHE_DATA_ON_WRITE) || family.isCacheDataOnWrite(),
         conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
-            DEFAULT_CACHE_INDEXES_ON_WRITE) || family.shouldCacheIndexesOnWrite(),
+            DEFAULT_CACHE_INDEXES_ON_WRITE) || family.isCacheIndexesOnWrite(),
         conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
-            DEFAULT_CACHE_BLOOMS_ON_WRITE) || family.shouldCacheBloomsOnWrite(),
+            DEFAULT_CACHE_BLOOMS_ON_WRITE) || family.isCacheBloomsOnWrite(),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY,
-            DEFAULT_EVICT_ON_CLOSE) || family.shouldEvictBlocksOnClose(),
-        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_COMPRESSED_CACHE),
+            DEFAULT_EVICT_ON_CLOSE) || family.isEvictBlocksOnClose(),
+        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY,
-            DEFAULT_PREFETCH_ON_OPEN) || family.shouldPrefetchBlocksOnOpen(),
+            DEFAULT_PREFETCH_ON_OPEN) || family.isPrefetchBlocksOnOpen(),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
-            HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.shouldCacheDataInL1()
+            HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1()
      );
   }
 
@@ -208,13 +215,10 @@ public class CacheConfig {
         DEFAULT_IN_MEMORY, // This is a family-level setting so can't be set
                            // strictly from conf
         conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE),
-        conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
-            DEFAULT_CACHE_INDEXES_ON_WRITE),
-            conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
-                DEFAULT_CACHE_BLOOMS_ON_WRITE),
+        conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_INDEXES_ON_WRITE),
+        conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_BLOOMS_ON_WRITE),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
-        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY,
-            DEFAULT_COMPRESSED_CACHE),
+        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
           HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1)
@@ -232,7 +236,7 @@ public class CacheConfig {
    * @param cacheIndexesOnWrite whether index blocks should be cached on write
    * @param cacheBloomsOnWrite whether blooms should be cached on write
    * @param evictOnClose whether blocks should be evicted when HFile is closed
-   * @param cacheCompressed whether to store blocks as compressed in the cache
+   * @param cacheDataCompressed whether to store blocks as compressed in the cache
    * @param prefetchOnOpen whether to prefetch blocks upon open
    * @param cacheDataInL1 If more than one cache tier deployed, if true, cache this column families
    * data blocks up in the L1 tier.
@@ -241,7 +245,7 @@ public class CacheConfig {
       final boolean cacheDataOnRead, final boolean inMemory,
       final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
-      final boolean cacheCompressed, final boolean prefetchOnOpen,
+      final boolean cacheDataCompressed, final boolean prefetchOnOpen,
       final boolean cacheDataInL1) {
     this.blockCache = blockCache;
     this.cacheDataOnRead = cacheDataOnRead;
@@ -250,7 +254,7 @@ public class CacheConfig {
     this.cacheIndexesOnWrite = cacheIndexesOnWrite;
     this.cacheBloomsOnWrite = cacheBloomsOnWrite;
     this.evictOnClose = evictOnClose;
-    this.cacheCompressed = cacheCompressed;
+    this.cacheDataCompressed = cacheDataCompressed;
     this.prefetchOnOpen = prefetchOnOpen;
     this.cacheDataInL1 = cacheDataInL1;
     LOG.info(this);
@@ -264,7 +268,7 @@ public class CacheConfig {
     this(cacheConf.blockCache, cacheConf.cacheDataOnRead, cacheConf.inMemory,
         cacheConf.cacheDataOnWrite, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
-        cacheConf.cacheCompressed, cacheConf.prefetchOnOpen,
+        cacheConf.cacheDataCompressed, cacheConf.prefetchOnOpen,
         cacheConf.cacheDataInL1);
   }
 
@@ -298,14 +302,13 @@ public class CacheConfig {
    * available.
    */
   public boolean shouldCacheBlockOnRead(BlockCategory category) {
-    boolean shouldCache = isBlockCacheEnabled()
+    return isBlockCacheEnabled()
         && (cacheDataOnRead ||
             category == BlockCategory.INDEX ||
             category == BlockCategory.BLOOM ||
             (prefetchOnOpen &&
                 (category != BlockCategory.META &&
                  category != BlockCategory.UNKNOWN)));
-    return shouldCache;
   }
 
   /**
@@ -384,10 +387,23 @@ public class CacheConfig {
   }
 
   /**
-   * @return true if blocks should be compressed in the cache, false if not
+   * @return true if data blocks should be compressed in the cache, false if not
    */
-  public boolean shouldCacheCompressed() {
-    return isBlockCacheEnabled() && this.cacheCompressed;
+  public boolean shouldCacheDataCompressed() {
+    return isBlockCacheEnabled() && this.cacheDataCompressed;
+  }
+
+  /**
+   * @return true if this {@link BlockCategory} should be compressed in blockcache, false otherwise
+   */
+  public boolean shouldCacheCompressed(BlockCategory category) {
+    if (!isBlockCacheEnabled()) return false;
+    switch (category) {
+      case DATA:
+        return this.cacheDataCompressed;
+      default:
+        return false;
+    }
   }
 
   /**
@@ -408,7 +424,7 @@ public class CacheConfig {
       ", cacheIndexesOnWrite=" + shouldCacheIndexesOnWrite() +
       ", cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() +
       ", cacheEvictOnClose=" + shouldEvictOnClose() +
-      ", cacheCompressed=" + shouldCacheCompressed() +
+      ", cacheDataCompressed=" + shouldCacheDataCompressed() +
       ", prefetchOnOpen=" + shouldPrefetchOnOpen();
   }
 
@@ -449,7 +465,8 @@ public class CacheConfig {
    */
   private static LruBlockCache getL1(final Configuration c, final MemoryUsage mu) {
     long lruCacheSize = getLruCacheSize(c, mu);
-    int blockSize = c.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
+    if (lruCacheSize < 0) return null;
+    int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
     LOG.info("Allocating LruBlockCache size=" +
       StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
     return new LruBlockCache(lruCacheSize, blockSize, true, c);
@@ -466,7 +483,7 @@ public class CacheConfig {
     String bucketCacheIOEngineName = c.get(BUCKET_CACHE_IOENGINE_KEY, null);
     if (bucketCacheIOEngineName == null || bucketCacheIOEngineName.length() <= 0) return null;
 
-    int blockSize = c.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
+    int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
     float bucketCachePercentage = c.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
     long bucketCacheSize = (long) (bucketCachePercentage < 1? mu.getMax() * bucketCachePercentage:
       bucketCachePercentage * 1024 * 1024);
@@ -514,6 +531,8 @@ public class CacheConfig {
     if (blockCacheDisabled) return null;
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
     LruBlockCache l1 = getL1(conf, mu);
+    // blockCacheDisabled is set as a side-effect of getL1(), so check it again after the call.
+    if (blockCacheDisabled) return null;
     BucketCache l2 = getL2(conf, mu);
     if (l2 == null) {
       GLOBAL_BLOCK_CACHE_INSTANCE = l1;

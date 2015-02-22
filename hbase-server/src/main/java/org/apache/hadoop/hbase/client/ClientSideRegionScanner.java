@@ -22,14 +22,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -43,15 +43,12 @@ import org.mortbay.log.Log;
 public class ClientSideRegionScanner extends AbstractClientScanner {
 
   private HRegion region;
-  private Scan scan;
   RegionScanner scanner;
   List<Cell> values;
 
   public ClientSideRegionScanner(Configuration conf, FileSystem fs,
-      Path rootDir, HTableDescriptor htd, HRegionInfo hri, Scan scan, ScanMetrics scanMetrics) 
+      Path rootDir, HTableDescriptor htd, HRegionInfo hri, Scan scan, ScanMetrics scanMetrics)
           throws IOException {
-
-    this.scan = scan;
 
     // region is immutable, set isolation level
     scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
@@ -84,9 +81,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     Result result = Result.create(values);
     if (this.scanMetrics != null) {
       long resultSize = 0;
-      for (Cell kv : values) {
-        // TODO add getLength to Cell/use CellUtil#estimatedSizeOf
-        resultSize += KeyValueUtil.ensureKeyValue(kv).getLength();
+      for (Cell cell : values) {
+        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
       }
       this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
     }

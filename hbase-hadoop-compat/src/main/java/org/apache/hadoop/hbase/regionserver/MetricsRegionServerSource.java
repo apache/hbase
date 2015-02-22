@@ -112,15 +112,37 @@ public interface MetricsRegionServerSource extends BaseSource {
    */
   void incrSlowAppend();
 
+  /**
+   * Update the split transaction time histogram
+   * @param t time it took, in milliseconds
+   */
+  void updateSplitTime(long t);
+
+  /**
+   * Increment number of a requested splits
+   */
+  void incrSplitRequest();
+
+  /**
+   * Increment number of successful splits
+   */
+  void incrSplitSuccess();
+
+  /**
+   * Update the flush time histogram
+   * @param t time it took, in milliseconds
+   */
+  void updateFlushTime(long t);
+
   // Strings used for exporting to metrics system.
   String REGION_COUNT = "regionCount";
   String REGION_COUNT_DESC = "Number of regions";
   String STORE_COUNT = "storeCount";
   String STORE_COUNT_DESC = "Number of Stores";
-  String HLOGFILE_COUNT = "hlogFileCount";
-  String HLOGFILE_COUNT_DESC = "Number of HLog Files";
-  String HLOGFILE_SIZE = "hlogFileSize";
-  String HLOGFILE_SIZE_DESC = "Size of all HLog Files";
+  String WALFILE_COUNT = "hlogFileCount";
+  String WALFILE_COUNT_DESC = "Number of WAL Files";
+  String WALFILE_SIZE = "hlogFileSize";
+  String WALFILE_SIZE_DESC = "Size of all WAL Files";
   String STOREFILE_COUNT = "storeFileCount";
   String STOREFILE_COUNT_DESC = "Number of Store Files";
   String MEMSTORE_SIZE = "memStoreSize";
@@ -158,6 +180,8 @@ public interface MetricsRegionServerSource extends BaseSource {
   String PERCENT_FILES_LOCAL = "percentFilesLocal";
   String PERCENT_FILES_LOCAL_DESC =
       "The percent of HFiles that are stored on the local hdfs data node.";
+  String SPLIT_QUEUE_LENGTH = "splitQueueLength";
+  String SPLIT_QUEUE_LENGTH_DESC = "Length of the queue for splits.";
   String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
   String LARGE_COMPACTION_QUEUE_LENGTH = "largeCompactionQueueLength";
   String SMALL_COMPACTION_QUEUE_LENGTH = "smallCompactionQueueLength";
@@ -266,4 +290,20 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MOB_FILE_CACHE_COUNT = "mobFileCacheCount";
   String MOB_FILE_CACHE_COUNT_DESC = "The count of cached mob files";
 
+  String HEDGED_READS = "hedgedReads";
+  String HEDGED_READS_DESC = "The number of times we started a hedged read";
+  String HEDGED_READ_WINS = "hedgedReadWins";
+  String HEDGED_READ_WINS_DESC =
+      "The number of times we started a hedged read and a hedged read won";
+
+  String BLOCKED_REQUESTS_COUNT = "blockedRequestCount";
+  String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
+      + "larger than blockingMemStoreSize";
+
+  String SPLIT_KEY = "splitTime";
+  String SPLIT_REQUEST_KEY = "splitRequestCount";
+  String SPLIT_REQUEST_DESC = "Number of splits requested";
+  String SPLIT_SUCCESS_KEY = "splitSuccessCounnt";
+  String SPLIT_SUCCESS_DESC = "Number of successfully executed splits";
+  String FLUSH_KEY = "flushTime";
 }

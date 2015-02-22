@@ -28,7 +28,8 @@ import java.util.ConcurrentModificationException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -36,7 +37,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test that I can Iterate Client Actions that hold Cells (Get does not have Cells).
  */
-@Category(SmallTests.class)
+@Category({SmallTests.class, ClientTests.class})
 public class TestPutDeleteEtcCellIteration {
   private static final byte [] ROW = new byte [] {'r'};
   private static final long TIMESTAMP = System.currentTimeMillis();

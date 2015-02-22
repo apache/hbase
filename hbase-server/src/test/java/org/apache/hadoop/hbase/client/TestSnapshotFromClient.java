@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -39,6 +38,8 @@ import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifestV1;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
@@ -55,7 +56,7 @@ import com.google.common.collect.Lists;
  * <p>
  * This is an end-to-end test for the snapshot utility
  */
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestSnapshotFromClient.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -148,7 +149,7 @@ public class TestSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    Table table = UTIL.getConnection().getTable(TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM);
     table.close();
 
@@ -184,7 +185,7 @@ public class TestSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    Table table = UTIL.getConnection().getTable(TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM, false);
 
     LOG.debug("FS state before disable:");

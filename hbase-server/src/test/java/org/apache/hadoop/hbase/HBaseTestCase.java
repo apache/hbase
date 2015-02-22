@@ -39,9 +39,11 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
@@ -50,6 +52,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
  * like an HBaseConfiguration and filesystem.
  * @deprecated Write junit4 unit tests using {@link HBaseTestingUtility}
  */
+@Deprecated
 public abstract class HBaseTestCase extends TestCase {
   private static final Log LOG = LogFactory.getLog(HBaseTestCase.class);
 
@@ -73,6 +76,14 @@ public abstract class HBaseTestCase extends TestCase {
   protected final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
   public volatile Configuration conf = HBaseConfiguration.create();
+  public final FSTableDescriptors fsTableDescriptors;
+  {
+    try {
+      fsTableDescriptors = new FSTableDescriptors(conf);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to init descriptors", e);
+    }
+  }
 
   /** constructor */
   public HBaseTestCase() {
@@ -101,12 +112,12 @@ public abstract class HBaseTestCase extends TestCase {
     }
     try {
       if (localfs) {
-        this.testDir = getUnitTestdir(getName());
+        testDir = getUnitTestdir(getName());
         if (fs.exists(testDir)) {
           fs.delete(testDir, true);
         }
       } else {
-        this.testDir = FSUtils.getRootDir(conf);
+        testDir = FSUtils.getRootDir(conf);
       }
     } catch (Exception e) {
       LOG.fatal("error during setup", e);
@@ -138,9 +149,8 @@ public abstract class HBaseTestCase extends TestCase {
     }
 
   /**
-   * You must call close on the returned region and then close on the log file
-   * it created. Do {@link HRegion#close()} followed by {@link HRegion#getLog()}
-   * and on it call close.
+   * You must call close on the returned region and then close on the log file it created. Do
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to close both the region and the WAL.
    * @param desc
    * @param startKey
    * @param endKey
@@ -157,7 +167,7 @@ public abstract class HBaseTestCase extends TestCase {
       byte [] endKey, Configuration conf)
   throws IOException {
     HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
-    return HRegion.createHRegion(hri, testDir, conf, desc);
+    return HBaseTestingUtility.createRegionAndWAL(hri, testDir, conf, desc);
   }
 
   protected HRegion openClosedRegion(final HRegion closedRegion)
@@ -196,7 +206,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @return Column descriptor.
    */
   protected HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
+      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
       htd.addFamily(new HColumnDescriptor(cfName)
@@ -467,12 +477,12 @@ public abstract class HBaseTestCase extends TestCase {
    * A class that makes a {@link Incommon} out of a {@link HTable}
    */
   public static class HTableIncommon implements Incommon {
-    final HTable table;
+    final Table table;
 
     /**
      * @param table
      */
-    public HTableIncommon(final HTable table) {
+    public HTableIncommon(final Table table) {
       super();
       this.table = table;
     }
@@ -629,12 +639,13 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    */
   protected void createMetaRegion() throws IOException {
-    meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf, HTableDescriptor.META_TABLEDESC);
+    FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(conf);
+    meta = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO, testDir,
+        conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
   }
 
   protected void closeRootAndMeta() throws IOException {
-    HRegion.closeHRegion(meta);
+    HBaseTestingUtility.closeRegionAndWAL(meta);
   }
 
   public static void assertByteEquals(byte[] expected,

@@ -25,7 +25,7 @@ import java.util.concurrent.CancellationException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -138,10 +138,11 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   }
 
   @Override
-  protected void addRegionsToMeta(final List<HRegionInfo> regionInfos)
+  protected void addRegionsToMeta(final List<HRegionInfo> regionInfos,
+      int regionReplication)
       throws IOException {
-    super.addRegionsToMeta(regionInfos);
-    metaChanges.updateMetaParentRegions(this.server.getShortCircuitConnection(), regionInfos);
+    super.addRegionsToMeta(regionInfos, regionReplication);
+    metaChanges.updateMetaParentRegions(this.server.getConnection(), regionInfos);
   }
 
   @Override

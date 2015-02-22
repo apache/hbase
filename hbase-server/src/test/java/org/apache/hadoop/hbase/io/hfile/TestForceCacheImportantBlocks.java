@@ -25,7 +25,8 @@ import java.util.Collection;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -49,7 +50,7 @@ import org.junit.runners.Parameterized.Parameters;
  * need to reveal more about what is being cached whether DATA or INDEX blocks and then we could
  * do more verification in this test.
  */
-@Category(MediumTests.class)
+@Category({IOTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestForceCacheImportantBlocks {
   private final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
@@ -80,14 +81,15 @@ public class TestForceCacheImportantBlocks {
   @Parameters
   public static Collection<Object[]> parameters() {
     // HFile versions
-    return Arrays.asList(new Object[][] {
-        new Object[] { new Integer(2), false },
-        new Object[] { new Integer(3), true }
-    });
+    return Arrays.asList(
+      new Object[] { 2, true },
+      new Object[] { 2, false },
+      new Object[] { 3, true },
+      new Object[] { 3, false }
+    );
   }
 
-  public TestForceCacheImportantBlocks(int hfileVersion,
-      boolean cfCacheEnabled) {
+  public TestForceCacheImportantBlocks(int hfileVersion, boolean cfCacheEnabled) {
     this.hfileVersion = hfileVersion;
     this.cfCacheEnabled = cfCacheEnabled;
     TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, hfileVersion);
@@ -110,9 +112,9 @@ public class TestForceCacheImportantBlocks {
     hcd.setBlocksize(BLOCK_SIZE);
     hcd.setBlockCacheEnabled(cfCacheEnabled);
     HRegion region = TEST_UTIL.createTestRegion(TABLE, hcd);
+    BlockCache cache = region.getStore(hcd.getName()).getCacheConfig().getBlockCache();
+    CacheStats stats = cache.getStats();
     writeTestData(region);
-    CacheStats stats =
-      region.getStores().get(hcd.getName()).getCacheConfig().getBlockCache().getStats();
     assertEquals(0, stats.getHitCount());
     assertEquals(0, HFile.dataBlockReadCnt.get());
     // Do a single get, take count of caches.  If we are NOT caching DATA blocks, the miss

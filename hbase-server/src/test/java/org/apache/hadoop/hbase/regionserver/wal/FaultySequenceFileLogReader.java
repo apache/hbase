@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 public class FaultySequenceFileLogReader extends SequenceFileLogReader {
 
-  enum FailureType {
+  // public until class relocates to o.a.h.h.wal
+  public enum FailureType {
     BEGINNING, MIDDLE, END, NONE
   }
 
@@ -40,17 +40,17 @@ public class FaultySequenceFileLogReader extends SequenceFileLogReader {
   }
 
   @Override
-  public HLog.Entry next(HLog.Entry reuse) throws IOException {
+  public Entry next(Entry reuse) throws IOException {
     this.entryStart = this.getPosition();
     boolean b = true;
 
     if (nextQueue.isEmpty()) { // Read the whole thing at once and fake reading
       while (b == true) {
-        HLog.Entry e = new HLog.Entry(new HLogKey(), new WALEdit());
+        Entry e = new Entry(new HLogKey(), new WALEdit());
         if (compressionContext != null) {
           e.setCompressionContext(compressionContext);
         }
-        b = this.reader.next(e.getKey(), e.getEdit());
+        b = readNext(e);
         nextQueue.offer(e);
         numberOfFileEntries++;
       }

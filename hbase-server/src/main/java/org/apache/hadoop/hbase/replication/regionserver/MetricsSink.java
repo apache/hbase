@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSource;
 
 /**
  * This class is for maintaining the various replication statistics for a sink and publishing them
@@ -29,15 +28,12 @@ import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSource
 @InterfaceAudience.Private
 public class MetricsSink {
 
-  public static final String SINK_AGE_OF_LAST_APPLIED_OP = "sink.ageOfLastAppliedOp";
-  public static final String SINK_APPLIED_BATCHES = "sink.appliedBatches";
-  public static final String SINK_APPLIED_OPS = "sink.appliedOps";
-
-  private MetricsReplicationSource rms;
   private long lastTimestampForAge = System.currentTimeMillis();
+  private final MetricsReplicationSinkSource mss;
 
   public MetricsSink() {
-    rms = CompatibilitySingletonFactory.getInstance(MetricsReplicationSource.class);
+    mss =
+        CompatibilitySingletonFactory.getInstance(MetricsReplicationSourceFactory.class).getSink();
   }
 
   /**
@@ -52,7 +48,7 @@ public class MetricsSink {
       lastTimestampForAge = timestamp;
       age = System.currentTimeMillis() - lastTimestampForAge;
     } 
-    rms.setGauge(SINK_AGE_OF_LAST_APPLIED_OP, age);
+    mss.setLastAppliedOpAge(age);
     return age;
   }
 
@@ -71,8 +67,8 @@ public class MetricsSink {
    * @param batchSize
    */
   public void applyBatch(long batchSize) {
-    rms.incCounters(SINK_APPLIED_BATCHES, 1);
-    rms.incCounters(SINK_APPLIED_OPS, batchSize);
+    mss.incrAppliedBatches(1);
+    mss.incrAppliedOps(batchSize);
   }
 
 }

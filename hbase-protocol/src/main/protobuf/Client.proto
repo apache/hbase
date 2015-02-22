@@ -353,6 +353,17 @@ message RegionAction {
   repeated Action action = 3;
 }
 
+/*
+* Statistics about the current load on the region
+*/
+message RegionLoadStats {
+  // Percent load on the memstore. Guaranteed to be positive, between 0 and 100.
+  optional int32 memstoreLoad = 1 [default = 0];
+  // Percent JVM heap occupancy. Guaranteed to be positive, between 0 and 100.
+  // We can move this to "ServerLoadStats" should we develop them.
+  optional int32 heapOccupancy = 2 [default = 0];
+}
+
 /**
  * Either a Result or an Exception NameBytesPair (keyed by
  * exception name whose value is the exception stringified)
@@ -366,6 +377,8 @@ message ResultOrException {
   optional NameBytesPair exception = 3;
   // result if this was a coprocessor service call
   optional CoprocessorServiceResult service_result = 4;
+  // current load on the region
+  optional RegionLoadStats loadStats = 5;
 }
 
 /**
@@ -387,10 +400,13 @@ message RegionActionResult {
 message MultiRequest {
   repeated RegionAction regionAction = 1;
   optional uint64 nonceGroup = 2;
+  optional Condition condition = 3;
 }
 
 message MultiResponse {
   repeated RegionActionResult regionActionResult = 1;
+  // used for mutate to indicate processed only
+  optional bool processed = 2;
 }
 
 
@@ -408,6 +424,9 @@ service ClientService {
     returns(BulkLoadHFileResponse);
 
   rpc ExecService(CoprocessorServiceRequest)
+    returns(CoprocessorServiceResponse);
+    
+  rpc ExecRegionServerService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 
   rpc Multi(MultiRequest)

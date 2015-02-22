@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * An interface for a distributed reader-writer lock.

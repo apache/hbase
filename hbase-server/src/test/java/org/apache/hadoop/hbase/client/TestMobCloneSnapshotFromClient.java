@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
@@ -32,6 +31,8 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -43,7 +44,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test clone snapshots from the client
  */
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestMobCloneSnapshotFromClient {
   final Log LOG = LogFactory.getLog(getClass());
 
@@ -106,7 +107,7 @@ public class TestMobCloneSnapshotFromClient {
     try {
       // enable table and insert data
       admin.enableTable(tableName);
-      SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
+      SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
       snapshot0Rows = MobSnapshotTestingUtils.countMobRows(table);
       admin.disableTable(tableName);
 
@@ -115,7 +116,7 @@ public class TestMobCloneSnapshotFromClient {
 
       // enable table and insert more data
       admin.enableTable(tableName);
-      SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
+      SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
       snapshot1Rows = MobSnapshotTestingUtils.countMobRows(table);
       admin.disableTable(tableName);
 

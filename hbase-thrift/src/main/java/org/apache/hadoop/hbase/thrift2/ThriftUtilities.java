@@ -26,12 +26,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -333,10 +331,9 @@ public class ThriftUtilities {
         in.getFamilyCellMap().entrySet()) {
       TColumn column = new TColumn(ByteBuffer.wrap(familyEntry.getKey()));
       for (org.apache.hadoop.hbase.Cell cell: familyEntry.getValue()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        byte[] family = kv.getFamily();
-        byte[] qualifier = kv.getQualifier();
-        long timestamp = kv.getTimestamp();
+        byte[] family = CellUtil.cloneFamily(cell);
+        byte[] qualifier = CellUtil.cloneQualifier(cell);
+        long timestamp = cell.getTimestamp();
         if (family != null) {
           column.setFamily(family);
         }
@@ -344,7 +341,7 @@ public class ThriftUtilities {
           column.setQualifier(qualifier);
         }
         if (timestamp != HConstants.LATEST_TIMESTAMP) {
-          column.setTimestamp(kv.getTimestamp());
+          column.setTimestamp(timestamp);
         }
       }
       columns.add(column);

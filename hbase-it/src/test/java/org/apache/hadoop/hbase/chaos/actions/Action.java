@@ -43,12 +43,29 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class Action {
 
+  public static final String KILL_MASTER_TIMEOUT_KEY =
+      "hbase.chaosmonkey.action.killmastertimeout";
+  public static final String START_MASTER_TIMEOUT_KEY =
+      "hbase.chaosmonkey.action.startmastertimeout";
+  public static final String KILL_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.killrstimeout";
+  public static final String START_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.startrstimeout";
+
   protected static Log LOG = LogFactory.getLog(Action.class);
+
+  protected static final long KILL_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long START_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long KILL_RS_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long START_RS_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
 
   protected ActionContext context;
   protected HBaseCluster cluster;
   protected ClusterStatus initialStatus;
   protected ServerName[] initialServers;
+
+  protected long killMasterTimeout;
+  protected long startMasterTimeout;
+  protected long killRsTimeout;
+  protected long startRsTimeout;
 
   public void init(ActionContext context) throws IOException {
     this.context = context;
@@ -56,6 +73,13 @@ public class Action {
     initialStatus = cluster.getInitialClusterStatus();
     Collection<ServerName> regionServers = initialStatus.getServers();
     initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
+
+    killMasterTimeout = cluster.getConf().getLong(KILL_MASTER_TIMEOUT_KEY,
+        KILL_MASTER_TIMEOUT_DEFAULT);
+    startMasterTimeout = cluster.getConf().getLong(START_MASTER_TIMEOUT_KEY,
+        START_MASTER_TIMEOUT_DEFAULT);
+    killRsTimeout = cluster.getConf().getLong(KILL_RS_TIMEOUT_KEY, KILL_RS_TIMEOUT_DEFAULT);
+    startRsTimeout = cluster.getConf().getLong(START_RS_TIMEOUT_KEY, START_RS_TIMEOUT_DEFAULT);
   }
 
   public void perform() throws Exception { }
@@ -84,29 +108,29 @@ public class Action {
   protected void killMaster(ServerName server) throws IOException {
     LOG.info("Killing master:" + server);
     cluster.killMaster(server);
-    cluster.waitForMasterToStop(server, PolicyBasedChaosMonkey.TIMEOUT);
+    cluster.waitForMasterToStop(server, killMasterTimeout);
     LOG.info("Killed master server:" + server);
   }
 
   protected void startMaster(ServerName server) throws IOException {
     LOG.info("Starting master:" + server.getHostname());
-    cluster.startMaster(server.getHostname());
-    cluster.waitForActiveAndReadyMaster(PolicyBasedChaosMonkey.TIMEOUT);
+    cluster.startMaster(server.getHostname(), server.getPort());
+    cluster.waitForActiveAndReadyMaster(startMasterTimeout);
     LOG.info("Started master: " + server);
   }
 
   protected void killRs(ServerName server) throws IOException {
     LOG.info("Killing region server:" + server);
     cluster.killRegionServer(server);
-    cluster.waitForRegionServerToStop(server, PolicyBasedChaosMonkey.TIMEOUT);
+    cluster.waitForRegionServerToStop(server, killRsTimeout);
     LOG.info("Killed region server:" + server + ". Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
   }
 
   protected void startRs(ServerName server) throws IOException {
     LOG.info("Starting region server:" + server.getHostname());
-    cluster.startRegionServer(server.getHostname());
-    cluster.waitForRegionServerToStart(server.getHostname(), PolicyBasedChaosMonkey.TIMEOUT);
+    cluster.startRegionServer(server.getHostname(), server.getPort());
+    cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
     LOG.info("Started region server:" + server + ". Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
   }
@@ -139,7 +163,12 @@ public class Action {
 
   protected void forceBalancer() throws Exception {
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
-    boolean result = admin.balancer();
+    boolean result = false;
+    try {
+      result = admin.balancer();
+    } catch (Exception e) {
+      LOG.warn("Got exception while doing balance ", e);
+    }
     if (!result) {
       LOG.error("Balancer didn't succeed");
     }

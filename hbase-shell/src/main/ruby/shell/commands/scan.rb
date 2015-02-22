@@ -24,8 +24,8 @@ module Shell
         return <<-EOF
 Scan a table; pass table name and optionally a dictionary of scanner
 specifications.  Scanner specifications may include one or more of:
-TIMERANGE, FILTER, LIMIT, STARTROW, STOPROW, TIMESTAMP, MAXLENGTH,
-or COLUMNS, CACHE
+TIMERANGE, FILTER, LIMIT, STARTROW, STOPROW, ROWPREFIXFILTER, TIMESTAMP,
+MAXLENGTH or COLUMNS, CACHE or RAW, VERSIONS
 
 If no columns are specified, all columns will be scanned.
 To scan all members of a column family, leave the qualifier empty as in
@@ -44,8 +44,8 @@ Some examples:
   hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, STARTROW => 'xyz'}
   hbase> scan 't1', {COLUMNS => 'c1', TIMERANGE => [1303668804, 1303668904]}
   hbase> scan 't1', {REVERSED => true}
-  hbase> scan 't1', {FILTER => "(PrefixFilter ('row2') AND
-    (QualifierFilter (>=, 'binary:xyz'))) AND (TimestampsFilter ( 123, 456))"}
+  hbase> scan 't1', {ROWPREFIXFILTER => 'row2', FILTER => "
+    (QualifierFilter (>=, 'binary:xyz')) AND (TimestampsFilter ( 123, 456))"}
   hbase> scan 't1', {FILTER =>
     org.apache.hadoop.hbase.filter.ColumnPaginationFilter.new(1, 0)}
   hbase> scan 't1', {CONSISTENCY => 'TIMELINE'}

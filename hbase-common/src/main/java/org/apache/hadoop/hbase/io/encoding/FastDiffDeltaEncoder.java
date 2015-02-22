@@ -21,9 +21,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -101,11 +104,10 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
   }
 
-  private int findCommonTimestampPrefix(byte[] curKvBuf, int curKvTsOff, byte[] preKvBuf,
-      int preKvTsOff) {
+  private int findCommonTimestampPrefix(byte[] curTsBuf, byte[] prevTsBuf) {
     int commonPrefix = 0;
     while (commonPrefix < (KeyValue.TIMESTAMP_SIZE - 1)
-        && curKvBuf[curKvTsOff + commonPrefix] == preKvBuf[preKvTsOff + commonPrefix]) {
+        && curTsBuf[commonPrefix] == prevTsBuf[commonPrefix]) {
       commonPrefix++;
     }
     return commonPrefix; // has to be at most 7 bytes
@@ -237,59 +239,57 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingContext,
+  public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
       DataOutputStream out) throws IOException {
     EncodingState state = encodingContext.getEncodingState();
-    int size = compressSingleKeyValue(out, kv, state.prevKv);
-    size += afterEncodingKeyValue(kv, out, encodingContext);
-    state.prevKv = kv;
+    int size = compressSingleKeyValue(out, cell, state.prevCell);
+    size += afterEncodingKeyValue(cell, out, encodingContext);
+    state.prevCell = cell;
     return size;
   }
 
-  private int compressSingleKeyValue(DataOutputStream out, KeyValue kv, KeyValue prevKv)
+  private int compressSingleKeyValue(DataOutputStream out, Cell cell, Cell prevCell)
       throws IOException {
     byte flag = 0;
-    int kLength = kv.getKeyLength();
-    int vLength = kv.getValueLength();
-    byte[] curKvBuf = kv.getBuffer();
+    int kLength = KeyValueUtil.keyLength(cell);
+    int vLength = cell.getValueLength();
 
-    if (prevKv == null) {
+    if (prevCell == null) {
       // copy the key, there is no common prefix with none
       out.write(flag);
       ByteBufferUtils.putCompressedInt(out, kLength);
       ByteBufferUtils.putCompressedInt(out, vLength);
       ByteBufferUtils.putCompressedInt(out, 0);
-      out.write(curKvBuf, kv.getKeyOffset(), kLength + vLength);
+      CellUtil.writeFlatKey(cell, out);
+      // Write the value part
+      out.write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
     } else {
-      byte[] preKvBuf = prevKv.getBuffer();
-      int preKeyLength = prevKv.getKeyLength();
-      int preValLength = prevKv.getValueLength();
+      int preKeyLength = KeyValueUtil.keyLength(prevCell);
+      int preValLength = prevCell.getValueLength();
       // find a common prefix and skip it
-      int commonPrefix = ByteBufferUtils.findCommonPrefix(curKvBuf, kv.getKeyOffset(), kLength
-          - KeyValue.TIMESTAMP_TYPE_SIZE, preKvBuf, prevKv.getKeyOffset(), preKeyLength
-          - KeyValue.TIMESTAMP_TYPE_SIZE);
+      int commonPrefix = CellUtil.findCommonPrefixInFlatKey(cell, prevCell, true, false);
 
-      if (kLength == prevKv.getKeyLength()) {
+      if (kLength == preKeyLength) {
         flag |= FLAG_SAME_KEY_LENGTH;
       }
-      if (vLength == prevKv.getValueLength()) {
+      if (vLength == prevCell.getValueLength()) {
         flag |= FLAG_SAME_VALUE_LENGTH;
       }
-      if (kv.getTypeByte() == prevKv.getTypeByte()) {
+      if (cell.getTypeByte() == prevCell.getTypeByte()) {
         flag |= FLAG_SAME_TYPE;
       }
 
-      int commonTimestampPrefix = findCommonTimestampPrefix(curKvBuf, kv.getKeyOffset() + kLength
-          - KeyValue.TIMESTAMP_TYPE_SIZE, preKvBuf, prevKv.getKeyOffset() + preKeyLength
-          - KeyValue.TIMESTAMP_TYPE_SIZE);
+      byte[] curTsBuf = Bytes.toBytes(cell.getTimestamp());
+      int commonTimestampPrefix = findCommonTimestampPrefix(curTsBuf,
+          Bytes.toBytes(prevCell.getTimestamp()));
 
       flag |= commonTimestampPrefix << SHIFT_TIMESTAMP_LENGTH;
 
       // Check if current and previous values are the same. Compare value
       // length first as an optimization.
       if (vLength == preValLength
-          && Bytes.equals(kv.getValueArray(), kv.getValueOffset(), vLength,
-              prevKv.getValueArray(), prevKv.getValueOffset(), preValLength)) {
+          && Bytes.equals(cell.getValueArray(), cell.getValueOffset(), vLength,
+              prevCell.getValueArray(), prevCell.getValueOffset(), preValLength)) {
         flag |= FLAG_SAME_VALUE;
       }
 
@@ -301,31 +301,33 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
         ByteBufferUtils.putCompressedInt(out, vLength);
       }
       ByteBufferUtils.putCompressedInt(out, commonPrefix);
-
-      if (commonPrefix < kv.getRowLength() + KeyValue.ROW_LENGTH_SIZE) {
+      short rLen = cell.getRowLength();
+      if (commonPrefix < rLen + KeyValue.ROW_LENGTH_SIZE) {
         // Previous and current rows are different. Copy the differing part of
         // the row, skip the column family, and copy the qualifier.
-        out.write(curKvBuf, kv.getKeyOffset() + commonPrefix, kv.getRowLength()
-            + KeyValue.ROW_LENGTH_SIZE - commonPrefix);
-        out.write(curKvBuf, kv.getQualifierOffset(), kv.getQualifierLength());
+        CellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
+        out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
       } else {
         // The common part includes the whole row. As the column family is the
         // same across the whole file, it will automatically be included in the
         // common prefix, so we need not special-case it here.
-        int restKeyLength = kLength - commonPrefix - KeyValue.TIMESTAMP_TYPE_SIZE;
-        out.write(curKvBuf, kv.getKeyOffset() + commonPrefix, restKeyLength);
+        // What we write here is the non common part of the qualifier
+        int commonQualPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
+            - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
+        out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonQualPrefix,
+            cell.getQualifierLength() - commonQualPrefix);
       }
-      out.write(curKvBuf, kv.getKeyOffset() + kLength - KeyValue.TIMESTAMP_TYPE_SIZE
-          + commonTimestampPrefix, KeyValue.TIMESTAMP_SIZE - commonTimestampPrefix);
+      // Write non common ts part
+      out.write(curTsBuf, commonTimestampPrefix, KeyValue.TIMESTAMP_SIZE - commonTimestampPrefix);
 
       // Write the type if it is not the same as before.
       if ((flag & FLAG_SAME_TYPE) == 0) {
-        out.write(kv.getTypeByte());
+        out.write(cell.getTypeByte());
       }
 
       // Write the value if it is not the same as before.
       if ((flag & FLAG_SAME_VALUE) == 0) {
-        out.write(kv.getValueArray(), kv.getValueOffset(), vLength);
+        out.write(cell.getValueArray(), cell.getValueOffset(), vLength);
       }
     }
     return kLength + vLength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
@@ -360,8 +362,10 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBufferUtils.readCompressedInt(block); // commonLength
     int pos = block.position();
     block.reset();
-    return ByteBuffer.wrap(block.array(), block.arrayOffset() + pos, keyLength)
-        .slice();
+    ByteBuffer dup = block.duplicate();
+    dup.position(pos);
+    dup.limit(pos + keyLength);
+    return dup.slice();
   }
 
   @Override

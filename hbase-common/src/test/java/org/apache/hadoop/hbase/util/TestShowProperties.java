@@ -18,20 +18,21 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.util.Properties;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.util.Properties;
 
 
 /**
  * This test is there to dump the properties. It allows to detect possible env issues when
  * executing the tests on various environment.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestShowProperties {
   private static final Log LOG = LogFactory.getLog(TestShowProperties.class);
 

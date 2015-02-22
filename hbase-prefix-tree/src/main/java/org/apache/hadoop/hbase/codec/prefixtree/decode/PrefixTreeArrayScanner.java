@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.codec.prefixtree.decode;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
@@ -60,7 +60,6 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected boolean nubCellsRemain;
   protected int currentCellIndex;
-  protected boolean movedToPrevious;
 
 
   /*********************** construct ******************************/
@@ -169,7 +168,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
     //trivial override to confirm intent (findbugs)
     return super.equals(obj);
   }
-  
+
   @Override
   public int hashCode() {
     return super.hashCode();
@@ -261,12 +260,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
           return true;
         }
       } else {
-        if (movedToPrevious && currentRowNode.hasOccurrences()
-            && currentRowNode.getFanIndex() == getNextFanIndex()) {
-          followFan(getNextFanIndex());
-        } else {
-          discardCurrentRowNode(true);
-        }
+        discardCurrentRowNode(true);
       }
     }
     return false;// went past the end
@@ -301,10 +295,6 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   protected void followCurrentFan() {
     int currentFanPosition = currentRowNode.getFanIndex();
     followFan(currentFanPosition);
-  }
-
-  protected int getNextFanIndex() {
-    return rowNodes[rowNodeStackIndex + 1].getFanIndex();
   }
 
   protected void followNextFan() {
@@ -370,7 +360,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   /***************** helper methods **************************/
 
   protected void appendCurrentTokenToRowBuffer() {
-    System.arraycopy(block, currentRowNode.getTokenArrayOffset(), rowBuffer, rowLength, 
+    System.arraycopy(block, currentRowNode.getTokenArrayOffset(), rowBuffer, rowLength,
       currentRowNode.getTokenLength());
     rowLength += currentRowNode.getTokenLength();
   }
@@ -430,7 +420,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected int populateNonRowFieldsAndCompareTo(int cellNum, Cell key) {
     populateNonRowFields(cellNum);
-    return CellComparator.compareStatic(this, key, true);
+    return CellComparator.compare(this, key, true);
   }
 
   protected void populateFirstNonRowFields() {
@@ -537,13 +527,4 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   public int getTagBufferLength() {
     return tagsBuffer.length;
   }
-
-  public void setMovedToPreviousAsPartOfSeek(boolean movedToPrevious) {
-    this.movedToPrevious = movedToPrevious;
-  }
-
-  public boolean hasMovedToPreviousAsPartOfSeek() {
-    return this.movedToPrevious;
-  }
-
 }

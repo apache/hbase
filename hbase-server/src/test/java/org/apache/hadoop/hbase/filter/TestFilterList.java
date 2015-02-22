@@ -31,12 +31,13 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -47,7 +48,7 @@ import com.google.common.collect.Lists;
  * Tests filter sets
  *
  */
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestFilterList {
   static final int MAX_PAGES = 2;
   static final char FIRST_CHAR = 'a';
@@ -457,22 +458,22 @@ public class TestFilterList {
     // Should take the min if given two hints
     FilterList filterList = new FilterList(Operator.MUST_PASS_ONE,
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
         minKeyValue));
 
     // Should have no hint if any filter has no hint
     filterList = new FilterList(Operator.MUST_PASS_ONE,
         Arrays.asList(
             new Filter [] { filterMinHint, filterMaxHint, filterNoHint } ));
-    assertNull(filterList.getNextKeyHint(null));
+    assertNull(filterList.getNextCellHint(null));
     filterList = new FilterList(Operator.MUST_PASS_ONE,
         Arrays.asList(new Filter [] { filterNoHint, filterMaxHint } ));
-    assertNull(filterList.getNextKeyHint(null));
+    assertNull(filterList.getNextCellHint(null));
 
     // Should give max hint if its the only one
     filterList = new FilterList(Operator.MUST_PASS_ONE,
         Arrays.asList(new Filter [] { filterMaxHint, filterMaxHint } ));
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
         maxKeyValue));
 
     // MUST PASS ALL
@@ -481,13 +482,13 @@ public class TestFilterList {
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
         minKeyValue));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMaxHint, filterMinHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
         maxKeyValue));
 
     // Should have first hint even if a filter has no hint
@@ -495,17 +496,17 @@ public class TestFilterList {
         Arrays.asList(
             new Filter [] { filterNoHint, filterMinHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
         minKeyValue));
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterNoHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
         maxKeyValue));
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterNoHint, filterMinHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextKeyHint(null),
+    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
         minKeyValue));
   }
 
@@ -538,12 +539,12 @@ public class TestFilterList {
 
     // Value for fam:qual1 should be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterKeyValue(kvQual1));
-    final KeyValue transformedQual1 = KeyValueUtil.ensureKeyValue(flist.transform(kvQual1));
+    final KeyValue transformedQual1 = KeyValueUtil.ensureKeyValue(flist.transformCell(kvQual1));
     assertEquals(0, transformedQual1.getValue().length);
 
     // Value for fam:qual2 should not be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterKeyValue(kvQual2));
-    final KeyValue transformedQual2 = KeyValueUtil.ensureKeyValue(flist.transform(kvQual2));
+    final KeyValue transformedQual2 = KeyValueUtil.ensureKeyValue(flist.transformCell(kvQual2));
     assertEquals("value", Bytes.toString(transformedQual2.getValue()));
 
     // Other keys should be skipped:

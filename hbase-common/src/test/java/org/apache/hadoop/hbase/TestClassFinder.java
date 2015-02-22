@@ -42,18 +42,22 @@ import java.util.jar.Manifest;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.mortbay.log.Log;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestClassFinder {
-  private static final Log LOG = LogFactory.getLog(TestClassFinder.class);
+  @Rule public TestName name = new TestName();
   private static final HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private static final String BASEPKG = "tfcpkg";
+  private static final String PREFIX = "Prefix";
 
   // Use unique jar/class/package names in each test case with the help
   // of these global counters; we are mucking with ClassLoader in this test
@@ -75,6 +79,7 @@ public class TestClassFinder {
       deleteTestDir();
     }
     assertTrue(testDir.mkdirs());
+    Log.info("Using new, clean directory=" + testDir);
   }
 
   @AfterClass
@@ -114,8 +119,8 @@ public class TestClassFinder {
   @Test
   public void testClassFinderHandlesNestedPackages() throws Exception {
     final String NESTED = ".nested";
-    final String CLASSNAME1 = "c2";
-    final String CLASSNAME2 = "c3";
+    final String CLASSNAME1 = name.getMethodName() + "1";
+    final String CLASSNAME2 = name.getMethodName() + "2";
     long counter = testCounter.incrementAndGet();
     FileAndPath c1 = compileTestClass(counter, "", "c1");
     FileAndPath c2 = compileTestClass(counter, NESTED, CLASSNAME1);
@@ -135,55 +140,56 @@ public class TestClassFinder {
 
   @Test
   public void testClassFinderFiltersByNameInJar() throws Exception {
-    final String CLASSNAME = "c1";
-    final String CLASSNAMEEXCPREFIX = "c2";
-    long counter = testCounter.incrementAndGet();
-    FileAndPath c1 = compileTestClass(counter, "", CLASSNAME);
-    FileAndPath c2 = compileTestClass(counter, "", CLASSNAMEEXCPREFIX + "1");
-    FileAndPath c3 = compileTestClass(counter, "", CLASSNAMEEXCPREFIX + "2");
-    packageAndLoadJar(c1, c2, c3);
+    final long counter = testCounter.incrementAndGet();
+    final String classNamePrefix = name.getMethodName();
+    Log.info("Created jar " + createAndLoadJar("", classNamePrefix, counter));
 
     ClassFinder.FileNameFilter notExcNameFilter = new ClassFinder.FileNameFilter() {
       @Override
       public boolean isCandidateFile(String fileName, String absFilePath) {
-        return !fileName.startsWith(CLASSNAMEEXCPREFIX);
+        return !fileName.startsWith(PREFIX);
       }
     };
     ClassFinder incClassesFinder = new ClassFinder(null, notExcNameFilter, null);
     Set<Class<?>> incClasses = incClassesFinder.findClasses(
         makePackageName("", counter), false);
     assertEquals(1, incClasses.size());
-    Class<?> incClass = makeClass("", CLASSNAME, counter);
+    Class<?> incClass = makeClass("", classNamePrefix, counter);
     assertTrue(incClasses.contains(incClass));
   }
 
   @Test
   public void testClassFinderFiltersByClassInJar() throws Exception {
-    final String CLASSNAME = "c1";
-    final String CLASSNAMEEXCPREFIX = "c2";
-    long counter = testCounter.incrementAndGet();
-    FileAndPath c1 = compileTestClass(counter, "", CLASSNAME);
-    FileAndPath c2 = compileTestClass(counter, "", CLASSNAMEEXCPREFIX + "1");
-    FileAndPath c3 = compileTestClass(counter, "", CLASSNAMEEXCPREFIX + "2");
-    packageAndLoadJar(c1, c2, c3);
+    final long counter = testCounter.incrementAndGet();
+    final String classNamePrefix = name.getMethodName();
+    Log.info("Created jar " + createAndLoadJar("", classNamePrefix, counter));
 
     final ClassFinder.ClassFilter notExcClassFilter = new ClassFinder.ClassFilter() {
       @Override
       public boolean isCandidateClass(Class<?> c) {
-        return !c.getSimpleName().startsWith(CLASSNAMEEXCPREFIX);
+        return !c.getSimpleName().startsWith(PREFIX);
       }
     };
     ClassFinder incClassesFinder = new ClassFinder(null, null, notExcClassFilter);
     Set<Class<?>> incClasses = incClassesFinder.findClasses(
         makePackageName("", counter), false);
     assertEquals(1, incClasses.size());
-    Class<?> incClass = makeClass("", CLASSNAME, counter);
+    Class<?> incClass = makeClass("", classNamePrefix, counter);
     assertTrue(incClasses.contains(incClass));
+  }
+
+  private static String createAndLoadJar(final String packageNameSuffix,
+      final String classNamePrefix, final long counter)
+  throws Exception {
+    FileAndPath c1 = compileTestClass(counter, packageNameSuffix, classNamePrefix);
+    FileAndPath c2 = compileTestClass(counter, packageNameSuffix, PREFIX + "1");
+    FileAndPath c3 = compileTestClass(counter, packageNameSuffix, PREFIX + classNamePrefix + "2");
+    return packageAndLoadJar(c1, c2, c3);
   }
 
   @Test
   public void testClassFinderFiltersByPathInJar() throws Exception {
-    final String CLASSNAME = "c1";
+    final String CLASSNAME = name.getMethodName();
     long counter = testCounter.incrementAndGet();
     FileAndPath c1 = compileTestClass(counter, "", CLASSNAME);
     FileAndPath c2 = compileTestClass(counter, "", "c2");
@@ -213,47 +219,74 @@ public class TestClassFinder {
 
   @Test
   public void testClassFinderCanFindClassesInDirs() throws Exception {
-    // Well, technically, we are not guaranteed that the classes will
-    // be in dirs, but during normal build they would be.
+    // Make some classes for us to find.  Class naming and packaging is kinda cryptic.
+    // TODO: Fix.
+    final long counter = testCounter.incrementAndGet();
+    final String classNamePrefix = name.getMethodName();
+    String pkgNameSuffix = name.getMethodName();
+    Log.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
     ClassFinder allClassesFinder = new ClassFinder();
-    Set<Class<?>> allClasses = allClassesFinder.findClasses(
-        this.getClass().getPackage().getName(), false);
-    assertTrue(allClasses.contains(this.getClass()));
-    assertTrue(allClasses.contains(ClassFinder.class));
+    String pkgName = makePackageName(pkgNameSuffix, counter);
+    Set<Class<?>> allClasses = allClassesFinder.findClasses(pkgName, false);
+    assertTrue("Classes in " + pkgName, allClasses.size() > 0);
+    String classNameToFind = classNamePrefix + counter;
+    assertTrue(contains(allClasses, classNameToFind));
+  }
+
+  private static boolean contains(final Set<Class<?>> classes, final String simpleName) {
+    for (Class<?> c: classes) {
+      if (c.getSimpleName().equals(simpleName)) return true;
+    }
+    return false;
   }
 
   @Test
   public void testClassFinderFiltersByNameInDirs() throws Exception {
-    final String thisName = this.getClass().getSimpleName();
+    // Make some classes for us to find.  Class naming and packaging is kinda cryptic.
+    // TODO: Fix.
+    final long counter = testCounter.incrementAndGet();
+    final String classNamePrefix = name.getMethodName();
+    String pkgNameSuffix = name.getMethodName();
+    Log.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
+    final String classNameToFilterOut = classNamePrefix + counter;
     final ClassFinder.FileNameFilter notThisFilter = new ClassFinder.FileNameFilter() {
       @Override
       public boolean isCandidateFile(String fileName, String absFilePath) {
-        return !fileName.equals(thisName + ".class");
+        return !fileName.equals(classNameToFilterOut + ".class");
       }
     };
-    String thisPackage = this.getClass().getPackage().getName();
+    String pkgName = makePackageName(pkgNameSuffix, counter);
     ClassFinder allClassesFinder = new ClassFinder();
-    Set<Class<?>> allClasses = allClassesFinder.findClasses(thisPackage, false);
+    Set<Class<?>> allClasses = allClassesFinder.findClasses(pkgName, false);
+    assertTrue("Classes in " + pkgName, allClasses.size() > 0);
     ClassFinder notThisClassFinder = new ClassFinder(null, notThisFilter, null);
-    Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(thisPackage, false);
-    assertFalse(notAllClasses.contains(this.getClass()));
+    Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(pkgName, false);
+    assertFalse(contains(notAllClasses, classNameToFilterOut));
     assertEquals(allClasses.size() - 1, notAllClasses.size());
   }
 
   @Test
   public void testClassFinderFiltersByClassInDirs() throws Exception {
+    // Make some classes for us to find.  Class naming and packaging is kinda cryptic.
+    // TODO: Fix.
+    final long counter = testCounter.incrementAndGet();
+    final String classNamePrefix = name.getMethodName();
+    String pkgNameSuffix = name.getMethodName();
+    Log.info("Created jar " + createAndLoadJar(pkgNameSuffix, classNamePrefix, counter));
+    final Class<?> clazz = makeClass(pkgNameSuffix, classNamePrefix, counter);
     final ClassFinder.ClassFilter notThisFilter = new ClassFinder.ClassFilter() {
       @Override
       public boolean isCandidateClass(Class<?> c) {
-        return c != TestClassFinder.class;
+        return c != clazz;
       }
     };
-    String thisPackage = this.getClass().getPackage().getName();
+    String pkgName = makePackageName(pkgNameSuffix, counter);
     ClassFinder allClassesFinder = new ClassFinder();
-    Set<Class<?>> allClasses = allClassesFinder.findClasses(thisPackage, false);
+    Set<Class<?>> allClasses = allClassesFinder.findClasses(pkgName, false);
+    assertTrue("Classes in " + pkgName, allClasses.size() > 0);
     ClassFinder notThisClassFinder = new ClassFinder(null, null, notThisFilter);
-    Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(thisPackage, false);
-    assertFalse(notAllClasses.contains(this.getClass()));
+    Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(pkgName, false);
+    assertFalse(contains(notAllClasses, clazz.getSimpleName()));
     assertEquals(allClasses.size() - 1, notAllClasses.size());
   }
 

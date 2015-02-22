@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -39,6 +40,7 @@ import com.google.common.annotations.VisibleForTesting;
  * Stripe implementation of StoreFlusher. Flushes files either into L0 file w/o metadata, or
  * into separate striped files, avoiding L0.
  */
+@InterfaceAudience.Private
 public class StripeStoreFlusher extends StoreFlusher {
   private static final Log LOG = LogFactory.getLog(StripeStoreFlusher.class);
   private final Object flushLock = new Object();

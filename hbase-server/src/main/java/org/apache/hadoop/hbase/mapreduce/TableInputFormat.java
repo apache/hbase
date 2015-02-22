@@ -19,17 +19,26 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -40,10 +49,16 @@ import org.apache.hadoop.util.StringUtils;
 public class TableInputFormat extends TableInputFormatBase
 implements Configurable {
 
+  @SuppressWarnings("hiding")
   private static final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /** Job parameter that specifies the input table. */
   public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";
+  /**
+   * If specified, use start keys of this table to split.
+   * This is useful when you are preparing data for bulkload.
+   */
+  private static final String SPLIT_TABLE = "hbase.mapreduce.splittable";
   /** Base-64 encoded scanner. All other SCAN_ confs are ignored if this is specified.
    * See {@link TableMapReduceUtil#convertScanToString(Scan)} for more details.
    */
@@ -70,6 +85,8 @@ implements Configurable {
   public static final String SCAN_CACHEDROWS = "hbase.mapreduce.scan.cachedrows";
   /** Set the maximum number of values to return for each call to next(). */
   public static final String SCAN_BATCHSIZE = "hbase.mapreduce.scan.batchsize";
+  /** Specify if we have to shuffle the map tasks. */
+  public static final String SHUFFLE_MAPS = "hbase.mapreduce.inputtable.shufflemaps";
 
   /** The configuration. */
   private Configuration conf = null;
@@ -96,12 +113,6 @@ implements Configurable {
   @Override
   public void setConf(Configuration configuration) {
     this.conf = configuration;
-    String tableName = conf.get(INPUT_TABLE);
-    try {
-      setHTable(new HTable(new Configuration(conf), tableName));
-    } catch (Exception e) {
-      LOG.error(StringUtils.stringifyException(e));
-    }
 
     Scan scan = null;
 
@@ -162,7 +173,17 @@ implements Configurable {
 
     setScan(scan);
   }
-  
+
+  @Override
+  protected void initialize() {
+    TableName tableName = TableName.valueOf(conf.get(INPUT_TABLE));
+    try {
+      initializeTable(ConnectionFactory.createConnection(new Configuration(conf)), tableName);
+    } catch (Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+    }
+  }
+
   /**
    * Parses a combined family and qualifier and adds either both or just the
    * family in case there is no qualifier. This assumes the older colon
@@ -170,7 +191,6 @@ implements Configurable {
    *
    * @param scan The Scan to update.
    * @param familyAndQualifier family and qualifier
-   * @return A reference to this instance.
    * @throws IllegalArgumentException When familyAndQualifier is invalid.
    */
   private static void addColumn(Scan scan, byte[] familyAndQualifier) {
@@ -201,6 +221,25 @@ implements Configurable {
   }
 
   /**
+   * Calculates the splits that will serve as input for the map tasks. The
+   * number of splits matches the number of regions in a table. Splits are shuffled if
+   * required.
+   * @param context  The current job context.
+   * @return The list of input splits.
+   * @throws IOException When creating the list of splits fails.
+   * @see org.apache.hadoop.mapreduce.InputFormat#getSplits(
+   *   org.apache.hadoop.mapreduce.JobContext)
+   */
+  @Override
+  public List<InputSplit> getSplits(JobContext context) throws IOException {
+    List<InputSplit> splits = super.getSplits(context);
+    if ((conf.get(SHUFFLE_MAPS) != null) && "true".equals(conf.get(SHUFFLE_MAPS).toLowerCase())) {
+      Collections.shuffle(splits);
+    }
+    return splits;
+  }
+
+  /**
    * Convenience method to parse a string representation of an array of column specifiers.
    *
    * @param scan The Scan to update.
@@ -213,4 +252,24 @@ implements Configurable {
     }
   }
 
+  @Override
+  protected Pair<byte[][], byte[][]> getStartEndKeys() throws IOException {
+    if (conf.get(SPLIT_TABLE) != null) {
+      TableName splitTableName = TableName.valueOf(conf.get(SPLIT_TABLE));
+      try (Connection conn = ConnectionFactory.createConnection(getConf())) {
+        try (RegionLocator rl = conn.getRegionLocator(splitTableName)) {
+          return rl.getStartEndKeys();
+        }
+      }
+    }
+
+    return super.getStartEndKeys();
+  }
+
+  /**
+   * Sets split table in map-reduce job.
+   */
+  public static void configureSplitTable(Job job, TableName tableName) {
+    job.getConfiguration().set(SPLIT_TABLE, tableName.getNameAsString());
+  }
 }

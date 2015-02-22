@@ -27,13 +27,13 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -299,10 +299,25 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
             : now - minTimestamp.longValue();
         if (sf.isMajorCompaction() &&
             (cfTtl == HConstants.FOREVER || oldest < cfTtl)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Skipping major compaction of " + this +
-                " because one (major) compacted file only and oldestTime " +
-                oldest + "ms is < ttl=" + cfTtl);
+          float blockLocalityIndex = sf.getHDFSBlockDistribution().getBlockLocalityIndex(
+              RSRpcServices.getHostname(comConf.conf)
+          );
+          if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Major compaction triggered on only store " + this +
+                  "; to make hdfs blocks local, current blockLocalityIndex is " +
+                  blockLocalityIndex + " (min " + comConf.getMinLocalityToForceCompact() +
+                  ")");
+            }
+            result = true;
+          } else {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Skipping major compaction of " + this +
+                  " because one (major) compacted file only, oldestTime " +
+                  oldest + "ms is < ttl=" + cfTtl + " and blockLocalityIndex is " +
+                  blockLocalityIndex + " (min " + comConf.getMinLocalityToForceCompact() +
+                  ")");
+            }
           }
         } else if (cfTtl != HConstants.FOREVER && oldest > cfTtl) {
           LOG.debug("Major compaction triggered on store " + this +
@@ -321,6 +336,15 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     return result;
   }
 
+  /**
+   * Used calculation jitter
+   */
+  private final Random random = new Random();
+
+  /**
+   * @param filesToCompact
+   * @return When to run next major compaction
+   */
   public long getNextMajorCompactTime(final Collection<StoreFile> filesToCompact) {
     // default = 24hrs
     long ret = comConf.getMajorCompactionPeriod();
@@ -332,10 +356,15 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
         // deterministic jitter avoids a major compaction storm on restart
         Integer seed = StoreUtils.getDeterministicRandomSeed(filesToCompact);
         if (seed != null) {
-          double rnd = (new Random(seed)).nextDouble();
+          // Synchronized to ensure one user of random instance at a time.
+          double rnd = -1;
+          synchronized (this) {
+            this.random.setSeed(seed);
+            rnd = this.random.nextDouble();
+          }
           ret += jitter - Math.round(2L * jitter * rnd);
         } else {
-          ret = 0; // no storefiles == no major compaction
+          ret = 0; // If seed is null, then no storefiles == no major compaction
         }
       }
     }

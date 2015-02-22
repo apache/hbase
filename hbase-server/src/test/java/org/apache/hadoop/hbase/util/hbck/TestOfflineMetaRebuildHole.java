@@ -25,7 +25,8 @@ import static org.junit.Assert.assertFalse;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.junit.Test;
@@ -35,7 +36,7 @@ import org.junit.experimental.categories.Category;
  * This builds a table, removes info from meta, and then fails when attempting
  * to rebuild meta.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
 
   @Test(timeout = 120000)
@@ -63,6 +64,7 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
     // attempt to rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);
     assertFalse(fsck.rebuildMeta(false));
+    fsck.close();
 
     // bring up the minicluster
     TEST_UTIL.startMiniZKCluster(); // tables seem enabled by default
@@ -82,7 +84,7 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
 
     // Meta still messed up.
     assertEquals(1, scanMeta());
-    HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
+    HTableDescriptor[] htbls = getTables(TEST_UTIL.getConfiguration());
     LOG.info("Tables present after restart: " + Arrays.toString(htbls));
 
     // After HBASE-451 HBaseAdmin.listTables() gets table descriptors from FS,
@@ -93,6 +95,4 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
   }
-
 }
-

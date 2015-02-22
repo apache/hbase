@@ -18,19 +18,20 @@
 
 package org.apache.hadoop.hbase.security.access;
 
-import com.google.common.collect.Maps;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.VersionedWritable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.VersionedWritable;
+
+import com.google.common.collect.Maps;
 
 /**
  * Base permissions instance representing the ability to perform a given set
@@ -42,6 +43,9 @@ import java.util.Map;
 @InterfaceStability.Evolving
 public class Permission extends VersionedWritable {
   protected static final byte VERSION = 0;
+
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public enum Action {
     READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A');
 
@@ -147,6 +151,7 @@ public class Permission extends VersionedWritable {
     return result;
   }
 
+  @Override
   public String toString() {
     StringBuilder str = new StringBuilder("[Permission: ")
         .append("actions=");
@@ -166,6 +171,7 @@ public class Permission extends VersionedWritable {
   }
 
   /** @return the object version number */
+  @Override
   public byte getVersion() {
     return VERSION;
   }

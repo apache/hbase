@@ -57,11 +57,11 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
 
     for (ServerName server : selectedServers) {
       LOG.info("Starting region server:" + server.getHostname());
-      cluster.startRegionServer(server.getHostname());
+      cluster.startRegionServer(server.getHostname(), server.getPort());
 
     }
     for (ServerName server : selectedServers) {
-      cluster.waitForRegionServerToStart(server.getHostname(), PolicyBasedChaosMonkey.TIMEOUT);
+      cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), PolicyBasedChaosMonkey.TIMEOUT);
     }
     LOG.info("Started " + selectedServers.size() +" region servers. Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());

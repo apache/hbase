@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.PleaseHoldException;
@@ -42,9 +41,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,7 +54,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.base.Joiner;
 
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestMaster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestMaster.class);
@@ -63,6 +65,8 @@ public class TestMaster {
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
+    // we will retry operations when PleaseHoldException is thrown
+    TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     // Start a cluster of two regionservers.
     TEST_UTIL.startMiniCluster(2);
     admin = TEST_UTIL.getHBaseAdmin();
@@ -79,15 +83,14 @@ public class TestMaster {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 
-    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
-    assertTrue(m.assignmentManager.getTableStateManager().isTableState(TABLENAME,
-      ZooKeeperProtos.Table.State.ENABLED));
-    TEST_UTIL.loadTable(ht, FAMILYNAME, false);
-    ht.close();
+    try (HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME)) {
+      assertTrue(m.assignmentManager.getTableStateManager().isTableState(TABLENAME,
+        TableState.State.ENABLED));
+      TEST_UTIL.loadTable(ht, FAMILYNAME, false);
+    }
 
-    List<Pair<HRegionInfo, ServerName>> tableRegions =
-      MetaTableAccessor.getTableRegionsAndLocations(m.getZooKeeper(),
-        m.getShortCircuitConnection(), TABLENAME);
+    List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
+        m.getConnection(), TABLENAME);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(1, tableRegions.size());
     assertArrayEquals(HConstants.EMPTY_START_ROW,
@@ -104,8 +107,8 @@ public class TestMaster {
       Thread.sleep(100);
     }
     LOG.info("Making sure we can call getTableRegions while opening");
-    tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getZooKeeper(),
-      m.getShortCircuitConnection(), TABLENAME, false);
+    tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getConnection(),
+      TABLENAME, false);
 
     LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
     // We have three regions because one is split-in-progress
@@ -115,7 +118,7 @@ public class TestMaster {
         m.getTableRegionForRow(TABLENAME, Bytes.toBytes("cde"));
     LOG.info("Result is: " + pair);
     Pair<HRegionInfo, ServerName> tableRegionFromName =
-        MetaTableAccessor.getRegion(m.getShortCircuitConnection(),
+        MetaTableAccessor.getRegion(m.getConnection(),
           pair.getFirst().getRegionName());
     assertEquals(tableRegionFromName.getFirst(), pair.getFirst());
   }
@@ -173,7 +176,7 @@ public class TestMaster {
       admin.move(tableRegions.get(0).getEncodedNameAsBytes(), null);
       fail("Region should not be moved since master is not initialized");
     } catch (IOException ioe) {
-      assertTrue(ioe instanceof PleaseHoldException);
+      assertTrue(StringUtils.stringifyException(ioe).contains("PleaseHoldException"));
     } finally {
       master.initialized = true;
       TEST_UTIL.deleteTable(tableName);

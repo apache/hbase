@@ -44,13 +44,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -58,7 +60,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputControllerFactory;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -77,7 +82,7 @@ import org.mockito.stubbing.Answer;
 /**
  * Test compaction framework and common functions
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestCompaction {
   @Rule public TestName name = new TestName();
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
@@ -98,8 +103,10 @@ public class TestCompaction {
     super();
 
     // Set cache flush size to 1MB
-    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024*1024);
+    conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt("hbase.hregion.memstore.block.multiplier", 100);
+    conf.set(CompactionThroughputControllerFactory.HBASE_THROUGHPUT_CONTROLLER_KEY,
+      NoLimitCompactionThroughputController.class.getName());
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
 
     secondRowBytes = START_KEY_BYTES.clone();
@@ -117,9 +124,9 @@ public class TestCompaction {
 
   @After
   public void tearDown() throws Exception {
-    HLog hlog = r.getLog();
+    WAL wal = r.getWAL();
     this.r.close();
-    hlog.closeAndDelete();
+    wal.close();
   }
 
   /**
@@ -358,7 +365,8 @@ public class TestCompaction {
       }
 
       @Override
-      public List<Path> compact() throws IOException {
+      public List<Path> compact(CompactionThroughputController throughputController)
+          throws IOException {
         finishCompaction(this.selectedFiles);
         return new ArrayList<Path>();
       }
@@ -409,12 +417,15 @@ public class TestCompaction {
       }
 
       @Override
-      public List<Path> compact() throws IOException {
+      public List<Path> compact(CompactionThroughputController throughputController)
+          throws IOException {
         try {
           isInCompact = true;
-          synchronized (this) { this.wait(); }
+          synchronized (this) {
+            this.wait();
+          }
         } catch (InterruptedException e) {
-           Assume.assumeNoException(e);
+          Assume.assumeNoException(e);
         }
         return new ArrayList<Path>();
       }
@@ -480,14 +491,18 @@ public class TestCompaction {
     HRegionServer mockServer = mock(HRegionServer.class);
     when(mockServer.isStopped()).thenReturn(false);
     when(mockServer.getConfiguration()).thenReturn(conf);
+    when(mockServer.getChoreService()).thenReturn(new ChoreService("test"));
     CompactSplitThread cst = new CompactSplitThread(mockServer);
     when(mockServer.getCompactSplitThread()).thenReturn(cst);
 
     // Set up the region mock that redirects compactions.
     HRegion r = mock(HRegion.class);
-    when(r.compact(any(CompactionContext.class), any(Store.class))).then(new Answer<Boolean>() {
+    when(
+      r.compact(any(CompactionContext.class), any(Store.class),
+        any(CompactionThroughputController.class))).then(new Answer<Boolean>() {
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
-        ((CompactionContext)invocation.getArguments()[0]).compact();
+        invocation.getArgumentAt(0, CompactionContext.class).compact(
+          invocation.getArgumentAt(2, CompactionThroughputController.class));
         return true;
       }
     });

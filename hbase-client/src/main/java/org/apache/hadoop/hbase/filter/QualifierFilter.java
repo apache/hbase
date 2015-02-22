@@ -22,10 +22,9 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -42,7 +41,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * <p>
  * Multiple filters can be combined using {@link FilterList}.
  * <p>
- * If an already known column qualifier is looked for, use {@link Get#addColumn}
+ * If an already known column qualifier is looked for, 
+ * use {@link org.apache.hadoop.hbase.client.Get#addColumn}
  * directly rather than a filter.
  */
 @InterfaceAudience.Public

@@ -26,7 +26,8 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -38,7 +39,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test the {@link MemStoreChunkPool} class
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestMemStoreChunkPool {
   private final static Configuration conf = new Configuration();
   private static MemStoreChunkPool chunkPool;
@@ -118,10 +119,10 @@ public class TestMemStoreChunkPool {
     assertEquals(3, memstore.snapshot.size());
 
     // Adding value to "new" memstore
-    assertEquals(0, memstore.kvset.size());
+    assertEquals(0, memstore.cellSet.size());
     memstore.add(new KeyValue(row, fam, qf4, val));
     memstore.add(new KeyValue(row, fam, qf5, val));
-    assertEquals(2, memstore.kvset.size());
+    assertEquals(2, memstore.cellSet.size());
     memstore.clearSnapshot(snapshot.getId());
 
     int chunkCount = chunkPool.getPoolSize();
@@ -155,10 +156,10 @@ public class TestMemStoreChunkPool {
     assertEquals(3, memstore.snapshot.size());
 
     // Adding value to "new" memstore
-    assertEquals(0, memstore.kvset.size());
+    assertEquals(0, memstore.cellSet.size());
     memstore.add(new KeyValue(row, fam, qf4, val));
     memstore.add(new KeyValue(row, fam, qf5, val));
-    assertEquals(2, memstore.kvset.size());
+    assertEquals(2, memstore.cellSet.size());
 
     // opening scanner before clear the snapshot
     List<KeyValueScanner> scanners = memstore.getScanners(0);

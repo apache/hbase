@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -85,7 +85,7 @@ public class ZKSecretWatcher extends ZooKeeperListener {
     if (keysParentZNode.equals(ZKUtil.getParent(path))) {
       String keyId = ZKUtil.getNodeName(path);
       try {
-        Integer id = new Integer(keyId);
+        Integer id = Integer.valueOf(keyId);
         secretManager.removeKey(id);
       } catch (NumberFormatException nfe) {
         LOG.error("Invalid znode name for key ID '"+keyId+"'", nfe);

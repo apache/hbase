@@ -18,15 +18,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import static org.junit.Assert.assertEquals;
+
+import com.google.common.base.Joiner;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.RandomStringUtils;
@@ -41,20 +35,23 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -78,7 +75,15 @@ import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Test Bulk Load and MR on a distributed cluster.
@@ -198,6 +203,9 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     HTableDescriptor desc = admin.getTableDescriptor(t);
     desc.addCoprocessor(SlowMeCoproScanOperations.class.getName());
     HBaseTestingUtility.modifyTableSync(admin, desc);
+    //sleep for sometime. Hope is that the regions are closed/opened before 
+    //the sleep returns. TODO: do this better
+    Thread.sleep(30000);
   }
 
   @Test
@@ -246,7 +254,6 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         EnvironmentEdgeManager.currentTime();
     Configuration conf = new Configuration(util.getConfiguration());
     Path p = util.getDataTestDirOnTestFS(getTablename() +  "-" + iteration);
-    HTable table = new HTable(conf, getTablename());
 
     conf.setBoolean("mapreduce.map.speculative", false);
     conf.setBoolean("mapreduce.reduce.speculative", false);
@@ -272,18 +279,23 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
     // Set where to place the hfiles.
     FileOutputFormat.setOutputPath(job, p);
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+        Admin admin = conn.getAdmin();
+        Table table = conn.getTable(getTablename());
+        RegionLocator regionLocator = conn.getRegionLocator(getTablename())) {
+      
+      // Configure the partitioner and other things needed for HFileOutputFormat.
+      HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
 
-    // Configure the partitioner and other things needed for HFileOutputFormat.
-    HFileOutputFormat.configureIncrementalLoad(job, table);
+      // Run the job making sure it works.
+      assertEquals(true, job.waitForCompletion(true));
 
-    // Run the job making sure it works.
-    assertEquals(true, job.waitForCompletion(true));
+      // Create a new loader.
+      LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
 
-    // Create a new loader.
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
-
-    // Load the HFiles in.
-    loader.doBulkLoad(p, table);
+      // Load the HFiles in.
+      loader.doBulkLoad(p, admin, table, regionLocator);
+    }
 
     // Delete the files.
     util.getTestFileSystem().delete(p, true);
@@ -524,7 +536,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
                             LinkChain linkChain,
                             int numPartitions) {
       int hash = linkKey.getChainId().hashCode();
-      return hash % numPartitions;
+      return Math.abs(hash % numPartitions);
     }
   }
 
@@ -603,27 +615,50 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     protected void reduce(LinkKey key, Iterable<LinkChain> values, Context context)
         throws java.io.IOException, java.lang.InterruptedException {
       long next = -1L;
+      long prev = -1L;
       long count = 0L;
 
       for (LinkChain lc : values) {
 
         if (next == -1) {
-          if (lc.getRk() != 0L) throw new RuntimeException("Chains should all start at 0 rk"
-            + ". Chain:" + key.chainId + ", order:" + key.order);
+          if (lc.getRk() != 0L) {
+            String msg = "Chains should all start at rk 0, but read rk " + lc.getRk()
+                + ". Chain:" + key.chainId + ", order:" + key.order;
+            logError(msg, context);
+            throw new RuntimeException(msg);
+          }
           next = lc.getNext();
         } else {
-          if (next != lc.getRk())
-            throw new RuntimeException("Missing a link in the chain. Expecting " +
-                next + " got " + lc.getRk() + ". Chain:" + key.chainId + ", order:" + key.order);
+          if (next != lc.getRk()) {
+            String msg = "Missing a link in the chain. Prev rk " + prev + " was, expecting "
+                + next + " but got " + lc.getRk() + ". Chain:" + key.chainId
+                + ", order:" + key.order;
+            logError(msg, context);
+            throw new RuntimeException(msg);
+          }
+          prev = lc.getRk();
           next = lc.getNext();
         }
         count++;
       }
 
       int expectedChainLen = context.getConfiguration().getInt(CHAIN_LENGTH_KEY, CHAIN_LENGTH);
-      if (count != expectedChainLen)
-        throw new RuntimeException("Chain wasn't the correct length.  Expected " +
-            expectedChainLen + " got " + count + ". Chain:" + key.chainId + ", order:" + key.order);
+      if (count != expectedChainLen) {
+        String msg = "Chain wasn't the correct length.  Expected " + expectedChainLen + " got "
+            + count + ". Chain:" + key.chainId + ", order:" + key.order;
+        logError(msg, context);
+        throw new RuntimeException(msg);
+      }
+    }
+
+    private static void logError(String msg, Context context) throws IOException {
+      HBaseTestingUtility util = new HBaseTestingUtility(context.getConfiguration());
+      TableName table = getTableName(context.getConfiguration());
+
+      LOG.error("Failure in chain verification: " + msg);
+      LOG.error("cluster status:\n" + util.getHBaseClusterInterface().getClusterStatus());
+      LOG.error("table regions:\n"
+          + Joiner.on("\n").join(util.getHBaseAdmin().getTableRegions(table)));
     }
   }
 
@@ -729,7 +764,11 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   @Override
   public TableName getTablename() {
-    return TableName.valueOf(getConf().get(TABLE_NAME_KEY, TABLE_NAME));
+    return getTableName(getConf());
+  }
+
+  public static TableName getTableName(Configuration conf) {
+    return TableName.valueOf(conf.get(TABLE_NAME_KEY, TABLE_NAME));
   }
 
   @Override

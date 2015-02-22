@@ -26,21 +26,26 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import java.io.File;
 
 /**
  * Test our testing utility class
  */
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 public class TestHBaseTestingUtility {
   private final Log LOG = LogFactory.getLog(this.getClass());
 
@@ -81,14 +86,14 @@ public class TestHBaseTestingUtility {
       htu2.startMiniCluster();
       htu3.startMiniCluster();
 
-      final byte[] TABLE_NAME = Bytes.toBytes("test");
+      final TableName TABLE_NAME = TableName.valueOf("test");
       final byte[] FAM_NAME = Bytes.toBytes("fam");
       final byte[] ROW = Bytes.toBytes("row");
       final byte[] QUAL_NAME = Bytes.toBytes("qual");
       final byte[] VALUE = Bytes.toBytes("value");
 
-      HTable table1 = htu1.createTable(TABLE_NAME, FAM_NAME);
-      HTable table2 = htu2.createTable(TABLE_NAME, FAM_NAME);
+      Table table1 = htu1.createTable(TABLE_NAME, FAM_NAME);
+      Table table2 = htu2.createTable(TABLE_NAME, FAM_NAME);
 
       Put put = new Put(ROW);
       put.add(FAM_NAME, QUAL_NAME, VALUE);
@@ -114,6 +119,44 @@ public class TestHBaseTestingUtility {
 
   @Test public void testMiniCluster() throws Exception {
     HBaseTestingUtility hbt = new HBaseTestingUtility();
+
+    MiniHBaseCluster cluster = hbt.startMiniCluster();
+    try {
+      assertEquals(1, cluster.getLiveRegionServerThreads().size());
+    } finally {
+      hbt.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testMiniClusterBindToWildcard() throws Exception {
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    hbt.getConfiguration().set("hbase.regionserver.ipc.address", "0.0.0.0");
+    MiniHBaseCluster cluster = hbt.startMiniCluster();
+    try {
+      assertEquals(1, cluster.getLiveRegionServerThreads().size());
+    } finally {
+      hbt.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testMiniClusterWithSSLOn() throws Exception {
+    final String BASEDIR = System.getProperty("test.build.dir",
+        "target/test-dir") + "/" + TestHBaseTestingUtility.class.getSimpleName();
+    String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestHBaseTestingUtility.class);
+    String keystoresDir = new File(BASEDIR).getAbsolutePath();
+
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    File base = new File(BASEDIR);
+    FileUtil.fullyDelete(base);
+    base.mkdirs();
+
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, hbt.getConfiguration(), false);
+
+    hbt.getConfiguration().set("hbase.ssl.enabled", "true");
+    hbt.getConfiguration().addResource("ssl-server.xml");
+    hbt.getConfiguration().addResource("ssl-client.xml");
 
     MiniHBaseCluster cluster = hbt.startMiniCluster();
     try {

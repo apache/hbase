@@ -24,8 +24,8 @@ import static java.lang.Integer.rotateLeft;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Produces 32-bit hash for hash table lookup.
@@ -164,7 +164,7 @@ public class JenkinsHash extends Hash {
     //-------------------------------- last block: affect all 32 bits of (c)
     switch (length) {                   // all the case statements fall through
     case 12:
-    	c += ((key[offset + 11] & BYTE_MASK) << 24);
+      c += ((key[offset + 11] & BYTE_MASK) << 24);
     case 11:
       c += ((key[offset + 10] & BYTE_MASK) << 16);
     case 10:

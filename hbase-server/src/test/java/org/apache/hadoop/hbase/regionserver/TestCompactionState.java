@@ -30,11 +30,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /** Unit tests to test retrieving table/region compaction state*/
-@Category(LargeTests.class)
+@Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestCompactionState {
   final static Log LOG = LogFactory.getLog(TestCompactionState.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -80,15 +81,15 @@ public class TestCompactionState {
 
   @Test
   public void testInvalidColumnFamily() throws IOException, InterruptedException {
-    byte [] table = Bytes.toBytes("testInvalidColumnFamily");
+    TableName table = TableName.valueOf("testInvalidColumnFamily");
     byte [] family = Bytes.toBytes("family");
     byte [] fakecf = Bytes.toBytes("fakecf");
     boolean caughtMinorCompact = false;
     boolean caughtMajorCompact = false;
-    HTable ht = null;
+    Table ht = null;
     try {
       ht = TEST_UTIL.createTable(table, family);
-      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
       try {
         admin.compact(table, fakecf);
       } catch (IOException ioe) {
@@ -123,12 +124,11 @@ public class TestCompactionState {
       final CompactionState expectedState, boolean singleFamily)
       throws IOException, InterruptedException {
     // Create a table with regions
-    TableName table =
-        TableName.valueOf(tableName);
+    TableName table = TableName.valueOf(tableName);
     byte [] family = Bytes.toBytes("family");
     byte [][] families =
       {family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3"))};
-    HTable ht = null;
+    Table ht = null;
     try {
       ht = TEST_UTIL.createTable(table, families);
       loadData(ht, families, 3000, flushes);
@@ -137,7 +137,7 @@ public class TestCompactionState {
       int countBefore = countStoreFilesInFamilies(regions, families);
       int countBeforeSingleFamily = countStoreFilesInFamily(regions, family);
       assertTrue(countBefore > 0); // there should be some data files
-      HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
       if (expectedState == CompactionState.MINOR) {
         if (singleFamily) {
           admin.compact(table.getName(), family);
@@ -154,10 +154,10 @@ public class TestCompactionState {
       long curt = System.currentTimeMillis();
       long waitTime = 5000;
       long endt = curt + waitTime;
-      CompactionState state = admin.getCompactionState(table.getName());
+      CompactionState state = admin.getCompactionState(table);
       while (state == CompactionState.NONE && curt < endt) {
         Thread.sleep(10);
-        state = admin.getCompactionState(table.getName());
+        state = admin.getCompactionState(table);
         curt = System.currentTimeMillis();
       }
       // Now, should have the right compaction state,
@@ -169,10 +169,10 @@ public class TestCompactionState {
         }
       } else {
         // Wait until the compaction is done
-        state = admin.getCompactionState(table.getName());
+        state = admin.getCompactionState(table);
         while (state != CompactionState.NONE && curt < endt) {
           Thread.sleep(10);
-          state = admin.getCompactionState(table.getName());
+          state = admin.getCompactionState(table);
         }
         // Now, compaction should be done.
         assertEquals(CompactionState.NONE, state);
@@ -213,7 +213,7 @@ public class TestCompactionState {
     return count;
   }
 
-  private static void loadData(final HTable ht, final byte[][] families,
+  private static void loadData(final Table ht, final byte[][] families,
       final int rows, final int flushes) throws IOException {
     List<Put> puts = new ArrayList<Put>(rows);
     byte[] qualifier = Bytes.toBytes("val");
@@ -227,7 +227,6 @@ public class TestCompactionState {
         puts.add(p);
       }
       ht.put(puts);
-      ht.flushCommits();
       TEST_UTIL.flush();
       puts.clear();
     }

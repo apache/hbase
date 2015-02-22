@@ -34,8 +34,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -45,9 +45,8 @@ import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.io.HLogLink;
+import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -57,7 +56,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * <ol>
  * <li> Table Descriptor
  * <li> Snapshot creation time, type, format version, ...
- * <li> List of hfiles and hlogs
+ * <li> List of hfiles and wals
  * <li> Stats about hfiles and logs sizes, percentage of shared with the source table, ...
  * </ol>
  */
@@ -227,8 +226,8 @@ public final class SnapshotInfo extends Configured implements Tool {
      */
     FileInfo addStoreFile(final HRegionInfo region, final String family,
         final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-      HFileLink link = HFileLink.create(conf, snapshotTable, region.getEncodedName(),
-                                        family, storeFile.getName());
+      HFileLink link = HFileLink.build(conf, snapshotTable, region.getEncodedName(),
+              family, storeFile.getName());
       boolean isCorrupted = false;
       boolean inArchive = false;
       long size = -1;
@@ -261,7 +260,7 @@ public final class SnapshotInfo extends Configured implements Tool {
      * @return the log information
      */
     FileInfo addLogFile(final String server, final String logfile) throws IOException {
-      HLogLink logLink = new HLogLink(conf, server, logfile);
+      WALLink logLink = new WALLink(conf, server, logfile);
       long size = -1;
       try {
         size = logLink.getFileStatus(fs).getLen();

@@ -20,7 +20,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -28,7 +29,7 @@ import org.junit.experimental.categories.Category;
  * TestTableInputFormatScan part 2.
  * @see TestTableInputFormatScanBase
  */
-@Category(LargeTests.class)
+@Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestTableInputFormatScan2 extends TestTableInputFormatScanBase {
 
   /**

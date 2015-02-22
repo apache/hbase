@@ -28,16 +28,16 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -154,7 +154,6 @@ public class HMasterCommandLine extends ServerCommandLine {
       // and regionserver both in the one JVM.
       if (LocalHBaseCluster.isLocal(conf)) {
         DefaultMetricsSystem.setMiniClusterMode(true);
-        conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
         final MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster(conf);
         File zkDataPath = new File(conf.get(HConstants.ZOOKEEPER_DATA_DIR));
         int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
@@ -167,7 +166,10 @@ public class HMasterCommandLine extends ServerCommandLine {
         // login the zookeeper server principal (if using security)
         ZKUtil.loginServer(conf, "hbase.zookeeper.server.keytab.file",
           "hbase.zookeeper.server.kerberos.principal", null);
-
+        int localZKClusterSessionTimeout =
+          conf.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", 10*1000);
+        conf.setInt(HConstants.ZK_SESSION_TIMEOUT, localZKClusterSessionTimeout);
+        LOG.info("Starting a zookeeper cluster");
         int clientPort = zooKeeperCluster.startup(zkDataPath);
         if (clientPort != zkClientPort) {
           String errorMsg = "Could not start ZK at requested port of " +
@@ -177,13 +179,15 @@ public class HMasterCommandLine extends ServerCommandLine {
           System.err.println(errorMsg);
           throw new IOException(errorMsg);
         }
-        conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
-                 Integer.toString(clientPort));
-        conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 10 *1000);
+        conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(clientPort));
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.
-        LocalHBaseCluster cluster = new LocalHBaseCluster(conf, conf.getInt("hbase.masters", 1),
-          conf.getInt("hbase.regionservers", 0), LocalHMaster.class, HRegionServer.class);
+        int mastersCount = conf.getInt("hbase.masters", 1);
+        int regionServersCount = conf.getInt("hbase.regionservers", 1);
+        LOG.info("Starting up instance of localHBaseCluster; master=" + mastersCount +
+          ", regionserversCount=" + regionServersCount);
+        LocalHBaseCluster cluster = new LocalHBaseCluster(conf, mastersCount, regionServersCount,
+          LocalHMaster.class, HRegionServer.class);
         ((LocalHMaster)cluster.getMaster(0)).setZKCluster(zooKeeperCluster);
         cluster.startup();
         waitOnMasterThreads(cluster);
@@ -208,8 +212,9 @@ public class HMasterCommandLine extends ServerCommandLine {
     return 0;
   }
 
+  @SuppressWarnings("resource")
   private int stopMaster() {
-    HBaseAdmin adm = null;
+    Admin adm = null;
     try {
       Configuration conf = getConf();
       // Don't try more than once

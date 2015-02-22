@@ -23,13 +23,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
@@ -120,8 +118,7 @@ abstract class StoreFlusher {
           // If we know that this KV is going to be included always, then let us
           // set its memstoreTS to 0. This will help us save space when writing to
           // disk.
-          KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-          sink.append(kv);
+          sink.append(c);
         }
         kvs.clear();
       }

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.RetryCounter.ExponentialBackoffPolicy;
 import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 

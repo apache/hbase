@@ -30,7 +30,6 @@ org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
-org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
 org.apache.hadoop.hbase.util.DirectMemoryUtils;
 org.apache.hadoop.util.StringUtils;
 com.yammer.metrics.stats.Snapshot;
@@ -41,7 +40,7 @@ java.lang.management.ManagementFactory;
         <li class="active"><a href="#tab_baseStats" data-toggle="tab">Base Stats</a></li>
         <li class=""><a href="#tab_memoryStats" data-toggle="tab">Memory</a></li>
         <li class=""><a href="#tab_requestStats" data-toggle="tab">Requests</a></li>
-        <li class=""><a href="#tab_hlogStats" data-toggle="tab">hlogs</a></li>
+        <li class=""><a href="#tab_walStats" data-toggle="tab">WALs</a></li>
         <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
         <li class=""><a href="#tab_queueStats" data-toggle="tab">Queues</a></li>
     </ul>
@@ -55,8 +54,8 @@ java.lang.management.ManagementFactory;
         <div class="tab-pane" id="tab_requestStats">
             <& requestStats; mWrap = mWrap &>
         </div>
-        <div class="tab-pane" id="tab_hlogStats">
-            <& hlogStats; mWrap = mWrap &>
+        <div class="tab-pane" id="tab_walStats">
+            <& walStats; mWrap = mWrap &>
         </div>
         <div class="tab-pane" id="tab_storeStats">
             <& storeStats; mWrap = mWrap &>
@@ -77,7 +76,7 @@ java.lang.management.ManagementFactory;
         <th>Requests Per Second</th>
         <th>Num. Regions</th>
         <th>Block locality</th>
-        <th>Slow HLog Append Count</th>
+        <th>Slow WAL Append Count</th>
     </tr>
     <tr>
         <td><% String.format("%.0f", mWrap.getRequestsPerSecond()) %></td>
@@ -120,20 +119,20 @@ MetricsRegionServerWrapper mWrap;
 </table>
 </%def>
 
-<%def hlogStats>
+<%def walStats>
 <%args>
 MetricsRegionServerWrapper mWrap;
 </%args>
 <table class="table table-striped">
 <tr>
     <tr>
-        <th>Num. HLog Files</th>
-        <th>Size. HLog Files (bytes)</th>
+        <th>Num. WAL Files</th>
+        <th>Size. WAL Files (bytes)</th>
     </tr>
 </tr>
 <tr>
-    <td><% mWrap.getNumHLogFiles() %></td>
-    <td><% mWrap.getHLogFileSize() %></td>
+    <td><% mWrap.getNumWALFiles() %></td>
+    <td><% mWrap.getWALFileSize() %></td>
 </tr>
 </table>
 </%def>

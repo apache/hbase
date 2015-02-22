@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.io.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Dictionary interface

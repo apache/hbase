@@ -156,3 +156,14 @@ message WhileMatchFilter {
 }
 message FilterAllFilter {
 }
+
+message RowRange {
+  optional bytes start_row = 1;
+  optional bool start_row_inclusive = 2;
+  optional bytes stop_row = 3;
+  optional bool stop_row_inclusive =4;
+}
+
+message MultiRowRangeFilter {
+  repeated RowRange row_range_list = 1;
+}

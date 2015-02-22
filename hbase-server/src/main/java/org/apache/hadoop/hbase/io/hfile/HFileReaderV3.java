@@ -23,13 +23,13 @@ import java.security.KeyException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -295,10 +295,9 @@ public class HFileReaderV3 extends HFileReaderV2 {
         if (comp == 0) {
           if (seekBefore) {
             if (lastKeyValueSize < 0) {
-              KeyValue kv = KeyValueUtil.ensureKeyValue(key);
               throw new IllegalStateException("blockSeek with seekBefore "
                   + "at the first key of the block: key="
-                  + Bytes.toStringBinary(kv.getKey(), kv.getKeyOffset(), kv.getKeyLength())
+                  + CellUtil.getCellKeyAsString(key)
                   + ", blockOffset=" + block.getOffset() + ", onDiskSize="
                   + block.getOnDiskSizeWithHeader());
             }

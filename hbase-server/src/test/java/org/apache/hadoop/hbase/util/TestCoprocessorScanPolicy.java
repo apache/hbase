@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.IsolationLevel;
@@ -48,6 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -60,6 +60,8 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -69,7 +71,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestCoprocessorScanPolicy {
   final Log LOG = LogFactory.getLog(getClass());
@@ -108,7 +110,7 @@ public class TestCoprocessorScanPolicy {
     if (TEST_UTIL.getHBaseAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
-    HTable t = TEST_UTIL.createTable(tableName, F, 1);
+    Table t = TEST_UTIL.createTable(tableName, F, 1);
     // set the version override to 2
     Put p = new Put(R);
     p.setAttribute("versions", new byte[]{});
@@ -164,7 +166,7 @@ public class TestCoprocessorScanPolicy {
     .setTimeToLive(1);
     desc.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(desc);
-    HTable t = new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
+    Table t = TEST_UTIL.getConnection().getTable(tableName);
     long now = EnvironmentEdgeManager.currentTime();
     ManualEnvironmentEdge me = new ManualEnvironmentEdge();
     me.setValue(now);
@@ -210,6 +212,7 @@ public class TestCoprocessorScanPolicy {
     // should be gone now
     assertEquals(0, r.size());
     t.close();
+    EnvironmentEdgeManager.reset();
   }
 
   public static class ScanObserver extends BaseRegionObserver {

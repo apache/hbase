@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -98,6 +99,8 @@ public class DefaultMobCompactor extends DefaultCompactor {
     }
   }
 
+  // TODO refactor to take advantage of the throughput controller.
+
   /**
    * Performs compaction on a column family with the mob flag enabled.
    * This is for when the mob threshold size has changed or if the mob
@@ -142,7 +145,8 @@ public class DefaultMobCompactor extends DefaultCompactor {
    */
   @Override
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
-      long smallestReadPoint, boolean cleanSeqId, boolean major) throws IOException {
+      long smallestReadPoint, boolean cleanSeqId,
+      CompactionThroughputController throughputController,  boolean major) throws IOException {
     if (!(scanner instanceof MobCompactionStoreScanner)) {
       throw new IllegalArgumentException(
           "The scanner should be an instance of MobCompactionStoreScanner");
@@ -185,67 +189,67 @@ public class DefaultMobCompactor extends DefaultCompactor {
         hasMore = compactionScanner.next(cells, compactionKVMax);
         // output to writer:
         for (Cell c : cells) {
-          // TODO remove the KeyValueUtil.ensureKeyValue before merging back to trunk.
-          KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-          resetSeqId(smallestReadPoint, cleanSeqId, kv);
+          if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
+            CellUtil.setSequenceId(c, 0);
+          }
           if (compactionScanner.isOutputDeleteMarkers() && CellUtil.isDelete(c)) {
-            delFileWriter.append(kv);
+            delFileWriter.append(c);
             deleteMarkersCount++;
-          } else if (mobFileWriter == null || kv.getTypeByte() != KeyValue.Type.Put.getCode()) {
+          } else if (mobFileWriter == null || c.getTypeByte() != KeyValue.Type.Put.getCode()) {
             // If the mob file writer is null or the kv type is not put, directly write the cell
             // to the store file.
-            writer.append(kv);
-          } else if (MobUtils.isMobReferenceCell(kv)) {
-            if (MobUtils.hasValidMobRefCellValue(kv)) {
-              int size = MobUtils.getMobValueLength(kv);
+            writer.append(c);
+          } else if (MobUtils.isMobReferenceCell(c)) {
+            if (MobUtils.hasValidMobRefCellValue(c)) {
+              int size = MobUtils.getMobValueLength(c);
               if (size > mobSizeThreshold) {
                 // If the value size is larger than the threshold, it's regarded as a mob. Since
                 // its value is already in the mob file, directly write this cell to the store file
-                writer.append(kv);
+                writer.append(c);
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
                 // the mob cell from the mob file, and write it back to the store file.
-                Cell cell = mobStore.resolve(kv, false);
-                if (cell.getValueLength() != 0) {
+                Cell mobCell = mobStore.resolve(c, false);
+                if (mobCell.getValueLength() != 0) {
                   // put the mob data back to the store file
-                  KeyValue mobKv = KeyValueUtil.ensureKeyValue(cell);
-                  mobKv.setSequenceId(kv.getSequenceId());
-                  writer.append(mobKv);
+                  // KeyValue mobKv = KeyValueUtil.ensureKeyValue(cell);
+                  CellUtil.setSequenceId(mobCell, c.getSequenceId());
+                  writer.append(mobCell);
                   mobCompactedFromMobCellsCount++;
-                  mobCompactedFromMobCellsSize += cell.getValueLength();
+                  mobCompactedFromMobCellsSize += mobCell.getValueLength();
                 } else {
                   // If the value of a file is empty, there might be issues when retrieving,
                   // directly write the cell to the store file, and leave it to be handled by the
                   // next compaction.
-                  writer.append(kv);
+                  writer.append(c);
                 }
               }
             } else {
-              LOG.warn("The value format of the KeyValue " + kv
+              LOG.warn("The value format of the KeyValue " + c
                   + " is wrong, its length is less than " + Bytes.SIZEOF_INT);
-              writer.append(kv);
+              writer.append(c);
             }
-          } else if (kv.getValueLength() <= mobSizeThreshold) {
+          } else if (c.getValueLength() <= mobSizeThreshold) {
             // If the value size of a cell is not larger than the threshold, directly write it to
             // the store file.
-            writer.append(kv);
+            writer.append(c);
           } else {
             // If the value size of a cell is larger than the threshold, it's regarded as a mob,
             // write this cell to a mob file, and write the path to the store file.
             mobCells++;
             // append the original keyValue in the mob file.
-            mobFileWriter.append(kv);
-            KeyValue reference = MobUtils.createMobRefKeyValue(kv, fileName, tableNameTag);
+            mobFileWriter.append(c);
+            KeyValue reference = MobUtils.createMobRefKeyValue(c, fileName, tableNameTag);
             // write the cell whose value is the path of a mob file to the store file.
             writer.append(reference);
             mobCompactedIntoMobCellsCount++;
-            mobCompactedIntoMobCellsSize += kv.getValueLength();
+            mobCompactedIntoMobCellsSize += c.getValueLength();
           }
           ++progress.currentCompactedKVs;
 
           // check periodically to see if a system stop is requested
           if (closeCheckInterval > 0) {
-            bytesWritten += kv.getLength();
+            bytesWritten += KeyValueUtil.length(c);
             if (bytesWritten > closeCheckInterval) {
               bytesWritten = 0;
               if (!store.areWritesEnabled()) {

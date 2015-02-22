@@ -25,10 +25,12 @@ import java.security.Permission;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestZooKeeperMainServer {
   // ZKMS calls System.exit.  Catch the call and prevent exit using trick described up in
   // http://stackoverflow.com/questions/309396/java-how-to-test-methods-that-call-system-exit

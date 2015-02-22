@@ -22,10 +22,8 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -97,23 +95,9 @@ final public class FilterWrapper extends Filter {
     return this.filter.filterRow();
   }
 
-  /**
-   * This method is deprecated and you should override Cell getNextKeyHint(Cell) instead.
-   */
-  @Override
-  @Deprecated
-  public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
-    return KeyValueUtil.ensureKeyValue(this.filter.getNextCellHint((Cell)currentKV));
-  }
-
-  /**
-   * Old filter wrapper descendants will implement KV getNextKeyHint(KV) so we should call it.
-   */
   @Override
   public Cell getNextCellHint(Cell currentCell) throws IOException {
-    // Old filters based off of this class will override KeyValue getNextKeyHint(KeyValue).
-    // Thus to maintain compatibility we need to call the old version.
-    return this.getNextKeyHint(KeyValueUtil.ensureKeyValue(currentCell));
+    return this.filter.getNextCellHint(currentCell);
   }
 
   @Override
@@ -128,20 +112,7 @@ final public class FilterWrapper extends Filter {
 
   @Override
   public Cell transformCell(Cell v) throws IOException {
-    // Old filters based off of this class will override KeyValue transform(KeyValue).
-    // Thus to maintain compatibility we need to call the old version.
-    return transform(KeyValueUtil.ensureKeyValue(v));
-  }
-
-  /**
-   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
-   *
-   * This is for transition from 0.94 -> 0.96
-   */
-  @Override
-  @Deprecated
-  public KeyValue transform(KeyValue currentKV) throws IOException {
-    return KeyValueUtil.ensureKeyValue(this.filter.transformCell(currentKV));
+    return this.filter.transformCell(v);
   }
 
   @Override

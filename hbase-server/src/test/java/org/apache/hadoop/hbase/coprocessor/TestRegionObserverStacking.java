@@ -31,17 +31,18 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({CoprocessorTests.class, SmallTests.class})
 public class TestRegionObserverStacking extends TestCase {
   private static HBaseTestingUtility TEST_UTIL
     = new HBaseTestingUtility();
@@ -101,7 +102,7 @@ public class TestRegionObserverStacking extends TestCase {
     }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
@@ -138,6 +139,7 @@ public class TestRegionObserverStacking extends TestCase {
 
     assertTrue(idA < idB);
     assertTrue(idB < idC);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
 }

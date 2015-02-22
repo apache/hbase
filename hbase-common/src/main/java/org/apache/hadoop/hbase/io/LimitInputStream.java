@@ -19,18 +19,21 @@
 
 package org.apache.hadoop.hbase.io;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Copied from guava source code v15 (LimitedInputStream)
  * Guava deprecated LimitInputStream in v14 and removed it in v15. Copying this class here
  * allows to be compatible with guava 11 to 15+.
  */
+@InterfaceAudience.Private
 public final class LimitInputStream extends FilterInputStream {
   private long left;
   private long mark = -1;

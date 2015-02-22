@@ -31,20 +31,23 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -62,7 +65,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -88,7 +92,7 @@ import org.apache.zookeeper.KeeperException;
  * Note: Currently there can only be one snapshot being taken at a time over the cluster. This is a
  * simplification in the current implementation.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 @InterfaceStability.Unstable
 public class SnapshotManager extends MasterProcedureManager implements Stoppable {
   private static final Log LOG = LogFactory.getLog(SnapshotManager.class);
@@ -210,6 +214,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // ignore all the snapshots in progress
     FileStatus[] snapshots = fs.listStatus(snapshotDir,
       new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
+    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     // loop through all the completed snapshots
     for (FileStatus snapshot : snapshots) {
       Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
@@ -222,7 +227,22 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       try {
         in = fs.open(info);
         SnapshotDescription desc = SnapshotDescription.parseFrom(in);
+        if (cpHost != null) {
+          try {
+            cpHost.preListSnapshot(desc);
+          } catch (AccessDeniedException e) {
+            LOG.warn("Current user does not have access to " + desc.getName() + " snapshot. "
+                + "Either you should be owner of this snapshot or admin user.");
+            // Skip this and try for next snapshot
+            continue;
+          }
+        }
         snapshotDescs.add(desc);
+
+        // call coproc post hook
+        if (cpHost != null) {
+          cpHost.postListSnapshot(desc);
+        }
       } catch (IOException e) {
         LOG.warn("Found a corrupted snapshot " + snapshot.getPath(), e);
       } finally {
@@ -257,6 +277,18 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @throws IOException For filesystem IOExceptions
    */
   public void deleteSnapshot(SnapshotDescription snapshot) throws SnapshotDoesNotExistException, IOException {
+    // check to see if it is completed
+    if (!isSnapshotCompleted(snapshot)) {
+      throw new SnapshotDoesNotExistException(snapshot);
+    }
+
+    String snapshotName = snapshot.getName();
+    // first create the snapshot description and check to see if it exists
+    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+    // Get snapshot info from file system. The one passed as parameter is a "fake" snapshotInfo with
+    // just the "name" and it does not contains the "real" snapshot information
+    snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
     // call coproc pre hook
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
@@ -264,19 +296,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       cpHost.preDeleteSnapshot(snapshot);
     }
 
-    // check to see if it is completed
-    if (!isSnapshotCompleted(snapshot)) {
-      throw new SnapshotDoesNotExistException(snapshot);
-    }
-
-    String snapshotName = snapshot.getName();
     LOG.debug("Deleting snapshot: " + snapshotName);
-    // first create the snapshot description and check to see if it exists
-    MasterFileSystem fs = master.getMasterFileSystem();
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-
     // delete the existing snapshot
-    if (!fs.getFileSystem().delete(snapshotDir, true)) {
+    if (!fs.delete(snapshotDir, true)) {
       throw new HBaseSnapshotException("Failed to delete snapshot directory: " + snapshotDir);
     }
 
@@ -540,13 +562,16 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       throw new SnapshotCreationException("Table '" + snapshot.getTable()
           + "' doesn't exist, can't take snapshot.", snapshot);
     }
-
+    SnapshotDescription.Builder builder = snapshot.toBuilder();
     // if not specified, set the snapshot format
     if (!snapshot.hasVersion()) {
-      snapshot = snapshot.toBuilder()
-          .setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION)
-          .build();
+      builder.setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION);
     }
+    User user = RequestContext.getRequestUser();
+    if (User.isHBaseSecurityEnabled(master.getConfiguration()) && user != null) {
+      builder.setOwner(user.getShortName());
+    }
+    snapshot = builder.build();
 
     // call pre coproc hook
     MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
@@ -558,14 +583,14 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     TableName snapshotTable = TableName.valueOf(snapshot.getTable());
     AssignmentManager assignmentMgr = master.getAssignmentManager();
     if (assignmentMgr.getTableStateManager().isTableState(snapshotTable,
-        ZooKeeperProtos.Table.State.ENABLED)) {
+        TableState.State.ENABLED)) {
       LOG.debug("Table enabled, starting distributed snapshot.");
       snapshotEnabledTable(snapshot);
       LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
     }
     // For disabled table, snapshot is created by the master
     else if (assignmentMgr.getTableStateManager().isTableState(snapshotTable,
-        ZooKeeperProtos.Table.State.DISABLED)) {
+        TableState.State.DISABLED)) {
       LOG.debug("Table is disabled, running snapshot entirely on master.");
       snapshotDisabledTable(snapshot);
       LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
@@ -680,10 +705,12 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       throw new SnapshotDoesNotExistException(reqSnapshot);
     }
 
-    // read snapshot information
-    SnapshotDescription fsSnapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    // Get snapshot info from file system. The reqSnapshot is a "fake" snapshotInfo with
+    // just the snapshot "name" and table name to restore. It does not contains the "real" snapshot
+    // information.
+    SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     SnapshotManifest manifest = SnapshotManifest.open(master.getConfiguration(), fs,
-        snapshotDir, fsSnapshot);
+        snapshotDir, snapshot);
     HTableDescriptor snapshotTableDesc = manifest.getTableDescriptor();
     TableName tableName = TableName.valueOf(reqSnapshot.getTable());
 
@@ -694,11 +721,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     SnapshotReferenceUtil.verifySnapshot(master.getConfiguration(), fs, manifest);
 
     // Execute the restore/clone operation
-    if (MetaTableAccessor.tableExists(master.getShortCircuitConnection(), tableName)) {
-      if (master.getAssignmentManager().getTableStateManager().isTableState(
-          TableName.valueOf(fsSnapshot.getTable()), ZooKeeperProtos.Table.State.ENABLED)) {
+    if (MetaTableAccessor.tableExists(master.getConnection(), tableName)) {
+      if (master.getTableStateManager().isTableState(
+          TableName.valueOf(snapshot.getTable()), TableState.State.ENABLED)) {
         throw new UnsupportedOperationException("Table '" +
-            TableName.valueOf(fsSnapshot.getTable()) + "' must be disabled in order to " +
+            TableName.valueOf(snapshot.getTable()) + "' must be disabled in order to " +
             "perform a restore operation" +
             ".");
       }
@@ -707,8 +734,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       if (cpHost != null) {
         cpHost.preRestoreSnapshot(reqSnapshot, snapshotTableDesc);
       }
-      restoreSnapshot(fsSnapshot, snapshotTableDesc);
-      LOG.info("Restore snapshot=" + fsSnapshot.getName() + " as table=" + tableName);
+      restoreSnapshot(snapshot, snapshotTableDesc);
+      LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
 
       if (cpHost != null) {
         cpHost.postRestoreSnapshot(reqSnapshot, snapshotTableDesc);
@@ -718,8 +745,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       if (cpHost != null) {
         cpHost.preCloneSnapshot(reqSnapshot, htd);
       }
-      cloneSnapshot(fsSnapshot, htd);
-      LOG.info("Clone snapshot=" + fsSnapshot.getName() + " as table=" + tableName);
+      cloneSnapshot(snapshot, htd);
+      LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
 
       if (cpHost != null) {
         cpHost.postCloneSnapshot(reqSnapshot, htd);
@@ -900,7 +927,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       restoreHandler.cancel(why);
     }
     try {
-      coordinator.close();
+      if (coordinator != null) {
+        coordinator.close();
+      }
     } catch (IOException e) {
       LOG.error("stop ProcedureCoordinator error", e);
     }

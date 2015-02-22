@@ -32,24 +32,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -59,9 +58,10 @@ import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
-import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
@@ -70,22 +70,19 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestRegionPlacement {
   final static Log LOG = LogFactory.getLog(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int SLAVES = 10;
-  private static HBaseAdmin admin;
+  private static Connection CONNECTION;
+  private static Admin admin;
   private static RegionPlacementMaintainer rp;
   private static Position[] positions = Position.values();
   private int lastRegionOnPrimaryRSCount = 0;
   private int REGION_NUM = 10;
   private Map<HRegionInfo, ServerName[]> favoredNodesAssignmentPlan =
       new HashMap<HRegionInfo, ServerName[]>();
-  private final static int PRIMARY = Position.PRIMARY.ordinal();
-  private final static int SECONDARY = Position.SECONDARY.ordinal();
-  private final static int TERTIARY = Position.TERTIARY.ordinal();
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -95,7 +92,8 @@ public class TestRegionPlacement {
         FavoredNodeLoadBalancer.class, LoadBalancer.class);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     TEST_UTIL.startMiniCluster(SLAVES);
-    admin = new HBaseAdmin(conf);
+    CONNECTION = TEST_UTIL.getConnection();
+    admin = CONNECTION.getAdmin();
     rp = new RegionPlacementMaintainer(conf);
   }
 
@@ -105,114 +103,9 @@ public class TestRegionPlacement {
   }
 
   @Test
-  public void testFavoredNodesPresentForRoundRobinAssignment() throws HBaseIOException {
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
-    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
-    List<ServerName> servers = new ArrayList<ServerName>();
-    for (int i = 0; i < SLAVES; i++) {
-      ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
-      servers.add(server);
-    }
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
-    HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"));
-    regions.add(region);
-    Map<ServerName,List<HRegionInfo>> assignmentMap = balancer.roundRobinAssignment(regions,
-        servers);
-    Set<ServerName> serverBefore = assignmentMap.keySet();
-    List<ServerName> favoredNodesBefore =
-        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesBefore.size() == 3);
-    // the primary RS should be the one that the balancer's assignment returns
-    assertTrue(ServerName.isSameHostnameAndPort(serverBefore.iterator().next(),
-        favoredNodesBefore.get(PRIMARY)));
-    // now remove the primary from the list of available servers
-    List<ServerName> removedServers = removeMatchingServers(serverBefore, servers);
-    // call roundRobinAssignment with the modified servers list
-    assignmentMap = balancer.roundRobinAssignment(regions, servers);
-    List<ServerName> favoredNodesAfter =
-        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesAfter.size() == 3);
-    // We don't expect the favored nodes assignments to change in multiple calls
-    // to the roundRobinAssignment method in the balancer (relevant for AssignmentManager.assign
-    // failures)
-    assertTrue(favoredNodesAfter.containsAll(favoredNodesBefore));
-    Set<ServerName> serverAfter = assignmentMap.keySet();
-    // We expect the new RegionServer assignee to be one of the favored nodes
-    // chosen earlier.
-    assertTrue(ServerName.isSameHostnameAndPort(serverAfter.iterator().next(),
-                 favoredNodesBefore.get(SECONDARY)) ||
-               ServerName.isSameHostnameAndPort(serverAfter.iterator().next(),
-                 favoredNodesBefore.get(TERTIARY)));
-
-    // put back the primary in the list of available servers
-    servers.addAll(removedServers);
-    // now roundRobinAssignment with the modified servers list should return the primary
-    // as the regionserver assignee
-    assignmentMap = balancer.roundRobinAssignment(regions, servers);
-    Set<ServerName> serverWithPrimary = assignmentMap.keySet();
-    assertTrue(serverBefore.containsAll(serverWithPrimary));
-
-    // Make all the favored nodes unavailable for assignment
-    removeMatchingServers(favoredNodesAfter, servers);
-    // call roundRobinAssignment with the modified servers list
-    assignmentMap = balancer.roundRobinAssignment(regions, servers);
-    List<ServerName> favoredNodesNow =
-        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesNow.size() == 3);
-    assertTrue(!favoredNodesNow.contains(favoredNodesAfter.get(PRIMARY)) &&
-        !favoredNodesNow.contains(favoredNodesAfter.get(SECONDARY)) &&
-        !favoredNodesNow.contains(favoredNodesAfter.get(TERTIARY)));
-  }
-
-  @Test
-  public void testFavoredNodesPresentForRandomAssignment() throws HBaseIOException {
-    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(TEST_UTIL.getConfiguration());
-    balancer.setMasterServices(TEST_UTIL.getMiniHBaseCluster().getMaster());
-    List<ServerName> servers = new ArrayList<ServerName>();
-    for (int i = 0; i < SLAVES; i++) {
-      ServerName server = TEST_UTIL.getMiniHBaseCluster().getRegionServer(i).getServerName();
-      servers.add(server);
-    }
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(1);
-    HRegionInfo region = new HRegionInfo(TableName.valueOf("foobar"));
-    regions.add(region);
-    ServerName serverBefore = balancer.randomAssignment(region, servers);
-    List<ServerName> favoredNodesBefore =
-        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesBefore.size() == 3);
-    // the primary RS should be the one that the balancer's assignment returns
-    assertTrue(ServerName.isSameHostnameAndPort(serverBefore,favoredNodesBefore.get(PRIMARY)));
-    // now remove the primary from the list of servers
-    removeMatchingServers(serverBefore, servers);
-    // call randomAssignment with the modified servers list
-    ServerName serverAfter = balancer.randomAssignment(region, servers);
-    List<ServerName> favoredNodesAfter =
-        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesAfter.size() == 3);
-    // We don't expect the favored nodes assignments to change in multiple calls
-    // to the randomAssignment method in the balancer (relevant for AssignmentManager.assign
-    // failures)
-    assertTrue(favoredNodesAfter.containsAll(favoredNodesBefore));
-    // We expect the new RegionServer assignee to be one of the favored nodes
-    // chosen earlier.
-    assertTrue(ServerName.isSameHostnameAndPort(serverAfter, favoredNodesBefore.get(SECONDARY)) ||
-               ServerName.isSameHostnameAndPort(serverAfter, favoredNodesBefore.get(TERTIARY)));
-    // Make all the favored nodes unavailable for assignment
-    removeMatchingServers(favoredNodesAfter, servers);
-    // call randomAssignment with the modified servers list
-    balancer.randomAssignment(region, servers);
-    List<ServerName> favoredNodesNow =
-        ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(region);
-    assertTrue(favoredNodesNow.size() == 3);
-    assertTrue(!favoredNodesNow.contains(favoredNodesAfter.get(PRIMARY)) &&
-        !favoredNodesNow.contains(favoredNodesAfter.get(SECONDARY)) &&
-        !favoredNodesNow.contains(favoredNodesAfter.get(TERTIARY)));
-  }
-
-  @Test
   public void testRegionPlacement() throws Exception {
     String tableStr = "testRegionAssignment";
-    byte[] table = Bytes.toBytes(tableStr);
+    TableName table = TableName.valueOf(tableStr);
     // Create a table with REGION_NUM regions.
     createTable(table, REGION_NUM);
 
@@ -501,27 +394,6 @@ public class TestRegionPlacement {
           regionMovement, expected);
   }
 
-  private List<ServerName> removeMatchingServers(ServerName serverWithoutStartCode,
-      List<ServerName> servers) {
-    List<ServerName> serversToRemove = new ArrayList<ServerName>();
-    for (ServerName s : servers) {
-      if (ServerName.isSameHostnameAndPort(s, serverWithoutStartCode)) {
-        serversToRemove.add(s);
-      }
-    }
-    servers.removeAll(serversToRemove);
-    return serversToRemove;
-  }
-
-  private List<ServerName> removeMatchingServers(Collection<ServerName> serversWithoutStartCode,
-      List<ServerName> servers) {
-    List<ServerName> serversToRemove = new ArrayList<ServerName>();
-    for (ServerName s : serversWithoutStartCode) {
-      serversToRemove.addAll(removeMatchingServers(s, servers));
-    }
-    return serversToRemove;
-  }
-
   /**
    * Verify the number of user regions is assigned to the primary
    * region server based on the plan is expected
@@ -601,6 +473,7 @@ public class TestRegionPlacement {
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(Result result) throws IOException {
         try {
+          @SuppressWarnings("deprecation")
           HRegionInfo info = MetaScanner.getHRegionInfo(result);
           if(info.getTable().getNamespaceAsString()
               .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
@@ -653,7 +526,7 @@ public class TestRegionPlacement {
       @Override
       public void close() throws IOException {}
     };
-    MetaScanner.metaScan(TEST_UTIL.getConfiguration(), visitor);
+    MetaScanner.metaScan(CONNECTION, visitor);
     LOG.info("There are " + regionOnPrimaryNum.intValue() + " out of " +
         totalRegionNum.intValue() + " regions running on the primary" +
         " region servers" );
@@ -667,7 +540,7 @@ public class TestRegionPlacement {
    * @return
    * @throws IOException
    */
-  private static void createTable(byte[] tableName, int regionNum)
+  private static void createTable(TableName tableName, int regionNum)
       throws IOException {
     int expectedRegions = regionNum;
     byte[][] splitKeys = new byte[expectedRegions - 1][];
@@ -676,13 +549,15 @@ public class TestRegionPlacement {
       splitKeys[i - 1] = new byte[] { splitKey, splitKey, splitKey };
     }
 
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
 
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    HTable ht = (HTable) CONNECTION.getTable(tableName);
+    @SuppressWarnings("deprecation")
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
     assertEquals("Tried to create " + expectedRegions + " regions "
         + "but only found " + regions.size(), expectedRegions, regions.size());
+    ht.close();
   }
 }

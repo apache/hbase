@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
  * Skips WAL edits for all System tables including META

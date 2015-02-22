@@ -34,7 +34,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
@@ -328,13 +328,13 @@ public class RestoreSnapshotHelper {
       regionsToRestore.add(hri);
     }
 
-    public void updateMetaParentRegions(HConnection hConnection,
+    public void updateMetaParentRegions(Connection connection,
         final List<HRegionInfo> regionInfos) throws IOException {
       if (regionInfos == null || parentsMap.isEmpty()) return;
 
       // Extract region names and offlined regions
       Map<String, HRegionInfo> regionsByName = new HashMap<String, HRegionInfo>(regionInfos.size());
-      List<HRegionInfo> parentRegions = new LinkedList();
+      List<HRegionInfo> parentRegions = new LinkedList<>();
       for (HRegionInfo regionInfo: regionInfos) {
         if (regionInfo.isSplitParent()) {
           parentRegions.add(regionInfo);
@@ -359,7 +359,7 @@ public class RestoreSnapshotHelper {
         }
 
         LOG.debug("Update splits parent " + regionInfo.getEncodedName() + " -> " + daughters);
-        MetaTableAccessor.addRegionToMeta(hConnection, regionInfo,
+        MetaTableAccessor.addRegionToMeta(connection, regionInfo,
           regionsByName.get(daughters.getFirst()),
           regionsByName.get(daughters.getSecond()));
       }
@@ -609,7 +609,7 @@ public class RestoreSnapshotHelper {
     }
 
     // create the regions on disk
-    ModifyRegionUtils.createRegions(exec, conf, rootDir, tableDir,
+    ModifyRegionUtils.createRegions(exec, conf, rootDir,
       tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
         @Override
         public void fillRegion(final HRegion region) throws IOException {
@@ -689,7 +689,7 @@ public class RestoreSnapshotHelper {
    * </ul>
    * @param familyDir destination directory for the store file
    * @param regionInfo destination region info for the table
-   * @param hfileName store file name (can be a Reference, HFileLink or simple HFile)
+   * @param storeFile store file name (can be a Reference, HFileLink or simple HFile)
    */
   private void restoreStoreFile(final Path familyDir, final HRegionInfo regionInfo,
       final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
@@ -719,7 +719,7 @@ public class RestoreSnapshotHelper {
    * </pre></blockquote>
    * @param familyDir destination directory for the store file
    * @param regionInfo destination region info for the table
-   * @param hfileName reference file name
+   * @param storeFile reference file name
    */
   private void restoreReferenceFile(final Path familyDir, final HRegionInfo regionInfo,
       final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
@@ -754,7 +754,7 @@ public class RestoreSnapshotHelper {
     } else {
       InputStream in;
       if (linkPath != null) {
-        in = new HFileLink(conf, linkPath).open(fs);
+        in = HFileLink.buildFromHFileLinkPattern(conf, linkPath).open(fs);
       } else {
         linkPath = new Path(new Path(HRegion.getRegionDir(snapshotManifest.getSnapshotDir(),
                         regionInfo.getEncodedName()), familyDir.getName()), hfileName);
@@ -826,7 +826,7 @@ public class RestoreSnapshotHelper {
     for (HColumnDescriptor hcd: snapshotTableDescriptor.getColumnFamilies()) {
       htd.addFamily(hcd);
     }
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+    for (Map.Entry<Bytes, Bytes> e:
         snapshotTableDescriptor.getValues().entrySet()) {
       htd.setValue(e.getKey(), e.getValue());
     }

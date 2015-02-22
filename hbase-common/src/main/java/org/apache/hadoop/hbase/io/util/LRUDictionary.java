@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.util;
 
 import java.util.HashMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;

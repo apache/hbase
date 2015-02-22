@@ -28,7 +28,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -38,8 +37,11 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Scanner class that contains the <code>hbase:meta</code> table scanning logic.
@@ -54,36 +56,40 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
  */
 @InterfaceAudience.Private
 //TODO: merge this to MetaTableAccessor, get rid of it.
-public class MetaScanner {
+public final class MetaScanner {
   private static final Log LOG = LogFactory.getLog(MetaScanner.class);
+
+  private MetaScanner() {}
+
   /**
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
    * start row value as table name.
+   * 
+   * <p>Visible for testing. Use {@link
+   * #metaScan(Connection, MetaScannerVisitor, TableName)} instead.
    *
-   * @param configuration conf
    * @param visitor A custom visitor
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration,
-      MetaScannerVisitor visitor)
-  throws IOException {
-    metaScan(configuration, visitor, null, null, Integer.MAX_VALUE);
+  @VisibleForTesting // Do not use. Used by tests only and hbck.
+  public static void metaScan(Connection connection,
+      MetaScannerVisitor visitor) throws IOException {
+    metaScan(connection, visitor, null, null, Integer.MAX_VALUE);
   }
 
   /**
    * Scans the meta table and calls a visitor on each RowResult. Uses a table
    * name to locate meta regions.
    *
-   * @param configuration config
    * @param connection connection to use internally (null to use a new instance)
    * @param visitor visitor object
    * @param userTableName User table name in meta table to start scan at.  Pass
    * null if not interested in a particular table.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration, ClusterConnection connection,
+  public static void metaScan(Connection connection,
       MetaScannerVisitor visitor, TableName userTableName) throws IOException {
-    metaScan(configuration, connection, visitor, userTableName, null, Integer.MAX_VALUE,
+    metaScan(connection, visitor, userTableName, null, Integer.MAX_VALUE,
         TableName.META_TABLE_NAME);
   }
 
@@ -91,8 +97,11 @@ public class MetaScanner {
    * Scans the meta table and calls a visitor on each RowResult. Uses a table
    * name and a row name to locate meta regions. And it only scans at most
    * <code>rowLimit</code> of rows.
+   * 
+   * <p>Visible for testing. Use {@link
+   * #metaScan(Connection, MetaScannerVisitor, TableName)} instead.
    *
-   * @param configuration HBase configuration.
+   * @param connection to scan on
    * @param visitor Visitor object.
    * @param userTableName User table name in meta table to start scan at.  Pass
    * null if not interested in a particular table.
@@ -102,12 +111,13 @@ public class MetaScanner {
    * will be set to default value <code>Integer.MAX_VALUE</code>.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration,
+  @VisibleForTesting // Do not use. Used by Master but by a method that is used testing.
+  public static void metaScan(Connection connection,
       MetaScannerVisitor visitor, TableName userTableName, byte[] row,
       int rowLimit)
   throws IOException {
-    metaScan(configuration, null, visitor, userTableName, row, rowLimit,
-      TableName.META_TABLE_NAME);
+    metaScan(connection, visitor, userTableName, row, rowLimit, TableName
+        .META_TABLE_NAME);
   }
 
   /**
@@ -115,7 +125,6 @@ public class MetaScanner {
    * name and a row name to locate meta regions. And it only scans at most
    * <code>rowLimit</code> of rows.
    *
-   * @param configuration HBase configuration.
    * @param connection connection to use internally (null to use a new instance)
    * @param visitor Visitor object. Closes the visitor before returning.
    * @param tableName User table name in meta table to start scan at.  Pass
@@ -127,37 +136,34 @@ public class MetaScanner {
    * @param metaTableName Meta table to scan, root or meta.
    * @throws IOException e
    */
-  static void metaScan(Configuration configuration, ClusterConnection connection,
+  static void metaScan(Connection connection,
       final MetaScannerVisitor visitor, final TableName tableName,
       final byte[] row, final int rowLimit, final TableName metaTableName)
     throws IOException {
 
-    if (connection == null){
-      connection = ConnectionManager.getConnectionInternal(configuration);
-    }
-
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
     // Calculate startrow for scan.
     byte[] startRow;
-    ResultScanner scanner = null;
-    HTable metaTable = null;
-    try {
-      metaTable = new HTable(TableName.META_TABLE_NAME, connection, null);
+    // If the passed in 'connection' is 'managed' -- i.e. every second test uses
+    // an HTable or an HBaseAdmin with managed connections -- then doing
+    // connection.getTable will throw an exception saying you are NOT to use
+    // managed connections getting tables.  Leaving this as it is for now. Will
+    // revisit when inclined to change all tests.  User code probaby makes use of
+    // managed connections too so don't change it till post hbase 1.0.
+    try (Table metaTable = new HTable(TableName.META_TABLE_NAME, connection, null)) {
       if (row != null) {
         // Scan starting at a particular row in a particular table
-        byte[] searchRow = HRegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
-
-        Result startRowResult = metaTable.getRowOrBefore(searchRow, HConstants.CATALOG_FAMILY);
-
+        Result startRowResult = getClosestRowOrBefore(metaTable, tableName, row,
+            connection.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
+                HConstants.DEFAULT_USE_META_REPLICAS));
         if (startRowResult == null) {
-          throw new TableNotFoundException("Cannot find row in "+ TableName
-              .META_TABLE_NAME.getNameAsString()+" for table: "
-              + tableName + ", row=" + Bytes.toStringBinary(searchRow));
+          throw new TableNotFoundException("Cannot find row in " + metaTable.getName() +
+            " for table: " + tableName + ", row=" + Bytes.toStringBinary(row));
         }
         HRegionInfo regionInfo = getHRegionInfo(startRowResult);
         if (regionInfo == null) {
           throw new IOException("HRegionInfo was null or empty in Meta for " +
-            tableName + ", row=" + Bytes.toStringBinary(searchRow));
+            tableName + ", row=" + Bytes.toStringBinary(row));
         }
         byte[] rowBefore = regionInfo.getStartKey();
         startRow = HRegionInfo.createRegionName(tableName, rowBefore, HConstants.ZEROES, false);
@@ -170,8 +176,13 @@ public class MetaScanner {
           HConstants.ZEROES, false);
       }
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
-      int scannerCaching = configuration.getInt(HConstants.HBASE_META_SCANNER_CACHING,
-        HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+      int scannerCaching = connection.getConfiguration()
+          .getInt(HConstants.HBASE_META_SCANNER_CACHING,
+              HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+      if (connection.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
+                HConstants.DEFAULT_USE_META_REPLICAS)) {
+        scan.setConsistency(Consistency.TIMELINE);
+      }
       if (rowUpperLimit <= scannerCaching) {
           scan.setSmall(true);
       }
@@ -182,25 +193,18 @@ public class MetaScanner {
           Bytes.toStringBinary(startRow) + " for max=" + rowUpperLimit + " with caching=" + rows);
       }
       // Run the scan
-      scanner = metaTable.getScanner(scan);
-      Result result;
-      int processedRows = 0;
-      while ((result = scanner.next()) != null) {
-        if (visitor != null) {
-          if (!visitor.processRow(result)) break;
+      try (ResultScanner resultScanner = metaTable.getScanner(scan)) {
+        Result result;
+        int processedRows = 0;
+        while ((result = resultScanner.next()) != null) {
+          if (visitor != null) {
+            if (!visitor.processRow(result)) break;
+          }
+          processedRows++;
+          if (processedRows >= rowUpperLimit) break;
         }
-        processedRows++;
-        if (processedRows >= rowUpperLimit) break;
       }
     } finally {
-      if (scanner != null) {
-        try {
-          scanner.close();
-        } catch (Throwable t) {
-          ExceptionUtil.rethrowIfInterrupt(t);
-          LOG.debug("Got exception in closing the result scanner", t);
-        }
-      }
       if (visitor != null) {
         try {
           visitor.close();
@@ -209,15 +213,23 @@ public class MetaScanner {
           LOG.debug("Got exception in closing the meta scanner visitor", t);
         }
       }
-      if (metaTable != null) {
-        try {
-          metaTable.close();
-        } catch (Throwable t) {
-          ExceptionUtil.rethrowIfInterrupt(t);
-          LOG.debug("Got exception in closing meta table", t);
-        }
-      }
+    }
+  }
 
+  /**
+   * @return Get closest metatable region row to passed <code>row</code>
+   * @throws IOException
+   */
+  private static Result getClosestRowOrBefore(final Table metaTable, final TableName userTableName,
+      final byte [] row, boolean useMetaReplicas)
+  throws IOException {
+    byte[] searchRow = HRegionInfo.createRegionName(userTableName, row, HConstants.NINES, false);
+    Scan scan = Scan.createGetClosestRowOrBeforeReverseScan(searchRow);
+    if (useMetaReplicas) {
+      scan.setConsistency(Consistency.TIMELINE);
+    }
+    try (ResultScanner resultScanner = metaTable.getScanner(scan)) {
+      return resultScanner.next();
     }
   }
 
@@ -236,13 +248,16 @@ public class MetaScanner {
 
   /**
    * Lists all of the regions currently in META.
-   * @param conf
+   * @param conf configuration
+   * @param connection to connect with
    * @param offlined True if we are to include offlined regions, false and we'll
    * leave out offlined regions from returned list.
    * @return List of all user-space regions.
    * @throws IOException
    */
-  public static List<HRegionInfo> listAllRegions(Configuration conf, final boolean offlined)
+  @VisibleForTesting // And for hbck.
+  public static List<HRegionInfo> listAllRegions(Configuration conf, Connection connection,
+      final boolean offlined)
   throws IOException {
     final List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
@@ -265,7 +280,7 @@ public class MetaScanner {
           return true;
         }
     };
-    metaScan(conf, visitor);
+    metaScan(connection, visitor);
     return regions;
   }
 
@@ -276,10 +291,23 @@ public class MetaScanner {
    * leave out offlined regions from returned list.
    * @return Map of all user-space regions to servers
    * @throws IOException
+   * @deprecated Use {@link #allTableRegions(Connection, TableName)} instead
    */
+  @Deprecated
   public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
-      ClusterConnection connection, final TableName tableName,
-      final boolean offlined) throws IOException {
+      Connection connection, final TableName tableName, boolean offlined) throws IOException {
+    return allTableRegions(connection, tableName);
+  }
+
+  /**
+   * Lists all of the table regions currently in META.
+   * @param connection
+   * @param tableName
+   * @return Map of all user-space regions to servers
+   * @throws IOException
+   */
+  public static NavigableMap<HRegionInfo, ServerName> allTableRegions(
+      Connection connection, final TableName tableName) throws IOException {
     final NavigableMap<HRegionInfo, ServerName> regions =
       new TreeMap<HRegionInfo, ServerName>();
     MetaScannerVisitor visitor = new TableMetaScannerVisitor(tableName) {
@@ -296,7 +324,7 @@ public class MetaScanner {
         return true;
       }
     };
-    metaScan(conf, connection, visitor, tableName);
+    metaScan(connection, visitor, tableName);
     return regions;
   }
 
@@ -304,7 +332,7 @@ public class MetaScanner {
    * Lists table regions and locations grouped by region range from META.
    */
   public static List<RegionLocations> listTableRegionLocations(Configuration conf,
-      ClusterConnection connection, final TableName tableName) throws IOException {
+      Connection connection, final TableName tableName) throws IOException {
     final List<RegionLocations> regions = new ArrayList<RegionLocations>();
     MetaScannerVisitor visitor = new TableMetaScannerVisitor(tableName) {
       @Override
@@ -315,7 +343,7 @@ public class MetaScanner {
         return true;
       }
     };
-    metaScan(conf, connection, visitor, tableName);
+    metaScan(connection, visitor, tableName);
     return regions;
   }
 

@@ -20,17 +20,19 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Cluster registry.
- * Implemenations hold cluster information such as this cluster's id, location of hbase:meta, etc.
+ * Implementations hold cluster information such as this cluster's id, location of hbase:meta, etc.
+ * Internal use only.
  */
+@InterfaceAudience.Private
 interface Registry {
   /**
    * @param connection
    */
-  void init(HConnection connection);
+  void init(Connection connection);
 
   /**
    * @return Meta region location
@@ -42,12 +44,6 @@ interface Registry {
    * @return Cluster id.
    */
   String getClusterId();
-
-  /**
-   * @param enabled Return true if table is enabled
-   * @throws IOException
-   */
-  boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException;
 
   /**
    * @return Count of 'running' regionservers

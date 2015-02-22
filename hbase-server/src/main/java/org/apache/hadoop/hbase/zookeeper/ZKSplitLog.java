@@ -26,18 +26,17 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
-import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Common methods and attributes used by {@link SplitLogManager} and {@link SplitLogWorker}
+ * Common methods and attributes used by {@link org.apache.hadoop.hbase.master.SplitLogManager} 
+ * and {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}
  * running distributed splitting of WAL logs.
  */
 @InterfaceAudience.Private
@@ -157,7 +156,7 @@ public class ZKSplitLog {
   public static long parseLastFlushedSequenceIdFrom(final byte[] bytes) {
     long lastRecordedFlushedSequenceId = -1l;
     try {
-      lastRecordedFlushedSequenceId = ZKUtil.parseHLogPositionFrom(bytes);
+      lastRecordedFlushedSequenceId = ZKUtil.parseWALPositionFrom(bytes);
     } catch (DeserializationException e) {
       lastRecordedFlushedSequenceId = -1l;
       LOG.warn("Can't parse last flushed sequence Id", e);

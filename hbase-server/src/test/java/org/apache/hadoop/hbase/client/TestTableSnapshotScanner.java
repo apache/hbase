@@ -29,11 +29,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.mapreduce.TestTableSnapshotInputFormat;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
@@ -41,7 +42,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestTableSnapshotScanner {
 
   private static final Log LOG = LogFactory.getLog(TestTableSnapshotInputFormat.class);
@@ -56,7 +57,7 @@ public class TestTableSnapshotScanner {
 
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(NUM_REGION_SERVERS);
+    UTIL.startMiniCluster(NUM_REGION_SERVERS, true);
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
@@ -91,7 +92,7 @@ public class TestTableSnapshotScanner {
     Admin admin = util.getHBaseAdmin();
 
     // put some stuff in the table
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     util.loadTable(table, FAMILIES);
 
     Path rootDir = FSUtils.getRootDir(util.getConfiguration());

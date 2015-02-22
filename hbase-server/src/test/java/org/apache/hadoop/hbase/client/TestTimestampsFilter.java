@@ -30,6 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -43,7 +45,7 @@ import org.junit.experimental.categories.Category;
  * Sets up the HBase mini cluster once at start. Each creates a table
  * named for the method and does its stuff against that.
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestTimestampsFilter {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -96,7 +98,7 @@ public class TestTimestampsFilter {
     Cell kvs[];
 
     // create table; set versions to max...
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     for (int rowIdx = 0; rowIdx < 5; rowIdx++) {
       for (int colIdx = 0; colIdx < 5; colIdx++) {
@@ -171,7 +173,7 @@ public class TestTimestampsFilter {
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     Put p = new Put(Bytes.toBytes("row"));
     p.add(FAMILY, Bytes.toBytes("column0"), 3, Bytes.toBytes("value0-3"));
@@ -231,7 +233,7 @@ public class TestTimestampsFilter {
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);
@@ -254,7 +256,7 @@ public class TestTimestampsFilter {
     ht.close();
   }
 
-  private void verifyInsertedValues(HTable ht, byte[] cf) throws IOException {
+  private void verifyInsertedValues(Table ht, byte[] cf) throws IOException {
     for (int rowIdx = 0; rowIdx < 5; rowIdx++) {
       for (int colIdx = 0; colIdx < 5; colIdx++) {
         // ask for versions that exist.
@@ -313,7 +315,7 @@ public class TestTimestampsFilter {
    * versions for the row/column specified by rowIdx & colIdx.
    *
    */
-  private  Cell[] getNVersions(HTable ht, byte[] cf, int rowIdx,
+  private  Cell[] getNVersions(Table ht, byte[] cf, int rowIdx,
                                    int colIdx, List<Long> versions)
     throws IOException {
     byte row[] = Bytes.toBytes("row:" + rowIdx);
@@ -332,7 +334,7 @@ public class TestTimestampsFilter {
    * Uses the TimestampFilter on a Scan to request a specified list of
    * versions for the rows from startRowIdx to endRowIdx (both inclusive).
    */
-  private Result[] scanNVersions(HTable ht, byte[] cf, int startRowIdx,
+  private Result[] scanNVersions(Table ht, byte[] cf, int startRowIdx,
                                  int endRowIdx, List<Long> versions)
     throws IOException {
     byte startRow[] = Bytes.toBytes("row:" + startRowIdx);
@@ -349,7 +351,7 @@ public class TestTimestampsFilter {
    * Insert in specific row/column versions with timestamps
    * versionStart..versionEnd.
    */
-  private void putNVersions(HTable ht, byte[] cf, int rowIdx, int colIdx,
+  private void putNVersions(Table ht, byte[] cf, int rowIdx, int colIdx,
                             long versionStart, long versionEnd)
       throws IOException {
     byte row[] = Bytes.toBytes("row:" + rowIdx);
@@ -368,7 +370,7 @@ public class TestTimestampsFilter {
    * For row/column specified by rowIdx/colIdx, delete the cell
    * corresponding to the specified version.
    */
-  private void deleteOneVersion(HTable ht, byte[] cf, int rowIdx,
+  private void deleteOneVersion(Table ht, byte[] cf, int rowIdx,
                                 int colIdx, long version)
     throws IOException {
     byte row[] = Bytes.toBytes("row:" + rowIdx);

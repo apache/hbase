@@ -47,9 +47,10 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.security.SecurityUtil;
@@ -88,7 +89,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * ThriftServer - this class starts up a Thrift server which implements the HBase API specified in the
  * HbaseClient.thrift IDL file.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class ThriftServer {
   private static final Log log = LogFactory.getLog(ThriftServer.class);
@@ -106,7 +107,7 @@ public class ThriftServer {
 
   public static final int DEFAULT_LISTEN_PORT = 9090;
 
-  
+
   public ThriftServer() {
   }
 
@@ -308,6 +309,15 @@ public class ThriftServer {
       System.exit(1);
     }
 
+    // Get address to bind
+    String bindAddress;
+    if (cmd.hasOption("bind")) {
+      bindAddress = cmd.getOptionValue("bind");
+      conf.set("hbase.thrift.info.bindAddress", bindAddress);
+    } else {
+      bindAddress = conf.get("hbase.thrift.info.bindAddress");
+    }
+
     // Get port to bind to
     int listenPort = 0;
     try {
@@ -386,7 +396,7 @@ public class ThriftServer {
         conf.getBoolean("hbase.regionserver.thrift.framed", false) || nonblocking || hsha;
     TTransportFactory transportFactory = getTTransportFactory(qop, name, host, framed,
         conf.getInt("hbase.regionserver.thrift.framed.max_frame_size_in_mb", 2) * 1024 * 1024);
-    InetSocketAddress inetSocketAddress = bindToPort(cmd.getOptionValue("bind"), listenPort);
+    InetSocketAddress inetSocketAddress = bindToPort(bindAddress, listenPort);
     conf.setBoolean("hbase.regionserver.thrift.framed", framed);
     if (qop != null) {
       // Create a processor wrapper, to get the caller
@@ -408,7 +418,7 @@ public class ThriftServer {
     try {
       if (cmd.hasOption("infoport")) {
         String val = cmd.getOptionValue("infoport");
-        conf.setInt("hbase.thrift.info.port", Integer.valueOf(val));
+        conf.setInt("hbase.thrift.info.port", Integer.parseInt(val));
         log.debug("Web UI port set to " + val);
       }
     } catch (NumberFormatException e) {

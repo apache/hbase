@@ -27,6 +27,9 @@ module Hbase
     def initialize(configuration, formatter)
       @config = configuration
       @formatter = formatter
+      
+      # @connection = org.apache.hadoop.hbase.client.ConnectionFactory(configuration)
+      # @admin = @connection.getAdmin()
       @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
     end
 
@@ -94,6 +97,20 @@ module Hbase
           raise(ArgumentError, "No authentication set for the given user " + user)
         end
         return response.getAuthList
+      end
+    end
+
+    def list_labels(regex = ".*")
+      lables_table_available?
+      begin
+        response = VisibilityClient.listLabels(@config, regex)
+        if response.nil?
+          raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
+        end
+        if response.getLabelList.empty?
+          raise(ArgumentError, "No auth label defined")
+        end
+        return response.getLabelList
       end
     end
 

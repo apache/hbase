@@ -25,8 +25,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -37,7 +38,7 @@ import org.junit.experimental.categories.Category;
  * Do some ops and prove that client and server can work w/o codecs; that we can pb all the time.
  * Good for third-party clients or simple scripts that want to talk direct to hbase.
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestFromClientSideNoCodec {
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   /**
@@ -96,7 +97,7 @@ public class TestFromClientSideNoCodec {
   public void testNoCodec() {
     Configuration c = new Configuration();
     c.set("hbase.client.default.rpc.codec", "");
-    String codec = RpcClient.getDefaultCodec(c);
+    String codec = AbstractRpcClient.getDefaultCodec(c);
     assertTrue(codec == null || codec.length() == 0);
   }
 }

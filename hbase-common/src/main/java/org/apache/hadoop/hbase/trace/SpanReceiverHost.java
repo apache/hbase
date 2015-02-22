@@ -24,14 +24,17 @@ import java.util.HashSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.htrace.SpanReceiver;
-import org.htrace.Trace;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.htrace.SpanReceiver;
+import org.apache.htrace.SpanReceiverBuilder;
+import org.apache.htrace.Trace;
 
 /**
  * This class provides functions for reading the names of SpanReceivers from
  * hbase-site.xml, adding those SpanReceivers to the Tracer, and closing those
  * SpanReceivers when appropriate.
  */
+@InterfaceAudience.Private
 public class SpanReceiverHost {
   public static final String SPAN_RECEIVERS_CONF_KEY = "hbase.trace.spanreceiver.classes";
   private static final Log LOG = LogFactory.getLog(SpanReceiverHost.class);
@@ -46,9 +49,6 @@ public class SpanReceiverHost {
   }
 
   public static SpanReceiverHost getInstance(Configuration conf) {
-    if (SingletonHolder.INSTANCE.host != null) {
-      return SingletonHolder.INSTANCE.host;
-    }
     synchronized (SingletonHolder.INSTANCE.lock) {
       if (SingletonHolder.INSTANCE.host != null) {
         return SingletonHolder.INSTANCE.host;
@@ -68,60 +68,29 @@ public class SpanReceiverHost {
   }
 
   /**
-   * Reads the names of classes specified in the
-   * "hbase.trace.spanreceiver.classes" property and instantiates and registers
-   * them with the Tracer as SpanReceiver's.
+   * Reads the names of classes specified in the {@code hbase.trace.spanreceiver.classes} property
+   * and instantiates and registers them with the Tracer.
    *
    */
   public void loadSpanReceivers() {
-    Class<?> implClass = null;
     String[] receiverNames = conf.getStrings(SPAN_RECEIVERS_CONF_KEY);
     if (receiverNames == null || receiverNames.length == 0) {
       return;
     }
+
+    SpanReceiverBuilder builder = new SpanReceiverBuilder(new HBaseHTraceConfiguration(conf));
     for (String className : receiverNames) {
       className = className.trim();
 
-      try {
-        implClass = Class.forName(className);
-        SpanReceiver receiver = loadInstance(implClass);
-        if (receiver != null) {
-          receivers.add(receiver);
-          LOG.info("SpanReceiver " + className + " was loaded successfully.");
-        }
-
-      } catch (ClassNotFoundException e) {
-        LOG.warn("Class " + className + " cannot be found. " + e.getMessage());
-      } catch (IOException e) {
-        LOG.warn("Load SpanReceiver " + className + " failed. "
-            + e.getMessage());
+      SpanReceiver receiver = builder.spanReceiverClass(className).build();
+      if (receiver != null) {
+        receivers.add(receiver);
+        LOG.info("SpanReceiver " + className + " was loaded successfully.");
       }
     }
     for (SpanReceiver rcvr : receivers) {
       Trace.addReceiver(rcvr);
     }
-  }
-
-  private SpanReceiver loadInstance(Class<?> implClass)
-      throws IOException {
-    SpanReceiver impl = null;
-    try {
-      Object o = implClass.newInstance();
-      impl = (SpanReceiver)o;
-      impl.configure(new HBaseHTraceConfiguration(this.conf));
-    } catch (SecurityException e) {
-      throw new IOException(e);
-    } catch (IllegalArgumentException e) {
-      throw new IOException(e);
-    } catch (RuntimeException e) {
-      throw new IOException(e);
-    } catch (InstantiationException e) {
-      e.printStackTrace();
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
-    }
-
-    return impl;
   }
 
   /**

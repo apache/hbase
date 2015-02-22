@@ -29,7 +29,7 @@ import com.google.common.collect.Lists;
 
 public class TestRowDataComplexQualifiers extends BaseTestRowData{
 
-	static byte[]
+  static byte[]
     Arow = Bytes.toBytes("Arow"),
     cf = PrefixTreeTestConstants.TEST_CF,
     v0 = Bytes.toBytes("v0");

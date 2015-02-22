@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.hbase.io;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileNotFoundException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
@@ -137,12 +139,12 @@ public class FileLink {
     }
 
     @Override
-    public int read(byte b[]) throws IOException {
+    public int read(byte[] b) throws IOException {
        return read(b, 0, b.length);
     }
 
     @Override
-    public int read(byte b[], int off, int len) throws IOException {
+    public int read(byte[] b, int off, int len) throws IOException {
       int n;
       try {
         n = in.read(b, off, len);
@@ -290,7 +292,7 @@ public class FileLink {
           if (pos != 0) in.seek(pos);
           assert(in.getPos() == pos) : "Link unable to seek to the right position=" + pos;
           if (LOG.isTraceEnabled()) {
-            if (currentPath != null) {
+            if (currentPath == null) {
               LOG.debug("link open path=" + path);
             } else {
               LOG.trace("link switch from path=" + currentPath + " to path=" + path);
@@ -337,22 +339,33 @@ public class FileLink {
   public String toString() {
     StringBuilder str = new StringBuilder(getClass().getName());
     str.append(" locations=[");
-    int i = 0;
-    for (Path location: locations) {
-      if (i++ > 0) str.append(", ");
-      str.append(location.toString());
+    for (int i = 0; i < locations.length; ++i) {
+      if (i > 0) str.append(", ");
+      str.append(locations[i].toString());
     }
     str.append("]");
     return str.toString();
   }
 
   /**
+   * @return true if the file pointed by the link exists
+   */
+  public boolean exists(final FileSystem fs) throws IOException {
+    for (int i = 0; i < locations.length; ++i) {
+      if (fs.exists(locations[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * @return the path of the first available link.
    */
   public Path getAvailablePath(FileSystem fs) throws IOException {
-    for (Path path: locations) {
-      if (fs.exists(path)) {
-        return path;
+    for (int i = 0; i < locations.length; ++i) {
+      if (fs.exists(locations[i])) {
+        return locations[i];
       }
     }
     throw new FileNotFoundException("Unable to open link: " + this);
@@ -366,9 +379,9 @@ public class FileLink {
    * @throws IOException on unexpected error.
    */
   public FileStatus getFileStatus(FileSystem fs) throws IOException {
-    for (Path path: locations) {
+    for (int i = 0; i < locations.length; ++i) {
       try {
-        return fs.getFileStatus(path);
+        return fs.getFileStatus(locations[i]);
       } catch (FileNotFoundException e) {
         // Try another file location
       }
@@ -411,11 +424,18 @@ public class FileLink {
    */
   protected void setLocations(Path originPath, Path... alternativePaths) {
     assert this.locations == null : "Link locations already set";
-    this.locations = new Path[1 + alternativePaths.length];
-    this.locations[0] = originPath;
-    for (int i = 0; i < alternativePaths.length; i++) {
-      this.locations[i + 1] = alternativePaths[i];
+
+    List<Path> paths = new ArrayList<Path>(alternativePaths.length +1);
+    if (originPath != null) {
+      paths.add(originPath);
     }
+
+    for (int i = 0; i < alternativePaths.length; i++) {
+      if (alternativePaths[i] != null) {
+        paths.add(alternativePaths[i]);
+      }
+    }
+    this.locations = paths.toArray(new Path[0]);
   }
 
   /**

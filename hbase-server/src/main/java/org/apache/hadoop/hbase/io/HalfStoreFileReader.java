@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -304,10 +304,18 @@ public class HalfStoreFileReader extends StoreFile.Reader {
           // The equals sign isn't strictly necessary just here to be consistent
           // with seekTo
           if (getComparator().compareOnlyKeyPortion(key, splitCell) >= 0) {
-            return this.delegate.seekBefore(splitCell);
+            boolean ret = this.delegate.seekBefore(splitCell);
+            if (ret) {
+              atEnd = false;
+            }
+            return ret;
           }
         }
-        return this.delegate.seekBefore(key);
+        boolean ret = this.delegate.seekBefore(key);
+        if (ret) {
+          atEnd = false;
+        }
+        return ret;
       }
     };
   }

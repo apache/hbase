@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -38,14 +38,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -56,18 +58,19 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -115,6 +118,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -131,6 +136,9 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescript
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
@@ -148,13 +156,15 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
@@ -164,6 +174,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -171,18 +182,13 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingRpcChannel;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-
 /**
- * An internal, A non-instantiable class that manages creation of {@link HConnection}s.
+ * An internal, non-instantiable class that manages creation of {@link HConnection}s.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
 // NOTE: DO NOT make this class public. It was made package-private on purpose.
-class ConnectionManager {
+final class ConnectionManager {
   static final Log LOG = LogFactory.getLog(ConnectionManager.class);
 
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
@@ -246,7 +252,7 @@ class ConnectionManager {
    */
   @VisibleForTesting
   static NonceGenerator injectNonceGeneratorForTesting(
-      HConnection conn, NonceGenerator cnm) {
+      ClusterConnection conn, NonceGenerator cnm) {
     HConnectionImplementation connImpl = (HConnectionImplementation)conn;
     NonceGenerator ng = connImpl.getNonceGenerator();
     LOG.warn("Nonce generator is being replaced by test code for " + cnm.getClass().getName());
@@ -262,6 +268,7 @@ class ConnectionManager {
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static HConnection getConnection(final Configuration conf) throws IOException {
@@ -393,6 +400,9 @@ class ConnectionManager {
     return createConnection(conf, false, pool, user);
   }
 
+  /**
+   * @deprecated instead use one of the {@link ConnectionFactory#createConnection()} methods.
+   */
   @Deprecated
   static HConnection createConnection(final Configuration conf, final boolean managed)
       throws IOException {
@@ -400,28 +410,14 @@ class ConnectionManager {
     return createConnection(conf, managed, null, provider.getCurrent());
   }
 
+  /**
+   * @deprecated instead use one of the {@link ConnectionFactory#createConnection()} methods.
+   */
   @Deprecated
   static ClusterConnection createConnection(final Configuration conf, final boolean managed,
       final ExecutorService pool, final User user)
   throws IOException {
-    String className = conf.get(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
-      HConnectionImplementation.class.getName());
-    Class<?> clazz = null;
-    try {
-      clazz = Class.forName(className);
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e);
-    }
-    try {
-      // Default HCM#HCI is not accessible; make it so before invoking.
-      Constructor<?> constructor =
-        clazz.getDeclaredConstructor(Configuration.class,
-          boolean.class, ExecutorService.class, User.class);
-      constructor.setAccessible(true);
-      return (ClusterConnection) constructor.newInstance(conf, managed, pool, user);
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+    return (ClusterConnection) ConnectionFactory.createConnection(conf, managed, pool, user);
   }
 
   /**
@@ -430,7 +426,7 @@ class ConnectionManager {
    * then close connection to the zookeeper ensemble and let go of all associated resources.
    *
    * @param conf configuration whose identity is used to find {@link HConnection} instance.
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteConnection(Configuration conf) {
@@ -442,7 +438,7 @@ class ConnectionManager {
    * This will then close connection to the zookeeper ensemble and let go of all resources.
    *
    * @param connection
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteStaleConnection(HConnection connection) {
@@ -453,7 +449,7 @@ class ConnectionManager {
    * Delete information for all connections. Close or not the connection, depending on the
    *  staleConnection boolean and the ref count. By default, you should use it with
    *  staleConnection to true.
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteAllConnections(boolean staleConnection) {
@@ -476,7 +472,9 @@ class ConnectionManager {
     deleteAllConnections(false);
   }
 
-
+  /**
+   * @deprecated connection caching is going away.
+   */
   @Deprecated
   private static void deleteConnection(HConnection connection, boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
@@ -489,6 +487,9 @@ class ConnectionManager {
     }
   }
 
+  /**
+   * @deprecated connection caching is going away.
+˙   */
   @Deprecated
   private static void deleteConnection(HConnectionKey connectionKey, boolean staleConnection) {
     synchronized (CONNECTION_INSTANCES) {
@@ -549,10 +550,13 @@ class ConnectionManager {
   static class HConnectionImplementation implements ClusterConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final long pause;
+    private final boolean useMetaReplicas;
     private final int numTries;
     final int rpcTimeout;
     private NonceGenerator nonceGenerator = null;
     private final AsyncProcess asyncProcess;
+    // single tracker per connection
+    private final ServerStatisticTracker stats;
 
     private volatile boolean closed;
     private volatile boolean aborted;
@@ -571,8 +575,6 @@ class ConnectionManager {
     private final Object masterAndZKLock = new Object();
 
     private long keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
-    private final DelayedClosing delayedClosing =
-      DelayedClosing.createAndStart(this);
 
     // thread executor shared by all HTableInterface instances created
     // by this connection
@@ -580,6 +582,10 @@ class ConnectionManager {
     private volatile boolean cleanupPool = false;
 
     private final Configuration conf;
+
+    // cache the configuration value for tables so that we can avoid calling
+    // the expensive Configuration to fetch the value multiple times.
+    private final TableConfiguration tableConfig;
 
     // Client rpc instance.
     private RpcClient rpcClient;
@@ -597,10 +603,14 @@ class ConnectionManager {
 
     private RpcControllerFactory rpcControllerFactory;
 
+    private final RetryingCallerInterceptor interceptor;
+
     /**
      * Cluster registry of basic info such as clusterid and meta region location.
      */
      Registry registry;
+
+    private final ClientBackoffPolicy backoffPolicy;
 
      HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
        this(conf, managed, null, null);
@@ -626,8 +636,7 @@ class ConnectionManager {
       this.registry = setupRegistry();
       retrieveClusterId();
 
-      this.rpcClient = new RpcClient(this.conf, this.clusterId);
-      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
+      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId);
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
 
       // Do we publish the status?
@@ -647,7 +656,7 @@ class ConnectionManager {
                 @Override
                 public void newDead(ServerName sn) {
                   clearCaches(sn);
-                  rpcClient.cancelConnections(sn.getHostname(), sn.getPort());
+                  rpcClient.cancelConnections(sn);
                 }
               }, conf, listenerClass);
         }
@@ -659,11 +668,13 @@ class ConnectionManager {
      */
     protected HConnectionImplementation(Configuration conf) {
       this.conf = conf;
+      this.tableConfig = new TableConfiguration(conf);
       this.closed = false;
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
           HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
-      this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
-          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+      this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
+          HConstants.DEFAULT_USE_META_REPLICAS); 
+      this.numTries = tableConfig.getRetriesNumber();
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
           HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
@@ -677,7 +688,11 @@ class ConnectionManager {
       } else {
         this.nonceGenerator = new NoNonceGenerator();
       }
+      stats = ServerStatisticTracker.create(conf);
       this.asyncProcess = createAsyncProcess(this.conf);
+      this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
+      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
+      this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
     }
 
     @Override
@@ -710,15 +725,34 @@ class ConnectionManager {
       if (managed) {
         throw new IOException("The connection has to be unmanaged.");
       }
-      return new HTable(tableName, this, pool);
+      return new HTable(tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, pool);
+    }
+
+    @Override
+    public BufferedMutator getBufferedMutator(BufferedMutatorParams params) {
+      if (params.getTableName() == null) {
+        throw new IllegalArgumentException("TableName cannot be null.");
+      }
+      if (params.getPool() == null) {
+        params.pool(HTable.getDefaultExecutor(getConfiguration()));
+      }
+      if (params.getWriteBufferSize() == BufferedMutatorParams.UNSET) {
+        params.writeBufferSize(tableConfig.getWriteBufferSize());
+      }
+      if (params.getMaxKeyValueSize() == BufferedMutatorParams.UNSET) {
+        params.maxKeyValueSize(tableConfig.getMaxKeyValueSize());
+      }
+      return new BufferedMutatorImpl(this, rpcCallerFactory, rpcControllerFactory, params);
+    }
+
+    @Override
+    public BufferedMutator getBufferedMutator(TableName tableName) {
+      return getBufferedMutator(new BufferedMutatorParams(tableName));
     }
 
     @Override
     public RegionLocator getRegionLocator(TableName tableName) throws IOException {
-      if (managed) {
-        throw new IOException("The connection has to be unmanaged.");
-      }
-      return new HTable(tableName, this, getBatchPool());
+      return new HRegionLocator(tableName, this);
     }
 
     @Override
@@ -785,28 +819,7 @@ class ConnectionManager {
      * @throws IOException
      */
     private Registry setupRegistry() throws IOException {
-      String registryClass = this.conf.get("hbase.client.registry.impl",
-        ZooKeeperRegistry.class.getName());
-      Registry registry = null;
-      try {
-        registry = (Registry)Class.forName(registryClass).newInstance();
-      } catch (Throwable t) {
-        throw new IOException(t);
-      }
-      registry.init(this);
-      return registry;
-    }
-
-    /**
-     * For tests only.
-     * @param rpcClient Client we should use instead.
-     * @return Previous rpcClient
-     */
-    @VisibleForTesting
-    RpcClient setRpcClient(final RpcClient rpcClient) {
-      RpcClient oldRpcClient = this.rpcClient;
-      this.rpcClient = rpcClient;
-      return oldRpcClient;
+      return RegistryFactory.getRegistry(this);
     }
 
     /**
@@ -819,7 +832,6 @@ class ConnectionManager {
 
     /**
      * An identifier that will remain the same for a given connection.
-     * @return
      */
     @Override
     public String toString(){
@@ -865,7 +877,9 @@ class ConnectionManager {
      * @return true if the master is running, throws an exception otherwise
      * @throws MasterNotRunningException - if the master is not running
      * @throws ZooKeeperConnectionException
+     * @deprecated this has been deprecated without a replacement
      */
+    @Deprecated
     @Override
     public boolean isMasterRunning()
     throws MasterNotRunningException, ZooKeeperConnectionException {
@@ -893,7 +907,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableEnabled(TableName tableName) throws IOException {
-      return this.registry.isTableOnlineState(tableName, true);
+      return getTableState(tableName).inStates(TableState.State.ENABLED);
     }
 
     @Override
@@ -903,7 +917,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableDisabled(TableName tableName) throws IOException {
-      return this.registry.isTableOnlineState(tableName, false);
+      return getTableState(tableName).inStates(TableState.State.DISABLED);
     }
 
     @Override
@@ -913,30 +927,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableAvailable(final TableName tableName) throws IOException {
-      final AtomicBoolean available = new AtomicBoolean(true);
-      final AtomicInteger regionCount = new AtomicInteger(0);
-      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
-        @Override
-        public boolean processRow(Result row) throws IOException {
-          HRegionInfo info = MetaScanner.getHRegionInfo(row);
-          if (info != null && !info.isSplitParent()) {
-            if (tableName.equals(info.getTable())) {
-              ServerName server = HRegionInfo.getServerName(row);
-              if (server == null) {
-                available.set(false);
-                return false;
-              }
-              regionCount.incrementAndGet();
-            } else if (tableName.compareTo(info.getTable()) < 0) {
-              // Return if we are done with the current table
-              return false;
-            }
-          }
-          return true;
-        }
-      };
-      MetaScanner.metaScan(conf, this, visitor, tableName);
-      return available.get() && (regionCount.get() > 0);
+      return isTableAvailable(tableName, null);
     }
 
     @Override
@@ -945,44 +936,61 @@ class ConnectionManager {
     }
 
     @Override
-    public boolean isTableAvailable(final TableName tableName, final byte[][] splitKeys)
+    public boolean isTableAvailable(final TableName tableName, @Nullable final byte[][] splitKeys)
         throws IOException {
-      final AtomicBoolean available = new AtomicBoolean(true);
-      final AtomicInteger regionCount = new AtomicInteger(0);
-      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
-        @Override
-        public boolean processRow(Result row) throws IOException {
-          HRegionInfo info = MetaScanner.getHRegionInfo(row);
-          if (info != null && !info.isSplitParent()) {
-            if (tableName.equals(info.getTable())) {
-              ServerName server = HRegionInfo.getServerName(row);
-              if (server == null) {
-                available.set(false);
-                return false;
-              }
-              if (!Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-                for (byte[] splitKey : splitKeys) {
-                  // Just check if the splitkey is available
-                  if (Bytes.equals(info.getStartKey(), splitKey)) {
-                    regionCount.incrementAndGet();
-                    break;
-                  }
-                }
-              } else {
-                // Always empty start row should be counted
-                regionCount.incrementAndGet();
-              }
-            } else if (tableName.compareTo(info.getTable()) < 0) {
-              // Return if we are done with the current table
-              return false;
+      try {
+        if (!isTableEnabled(tableName)) {
+          LOG.debug("Table " + tableName + " not enabled");
+          return false;
+        }
+        ClusterConnection connection = getConnectionInternal(getConfiguration());
+        List<Pair<HRegionInfo, ServerName>> locations = MetaTableAccessor
+            .getTableRegionsAndLocations(connection, tableName, true);
+        int notDeployed = 0;
+        int regionCount = 0;
+        for (Pair<HRegionInfo, ServerName> pair : locations) {
+          HRegionInfo info = pair.getFirst();
+          if (pair.getSecond() == null) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Table " + tableName + " has not deployed region " + pair.getFirst()
+                  .getEncodedName());
             }
+            notDeployed++;
+          } else if (splitKeys != null
+              && !Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
+            for (byte[] splitKey : splitKeys) {
+              // Just check if the splitkey is available
+              if (Bytes.equals(info.getStartKey(), splitKey)) {
+                regionCount++;
+                break;
+              }
+            }
+          } else {
+            // Always empty start row should be counted
+            regionCount++;
+          }
+        }
+        if (notDeployed > 0) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Table " + tableName + " has " + notDeployed + " regions");
+          }
+          return false;
+        } else if (splitKeys != null && regionCount != splitKeys.length + 1) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Table " + tableName + " expected to have " + (splitKeys.length + 1)
+                + " regions, but only " + regionCount + " available");
+          }
+          return false;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Table " + tableName + " should be available");
           }
           return true;
         }
-      };
-      MetaScanner.metaScan(conf, this, visitor, tableName);
-      // +1 needs to be added so that the empty start row is also taken into account
-      return available.get() && (regionCount.get() == splitKeys.length + 1);
+      } catch (TableNotFoundException tnfe) {
+        LOG.warn("Table " + tableName + " not enabled, it is not exists");
+        return false;
+      }
     }
 
     @Override
@@ -1010,7 +1018,7 @@ class ConnectionManager {
     @Override
     public List<HRegionLocation> locateRegions(final TableName tableName)
     throws IOException {
-      return locateRegions (tableName, false, true);
+      return locateRegions(tableName, false, true);
     }
 
     @Override
@@ -1022,8 +1030,7 @@ class ConnectionManager {
     @Override
     public List<HRegionLocation> locateRegions(final TableName tableName,
         final boolean useCache, final boolean offlined) throws IOException {
-      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, this,
-          tableName, offlined);
+      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(this, tableName);
       final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
       for (HRegionInfo regionInfo : regions.keySet()) {
         RegionLocations list = locateRegion(tableName, regionInfo.getStartKey(), useCache, true);
@@ -1061,21 +1068,23 @@ class ConnectionManager {
     @Override
     public HRegionLocation relocateRegion(final TableName tableName,
         final byte [] row) throws IOException{
-      return relocateRegion(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+      RegionLocations locations =  relocateRegion(tableName, row,
+        RegionReplicaUtil.DEFAULT_REPLICA_ID);
+      return locations == null ? null :
+        locations.getRegionLocation(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     }
 
     @Override
-    public HRegionLocation relocateRegion(final TableName tableName,
+    public RegionLocations relocateRegion(final TableName tableName,
         final byte [] row, int replicaId) throws IOException{
       // Since this is an explicit request not to use any caching, finding
       // disabled tables should not be desirable.  This will ensure that an exception is thrown when
       // the first time a disabled table is interacted with.
-      if (isTableDisabled(tableName)) {
+      if (!tableName.equals(TableName.META_TABLE_NAME) && isTableDisabled(tableName)) {
         throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
       }
 
-      RegionLocations locations = locateRegion(tableName, row, false, true, replicaId);
-      return locations == null ? null : locations.getRegionLocation(replicaId);
+      return locateRegion(tableName, row, false, true, replicaId);
     }
 
     @Override
@@ -1117,7 +1126,7 @@ class ConnectionManager {
       RegionLocations locations = null;
       if (useCache) {
         locations = getCachedLocation(tableName, metaCacheKey);
-        if (locations != null) {
+        if (locations != null && locations.getRegionLocation(replicaId) != null) {
           return locations;
         }
       }
@@ -1128,7 +1137,7 @@ class ConnectionManager {
         // same query while we were waiting on the lock.
         if (useCache) {
           locations = getCachedLocation(tableName, metaCacheKey);
-          if (locations != null) {
+          if (locations != null && locations.getRegionLocation(replicaId) != null) {
             return locations;
           }
         }
@@ -1168,6 +1177,9 @@ class ConnectionManager {
       s.setStartRow(metaKey);
       s.setSmall(true);
       s.setCaching(1);
+      if (this.useMetaReplicas) {
+        s.setConsistency(Consistency.TIMELINE);
+      }
 
       int localNumRetries = (retry ? numTries : 1);
 
@@ -1363,9 +1375,8 @@ class ConnectionManager {
       HConnection connection;
       MasterService.BlockingInterface stub;
       int userCount;
-      long keepAliveUntil = Long.MAX_VALUE;
 
-      MasterServiceState (final HConnection connection) {
+      MasterServiceState(final HConnection connection) {
         super();
         this.connection = connection;
       }
@@ -1464,18 +1475,14 @@ class ConnectionManager {
        * @return A stub to do <code>intf</code> against the master
        * @throws MasterNotRunningException
        */
-      @edu.umd.cs.findbugs.annotations.SuppressWarnings (value="SWL_SLEEP_WITH_LOCK_HELD")
-      Object makeStub() throws MasterNotRunningException {
+      Object makeStub() throws IOException {
         // The lock must be at the beginning to prevent multiple master creations
         //  (and leaks) in a multithread context
         synchronized (masterAndZKLock) {
           Exception exceptionCaught = null;
-          Object stub = null;
-          int tries = 0;
-          while (!closed && stub == null) {
-            tries++;
+          if (!closed) {
             try {
-              stub = makeStubNoRetries();
+              return makeStubNoRetries();
             } catch (IOException e) {
               exceptionCaught = e;
             } catch (KeeperException e) {
@@ -1484,34 +1491,10 @@ class ConnectionManager {
               exceptionCaught = e;
             }
 
-            if (exceptionCaught != null)
-              // It failed. If it's not the last try, we're going to wait a little
-              if (tries < numTries && !ExceptionUtil.isInterrupt(exceptionCaught)) {
-                // tries at this point is 1 or more; decrement to start from 0.
-                long pauseTime = ConnectionUtils.getPauseTime(pause, tries - 1);
-                LOG.info("getMaster attempt " + tries + " of " + numTries +
-                    " failed; retrying after sleep of " + pauseTime + ", exception=" +
-                  exceptionCaught);
-
-                try {
-                  Thread.sleep(pauseTime);
-                } catch (InterruptedException e) {
-                  throw new MasterNotRunningException(
-                      "Thread was interrupted while trying to connect to master.", e);
-                }
-              } else {
-                // Enough tries, we stop now
-                LOG.info("getMaster attempt " + tries + " of " + numTries +
-                    " failed; no more retrying.", exceptionCaught);
-                throw new MasterNotRunningException(exceptionCaught);
-              }
+            throw new MasterNotRunningException(exceptionCaught);
+          } else {
+            throw new DoNotRetryIOException("Connection was closed while trying to get master");
           }
-
-          if (stub == null) {
-            // implies this.closed true
-            throw new MasterNotRunningException("Connection was closed while trying to get master");
-          }
-          return stub;
         }
       }
     }
@@ -1527,8 +1510,7 @@ class ConnectionManager {
       }
 
       @Override
-      @edu.umd.cs.findbugs.annotations.SuppressWarnings("SWL_SLEEP_WITH_LOCK_HELD")
-      MasterService.BlockingInterface makeStub() throws MasterNotRunningException {
+      MasterService.BlockingInterface makeStub() throws IOException {
         return (MasterService.BlockingInterface)super.makeStub();
       }
 
@@ -1633,73 +1615,8 @@ class ConnectionManager {
       if (zkw == null){
         return;
       }
-      if (keepAliveZookeeperUserCount.addAndGet(-1) <= 0 ){
+      if (keepAliveZookeeperUserCount.addAndGet(-1) <= 0) {
         keepZooKeeperWatcherAliveUntil = System.currentTimeMillis() + keepAlive;
-      }
-    }
-
-    /**
-     * Creates a Chore thread to check the connections to master & zookeeper
-     *  and close them when they reach their closing time (
-     *  {@link MasterServiceState#keepAliveUntil} and
-     *  {@link #keepZooKeeperWatcherAliveUntil}). Keep alive time is
-     *  managed by the release functions and the variable {@link #keepAlive}
-     */
-    private static class DelayedClosing extends Chore implements Stoppable {
-      private HConnectionImplementation hci;
-      Stoppable stoppable;
-
-      private DelayedClosing(
-        HConnectionImplementation hci, Stoppable stoppable){
-        super(
-          "ZooKeeperWatcher and Master delayed closing for connection "+hci,
-          60*1000, // We check every minutes
-          stoppable);
-        this.hci = hci;
-        this.stoppable = stoppable;
-      }
-
-      static DelayedClosing createAndStart(HConnectionImplementation hci){
-        Stoppable stoppable = new Stoppable() {
-              private volatile boolean isStopped = false;
-              @Override public void stop(String why) { isStopped = true;}
-              @Override public boolean isStopped() {return isStopped;}
-            };
-
-        return new DelayedClosing(hci, stoppable);
-      }
-
-      protected void closeMasterProtocol(MasterServiceState protocolState) {
-        if (System.currentTimeMillis() > protocolState.keepAliveUntil) {
-          hci.closeMasterService(protocolState);
-          protocolState.keepAliveUntil = Long.MAX_VALUE;
-        }
-      }
-
-      @Override
-      protected void chore() {
-        synchronized (hci.masterAndZKLock) {
-          if (hci.canCloseZKW) {
-            if (System.currentTimeMillis() >
-              hci.keepZooKeeperWatcherAliveUntil) {
-
-              hci.closeZooKeeperWatcher();
-              hci.keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
-            }
-          }
-          closeMasterProtocol(hci.masterServiceState);
-          closeMasterProtocol(hci.masterServiceState);
-        }
-      }
-
-      @Override
-      public void stop(String why) {
-        stoppable.stop(why);
-      }
-
-      @Override
-      public boolean isStopped() {
-        return stoppable.isStopped();
       }
     }
 
@@ -1725,7 +1642,6 @@ class ConnectionManager {
 
     private void resetMasterServiceState(final MasterServiceState mss) {
       mss.userCount++;
-      mss.keepAliveUntil = Long.MAX_VALUE;
     }
 
     @Override
@@ -1734,7 +1650,14 @@ class ConnectionManager {
       synchronized (masterAndZKLock) {
         if (!isKeepAliveMasterConnectedAndRunning(this.masterServiceState)) {
           MasterServiceStubMaker stubMaker = new MasterServiceStubMaker();
-          this.masterServiceState.stub = stubMaker.makeStub();
+          try {
+            this.masterServiceState.stub = stubMaker.makeStub();
+          } catch (MasterNotRunningException ex) {
+            throw ex;
+          } catch (IOException e) {
+            // rethrow as MasterNotRunningException so that we can keep the method sig
+            throw new MasterNotRunningException(e);
+          }
         }
         resetMasterServiceState(this.masterServiceState);
       }
@@ -1993,6 +1916,13 @@ class ConnectionManager {
         }
 
         @Override
+        public GetTableStateResponse getTableState(
+                RpcController controller, GetTableStateRequest request)
+                throws ServiceException {
+          return stub.getTableState(controller, request);
+        }
+
+        @Override
         public void close() {
           release(this.mss);
         }
@@ -2023,6 +1953,27 @@ class ConnectionManager {
             RpcController controller, GetClusterStatusRequest request)
             throws ServiceException {
           return stub.getClusterStatus(controller, request);
+        }
+
+        @Override
+        public SetQuotaResponse setQuota(
+            RpcController controller, SetQuotaRequest request)
+            throws ServiceException {
+          return stub.setQuota(controller, request);
+        }
+
+        @Override
+        public MajorCompactionTimestampResponse getLastMajorCompactionTimestamp(
+            RpcController controller, MajorCompactionTimestampRequest request)
+            throws ServiceException {
+          return stub.getLastMajorCompactionTimestamp(controller, request);
+        }
+
+        @Override
+        public MajorCompactionTimestampResponse getLastMajorCompactionTimestampForRegion(
+            RpcController controller, MajorCompactionTimestampForRegionRequest request)
+            throws ServiceException {
+          return stub.getLastMajorCompactionTimestampForRegion(controller, request);
         }
       };
     }
@@ -2055,9 +2006,6 @@ class ConnectionManager {
       if (mss.getStub() == null) return;
       synchronized (masterAndZKLock) {
         --mss.userCount;
-        if (mss.userCount <= 0) {
-          mss.keepAliveUntil = System.currentTimeMillis() + keepAlive;
-        }
       }
     }
 
@@ -2095,7 +2043,7 @@ class ConnectionManager {
         final Object exception, final HRegionLocation source) {
       assert source != null;
       updateCachedLocations(tableName, source.getRegionInfo().getRegionName()
-        , rowkey, exception, source.getServerName());
+          , rowkey, exception, source.getServerName());
     }
 
     /**
@@ -2172,6 +2120,9 @@ class ConnectionManager {
       updateCachedLocations(TableName.valueOf(tableName), rowkey, exception, source);
     }
 
+    /**
+     * @deprecated since 0.96 - Use {@link HTableInterface#batch} instead
+     */
     @Override
     @Deprecated
     public void processBatch(List<? extends Row> list,
@@ -2188,6 +2139,9 @@ class ConnectionManager {
       processBatchCallback(list, tableName, pool, results, null);
     }
 
+    /**
+     * @deprecated Unsupported API
+     */
     @Override
     @Deprecated
     public void processBatch(List<? extends Row> list,
@@ -2222,6 +2176,9 @@ class ConnectionManager {
       }
     }
 
+    /**
+     * @deprecated Unsupported API
+     */
     @Override
     @Deprecated
     public <R> void processBatchCallback(
@@ -2238,12 +2195,23 @@ class ConnectionManager {
     protected AsyncProcess createAsyncProcess(Configuration conf) {
       // No default pool available.
       return new AsyncProcess(this, conf, this.batchPool,
-          RpcRetryingCallerFactory.instantiate(conf), false, RpcControllerFactory.instantiate(conf));
+          RpcRetryingCallerFactory.instantiate(conf, this.getStatisticsTracker()), false,
+          RpcControllerFactory.instantiate(conf));
     }
 
     @Override
     public AsyncProcess getAsyncProcess() {
       return asyncProcess;
+    }
+
+    @Override
+    public ServerStatisticTracker getStatisticsTracker() {
+      return this.stats;
+    }
+
+    @Override
+    public ClientBackoffPolicy getBackoffPolicy() {
+      return this.backoffPolicy;
     }
 
     /*
@@ -2255,23 +2223,35 @@ class ConnectionManager {
       return metaCache.getNumberOfCachedRegionLocations(tableName);
     }
 
+    /**
+     * @deprecated always return false since 0.99
+     */
     @Override
     @Deprecated
     public void setRegionCachePrefetch(final TableName tableName, final boolean enable) {
     }
 
+    /**
+     * @deprecated always return false since 0.99
+     */
     @Override
     @Deprecated
     public void setRegionCachePrefetch(final byte[] tableName,
         final boolean enable) {
     }
 
+    /**
+     * @deprecated always return false since 0.99
+     */
     @Override
     @Deprecated
     public boolean getRegionCachePrefetch(TableName tableName) {
       return false;
     }
 
+    /**
+     * @deprecated always return false since 0.99
+     */
     @Override
     @Deprecated
     public boolean getRegionCachePrefetch(byte[] tableName) {
@@ -2346,7 +2326,6 @@ class ConnectionManager {
       if (this.closed) {
         return;
       }
-      delayedClosing.stop("Closing connection");
       closeMaster();
       shutdownBatchPool();
       this.closed = true;
@@ -2356,7 +2335,7 @@ class ConnectionManager {
         clusterStatusListener.close();
       }
       if (rpcClient != null) {
-        rpcClient.stop();
+        rpcClient.close();
       }
     }
 
@@ -2392,6 +2371,10 @@ class ConnectionManager {
       close();
     }
 
+    /**
+     * @deprecated Use {@link Admin#listTables()} instead
+     */
+    @Deprecated
     @Override
     public HTableDescriptor[] listTables() throws IOException {
       MasterKeepAliveConnection master = getKeepAliveMasterService();
@@ -2406,16 +2389,24 @@ class ConnectionManager {
       }
     }
 
+    /**
+     * @deprecated Use {@link Admin#listTableNames()} instead
+     */
+    @Deprecated
     @Override
     public String[] getTableNames() throws IOException {
       TableName[] tableNames = listTableNames();
-      String result[] = new String[tableNames.length];
+      String[] result = new String[tableNames.length];
       for (int i = 0; i < tableNames.length; i++) {
         result[i] = tableNames[i].getNameAsString();
       }
       return result;
     }
 
+    /**
+     * @deprecated Use {@link Admin#listTableNames()} instead
+     */
+    @Deprecated
     @Override
     public TableName[] listTableNames() throws IOException {
       MasterKeepAliveConnection master = getKeepAliveMasterService();
@@ -2430,6 +2421,10 @@ class ConnectionManager {
       }
     }
 
+    /**
+     * @deprecated Use {@link Admin#getTableDescriptorsByTableName(List)} instead
+     */
+    @Deprecated
     @Override
     public HTableDescriptor[] getHTableDescriptorsByTableName(
         List<TableName> tableNames) throws IOException {
@@ -2446,6 +2441,10 @@ class ConnectionManager {
       }
     }
 
+    /**
+     * @deprecated Use {@link Admin#getTableDescriptorsByTableName(List)} instead
+     */
+    @Deprecated
     @Override
     public HTableDescriptor[] getHTableDescriptors(
         List<String> names) throws IOException {
@@ -2465,22 +2464,20 @@ class ConnectionManager {
     /**
      * Connects to the master to get the table descriptor.
      * @param tableName table name
-     * @return
      * @throws IOException if the connection to master fails or if the table
      *  is not found.
+     * @deprecated Use {@link Admin#getTableDescriptor(TableName)} instead
      */
+    @Deprecated
     @Override
     public HTableDescriptor getHTableDescriptor(final TableName tableName)
     throws IOException {
       if (tableName == null) return null;
-      if (tableName.equals(TableName.META_TABLE_NAME)) {
-        return HTableDescriptor.META_TABLEDESC;
-      }
       MasterKeepAliveConnection master = getKeepAliveMasterService();
       GetTableDescriptorsResponse htds;
       try {
         GetTableDescriptorsRequest req =
-          RequestConverter.buildGetTableDescriptorsRequest(tableName);
+            RequestConverter.buildGetTableDescriptorsRequest(tableName);
         htds = master.getTableDescriptors(null, req);
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
@@ -2493,10 +2490,34 @@ class ConnectionManager {
       throw new TableNotFoundException(tableName.getNameAsString());
     }
 
+    /**
+     * @deprecated Use {@link Admin#getTableDescriptor(TableName)} instead
+     */
+    @Deprecated
     @Override
     public HTableDescriptor getHTableDescriptor(final byte[] tableName)
     throws IOException {
       return getHTableDescriptor(TableName.valueOf(tableName));
+    }
+
+    @Override
+    public TableState getTableState(TableName tableName) throws IOException {
+      ClusterConnection conn = getConnectionInternal(getConfiguration());
+      TableState tableState = MetaTableAccessor.getTableState(conn, tableName);
+      if (tableState == null)
+        throw new TableNotFoundException(tableName);
+      return tableState;
+    }
+
+    @Override
+    public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
+      return RpcRetryingCallerFactory
+          .instantiate(conf, this.interceptor, this.getStatisticsTracker());
+    }
+
+    @Override
+    public boolean isManaged() {
+      return managed;
     }
   }
 
@@ -2537,7 +2558,7 @@ class ConnectionManager {
       long result;
       ServerErrors errorStats = errorsByServer.get(server);
       if (errorStats != null) {
-        result = ConnectionUtils.getPauseTime(basePause, errorStats.retries.get());
+        result = ConnectionUtils.getPauseTime(basePause, errorStats.getCount());
       } else {
         result = 0; // yes, if the server is not in our list we don't wait before retrying.
       }
@@ -2569,7 +2590,11 @@ class ConnectionManager {
      * The record of errors for a server.
      */
     private static class ServerErrors {
-      public final AtomicInteger retries = new AtomicInteger(0);
+      private final AtomicInteger retries = new AtomicInteger(0);
+
+      public int getCount() {
+        return retries.get();
+      }
 
       public void addError() {
         retries.incrementAndGet();

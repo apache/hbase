@@ -23,19 +23,16 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
-import java.util.NavigableSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -52,14 +49,14 @@ import org.apache.zookeeper.KeeperException;
 public class RegionServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(RegionServerTracker.class);
   private NavigableMap<ServerName, RegionServerInfo> regionServers = 
-		  new TreeMap<ServerName, RegionServerInfo>();
+      new TreeMap<ServerName, RegionServerInfo>();
   private ServerManager serverManager;
-  private Abortable abortable;
+  private Server server;
 
   public RegionServerTracker(ZooKeeperWatcher watcher,
-      Abortable abortable, ServerManager serverManager) {
+      Server server, ServerManager serverManager) {
     super(watcher);
-    this.abortable = abortable;
+    this.server = server;
     this.serverManager = serverManager;
   }
 
@@ -88,12 +85,12 @@ public class RegionServerTracker extends ZooKeeperListener {
           try {
             String nodePath = ZKUtil.joinZNode(watcher.rsZNode, n);
             byte[] data = ZKUtil.getData(watcher, nodePath);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("RS node: " + nodePath + " data: " + Bytes.toString(data));
-            }
             if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
               int magicLen = ProtobufUtil.lengthOfPBMagic();
               rsInfoBuilder.mergeFrom(data, magicLen, data.length - magicLen);
+            }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Added tracking of RS " + nodePath);
             }
           } catch (KeeperException e) {
             LOG.warn("Get Rs info port from ephemeral node", e);
@@ -133,15 +130,16 @@ public class RegionServerTracker extends ZooKeeperListener {
 
   @Override
   public void nodeChildrenChanged(String path) {
-    if (path.equals(watcher.rsZNode)) {
+    if (path.equals(watcher.rsZNode)
+        && !server.isAborted() && !server.isStopped()) {
       try {
         List<String> servers =
           ZKUtil.listChildrenAndWatchThem(watcher, watcher.rsZNode);
         add(servers);
       } catch (IOException e) {
-        abortable.abort("Unexpected zk exception getting RS nodes", e);
+        server.abort("Unexpected zk exception getting RS nodes", e);
       } catch (KeeperException e) {
-        abortable.abort("Unexpected zk exception getting RS nodes", e);
+        server.abort("Unexpected zk exception getting RS nodes", e);
       }
     }
   }

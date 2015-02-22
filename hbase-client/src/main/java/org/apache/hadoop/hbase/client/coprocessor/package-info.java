@@ -50,9 +50,9 @@ must:
  method should return a reference to the Endpoint's protocol buffer Service instance.
 </ul>
 Clients may then call the defined service methods on coprocessor instances via
-the {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])},
-{@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}, and
-{@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
+the {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])},
+{@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}, and
+{@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
 methods.
 </p>
 
@@ -65,21 +65,21 @@ to identify which regions should be used for the method invocations.  Clients
 can call coprocessor Service methods against either:
 <ul>
  <li><strong>a single region</strong> - calling
-   {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])}
+   {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}
    with a single row key.  This returns a {@link org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel}
    instance which communicates with the region containing the given row key (even if the
    row does not exist) as the RPC endpoint.  Clients can then use the {@code CoprocessorRpcChannel}
    instance in creating a new Service stub to call RPC methods on the region's coprocessor.</li>
  <li><strong>a range of regions</strong> - calling
-   {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
-   or {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
+   {@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
+   or {@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call, org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
    with a starting row key and an ending row key.  All regions in the table
    from the region containing the start row key to the region containing the end
    row key (inclusive), will we used as the RPC endpoints.</li>
 </ul>
 </p>
 
-<p><em>Note that the row keys passed as parameters to the <code>HTable</code>
+<p><em>Note that the row keys passed as parameters to the <code>Table</code>
 methods are not passed directly to the coprocessor Service implementations.
 They are only used to identify the regions for endpoints of the remote calls.
 </em></p>
@@ -160,7 +160,8 @@ use:
 
 <div style="background-color: #cccccc; padding: 2px">
 <blockquote><pre>
-HTable table = new HTable(conf, "mytable");
+Connection connection = ConnectionFactory.createConnection(conf);
+Table table = connection.getTable(TableName.valueOf("mytable"));
 final ExampleProtos.CountRequest request = ExampleProtos.CountRequest.getDefaultInstance();
 Map<byte[],Long> results = table.coprocessorService(
     ExampleProtos.RowCountService.class, // the protocol interface we're invoking
@@ -186,7 +187,7 @@ of <code>mytable</code>, keyed by the region name.
 By implementing {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call}
 as an anonymous class, we can invoke <code>RowCountService</code> methods
 directly against the {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
-method's argument.  Calling {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
+method's argument.  Calling {@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
 will take care of invoking <code>Batch.Call.call()</code> against our anonymous class
 with the <code>RowCountService</code> instance for each table region.
 </p>
@@ -199,7 +200,8 @@ like to combine row count and key-value count for each region:
 
 <div style="background-color: #cccccc; padding: 2px">
 <blockquote><pre>
-HTable table = new HTable(conf, "mytable");
+Connection connection = ConnectionFactory.createConnection(conf);
+Table table = connection.getTable(TableName.valueOf("mytable"));
 // combine row count and kv count for region
 final ExampleProtos.CountRequest request = ExampleProtos.CountRequest.getDefaultInstance();
 Map<byte[],Long> results = table.coprocessorService(

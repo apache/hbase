@@ -24,16 +24,20 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.UUID;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -415,5 +419,50 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
       }
     }
     return filteredList;
+  }
+
+  @Override
+  public Put setAttribute(String name, byte[] value) {
+    return (Put) super.setAttribute(name, value);
+  }
+
+  @Override
+  public Put setId(String id) {
+    return (Put) super.setId(id);
+  }
+
+  @Override
+  public Put setDurability(Durability d) {
+    return (Put) super.setDurability(d);
+  }
+
+  @Override
+  public Put setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
+    return (Put) super.setFamilyCellMap(map);
+  }
+
+  @Override
+  public Put setClusterIds(List<UUID> clusterIds) {
+    return (Put) super.setClusterIds(clusterIds);
+  }
+
+  @Override
+  public Put setCellVisibility(CellVisibility expression) {
+    return (Put) super.setCellVisibility(expression);
+  }
+
+  @Override
+  public Put setACL(String user, Permission perms) {
+    return (Put) super.setACL(user, perms);
+  }
+
+  @Override
+  public Put setACL(Map<String, Permission> perms) {
+    return (Put) super.setACL(perms);
+  }
+
+  @Override
+  public Put setTTL(long ttl) {
+    return (Put) super.setTTL(ttl);
   }
 }

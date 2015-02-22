@@ -37,8 +37,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -46,14 +47,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -63,7 +60,13 @@ import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -77,7 +80,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Sets;
 
-@Category(MediumTests.class)
+@Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationSourceManager {
 
   private static final Log LOG =
@@ -110,12 +113,10 @@ public class TestReplicationSourceManager {
 
   private static FileSystem fs;
 
-  private static String logName;
-
   private static Path oldLogDir;
 
   private static Path logDir;
-  
+
   private static CountDownLatch latch;
 
   private static List<String> files = new ArrayList<String>();
@@ -128,6 +129,8 @@ public class TestReplicationSourceManager {
         ReplicationSourceDummy.class.getCanonicalName());
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY,
         HConstants.REPLICATION_ENABLE_DEFAULT);
+    conf.setLong("replication.sleep.before.failover", 2000);
+    conf.setInt("replication.source.maxretriesmultiplier", 10);
     utility = new HBaseTestingUtility(conf);
     utility.startMiniZKCluster();
 
@@ -144,6 +147,7 @@ public class TestReplicationSourceManager {
     ZKUtil.setData(zkw, "/hbase/replication/state", ReplicationStateZKBase.ENABLED_ZNODE_BYTES);
 
     ZKClusterId.setClusterId(zkw, new ClusterId());
+    FSUtils.setRootDir(utility.getConfiguration(), utility.getDataTestDir());
     fs = FileSystem.get(conf);
     oldLogDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
@@ -151,8 +155,6 @@ public class TestReplicationSourceManager {
         HConstants.HREGION_LOGDIR_NAME);
     replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
     manager = replication.getReplicationManager();
-    
-    logName = HConstants.HREGION_LOGDIR_NAME;
 
     manager.addSource(slaveId);
 
@@ -195,8 +197,9 @@ public class TestReplicationSourceManager {
 
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     listeners.add(replication);
-    HLog hlog = HLogFactory.createHLog(fs, utility.getDataTestDir(), logName,
-        conf, listeners, URLEncoder.encode("regionserver:60020", "UTF8"));
+    final WALFactory wals = new WALFactory(utility.getConfiguration(), listeners,
+        URLEncoder.encode("regionserver:60020", "UTF8"));
+    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes());
     final AtomicLong sequenceId = new AtomicLong(1);
     manager.init();
     HTableDescriptor htd = new HTableDescriptor();
@@ -204,12 +207,12 @@ public class TestReplicationSourceManager {
     // Testing normal log rolling every 20
     for(long i = 1; i < 101; i++) {
       if(i > 1 && i % 20 == 0) {
-        hlog.rollWriter();
+        wal.rollWriter();
       }
       LOG.info(i);
-      HLogKey key = new HLogKey(hri.getRegionName(), test, seq++,
-          System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
-      hlog.append(hri, test, edit, System.currentTimeMillis(), htd, sequenceId);
+      final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), test,
+          System.currentTimeMillis()), edit, sequenceId, true ,null);
+      wal.sync(txid);
     }
 
     // Simulate a rapid insert that's followed
@@ -220,24 +223,28 @@ public class TestReplicationSourceManager {
     LOG.info(baseline + " and " + time);
 
     for (int i = 0; i < 3; i++) {
-      hlog.append(hri, test, edit, System.currentTimeMillis(), htd, sequenceId);
+      wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), test,
+          System.currentTimeMillis()), edit, sequenceId, true, null);
     }
+    wal.sync();
 
-    assertEquals(6, manager.getHLogs().get(slaveId).size());
+    assertEquals(6, manager.getWALs().get(slaveId).size());
 
-    hlog.rollWriter();
+    wal.rollWriter();
 
     manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
         "1", 0, false, false);
 
-    hlog.append(hri, test, edit, System.currentTimeMillis(), htd, sequenceId);
+    wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), test,
+        System.currentTimeMillis()), edit, sequenceId, true, null);
+    wal.sync();
 
-    assertEquals(1, manager.getHLogs().size());
+    assertEquals(1, manager.getWALs().size());
 
 
-    // TODO Need a case with only 2 HLogs and we only want to delete the first one
+    // TODO Need a case with only 2 WALs and we only want to delete the first one
   }
-  
+
   @Test
   public void testClaimQueues() throws Exception {
     LOG.debug("testNodeFailoverWorkerCopyQueuesFromRSUsingMulti");
@@ -280,7 +287,7 @@ public class TestReplicationSourceManager {
     assertEquals(1, populatedMap);
     server.abort("", null);
   }
-  
+
   @Test
   public void testCleanupFailoverQueues() throws Exception {
     final Server server = new DummyServer("hostname1.example.org");
@@ -307,12 +314,12 @@ public class TestReplicationSourceManager {
             new Long(1), new Long(2)));
     w1.start();
     w1.join(5000);
-    assertEquals(1, manager.getHlogsByIdRecoveredQueues().size());
+    assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
-    assertEquals(files, manager.getHlogsByIdRecoveredQueues().get(id));
+    assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id));
     manager.cleanOldLogs("log2", id, true);
     // log1 should be deleted
-    assertEquals(Sets.newHashSet("log2"), manager.getHlogsByIdRecoveredQueues().get(id));
+    assertEquals(Sets.newHashSet("log2"), manager.getWalsByIdRecoveredQueues().get(id));
   }
 
   @Test
@@ -360,8 +367,8 @@ public class TestReplicationSourceManager {
 
     server.abort("", null);
   }
-  
-  
+
+
   static class DummyNodeFailoverWorker extends Thread {
     private SortedMap<String, SortedSet<String>> logZnodesMap;
     Server server;
@@ -410,7 +417,7 @@ public class TestReplicationSourceManager {
       return 0;
     }
   }
-  
+
   static class DummyServer implements Server {
     String hostname;
 
@@ -437,7 +444,7 @@ public class TestReplicationSourceManager {
       return null;
     }
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -470,7 +477,10 @@ public class TestReplicationSourceManager {
     public boolean isStopped() {
       return false; // To change body of implemented methods use File | Settings | File Templates.
     }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
+    }
   }
-
 }
-

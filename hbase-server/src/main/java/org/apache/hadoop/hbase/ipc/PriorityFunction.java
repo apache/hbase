@@ -18,11 +18,16 @@
 package org.apache.hadoop.hbase.ipc;
 
 import com.google.protobuf.Message;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 
 /**
  * Function to figure priority of incoming request.
  */
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceStability.Evolving
 public interface PriorityFunction {
   /**
    * Returns the 'priority type' of the specified request.

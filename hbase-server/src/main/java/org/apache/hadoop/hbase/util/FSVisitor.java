@@ -23,13 +23,13 @@ import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 
 /**
  * Utility methods for interacting with the hbase.root file system.
@@ -73,7 +73,9 @@ public final class FSVisitor {
       final RegionVisitor visitor) throws IOException {
     FileStatus[] regions = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
-      LOG.info("No regions under directory:" + tableDir);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("No regions under directory:" + tableDir);
+      }
       return;
     }
 
@@ -94,7 +96,9 @@ public final class FSVisitor {
       final StoreFileVisitor visitor) throws IOException {
     FileStatus[] regions = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
-      LOG.info("No regions under directory:" + tableDir);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("No regions under directory:" + tableDir);
+      }
       return;
     }
 
@@ -115,7 +119,9 @@ public final class FSVisitor {
       final StoreFileVisitor visitor) throws IOException {
     FileStatus[] families = FSUtils.listStatus(fs, regionDir, new FSUtils.FamilyDirFilter(fs));
     if (families == null) {
-      LOG.info("No families under region directory:" + regionDir);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("No families under region directory:" + regionDir);
+      }
       return;
     }
 
@@ -127,7 +133,9 @@ public final class FSVisitor {
       // get all the storeFiles in the family
       FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir, fileFilter);
       if (storeFiles == null) {
-        LOG.debug("No hfiles found for family: " + familyDir + ", skipping.");
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("No hfiles found for family: " + familyDir + ", skipping.");
+        }
         continue;
       }
 
@@ -150,7 +158,9 @@ public final class FSVisitor {
       final FSVisitor.RecoveredEditsVisitor visitor) throws IOException {
     FileStatus[] regions = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
-      LOG.info("No recoveredEdits regions under directory:" + tableDir);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("No recoveredEdits regions under directory:" + tableDir);
+      }
       return;
     }
 
@@ -169,7 +179,7 @@ public final class FSVisitor {
    */
   public static void visitRegionRecoveredEdits(final FileSystem fs, final Path regionDir,
       final FSVisitor.RecoveredEditsVisitor visitor) throws IOException {
-    NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regionDir);
+    NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(fs, regionDir);
     if (files == null || files.size() == 0) return;
 
     for (Path source: files) {
@@ -194,21 +204,25 @@ public final class FSVisitor {
     Path logsDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
     FileStatus[] logServerDirs = FSUtils.listStatus(fs, logsDir);
     if (logServerDirs == null) {
-      LOG.info("No logs under directory:" + logsDir);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("No logs under directory:" + logsDir);
+      }
       return;
     }
 
     for (FileStatus serverLogs: logServerDirs) {
       String serverName = serverLogs.getPath().getName();
 
-      FileStatus[] hlogs = FSUtils.listStatus(fs, serverLogs.getPath());
-      if (hlogs == null) {
-        LOG.debug("No hfiles found for server: " + serverName + ", skipping.");
+      FileStatus[] wals = FSUtils.listStatus(fs, serverLogs.getPath());
+      if (wals == null) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("No wals found for server: " + serverName + ", skipping.");
+        }
         continue;
       }
 
-      for (FileStatus hlogRef: hlogs) {
-        visitor.logFile(serverName, hlogRef.getPath().getName());
+      for (FileStatus walRef: wals) {
+        visitor.logFile(serverName, walRef.getPath().getName());
       }
     }
   }

@@ -21,10 +21,11 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.nio.ByteBuffer;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestCachedBlockQueue extends TestCase {
 
   public void testQueue() throws Exception {

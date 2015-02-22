@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Addressing;
 
 /**
@@ -104,7 +104,8 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   }
 
   /**
-   * @return String made of hostname and port formatted as per {@link Addressing#createHostAndPortStr(String, int)}
+   * @return String made of hostname and port formatted as
+   * per {@link Addressing#createHostAndPortStr(String, int)}
    */
   public String getHostnamePort() {
     return Addressing.createHostAndPortStr(this.getHostname(), this.getPort());

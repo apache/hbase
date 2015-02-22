@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Pools PrefixTreeArraySearcher objects. Each Searcher can consist of hundreds or thousands of

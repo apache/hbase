@@ -32,7 +32,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -51,7 +52,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Test the optimization that does not scan files where all key ranges are excluded.
  */
 @RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestScannerSelectionUsingKeyRange {
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static TableName TABLE = TableName.valueOf("myTable");
@@ -98,7 +99,8 @@ public class TestScannerSelectionUsingKeyRange {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(TABLE);
-    HRegion region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), conf, htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
+        htd);
 
     for (int iFile = 0; iFile < NUM_FILES; ++iFile) {
       for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
@@ -125,6 +127,6 @@ public class TestScannerSelectionUsingKeyRange {
     assertEquals(0, results.size());
     Set<String> accessedFiles = cache.getCachedFileNamesForTest();
     assertEquals(expectedCount, accessedFiles.size());
-    region.close();
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 }

@@ -23,13 +23,10 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -46,7 +43,7 @@ import org.junit.rules.TestName;
  * Verify that the HColumnDescriptor version is set correctly by default, hbase-site.xml, and user
  * input
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestHColumnDescriptorDefaultVersions {
 
   @Rule
@@ -151,8 +148,8 @@ public class TestHColumnDescriptorDefaultVersions {
     // Verify descriptor from HDFS
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    htd = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
-    hcds = htd.getColumnFamilies();
+    TableDescriptor td = FSTableDescriptors.getTableDescriptorFromFs(mfs.getFileSystem(), tableDir);
+    hcds = td.getHTableDescriptor().getColumnFamilies();
     verifyHColumnDescriptor(expected, hcds, tableName, families);
   }
 

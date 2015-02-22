@@ -27,13 +27,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -47,7 +49,7 @@ import com.google.common.collect.Lists;
 
 /**
  */
-@Category(MediumTests.class)
+@Category({FilterTests.class, MediumTests.class})
 public class TestFuzzyRowAndColumnRangeFilter {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final Log LOG = LogFactory.getLog(this.getClass());
@@ -88,7 +90,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
   public void Test() throws Exception {
     String cf = "f";
     String table = "TestFuzzyAndColumnRangeFilterClient";
-    HTable ht = TEST_UTIL.createTable(Bytes.toBytes(table),
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(table),
             Bytes.toBytes(cf), Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)
@@ -128,7 +130,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
     runTest(ht, 1, 8);
   }
 
-  private void runTest(HTable hTable, int cqStart, int expectedSize) throws IOException {
+  private void runTest(Table hTable, int cqStart, int expectedSize) throws IOException {
     // [0, 2, ?, ?, ?, ?, 0, 0, 0, 1]
     byte[] fuzzyKey = new byte[10];
     ByteBuffer buf = ByteBuffer.wrap(fuzzyKey);
@@ -150,7 +152,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
     runScanner(hTable, expectedSize, columnRangeFilter, fuzzyRowFilter);
   }
 
-  private void runScanner(HTable hTable, int expectedSize, Filter... filters) throws IOException {
+  private void runScanner(Table hTable, int expectedSize, Filter... filters) throws IOException {
     String cf = "f";
     Scan scan = new Scan();
     scan.addFamily(cf.getBytes());

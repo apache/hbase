@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -34,12 +35,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -47,9 +46,11 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -58,7 +59,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationSmallTests extends TestReplicationBase {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationSmallTests.class);
@@ -68,12 +69,11 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    */
   @Before
   public void setUp() throws Exception {
-    htable1.setAutoFlush(true, true);
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
     for ( JVMClusterUtil.RegionServerThread r :
         utility1.getHBaseCluster().getRegionServerThreads()) {
-      r.getRegionServer().getWAL().rollWriter();
+      utility1.getHBaseAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     utility1.deleteTableData(tableName);
     // truncating the table will send one Delete per row to the slave cluster
@@ -114,7 +114,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final byte[] v1 = Bytes.toBytes("v1");
     final byte[] v2 = Bytes.toBytes("v2");
     final byte[] v3 = Bytes.toBytes("v3");
-    htable1 = new HTable(conf1, tableName);
+    htable1 = utility1.getConnection().getTable(tableName);
 
     long t = EnvironmentEdgeManager.currentTime();
     // create three versions for "row"
@@ -201,7 +201,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     Put put = new Put(row);
     put.add(famName, row, row);
 
-    htable1 = new HTable(conf1, tableName);
+    htable1 = utility1.getConnection().getTable(tableName);
     htable1.put(put);
 
     Get get = new Get(row);
@@ -244,15 +244,14 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   @Test(timeout=300000)
   public void testSmallBatch() throws Exception {
     LOG.info("testSmallBatch");
-    Put put;
     // normal Batch tests
-    htable1.setAutoFlush(false, true);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
-      put = new Put(Bytes.toBytes(i));
+      Put put = new Put(Bytes.toBytes(i));
       put.add(famName, row, row);
-      htable1.put(put);
+      puts.add(put);
     }
-    htable1.flushCommits();
+    htable1.put(puts);
 
     Scan scan = new Scan();
 
@@ -379,19 +378,22 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
   /**
    * Do a more intense version testSmallBatch, one  that will trigger
-   * hlog rolling and other non-trivial code paths
+   * wal rolling and other non-trivial code paths
    * @throws Exception
    */
   @Test(timeout=300000)
-  public void loadTesting() throws Exception {
-    htable1.setWriteBufferSize(1024);
-    htable1.setAutoFlush(false, true);
+  public void testLoading() throws Exception {
+    LOG.info("Writing out rows to table1 in testLoading");
+    List<Put> puts = new ArrayList<Put>();
     for (int i = 0; i < NB_ROWS_IN_BIG_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.add(famName, row, row);
-      htable1.put(put);
+      puts.add(put);
     }
-    htable1.flushCommits();
+    htable1.setWriteBufferSize(1024);
+    // The puts will be iterated through and flushed only when the buffer
+    // size is reached.
+    htable1.put(puts);
 
     Scan scan = new Scan();
 
@@ -401,16 +403,18 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     assertEquals(NB_ROWS_IN_BIG_BATCH, res.length);
 
-
+    LOG.info("Looking in table2 for replicated rows in testLoading");
     long start = System.currentTimeMillis();
-    for (int i = 0; i < NB_RETRIES; i++) {
+    // Retry more than NB_RETRIES.  As it was, retries were done in 5 seconds and we'd fail
+    // sometimes.
+    final long retries = NB_RETRIES * 10;
+    for (int i = 0; i < retries; i++) {
       scan = new Scan();
-
       scanner = htable2.getScanner(scan);
       res = scanner.next(NB_ROWS_IN_BIG_BATCH);
       scanner.close();
       if (res.length != NB_ROWS_IN_BIG_BATCH) {
-        if (i == NB_RETRIES - 1) {
+        if (i == retries - 1) {
           int lastRow = -1;
           for (Result result : res) {
             int currentRow = Bytes.toInt(result.getRow());
@@ -424,7 +428,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
             res.length + " instead of " + NB_ROWS_IN_BIG_BATCH + "; waited=" +
             (System.currentTimeMillis() - start) + "ms");
         } else {
-          LOG.info("Only got " + res.length + " rows");
+          LOG.info("Only got " + res.length + " rows... retrying");
           Thread.sleep(SLEEP_TIME);
         }
       } else {
@@ -445,7 +449,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     // identical since it does the check
     testSmallBatch();
 
-    String[] args = new String[] {"2", Bytes.toString(tableName)};
+    String[] args = new String[] {"2", tableName.getNameAsString()};
     Job job = VerifyReplication.createSubmittableJob(CONF_WITH_LOCALFS, args);
     if (job == null) {
       fail("Job wasn't created, see the log");
@@ -495,7 +499,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     HRegionInfo hri = new HRegionInfo(htable1.getName(),
       HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
     WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
-    Replication.scopeWALEdits(htable1.getTableDescriptor(), new HLogKey(), edit);
+    Replication.scopeWALEdits(htable1.getTableDescriptor(), new WALKey(), edit);
   }
 
   /**
@@ -507,13 +511,13 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    */
   @Test(timeout = 300000)
   public void testVerifyListReplicatedTable() throws Exception {
-	LOG.info("testVerifyListReplicatedTable");
+    LOG.info("testVerifyListReplicatedTable");
 
     final String tName = "VerifyListReplicated_";
     final String colFam = "cf1";
     final int numOfTables = 3;
 
-    HBaseAdmin hadmin = new HBaseAdmin(conf1);
+    HBaseAdmin hadmin = utility1.getHBaseAdmin();
 
     // Create Tables
     for (int i = 0; i < numOfTables; i++) {

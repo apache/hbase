@@ -50,13 +50,34 @@
       </testResource>
     </testResources>
     <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-site-plugin</artifactId>
-          <configuration>
-            <skip>true</skip>
-          </configuration>
-        </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <configuration>
+              <compilerId>${java.default.compiler}</compilerId>
+              <forceJavacCompilerUse>true</forceJavacCompilerUse>
+              <useIncrementalCompilation>false</useIncrementalCompilation>
+            </configuration>
+          </execution>
+          <execution>
+            <id>default-testCompile</id>
+            <configuration>
+              <compilerId>${java.default.compiler}</compilerId>
+              <forceJavacCompilerUse>true</forceJavacCompilerUse>
+              <useIncrementalCompilation>false</useIncrementalCompilation>
+            </configuration>
+          </execution>
+       </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
       <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running
         tests (this is needed for upstream projects whose tests need this jar simply for
         compilation) -->
@@ -160,6 +181,12 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-annotations</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-protocol</artifactId>
     </dependency>
     <dependency>
@@ -204,7 +231,7 @@
     </dependency>
     <!-- Test Dependencies -->
     <dependency>
-      <groupId>org.htrace</groupId>
+      <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core</artifactId>
    </dependency>
   </dependencies>
@@ -330,10 +357,6 @@
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
           <scope>test</scope>
         </dependency>
@@ -381,10 +404,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>

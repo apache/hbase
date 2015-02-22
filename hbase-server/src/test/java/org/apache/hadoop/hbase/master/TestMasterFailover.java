@@ -37,16 +37,18 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -55,20 +57,20 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({FlakeyTests.class, LargeTests.class})
 public class TestMasterFailover {
   private static final Log LOG = LogFactory.getLog(TestMasterFailover.class);
 
   HRegion createRegion(final HRegionInfo  hri, final Path rootdir, final Configuration c,
       final HTableDescriptor htd)
   throws IOException {
-    HRegion r = HRegion.createHRegion(hri, rootdir, c, htd);
-    // The above call to create a region will create an hlog file.  Each
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, rootdir, c, htd);
+    // The above call to create a region will create an wal file.  Each
     // log file create will also create a running thread to do syncing.  We need
     // to close out this log else we will have a running thread trying to sync
     // the file system continuously which is ugly when dfs is taken away at the
     // end of the test.
-    HRegion.closeHRegion(r);
+    HBaseTestingUtility.closeRegionAndWAL(r);
     return r;
   }
 
@@ -150,7 +152,7 @@ public class TestMasterFailover {
     assertEquals(2, masterThreads.size());
     int rsCount = masterThreads.get(activeIndex).getMaster().getClusterStatus().getServersSize();
     LOG.info("Active master " + active.getServerName() + " managing " + rsCount +  " regions servers");
-    assertEquals(5, rsCount);
+    assertEquals(4, rsCount);
 
     // Check that ClusterStatus reports the correct active and backup masters
     assertNotNull(active);
@@ -215,10 +217,10 @@ public class TestMasterFailover {
     HMaster master = masterThreads.get(0).getMaster();
     assertTrue(master.isActiveMaster());
     assertTrue(master.isInitialized());
-
+    
     // Create a table with a region online
-    HTable onlineTable = TEST_UTIL.createTable("onlineTable", "family");
-
+    Table onlineTable = TEST_UTIL.createTable(TableName.valueOf("onlineTable"), "family");
+    onlineTable.close();
     // Create a table in META, so it has a region offline
     HTableDescriptor offlineTable = new HTableDescriptor(
       TableName.valueOf(Bytes.toBytes("offlineTable")));
@@ -226,21 +228,23 @@ public class TestMasterFailover {
 
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = FSUtils.getRootDir(conf);
-    FSTableDescriptors fstd = new FSTableDescriptors(filesystem, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(conf, filesystem, rootdir);
     fstd.createTableDescriptor(offlineTable);
 
     HRegionInfo hriOffline = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(hriOffline, rootdir, conf, offlineTable);
-    MetaTableAccessor.addRegionToMeta(master.getShortCircuitConnection(), hriOffline);
+    MetaTableAccessor.addRegionToMeta(master.getConnection(), hriOffline);
 
     log("Regions in hbase:meta and namespace have been created");
 
     // at this point we only expect 3 regions to be assigned out
     // (catalogs and namespace, + 1 online region)
     assertEquals(3, cluster.countServedRegions());
-    HRegionInfo hriOnline = onlineTable.getRegionLocation(
-      HConstants.EMPTY_START_ROW).getRegionInfo();
-
+    HRegionInfo hriOnline = null;
+    try (RegionLocator locator =
+        TEST_UTIL.getConnection().getRegionLocator(TableName.valueOf("onlineTable"))) {
+      hriOnline = locator.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
+    }
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     RegionStateStore stateStore = master.getAssignmentManager().getRegionStateStore();
 
@@ -256,7 +260,36 @@ public class TestMasterFailover {
     oldState = new RegionState(hriOffline, State.OFFLINE);
     newState = new RegionState(hriOffline, State.PENDING_OPEN, newState.getServerName());
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-
+    
+    HRegionInfo failedClose = new HRegionInfo(offlineTable.getTableName(), null, null);
+    createRegion(failedClose, rootdir, conf, offlineTable);
+    MetaTableAccessor.addRegionToMeta(master.getConnection(), failedClose);
+    
+    oldState = new RegionState(failedClose, State.PENDING_CLOSE);
+    newState = new RegionState(failedClose, State.FAILED_CLOSE, newState.getServerName());
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+    
+    HRegionInfo failedOpen = new HRegionInfo(offlineTable.getTableName(), null, null);
+    createRegion(failedOpen, rootdir, conf, offlineTable);
+    MetaTableAccessor.addRegionToMeta(master.getConnection(), failedOpen);
+    
+    // Simulate a region transitioning to failed open when the region server reports the
+    // transition as FAILED_OPEN
+    oldState = new RegionState(failedOpen, State.PENDING_OPEN);
+    newState = new RegionState(failedOpen, State.FAILED_OPEN, newState.getServerName());
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+    
+    HRegionInfo failedOpenNullServer = new HRegionInfo(offlineTable.getTableName(), null, null);
+    LOG.info("Failed open NUll server " + failedOpenNullServer.getEncodedName());
+    createRegion(failedOpenNullServer, rootdir, conf, offlineTable);
+    MetaTableAccessor.addRegionToMeta(master.getConnection(), failedOpenNullServer);
+    
+    // Simulate a region transitioning to failed open when the master couldn't find a plan for
+    // the region
+    oldState = new RegionState(failedOpenNullServer, State.OFFLINE);
+    newState = new RegionState(failedOpenNullServer, State.FAILED_OPEN, null);
+    stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
+    
     // Stop the master
     log("Aborting master");
     cluster.abortMaster(0);
@@ -279,6 +312,9 @@ public class TestMasterFailover {
     // Both pending_open (RPC sent/not yet) regions should be online
     assertTrue(regionStates.isRegionOnline(hriOffline));
     assertTrue(regionStates.isRegionOnline(hriOnline));
+    assertTrue(regionStates.isRegionOnline(failedClose));
+    assertTrue(regionStates.isRegionOnline(failedOpenNullServer));
+    assertTrue(regionStates.isRegionOnline(failedOpen));
 
     log("Done with verification, shutting down cluster");
 

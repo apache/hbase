@@ -27,13 +27,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -43,7 +44,7 @@ import com.google.protobuf.RpcController;
 /**
  * Test snapshot logic from the client
  */
-@Category(SmallTests.class)
+@Category({SmallTests.class, ClientTests.class})
 public class TestSnapshotFromAdmin {
 
   private static final Log LOG = LogFactory.getLog(TestSnapshotFromAdmin.class);
@@ -99,7 +100,7 @@ public class TestSnapshotFromAdmin {
       builder.build(), builder.build(), builder.build(), builder.setDone(true).build());
 
     // setup the admin and run the test
-    HBaseAdmin admin = new HBaseAdmin(mockConnection);
+    Admin admin = new HBaseAdmin(mockConnection);
     String snapshot = "snapshot";
     TableName table = TableName.valueOf("table");
     // get start time
@@ -122,7 +123,7 @@ public class TestSnapshotFromAdmin {
         .mock(ConnectionManager.HConnectionImplementation.class);
     Configuration conf = HBaseConfiguration.create();
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
-    HBaseAdmin admin = new HBaseAdmin(mockConnection);
+    Admin admin = new HBaseAdmin(mockConnection);
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     // check that invalid snapshot names fail
     failSnapshotStart(admin, builder.setName(HConstants.SNAPSHOT_DIR_NAME).build());
@@ -152,7 +153,7 @@ public class TestSnapshotFromAdmin {
     admin.snapshot(builder.setName("snapshot").setTable("table").build());
   }
 
-  private void failSnapshotStart(HBaseAdmin admin, SnapshotDescription snapshot) throws IOException {
+  private void failSnapshotStart(Admin admin, SnapshotDescription snapshot) throws IOException {
     try {
       admin.snapshot(snapshot);
       fail("Snapshot should not have succeed with name:" + snapshot.getName());

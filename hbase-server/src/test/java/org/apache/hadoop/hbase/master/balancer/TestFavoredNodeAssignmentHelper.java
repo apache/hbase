@@ -31,9 +31,10 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RackManager;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.junit.BeforeClass;
@@ -41,7 +42,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestFavoredNodeAssignmentHelper {
 
   private static List<ServerName> servers = new ArrayList<ServerName>();

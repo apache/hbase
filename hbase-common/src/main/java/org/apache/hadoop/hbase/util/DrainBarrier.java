@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A simple barrier that can be used by classes that need to wait for some operations to

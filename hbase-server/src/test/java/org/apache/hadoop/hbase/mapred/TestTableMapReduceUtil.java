@@ -33,10 +33,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
@@ -55,13 +57,13 @@ import org.junit.experimental.categories.Category;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestTableMapReduceUtil {
 
   private static final Log LOG = LogFactory
       .getLog(TestTableMapReduceUtil.class);
 
-  private static HTable presidentsTable;
+  private static Table presidentsTable;
   private static final String TABLE_NAME = "People";
 
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("info");
@@ -87,7 +89,7 @@ public class TestTableMapReduceUtil {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
-    presidentsTable = createAndFillTable(Bytes.toBytes(TABLE_NAME));
+    presidentsTable = createAndFillTable(TableName.valueOf(TABLE_NAME));
     UTIL.startMiniMapReduceCluster();
   }
 
@@ -104,13 +106,13 @@ public class TestTableMapReduceUtil {
     LOG.info("before done");
   }
 
-  public static HTable createAndFillTable(byte[] tableName) throws IOException {
-    HTable table = UTIL.createTable(tableName, COLUMN_FAMILY);
+  public static Table createAndFillTable(TableName tableName) throws IOException {
+    Table table = UTIL.createTable(tableName, COLUMN_FAMILY);
     createPutCommand(table);
     return table;
   }
 
-  private static void createPutCommand(HTable table) throws IOException {
+  private static void createPutCommand(Table table) throws IOException {
     for (String president : presidentsRowKeys) {
       if (presidentNames.hasNext()) {
         Put p = new Put(Bytes.toBytes(president));
@@ -134,7 +136,6 @@ public class TestTableMapReduceUtil {
    * does not exceed the number of regions for the given table.
    */
   @Test
-  @SuppressWarnings("deprecation")
   public void shouldNumberOfReduceTaskNotExceedNumberOfRegionsForGivenTable()
       throws IOException {
     Assert.assertNotNull(presidentsTable);
@@ -153,7 +154,6 @@ public class TestTableMapReduceUtil {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void shouldNumberOfMapTaskNotExceedNumberOfRegionsForGivenTable()
       throws IOException {
     Configuration cfg = UTIL.getConfiguration();

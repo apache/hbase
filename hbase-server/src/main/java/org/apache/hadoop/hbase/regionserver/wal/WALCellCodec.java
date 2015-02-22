@@ -22,11 +22,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -47,7 +48,7 @@ import com.google.protobuf.ByteString;
  * This codec is used at server side for writing cells to WAL as well as for sending edits
  * as part of the distributed splitting process.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX, HBaseInterfaceAudience.CONFIG})
 public class WALCellCodec implements Codec {
   /** Configuration key for the class to use when encoding cells in the WAL */
   public static final String WAL_CELL_CODEC_CLASS_KEY = "hbase.regionserver.wal.codec";
@@ -81,7 +82,7 @@ public class WALCellCodec implements Codec {
   static String getWALCellCodecClass(Configuration conf) {
     return conf.get(WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
   }
-  
+
   /**
    * Create and setup a {@link WALCellCodec} from the {@code cellCodecClsName} and
    * CompressionContext, if {@code cellCodecClsName} is specified.
@@ -89,6 +90,7 @@ public class WALCellCodec implements Codec {
    * Fully prepares the codec for use.
    * @param conf {@link Configuration} to read for the user-specified codec. If none is specified,
    *          uses a {@link WALCellCodec}.
+   * @param cellCodecClsName name of codec
    * @param compression compression the codec should use
    * @return a {@link WALCellCodec} ready for use.
    * @throws UnsupportedOperationException if the codec cannot be instantiated
@@ -104,7 +106,7 @@ public class WALCellCodec implements Codec {
   }
 
   /**
-   * Create and setup a {@link WALCellCodec} from the 
+   * Create and setup a {@link WALCellCodec} from the
    * CompressionContext.
    * Cell Codec classname is read from {@link Configuration}.
    * Fully prepares the codec for use.
@@ -120,7 +122,7 @@ public class WALCellCodec implements Codec {
     return ReflectionUtils.instantiateWithCustomCtor(cellCodecClsName, new Class[]
         { Configuration.class, CompressionContext.class }, new Object[] { conf, compression });
   }
-  
+
   public interface ByteStringCompressor {
     ByteString compress(byte[] data, Dictionary dict) throws IOException;
   }
@@ -129,7 +131,7 @@ public class WALCellCodec implements Codec {
     byte[] uncompress(ByteString data, Dictionary dict) throws IOException;
   }
 
-  // TODO: it sucks that compression context is in HLog.Entry. It'd be nice if it was here.
+  // TODO: it sucks that compression context is in WAL.Entry. It'd be nice if it was here.
   //       Dictionary could be gotten by enum; initially, based on enum, context would create
   //       an array of dictionaries.
   static class BaosAndCompressor extends ByteArrayOutputStream implements ByteStringCompressor {
@@ -189,41 +191,34 @@ public class WALCellCodec implements Codec {
 
     @Override
     public void write(Cell cell) throws IOException {
-      if (!(cell instanceof KeyValue)) throw new IOException("Cannot write non-KV cells to WAL");
-      KeyValue kv = (KeyValue)cell;
-      byte[] kvBuffer = kv.getBuffer();
-      int offset = kv.getOffset();
-
       // We first write the KeyValue infrastructure as VInts.
-      StreamUtils.writeRawVInt32(out, kv.getKeyLength());
-      StreamUtils.writeRawVInt32(out, kv.getValueLength());
+      StreamUtils.writeRawVInt32(out, KeyValueUtil.keyLength(cell));
+      StreamUtils.writeRawVInt32(out, cell.getValueLength());
       // To support tags
-      int tagsLength = kv.getTagsLength();
+      int tagsLength = cell.getTagsLength();
       StreamUtils.writeRawVInt32(out, tagsLength);
 
       // Write row, qualifier, and family; use dictionary
       // compression as they're likely to have duplicates.
-      write(kvBuffer, kv.getRowOffset(), kv.getRowLength(), compression.rowDict);
-      write(kvBuffer, kv.getFamilyOffset(), kv.getFamilyLength(), compression.familyDict);
-      write(kvBuffer, kv.getQualifierOffset(), kv.getQualifierLength(), compression.qualifierDict);
+      write(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), compression.rowDict);
+      write(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+          compression.familyDict);
+      write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+          compression.qualifierDict);
 
       // Write timestamp, type and value as uncompressed.
-      int pos = kv.getTimestampOffset();
-      int tsTypeValLen = kv.getLength() + offset - pos;
-      if (tagsLength > 0) {
-        tsTypeValLen = tsTypeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
-      }
-      assert tsTypeValLen > 0;
-      out.write(kvBuffer, pos, tsTypeValLen);
+      StreamUtils.writeLong(out, cell.getTimestamp());
+      out.write(cell.getTypeByte());
+      out.write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
       if (tagsLength > 0) {
         if (compression.tagCompressionContext != null) {
           // Write tags using Dictionary compression
-          compression.tagCompressionContext.compressTags(out, kvBuffer, kv.getTagsOffset(),
-              tagsLength);
+          compression.tagCompressionContext.compressTags(out, cell.getTagsArray(),
+              cell.getTagsOffset(), tagsLength);
         } else {
           // Tag compression is disabled within the WAL compression. Just write the tags bytes as
           // it is.
-          out.write(kvBuffer, kv.getTagsOffset(), tagsLength);
+          out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
         }
       }
     }
@@ -254,7 +249,7 @@ public class WALCellCodec implements Codec {
     protected Cell parseCell() throws IOException {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
-      
+
       int tagsLength = StreamUtils.readRawVarint32(in);
       int length = 0;
       if(tagsLength == 0) {
@@ -333,16 +328,15 @@ public class WALCellCodec implements Codec {
     }
   }
 
-  public class EnsureKvEncoder extends BaseEncoder {
+  public static class EnsureKvEncoder extends BaseEncoder {
     public EnsureKvEncoder(OutputStream out) {
       super(out);
     }
     @Override
     public void write(Cell cell) throws IOException {
-      if (!(cell instanceof KeyValue)) throw new IOException("Cannot write non-KV cells to WAL");
       checkFlushed();
       // Make sure to write tags into WAL
-      KeyValue.oswrite((KeyValue) cell, this.out, true);
+      KeyValueUtil.oswrite(cell, this.out, true);
     }
   }
 

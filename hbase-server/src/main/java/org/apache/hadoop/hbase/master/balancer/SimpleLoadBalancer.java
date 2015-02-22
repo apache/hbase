@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -30,10 +29,10 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -52,9 +51,10 @@ import com.google.common.collect.MinMaxPriorityQueue;
  * <p>On cluster startup, bulk assignment can be used to determine
  * locations for all Regions in a cluster.
  *
- * <p>This classes produces plans for the {@link AssignmentManager} to execute.
+ * <p>This classes produces plans for the 
+ * {@link org.apache.hadoop.hbase.master.AssignmentManager} to execute.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SimpleLoadBalancer extends BaseLoadBalancer {
   private static final Log LOG = LogFactory.getLog(SimpleLoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());
@@ -183,22 +183,25 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   public List<RegionPlan> balanceCluster(
       Map<ServerName, List<HRegionInfo>> clusterMap) {
     List<RegionPlan> regionsToReturn = balanceMasterRegions(clusterMap);
-    if (regionsToReturn != null) {
+    if (regionsToReturn != null || clusterMap == null || clusterMap.size() <= 1) {
       return regionsToReturn;
     }
-    filterExcludedServers(clusterMap);
-    boolean emptyRegionServerPresent = false;
+    if (masterServerName != null && clusterMap.containsKey(masterServerName)) {
+      if (clusterMap.size() <= 2) {
+        return null;
+      }
+      clusterMap = new HashMap<ServerName, List<HRegionInfo>>(clusterMap);
+      clusterMap.remove(masterServerName);
+    }
+
     long startTime = System.currentTimeMillis();
 
-    Collection<ServerName> backupMasters = getBackupMasters();
-    ClusterLoadState cs = new ClusterLoadState(masterServerName,
-      backupMasters, backupMasterWeight, clusterMap);
     // construct a Cluster object with clusterMap and rest of the
     // argument as defaults
-    Cluster c = new Cluster(masterServerName, clusterMap, null, this.regionFinder,
-      getBackupMasters(), tablesOnMaster, this.rackManager);
+    Cluster c = new Cluster(clusterMap, null, this.regionFinder, this.rackManager);
     if (!this.needsBalance(c)) return null;
 
+    ClusterLoadState cs = new ClusterLoadState(clusterMap);
     int numServers = cs.getNumServers();
     NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
     int numRegions = cs.getNumRegions();
@@ -209,9 +212,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     // Using to check balance result.
     StringBuilder strBalanceParam = new StringBuilder();
     strBalanceParam.append("Balance parameter: numRegions=").append(numRegions)
-        .append(", numServers=").append(numServers).append(", numBackupMasters=")
-        .append(cs.getNumBackupMasters()).append(", backupMasterWeight=")
-        .append(backupMasterWeight).append(", max=").append(max)
+        .append(", numServers=").append(numServers).append(", max=").append(max)
         .append(", min=").append(min);
     LOG.debug(strBalanceParam.toString());
 
@@ -237,11 +238,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       }
       serversOverloaded++;
       List<HRegionInfo> regions = server.getValue();
-      int w = 1; // Normal region server has weight 1
-      if (backupMasters != null && backupMasters.contains(sal.getServerName())) {
-        w = backupMasterWeight; // Backup master has heavier weight
-      }
-      int numToOffload = Math.min((load - max) / w, regions.size());
+      int numToOffload = Math.min(load - max, regions.size());
       // account for the out-of-band regions which were assigned to this server
       // after some other region server crashed
       Collections.sort(regions, riComparator);
@@ -258,10 +255,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         regionsToMove.add(new RegionPlan(hri, sal.getServerName(), null));
         numTaken++;
         if (numTaken >= numToOffload) break;
-        // fetch in alternate order if there is new region server
-        if (emptyRegionServerPresent) {
-          fetchFromTail = !fetchFromTail;
-        }
       }
       serverBalanceInfo.put(sal.getServerName(),
         new BalanceInfo(numToOffload, (-1)*numTaken));
@@ -281,12 +274,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       if (load >= min && load > 0) {
         continue; // look for other servers which haven't reached min
       }
-      int w = 1; // Normal region server has weight 1
-      if (backupMasters != null
-          && backupMasters.contains(server.getKey().getServerName())) {
-        w = backupMasterWeight; // Backup master has heavier weight
-      }
-      int regionsToPut = (min - load) / w;
+      int regionsToPut = min - load;
       if (regionsToPut == 0)
       {
         regionsToPut = 1;
@@ -310,9 +298,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         if (numToTake == 0) continue;
 
         addRegionPlan(regionsToMove, fetchFromTail, si, regionsToReturn);
-        if (emptyRegionServerPresent) {
-          fetchFromTail = !fetchFromTail;
-        }
 
         underloadedServers.put(si, numToTake-1);
         cnt++;
@@ -388,9 +373,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         addRegionPlan(regionsToMove, fetchFromTail,
           server.getKey().getServerName(), regionsToReturn);
         numTaken++;
-        if (emptyRegionServerPresent) {
-          fetchFromTail = !fetchFromTail;
-        }
       }
     }
 
@@ -408,9 +390,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         }
         addRegionPlan(regionsToMove, fetchFromTail,
           server.getKey().getServerName(), regionsToReturn);
-        if (emptyRegionServerPresent) {
-          fetchFromTail = !fetchFromTail;
-        }
         if (regionsToMove.isEmpty()) {
           break;
         }

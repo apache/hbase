@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 
 /**
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.exceptions.HBaseException;
  * store, loss of connection to a peer cluster or errors during deserialization of replication data.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ReplicationException extends HBaseException {
 
   private static final long serialVersionUID = -8885598603988198062L;

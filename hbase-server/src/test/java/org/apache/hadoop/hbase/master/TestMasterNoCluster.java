@@ -38,19 +38,20 @@ import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -75,7 +76,7 @@ import com.google.protobuf.ServiceException;
  * TODO: Speed up the zk connection by Master.  It pauses 5 seconds establishing
  * session.
  */
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestMasterNoCluster {
   private static final Log LOG = LogFactory.getLog(TestMasterNoCluster.class);
   private static final HBaseTestingUtility TESTUTIL = new HBaseTestingUtility();
@@ -205,7 +206,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      public HConnection getShortCircuitConnection() {
+      public ClusterConnection getConnection() {
         // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
         // the conf from the master; the conf will already have an HConnection
         // associate so the below mocking of a connection will fail.
@@ -261,8 +262,8 @@ public class TestMasterNoCluster {
       TESTUTIL.getConfiguration());
     HMaster master = new HMaster(conf, cp) {
       @Override
-      void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMeatRSs) {
-      }
+      void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMeatRSs, int replicaId)
+      { }
 
       @Override
       void initializeZKBasedSystemTrackers() throws IOException,
@@ -281,7 +282,7 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      public HConnection getShortCircuitConnection() {
+      public ClusterConnection getConnection() {
         // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
         // the conf from the master; the conf will already have an HConnection
         // associate so the below mocking of a connection will fail.

@@ -16,15 +16,6 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,28 +25,39 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+
+import static org.junit.Assert.assertTrue;
+
 /**
  * Tests changing data block encoding settings of a column family.
  */
-@Category(LargeTests.class)
+@Category({IOTests.class, LargeTests.class})
 public class TestChangingEncoding {
   private static final Log LOG = LogFactory.getLog(TestChangingEncoding.class);
   static final String CF = "EncodingTestCF";
@@ -69,10 +71,9 @@ public class TestChangingEncoding {
 
   private static final int TIMEOUT_MS = 600000;
 
-  private HBaseAdmin admin;
   private HColumnDescriptor hcd;
 
-  private String tableName;
+  private TableName tableName;
   private static final List<DataBlockEncoding> ENCODINGS_TO_ITERATE =
       createEncodingsToIterate();
 
@@ -87,11 +88,13 @@ public class TestChangingEncoding {
   private int numBatchesWritten;
 
   private void prepareTest(String testId) throws IOException {
-    tableName = "test_table_" + testId;
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    tableName = TableName.valueOf("test_table_" + testId);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
-    admin.createTable(htd);
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      admin.createTable(htd);
+    }
     numBatchesWritten = 0;
   }
 
@@ -110,16 +113,6 @@ public class TestChangingEncoding {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    admin = new HBaseAdmin(conf);
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    admin.close();
-  }
-
   private static byte[] getRowKey(int batchId, int i) {
     return Bytes.toBytes("batch" + batchId + "_row" + i);
   }
@@ -133,11 +126,10 @@ public class TestChangingEncoding {
         + "_col" + j);
   }
 
-  static void writeTestDataBatch(Configuration conf, String tableName,
+  static void writeTestDataBatch(TableName tableName,
       int batchId) throws Exception {
     LOG.debug("Writing test data batch " + batchId);
-    HTable table = new HTable(conf, tableName);
-    table.setAutoFlushTo(false);
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       Put put = new Put(getRowKey(batchId, i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
@@ -145,16 +137,18 @@ public class TestChangingEncoding {
             getValue(batchId, i, j));
       }
       put.setDurability(Durability.SKIP_WAL);
-      table.put(put);
+      puts.add(put);
     }
-    table.flushCommits();
-    table.close();
+    try (Connection conn = ConnectionFactory.createConnection(conf);
+        Table table = conn.getTable(tableName)) {
+      table.put(puts);
+    }
   }
 
-  static void verifyTestDataBatch(Configuration conf, String tableName,
+  static void verifyTestDataBatch(TableName tableName,
       int batchId) throws Exception {
     LOG.debug("Verifying test data batch " + batchId);
-    HTable table = new HTable(conf, tableName);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       Get get = new Get(getRowKey(batchId, i));
       Result result = table.get(get);
@@ -167,13 +161,13 @@ public class TestChangingEncoding {
   }
 
   private void writeSomeNewData() throws Exception {
-    writeTestDataBatch(conf, tableName, numBatchesWritten);
+    writeTestDataBatch(tableName, numBatchesWritten);
     ++numBatchesWritten;
   }
 
   private void verifyAllData() throws Exception {
     for (int i = 0; i < numBatchesWritten; ++i) {
-      verifyTestDataBatch(conf, tableName, i);
+      verifyTestDataBatch(tableName, i);
     }
   }
 
@@ -182,12 +176,14 @@ public class TestChangingEncoding {
     LOG.debug("Setting CF encoding to " + encoding + " (ordinal="
       + encoding.ordinal() + "), onlineChange=" + onlineChange);
     hcd.setDataBlockEncoding(encoding);
-    if (!onlineChange) {
-      admin.disableTable(tableName);
-    }
-    admin.modifyColumn(tableName, hcd);
-    if (!onlineChange) {
-      admin.enableTable(tableName);
+    try (Admin admin = TEST_UTIL.getConnection().getAdmin()) {
+      if (!onlineChange) {
+        admin.disableTable(tableName);
+      }
+      admin.modifyColumn(tableName, hcd);
+      if (!onlineChange) {
+        admin.enableTable(tableName);
+      }
     }
     // This is a unit test, not integration test. So let's
     // wait for regions out of transition. Otherwise, for online
@@ -225,6 +221,7 @@ public class TestChangingEncoding {
   private void compactAndWait() throws IOException, InterruptedException {
     LOG.debug("Compacting table " + tableName);
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.majorCompact(tableName);
 
     // Waiting for the compaction to start, at least .5s.

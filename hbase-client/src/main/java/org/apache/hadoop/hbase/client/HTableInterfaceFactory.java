@@ -18,18 +18,20 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-
 import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 
 /**
  * Defines methods to create new HTableInterface.
  *
  * @since 0.21.0
+ * @deprecated in favor of {@link ConnectionFactory} and {@link Connection}.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface HTableInterfaceFactory {

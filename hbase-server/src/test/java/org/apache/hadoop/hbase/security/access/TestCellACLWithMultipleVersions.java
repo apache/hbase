@@ -31,21 +31,25 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -56,7 +60,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({SecurityTests.class, MediumTests.class})
 public class TestCellACLWithMultipleVersions extends SecureTestUtil {
   private static final Log LOG = LogFactory.getLog(TestCellACLWithMultipleVersions.class);
 
@@ -108,7 +112,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     rsHost.createEnvironment(AccessController.class, ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
 
     // create a set of test users
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
@@ -123,8 +127,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    // Create the test table (owner added to the _acl_ table)
-    Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);
     hcd.setMaxVersions(4);
@@ -134,8 +136,15 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     hcd.setMaxVersions(4);
     htd.setOwner(USER_OWNER);
     htd.addFamily(hcd);
-    admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
+    // Create the test table (owner added to the _acl_ table)
+    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+      try (Admin admin = connection.getAdmin()) {
+        admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
+      }
+    }
+    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
+    LOG.info("Sleeping a second because of HBASE-12581");
+    Threads.sleep(1000);
   }
 
   @Test
@@ -145,7 +154,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           Put p;
           // with ro ACL
@@ -167,6 +177,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           t.put(p);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -179,11 +190,13 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
         get.setMaxVersions(10);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
           t.close();
+          connection.close();
         }
       }
     };
@@ -193,11 +206,13 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
         get.setMaxVersions(10);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
           t.close();
+          connection.close();
         }
       }
     };
@@ -210,7 +225,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
@@ -224,6 +240,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           t.put(p);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -249,24 +266,23 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          // with rw ACL for "user1"
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, ZERO);
-          p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          t.put(p);
-          // with rw ACL for "user1"
-          p = new Put(TEST_ROW2);
-          p.add(TEST_FAMILY1, TEST_Q1, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, ZERO);
-          p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          t.put(p);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            // with rw ACL for "user1"
+            Put p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            t.put(p);
+            // with rw ACL for "user1"
+            p = new Put(TEST_ROW2);
+            p.add(TEST_FAMILY1, TEST_Q1, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            t.put(p);
+          }
         }
         return null;
       }
@@ -275,27 +291,26 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          // with rw ACL for "user1" and "user2"
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, ZERO);
-          Map<String, Permission> perms = new HashMap<String, Permission>();
-          perms.put(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          perms.put(user2.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          p.setACL(perms);
-          t.put(p);
-          // with rw ACL for "user1" and "user2"
-          p = new Put(TEST_ROW2);
-          p.add(TEST_FAMILY1, TEST_Q1, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, ZERO);
-          p.setACL(perms);
-          t.put(p);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            // with rw ACL for "user1" and "user2"
+            Put p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            Map<String, Permission> perms = new HashMap<String, Permission>();
+            perms.put(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            perms.put(user2.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            p.setACL(perms);
+            t.put(p);
+            // with rw ACL for "user1" and "user2"
+            p = new Put(TEST_ROW2);
+            p.add(TEST_FAMILY1, TEST_Q1, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.setACL(perms);
+            t.put(p);
+          }
         }
         return null;
       }
@@ -306,14 +321,13 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW1);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q1);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q2);
-          t.delete(d);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW1);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q2);
+            t.delete(d);
+          }
         }
         return null;
       }
@@ -323,17 +337,16 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW2);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q1);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q2);
-          t.delete(d);
-          fail("user2 should not be allowed to delete the row");
-        } catch (Exception e) {
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW2);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q2);
+            t.delete(d);
+            fail("user2 should not be allowed to delete the row");
+          } catch (Exception e) {
 
-        } finally {
-          t.close();
+          }
         }
         return null;
       }
@@ -342,13 +355,12 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW2);
-          d.deleteFamily(TEST_FAMILY1);
-          t.delete(d);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW2);
+            d.deleteFamily(TEST_FAMILY1);
+            t.delete(d);
+          }
         }
         return null;
       }
@@ -363,21 +375,20 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          // Store read only ACL at a future time
-          Put p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1,
-            EnvironmentEdgeManager.currentTime() + 1000000,
-            ZERO);
-          p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ));
-          t.put(p);
-          // Store a read write ACL without a timestamp, server will use current time
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q2, ONE);
-          p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
-            Permission.Action.WRITE));
-          t.put(p);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            // Store a read write ACL without a timestamp, server will use current time
+            Put p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q2, ONE);
+            p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            t.put(p);
+            LOG.info("Stored at current time");
+            // Store read only ACL at a future time
+            p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1,
+                EnvironmentEdgeManager.currentTime() + 1000000, ZERO);
+            p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ));
+            t.put(p);
+          }
         }
         return null;
       }
@@ -389,11 +400,10 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          return t.get(get).listCells();
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            return t.get(get).listCells();
+          }
         }
       }
     };
@@ -402,11 +412,10 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q2);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          return t.get(get).listCells();
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            return t.get(get).listCells();
+          }
         }
       }
     };
@@ -422,11 +431,10 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Delete delete = new Delete(TEST_ROW).deleteFamily(TEST_FAMILY1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          t.delete(delete);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            t.delete(delete);
+          }
         }
         return null;
       }
@@ -448,43 +456,42 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     USER_OWNER.runAs(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          // This version (TS = 123) with rw ACL for USER_OTHER and USER_OTHER2
-          Put p = new Put(TEST_ROW);
-          p.add(TEST_FAMILY1, TEST_Q1, 123L, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, 123L, ZERO);
-          Map<String, Permission> perms = new HashMap<String, Permission>();
-          perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
-            Permission.Action.WRITE));
-          perms.put(USER_OTHER2.getShortName(), new Permission(Permission.Action.READ,
-            Permission.Action.WRITE));
-          p.setACL(perms);
-          t.put(p);
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            // This version (TS = 123) with rw ACL for USER_OTHER and USER_OTHER2
+            Put p = new Put(TEST_ROW);
+            p.add(TEST_FAMILY1, TEST_Q1, 123L, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, 123L, ZERO);
+            Map<String, Permission> perms = new HashMap<String, Permission>();
+            perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            perms.put(USER_OTHER2.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            p.setACL(perms);
+            t.put(p);
 
-          // This version (TS = 125) with rw ACL for USER_OTHER
-          p = new Put(TEST_ROW);
-          p.add(TEST_FAMILY1, TEST_Q1, 125L, ONE);
-          p.add(TEST_FAMILY1, TEST_Q2, 125L, ONE);
-          perms = new HashMap<String, Permission>();
-          perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
-            Permission.Action.WRITE));
-          p.setACL(perms);
-          t.put(p);
+            // This version (TS = 125) with rw ACL for USER_OTHER
+            p = new Put(TEST_ROW);
+            p.add(TEST_FAMILY1, TEST_Q1, 125L, ONE);
+            p.add(TEST_FAMILY1, TEST_Q2, 125L, ONE);
+            perms = new HashMap<String, Permission>();
+            perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            p.setACL(perms);
+            t.put(p);
 
-          // This version (TS = 127) with rw ACL for USER_OTHER
-          p = new Put(TEST_ROW);
-          p.add(TEST_FAMILY1, TEST_Q1, 127L, TWO);
-          p.add(TEST_FAMILY1, TEST_Q2, 127L, TWO);
-          perms = new HashMap<String, Permission>();
-          perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
-            Permission.Action.WRITE));
-          p.setACL(perms);
-          t.put(p);
+            // This version (TS = 127) with rw ACL for USER_OTHER
+            p = new Put(TEST_ROW);
+            p.add(TEST_FAMILY1, TEST_Q1, 127L, TWO);
+            p.add(TEST_FAMILY1, TEST_Q2, 127L, TWO);
+            perms = new HashMap<String, Permission>();
+            perms.put(USER_OTHER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            p.setACL(perms);
+            t.put(p);
 
-          return null;
-        } finally {
-          t.close();
+            return null;
+          }
         }
       }
     });
@@ -493,13 +500,12 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     USER_OTHER2.runAs(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW, 124L);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q1);
-          t.delete(d);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW, 124L);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+            t.delete(d);
+          }
         }
         return null;
       }
@@ -509,13 +515,12 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     USER_OTHER2.runAs(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q2, 124L);
-          t.delete(d);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q2, 124L);
+            t.delete(d);
+          }
         }
         return null;
       }
@@ -535,53 +540,52 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
-          permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          Map<String, Permission> permsU2andOwner = new HashMap<String, Permission>();
-          permsU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
-          p.setACL(permsU2andOwner);
-          t.put(p);
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY2, TEST_Q1, 123, ZERO);
-          p.add(TEST_FAMILY2, TEST_Q2, 123, ZERO);
-          p.setACL(permsU2andOwner);
-          t.put(p);
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
+            permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            Map<String, Permission> permsU2andOwner = new HashMap<String, Permission>();
+            permsU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            Put p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+            p.setACL(permsU2andOwner);
+            t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY2, TEST_Q1, 123, ZERO);
+            p.add(TEST_FAMILY2, TEST_Q2, 123, ZERO);
+            p.setACL(permsU2andOwner);
+            t.put(p);
 
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY2, TEST_Q1, 125, ZERO);
-          p.add(TEST_FAMILY2, TEST_Q2, 125, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY2, TEST_Q1, 125, ZERO);
+            p.add(TEST_FAMILY2, TEST_Q2, 125, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
 
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
-          p.setACL(permsU2andOwner);
-          t.put(p);
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY2, TEST_Q1, 129, ZERO);
-          p.add(TEST_FAMILY2, TEST_Q2, 129, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
-        } finally {
-          t.close();
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+            p.setACL(permsU2andOwner);
+            t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY2, TEST_Q1, 129, ZERO);
+            p.add(TEST_FAMILY2, TEST_Q2, 129, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
+          }
         }
         return null;
       }
@@ -592,15 +596,14 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW1);
-          d.deleteColumn(TEST_FAMILY1, TEST_Q1, 123);
-          d.deleteColumn(TEST_FAMILY1, TEST_Q2);
-          d.deleteFamilyVersion(TEST_FAMILY2, 125);
-          t.delete(d);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW1);
+            d.deleteColumn(TEST_FAMILY1, TEST_Q1, 123);
+            d.deleteColumn(TEST_FAMILY1, TEST_Q2);
+            d.deleteFamilyVersion(TEST_FAMILY2, 125);
+            t.delete(d);
+          }
         }
         return null;
       }
@@ -609,18 +612,17 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW1, 127);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q1);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q2);
-          d.deleteFamily(TEST_FAMILY2, 129);
-          t.delete(d);
-          fail("user2 can not do the delete");
-        } catch (Exception e) {
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW1, 127);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q2);
+            d.deleteFamily(TEST_FAMILY2, 129);
+            t.delete(d);
+            fail("user2 can not do the delete");
+          } catch (Exception e) {
 
-        } finally {
-          t.close();
+          }
         }
         return null;
       }
@@ -640,37 +642,36 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
-          permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          Map<String, Permission> permsU2andOwner = new HashMap<String, Permission>();
-          permsU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
-          p.setACL(permsU2andOwner);
-          t.put(p);
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
+            permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            Map<String, Permission> permsU2andOwner = new HashMap<String, Permission>();
+            permsU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            Put p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+            p.setACL(permsU2andOwner);
+            t.put(p);
 
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
-          p.setACL(permsU2andOwner);
-          t.put(p);
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
-        } finally {
-          t.close();
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+            p.setACL(permsU2andOwner);
+            t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
+          }
         }
         return null;
       }
@@ -680,15 +681,14 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Increment inc = new Increment(TEST_ROW1);
-          inc.setTimeRange(0, 123);
-          inc.addColumn(TEST_FAMILY1, TEST_Q1, 2L);
-          t.increment(inc);
-          t.incrementColumnValue(TEST_ROW1, TEST_FAMILY1, TEST_Q2, 1L);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Increment inc = new Increment(TEST_ROW1);
+            inc.setTimeRange(0, 123);
+            inc.addColumn(TEST_FAMILY1, TEST_Q1, 2L);
+            t.increment(inc);
+            t.incrementColumnValue(TEST_ROW1, TEST_FAMILY1, TEST_Q2, 1L);
+          }
         }
         return null;
       }
@@ -697,17 +697,16 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Increment inc = new Increment(TEST_ROW1);
-          inc.setTimeRange(0, 127);
-          inc.addColumn(TEST_FAMILY1, TEST_Q2, 2L);
-          t.increment(inc);
-          fail();
-        } catch (Exception e) {
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Increment inc = new Increment(TEST_ROW1);
+            inc.setTimeRange(0, 127);
+            inc.addColumn(TEST_FAMILY1, TEST_Q2, 2L);
+            t.increment(inc);
+            fail();
+          } catch (Exception e) {
 
-        } finally {
-          t.close();
+          }
         }
         return null;
       }
@@ -727,37 +726,36 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
-          permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          Map<String, Permission> permsU2andOwner = new HashMap<String, Permission>();
-          permsU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
-          p.setACL(permsU2andOwner);
-          t.put(p);
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
+            permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            Map<String, Permission> permsU2andOwner = new HashMap<String, Permission>();
+            permsU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            Put p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+            p.setACL(permsU2andOwner);
+            t.put(p);
 
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
-          p.setACL(permsU2andOwner);
-          t.put(p);
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
-        } finally {
-          t.close();
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+            p.setACL(permsU2andOwner);
+            t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
+          }
         }
         return null;
       }
@@ -769,16 +767,15 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 125, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, ZERO);
-          p.setACL(user2.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          t.put(p);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Put p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 125, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.setACL(user2.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            t.put(p);
+          }
         }
         return null;
       }
@@ -788,18 +785,17 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Put p = new Put(TEST_ROW1);
-          // column Q1 covers version at 123 fr which user2 do not have permission
-          p.add(TEST_FAMILY1, TEST_Q1, 124, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, ZERO);
-          t.put(p);
-          fail();
-        } catch (Exception e) {
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Put p = new Put(TEST_ROW1);
+            // column Q1 covers version at 123 fr which user2 do not have permission
+            p.add(TEST_FAMILY1, TEST_Q1, 124, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            t.put(p);
+            fail();
+          } catch (Exception e) {
 
-        } finally {
-          t.close();
+          }
         }
         return null;
       }
@@ -817,49 +813,48 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
-          permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          Map<String, Permission> permsU1andU2andOwner = new HashMap<String, Permission>();
-          permsU1andU2andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU1andU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU1andU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          Map<String, Permission> permsU1andU2 = new HashMap<String, Permission>();
-          permsU1andU2.put(user1.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
-          permsU1andU2.put(user2.getShortName(), new Permission(Permission.Action.READ,
-              Permission.Action.WRITE));
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
+            permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU1andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            Map<String, Permission> permsU1andU2andOwner = new HashMap<String, Permission>();
+            permsU1andU2andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU1andU2andOwner.put(user2.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU1andU2andOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            Map<String, Permission> permsU1andU2 = new HashMap<String, Permission>();
+            permsU1andU2.put(user1.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
+            permsU1andU2.put(user2.getShortName(), new Permission(Permission.Action.READ,
+                Permission.Action.WRITE));
 
-          Put p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 120, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, 120, ZERO);
-          p.setACL(permsU1andU2andOwner);
-          t.put(p);
+            Put p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 120, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, 120, ZERO);
+            p.setACL(permsU1andU2andOwner);
+            t.put(p);
 
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
-          p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
-          p.setACL(permsU1andOwner);
-          t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+            p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+            p.setACL(permsU1andOwner);
+            t.put(p);
 
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
-          p.setACL(permsU1andU2);
-          t.put(p);
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+            p.setACL(permsU1andU2);
+            t.put(p);
 
-          p = new Put(TEST_ROW1);
-          p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
-          p.setACL(user2.getShortName(), new Permission(Permission.Action.READ));
-          t.put(p);
-        } finally {
-          t.close();
+            p = new Put(TEST_ROW1);
+            p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+            p.setACL(user2.getShortName(), new Permission(Permission.Action.READ));
+            t.put(p);
+          }
         }
         return null;
       }
@@ -870,13 +865,12 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW1);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q1, 120);
-          t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW1);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q1, 120);
+            t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
+          }
         }
         return null;
       }
@@ -886,15 +880,14 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW1);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q1);
-          t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
-          fail("user2 should not be allowed to do checkAndDelete");
-        } catch (Exception e) {
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW1);
+            d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+            t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
+            fail("user2 should not be allowed to do checkAndDelete");
+          } catch (Exception e) {
+          }
         }
         return null;
       }
@@ -905,13 +898,12 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Delete d = new Delete(TEST_ROW1);
-          d.deleteColumn(TEST_FAMILY1, TEST_Q2, 120);
-          t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q2, ZERO, d);
-        } finally {
-          t.close();
+        try (Connection connection = ConnectionFactory.createConnection(conf)) {
+          try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
+            Delete d = new Delete(TEST_ROW1);
+            d.deleteColumn(TEST_FAMILY1, TEST_Q2, 120);
+            t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q2, ZERO, d);
+          }
         }
         return null;
       }

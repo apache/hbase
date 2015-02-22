@@ -32,7 +32,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
@@ -44,7 +45,7 @@ import org.junit.experimental.categories.Category;
  * Test the synchronization of token authentication master keys through
  * ZKSecretWatcher
  */
-@Category(LargeTests.class)
+@Category({SecurityTests.class, LargeTests.class})
 public class TestZKSecretWatcher {
   private static Log LOG = LogFactory.getLog(TestZKSecretWatcher.class);
   private static HBaseTestingUtility TEST_UTIL;

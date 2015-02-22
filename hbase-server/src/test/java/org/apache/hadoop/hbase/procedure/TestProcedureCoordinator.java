@@ -41,7 +41,8 @@ import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.junit.After;
@@ -59,7 +60,7 @@ import com.google.common.collect.Lists;
  * This only works correctly when we do <i>class level parallelization</i> of tests. If we do method
  * level serialization this class will likely throw all kinds of errors.
  */
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestProcedureCoordinator {
   // general test constants
   private static final long WAKE_FREQUENCY = 1000;

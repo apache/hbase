@@ -35,7 +35,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -47,10 +48,12 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestBlocksRead extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
   static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
@@ -74,20 +77,20 @@ public class TestBlocksRead extends HBaseTestCase {
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
    */
   @SuppressWarnings("deprecation")
-  @Override
+  @Before
   protected void setUp() throws Exception {
     super.setUp();
   }
 
   @SuppressWarnings("deprecation")
-  @Override
+  @After
   protected void tearDown() throws Exception {
     super.tearDown();
     EnvironmentEdgeManagerTestHelper.reset();
   }
 
   /**
-   * Callers must afterward call {@link HRegion#closeHRegion(HRegion)}
+   * Callers must afterward call {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)}
    * @param tableName
    * @param callingMethod
    * @param conf
@@ -109,7 +112,7 @@ public class TestBlocksRead extends HBaseTestCase {
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
     blockCache = new CacheConfig(conf).getBlockCache();
     return r;
   }
@@ -262,7 +265,7 @@ public class TestBlocksRead extends HBaseTestCase {
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col5", 5);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -371,7 +374,7 @@ public class TestBlocksRead extends HBaseTestCase {
       verifyData(kvs[1], "row", "col2", 12);
       verifyData(kvs[2], "row", "col3", 13);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -420,7 +423,7 @@ public class TestBlocksRead extends HBaseTestCase {
     
       assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }
@@ -447,7 +450,7 @@ public class TestBlocksRead extends HBaseTestCase {
       assertEquals(1, kvs.length);
       verifyData(kvs[0], "row", "col99", 201);
     } finally {
-      HRegion.closeHRegion(this.region);
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
     }
   }

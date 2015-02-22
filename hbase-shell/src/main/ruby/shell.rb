@@ -103,6 +103,10 @@ module Shell
       @hbase_visibility_labels_admin ||= hbase.visibility_labels_admin(formatter)
     end
 
+    def hbase_quotas_admin
+      @hbase_quotas_admin ||= hbase.quotas_admin(formatter)
+    end
+
     def export_commands(where)
       ::Shell.commands.keys.each do |cmd|
         # here where is the IRB namespace
@@ -221,7 +225,7 @@ double-quote'd hexadecimal representation. For example:
   hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
 
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
-For more on the HBase Shell, see http://hbase.apache.org/docs/current/book.html
+For more on the HBase Shell, see http://hbase.apache.org/book.html
       HERE
     end
   end
@@ -317,12 +321,17 @@ Shell.load_command_group(
     merge_region
     unassign
     zk_dump
-    hlog_roll
+    wal_roll
     catalogjanitor_run
     catalogjanitor_switch
     catalogjanitor_enabled
+    compact_rs
     trace
-  ]
+  ],
+  # TODO remove older hlog_roll command
+  :aliases => {
+    'wal_roll' => ['hlog_roll']
+  }
 )
 
 Shell.load_command_group(
@@ -338,6 +347,8 @@ Shell.load_command_group(
     show_peer_tableCFs
     set_peer_tableCFs
     list_replicated_tables
+    append_peer_tableCFs
+    remove_peer_tableCFs
   ]
 )
 
@@ -348,9 +359,27 @@ Shell.load_command_group(
     snapshot
     clone_snapshot
     restore_snapshot
-    rename_snapshot
     delete_snapshot
+    delete_all_snapshot
     list_snapshots
+  ]
+)
+
+Shell.load_command_group(
+  'configuration',
+  :full_name => 'ONLINE CONFIGURATION TOOLS',
+  :commands => %w[
+    update_config
+    update_all_config
+  ]
+)
+
+Shell.load_command_group(
+  'quotas',
+  :full_name => 'CLUSTER QUOTAS TOOLS',
+  :commands => %w[
+    set_quota
+    list_quotas
   ]
 )
 
@@ -371,6 +400,7 @@ Shell.load_command_group(
   :comment => "NOTE: Above commands are only applicable if running with the VisibilityController coprocessor",
   :commands => %w[
     add_labels
+    list_labels
     set_auths
     get_auths
     clear_auths

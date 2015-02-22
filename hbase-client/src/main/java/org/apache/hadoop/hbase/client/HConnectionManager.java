@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
+
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.security.User;
 
 /**
@@ -34,16 +34,15 @@ import org.apache.hadoop.hbase.security.User;
  * From this {@link HConnection} {@link HTableInterface} implementations are retrieved
  * with {@link HConnection#getTable(byte[])}. Example:
  * <pre>
- * {@code
  * HConnection connection = HConnectionManager.createConnection(config);
- * HTableInterface table = connection.getTable("table1");
+ * HTableInterface table = connection.getTable(TableName.valueOf("table1"));
  * try {
  *   // Use the table as needed, for a single operation and a single thread
  * } finally {
  *   table.close();
  *   connection.close();
  * }
- * }</pre>
+ * </pre>
  * <p>This class has a static Map of {@link HConnection} instances keyed by
  * {@link HConnectionKey}; A {@link HConnectionKey} is identified by a set of
  * {@link Configuration} properties. Invocations of {@link #getConnection(Configuration)}
@@ -82,16 +81,19 @@ import org.apache.hadoop.hbase.security.User;
  * were problematic for clients of HConnection that wanted to register their
  * own shutdown hooks so we removed ours though this shifts the onus for
  * cleanup to the client.
+ * @deprecated Please use ConnectionFactory instead
  */
-@SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HConnectionManager {
+@Deprecated
+public final class HConnectionManager extends ConnectionFactory {
 
+  /** @deprecated connection caching is going away */
   @Deprecated
   public static final String RETRIES_BY_SERVER_KEY =
       ConnectionManager.RETRIES_BY_SERVER_KEY;
 
+  /** @deprecated connection caching is going away */
   @Deprecated
   public static final int MAX_CACHED_CONNECTION_INSTANCES =
       ConnectionManager.MAX_CACHED_CONNECTION_INSTANCES;
@@ -110,8 +112,9 @@ public class HConnectionManager {
    * {@link HConnectionKey}.
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @deprecated connection caching is going away
    */
+  @Deprecated
   public static HConnection getConnection(final Configuration conf) throws IOException {
     return ConnectionManager.getConnectionInternal(conf);
   }
@@ -123,19 +126,23 @@ public class HConnectionManager {
    * calling {@link HConnection#close()} on the returned connection instance.
    *
    * This is the recommended way to create HConnections.
-   * {@code
+   * <pre>
    * HConnection connection = HConnectionManager.createConnection(conf);
    * HTableInterface table = connection.getTable("mytable");
-   * table.get(...);
-   * ...
-   * table.close();
-   * connection.close();
+   * try {
+   *   table.get(...);
+   *   ...
+   * } finally {
+   *   table.close();
+   *   connection.close();
    * }
+   * </pre>
    *
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
    */
+  @Deprecated
   public static HConnection createConnection(Configuration conf) throws IOException {
     return ConnectionManager.createConnectionInternal(conf);
   }
@@ -147,7 +154,7 @@ public class HConnectionManager {
    * {@link #getConnection(Configuration)}. The caller is responsible for
    * calling {@link HConnection#close()} on the returned connection instance.
    * This is the recommended way to create HConnections.
-   * {@code
+   * <pre>
    * ExecutorService pool = ...;
    * HConnection connection = HConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
@@ -155,12 +162,13 @@ public class HConnectionManager {
    * ...
    * table.close();
    * connection.close();
-   * }
+   * </pre>
    * @param conf configuration
    * @param pool the thread pool to use for batch operation in HTables used via this HConnection
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
    */
+  @Deprecated
   public static HConnection createConnection(Configuration conf, ExecutorService pool)
       throws IOException {
     return ConnectionManager.createConnection(conf, pool);
@@ -172,7 +180,7 @@ public class HConnectionManager {
    * {@link #getConnection(Configuration)}. The caller is responsible for
    * calling {@link HConnection#close()} on the returned connection instance.
    * This is the recommended way to create HConnections.
-   * {@code
+   * <pre>
    * ExecutorService pool = ...;
    * HConnection connection = HConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
@@ -180,12 +188,13 @@ public class HConnectionManager {
    * ...
    * table.close();
    * connection.close();
-   * }
+   * </pre>
    * @param conf configuration
    * @param user the user the connection is for
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
    */
+  @Deprecated
   public static HConnection createConnection(Configuration conf, User user)
   throws IOException {
     return ConnectionManager.createConnection(conf, user);
@@ -197,7 +206,7 @@ public class HConnectionManager {
    * {@link #getConnection(Configuration)}. The caller is responsible for
    * calling {@link HConnection#close()} on the returned connection instance.
    * This is the recommended way to create HConnections.
-   * {@code
+   * <pre>
    * ExecutorService pool = ...;
    * HConnection connection = HConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
@@ -205,24 +214,31 @@ public class HConnectionManager {
    * ...
    * table.close();
    * connection.close();
-   * }
+   * </pre>
    * @param conf configuration
    * @param pool the thread pool to use for batch operation in HTables used via this HConnection
    * @param user the user the connection is for
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
    */
+  @Deprecated
   public static HConnection createConnection(Configuration conf, ExecutorService pool, User user)
   throws IOException {
     return ConnectionManager.createConnection(conf, pool, user);
   }
 
+  /**
+   * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
+   */
   @Deprecated
   static HConnection createConnection(final Configuration conf, final boolean managed)
       throws IOException {
     return ConnectionManager.createConnection(conf, managed);
   }
 
+  /**
+   * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
+   */
   @Deprecated
   static ClusterConnection createConnection(final Configuration conf, final boolean managed,
       final ExecutorService pool, final User user) throws IOException {
@@ -235,7 +251,7 @@ public class HConnectionManager {
    * then close connection to the zookeeper ensemble and let go of all associated resources.
    *
    * @param conf configuration whose identity is used to find {@link HConnection} instance.
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteConnection(Configuration conf) {
@@ -247,7 +263,7 @@ public class HConnectionManager {
    * This will then close connection to the zookeeper ensemble and let go of all resources.
    *
    * @param connection
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteStaleConnection(HConnection connection) {
@@ -258,7 +274,7 @@ public class HConnectionManager {
    * Delete information for all connections. Close or not the connection, depending on the
    *  staleConnection boolean and the ref count. By default, you should use it with
    *  staleConnection to true.
-   * @deprecated
+   * @deprecated connection caching is going away.
    */
   @Deprecated
   public static void deleteAllConnections(boolean staleConnection) {

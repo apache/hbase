@@ -31,14 +31,9 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
@@ -46,19 +41,21 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
 
 /**
  * Test performance improvement of joined scanners optimization:
  * https://issues.apache.org/jira/browse/HBASE-5416
  */
-@Category(LargeTests.class)
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestJoinedScanners {
   static final Log LOG = LogFactory.getLog(TestJoinedScanners.class);
 
@@ -92,15 +89,15 @@ public class TestJoinedScanners {
       cluster = htu.startMiniCluster(1, regionServersCount, dataNodeHosts);
       byte [][] families = {cf_essential, cf_joined};
 
-      byte[] tableName = Bytes.toBytes(this.getClass().getSimpleName());
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+      TableName tableName = TableName.valueOf(this.getClass().getSimpleName());
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       for(byte[] family : families) {
         HColumnDescriptor hcd = new HColumnDescriptor(family);
         hcd.setDataBlockEncoding(blockEncoding);
         desc.addFamily(hcd);
       }
       htu.getHBaseAdmin().createTable(desc);
-      HTable ht = new HTable(htu.getConfiguration(), tableName);
+      Table ht = htu.getConnection().getTable(tableName);
 
       long rows_to_insert = 1000;
       int insert_batch = 20;
@@ -150,7 +147,7 @@ public class TestJoinedScanners {
     }
   }
 
-  private void runScanner(HTable table, boolean slow) throws Exception {
+  private void runScanner(Table table, boolean slow) throws Exception {
     long time = System.nanoTime();
     Scan scan = new Scan();
     scan.addColumn(cf_essential, col_name);
@@ -173,26 +170,6 @@ public class TestJoinedScanners {
     result_scanner.close();
     LOG.info((slow ? "Slow" : "Joined") + " scanner finished in " + Double.toString(timeSec)
       + " seconds, got " + Long.toString(rows_count/2) + " rows");
-  }
-
-  private static HRegion initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
-      String callingMethod, Configuration conf, byte[]... families)
-      throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-    for(byte [] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
-      htd.addFamily(hcd);
-    }
-    HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false);
-    Path path = new Path(DIR + callingMethod);
-    FileSystem fs = FileSystem.get(conf);
-    if (fs.exists(path)) {
-      if (!fs.delete(path, true)) {
-        throw new IOException("Failed delete of " + path);
-      }
-    }
-    return HRegion.createHRegion(info, path, conf, htd);
   }
 
   private static Options options = new Options();

@@ -32,16 +32,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -62,7 +66,7 @@ import org.mockito.stubbing.Answer;
  * Spin up a small cluster and check that the hfiles of region are properly long-term archived as
  * specified via the {@link ZKTableArchiveClient}.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestZooKeeperTableArchiveClient {
 
   private static final Log LOG = LogFactory.getLog(TestZooKeeperTableArchiveClient.class);
@@ -72,6 +76,7 @@ public class TestZooKeeperTableArchiveClient {
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
   private static ZKTableArchiveClient archivingClient;
   private final List<Path> toCleanup = new ArrayList<Path>();
+  private static ClusterConnection CONNECTION;
 
   /**
    * Setup the config for the cluster
@@ -80,8 +85,8 @@ public class TestZooKeeperTableArchiveClient {
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniZKCluster();
-    archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), UTIL.getHBaseAdmin()
-        .getConnection());
+    CONNECTION = (ClusterConnection)ConnectionFactory.createConnection(UTIL.getConfiguration());
+    archivingClient = new ZKTableArchiveClient(UTIL.getConfiguration(), CONNECTION);
     // make hfile archiving node so we can archive files
     ZooKeeperWatcher watcher = UTIL.getZooKeeperWatcher();
     String archivingZNode = ZKTableArchiveClient.getArchiveZNode(UTIL.getConfiguration(), watcher);
@@ -114,6 +119,7 @@ public class TestZooKeeperTableArchiveClient {
   @AfterClass
   public static void cleanupTest() throws Exception {
     try {
+      CONNECTION.close();
       UTIL.shutdownMiniZKCluster();
     } catch (Exception e) {
       LOG.warn("problem shutting down cluster", e);
@@ -207,6 +213,7 @@ public class TestZooKeeperTableArchiveClient {
     Configuration conf = UTIL.getConfiguration();
     // setup the delegate
     Stoppable stop = new StoppableImplementation();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
     HFileCleaner cleaner = setupAndCreateCleaner(conf, fs, archiveDir, stop);
     List<BaseHFileCleanerDelegate> cleaners = turnOnArchiving(STRING_TABLE_NAME, cleaner);
     final LongTermArchivingHFileCleaner delegate = (LongTermArchivingHFileCleaner) cleaners.get(0);
@@ -245,7 +252,7 @@ public class TestZooKeeperTableArchiveClient {
     // need to be checked) in 'otherTable' and the files (which should be retained) in the 'table'
     CountDownLatch finished = setupCleanerWatching(delegate, cleaners, files.size() + 3);
     // run the cleaner
-    cleaner.start();
+    choreService.scheduleChore(cleaner);
     // wait for the cleaner to check all the files
     finished.await();
     // stop the cleaner
@@ -407,8 +414,9 @@ public class TestZooKeeperTableArchiveClient {
    */
   private void runCleaner(HFileCleaner cleaner, CountDownLatch finished, Stoppable stop)
       throws InterruptedException {
+    final ChoreService choreService = new ChoreService("CLEANER_SERVER_NAME");
     // run the cleaner
-    cleaner.start();
+    choreService.scheduleChore(cleaner);
     // wait for the cleaner to check all the files
     finished.await();
     // stop the cleaner

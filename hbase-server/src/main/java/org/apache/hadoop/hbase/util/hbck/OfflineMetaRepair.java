@@ -19,14 +19,15 @@ package org.apache.hadoop.hbase.util.hbck;
 
 import java.io.IOException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.io.MultipleIOException;
@@ -36,13 +37,13 @@ import org.apache.hadoop.io.MultipleIOException;
  * are any problem detected, it will fail suggesting actions for the user to do
  * to "fix" problems. If it succeeds, it will backup the previous hbase:meta and
  * -ROOT- dirs and write new tables in place.
- * 
+ *
  * This is an advanced feature, so is only exposed for use if explicitly
  * mentioned.
- * 
+ *
  * hbase org.apache.hadoop.hbase.util.hbck.OfflineMetaRepair ...
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class OfflineMetaRepair {
   private static final Log LOG = LogFactory.getLog(OfflineMetaRepair.class.getName());
@@ -62,7 +63,7 @@ public class OfflineMetaRepair {
 
   /**
    * Main program
-   * 
+   *
    * @param args
    * @throws Exception
    */
@@ -110,6 +111,8 @@ public class OfflineMetaRepair {
         printUsageAndExit();
       }
     }
+
+    System.out.println("OfflineMetaRepair command line options: " + StringUtils.join(args, " "));
 
     // Fsck doesn't shutdown and and doesn't provide a way to shutdown its
     // threads cleanly, so we do a System.exit.

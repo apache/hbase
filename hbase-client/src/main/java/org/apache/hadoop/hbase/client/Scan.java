@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,12 +31,14 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -49,8 +52,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * To scan everything for each row, instantiate a Scan object.
  * <p>
  * To modify scanner caching for just this scan, use {@link #setCaching(int) setCaching}.
- * If caching is NOT set, we will use the caching value of the hosting {@link HTable}.  See
- * {@link HTable#setScannerCaching(int)}. In addition to row caching, it is possible to specify a
+ * If caching is NOT set, we will use the caching value of the hosting {@link Table}.
+ * In addition to row caching, it is possible to specify a
  * maximum result size, using {@link #setMaxResultSize(long)}. When both are used,
  * single server requests are limited by either number of rows or maximum result size, whichever
  * limit comes first.
@@ -87,7 +90,6 @@ public class Scan extends Query {
   private static final Log LOG = LogFactory.getLog(Scan.class);
 
   private static final String RAW_ATTR = "_raw_";
-  private static final String ISOLATION_LEVEL = "_isolationlevel_";
 
   /**
    * EXPERT ONLY.
@@ -211,6 +213,7 @@ public class Scan extends Query {
     loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
     consistency = scan.getConsistency();
     reversed = scan.isReversed();
+    small = scan.isSmall();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
@@ -297,7 +300,7 @@ public class Scan extends Query {
    * Get versions of columns only within the specified timestamp range,
    * [minStamp, maxStamp).  Note, default maximum versions to return is 1.  If
    * your time range spans more than one version and you want all versions
-   * returned, up the number of versions beyond the defaut.
+   * returned, up the number of versions beyond the default.
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
    * @throws IOException if invalid time range
@@ -335,8 +338,10 @@ public class Scan extends Query {
 
   /**
    * Set the start row of the scan.
-   * @param startRow row to start scan on (inclusive)
-   * Note: In order to make startRow exclusive add a trailing 0 byte
+   * <p>
+   * If the specified row does not exist, the Scanner will start from the
+   * next closest row after the specified row.
+   * @param startRow row to start scanner at or after
    * @return this
    */
   public Scan setStartRow(byte [] startRow) {
@@ -345,14 +350,83 @@ public class Scan extends Query {
   }
 
   /**
-   * Set the stop row.
+   * Set the stop row of the scan.
    * @param stopRow row to end at (exclusive)
-   * Note: In order to make stopRow inclusive add a trailing 0 byte
+   * <p>
+   * The scan will include rows that are lexicographically less than
+   * the provided stopRow.
+   * <p><b>Note:</b> When doing a filter for a rowKey <u>Prefix</u>
+   * use {@link #setRowPrefixFilter(byte[])}.
+   * The 'trailing 0' will not yield the desired result.</p>
    * @return this
    */
   public Scan setStopRow(byte [] stopRow) {
     this.stopRow = stopRow;
     return this;
+  }
+
+  /**
+   * <p>Set a filter (using stopRow and startRow) so the result set only contains rows where the
+   * rowKey starts with the specified prefix.</p>
+   * <p>This is a utility method that converts the desired rowPrefix into the appropriate values
+   * for the startRow and stopRow to achieve the desired result.</p>
+   * <p>This can safely be used in combination with setFilter.</p>
+   * <p><b>NOTE: Doing a {@link #setStartRow(byte[])} and/or {@link #setStopRow(byte[])}
+   * after this method will yield undefined results.</b></p>
+   * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
+   * @return this
+   */
+  public Scan setRowPrefixFilter(byte[] rowPrefix) {
+    if (rowPrefix == null) {
+      setStartRow(HConstants.EMPTY_START_ROW);
+      setStopRow(HConstants.EMPTY_END_ROW);
+    } else {
+      this.setStartRow(rowPrefix);
+      this.setStopRow(calculateTheClosestNextRowKeyForPrefix(rowPrefix));
+    }
+    return this;
+  }
+
+  /**
+   * <p>When scanning for a prefix the scan should stop immediately after the the last row that
+   * has the specified prefix. This method calculates the closest next rowKey immediately following
+   * the given rowKeyPrefix.</p>
+   * <p><b>IMPORTANT: This converts a rowKey<u>Prefix</u> into a rowKey</b>.</p>
+   * <p>If the prefix is an 'ASCII' string put into a byte[] then this is easy because you can
+   * simply increment the last byte of the array.
+   * But if your application uses real binary rowids you may run into the scenario that your
+   * prefix is something like:</p>
+   * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x23, 0xFF, 0xFF }</b><br/>
+   * Then this stopRow needs to be fed into the actual scan<br/>
+   * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x24 }</b> (Notice that it is shorter now)<br/>
+   * This method calculates the correct stop row value for this usecase.
+   *
+   * @param rowKeyPrefix the rowKey<u>Prefix</u>.
+   * @return the closest next rowKey immediately following the given rowKeyPrefix.
+   */
+  private byte[] calculateTheClosestNextRowKeyForPrefix(byte[] rowKeyPrefix) {
+    // Essentially we are treating it like an 'unsigned very very long' and doing +1 manually.
+    // Search for the place where the trailing 0xFFs start
+    int offset = rowKeyPrefix.length;
+    while (offset > 0) {
+      if (rowKeyPrefix[offset - 1] != (byte) 0xFF) {
+        break;
+      }
+      offset--;
+    }
+
+    if (offset == 0) {
+      // We got an 0xFFFF... (only FFs) stopRow value which is
+      // the last possible prefix before the end of the table.
+      // So set it to stop at the 'end of the table'
+      return HConstants.EMPTY_END_ROW;
+    }
+
+    // Copy the right length of the original
+    byte[] newStopRow = Arrays.copyOfRange(rowKeyPrefix, 0, offset);
+    // And increment the last one
+    newStopRow[newStopRow.length - 1]++;
+    return newStopRow;
   }
 
   /**
@@ -378,39 +452,44 @@ public class Scan extends Query {
    * Set the maximum number of values to return for each call to next()
    * @param batch the maximum number of values
    */
-  public void setBatch(int batch) {
+  public Scan setBatch(int batch) {
     if (this.hasFilter() && this.filter.hasFilterRow()) {
       throw new IncompatibleFilterException(
         "Cannot set batch on a scan using a filter" +
         " that returns true for filter.hasFilterRow");
     }
     this.batch = batch;
+    return this;
   }
 
   /**
    * Set the maximum number of values to return per row per Column Family
    * @param limit the maximum number of values returned / row / CF
    */
-  public void setMaxResultsPerColumnFamily(int limit) {
+  public Scan setMaxResultsPerColumnFamily(int limit) {
     this.storeLimit = limit;
+    return this;
   }
 
   /**
    * Set offset for the row per Column Family.
    * @param offset is the number of kvs that will be skipped.
    */
-  public void setRowOffsetPerColumnFamily(int offset) {
+  public Scan setRowOffsetPerColumnFamily(int offset) {
     this.storeOffset = offset;
+    return this;
   }
 
   /**
    * Set the number of rows for caching that will be passed to scanners.
-   * If not set, the default setting from {@link HTable#getScannerCaching()} will apply.
+   * If not set, the Configuration setting {@link HConstants#HBASE_CLIENT_SCANNER_CACHING} will
+   * apply.
    * Higher caching values will enable faster scanners but will use more memory.
    * @param caching the number of rows for caching
    */
-  public void setCaching(int caching) {
+  public Scan setCaching(int caching) {
     this.caching = caching;
+    return this;
   }
 
   /**
@@ -427,8 +506,9 @@ public class Scan extends Query {
    *
    * @param maxResultSize The maximum result size in bytes.
    */
-  public void setMaxResultSize(long maxResultSize) {
+  public Scan setMaxResultSize(long maxResultSize) {
     this.maxResultSize = maxResultSize;
+    return this;
   }
 
   @Override
@@ -565,8 +645,9 @@ public class Scan extends Query {
    * @param cacheBlocks if false, default settings are overridden and blocks
    * will not be cached
    */
-  public void setCacheBlocks(boolean cacheBlocks) {
+  public Scan setCacheBlocks(boolean cacheBlocks) {
     this.cacheBlocks = cacheBlocks;
+    return this;
   }
 
   /**
@@ -615,8 +696,9 @@ public class Scan extends Query {
    * - if there's a concurrent split and you have more than 2 column families, some rows may be
    *   missing some column families.
    */
-  public void setLoadColumnFamiliesOnDemand(boolean value) {
+  public Scan setLoadColumnFamiliesOnDemand(boolean value) {
     this.loadColumnFamiliesOnDemand = value;
+    return this;
   }
 
   /**
@@ -729,8 +811,9 @@ public class Scan extends Query {
    * It is an error to specify any column when "raw" is set.
    * @param raw True/False to enable/disable "raw" mode.
    */
-  public void setRaw(boolean raw) {
+  public Scan setRaw(boolean raw) {
     setAttribute(RAW_ATTR, Bytes.toBytes(raw));
+    return this;
   }
 
   /**
@@ -741,31 +824,7 @@ public class Scan extends Query {
     return attr == null ? false : Bytes.toBoolean(attr);
   }
 
-  /*
-   * Set the isolation level for this scan. If the
-   * isolation level is set to READ_UNCOMMITTED, then
-   * this scan will return data from committed and
-   * uncommitted transactions. If the isolation level
-   * is set to READ_COMMITTED, then this scan will return
-   * data from committed transactions only. If a isolation
-   * level is not explicitly set on a Scan, then it
-   * is assumed to be READ_COMMITTED.
-   * @param level IsolationLevel for this scan
-   */
-  public void setIsolationLevel(IsolationLevel level) {
-    setAttribute(ISOLATION_LEVEL, level.toBytes());
-  }
-  /*
-   * @return The isolation level of this scan.
-   * If no isolation level was set for this scan object,
-   * then it returns READ_COMMITTED.
-   * @return The IsolationLevel for this scan
-   */
-  public IsolationLevel getIsolationLevel() {
-    byte[] attr = getAttribute(ISOLATION_LEVEL);
-    return attr == null ? IsolationLevel.READ_COMMITTED :
-                          IsolationLevel.fromBytes(attr);
-  }
+
 
   /**
    * Set whether this scan is a small scan
@@ -787,8 +846,9 @@ public class Scan extends Query {
    *
    * @param small
    */
-  public void setSmall(boolean small) {
+  public Scan setSmall(boolean small) {
     this.small = small;
+    return this;
   }
 
   /**
@@ -797,5 +857,63 @@ public class Scan extends Query {
    */
   public boolean isSmall() {
     return small;
+  }
+
+  @Override
+  public Scan setAttribute(String name, byte[] value) {
+    return (Scan) super.setAttribute(name, value);
+  }
+
+  @Override
+  public Scan setId(String id) {
+    return (Scan) super.setId(id);
+  }
+
+  @Override
+  public Scan setAuthorizations(Authorizations authorizations) {
+    return (Scan) super.setAuthorizations(authorizations);
+  }
+
+  @Override
+  public Scan setACL(Map<String, Permission> perms) {
+    return (Scan) super.setACL(perms);
+  }
+
+  @Override
+  public Scan setACL(String user, Permission perms) {
+    return (Scan) super.setACL(user, perms);
+  }
+
+  @Override
+  public Scan setConsistency(Consistency consistency) {
+    return (Scan) super.setConsistency(consistency);
+  }
+
+  @Override
+  public Scan setReplicaId(int Id) {
+    return (Scan) super.setReplicaId(Id);
+  }
+
+  @Override
+  public Scan setIsolationLevel(IsolationLevel level) {
+    return (Scan) super.setIsolationLevel(level);
+  }
+
+  /**
+   * Utility that creates a Scan that will do a  small scan in reverse from passed row
+   * looking for next closest row.
+   * @param row
+   * @param family
+   * @return An instance of Scan primed with passed <code>row</code> and <code>family</code> to
+   * scan in reverse for one row only.
+   */
+  static Scan createGetClosestRowOrBeforeReverseScan(byte[] row) {
+    // Below does not work if you add in family; need to add the family qualifier that is highest
+    // possible family qualifier.  Do we have such a notion?  Would have to be magic.
+    Scan scan = new Scan(row);
+    scan.setSmall(true);
+    scan.setReversed(true);
+    scan.setCaching(1);
+    return scan;
   }
 }

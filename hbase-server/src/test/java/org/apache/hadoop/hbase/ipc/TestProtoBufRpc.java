@@ -24,7 +24,8 @@ import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
@@ -51,7 +52,7 @@ import com.google.protobuf.ServiceException;
  * This test depends on test.proto definition of types in <code>src/test/protobuf/test.proto</code>
  * and protobuf service definition from <code>src/test/protobuf/test_rpc_service.proto</code>
  */
-@Category(MediumTests.class)
+@Category({RPCTests.class, MediumTests.class})
 public class TestProtoBufRpc {
   public final static String ADDRESS = "localhost";
   public static int PORT = 0;
@@ -111,7 +112,7 @@ public class TestProtoBufRpc {
 
   @Test
   public void testProtoBufRpc() throws Exception {
-    RpcClient rpcClient = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);
+    RpcClient rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(this.isa.getHostName(), this.isa.getPort(), System.currentTimeMillis()),
@@ -135,7 +136,7 @@ public class TestProtoBufRpc {
       } catch (ServiceException e) {
       }
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 }

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
 /**
@@ -40,16 +40,14 @@ public interface HFileBlockDecodingContext {
    * @param uncompressedSizeWithoutHeader numBytes without header required to store the block after
    *          decompressing (not decoding)
    * @param blockBufferWithoutHeader ByteBuffer pointed after the header but before the data
-   * @param onDiskBlock on disk bytes to be decoded
-   * @param offset data start offset in onDiskBlock
+   * @param onDiskBlock on disk data to be decoded
    * @throws IOException
    */
   void prepareDecoding(
     int onDiskSizeWithoutHeader,
     int uncompressedSizeWithoutHeader,
     ByteBuffer blockBufferWithoutHeader,
-    byte[] onDiskBlock,
-    int offset
+    ByteBuffer onDiskBlock
   ) throws IOException;
 
   /**

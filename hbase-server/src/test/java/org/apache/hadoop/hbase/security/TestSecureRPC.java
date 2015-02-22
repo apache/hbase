@@ -35,7 +35,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -53,7 +55,7 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.BlockingService;
 
-@Category(SmallTests.class)
+@Category({SecurityTests.class, SmallTests.class})
 public class TestSecureRPC {
   public static RpcServerInterface rpcServer;
   /**
@@ -98,7 +100,8 @@ public class TestSecureRPC {
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
           isa, conf, new FifoRpcScheduler(conf, 1));
     rpcServer.start();
-    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
+    RpcClient rpcClient = RpcClientFactory
+        .createClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
@@ -114,7 +117,7 @@ public class TestSecureRPC {
 
       assertEquals(0xDEADBEEF, results.get(0).intValue());
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 }

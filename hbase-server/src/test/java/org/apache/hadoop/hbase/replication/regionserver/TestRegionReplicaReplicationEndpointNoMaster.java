@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
@@ -35,11 +34,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.coprocessor.BaseWALObserver;
@@ -51,12 +49,14 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryR
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint.ReplicateContext;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint.RegionReplicaReplayCallable;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -72,7 +72,7 @@ import com.google.common.collect.Lists;
  * Tests RegionReplicaReplicationEndpoint. Unlike TestRegionReplicaReplicationEndpoint this
  * class contains lower level tests using callables.
  */
-@Category(MediumTests.class)
+@Category({ReplicationTests.class, MediumTests.class})
 public class TestRegionReplicaReplicationEndpointNoMaster {
 
   private static final Log LOG = LogFactory.getLog(
@@ -141,18 +141,18 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   public void after() throws Exception {
   }
 
-  static ConcurrentLinkedQueue<HLog.Entry> entries = new ConcurrentLinkedQueue<HLog.Entry>();
+  static ConcurrentLinkedQueue<Entry> entries = new ConcurrentLinkedQueue<Entry>();
 
   public static class WALEditCopro extends BaseWALObserver {
     public WALEditCopro() {
       entries.clear();
     }
     @Override
-    public void postWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx, HRegionInfo info,
-        HLogKey logKey, WALEdit logEdit) throws IOException {
+    public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+        HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
       // only keep primary region's edits
       if (logKey.getTablename().equals(tableName) && info.getReplicaId() == 0) {
-        entries.add(new HLog.Entry(logKey, logEdit));
+        entries.add(new Entry(logKey, logEdit));
       }
     }
   }
@@ -162,7 +162,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // tests replaying the edits to a secondary region replica using the Callable directly
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) HConnectionManager.createConnection(HTU.getConfiguration());
+        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
 
     //load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
@@ -179,11 +179,11 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     connection.close();
   }
 
-  private void replicateUsingCallable(ClusterConnection connection, Queue<HLog.Entry> entries)
+  private void replicateUsingCallable(ClusterConnection connection, Queue<Entry> entries)
       throws IOException, RuntimeException {
-    HLog.Entry entry;
+    Entry entry;
     while ((entry = entries.poll()) != null) {
-      byte[] row = entry.getEdit().getKeyValues().get(0).getRow();
+      byte[] row = entry.getEdit().getCells().get(0).getRow();
       RegionLocations locations = connection.locateRegion(tableName, row, true, true);
       RegionReplicaReplayCallable callable = new RegionReplicaReplayCallable(connection,
         RpcControllerFactory.instantiate(connection.getConfiguration()),
@@ -203,7 +203,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // the region is moved to another location.It tests handling of RME.
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) HConnectionManager.createConnection(HTU.getConfiguration());
+        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
     //load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
@@ -237,7 +237,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // tests replaying the edits to a secondary region replica using the RRRE.replicate()
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) HConnectionManager.createConnection(HTU.getConfiguration());
+        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
     RegionReplicaReplicationEndpoint replicator = new RegionReplicaReplicationEndpoint();
 
     ReplicationEndpoint.Context context = mock(ReplicationEndpoint.Context.class);

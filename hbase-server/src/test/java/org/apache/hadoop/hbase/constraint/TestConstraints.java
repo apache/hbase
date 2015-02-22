@@ -26,7 +26,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.constraint.TestConstraint.CheckWasRunConstraint;
@@ -38,7 +39,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test reading/writing the constraints into the {@link HTableDescriptor}
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestConstraints {
 
   @SuppressWarnings("unchecked")

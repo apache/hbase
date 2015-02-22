@@ -22,6 +22,7 @@ option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
 import "HBase.proto";
+import "Client.proto";
 
 message WALHeader {
   optional bool has_compression = 1;
@@ -31,7 +32,10 @@ message WALHeader {
   optional string cell_codec_cls_name = 5;
 }
 
-// Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
+/*
+ * Protocol buffer version of WALKey; see WALKey comment, not really a key but WALEdit header
+ * for some KVs
+ */
 message WALKey {
   required bytes encoded_region_name = 1;
   required bytes table_name = 2;
@@ -120,6 +124,22 @@ message FlushDescriptor {
   repeated StoreFlushDescriptor store_flushes = 5;
 }
 
+message StoreDescriptor {
+  required bytes family_name = 1;
+  required string store_home_dir = 2; //relative to region dir
+  repeated string store_file = 3; // relative to store dir
+}
+
+/**
+ * Special WAL entry used for writing bulk load events to WAL
+ */
+message BulkLoadDescriptor {
+  required TableName table_name = 1;
+  required bytes encoded_region_name = 2;
+  repeated StoreDescriptor stores = 3;
+  required int64 bulkload_seq_num = 4;
+}
+
 /**
  * Special WAL entry to hold all related to a region event (open/close).
  */
@@ -127,12 +147,6 @@ message RegionEventDescriptor {
   enum EventType {
     REGION_OPEN = 0;
     REGION_CLOSE = 1;
-  }
-
-  message StoreDescriptor {
-    required bytes family_name = 1;
-    required string store_home_dir = 2; //relative to region dir
-    repeated string store_file = 3; // relative to store dir
   }
 
   required EventType event_type = 1;
@@ -144,8 +158,10 @@ message RegionEventDescriptor {
 }
 
 /**
- * A trailer that is appended to the end of a properly closed HLog WAL file.
+ * A trailer that is appended to the end of a properly closed WAL file.
  * If missing, this is either a legacy or a corrupted WAL file.
+ * N.B. This trailer currently doesn't contain any information and we
+ * purposefully don't expose it in the WAL APIs. It's for future growth.
  */
 message WALTrailer {
 }

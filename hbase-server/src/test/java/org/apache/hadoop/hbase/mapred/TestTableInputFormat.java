@@ -35,12 +35,14 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -54,7 +56,7 @@ import org.mockito.stubbing.Answer;
  * This tests the TableInputFormat and its recovery semantics
  * 
  */
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestTableInputFormat {
 
   private static final Log LOG = LogFactory.getLog(TestTableInputFormat.class);
@@ -88,8 +90,8 @@ public class TestTableInputFormat {
    * @return
    * @throws IOException
    */
-  public static HTable createTable(byte[] tableName) throws IOException {
-    HTable table = UTIL.createTable(tableName, FAMILY);
+  public static Table createTable(byte[] tableName) throws IOException {
+    Table table = UTIL.createTable(TableName.valueOf(tableName), new byte[][]{FAMILY});
     Put p = new Put("aaa".getBytes());
     p.add(FAMILY, null, "value aaa".getBytes());
     table.put(p);
@@ -124,7 +126,7 @@ public class TestTableInputFormat {
    * @param table
    * @throws IOException
    */
-  static void runTestMapred(HTable table) throws IOException {
+  static void runTestMapred(Table table) throws IOException {
     org.apache.hadoop.hbase.mapred.TableRecordReader trr = 
         new org.apache.hadoop.hbase.mapred.TableRecordReader();
     trr.setStartRow("aaa".getBytes());
@@ -157,7 +159,7 @@ public class TestTableInputFormat {
    * @throws IOException
    * @throws InterruptedException
    */
-  static void runTestMapreduce(HTable table) throws IOException,
+  static void runTestMapreduce(Table table) throws IOException,
       InterruptedException {
     org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl trr = 
         new org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl();
@@ -194,7 +196,7 @@ public class TestTableInputFormat {
    * 
    * @throws IOException
    */
-  static HTable createIOEScannerTable(byte[] name, final int failCnt)
+  static Table createIOEScannerTable(byte[] name, final int failCnt)
       throws IOException {
     // build up a mock scanner stuff to fail the first time
     Answer<ResultScanner> a = new Answer<ResultScanner>() {
@@ -218,7 +220,7 @@ public class TestTableInputFormat {
       }
     };
 
-    HTable htable = spy(createTable(name));
+    Table htable = spy(createTable(name));
     doAnswer(a).when(htable).getScanner((Scan) anyObject());
     return htable;
   }
@@ -229,7 +231,7 @@ public class TestTableInputFormat {
    * 
    * @throws IOException
    */
-  static HTable createDNRIOEScannerTable(byte[] name, final int failCnt)
+  static Table createDNRIOEScannerTable(byte[] name, final int failCnt)
       throws IOException {
     // build up a mock scanner stuff to fail the first time
     Answer<ResultScanner> a = new Answer<ResultScanner>() {
@@ -256,7 +258,7 @@ public class TestTableInputFormat {
       }
     };
 
-    HTable htable = spy(createTable(name));
+    Table htable = spy(createTable(name));
     doAnswer(a).when(htable).getScanner((Scan) anyObject());
     return htable;
   }
@@ -268,7 +270,7 @@ public class TestTableInputFormat {
    */
   @Test
   public void testTableRecordReader() throws IOException {
-    HTable table = createTable("table1".getBytes());
+    Table table = createTable("table1".getBytes());
     runTestMapred(table);
   }
 
@@ -279,7 +281,7 @@ public class TestTableInputFormat {
    */
   @Test
   public void testTableRecordReaderScannerFail() throws IOException {
-    HTable htable = createIOEScannerTable("table2".getBytes(), 1);
+    Table htable = createIOEScannerTable("table2".getBytes(), 1);
     runTestMapred(htable);
   }
 
@@ -290,7 +292,7 @@ public class TestTableInputFormat {
    */
   @Test(expected = IOException.class)
   public void testTableRecordReaderScannerFailTwice() throws IOException {
-    HTable htable = createIOEScannerTable("table3".getBytes(), 2);
+    Table htable = createIOEScannerTable("table3".getBytes(), 2);
     runTestMapred(htable);
   }
 
@@ -302,7 +304,7 @@ public class TestTableInputFormat {
    */
   @Test
   public void testTableRecordReaderScannerTimeout() throws IOException {
-    HTable htable = createDNRIOEScannerTable("table4".getBytes(), 1);
+    Table htable = createDNRIOEScannerTable("table4".getBytes(), 1);
     runTestMapred(htable);
   }
 
@@ -314,7 +316,7 @@ public class TestTableInputFormat {
    */
   @Test(expected = org.apache.hadoop.hbase.DoNotRetryIOException.class)
   public void testTableRecordReaderScannerTimeoutTwice() throws IOException {
-    HTable htable = createDNRIOEScannerTable("table5".getBytes(), 2);
+    Table htable = createDNRIOEScannerTable("table5".getBytes(), 2);
     runTestMapred(htable);
   }
 
@@ -327,7 +329,7 @@ public class TestTableInputFormat {
   @Test
   public void testTableRecordReaderMapreduce() throws IOException,
       InterruptedException {
-    HTable table = createTable("table1-mr".getBytes());
+    Table table = createTable("table1-mr".getBytes());
     runTestMapreduce(table);
   }
 
@@ -340,7 +342,7 @@ public class TestTableInputFormat {
   @Test
   public void testTableRecordReaderScannerFailMapreduce() throws IOException,
       InterruptedException {
-    HTable htable = createIOEScannerTable("table2-mr".getBytes(), 1);
+    Table htable = createIOEScannerTable("table2-mr".getBytes(), 1);
     runTestMapreduce(htable);
   }
 
@@ -353,7 +355,7 @@ public class TestTableInputFormat {
   @Test(expected = IOException.class)
   public void testTableRecordReaderScannerFailMapreduceTwice() throws IOException,
       InterruptedException {
-    HTable htable = createIOEScannerTable("table3-mr".getBytes(), 2);
+    Table htable = createIOEScannerTable("table3-mr".getBytes(), 2);
     runTestMapreduce(htable);
   }
 
@@ -367,7 +369,7 @@ public class TestTableInputFormat {
   @Test
   public void testTableRecordReaderScannerTimeoutMapreduce()
       throws IOException, InterruptedException {
-    HTable htable = createDNRIOEScannerTable("table4-mr".getBytes(), 1);
+    Table htable = createDNRIOEScannerTable("table4-mr".getBytes(), 1);
     runTestMapreduce(htable);
   }
 
@@ -381,7 +383,7 @@ public class TestTableInputFormat {
   @Test(expected = org.apache.hadoop.hbase.DoNotRetryIOException.class)
   public void testTableRecordReaderScannerTimeoutMapreduceTwice()
       throws IOException, InterruptedException {
-    HTable htable = createDNRIOEScannerTable("table5-mr".getBytes(), 2);
+    Table htable = createDNRIOEScannerTable("table5-mr".getBytes(), 2);
     runTestMapreduce(htable);
   }
 

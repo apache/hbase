@@ -29,18 +29,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({MasterTests.class, LargeTests.class})
 public class TestMasterRestartAfterDisablingTable {
 
   private static final Log LOG = LogFactory.getLog(TestMasterRestartAfterDisablingTable.class);
@@ -65,9 +67,11 @@ public class TestMasterRestartAfterDisablingTable {
     TableName table = TableName.valueOf("tableRestart");
     byte[] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
-    HTable ht = TEST_UTIL.createTable(table, family);
-    int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family,
-        NUM_REGIONS_TO_CREATE);
+    HTable ht = TEST_UTIL.createMultiRegionTable(table, family, NUM_REGIONS_TO_CREATE);
+    int numRegions = -1;
+    try (RegionLocator r = ht.getRegionLocator()) {
+      numRegions = r.getStartKeys().length;
+    }
     numRegions += 1; // catalogs
     log("Waiting for no more RIT\n");
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
@@ -93,11 +97,11 @@ public class TestMasterRestartAfterDisablingTable {
 
     assertTrue("The table should not be in enabled state", cluster.getMaster()
         .getAssignmentManager().getTableStateManager().isTableState(
-        TableName.valueOf("tableRestart"), ZooKeeperProtos.Table.State.DISABLED,
-        ZooKeeperProtos.Table.State.DISABLING));
+        TableName.valueOf("tableRestart"), TableState.State.DISABLED,
+        TableState.State.DISABLING));
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     admin.enableTable(table);
     admin.close();
     log("Waiting for no more RIT\n");
@@ -109,7 +113,7 @@ public class TestMasterRestartAfterDisablingTable {
           6, regions.size());
     assertTrue("The table should be in enabled state", cluster.getMaster()
         .getAssignmentManager().getTableStateManager()
-        .isTableState(TableName.valueOf("tableRestart"), ZooKeeperProtos.Table.State.ENABLED));
+        .isTableState(TableName.valueOf("tableRestart"), TableState.State.ENABLED));
     ht.close();
     TEST_UTIL.shutdownMiniCluster();
   }

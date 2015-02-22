@@ -31,12 +31,14 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest;
@@ -54,7 +56,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestBulkDeleteProtocol {
   private static final byte[] FAMILY1 = Bytes.toBytes("cf1");
   private static final byte[] FAMILY2 = Bytes.toBytes("cf2");
@@ -77,8 +79,8 @@ public class TestBulkDeleteProtocol {
 
   // @Ignore @Test
   public void testBulkDeleteEndpoint() throws Throwable {
-    byte[] tableName = Bytes.toBytes("testBulkDeleteEndpoint");
-    HTable ht = createTable(tableName);
+    TableName tableName = TableName.valueOf("testBulkDeleteEndpoint");
+    Table ht = createTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       byte[] rowkey = Bytes.toBytes(j);
@@ -100,9 +102,9 @@ public class TestBulkDeleteProtocol {
   // @Ignore @Test
   public void testBulkDeleteEndpointWhenRowBatchSizeLessThanRowsToDeleteFromARegion()
       throws Throwable {
-    byte[] tableName = Bytes
-        .toBytes("testBulkDeleteEndpointWhenRowBatchSizeLessThanRowsToDeleteFromARegion");
-    HTable ht = createTable(tableName);
+    TableName tableName = TableName
+        .valueOf("testBulkDeleteEndpointWhenRowBatchSizeLessThanRowsToDeleteFromARegion");
+    Table ht = createTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       byte[] rowkey = Bytes.toBytes(j);
@@ -121,9 +123,9 @@ public class TestBulkDeleteProtocol {
     ht.close();
   }
 
-  private long invokeBulkDeleteProtocol(byte[] tableName, final Scan scan, final int rowBatchSize,
+  private long invokeBulkDeleteProtocol(TableName tableName, final Scan scan, final int rowBatchSize,
       final DeleteType deleteType, final Long timeStamp) throws Throwable {
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table ht = TEST_UTIL.getConnection().getTable(tableName);
     long noOfDeletedRows = 0L;
     Batch.Call<BulkDeleteService, BulkDeleteResponse> callable =
       new Batch.Call<BulkDeleteService, BulkDeleteResponse>() {
@@ -154,8 +156,8 @@ public class TestBulkDeleteProtocol {
 
   // @Ignore @Test
   public void testBulkDeleteWithConditionBasedDelete() throws Throwable {
-    byte[] tableName = Bytes.toBytes("testBulkDeleteWithConditionBasedDelete");
-    HTable ht = createTable(tableName);
+    TableName tableName = TableName.valueOf("testBulkDeleteWithConditionBasedDelete");
+    Table ht = createTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       byte[] rowkey = Bytes.toBytes(j);
@@ -184,8 +186,8 @@ public class TestBulkDeleteProtocol {
 
   // @Ignore @Test
   public void testBulkDeleteColumn() throws Throwable {
-    byte[] tableName = Bytes.toBytes("testBulkDeleteColumn");
-    HTable ht = createTable(tableName);
+    TableName tableName = TableName.valueOf("testBulkDeleteColumn");
+    Table ht = createTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       byte[] rowkey = Bytes.toBytes(j);
@@ -213,12 +215,12 @@ public class TestBulkDeleteProtocol {
 
   // @Ignore @Test
   public void testBulkDeleteFamily() throws Throwable {
-    byte[] tableName = Bytes.toBytes("testBulkDeleteFamily");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    TableName tableName = TableName.valueOf("testBulkDeleteFamily");
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(FAMILY1));
     htd.addFamily(new HColumnDescriptor(FAMILY2));
     TEST_UTIL.getHBaseAdmin().createTable(htd, Bytes.toBytes(0), Bytes.toBytes(120), 5);
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table ht = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       Put put = new Put(Bytes.toBytes(j));
@@ -244,8 +246,8 @@ public class TestBulkDeleteProtocol {
 
   // @Ignore @Test
   public void testBulkDeleteColumnVersion() throws Throwable {
-    byte[] tableName = Bytes.toBytes("testBulkDeleteColumnVersion");
-    HTable ht = createTable(tableName);
+    TableName tableName = TableName.valueOf("testBulkDeleteColumnVersion");
+    Table ht = createTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       Put put = new Put(Bytes.toBytes(j));
@@ -292,8 +294,8 @@ public class TestBulkDeleteProtocol {
 
   // @Ignore @Test
   public void testBulkDeleteColumnVersionBasedOnTS() throws Throwable {
-    byte[] tableName = Bytes.toBytes("testBulkDeleteColumnVersionBasedOnTS");
-    HTable ht = createTable(tableName);
+    TableName tableName = TableName.valueOf("testBulkDeleteColumnVersionBasedOnTS");
+    Table ht = createTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       Put put = new Put(Bytes.toBytes(j));
@@ -339,8 +341,8 @@ public class TestBulkDeleteProtocol {
 
   // @Ignore @Test
   public void testBulkDeleteWithNumberOfVersions() throws Throwable {
-    byte[] tableName = Bytes.toBytes("testBulkDeleteWithNumberOfVersions");
-    HTable ht = createTable(tableName);
+    TableName tableName = TableName.valueOf("testBulkDeleteWithNumberOfVersions");
+    Table ht = createTable(tableName);
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       Put put = new Put(Bytes.toBytes(j));
@@ -422,13 +424,13 @@ public class TestBulkDeleteProtocol {
     ht.close();
   }
 
-  private HTable createTable(byte[] tableName) throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+  private Table createTable(TableName tableName) throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY1);
     hcd.setMaxVersions(10);// Just setting 10 as I am not testing with more than 10 versions here
     htd.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(htd, Bytes.toBytes(0), Bytes.toBytes(120), 5);
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table ht = TEST_UTIL.getConnection().getTable(tableName);
     return ht;
   }
 

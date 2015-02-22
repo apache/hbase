@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,9 +29,11 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CompoundConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
@@ -41,8 +43,10 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -72,6 +76,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  *
  * /hbase/replication/peers/1/tableCFs [Value: "table1; table2:cf1,cf3; table3:cfx,cfy"]
  */
+@InterfaceAudience.Private
 public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements ReplicationPeers {
 
   // Map of peer clusters keyed by their id
@@ -107,19 +112,27 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
         throw new IllegalArgumentException("Cannot add a peer with id=" + id
             + " because that id already exists.");
       }
-      ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
-      ZKUtil.createAndWatch(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id),
-        toByteArray(peerConfig));
-      // There is a race b/w PeerWatcher and ReplicationZookeeper#add method to create the
-      // peer-state znode. This happens while adding a peer.
-      // The peer state data is set as "ENABLED" by default.
-      ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, getPeerStateNode(id),
-        ENABLED_ZNODE_BYTES);
-      // A peer is enabled by default
 
+      if(id.contains("-")){
+        throw new IllegalArgumentException("Found invalid peer name:" + id);
+      }
+
+      ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
+      List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+      ZKUtilOp op1 = ZKUtilOp.createAndFailSilent(ZKUtil.joinZNode(this.peersZNode, id),
+        toByteArray(peerConfig));
+      // There is a race (if hbase.zookeeper.useMulti is false)
+      // b/w PeerWatcher and ReplicationZookeeper#add method to create the
+      // peer-state znode. This happens while adding a peer
+      // The peer state data is set as "ENABLED" by default.
+      ZKUtilOp op2 = ZKUtilOp.createAndFailSilent(getPeerStateNode(id), ENABLED_ZNODE_BYTES);
       String tableCFsStr = (tableCFs == null) ? "" : tableCFs;
-      ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, getTableCFsNode(id),
-                    Bytes.toBytes(tableCFsStr));
+      ZKUtilOp op3 = ZKUtilOp.createAndFailSilent(getTableCFsNode(id), Bytes.toBytes(tableCFsStr));
+      listOfOps.add(op1);
+      listOfOps.add(op2);
+      listOfOps.add(op3);
+      ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
+      // A peer is enabled by default
     } catch (KeeperException e) {
       throw new ReplicationException("Could not add peer with id=" + id
           + ", peerConfif=>" + peerConfig, e);
@@ -188,7 +201,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
   }
 
   @Override
-  public Map<String, List<String>> getTableCFs(String id) throws IllegalArgumentException {
+  public Map<TableName, List<String>> getTableCFs(String id) throws IllegalArgumentException {
     ReplicationPeer replicationPeer = this.peerClusters.get(id);
     if (replicationPeer == null) {
       throw new IllegalArgumentException("Peer with id= " + id + " is not connected");
@@ -389,8 +402,14 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     if (peer == null) {
       return false;
     }
-    ((ConcurrentMap<String, ReplicationPeerZKImpl>) peerClusters).putIfAbsent(peerId, peer);
-    LOG.info("Added new peer cluster " + peer.getPeerConfig().getClusterKey());
+    ReplicationPeerZKImpl previous =
+      ((ConcurrentMap<String, ReplicationPeerZKImpl>) peerClusters).putIfAbsent(peerId, peer);
+    if (previous == null) {
+      LOG.info("Added new peer cluster=" + peer.getPeerConfig().getClusterKey());
+    } else {
+      LOG.info("Peer already present, " + previous.getPeerConfig().getClusterKey() +
+        ", new cluster=" + peer.getPeerConfig().getClusterKey());
+    }
     return true;
   }
 

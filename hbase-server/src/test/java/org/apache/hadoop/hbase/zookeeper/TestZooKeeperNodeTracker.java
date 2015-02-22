@@ -33,6 +33,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.master.TestActiveMasterManager.NodeDeletionListener;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.CreateMode;
@@ -45,7 +47,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestZooKeeperNodeTracker {
   private static final Log LOG = LogFactory.getLog(TestZooKeeperNodeTracker.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -332,12 +334,12 @@ public class TestZooKeeperNodeTracker {
     Assert.assertFalse(ZKUtil.getData(zkw, nodeName) == null);
 
     // Check that we don't delete if we're not supposed to
-    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn));
+    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn, 0));
     MasterAddressTracker.deleteIfEquals(zkw, ServerName.valueOf("127.0.0.2:52", 45L).toString());
     Assert.assertFalse(ZKUtil.getData(zkw, nodeName) == null);
 
     // Check that we delete when we're supposed to
-    ZKUtil.setData(zkw, nodeName,MasterAddressTracker.toByteArray(sn));
+    ZKUtil.setData(zkw, nodeName,MasterAddressTracker.toByteArray(sn, 0));
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString());
     Assert.assertTrue( ZKUtil.getData(zkw, nodeName)== null );
 

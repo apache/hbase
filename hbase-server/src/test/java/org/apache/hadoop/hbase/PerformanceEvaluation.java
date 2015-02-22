@@ -47,19 +47,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -73,11 +73,9 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Hash;
-import org.apache.hadoop.hbase.util.MurmurHash;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.*;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -88,10 +86,10 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.htrace.Sampler;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
-import org.htrace.impl.ProbabilitySampler;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.htrace.impl.ProbabilitySampler;
 
 import com.google.common.base.Objects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -116,6 +114,7 @@ import com.yammer.metrics.stats.UniformSample;
  * specifying {@code --nomapred}. Each client does about 1GB of data, unless
  * specified otherwise.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class PerformanceEvaluation extends Configured implements Tool {
   protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -177,6 +176,25 @@ public class PerformanceEvaluation extends Configured implements Tool {
     ELAPSED_TIME,
     /** number of rows */
     ROWS
+  }
+
+  protected static class RunResult implements Comparable<RunResult> {
+    public RunResult(long duration, Histogram hist) {
+      this.duration = duration;
+      this.hist = hist;
+    }
+
+    public final long duration;
+    public final Histogram hist;
+
+    @Override
+    public String toString() {
+      return Long.toString(duration);
+    }
+
+    @Override public int compareTo(RunResult o) {
+      return Long.compare(this.duration, o.duration);
+    }
   }
 
   /**
@@ -255,15 +273,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
       ObjectMapper mapper = new ObjectMapper();
       TestOptions opts = mapper.readValue(value.toString(), TestOptions.class);
       Configuration conf = HBaseConfiguration.create(context.getConfiguration());
-      final HConnection con = HConnectionManager.createConnection(conf);
+      final Connection con = ConnectionFactory.createConnection(conf);
 
       // Evaluation task
-      long elapsedTime = runOneClient(this.cmd, conf, con, opts, status);
+      RunResult result = PerformanceEvaluation.runOneClient(this.cmd, conf, con, opts, status);
       // Collect how much time the thing took. Report as map output and
       // to the ELAPSED_TIME counter.
-      context.getCounter(Counter.ELAPSED_TIME).increment(elapsedTime);
+      context.getCounter(Counter.ELAPSED_TIME).increment(result.duration);
       context.getCounter(Counter.ROWS).increment(opts.perClientRunRows);
-      context.write(new LongWritable(opts.startRow), new LongWritable(elapsedTime));
+      context.write(new LongWritable(opts.startRow), new LongWritable(result.duration));
       context.progress();
     }
   }
@@ -368,34 +386,33 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   /*
    * Run all clients in this vm each to its own thread.
-   * @param cmd Command to run.
-   * @throws IOException
    */
-  static long doLocalClients(final TestOptions opts, final Configuration conf)
+  static RunResult[] doLocalClients(final TestOptions opts, final Configuration conf)
       throws IOException, InterruptedException {
     final Class<? extends Test> cmd = determineCommandClass(opts.cmdName);
     assert cmd != null;
-    Future<Long>[] threads = new Future[opts.numClientThreads];
-    long[] timings = new long[opts.numClientThreads];
+    @SuppressWarnings("unchecked")
+    Future<RunResult>[] threads = new Future[opts.numClientThreads];
+    RunResult[] results = new RunResult[opts.numClientThreads];
     ExecutorService pool = Executors.newFixedThreadPool(opts.numClientThreads,
       new ThreadFactoryBuilder().setNameFormat("TestClient-%s").build());
-    final HConnection con = HConnectionManager.createConnection(conf);
+    final Connection con = ConnectionFactory.createConnection(conf);
     for (int i = 0; i < threads.length; i++) {
       final int index = i;
-      threads[i] = pool.submit(new Callable<Long>() {
+      threads[i] = pool.submit(new Callable<RunResult>() {
         @Override
-        public Long call() throws Exception {
+        public RunResult call() throws Exception {
           TestOptions threadOpts = new TestOptions(opts);
           if (threadOpts.startRow == 0) threadOpts.startRow = index * threadOpts.perClientRunRows;
-          long elapsedTime = runOneClient(cmd, conf, con, threadOpts, new Status() {
+          RunResult run = runOneClient(cmd, conf, con, threadOpts, new Status() {
             @Override
             public void setStatus(final String msg) throws IOException {
               LOG.info(msg);
             }
           });
-          LOG.info("Finished in " + elapsedTime +
+          LOG.info("Finished " + Thread.currentThread().getName() + " in " + run.duration +
             "ms over " + threadOpts.perClientRunRows + " rows");
-          return elapsedTime;
+          return run;
         }
       });
     }
@@ -403,27 +420,27 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     for (int i = 0; i < threads.length; i++) {
       try {
-        timings[i] = threads[i].get();
+        results[i] = threads[i].get();
       } catch (ExecutionException e) {
         throw new IOException(e.getCause());
       }
     }
     final String test = cmd.getSimpleName();
     LOG.info("[" + test + "] Summary of timings (ms): "
-             + Arrays.toString(timings));
-    Arrays.sort(timings);
+             + Arrays.toString(results));
+    Arrays.sort(results);
     long total = 0;
-    for (long timing : timings) {
-      total += timing;
+    for (RunResult result : results) {
+      total += result.duration;
     }
     LOG.info("[" + test + "]"
-      + "\tMin: " + timings[0] + "ms"
-      + "\tMax: " + timings[timings.length - 1] + "ms"
-      + "\tAvg: " + (total / timings.length) + "ms");
+      + "\tMin: " + results[0] + "ms"
+      + "\tMax: " + results[results.length - 1] + "ms"
+      + "\tAvg: " + (total / results.length) + "ms");
 
     con.close();
 
-    return total;
+    return results;
   }
 
   /*
@@ -440,7 +457,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Path inputDir = writeInputFile(conf, opts);
     conf.set(EvaluationMapTask.CMD_KEY, cmd.getName());
     conf.set(EvaluationMapTask.PE_KEY, PerformanceEvaluation.class.getName());
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.setJarByClass(PerformanceEvaluation.class);
     job.setJobName("HBase Performance Evaluation - " + opts.cmdName);
 
@@ -643,7 +660,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public void setCycles(final int cycles) {
       this.cycles = cycles;
     }
- 
+
     public boolean isValueZipf() {
       return valueZipf;
     }
@@ -922,8 +939,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private final Status status;
     private final Sampler<?> traceSampler;
     private final SpanReceiverHost receiverHost;
-    protected HConnection connection;
-    protected HTableInterface table;
+    protected Connection connection;
+//    protected Table table;
 
     private String testName;
     private Histogram latency;
@@ -934,9 +951,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
      * Note that all subclasses of this class must provide a public constructor
      * that has the exact same list of arguments.
      */
-    Test(final HConnection con, final TestOptions options, final Status status) {
+    Test(final Connection con, final TestOptions options, final Status status) {
       this.connection = con;
-      this.conf = con ==  null? null: this.connection.getConfiguration();
+      this.conf = con == null ? HBaseConfiguration.create() : this.connection.getConfiguration();
       this.receiverHost = this.conf == null? null: SpanReceiverHost.getInstance(conf);
       this.opts = options;
       this.status = status;
@@ -944,7 +961,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (options.traceRate >= 1.0) {
         this.traceSampler = Sampler.ALWAYS;
       } else if (options.traceRate > 0.0) {
-        this.traceSampler = new ProbabilitySampler(options.traceRate);
+        conf.setDouble("hbase.sampler.fraction", options.traceRate);
+        this.traceSampler = new ProbabilitySampler(new HBaseHTraceConfiguration(conf));
       } else {
         this.traceSampler = Sampler.NEVER;
       }
@@ -993,37 +1011,35 @@ public class PerformanceEvaluation extends Configured implements Tool {
       return opts.period;
     }
 
+    /**
+     * Populated by testTakedown. Only implemented by RandomReadTest at the moment.
+     */
+    public Histogram getLatency() {
+      return latency;
+    }
+
     void testSetup() throws IOException {
       if (!opts.oneCon) {
-        this.connection = HConnectionManager.createConnection(conf);
+        this.connection = ConnectionFactory.createConnection(conf);
       }
-      this.table = new HTable(TableName.valueOf(opts.tableName), connection);
-      this.table.setAutoFlushTo(opts.autoFlush);
-
-      try {
-        Constructor<?> ctor =
-            Histogram.class.getDeclaredConstructor(com.yammer.metrics.stats.Sample.class);
-        ctor.setAccessible(true);
-        latency = (Histogram) ctor.newInstance(new UniformSample(1024 * 500));
-        valueSize = (Histogram) ctor.newInstance(new UniformSample(1024 * 500));
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-
+      onStartup();
+      latency = YammerHistogramUtils.newHistogram(new UniformSample(1024 * 500));
+      valueSize = YammerHistogramUtils.newHistogram(new UniformSample(1024 * 500));
     }
+
+    abstract void onStartup() throws IOException;
 
     void testTakedown() throws IOException {
       reportLatency();
       reportValueSize();
-      if (opts.flushCommits) {
-        this.table.flushCommits();
-      }
-      table.close();
+      onTakedown();
       if (!opts.oneCon) {
         connection.close();
       }
       receiverHost.closeReceivers();
     }
+
+    abstract void onTakedown() throws IOException;
 
     /*
      * Run test
@@ -1090,6 +1106,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       status.setStatus(testName + " Avg      = " + h.mean());
       status.setStatus(testName + " StdDev   = " + h.stdDev());
       status.setStatus(testName + " 50th     = " + sn.getMedian());
+      status.setStatus(testName + " 75th     = " + sn.get75thPercentile());
       status.setStatus(testName + " 95th     = " + sn.get95thPercentile());
       status.setStatus(testName + " 99th     = " + sn.get99thPercentile());
       status.setStatus(testName + " 99.9th   = " + sn.get999thPercentile());
@@ -1099,32 +1116,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     /**
-     * Used formating doubles so only two places after decimal point.
-     */
-    private static DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#0.00");
-
-    /**
      * @return Subset of the histograms' calculation.
      */
-    private String getShortLatencyReport() {
-      return getShortHistogramReport(this.latency);
+    public String getShortLatencyReport() {
+      return YammerHistogramUtils.getShortHistogramReport(this.latency);
     }
 
     /**
      * @return Subset of the histograms' calculation.
      */
-    private String getShortValueSizeReport() {
-      return getShortHistogramReport(this.valueSize);
-    }
-
-    private String getShortHistogramReport(final Histogram h) {
-      Snapshot sn = h.getSnapshot();
-      return "mean=" + DOUBLE_FORMAT.format(h.mean()) +
-        ", min=" + DOUBLE_FORMAT.format(h.min()) +
-        ", max=" + DOUBLE_FORMAT.format(h.max()) +
-        ", stdDev=" + DOUBLE_FORMAT.format(h.stdDev()) +
-        ", 95th=" + DOUBLE_FORMAT.format(sn.get95thPercentile()) +
-        ", 99th=" + DOUBLE_FORMAT.format(sn.get99thPercentile());
+    public String getShortValueSizeReport() {
+      return YammerHistogramUtils.getShortHistogramReport(this.valueSize);
     }
 
     /*
@@ -1134,8 +1136,44 @@ public class PerformanceEvaluation extends Configured implements Tool {
     abstract void testRow(final int i) throws IOException, InterruptedException;
   }
 
-  static class RandomSeekScanTest extends Test {
-    RandomSeekScanTest(HConnection con, TestOptions options, Status status) {
+  static abstract class TableTest extends Test {
+    protected Table table;
+
+    TableTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    void onStartup() throws IOException {
+      this.table = connection.getTable(TableName.valueOf(opts.tableName));
+    }
+    
+    @Override
+    void onTakedown() throws IOException {
+      table.close();
+    }
+  }
+
+  static abstract class BufferedMutatorTest extends Test {
+    protected BufferedMutator mutator;
+
+    BufferedMutatorTest(Connection con, TestOptions options, Status status) {
+      super(con, options, status);
+    }
+
+    @Override
+    void onStartup() throws IOException {
+      this.mutator = connection.getBufferedMutator(TableName.valueOf(opts.tableName));
+    }
+    
+    @Override
+    void onTakedown() throws IOException {
+      mutator.close();
+    }
+  }
+
+  static class RandomSeekScanTest extends TableTest {
+    RandomSeekScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1164,8 +1202,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
-  static abstract class RandomScanWithRangeTest extends Test {
-    RandomScanWithRangeTest(HConnection con, TestOptions options, Status status) {
+  static abstract class RandomScanWithRangeTest extends TableTest {
+    RandomScanWithRangeTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1209,7 +1247,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange10Test extends RandomScanWithRangeTest {
-    RandomScanWithRange10Test(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRange10Test(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1220,7 +1258,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange100Test extends RandomScanWithRangeTest {
-    RandomScanWithRange100Test(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRange100Test(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1231,7 +1269,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange1000Test extends RandomScanWithRangeTest {
-    RandomScanWithRange1000Test(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRange1000Test(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1242,7 +1280,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange10000Test extends RandomScanWithRangeTest {
-    RandomScanWithRange10000Test(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRange10000Test(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1252,12 +1290,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class RandomReadTest extends Test {
+  static class RandomReadTest extends TableTest {
     private final Consistency consistency;
     private ArrayList<Get> gets;
     private Random rd = new Random();
 
-    RandomReadTest(HConnection con, TestOptions options, Status status) {
+    RandomReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
       consistency = options.replicas == DEFAULT_OPTS.replicas ? null : Consistency.TIMELINE;
       if (opts.multiGet > 0) {
@@ -1306,8 +1344,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class RandomWriteTest extends Test {
-    RandomWriteTest(HConnection con, TestOptions options, Status status) {
+  static class RandomWriteTest extends BufferedMutatorTest {
+    RandomWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1332,14 +1370,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
         updateValueSize(value.length);
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      table.put(put);
+      mutator.mutate(put);
     }
   }
 
-  static class ScanTest extends Test {
+  static class ScanTest extends TableTest {
     private ResultScanner testScanner;
 
-    ScanTest(HConnection con, TestOptions options, Status status) {
+    ScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1369,8 +1407,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   }
 
-  static class SequentialReadTest extends Test {
-    SequentialReadTest(HConnection con, TestOptions options, Status status) {
+  static class SequentialReadTest extends TableTest {
+    SequentialReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1385,8 +1423,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
   }
 
-  static class SequentialWriteTest extends Test {
-    SequentialWriteTest(HConnection con, TestOptions options, Status status) {
+  static class SequentialWriteTest extends BufferedMutatorTest {
+    SequentialWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1411,14 +1449,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
         updateValueSize(value.length);
       }
       put.setDurability(opts.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
-      table.put(put);
+      mutator.mutate(put);
     }
   }
 
-  static class FilteredScanTest extends Test {
+  static class FilteredScanTest extends TableTest {
     protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
 
-    FilteredScanTest(HConnection con, TestOptions options, Status status) {
+    FilteredScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1528,7 +1566,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
   }
 
-  static long runOneClient(final Class<? extends Test> cmd, Configuration conf, HConnection con,
+  static RunResult runOneClient(final Class<? extends Test> cmd, Configuration conf, Connection con,
                            TestOptions opts, final Status status)
       throws IOException, InterruptedException {
     status.setStatus("Start " + cmd + " at offset " + opts.startRow + " for " +
@@ -1538,7 +1576,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     final Test t;
     try {
       Constructor<? extends Test> constructor =
-        cmd.getDeclaredConstructor(HConnection.class, TestOptions.class, Status.class);
+        cmd.getDeclaredConstructor(Connection.class, TestOptions.class, Status.class);
       t = constructor.newInstance(con, opts, status);
     } catch (NoSuchMethodException e) {
       throw new IllegalArgumentException("Invalid command class: " +
@@ -1555,7 +1593,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       " (" + calculateMbps((int)(opts.perClientRunRows * opts.sampleRate), totalElapsedTime,
           getAverageValueLength(opts)) + ")");
 
-    return totalElapsedTime;
+    return new RunResult(totalElapsedTime, t.getLatency());
   }
 
   private static int getAverageValueLength(final TestOptions opts) {
@@ -1567,12 +1605,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // Log the configuration we're going to run with. Uses JSON mapper because lazy. It'll do
     // the TestOptions introspection for us and dump the output in a readable format.
     LOG.info(cmd.getSimpleName() + " test run options=" + MAPPER.writeValueAsString(opts));
-    HBaseAdmin admin = null;
+    Admin admin = null;
+    Connection connection = null;
     try {
-      admin = new HBaseAdmin(getConf());
+      connection = ConnectionFactory.createConnection(getConf());
+      admin = connection.getAdmin();
       checkTable(admin, opts);
     } finally {
       if (admin != null) admin.close();
+      if (connection != null) connection.close();
     }
     if (opts.nomapred) {
       doLocalClients(opts, getConf());
@@ -1786,7 +1827,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
-      final String noOfTags = "--nooftags=";
+      final String noOfTags = "--numoftags=";
       if (cmd.startsWith(noOfTags)) {
         opts.noOfTags = Integer.parseInt(cmd.substring(noOfTags.length()));
         continue;
@@ -1876,6 +1917,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
         opts = calculateRowsAndSize(opts);
         break;
       }
+
+      // Not matching any option or command.
+      System.err.println("Error: Wrong option or command: " + cmd);
+      args.add(cmd);
+      break;
     }
     return opts;
   }
@@ -1913,10 +1959,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
       argv.addAll(Arrays.asList(args));
       TestOptions opts = parseOpts(argv);
 
-      // args remainting, print help and exit
+      // args remaining, print help and exit
       if (!argv.isEmpty()) {
         errCode = 0;
         printUsage();
+        return errCode;
       }
 
       // must run at least 1 client

@@ -31,6 +31,9 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +43,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -65,7 +67,7 @@ import com.google.protobuf.ServiceException;
 /**
  * TestEndpoint: test cases to verify coprocessor Endpoint
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorEndpoint {
   private static final Log LOG = LogFactory.getLog(TestCoprocessorEndpoint.class);
 
@@ -92,14 +94,14 @@ public class TestCoprocessorEndpoint {
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         ProtobufCoprocessorService.class.getName());
     util.startMiniCluster(2);
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = util.getHBaseAdmin();
     HTableDescriptor desc = new HTableDescriptor(TEST_TABLE);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
     util.waitUntilAllRegionsAssigned(TEST_TABLE);
     admin.close();
 
-    HTable table = new HTable(conf, TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
       put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
@@ -113,7 +115,7 @@ public class TestCoprocessorEndpoint {
     util.shutdownMiniCluster();
   }
 
-  private Map<byte [], Long> sum(final HTable table, final byte [] family,
+  private Map<byte [], Long> sum(final Table table, final byte [] family,
       final byte [] qualifier, final byte [] start, final byte [] end)
   throws ServiceException, Throwable {
     return table.coprocessorService(ColumnAggregationProtos.ColumnAggregationService.class,
@@ -138,7 +140,7 @@ public class TestCoprocessorEndpoint {
 
   @Test
   public void testAggregation() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     Map<byte[], Long> results = sum(table, TEST_FAMILY, TEST_QUALIFIER,
       ROWS[0], ROWS[ROWS.length-1]);
     int sumResult = 0;
@@ -172,7 +174,7 @@ public class TestCoprocessorEndpoint {
 
   @Test
   public void testCoprocessorService() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    HTable table = (HTable) util.getConnection().getTable(TEST_TABLE);
     NavigableMap<HRegionInfo,ServerName> regions = table.getRegionLocations();
 
     final TestProtos.EchoRequestProto request =
@@ -246,7 +248,7 @@ public class TestCoprocessorEndpoint {
 
   @Test
   public void testCoprocessorServiceNullResponse() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    HTable table = (HTable) util.getConnection().getTable(TEST_TABLE);
     NavigableMap<HRegionInfo,ServerName> regions = table.getRegionLocations();
 
     final TestProtos.EchoRequestProto request =
@@ -297,7 +299,7 @@ public class TestCoprocessorEndpoint {
     Configuration configuration = new Configuration(util.getConfiguration());
     // Make it not retry forever
     configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-    HTable table = new HTable(configuration, TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
 
     try {
       CoprocessorRpcChannel protocol = table.coprocessorService(ROWS[0]);

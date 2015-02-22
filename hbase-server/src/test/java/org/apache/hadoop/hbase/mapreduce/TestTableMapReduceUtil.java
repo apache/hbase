@@ -19,7 +19,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
@@ -31,7 +32,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test different variants of initTableMapperJob method
  */
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestTableMapReduceUtil {
 
   /*
@@ -45,8 +46,8 @@ public class TestTableMapReduceUtil {
     Job job = new Job(configuration, "tableName");
     // test 
     TableMapReduceUtil.initTableMapperJob("Table", new Scan(), Import.Importer.class, Text.class,
-        Text.class, job, false, HLogInputFormat.class);
-    assertEquals(HLogInputFormat.class, job.getInputFormatClass());
+        Text.class, job, false, WALInputFormat.class);
+    assertEquals(WALInputFormat.class, job.getInputFormatClass());
     assertEquals(Import.Importer.class, job.getMapperClass());
     assertEquals(LongWritable.class, job.getOutputKeyClass());
     assertEquals(Text.class, job.getOutputValueClass());
@@ -59,8 +60,8 @@ public class TestTableMapReduceUtil {
     Configuration configuration = new Configuration();
     Job job = new Job(configuration, "tableName");
     TableMapReduceUtil.initTableMapperJob(Bytes.toBytes("Table"), new Scan(),
-        Import.Importer.class, Text.class, Text.class, job, false, HLogInputFormat.class);
-    assertEquals(HLogInputFormat.class, job.getInputFormatClass());
+        Import.Importer.class, Text.class, Text.class, job, false, WALInputFormat.class);
+    assertEquals(WALInputFormat.class, job.getInputFormatClass());
     assertEquals(Import.Importer.class, job.getMapperClass());
     assertEquals(LongWritable.class, job.getOutputKeyClass());
     assertEquals(Text.class, job.getOutputValueClass());

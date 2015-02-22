@@ -57,7 +57,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -69,8 +70,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -93,7 +95,7 @@ import com.google.common.collect.Lists;
 /**
  * Test class for the Store
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestStore {
   public static final Log LOG = LogFactory.getLog(TestStore.class);
   @Rule public TestName name = new TestName();
@@ -167,17 +169,23 @@ public class TestStore {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
-    String logName = "logs";
-    Path logdir = new Path(basedir, logName);
+    final Path logdir = new Path(basedir, DefaultWALProvider.getWALDirectoryName(methodName));
 
     FileSystem fs = FileSystem.get(conf);
 
     fs.delete(logdir, true);
 
-    htd.addFamily(hcd);
+    if (htd.hasFamily(hcd.getName())) {
+      htd.modifyFamily(hcd);
+    } else {
+      htd.addFamily(hcd);
+    }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HLog hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
-    HRegion region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
+    final Configuration walConf = new Configuration(conf);
+    FSUtils.setRootDir(walConf, basedir);
+    final WALFactory wals = new WALFactory(walConf, null, methodName);
+    HRegion region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes()), fs, conf,
+        info, htd, null);
 
     store = new HStore(region, hcd, conf);
     return store;
@@ -275,6 +283,14 @@ public class TestStore {
 
   @Test
   public void testDeleteExpiredStoreFiles() throws Exception {
+    testDeleteExpiredStoreFiles(0);
+    testDeleteExpiredStoreFiles(1);
+  }
+
+  /*
+   * @param minVersions the MIN_VERSIONS for the column family
+   */
+  public void testDeleteExpiredStoreFiles(int minVersions) throws Exception {
     int storeFileNum = 4;
     int ttl = 4;
     IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge();
@@ -287,6 +303,7 @@ public class TestStore {
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 5);
 
     HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setMinVersions(minVersions);
     hcd.setTimeToLive(ttl);
     init(name.getMethodName(), conf, hcd);
 
@@ -315,10 +332,14 @@ public class TestStore {
       assertNull(this.store.requestCompaction());
       Collection<StoreFile> sfs = this.store.getStorefiles();
       // Ensure i files are gone.
-      assertEquals(storeFileNum - i, sfs.size());
-      // Ensure only non-expired files remain.
-      for (StoreFile sf : sfs) {
-        assertTrue(sf.getReader().getMaxTimestamp() >= (edge.currentTime() - storeTtl));
+      if (minVersions == 0) {
+        assertEquals(storeFileNum - i, sfs.size());
+        // Ensure only non-expired files remain.
+        for (StoreFile sf : sfs) {
+          assertTrue(sf.getReader().getMaxTimestamp() >= (edge.currentTime() - storeTtl));
+        }
+      } else {
+        assertEquals(storeFileNum, sfs.size());
       }
       // Let the next store file expired.
       edge.incrementTime(sleepTime);
@@ -326,7 +347,9 @@ public class TestStore {
     assertNull(this.store.requestCompaction());
     Collection<StoreFile> sfs = this.store.getStorefiles();
     // Assert the last expired file is not removed.
-    assertEquals(1, sfs.size());
+    if (minVersions == 0) {
+      assertEquals(1, sfs.size());
+    }
     long ts = sfs.iterator().next().getReader().getMaxTimestamp();
     assertTrue(ts < (edge.currentTime() - storeTtl));
   }
@@ -352,7 +375,7 @@ public class TestStore {
     Assert.assertEquals(lowestTimeStampFromManager,lowestTimeStampFromFS);
 
     // after compact; check the lowest time stamp
-    store.compact(store.requestCompaction());
+    store.compact(store.requestCompaction(), NoLimitCompactionThroughputController.INSTANCE);
     lowestTimeStampFromManager = StoreUtils.getLowestTimestamp(store.getStorefiles());
     lowestTimeStampFromFS = getLowestTimeStampFromFS(fs, store.getStorefiles());
     Assert.assertEquals(lowestTimeStampFromManager, lowestTimeStampFromFS);
@@ -525,7 +548,7 @@ public class TestStore {
     this.store.snapshot();
     flushStore(store, id++);
     Assert.assertEquals(storeFilessize, this.store.getStorefiles().size());
-    Assert.assertEquals(0, ((DefaultMemStore)this.store.memstore).kvset.size());
+    Assert.assertEquals(0, ((DefaultMemStore)this.store.memstore).cellSet.size());
   }
 
   private void assertCheck() {
@@ -570,7 +593,7 @@ public class TestStore {
     flushStore(store, id++);
     Assert.assertEquals(1, this.store.getStorefiles().size());
     // from the one we inserted up there, and a new one
-    Assert.assertEquals(2, ((DefaultMemStore)this.store.memstore).kvset.size());
+    Assert.assertEquals(2, ((DefaultMemStore)this.store.memstore).cellSet.size());
 
     // how many key/values for this row are there?
     Get get = new Get(row);
@@ -644,8 +667,8 @@ public class TestStore {
     }
 
     long computedSize=0;
-    for (KeyValue kv : ((DefaultMemStore)this.store.memstore).kvset) {
-      long kvsize = DefaultMemStore.heapSizeChange(kv, true);
+    for (Cell cell : ((DefaultMemStore)this.store.memstore).cellSet) {
+      long kvsize = DefaultMemStore.heapSizeChange(cell, true);
       //System.out.println(kv + " size= " + kvsize + " kvsize= " + kv.heapSize());
       computedSize += kvsize;
     }
@@ -676,7 +699,7 @@ public class TestStore {
     // then flush.
     flushStore(store, id++);
     Assert.assertEquals(1, this.store.getStorefiles().size());
-    Assert.assertEquals(1, ((DefaultMemStore)this.store.memstore).kvset.size());
+    Assert.assertEquals(1, ((DefaultMemStore)this.store.memstore).cellSet.size());
 
     // now increment again:
     newValue += 1;
@@ -763,7 +786,7 @@ public class TestStore {
         LOG.info("After failed flush, we should still have no files!");
         files = store.getRegionFileSystem().getStoreFiles(store.getColumnFamilyName());
         Assert.assertEquals(0, files != null ? files.size() : 0);
-        store.getHRegion().getLog().closeAndDelete();
+        store.getHRegion().getWAL().close();
         return null;
       }
     });

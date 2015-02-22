@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashSet;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,13 +41,17 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -429,7 +432,7 @@ public class SnapshotTestingUtils {
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
         String region = regionInfo.getEncodedName();
         String hfile = storeFile.getName();
-        HFileLink link = HFileLink.create(conf, table, region, family, hfile);
+        HFileLink link = HFileLink.build(conf, table, region, family, hfile);
         if (corruptedFiles.size() % 2 == 0) {
           fs.delete(link.getAvailablePath(fs), true);
           corruptedFiles.add(hfile);
@@ -486,7 +489,8 @@ public class SnapshotTestingUtils {
         this.tableRegions = tableRegions;
         this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
         new FSTableDescriptors(conf)
-          .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
+          .createTableDescriptorForTableDirectory(snapshotDir,
+              new TableDescriptor(htd), false);
       }
 
       public HTableDescriptor getTableDescriptor() {
@@ -557,7 +561,6 @@ public class SnapshotTestingUtils {
     private SnapshotBuilder createSnapshot(final String snapshotName, final int version)
         throws IOException {
       HTableDescriptor htd = createHtd(snapshotName);
-      htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
       RegionData[] regions = createTable(htd, TEST_NUM_REGIONS);
 
@@ -581,7 +584,8 @@ public class SnapshotTestingUtils {
     private RegionData[] createTable(final HTableDescriptor htd, final int nregions)
         throws IOException {
       Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
-      new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir, htd, false);
+      new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir,
+          new TableDescriptor(htd), false);
 
       assertTrue(nregions % 2 == 0);
       RegionData[] regions = new RegionData[nregions];
@@ -637,27 +641,26 @@ public class SnapshotTestingUtils {
     for (HRegion region : onlineRegions) {
       region.waitForFlushesAndCompactions();
     }
-    util.getHBaseAdmin().isTableAvailable(tableName);
+    // Wait up to 60 seconds for a table to be available.
+    util.waitFor(60000, util.predicateTableAvailable(tableName));
   }
 
   public static void createTable(final HBaseTestingUtility util, final TableName tableName,
       int regionReplication, final byte[]... families) throws IOException, InterruptedException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
-    for (byte[] family: families) {
+    for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
     }
     byte[][] splitKeys = getSplitKeys();
-    util.getHBaseAdmin().createTable(htd, splitKeys);
-    waitForTableToBeOnline(util, tableName);
+    util.createTable(htd, splitKeys);
     assertEquals((splitKeys.length + 1) * regionReplication,
         util.getHBaseAdmin().getTableRegions(tableName).size());
   }
 
   public static byte[][] getSplitKeys() {
     byte[][] splitKeys = new byte[KEYS.length-2][];
-    byte[] hex = Bytes.toBytes("123456789abcde");
     for (int i = 0; i < splitKeys.length; ++i) {
       splitKeys[i] = new byte[] { KEYS[i+1] };
     }
@@ -671,20 +674,22 @@ public class SnapshotTestingUtils {
 
   public static void loadData(final HBaseTestingUtility util, final TableName tableName, int rows,
       byte[]... families) throws IOException, InterruptedException {
-    loadData(util, new HTable(util.getConfiguration(), tableName), rows, families);
+    BufferedMutator mutator = util.getConnection().getBufferedMutator(tableName);
+    loadData(util, mutator, rows, families);
   }
 
-  public static void loadData(final HBaseTestingUtility util, final HTable table, int rows,
+  public static void loadData(final HBaseTestingUtility util, final BufferedMutator mutator, int rows,
       byte[]... families) throws IOException, InterruptedException {
-    table.setAutoFlush(false, true);
-
     // Ensure one row per region
     assertTrue(rows >= KEYS.length);
     for (byte k0: KEYS) {
       byte[] k = new byte[] { k0 };
       byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
       byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
-      putData(table, families, key, value);
+      final byte[][] families1 = families;
+      final byte[] key1 = key;
+      final byte[] value1 = value;
+      mutator.mutate(createPut(families1, key1, value1));
       rows--;
     }
 
@@ -692,22 +697,24 @@ public class SnapshotTestingUtils {
     while (rows-- > 0) {
       byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
       byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
-      putData(table, families, key, value);
+      final byte[][] families1 = families;
+      final byte[] key1 = key;
+      final byte[] value1 = value;
+      mutator.mutate(createPut(families1, key1, value1));
     }
-    table.flushCommits();
+    mutator.flush();
 
-    waitForTableToBeOnline(util, table.getName());
+    waitForTableToBeOnline(util, mutator.getName());
   }
 
-  private static void putData(final HTable table, final byte[][] families,
-      final byte[] key, final byte[] value) throws IOException {
+  private static Put createPut(final byte[][] families, final byte[] key, final byte[] value) {
     byte[] q = Bytes.toBytes("q");
     Put put = new Put(key);
     put.setDurability(Durability.SKIP_WAL);
     for (byte[] family: families) {
       put.add(family, q, value);
     }
-    table.put(put);
+    return put;
   }
 
   public static void deleteAllSnapshots(final Admin admin)
@@ -729,7 +736,7 @@ public class SnapshotTestingUtils {
 
   public static void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
       long expectedRows) throws IOException {
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       assertEquals(expectedRows, util.countRows(table));
     } finally {

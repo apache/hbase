@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 
@@ -68,7 +68,8 @@ public abstract class CompactionContext {
    * Runs the compaction based on current selection. select/forceSelect must have been called.
    * @return The new file paths resulting from compaction.
    */
-  public abstract List<Path> compact() throws IOException;
+  public abstract List<Path> compact(CompactionThroughputController throughputController)
+      throws IOException;
 
   public CompactionRequest getRequest() {
     assert hasSelection();

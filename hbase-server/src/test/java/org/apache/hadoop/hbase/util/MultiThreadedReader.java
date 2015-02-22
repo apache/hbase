@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
 /** Creates multiple threads that read and verify previously written data */
@@ -134,7 +135,7 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   public class HBaseReaderThread extends Thread {
     protected final int readerId;
-    protected final HTableInterface table;
+    protected final Table table;
 
     /** The "current" key being read. Increases from startKey to endKey. */
     private long curKey;
@@ -353,7 +354,7 @@ public class MultiThreadedReader extends MultiThreadedAction
     }
 
     protected void verifyResultsAndUpdateMetrics(boolean verify, Get[] gets, long elapsedNano,
-        Result[] results, HTableInterface table, boolean isNullExpected)
+        Result[] results, Table table, boolean isNullExpected)
         throws IOException {
       totalOpTimeMs.addAndGet(elapsedNano / 1000000);
       numKeys.addAndGet(gets.length);
@@ -365,22 +366,22 @@ public class MultiThreadedReader extends MultiThreadedAction
     }
 
     protected void verifyResultsAndUpdateMetrics(boolean verify, Get get, long elapsedNano,
-        Result result, HTableInterface table, boolean isNullExpected)
+        Result result, Table table, boolean isNullExpected)
         throws IOException {
       verifyResultsAndUpdateMetrics(verify, new Get[]{get}, elapsedNano,
           new Result[]{result}, table, isNullExpected);
     }
 
     private void verifyResultsAndUpdateMetricsOnAPerGetBasis(boolean verify, Get get,
-        Result result, HTableInterface table, boolean isNullExpected) throws IOException {
+        Result result, Table table, boolean isNullExpected) throws IOException {
       if (!result.isEmpty()) {
         if (verify) {
           numKeysVerified.incrementAndGet();
         }
       } else {
-		HRegionLocation hloc = connection.getRegionLocation(tableName,
-		    get.getRow(), false);
-         String rowKey = Bytes.toString(get.getRow());
+        HRegionLocation hloc = connection.getRegionLocation(tableName,
+          get.getRow(), false);
+        String rowKey = Bytes.toString(get.getRow());
         LOG.info("Key = " + rowKey + ", Region location: " + hloc);
         if(isNullExpected) {
           nullResult.incrementAndGet();

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -122,7 +123,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
   }
 
   protected class HBaseUpdaterThread extends Thread {
-    protected final HTableInterface table;
+    protected final Table table;
 
     public HBaseUpdaterThread(int updaterId) throws IOException {
       setName(getClass().getSimpleName() + "_" + updaterId);
@@ -274,11 +275,11 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       return result;
     }
 
-    public void mutate(HTableInterface table, Mutation m, long keyBase) {
+    public void mutate(Table table, Mutation m, long keyBase) {
       mutate(table, m, keyBase, null, null, null, null);
     }
 
-    public void mutate(HTableInterface table, Mutation m,
+    public void mutate(Table table, Mutation m,
         long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
       long start = System.currentTimeMillis();
       try {
@@ -299,7 +300,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       } catch (IOException e) {
         if (ignoreNonceConflicts && (e instanceof OperationConflictException)) {
           LOG.info("Detected nonce conflict, ignoring: " + e.getMessage());
-	  totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
+          totalOpTimeMs.addAndGet(System.currentTimeMillis() - start);
           return;
         }
         failedKeySet.add(keyBase);
@@ -327,11 +328,11 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
     }
   }
 
-  public void mutate(HTableInterface table, Mutation m, long keyBase) {
+  public void mutate(Table table, Mutation m, long keyBase) {
     mutate(table, m, keyBase, null, null, null, null);
   }
 
-  public void mutate(HTableInterface table, Mutation m,
+  public void mutate(Table table, Mutation m,
       long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
     long start = System.currentTimeMillis();
     try {

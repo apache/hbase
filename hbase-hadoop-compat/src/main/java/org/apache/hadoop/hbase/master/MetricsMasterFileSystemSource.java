@@ -48,9 +48,9 @@ public interface MetricsMasterFileSystemSource extends BaseSource {
   String SPLIT_SIZE_NAME = "hlogSplitSize";
 
   String META_SPLIT_TIME_DESC = "Time it takes to finish splitMetaLog()";
-  String META_SPLIT_SIZE_DESC = "Size of hbase:meta HLog files being split";
-  String SPLIT_TIME_DESC = "Time it takes to finish HLog.splitLog()";
-  String SPLIT_SIZE_DESC = "Size of HLog files being split";
+  String META_SPLIT_SIZE_DESC = "Size of hbase:meta WAL files being split";
+  String SPLIT_TIME_DESC = "Time it takes to finish WAL.splitLog()";
+  String SPLIT_SIZE_DESC = "Size of WAL files being split";
 
 
   void updateMetaWALSplitTime(long time);

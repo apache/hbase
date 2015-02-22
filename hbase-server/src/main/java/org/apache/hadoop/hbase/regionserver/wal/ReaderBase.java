@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,21 +31,19 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.FSUtils;
 
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
-public abstract class ReaderBase implements HLog.Reader {
+public abstract class ReaderBase implements DefaultWALProvider.Reader {
   private static final Log LOG = LogFactory.getLog(ReaderBase.class);
   protected Configuration conf;
   protected FileSystem fs;
   protected Path path;
   protected long edit = 0;
   protected long fileLength;
-  protected WALTrailer trailer;
-  // maximum size of the wal Trailer in bytes. If a user writes/reads a trailer with size larger
-  // than this size, it is written/read respectively, with a WARN message in the log.
-  protected int trailerWarnSize;
   /**
    * Compression context to use reading.  Can be null if no compression.
    */
@@ -65,8 +63,6 @@ public abstract class ReaderBase implements HLog.Reader {
     this.path = path;
     this.fs = fs;
     this.fileLength = this.fs.getFileStatus(path).getLen();
-    this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
-      HLog.DEFAULT_WAL_TRAILER_WARN_SIZE);
     String cellCodecClsName = initReader(stream);
 
     boolean compression = hasCompression();
@@ -87,15 +83,17 @@ public abstract class ReaderBase implements HLog.Reader {
   }
 
   @Override
-  public HLog.Entry next() throws IOException {
+  public Entry next() throws IOException {
     return next(null);
   }
 
   @Override
-  public HLog.Entry next(HLog.Entry reuse) throws IOException {
-    HLog.Entry e = reuse;
+  public Entry next(Entry reuse) throws IOException {
+    Entry e = reuse;
     if (e == null) {
-      e = new HLog.Entry(new HLogKey(), new WALEdit());
+      // we use HLogKey here instead of WALKey directly to support legacy coprocessors,
+      // seqencefile based readers, and HLogInputFormat.
+      e = new Entry(new HLogKey(), new WALEdit());
     }
     if (compressionContext != null) {
       e.setCompressionContext(compressionContext);
@@ -165,15 +163,10 @@ public abstract class ReaderBase implements HLog.Reader {
    * @param e The entry to read into.
    * @return Whether there was anything to read.
    */
-  protected abstract boolean readNext(HLog.Entry e) throws IOException;
+  protected abstract boolean readNext(Entry e) throws IOException;
 
   /**
    * Performs a filesystem-level seek to a certain position in an underlying file.
    */
   protected abstract void seekOnFs(long pos) throws IOException;
-
-  @Override
-  public WALTrailer getWALTrailer() {
-    return null;
-  }
 }

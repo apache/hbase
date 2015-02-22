@@ -34,13 +34,13 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -55,7 +55,7 @@ import org.junit.experimental.categories.Category;
  * error message describing the set of its loaded coprocessors for crash diagnosis.
  * (HBASE-4014).
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestMasterCoprocessorExceptionWithAbort {
 
   public static class MasterTracker extends ZooKeeperNodeTracker {
@@ -198,7 +198,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     // Test (part of the) output that should have be printed by master when it aborts:
     // (namely the part that shows the set of loaded coprocessors).
     // In this test, there is only a single coprocessor (BuggyMasterObserver).
-    assertTrue(master.getLoadedCoprocessors().
+    assertTrue(HMaster.getLoadedCoprocessors().
       contains(TestMasterCoprocessorExceptionWithAbort.BuggyMasterObserver.class.getName()));
 
     CreateTableThread createTableThread = new CreateTableThread(UTIL);

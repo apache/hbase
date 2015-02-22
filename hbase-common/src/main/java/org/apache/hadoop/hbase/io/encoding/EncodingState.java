@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Keeps track of the encoding state.
@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.KeyValue;
 public class EncodingState {
 
   /**
-   * The previous KeyValue the encoder encoded.
+   * The previous Cell the encoder encoded.
    */
-  protected KeyValue prevKv = null;
+  protected Cell prevCell = null;
 }

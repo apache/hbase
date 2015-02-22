@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Thrown by {@link BucketAllocator}

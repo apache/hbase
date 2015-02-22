@@ -25,8 +25,8 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Scan;
@@ -314,8 +314,15 @@ implements Writable, Comparable<TableSplit> {
    */
   @Override
   public String toString() {
-    return regionLocation + ":" +
-      Bytes.toStringBinary(startRow) + "," + Bytes.toStringBinary(endRow);
+    StringBuilder sb = new StringBuilder();
+    sb.append("HBase table split(");
+    sb.append("table name: ").append(tableName);
+    sb.append(", scan: ").append(scan);
+    sb.append(", start row: ").append(Bytes.toStringBinary(startRow));
+    sb.append(", end row: ").append(Bytes.toStringBinary(endRow));
+    sb.append(", region location: ").append(regionLocation);
+    sb.append(")");
+    return sb.toString();
   }
 
   /**

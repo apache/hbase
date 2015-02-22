@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.util.*;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A Static Interface.

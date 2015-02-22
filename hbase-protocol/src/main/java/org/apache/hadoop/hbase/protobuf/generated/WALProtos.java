@@ -1242,7 +1242,9 @@ public final class WALProtos {
    * Protobuf type {@code WALKey}
    *
    * <pre>
-   * Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
+   *
+   * Protocol buffer version of WALKey; see WALKey comment, not really a key but WALEdit header
+   * for some KVs
    * </pre>
    */
   public static final class WALKey extends
@@ -2033,7 +2035,9 @@ public final class WALProtos {
      * Protobuf type {@code WALKey}
      *
      * <pre>
-     * Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
+     *
+     * Protocol buffer version of WALKey; see WALKey comment, not really a key but WALEdit header
+     * for some KVs
      * </pre>
      */
     public static final class Builder extends
@@ -7600,6 +7604,2081 @@ public final class WALProtos {
     // @@protoc_insertion_point(class_scope:FlushDescriptor)
   }
 
+  public interface StoreDescriptorOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bytes family_name = 1;
+    /**
+     * <code>required bytes family_name = 1;</code>
+     */
+    boolean hasFamilyName();
+    /**
+     * <code>required bytes family_name = 1;</code>
+     */
+    com.google.protobuf.ByteString getFamilyName();
+
+    // required string store_home_dir = 2;
+    /**
+     * <code>required string store_home_dir = 2;</code>
+     *
+     * <pre>
+     *relative to region dir
+     * </pre>
+     */
+    boolean hasStoreHomeDir();
+    /**
+     * <code>required string store_home_dir = 2;</code>
+     *
+     * <pre>
+     *relative to region dir
+     * </pre>
+     */
+    java.lang.String getStoreHomeDir();
+    /**
+     * <code>required string store_home_dir = 2;</code>
+     *
+     * <pre>
+     *relative to region dir
+     * </pre>
+     */
+    com.google.protobuf.ByteString
+        getStoreHomeDirBytes();
+
+    // repeated string store_file = 3;
+    /**
+     * <code>repeated string store_file = 3;</code>
+     *
+     * <pre>
+     * relative to store dir
+     * </pre>
+     */
+    java.util.List<java.lang.String>
+    getStoreFileList();
+    /**
+     * <code>repeated string store_file = 3;</code>
+     *
+     * <pre>
+     * relative to store dir
+     * </pre>
+     */
+    int getStoreFileCount();
+    /**
+     * <code>repeated string store_file = 3;</code>
+     *
+     * <pre>
+     * relative to store dir
+     * </pre>
+     */
+    java.lang.String getStoreFile(int index);
+    /**
+     * <code>repeated string store_file = 3;</code>
+     *
+     * <pre>
+     * relative to store dir
+     * </pre>
+     */
+    com.google.protobuf.ByteString
+        getStoreFileBytes(int index);
+  }
+  /**
+   * Protobuf type {@code StoreDescriptor}
+   */
+  public static final class StoreDescriptor extends
+      com.google.protobuf.GeneratedMessage
+      implements StoreDescriptorOrBuilder {
+    // Use StoreDescriptor.newBuilder() to construct.
+    private StoreDescriptor(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private StoreDescriptor(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final StoreDescriptor defaultInstance;
+    public static StoreDescriptor getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public StoreDescriptor getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private StoreDescriptor(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              familyName_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              storeHomeDir_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                storeFile_ = new com.google.protobuf.LazyStringArrayList();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              storeFile_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          storeFile_ = new com.google.protobuf.UnmodifiableLazyStringList(storeFile_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_StoreDescriptor_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_StoreDescriptor_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<StoreDescriptor> PARSER =
+        new com.google.protobuf.AbstractParser<StoreDescriptor>() {
+      public StoreDescriptor parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new StoreDescriptor(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<StoreDescriptor> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bytes family_name = 1;
+    public static final int FAMILY_NAME_FIELD_NUMBER = 1;
+    private com.google.protobuf.ByteString familyName_;
+    /**
+     * <code>required bytes family_name = 1;</code>
+     */
+    public boolean hasFamilyName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bytes family_name = 1;</code>
+     */
+    public com.google.protobuf.ByteString getFamilyName() {
+      return familyName_;
+    }
+
+    // required string store_home_dir = 2;
+    public static final int STORE_HOME_DIR_FIELD_NUMBER = 2;
+    private java.lang.Object storeHomeDir_;
+    /**
+     * <code>required string store_home_dir = 2;</code>
+     *
+     * <pre>
+     *relative to region dir
+     * </pre>
+     */
+    public boolean hasStoreHomeDir() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required string store_home_dir = 2;</code>
+     *
+     * <pre>
+     *relative to region dir
+     * </pre>
+     */
+    public java.lang.String getStoreHomeDir() {
+      java.lang.Object ref = storeHomeDir_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          storeHomeDir_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string store_home_dir = 2;</code>
+     *
+     * <pre>
+     *relative to region dir
+     * </pre>
+     */
+    public com.google.protobuf.ByteString
+        getStoreHomeDirBytes() {
+      java.lang.Object ref = storeHomeDir_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        storeHomeDir_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // repeated string store_file = 3;
+    public static final int STORE_FILE_FIELD_NUMBER = 3;
+    private com.google.protobuf.LazyStringList storeFile_;
+    /**
+     * <code>repeated string store_file = 3;</code>
+     *
+     * <pre>
+     * relative to store dir
+     * </pre>
+     */
+    public java.util.List<java.lang.String>
+        getStoreFileList() {
+      return storeFile_;
+    }
+    /**
+     * <code>repeated string store_file = 3;</code>
+     *
+     * <pre>
+     * relative to store dir
+     * </pre>
+     */
+    public int getStoreFileCount() {
+      return storeFile_.size();
+    }
+    /**
+     * <code>repeated string store_file = 3;</code>
+     *
+     * <pre>
+     * relative to store dir
+     * </pre>
+     */
+    public java.lang.String getStoreFile(int index) {
+      return storeFile_.get(index);
+    }
+    /**
+     * <code>repeated string store_file = 3;</code>
+     *
+     * <pre>
+     * relative to store dir
+     * </pre>
+     */
+    public com.google.protobuf.ByteString
+        getStoreFileBytes(int index) {
+      return storeFile_.getByteString(index);
+    }
+
+    private void initFields() {
+      familyName_ = com.google.protobuf.ByteString.EMPTY;
+      storeHomeDir_ = "";
+      storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasFamilyName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasStoreHomeDir()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, familyName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getStoreHomeDirBytes());
+      }
+      for (int i = 0; i < storeFile_.size(); i++) {
+        output.writeBytes(3, storeFile_.getByteString(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, familyName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getStoreHomeDirBytes());
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < storeFile_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(storeFile_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getStoreFileList().size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor) obj;
+
+      boolean result = true;
+      result = result && (hasFamilyName() == other.hasFamilyName());
+      if (hasFamilyName()) {
+        result = result && getFamilyName()
+            .equals(other.getFamilyName());
+      }
+      result = result && (hasStoreHomeDir() == other.hasStoreHomeDir());
+      if (hasStoreHomeDir()) {
+        result = result && getStoreHomeDir()
+            .equals(other.getStoreHomeDir());
+      }
+      result = result && getStoreFileList()
+          .equals(other.getStoreFileList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasFamilyName()) {
+        hash = (37 * hash) + FAMILY_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getFamilyName().hashCode();
+      }
+      if (hasStoreHomeDir()) {
+        hash = (37 * hash) + STORE_HOME_DIR_FIELD_NUMBER;
+        hash = (53 * hash) + getStoreHomeDir().hashCode();
+      }
+      if (getStoreFileCount() > 0) {
+        hash = (37 * hash) + STORE_FILE_FIELD_NUMBER;
+        hash = (53 * hash) + getStoreFileList().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code StoreDescriptor}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_StoreDescriptor_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_StoreDescriptor_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        familyName_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        storeHomeDir_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_StoreDescriptor_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor build() {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.familyName_ = familyName_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.storeHomeDir_ = storeHomeDir_;
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          storeFile_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              storeFile_);
+          bitField0_ = (bitField0_ & ~0x00000004);
+        }
+        result.storeFile_ = storeFile_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.getDefaultInstance()) return this;
+        if (other.hasFamilyName()) {
+          setFamilyName(other.getFamilyName());
+        }
+        if (other.hasStoreHomeDir()) {
+          bitField0_ |= 0x00000002;
+          storeHomeDir_ = other.storeHomeDir_;
+          onChanged();
+        }
+        if (!other.storeFile_.isEmpty()) {
+          if (storeFile_.isEmpty()) {
+            storeFile_ = other.storeFile_;
+            bitField0_ = (bitField0_ & ~0x00000004);
+          } else {
+            ensureStoreFileIsMutable();
+            storeFile_.addAll(other.storeFile_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasFamilyName()) {
+          
+          return false;
+        }
+        if (!hasStoreHomeDir()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bytes family_name = 1;
+      private com.google.protobuf.ByteString familyName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes family_name = 1;</code>
+       */
+      public boolean hasFamilyName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bytes family_name = 1;</code>
+       */
+      public com.google.protobuf.ByteString getFamilyName() {
+        return familyName_;
+      }
+      /**
+       * <code>required bytes family_name = 1;</code>
+       */
+      public Builder setFamilyName(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        familyName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bytes family_name = 1;</code>
+       */
+      public Builder clearFamilyName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        familyName_ = getDefaultInstance().getFamilyName();
+        onChanged();
+        return this;
+      }
+
+      // required string store_home_dir = 2;
+      private java.lang.Object storeHomeDir_ = "";
+      /**
+       * <code>required string store_home_dir = 2;</code>
+       *
+       * <pre>
+       *relative to region dir
+       * </pre>
+       */
+      public boolean hasStoreHomeDir() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required string store_home_dir = 2;</code>
+       *
+       * <pre>
+       *relative to region dir
+       * </pre>
+       */
+      public java.lang.String getStoreHomeDir() {
+        java.lang.Object ref = storeHomeDir_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          storeHomeDir_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string store_home_dir = 2;</code>
+       *
+       * <pre>
+       *relative to region dir
+       * </pre>
+       */
+      public com.google.protobuf.ByteString
+          getStoreHomeDirBytes() {
+        java.lang.Object ref = storeHomeDir_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          storeHomeDir_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string store_home_dir = 2;</code>
+       *
+       * <pre>
+       *relative to region dir
+       * </pre>
+       */
+      public Builder setStoreHomeDir(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        storeHomeDir_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string store_home_dir = 2;</code>
+       *
+       * <pre>
+       *relative to region dir
+       * </pre>
+       */
+      public Builder clearStoreHomeDir() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        storeHomeDir_ = getDefaultInstance().getStoreHomeDir();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string store_home_dir = 2;</code>
+       *
+       * <pre>
+       *relative to region dir
+       * </pre>
+       */
+      public Builder setStoreHomeDirBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        storeHomeDir_ = value;
+        onChanged();
+        return this;
+      }
+
+      // repeated string store_file = 3;
+      private com.google.protobuf.LazyStringList storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+      private void ensureStoreFileIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          storeFile_ = new com.google.protobuf.LazyStringArrayList(storeFile_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public java.util.List<java.lang.String>
+          getStoreFileList() {
+        return java.util.Collections.unmodifiableList(storeFile_);
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public int getStoreFileCount() {
+        return storeFile_.size();
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public java.lang.String getStoreFile(int index) {
+        return storeFile_.get(index);
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public com.google.protobuf.ByteString
+          getStoreFileBytes(int index) {
+        return storeFile_.getByteString(index);
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public Builder setStoreFile(
+          int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureStoreFileIsMutable();
+        storeFile_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public Builder addStoreFile(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureStoreFileIsMutable();
+        storeFile_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public Builder addAllStoreFile(
+          java.lang.Iterable<java.lang.String> values) {
+        ensureStoreFileIsMutable();
+        super.addAll(values, storeFile_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public Builder clearStoreFile() {
+        storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated string store_file = 3;</code>
+       *
+       * <pre>
+       * relative to store dir
+       * </pre>
+       */
+      public Builder addStoreFileBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureStoreFileIsMutable();
+        storeFile_.add(value);
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:StoreDescriptor)
+    }
+
+    static {
+      defaultInstance = new StoreDescriptor(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:StoreDescriptor)
+  }
+
+  public interface BulkLoadDescriptorOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required .TableName table_name = 1;
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
+    boolean hasTableName();
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
+
+    // required bytes encoded_region_name = 2;
+    /**
+     * <code>required bytes encoded_region_name = 2;</code>
+     */
+    boolean hasEncodedRegionName();
+    /**
+     * <code>required bytes encoded_region_name = 2;</code>
+     */
+    com.google.protobuf.ByteString getEncodedRegionName();
+
+    // repeated .StoreDescriptor stores = 3;
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> 
+        getStoresList();
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor getStores(int index);
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    int getStoresCount();
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> 
+        getStoresOrBuilderList();
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder getStoresOrBuilder(
+        int index);
+
+    // required int64 bulkload_seq_num = 4;
+    /**
+     * <code>required int64 bulkload_seq_num = 4;</code>
+     */
+    boolean hasBulkloadSeqNum();
+    /**
+     * <code>required int64 bulkload_seq_num = 4;</code>
+     */
+    long getBulkloadSeqNum();
+  }
+  /**
+   * Protobuf type {@code BulkLoadDescriptor}
+   *
+   * <pre>
+   **
+   * Special WAL entry used for writing bulk load events to WAL
+   * </pre>
+   */
+  public static final class BulkLoadDescriptor extends
+      com.google.protobuf.GeneratedMessage
+      implements BulkLoadDescriptorOrBuilder {
+    // Use BulkLoadDescriptor.newBuilder() to construct.
+    private BulkLoadDescriptor(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private BulkLoadDescriptor(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final BulkLoadDescriptor defaultInstance;
+    public static BulkLoadDescriptor getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public BulkLoadDescriptor getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private BulkLoadDescriptor(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = tableName_.toBuilder();
+              }
+              tableName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(tableName_);
+                tableName_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              encodedRegionName_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                stores_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              stores_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.PARSER, extensionRegistry));
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000004;
+              bulkloadSeqNum_ = input.readInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          stores_ = java.util.Collections.unmodifiableList(stores_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_BulkLoadDescriptor_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_BulkLoadDescriptor_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<BulkLoadDescriptor> PARSER =
+        new com.google.protobuf.AbstractParser<BulkLoadDescriptor>() {
+      public BulkLoadDescriptor parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new BulkLoadDescriptor(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BulkLoadDescriptor> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required .TableName table_name = 1;
+    public static final int TABLE_NAME_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
+    public boolean hasTableName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+      return tableName_;
+    }
+    /**
+     * <code>required .TableName table_name = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+      return tableName_;
+    }
+
+    // required bytes encoded_region_name = 2;
+    public static final int ENCODED_REGION_NAME_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString encodedRegionName_;
+    /**
+     * <code>required bytes encoded_region_name = 2;</code>
+     */
+    public boolean hasEncodedRegionName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required bytes encoded_region_name = 2;</code>
+     */
+    public com.google.protobuf.ByteString getEncodedRegionName() {
+      return encodedRegionName_;
+    }
+
+    // repeated .StoreDescriptor stores = 3;
+    public static final int STORES_FIELD_NUMBER = 3;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> stores_;
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> getStoresList() {
+      return stores_;
+    }
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> 
+        getStoresOrBuilderList() {
+      return stores_;
+    }
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    public int getStoresCount() {
+      return stores_.size();
+    }
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor getStores(int index) {
+      return stores_.get(index);
+    }
+    /**
+     * <code>repeated .StoreDescriptor stores = 3;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder getStoresOrBuilder(
+        int index) {
+      return stores_.get(index);
+    }
+
+    // required int64 bulkload_seq_num = 4;
+    public static final int BULKLOAD_SEQ_NUM_FIELD_NUMBER = 4;
+    private long bulkloadSeqNum_;
+    /**
+     * <code>required int64 bulkload_seq_num = 4;</code>
+     */
+    public boolean hasBulkloadSeqNum() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required int64 bulkload_seq_num = 4;</code>
+     */
+    public long getBulkloadSeqNum() {
+      return bulkloadSeqNum_;
+    }
+
+    private void initFields() {
+      tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
+      stores_ = java.util.Collections.emptyList();
+      bulkloadSeqNum_ = 0L;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasTableName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasEncodedRegionName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasBulkloadSeqNum()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getTableName().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      for (int i = 0; i < getStoresCount(); i++) {
+        if (!getStores(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, tableName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, encodedRegionName_);
+      }
+      for (int i = 0; i < stores_.size(); i++) {
+        output.writeMessage(3, stores_.get(i));
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeInt64(4, bulkloadSeqNum_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, tableName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, encodedRegionName_);
+      }
+      for (int i = 0; i < stores_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, stores_.get(i));
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(4, bulkloadSeqNum_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor) obj;
+
+      boolean result = true;
+      result = result && (hasTableName() == other.hasTableName());
+      if (hasTableName()) {
+        result = result && getTableName()
+            .equals(other.getTableName());
+      }
+      result = result && (hasEncodedRegionName() == other.hasEncodedRegionName());
+      if (hasEncodedRegionName()) {
+        result = result && getEncodedRegionName()
+            .equals(other.getEncodedRegionName());
+      }
+      result = result && getStoresList()
+          .equals(other.getStoresList());
+      result = result && (hasBulkloadSeqNum() == other.hasBulkloadSeqNum());
+      if (hasBulkloadSeqNum()) {
+        result = result && (getBulkloadSeqNum()
+            == other.getBulkloadSeqNum());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasTableName()) {
+        hash = (37 * hash) + TABLE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getTableName().hashCode();
+      }
+      if (hasEncodedRegionName()) {
+        hash = (37 * hash) + ENCODED_REGION_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getEncodedRegionName().hashCode();
+      }
+      if (getStoresCount() > 0) {
+        hash = (37 * hash) + STORES_FIELD_NUMBER;
+        hash = (53 * hash) + getStoresList().hashCode();
+      }
+      if (hasBulkloadSeqNum()) {
+        hash = (37 * hash) + BULKLOAD_SEQ_NUM_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getBulkloadSeqNum());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code BulkLoadDescriptor}
+     *
+     * <pre>
+     **
+     * Special WAL entry used for writing bulk load events to WAL
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptorOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_BulkLoadDescriptor_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_BulkLoadDescriptor_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getTableNameFieldBuilder();
+          getStoresFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (tableNameBuilder_ == null) {
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+        } else {
+          tableNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        if (storesBuilder_ == null) {
+          stores_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+        } else {
+          storesBuilder_.clear();
+        }
+        bulkloadSeqNum_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_BulkLoadDescriptor_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor build() {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (tableNameBuilder_ == null) {
+          result.tableName_ = tableName_;
+        } else {
+          result.tableName_ = tableNameBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.encodedRegionName_ = encodedRegionName_;
+        if (storesBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+            stores_ = java.util.Collections.unmodifiableList(stores_);
+            bitField0_ = (bitField0_ & ~0x00000004);
+          }
+          result.stores_ = stores_;
+        } else {
+          result.stores_ = storesBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.bulkloadSeqNum_ = bulkloadSeqNum_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor.getDefaultInstance()) return this;
+        if (other.hasTableName()) {
+          mergeTableName(other.getTableName());
+        }
+        if (other.hasEncodedRegionName()) {
+          setEncodedRegionName(other.getEncodedRegionName());
+        }
+        if (storesBuilder_ == null) {
+          if (!other.stores_.isEmpty()) {
+            if (stores_.isEmpty()) {
+              stores_ = other.stores_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+            } else {
+              ensureStoresIsMutable();
+              stores_.addAll(other.stores_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.stores_.isEmpty()) {
+            if (storesBuilder_.isEmpty()) {
+              storesBuilder_.dispose();
+              storesBuilder_ = null;
+              stores_ = other.stores_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+              storesBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getStoresFieldBuilder() : null;
+            } else {
+              storesBuilder_.addAllMessages(other.stores_);
+            }
+          }
+        }
+        if (other.hasBulkloadSeqNum()) {
+          setBulkloadSeqNum(other.getBulkloadSeqNum());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasTableName()) {
+          
+          return false;
+        }
+        if (!hasEncodedRegionName()) {
+          
+          return false;
+        }
+        if (!hasBulkloadSeqNum()) {
+          
+          return false;
+        }
+        if (!getTableName().isInitialized()) {
+          
+          return false;
+        }
+        for (int i = 0; i < getStoresCount(); i++) {
+          if (!getStores(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required .TableName table_name = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      public boolean hasTableName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
+        if (tableNameBuilder_ == null) {
+          return tableName_;
+        } else {
+          return tableNameBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+        if (tableNameBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          tableName_ = value;
+          onChanged();
+        } else {
+          tableNameBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      public Builder setTableName(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
+        if (tableNameBuilder_ == null) {
+          tableName_ = builderForValue.build();
+          onChanged();
+        } else {
+          tableNameBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
+        if (tableNameBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              tableName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance()) {
+            tableName_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.newBuilder(tableName_).mergeFrom(value).buildPartial();
+          } else {
+            tableName_ = value;
+          }
+          onChanged();
+        } else {
+          tableNameBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      public Builder clearTableName() {
+        if (tableNameBuilder_ == null) {
+          tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
+          onChanged();
+        } else {
+          tableNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getTableNameFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
+        if (tableNameBuilder_ != null) {
+          return tableNameBuilder_.getMessageOrBuilder();
+        } else {
+          return tableName_;
+        }
+      }
+      /**
+       * <code>required .TableName table_name = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
+          getTableNameFieldBuilder() {
+        if (tableNameBuilder_ == null) {
+          tableNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder>(
+                  tableName_,
+                  getParentForChildren(),
+                  isClean());
+          tableName_ = null;
+        }
+        return tableNameBuilder_;
+      }
+
+      // required bytes encoded_region_name = 2;
+      private com.google.protobuf.ByteString encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes encoded_region_name = 2;</code>
+       */
+      public boolean hasEncodedRegionName() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required bytes encoded_region_name = 2;</code>
+       */
+      public com.google.protobuf.ByteString getEncodedRegionName() {
+        return encodedRegionName_;
+      }
+      /**
+       * <code>required bytes encoded_region_name = 2;</code>
+       */
+      public Builder setEncodedRegionName(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        encodedRegionName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bytes encoded_region_name = 2;</code>
+       */
+      public Builder clearEncodedRegionName() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        encodedRegionName_ = getDefaultInstance().getEncodedRegionName();
+        onChanged();
+        return this;
+      }
+
+      // repeated .StoreDescriptor stores = 3;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> stores_ =
+        java.util.Collections.emptyList();
+      private void ensureStoresIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          stores_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor>(stores_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> storesBuilder_;
+
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> getStoresList() {
+        if (storesBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(stores_);
+        } else {
+          return storesBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public int getStoresCount() {
+        if (storesBuilder_ == null) {
+          return stores_.size();
+        } else {
+          return storesBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor getStores(int index) {
+        if (storesBuilder_ == null) {
+          return stores_.get(index);
+        } else {
+          return storesBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder setStores(
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor value) {
+        if (storesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStoresIsMutable();
+          stores_.set(index, value);
+          onChanged();
+        } else {
+          storesBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder setStores(
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder builderForValue) {
+        if (storesBuilder_ == null) {
+          ensureStoresIsMutable();
+          stores_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          storesBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder addStores(org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor value) {
+        if (storesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStoresIsMutable();
+          stores_.add(value);
+          onChanged();
+        } else {
+          storesBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder addStores(
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor value) {
+        if (storesBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStoresIsMutable();
+          stores_.add(index, value);
+          onChanged();
+        } else {
+          storesBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder addStores(
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder builderForValue) {
+        if (storesBuilder_ == null) {
+          ensureStoresIsMutable();
+          stores_.add(builderForValue.build());
+          onChanged();
+        } else {
+          storesBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder addStores(
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder builderForValue) {
+        if (storesBuilder_ == null) {
+          ensureStoresIsMutable();
+          stores_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          storesBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder addAllStores(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> values) {
+        if (storesBuilder_ == null) {
+          ensureStoresIsMutable();
+          super.addAll(values, stores_);
+          onChanged();
+        } else {
+          storesBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder clearStores() {
+        if (storesBuilder_ == null) {
+          stores_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+          onChanged();
+        } else {
+          storesBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public Builder removeStores(int index) {
+        if (storesBuilder_ == null) {
+          ensureStoresIsMutable();
+          stores_.remove(index);
+          onChanged();
+        } else {
+          storesBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder getStoresBuilder(
+          int index) {
+        return getStoresFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder getStoresOrBuilder(
+          int index) {
+        if (storesBuilder_ == null) {
+          return stores_.get(index);  } else {
+          return storesBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> 
+           getStoresOrBuilderList() {
+        if (storesBuilder_ != null) {
+          return storesBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(stores_);
+        }
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder addStoresBuilder() {
+        return getStoresFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder addStoresBuilder(
+          int index) {
+        return getStoresFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .StoreDescriptor stores = 3;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder> 
+           getStoresBuilderList() {
+        return getStoresFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> 
+          getStoresFieldBuilder() {
+        if (storesBuilder_ == null) {
+          storesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder>(
+                  stores_,
+                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  getParentForChildren(),
+                  isClean());
+          stores_ = null;
+        }
+        return storesBuilder_;
+      }
+
+      // required int64 bulkload_seq_num = 4;
+      private long bulkloadSeqNum_ ;
+      /**
+       * <code>required int64 bulkload_seq_num = 4;</code>
+       */
+      public boolean hasBulkloadSeqNum() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required int64 bulkload_seq_num = 4;</code>
+       */
+      public long getBulkloadSeqNum() {
+        return bulkloadSeqNum_;
+      }
+      /**
+       * <code>required int64 bulkload_seq_num = 4;</code>
+       */
+      public Builder setBulkloadSeqNum(long value) {
+        bitField0_ |= 0x00000008;
+        bulkloadSeqNum_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required int64 bulkload_seq_num = 4;</code>
+       */
+      public Builder clearBulkloadSeqNum() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        bulkloadSeqNum_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:BulkLoadDescriptor)
+    }
+
+    static {
+      defaultInstance = new BulkLoadDescriptor(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:BulkLoadDescriptor)
+  }
+
   public interface RegionEventDescriptorOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -7643,29 +9722,29 @@ public final class WALProtos {
      */
     long getLogSequenceNumber();
 
-    // repeated .RegionEventDescriptor.StoreDescriptor stores = 5;
+    // repeated .StoreDescriptor stores = 5;
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
-    java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor> 
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> 
         getStoresList();
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor getStores(int index);
+    org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor getStores(int index);
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
     int getStoresCount();
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
-    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> 
         getStoresOrBuilderList();
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder getStoresOrBuilder(
+    org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder getStoresOrBuilder(
         int index);
 
     // optional .ServerName server = 6;
@@ -7778,10 +9857,10 @@ public final class WALProtos {
             }
             case 42: {
               if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
-                stores_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor>();
+                stores_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor>();
                 mutable_bitField0_ |= 0x00000010;
               }
-              stores_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.PARSER, extensionRegistry));
+              stores_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.PARSER, extensionRegistry));
               break;
             }
             case 50: {
@@ -7921,931 +10000,6 @@ public final class WALProtos {
       // @@protoc_insertion_point(enum_scope:RegionEventDescriptor.EventType)
     }
 
-    public interface StoreDescriptorOrBuilder
-        extends com.google.protobuf.MessageOrBuilder {
-
-      // required bytes family_name = 1;
-      /**
-       * <code>required bytes family_name = 1;</code>
-       */
-      boolean hasFamilyName();
-      /**
-       * <code>required bytes family_name = 1;</code>
-       */
-      com.google.protobuf.ByteString getFamilyName();
-
-      // required string store_home_dir = 2;
-      /**
-       * <code>required string store_home_dir = 2;</code>
-       *
-       * <pre>
-       *relative to region dir
-       * </pre>
-       */
-      boolean hasStoreHomeDir();
-      /**
-       * <code>required string store_home_dir = 2;</code>
-       *
-       * <pre>
-       *relative to region dir
-       * </pre>
-       */
-      java.lang.String getStoreHomeDir();
-      /**
-       * <code>required string store_home_dir = 2;</code>
-       *
-       * <pre>
-       *relative to region dir
-       * </pre>
-       */
-      com.google.protobuf.ByteString
-          getStoreHomeDirBytes();
-
-      // repeated string store_file = 3;
-      /**
-       * <code>repeated string store_file = 3;</code>
-       *
-       * <pre>
-       * relative to store dir
-       * </pre>
-       */
-      java.util.List<java.lang.String>
-      getStoreFileList();
-      /**
-       * <code>repeated string store_file = 3;</code>
-       *
-       * <pre>
-       * relative to store dir
-       * </pre>
-       */
-      int getStoreFileCount();
-      /**
-       * <code>repeated string store_file = 3;</code>
-       *
-       * <pre>
-       * relative to store dir
-       * </pre>
-       */
-      java.lang.String getStoreFile(int index);
-      /**
-       * <code>repeated string store_file = 3;</code>
-       *
-       * <pre>
-       * relative to store dir
-       * </pre>
-       */
-      com.google.protobuf.ByteString
-          getStoreFileBytes(int index);
-    }
-    /**
-     * Protobuf type {@code RegionEventDescriptor.StoreDescriptor}
-     */
-    public static final class StoreDescriptor extends
-        com.google.protobuf.GeneratedMessage
-        implements StoreDescriptorOrBuilder {
-      // Use StoreDescriptor.newBuilder() to construct.
-      private StoreDescriptor(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-        super(builder);
-        this.unknownFields = builder.getUnknownFields();
-      }
-      private StoreDescriptor(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
-      private static final StoreDescriptor defaultInstance;
-      public static StoreDescriptor getDefaultInstance() {
-        return defaultInstance;
-      }
-
-      public StoreDescriptor getDefaultInstanceForType() {
-        return defaultInstance;
-      }
-
-      private final com.google.protobuf.UnknownFieldSet unknownFields;
-      @java.lang.Override
-      public final com.google.protobuf.UnknownFieldSet
-          getUnknownFields() {
-        return this.unknownFields;
-      }
-      private StoreDescriptor(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        initFields();
-        int mutable_bitField0_ = 0;
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-            com.google.protobuf.UnknownFieldSet.newBuilder();
-        try {
-          boolean done = false;
-          while (!done) {
-            int tag = input.readTag();
-            switch (tag) {
-              case 0:
-                done = true;
-                break;
-              default: {
-                if (!parseUnknownField(input, unknownFields,
-                                       extensionRegistry, tag)) {
-                  done = true;
-                }
-                break;
-              }
-              case 10: {
-                bitField0_ |= 0x00000001;
-                familyName_ = input.readBytes();
-                break;
-              }
-              case 18: {
-                bitField0_ |= 0x00000002;
-                storeHomeDir_ = input.readBytes();
-                break;
-              }
-              case 26: {
-                if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
-                  storeFile_ = new com.google.protobuf.LazyStringArrayList();
-                  mutable_bitField0_ |= 0x00000004;
-                }
-                storeFile_.add(input.readBytes());
-                break;
-              }
-            }
-          }
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          throw e.setUnfinishedMessage(this);
-        } catch (java.io.IOException e) {
-          throw new com.google.protobuf.InvalidProtocolBufferException(
-              e.getMessage()).setUnfinishedMessage(this);
-        } finally {
-          if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
-            storeFile_ = new com.google.protobuf.UnmodifiableLazyStringList(storeFile_);
-          }
-          this.unknownFields = unknownFields.build();
-          makeExtensionsImmutable();
-        }
-      }
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_RegionEventDescriptor_StoreDescriptor_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_RegionEventDescriptor_StoreDescriptor_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder.class);
-      }
-
-      public static com.google.protobuf.Parser<StoreDescriptor> PARSER =
-          new com.google.protobuf.AbstractParser<StoreDescriptor>() {
-        public StoreDescriptor parsePartialFrom(
-            com.google.protobuf.CodedInputStream input,
-            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-            throws com.google.protobuf.InvalidProtocolBufferException {
-          return new StoreDescriptor(input, extensionRegistry);
-        }
-      };
-
-      @java.lang.Override
-      public com.google.protobuf.Parser<StoreDescriptor> getParserForType() {
-        return PARSER;
-      }
-
-      private int bitField0_;
-      // required bytes family_name = 1;
-      public static final int FAMILY_NAME_FIELD_NUMBER = 1;
-      private com.google.protobuf.ByteString familyName_;
-      /**
-       * <code>required bytes family_name = 1;</code>
-       */
-      public boolean hasFamilyName() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      /**
-       * <code>required bytes family_name = 1;</code>
-       */
-      public com.google.protobuf.ByteString getFamilyName() {
-        return familyName_;
-      }
-
-      // required string store_home_dir = 2;
-      public static final int STORE_HOME_DIR_FIELD_NUMBER = 2;
-      private java.lang.Object storeHomeDir_;
-      /**
-       * <code>required string store_home_dir = 2;</code>
-       *
-       * <pre>
-       *relative to region dir
-       * </pre>
-       */
-      public boolean hasStoreHomeDir() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      /**
-       * <code>required string store_home_dir = 2;</code>
-       *
-       * <pre>
-       *relative to region dir
-       * </pre>
-       */
-      public java.lang.String getStoreHomeDir() {
-        java.lang.Object ref = storeHomeDir_;
-        if (ref instanceof java.lang.String) {
-          return (java.lang.String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            storeHomeDir_ = s;
-          }
-          return s;
-        }
-      }
-      /**
-       * <code>required string store_home_dir = 2;</code>
-       *
-       * <pre>
-       *relative to region dir
-       * </pre>
-       */
-      public com.google.protobuf.ByteString
-          getStoreHomeDirBytes() {
-        java.lang.Object ref = storeHomeDir_;
-        if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          storeHomeDir_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-
-      // repeated string store_file = 3;
-      public static final int STORE_FILE_FIELD_NUMBER = 3;
-      private com.google.protobuf.LazyStringList storeFile_;
-      /**
-       * <code>repeated string store_file = 3;</code>
-       *
-       * <pre>
-       * relative to store dir
-       * </pre>
-       */
-      public java.util.List<java.lang.String>
-          getStoreFileList() {
-        return storeFile_;
-      }
-      /**
-       * <code>repeated string store_file = 3;</code>
-       *
-       * <pre>
-       * relative to store dir
-       * </pre>
-       */
-      public int getStoreFileCount() {
-        return storeFile_.size();
-      }
-      /**
-       * <code>repeated string store_file = 3;</code>
-       *
-       * <pre>
-       * relative to store dir
-       * </pre>
-       */
-      public java.lang.String getStoreFile(int index) {
-        return storeFile_.get(index);
-      }
-      /**
-       * <code>repeated string store_file = 3;</code>
-       *
-       * <pre>
-       * relative to store dir
-       * </pre>
-       */
-      public com.google.protobuf.ByteString
-          getStoreFileBytes(int index) {
-        return storeFile_.getByteString(index);
-      }
-
-      private void initFields() {
-        familyName_ = com.google.protobuf.ByteString.EMPTY;
-        storeHomeDir_ = "";
-        storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-      }
-      private byte memoizedIsInitialized = -1;
-      public final boolean isInitialized() {
-        byte isInitialized = memoizedIsInitialized;
-        if (isInitialized != -1) return isInitialized == 1;
-
-        if (!hasFamilyName()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-        if (!hasStoreHomeDir()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-        memoizedIsInitialized = 1;
-        return true;
-      }
-
-      public void writeTo(com.google.protobuf.CodedOutputStream output)
-                          throws java.io.IOException {
-        getSerializedSize();
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          output.writeBytes(1, familyName_);
-        }
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeBytes(2, getStoreHomeDirBytes());
-        }
-        for (int i = 0; i < storeFile_.size(); i++) {
-          output.writeBytes(3, storeFile_.getByteString(i));
-        }
-        getUnknownFields().writeTo(output);
-      }
-
-      private int memoizedSerializedSize = -1;
-      public int getSerializedSize() {
-        int size = memoizedSerializedSize;
-        if (size != -1) return size;
-
-        size = 0;
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(1, familyName_);
-        }
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBytesSize(2, getStoreHomeDirBytes());
-        }
-        {
-          int dataSize = 0;
-          for (int i = 0; i < storeFile_.size(); i++) {
-            dataSize += com.google.protobuf.CodedOutputStream
-              .computeBytesSizeNoTag(storeFile_.getByteString(i));
-          }
-          size += dataSize;
-          size += 1 * getStoreFileList().size();
-        }
-        size += getUnknownFields().getSerializedSize();
-        memoizedSerializedSize = size;
-        return size;
-      }
-
-      private static final long serialVersionUID = 0L;
-      @java.lang.Override
-      protected java.lang.Object writeReplace()
-          throws java.io.ObjectStreamException {
-        return super.writeReplace();
-      }
-
-      @java.lang.Override
-      public boolean equals(final java.lang.Object obj) {
-        if (obj == this) {
-         return true;
-        }
-        if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor)) {
-          return super.equals(obj);
-        }
-        org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor other = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor) obj;
-
-        boolean result = true;
-        result = result && (hasFamilyName() == other.hasFamilyName());
-        if (hasFamilyName()) {
-          result = result && getFamilyName()
-              .equals(other.getFamilyName());
-        }
-        result = result && (hasStoreHomeDir() == other.hasStoreHomeDir());
-        if (hasStoreHomeDir()) {
-          result = result && getStoreHomeDir()
-              .equals(other.getStoreHomeDir());
-        }
-        result = result && getStoreFileList()
-            .equals(other.getStoreFileList());
-        result = result &&
-            getUnknownFields().equals(other.getUnknownFields());
-        return result;
-      }
-
-      private int memoizedHashCode = 0;
-      @java.lang.Override
-      public int hashCode() {
-        if (memoizedHashCode != 0) {
-          return memoizedHashCode;
-        }
-        int hash = 41;
-        hash = (19 * hash) + getDescriptorForType().hashCode();
-        if (hasFamilyName()) {
-          hash = (37 * hash) + FAMILY_NAME_FIELD_NUMBER;
-          hash = (53 * hash) + getFamilyName().hashCode();
-        }
-        if (hasStoreHomeDir()) {
-          hash = (37 * hash) + STORE_HOME_DIR_FIELD_NUMBER;
-          hash = (53 * hash) + getStoreHomeDir().hashCode();
-        }
-        if (getStoreFileCount() > 0) {
-          hash = (37 * hash) + STORE_FILE_FIELD_NUMBER;
-          hash = (53 * hash) + getStoreFileList().hashCode();
-        }
-        hash = (29 * hash) + getUnknownFields().hashCode();
-        memoizedHashCode = hash;
-        return hash;
-      }
-
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseFrom(
-          com.google.protobuf.ByteString data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseFrom(
-          com.google.protobuf.ByteString data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data, extensionRegistry);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseFrom(byte[] data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseFrom(
-          byte[] data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data, extensionRegistry);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseFrom(java.io.InputStream input)
-          throws java.io.IOException {
-        return PARSER.parseFrom(input);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseFrom(
-          java.io.InputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return PARSER.parseFrom(input, extensionRegistry);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseDelimitedFrom(java.io.InputStream input)
-          throws java.io.IOException {
-        return PARSER.parseDelimitedFrom(input);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseDelimitedFrom(
-          java.io.InputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return PARSER.parseDelimitedFrom(input, extensionRegistry);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseFrom(
-          com.google.protobuf.CodedInputStream input)
-          throws java.io.IOException {
-        return PARSER.parseFrom(input);
-      }
-      public static org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parseFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return PARSER.parseFrom(input, extensionRegistry);
-      }
-
-      public static Builder newBuilder() { return Builder.create(); }
-      public Builder newBuilderForType() { return newBuilder(); }
-      public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor prototype) {
-        return newBuilder().mergeFrom(prototype);
-      }
-      public Builder toBuilder() { return newBuilder(this); }
-
-      @java.lang.Override
-      protected Builder newBuilderForType(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        Builder builder = new Builder(parent);
-        return builder;
-      }
-      /**
-       * Protobuf type {@code RegionEventDescriptor.StoreDescriptor}
-       */
-      public static final class Builder extends
-          com.google.protobuf.GeneratedMessage.Builder<Builder>
-         implements org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder {
-        public static final com.google.protobuf.Descriptors.Descriptor
-            getDescriptor() {
-          return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_RegionEventDescriptor_StoreDescriptor_descriptor;
-        }
-
-        protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-            internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_RegionEventDescriptor_StoreDescriptor_fieldAccessorTable
-              .ensureFieldAccessorsInitialized(
-                  org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder.class);
-        }
-
-        // Construct using org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.newBuilder()
-        private Builder() {
-          maybeForceBuilderInitialization();
-        }
-
-        private Builder(
-            com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-          super(parent);
-          maybeForceBuilderInitialization();
-        }
-        private void maybeForceBuilderInitialization() {
-          if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          }
-        }
-        private static Builder create() {
-          return new Builder();
-        }
-
-        public Builder clear() {
-          super.clear();
-          familyName_ = com.google.protobuf.ByteString.EMPTY;
-          bitField0_ = (bitField0_ & ~0x00000001);
-          storeHomeDir_ = "";
-          bitField0_ = (bitField0_ & ~0x00000002);
-          storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-          bitField0_ = (bitField0_ & ~0x00000004);
-          return this;
-        }
-
-        public Builder clone() {
-          return create().mergeFrom(buildPartial());
-        }
-
-        public com.google.protobuf.Descriptors.Descriptor
-            getDescriptorForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.WALProtos.internal_static_RegionEventDescriptor_StoreDescriptor_descriptor;
-        }
-
-        public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor getDefaultInstanceForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.getDefaultInstance();
-        }
-
-        public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor build() {
-          org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor result = buildPartial();
-          if (!result.isInitialized()) {
-            throw newUninitializedMessageException(result);
-          }
-          return result;
-        }
-
-        public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor buildPartial() {
-          org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor result = new org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor(this);
-          int from_bitField0_ = bitField0_;
-          int to_bitField0_ = 0;
-          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-            to_bitField0_ |= 0x00000001;
-          }
-          result.familyName_ = familyName_;
-          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-            to_bitField0_ |= 0x00000002;
-          }
-          result.storeHomeDir_ = storeHomeDir_;
-          if (((bitField0_ & 0x00000004) == 0x00000004)) {
-            storeFile_ = new com.google.protobuf.UnmodifiableLazyStringList(
-                storeFile_);
-            bitField0_ = (bitField0_ & ~0x00000004);
-          }
-          result.storeFile_ = storeFile_;
-          result.bitField0_ = to_bitField0_;
-          onBuilt();
-          return result;
-        }
-
-        public Builder mergeFrom(com.google.protobuf.Message other) {
-          if (other instanceof org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor) {
-            return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor)other);
-          } else {
-            super.mergeFrom(other);
-            return this;
-          }
-        }
-
-        public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor other) {
-          if (other == org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.getDefaultInstance()) return this;
-          if (other.hasFamilyName()) {
-            setFamilyName(other.getFamilyName());
-          }
-          if (other.hasStoreHomeDir()) {
-            bitField0_ |= 0x00000002;
-            storeHomeDir_ = other.storeHomeDir_;
-            onChanged();
-          }
-          if (!other.storeFile_.isEmpty()) {
-            if (storeFile_.isEmpty()) {
-              storeFile_ = other.storeFile_;
-              bitField0_ = (bitField0_ & ~0x00000004);
-            } else {
-              ensureStoreFileIsMutable();
-              storeFile_.addAll(other.storeFile_);
-            }
-            onChanged();
-          }
-          this.mergeUnknownFields(other.getUnknownFields());
-          return this;
-        }
-
-        public final boolean isInitialized() {
-          if (!hasFamilyName()) {
-            
-            return false;
-          }
-          if (!hasStoreHomeDir()) {
-            
-            return false;
-          }
-          return true;
-        }
-
-        public Builder mergeFrom(
-            com.google.protobuf.CodedInputStream input,
-            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-            throws java.io.IOException {
-          org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor parsedMessage = null;
-          try {
-            parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-            parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor) e.getUnfinishedMessage();
-            throw e;
-          } finally {
-            if (parsedMessage != null) {
-              mergeFrom(parsedMessage);
-            }
-          }
-          return this;
-        }
-        private int bitField0_;
-
-        // required bytes family_name = 1;
-        private com.google.protobuf.ByteString familyName_ = com.google.protobuf.ByteString.EMPTY;
-        /**
-         * <code>required bytes family_name = 1;</code>
-         */
-        public boolean hasFamilyName() {
-          return ((bitField0_ & 0x00000001) == 0x00000001);
-        }
-        /**
-         * <code>required bytes family_name = 1;</code>
-         */
-        public com.google.protobuf.ByteString getFamilyName() {
-          return familyName_;
-        }
-        /**
-         * <code>required bytes family_name = 1;</code>
-         */
-        public Builder setFamilyName(com.google.protobuf.ByteString value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-          familyName_ = value;
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>required bytes family_name = 1;</code>
-         */
-        public Builder clearFamilyName() {
-          bitField0_ = (bitField0_ & ~0x00000001);
-          familyName_ = getDefaultInstance().getFamilyName();
-          onChanged();
-          return this;
-        }
-
-        // required string store_home_dir = 2;
-        private java.lang.Object storeHomeDir_ = "";
-        /**
-         * <code>required string store_home_dir = 2;</code>
-         *
-         * <pre>
-         *relative to region dir
-         * </pre>
-         */
-        public boolean hasStoreHomeDir() {
-          return ((bitField0_ & 0x00000002) == 0x00000002);
-        }
-        /**
-         * <code>required string store_home_dir = 2;</code>
-         *
-         * <pre>
-         *relative to region dir
-         * </pre>
-         */
-        public java.lang.String getStoreHomeDir() {
-          java.lang.Object ref = storeHomeDir_;
-          if (!(ref instanceof java.lang.String)) {
-            java.lang.String s = ((com.google.protobuf.ByteString) ref)
-                .toStringUtf8();
-            storeHomeDir_ = s;
-            return s;
-          } else {
-            return (java.lang.String) ref;
-          }
-        }
-        /**
-         * <code>required string store_home_dir = 2;</code>
-         *
-         * <pre>
-         *relative to region dir
-         * </pre>
-         */
-        public com.google.protobuf.ByteString
-            getStoreHomeDirBytes() {
-          java.lang.Object ref = storeHomeDir_;
-          if (ref instanceof String) {
-            com.google.protobuf.ByteString b = 
-                com.google.protobuf.ByteString.copyFromUtf8(
-                    (java.lang.String) ref);
-            storeHomeDir_ = b;
-            return b;
-          } else {
-            return (com.google.protobuf.ByteString) ref;
-          }
-        }
-        /**
-         * <code>required string store_home_dir = 2;</code>
-         *
-         * <pre>
-         *relative to region dir
-         * </pre>
-         */
-        public Builder setStoreHomeDir(
-            java.lang.String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
-          storeHomeDir_ = value;
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>required string store_home_dir = 2;</code>
-         *
-         * <pre>
-         *relative to region dir
-         * </pre>
-         */
-        public Builder clearStoreHomeDir() {
-          bitField0_ = (bitField0_ & ~0x00000002);
-          storeHomeDir_ = getDefaultInstance().getStoreHomeDir();
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>required string store_home_dir = 2;</code>
-         *
-         * <pre>
-         *relative to region dir
-         * </pre>
-         */
-        public Builder setStoreHomeDirBytes(
-            com.google.protobuf.ByteString value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
-          storeHomeDir_ = value;
-          onChanged();
-          return this;
-        }
-
-        // repeated string store_file = 3;
-        private com.google.protobuf.LazyStringList storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-        private void ensureStoreFileIsMutable() {
-          if (!((bitField0_ & 0x00000004) == 0x00000004)) {
-            storeFile_ = new com.google.protobuf.LazyStringArrayList(storeFile_);
-            bitField0_ |= 0x00000004;
-           }
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public java.util.List<java.lang.String>
-            getStoreFileList() {
-          return java.util.Collections.unmodifiableList(storeFile_);
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public int getStoreFileCount() {
-          return storeFile_.size();
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public java.lang.String getStoreFile(int index) {
-          return storeFile_.get(index);
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public com.google.protobuf.ByteString
-            getStoreFileBytes(int index) {
-          return storeFile_.getByteString(index);
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public Builder setStoreFile(
-            int index, java.lang.String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureStoreFileIsMutable();
-          storeFile_.set(index, value);
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public Builder addStoreFile(
-            java.lang.String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureStoreFileIsMutable();
-          storeFile_.add(value);
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public Builder addAllStoreFile(
-            java.lang.Iterable<java.lang.String> values) {
-          ensureStoreFileIsMutable();
-          super.addAll(values, storeFile_);
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public Builder clearStoreFile() {
-          storeFile_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-          bitField0_ = (bitField0_ & ~0x00000004);
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>repeated string store_file = 3;</code>
-         *
-         * <pre>
-         * relative to store dir
-         * </pre>
-         */
-        public Builder addStoreFileBytes(
-            com.google.protobuf.ByteString value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureStoreFileIsMutable();
-          storeFile_.add(value);
-          onChanged();
-          return this;
-        }
-
-        // @@protoc_insertion_point(builder_scope:RegionEventDescriptor.StoreDescriptor)
-      }
-
-      static {
-        defaultInstance = new StoreDescriptor(true);
-        defaultInstance.initFields();
-      }
-
-      // @@protoc_insertion_point(class_scope:RegionEventDescriptor.StoreDescriptor)
-    }
-
     private int bitField0_;
     // required .RegionEventDescriptor.EventType event_type = 1;
     public static final int EVENT_TYPE_FIELD_NUMBER = 1;
@@ -8911,38 +10065,38 @@ public final class WALProtos {
       return logSequenceNumber_;
     }
 
-    // repeated .RegionEventDescriptor.StoreDescriptor stores = 5;
+    // repeated .StoreDescriptor stores = 5;
     public static final int STORES_FIELD_NUMBER = 5;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor> stores_;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> stores_;
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor> getStoresList() {
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> getStoresList() {
       return stores_;
     }
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
-    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> 
         getStoresOrBuilderList() {
       return stores_;
     }
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
     public int getStoresCount() {
       return stores_.size();
     }
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor getStores(int index) {
+    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor getStores(int index) {
       return stores_.get(index);
     }
     /**
-     * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+     * <code>repeated .StoreDescriptor stores = 5;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder getStoresOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder getStoresOrBuilder(
         int index) {
       return stores_.get(index);
     }
@@ -9609,23 +10763,23 @@ public final class WALProtos {
         return this;
       }
 
-      // repeated .RegionEventDescriptor.StoreDescriptor stores = 5;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor> stores_ =
+      // repeated .StoreDescriptor stores = 5;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> stores_ =
         java.util.Collections.emptyList();
       private void ensureStoresIsMutable() {
         if (!((bitField0_ & 0x00000010) == 0x00000010)) {
-          stores_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor>(stores_);
+          stores_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor>(stores_);
           bitField0_ |= 0x00000010;
          }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder> storesBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> storesBuilder_;
 
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor> getStoresList() {
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> getStoresList() {
         if (storesBuilder_ == null) {
           return java.util.Collections.unmodifiableList(stores_);
         } else {
@@ -9633,7 +10787,7 @@ public final class WALProtos {
         }
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public int getStoresCount() {
         if (storesBuilder_ == null) {
@@ -9643,9 +10797,9 @@ public final class WALProtos {
         }
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor getStores(int index) {
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor getStores(int index) {
         if (storesBuilder_ == null) {
           return stores_.get(index);
         } else {
@@ -9653,10 +10807,10 @@ public final class WALProtos {
         }
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public Builder setStores(
-          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor value) {
         if (storesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -9670,10 +10824,10 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public Builder setStores(
-          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder builderForValue) {
         if (storesBuilder_ == null) {
           ensureStoresIsMutable();
           stores_.set(index, builderForValue.build());
@@ -9684,9 +10838,9 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public Builder addStores(org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor value) {
+      public Builder addStores(org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor value) {
         if (storesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -9700,10 +10854,10 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public Builder addStores(
-          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor value) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor value) {
         if (storesBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -9717,10 +10871,10 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public Builder addStores(
-          org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder builderForValue) {
         if (storesBuilder_ == null) {
           ensureStoresIsMutable();
           stores_.add(builderForValue.build());
@@ -9731,10 +10885,10 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public Builder addStores(
-          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder builderForValue) {
+          int index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder builderForValue) {
         if (storesBuilder_ == null) {
           ensureStoresIsMutable();
           stores_.add(index, builderForValue.build());
@@ -9745,10 +10899,10 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public Builder addAllStores(
-          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor> values) {
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor> values) {
         if (storesBuilder_ == null) {
           ensureStoresIsMutable();
           super.addAll(values, stores_);
@@ -9759,7 +10913,7 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public Builder clearStores() {
         if (storesBuilder_ == null) {
@@ -9772,7 +10926,7 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
       public Builder removeStores(int index) {
         if (storesBuilder_ == null) {
@@ -9785,16 +10939,16 @@ public final class WALProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder getStoresBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder getStoresBuilder(
           int index) {
         return getStoresFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder getStoresOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder getStoresOrBuilder(
           int index) {
         if (storesBuilder_ == null) {
           return stores_.get(index);  } else {
@@ -9802,9 +10956,9 @@ public final class WALProtos {
         }
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> 
            getStoresOrBuilderList() {
         if (storesBuilder_ != null) {
           return storesBuilder_.getMessageOrBuilderList();
@@ -9813,33 +10967,33 @@ public final class WALProtos {
         }
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder addStoresBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder addStoresBuilder() {
         return getStoresFieldBuilder().addBuilder(
-            org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.getDefaultInstance());
+            org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder addStoresBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder addStoresBuilder(
           int index) {
         return getStoresFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.getDefaultInstance());
+            index, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionEventDescriptor.StoreDescriptor stores = 5;</code>
+       * <code>repeated .StoreDescriptor stores = 5;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder> 
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder> 
            getStoresBuilderList() {
         return getStoresFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder> 
           getStoresFieldBuilder() {
         if (storesBuilder_ == null) {
           storesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.StoreDescriptorOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptorOrBuilder>(
                   stores_,
                   ((bitField0_ & 0x00000010) == 0x00000010),
                   getParentForChildren(),
@@ -10021,8 +11175,10 @@ public final class WALProtos {
    *
    * <pre>
    **
-   * A trailer that is appended to the end of a properly closed HLog WAL file.
+   * A trailer that is appended to the end of a properly closed WAL file.
    * If missing, this is either a legacy or a corrupted WAL file.
+   * N.B. This trailer currently doesn't contain any information and we
+   * purposefully don't expose it in the WAL APIs. It's for future growth.
    * </pre>
    */
   public static final class WALTrailer extends
@@ -10246,8 +11402,10 @@ public final class WALProtos {
      *
      * <pre>
      **
-     * A trailer that is appended to the end of a properly closed HLog WAL file.
+     * A trailer that is appended to the end of a properly closed WAL file.
      * If missing, this is either a legacy or a corrupted WAL file.
+     * N.B. This trailer currently doesn't contain any information and we
+     * purposefully don't expose it in the WAL APIs. It's for future growth.
      * </pre>
      */
     public static final class Builder extends
@@ -10394,15 +11552,20 @@ public final class WALProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_FlushDescriptor_StoreFlushDescriptor_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_StoreDescriptor_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_StoreDescriptor_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_BulkLoadDescriptor_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_BulkLoadDescriptor_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_RegionEventDescriptor_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_RegionEventDescriptor_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionEventDescriptor_StoreDescriptor_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionEventDescriptor_StoreDescriptor_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_WALTrailer_descriptor;
   private static
@@ -10417,47 +11580,50 @@ public final class WALProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tWAL.proto\032\013HBase.proto\"\217\001\n\tWALHeader\022\027" +
-      "\n\017has_compression\030\001 \001(\010\022\026\n\016encryption_ke" +
-      "y\030\002 \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\022\027\n\017" +
-      "writer_cls_name\030\004 \001(\t\022\033\n\023cell_codec_cls_" +
-      "name\030\005 \001(\t\"\240\002\n\006WALKey\022\033\n\023encoded_region_" +
-      "name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023log_se" +
-      "quence_number\030\003 \002(\004\022\022\n\nwrite_time\030\004 \002(\004\022" +
-      "\035\n\ncluster_id\030\005 \001(\0132\005.UUIDB\002\030\001\022\034\n\006scopes" +
-      "\030\006 \003(\0132\014.FamilyScope\022\032\n\022following_kv_cou" +
-      "nt\030\007 \001(\r\022\032\n\013cluster_ids\030\010 \003(\0132\005.UUID\022\022\n\n",
-      "nonceGroup\030\t \001(\004\022\r\n\005nonce\030\n \001(\004\022\034\n\024orig_" +
-      "sequence_number\030\013 \001(\004\"=\n\013FamilyScope\022\016\n\006" +
-      "family\030\001 \002(\014\022\036\n\nscope_type\030\002 \002(\0162\n.Scope" +
-      "Type\"\276\001\n\024CompactionDescriptor\022\022\n\ntable_n" +
-      "ame\030\001 \002(\014\022\033\n\023encoded_region_name\030\002 \002(\014\022\023" +
-      "\n\013family_name\030\003 \002(\014\022\030\n\020compaction_input\030" +
-      "\004 \003(\t\022\031\n\021compaction_output\030\005 \003(\t\022\026\n\016stor" +
-      "e_home_dir\030\006 \002(\t\022\023\n\013region_name\030\007 \001(\014\"\353\002" +
-      "\n\017FlushDescriptor\022,\n\006action\030\001 \002(\0162\034.Flus" +
-      "hDescriptor.FlushAction\022\022\n\ntable_name\030\002 ",
-      "\002(\014\022\033\n\023encoded_region_name\030\003 \002(\014\022\035\n\025flus" +
-      "h_sequence_number\030\004 \001(\004\022<\n\rstore_flushes" +
-      "\030\005 \003(\0132%.FlushDescriptor.StoreFlushDescr" +
-      "iptor\032Y\n\024StoreFlushDescriptor\022\023\n\013family_" +
-      "name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022\024\n\014fl" +
-      "ush_output\030\003 \003(\t\"A\n\013FlushAction\022\017\n\013START" +
-      "_FLUSH\020\000\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013ABORT_FLUS" +
-      "H\020\002\"\364\002\n\025RegionEventDescriptor\0224\n\nevent_t" +
-      "ype\030\001 \002(\0162 .RegionEventDescriptor.EventT" +
-      "ype\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_regio",
-      "n_name\030\003 \002(\014\022\033\n\023log_sequence_number\030\004 \001(" +
-      "\004\0226\n\006stores\030\005 \003(\0132&.RegionEventDescripto" +
-      "r.StoreDescriptor\022\033\n\006server\030\006 \001(\0132\013.Serv" +
-      "erName\032R\n\017StoreDescriptor\022\023\n\013family_name" +
-      "\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022\022\n\nstore_" +
-      "file\030\003 \003(\t\".\n\tEventType\022\017\n\013REGION_OPEN\020\000" +
-      "\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWALTrailer*F\n\tScop" +
-      "eType\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030RE" +
-      "PLICATION_SCOPE_GLOBAL\020\001B?\n*org.apache.h" +
-      "adoop.hbase.protobuf.generatedB\tWALProto",
-      "sH\001\210\001\000\240\001\001"
+      "\n\tWAL.proto\032\013HBase.proto\032\014Client.proto\"\217" +
+      "\001\n\tWALHeader\022\027\n\017has_compression\030\001 \001(\010\022\026\n" +
+      "\016encryption_key\030\002 \001(\014\022\033\n\023has_tag_compres" +
+      "sion\030\003 \001(\010\022\027\n\017writer_cls_name\030\004 \001(\t\022\033\n\023c" +
+      "ell_codec_cls_name\030\005 \001(\t\"\240\002\n\006WALKey\022\033\n\023e" +
+      "ncoded_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002" +
+      " \002(\014\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwri" +
+      "te_time\030\004 \002(\004\022\035\n\ncluster_id\030\005 \001(\0132\005.UUID" +
+      "B\002\030\001\022\034\n\006scopes\030\006 \003(\0132\014.FamilyScope\022\032\n\022fo" +
+      "llowing_kv_count\030\007 \001(\r\022\032\n\013cluster_ids\030\010 ",
+      "\003(\0132\005.UUID\022\022\n\nnonceGroup\030\t \001(\004\022\r\n\005nonce\030" +
+      "\n \001(\004\022\034\n\024orig_sequence_number\030\013 \001(\004\"=\n\013F" +
+      "amilyScope\022\016\n\006family\030\001 \002(\014\022\036\n\nscope_type" +
+      "\030\002 \002(\0162\n.ScopeType\"\276\001\n\024CompactionDescrip" +
+      "tor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023encoded_regio" +
+      "n_name\030\002 \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020com" +
+      "paction_input\030\004 \003(\t\022\031\n\021compaction_output" +
+      "\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(\t\022\023\n\013region" +
+      "_name\030\007 \001(\014\"\353\002\n\017FlushDescriptor\022,\n\006actio" +
+      "n\030\001 \002(\0162\034.FlushDescriptor.FlushAction\022\022\n",
+      "\ntable_name\030\002 \002(\014\022\033\n\023encoded_region_name" +
+      "\030\003 \002(\014\022\035\n\025flush_sequence_number\030\004 \001(\004\022<\n" +
+      "\rstore_flushes\030\005 \003(\0132%.FlushDescriptor.S" +
+      "toreFlushDescriptor\032Y\n\024StoreFlushDescrip" +
+      "tor\022\023\n\013family_name\030\001 \002(\014\022\026\n\016store_home_d" +
+      "ir\030\002 \002(\t\022\024\n\014flush_output\030\003 \003(\t\"A\n\013FlushA" +
+      "ction\022\017\n\013START_FLUSH\020\000\022\020\n\014COMMIT_FLUSH\020\001" +
+      "\022\017\n\013ABORT_FLUSH\020\002\"R\n\017StoreDescriptor\022\023\n\013" +
+      "family_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(" +
+      "\t\022\022\n\nstore_file\030\003 \003(\t\"\215\001\n\022BulkLoadDescri",
+      "ptor\022\036\n\ntable_name\030\001 \002(\0132\n.TableName\022\033\n\023" +
+      "encoded_region_name\030\002 \002(\014\022 \n\006stores\030\003 \003(" +
+      "\0132\020.StoreDescriptor\022\030\n\020bulkload_seq_num\030" +
+      "\004 \002(\003\"\212\002\n\025RegionEventDescriptor\0224\n\nevent" +
+      "_type\030\001 \002(\0162 .RegionEventDescriptor.Even" +
+      "tType\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_reg" +
+      "ion_name\030\003 \002(\014\022\033\n\023log_sequence_number\030\004 " +
+      "\001(\004\022 \n\006stores\030\005 \003(\0132\020.StoreDescriptor\022\033\n" +
+      "\006server\030\006 \001(\0132\013.ServerName\".\n\tEventType\022" +
+      "\017\n\013REGION_OPEN\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWA",
+      "LTrailer*F\n\tScopeType\022\033\n\027REPLICATION_SCO" +
+      "PE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001" +
+      "B?\n*org.apache.hadoop.hbase.protobuf.gen" +
+      "eratedB\tWALProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -10500,20 +11666,26 @@ public final class WALProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_FlushDescriptor_StoreFlushDescriptor_descriptor,
               new java.lang.String[] { "FamilyName", "StoreHomeDir", "FlushOutput", });
-          internal_static_RegionEventDescriptor_descriptor =
+          internal_static_StoreDescriptor_descriptor =
             getDescriptor().getMessageTypes().get(5);
+          internal_static_StoreDescriptor_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_StoreDescriptor_descriptor,
+              new java.lang.String[] { "FamilyName", "StoreHomeDir", "StoreFile", });
+          internal_static_BulkLoadDescriptor_descriptor =
+            getDescriptor().getMessageTypes().get(6);
+          internal_static_BulkLoadDescriptor_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_BulkLoadDescriptor_descriptor,
+              new java.lang.String[] { "TableName", "EncodedRegionName", "Stores", "BulkloadSeqNum", });
+          internal_static_RegionEventDescriptor_descriptor =
+            getDescriptor().getMessageTypes().get(7);
           internal_static_RegionEventDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionEventDescriptor_descriptor,
               new java.lang.String[] { "EventType", "TableName", "EncodedRegionName", "LogSequenceNumber", "Stores", "Server", });
-          internal_static_RegionEventDescriptor_StoreDescriptor_descriptor =
-            internal_static_RegionEventDescriptor_descriptor.getNestedTypes().get(0);
-          internal_static_RegionEventDescriptor_StoreDescriptor_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionEventDescriptor_StoreDescriptor_descriptor,
-              new java.lang.String[] { "FamilyName", "StoreHomeDir", "StoreFile", });
           internal_static_WALTrailer_descriptor =
-            getDescriptor().getMessageTypes().get(6);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_WALTrailer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALTrailer_descriptor,
@@ -10525,6 +11697,7 @@ public final class WALProtos {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
         }, assigner);
   }
 

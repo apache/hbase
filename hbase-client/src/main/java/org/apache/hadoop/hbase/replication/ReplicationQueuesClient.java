@@ -20,11 +20,14 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 
 /**
  * This provides an interface for clients of replication to view replication queues. These queues
- * keep track of the HLogs that still need to be replicated to remote clusters.
+ * keep track of the WALs that still need to be replicated to remote clusters.
  */
+@InterfaceAudience.Private
 public interface ReplicationQueuesClient {
 
   /**
@@ -40,10 +43,10 @@ public interface ReplicationQueuesClient {
   List<String> getListOfReplicators();
 
   /**
-   * Get a list of all HLogs in the given queue on the given region server.
+   * Get a list of all WALs in the given queue on the given region server.
    * @param serverName the server name of the region server that owns the queue
    * @param queueId a String that identifies the queue
-   * @return a list of HLogs, null if this region server is dead and has no outstanding queues
+   * @return a list of WALs, null if this region server is dead and has no outstanding queues
    */
   List<String> getLogsInQueue(String serverName, String queueId);
 

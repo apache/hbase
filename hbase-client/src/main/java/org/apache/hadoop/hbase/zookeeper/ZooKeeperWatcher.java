@@ -22,17 +22,20 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -56,6 +59,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   // Identifier for this watcher (for logging only).  It is made of the prefix
   // passed on construction and the zookeeper sessionid.
+  private String prefix;
   private String identifier;
 
   // zookeeper quorum
@@ -81,8 +85,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
   // base znode for this cluster
   public String baseZNode;
-  // znode containing location of server hosting meta region
-  public String metaServerZNode;
+  //znodes containing the locations of the servers hosting the meta replicas
+  private Map<Integer,String> metaReplicaZnodes = new HashMap<Integer, String>();
   // znode containing ephemeral nodes of the regionservers
   public String rsZNode;
   // znode containing ephemeral nodes of the draining regionservers
@@ -94,6 +98,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // znode containing the current cluster state
   public String clusterStateZNode;
   // znode used for table disabling/enabling
+  @Deprecated
   public String tableZNode;
   // znode containing the unique cluster ID
   public String clusterIdZNode;
@@ -108,11 +113,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // znode containing namespace descriptors
   public static String namespaceZNode = "namespace";
 
-
-  // Certain ZooKeeper nodes need to be world-readable
-  public static final List<ACL> CREATOR_ALL_AND_WORLD_READABLE =
-    Arrays.asList(new ACL(ZooDefs.Perms.READ,ZooDefs.Ids.ANYONE_ID_UNSAFE),
-      new ACL(ZooDefs.Perms.ALL,ZooDefs.Ids.AUTH_IDS));
+  public final static String META_ZNODE_PREFIX = "meta-region-server";
 
   private final Configuration conf;
 
@@ -153,9 +154,10 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       this.constructorCaller = e;
     }
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
+    this.prefix = identifier;
     // Identifier will get the sessionid appended later below down when we
     // handle the syncconnect event.
-    this.identifier = identifier;
+    this.identifier = identifier + "0x0";
     this.abortable = abortable;
     setNodeNames(conf);
     this.recoverableZooKeeper = ZKUtil.connect(conf, quorum, this, identifier);
@@ -202,8 +204,15 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   private void setNodeNames(Configuration conf) {
     baseZNode = conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
         HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-    metaServerZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.metaserver", "meta-region-server"));
+    metaReplicaZnodes.put(0, ZKUtil.joinZNode(baseZNode,
+           conf.get("zookeeper.znode.metaserver", "meta-region-server")));
+    int numMetaReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
+            HConstants.DEFAULT_META_REPLICA_NUM);
+    for (int i = 1; i < numMetaReplicas; i++) {
+      String str = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.metaserver", "meta-region-server") + "-" + i);
+      metaReplicaZnodes.put(i, str);
+    }
     rsZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.rs", "rs"));
     drainingZNode = ZKUtil.joinZNode(baseZNode,
@@ -228,6 +237,75 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         conf.get("zookeeper.znode.recovering.regions", "recovering-regions"));
     namespaceZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.namespace", "namespace"));
+  }
+
+  /**
+   * Is the znode of any meta replica
+   * @param node
+   * @return true or false
+   */
+  public boolean isAnyMetaReplicaZnode(String node) {
+    if (metaReplicaZnodes.values().contains(node)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Is it the default meta replica's znode
+   * @param node
+   * @return true or false
+   */
+  public boolean isDefaultMetaReplicaZnode(String node) {
+    if (getZNodeForReplica(HRegionInfo.DEFAULT_REPLICA_ID).equals(node)) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get the znodes corresponding to the meta replicas from ZK
+   * @return list of znodes
+   * @throws KeeperException
+   */
+  public List<String> getMetaReplicaNodes() throws KeeperException {
+    List<String> childrenOfBaseNode = ZKUtil.listChildrenNoWatch(this, baseZNode);
+    List<String> metaReplicaNodes = new ArrayList<String>(2);
+    String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
+    for (String child : childrenOfBaseNode) {
+      if (child.startsWith(pattern)) metaReplicaNodes.add(child);
+    }
+    return metaReplicaNodes;
+  }
+
+  /**
+   * Get the znode string corresponding to a replicaId
+   * @param replicaId
+   * @return znode
+   */
+  public String getZNodeForReplica(int replicaId) {
+    String str = metaReplicaZnodes.get(replicaId);
+    // return a newly created path but don't update the cache of paths
+    // This is mostly needed for tests that attempt to create meta replicas
+    // from outside the master
+    if (str == null) {
+      str = ZKUtil.joinZNode(baseZNode,
+          conf.get("zookeeper.znode.metaserver", "meta-region-server") + "-" + replicaId);
+    }
+    return str;
+  }
+
+  /**
+   * Parse the meta replicaId from the passed znode
+   * @param znode
+   * @return replicaId
+   */
+  public int getMetaReplicaIdFromZnode(String znode) {
+    String pattern = conf.get("zookeeper.znode.metaserver","meta-region-server");
+    if (znode.equals(pattern)) return HRegionInfo.DEFAULT_REPLICA_ID;
+    // the non-default replicas are of the pattern meta-region-server-<replicaId>
+    String nonDefaultPattern = pattern + "-"; 
+    return Integer.parseInt(znode.substring(nonDefaultPattern.length()));
   }
 
   /**
@@ -381,7 +459,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
             this.constructorCaller);
           throw new NullPointerException("ZK is null");
         }
-        this.identifier = this.identifier + "-0x" +
+        this.identifier = this.prefix + "-0x" +
           Long.toHexString(this.recoverableZooKeeper.getSessionId());
         // Update our identifier.  Otherwise ignore.
         LOG.debug(this.identifier + " connected");

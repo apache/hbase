@@ -23,7 +23,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +34,9 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -65,7 +67,9 @@ import java.math.BigInteger;
 import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Coprocessor service for bulk loads in secure mode.
@@ -73,22 +77,23 @@ import java.util.List;
  * security in HBase.
  *
  * This service addresses two issues:
- *
- * 1. Moving files in a secure filesystem wherein the HBase Client
- * and HBase Server are different filesystem users.
- * 2. Does moving in a secure manner. Assuming that the filesystem
- * is POSIX compliant.
+ * <ol>
+ * <li>Moving files in a secure filesystem wherein the HBase Client
+ * and HBase Server are different filesystem users.</li>
+ * <li>Does moving in a secure manner. Assuming that the filesystem
+ * is POSIX compliant.</li>
+ * </ol>
  *
  * The algorithm is as follows:
- *
- * 1. Create an hbase owned staging directory which is
- * world traversable (711): /hbase/staging
- * 2. A user writes out data to his secure output directory: /user/foo/data
- * 3. A call is made to hbase to create a secret staging directory
- * which globally rwx (777): /user/staging/averylongandrandomdirectoryname
- * 4. The user moves the data into the random staging directory,
- * then calls bulkLoadHFiles()
- *
+ * <ol>
+ * <li>Create an hbase owned staging directory which is
+ * world traversable (711): {@code /hbase/staging}</li>
+ * <li>A user writes out data to his secure output directory: {@code /user/foo/data}</li>
+ * <li>A call is made to hbase to create a secret staging directory
+ * which globally rwx (777): {@code /user/staging/averylongandrandomdirectoryname}</li>
+ * <li>The user moves the data into the random staging directory,
+ * then calls bulkLoadHFiles()</li>
+ * </ol>
  * Like delegation tokens the strength of the security lies in the length
  * and randomness of the secret directory.
  *
@@ -156,7 +161,18 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
                                                  PrepareBulkLoadRequest request,
                                                  RpcCallback<PrepareBulkLoadResponse> done){
     try {
-      getAccessController().prePrepareBulkLoad(env);
+      List<BulkLoadObserver> bulkLoadObservers = getBulkLoadObservers();
+
+      if(bulkLoadObservers != null) {
+        ObserverContext<RegionCoprocessorEnvironment> ctx =
+                                           new ObserverContext<RegionCoprocessorEnvironment>();
+        ctx.prepare(env);
+
+        for(BulkLoadObserver bulkLoadObserver : bulkLoadObservers) {
+          bulkLoadObserver.prePrepareBulkLoad(ctx, request);
+        }
+      }
+
       String bulkToken = createStagingDir(baseStagingDir,
           getActiveUser(), ProtobufUtil.toTableName(request.getTableName())).toString();
       done.run(PrepareBulkLoadResponse.newBuilder().setBulkToken(bulkToken).build());
@@ -171,12 +187,19 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
                               CleanupBulkLoadRequest request,
                               RpcCallback<CleanupBulkLoadResponse> done) {
     try {
-      getAccessController().preCleanupBulkLoad(env);
-      fs.delete(createStagingDir(baseStagingDir,
-          getActiveUser(),
-          env.getRegion().getTableDesc().getTableName(),
-          new Path(request.getBulkToken()).getName()),
-          true);
+      List<BulkLoadObserver> bulkLoadObservers = getBulkLoadObservers();
+
+      if(bulkLoadObservers != null) {
+        ObserverContext<RegionCoprocessorEnvironment> ctx =
+                                           new ObserverContext<RegionCoprocessorEnvironment>();
+        ctx.prepare(env);
+
+        for(BulkLoadObserver bulkLoadObserver : bulkLoadObservers) {
+          bulkLoadObserver.preCleanupBulkLoad(ctx, request);
+        }
+      }
+
+      fs.delete(new Path(request.getBulkToken()), true);
       done.run(CleanupBulkLoadResponse.newBuilder().build());
     } catch (IOException e) {
       ResponseConverter.setControllerException(controller, e);
@@ -192,11 +215,13 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
       familyPaths.add(new Pair(el.getFamily().toByteArray(),el.getPath()));
     }
-    final Token userToken =
-        new Token(request.getFsToken().getIdentifier().toByteArray(),
-                  request.getFsToken().getPassword().toByteArray(),
-                  new Text(request.getFsToken().getKind()),
-                  new Text(request.getFsToken().getService()));
+    
+    Token userToken = null;
+    if (userProvider.isHadoopSecurityEnabled()) {
+      userToken = new Token(request.getFsToken().getIdentifier().toByteArray(), request.getFsToken()
+              .getPassword().toByteArray(), new Text(request.getFsToken().getKind()), new Text(
+              request.getFsToken().getService()));
+    }
     final String bulkToken = request.getBulkToken();
     User user = getActiveUser();
     final UserGroupInformation ugi = user.getUGI();
@@ -207,6 +232,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       //for mini cluster testing
       ResponseConverter.setControllerException(controller,
           new DoNotRetryIOException("User token cannot be null"));
+      done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(false).build());
       return;
     }
 
@@ -217,7 +243,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
       } catch (IOException e) {
         ResponseConverter.setControllerException(controller, e);
-        done.run(null);
+        done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(false).build());
         return;
       }
     }
@@ -228,18 +254,20 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       // the 'request user' necessary token to operate on the target fs.
       // After this point the 'doAs' user will hold two tokens, one for the source fs
       // ('request user'), another for the target fs (HBase region server principal).
-      FsDelegationToken targetfsDelegationToken = new FsDelegationToken(userProvider, "renewer");
-      try {
-        targetfsDelegationToken.acquireDelegationToken(fs);
-      } catch (IOException e) {
-        ResponseConverter.setControllerException(controller, e);
-        done.run(null);
-        return;
-      }
-      Token<?> targetFsToken = targetfsDelegationToken.getUserToken();
-      if (targetFsToken != null && (userToken == null
-          || !targetFsToken.getService().equals(userToken.getService()))) {
-        ugi.addToken(targetFsToken);
+      if (userProvider.isHadoopSecurityEnabled()) {
+        FsDelegationToken targetfsDelegationToken = new FsDelegationToken(userProvider, "renewer");
+        try {
+          targetfsDelegationToken.acquireDelegationToken(fs);
+        } catch (IOException e) {
+          ResponseConverter.setControllerException(controller, e);
+          done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(false).build());
+          return;
+        }
+        Token<?> targetFsToken = targetfsDelegationToken.getUserToken();
+        if (targetFsToken != null
+            && (userToken == null || !targetFsToken.getService().equals(userToken.getService()))) {
+          ugi.addToken(targetFsToken);
+        }
       }
 
       loaded = ugi.doAs(new PrivilegedAction<Boolean>() {
@@ -251,9 +279,6 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
             fs = FileSystem.get(conf);
             for(Pair<byte[], String> el: familyPaths) {
               Path p = new Path(el.getSecond());
-              LOG.trace("Setting permission for: " + p);
-              fs.setPermission(p, PERM_ALL_ACCESS);
-
               Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
               if(!fs.exists(stageFamily)) {
                 fs.mkdirs(stageFamily);
@@ -276,29 +301,31 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
       } catch (IOException e) {
         ResponseConverter.setControllerException(controller, e);
-        done.run(null);
+        done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(false).build());
         return;
       }
     }
     done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(loaded).build());
   }
 
-  private AccessController getAccessController() {
-    return (AccessController) this.env.getRegion()
-        .getCoprocessorHost().findCoprocessor(AccessController.class.getName());
+  private List<BulkLoadObserver> getBulkLoadObservers() {
+    List<BulkLoadObserver> coprocessorList =
+              this.env.getRegion().getCoprocessorHost().findCoprocessors(BulkLoadObserver.class);
+
+    return coprocessorList;
   }
 
   private Path createStagingDir(Path baseDir,
                                 User user,
                                 TableName tableName) throws IOException {
-    String randomDir = user.getShortName()+"__"+ tableName +"__"+
+    String tblName = tableName.getNameAsString().replace(":", "_");
+    String randomDir = user.getShortName()+"__"+ tblName +"__"+
         (new BigInteger(RANDOM_WIDTH, random).toString(RANDOM_RADIX));
-    return createStagingDir(baseDir, user, tableName, randomDir);
+    return createStagingDir(baseDir, user, randomDir);
   }
 
   private Path createStagingDir(Path baseDir,
                                 User user,
-                                TableName tableName,
                                 String randomDir) throws IOException {
     Path p = new Path(baseDir, randomDir);
     fs.mkdirs(p, PERM_ALL_ACCESS);
@@ -313,7 +340,8 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     }
 
     //this is for testing
-    if("simple".equalsIgnoreCase(conf.get(User.HBASE_SECURITY_CONF_KEY))) {
+    if (userProvider.isHadoopSecurityEnabled()
+        && "simple".equalsIgnoreCase(conf.get(User.HBASE_SECURITY_CONF_KEY))) {
       return User.createUserForTesting(conf, user.getShortName(), new String[]{});
     }
 
@@ -332,11 +360,13 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     private Configuration conf;
     // Source filesystem
     private FileSystem srcFs = null;
+    private Map<String, FsPermission> origPermissions = null;
 
     public SecureBulkLoadListener(FileSystem fs, String stagingDir, Configuration conf) {
       this.fs = fs;
       this.stagingDir = stagingDir;
       this.conf = conf;
+      this.origPermissions = new HashMap<String, FsPermission>();
     }
 
     @Override
@@ -356,13 +386,15 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         LOG.debug("Bulk-load file " + srcPath + " is on different filesystem than " +
             "the destination filesystem. Copying file over to destination staging dir.");
         FileUtil.copy(srcFs, p, fs, stageP, false, conf);
-      }
-      else {
+      } else {
         LOG.debug("Moving " + p + " to " + stageP);
+        FileStatus origFileStatus = fs.getFileStatus(p);
+        origPermissions.put(srcPath, origFileStatus.getPermission());
         if(!fs.rename(p, stageP)) {
           throw new IOException("Failed to move HFile: " + p + " to " + stageP);
         }
       }
+      fs.setPermission(stageP, PERM_ALL_ACCESS);
       return stageP.toString();
     }
 
@@ -373,12 +405,23 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
 
     @Override
     public void failedBulkLoad(final byte[] family, final String srcPath) throws IOException {
+      if (!FSHDFSUtils.isSameHdfs(conf, srcFs, fs)) {
+        // files are copied so no need to move them back
+        return;
+      }
       Path p = new Path(srcPath);
       Path stageP = new Path(stagingDir,
           new Path(Bytes.toString(family), p.getName()));
       LOG.debug("Moving " + stageP + " back to " + p);
       if(!fs.rename(stageP, p))
         throw new IOException("Failed to move HFile: " + stageP + " to " + p);
+
+      // restore original permission
+      if (origPermissions.containsKey(srcPath)) {
+        fs.setPermission(p, origPermissions.get(srcPath));
+      } else {
+        LOG.warn("Can't find previous permission for path=" + srcPath);
+      }
     }
 
     /**

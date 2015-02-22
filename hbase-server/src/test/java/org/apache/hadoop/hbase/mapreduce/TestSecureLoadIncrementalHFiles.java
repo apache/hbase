@@ -19,7 +19,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -38,7 +39,7 @@ import org.junit.experimental.categories.Category;
  * invaluable as it verifies the other mechanisms that need to be
  * supported as part of a LoadIncrementalFiles call.
  */
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestSecureLoadIncrementalHFiles extends  TestLoadIncrementalHFiles{
 
   @BeforeClass
@@ -55,7 +56,7 @@ public class TestSecureLoadIncrementalHFiles extends  TestLoadIncrementalHFiles{
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
-    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
 
     setupNamespace();
   }

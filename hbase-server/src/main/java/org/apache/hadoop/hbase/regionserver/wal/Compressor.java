@@ -21,7 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,9 +33,13 @@ import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALProvider;
+
 /**
  * A set of static functions for running our custom WAL compression/decompression.
- * Also contains a command line tool to compress and uncompress HLogs.
+ * Also contains a command line tool to compress and uncompress WALs.
  */
 @InterfaceAudience.Private
 public class Compressor {
@@ -56,8 +60,8 @@ public class Compressor {
 
   private static void printHelp() {
     System.err.println("usage: Compressor <input> <output>");
-    System.err.println("If <input> HLog is compressed, <output> will be decompressed.");
-    System.err.println("If <input> HLog is uncompressed, <output> will be compressed.");
+    System.err.println("If <input> WAL is compressed, <output> will be decompressed.");
+    System.err.println("If <input> WAL is uncompressed, <output> will be compressed.");
     return;
   }
 
@@ -68,8 +72,8 @@ public class Compressor {
     FileSystem inFS = input.getFileSystem(conf);
     FileSystem outFS = output.getFileSystem(conf);
 
-    HLog.Reader in = HLogFactory.createReader(inFS, input, conf, null, false);
-    HLog.Writer out = null;
+    WAL.Reader in = WALFactory.createReaderIgnoreCustomClass(inFS, input, conf);
+    WALProvider.Writer out = null;
 
     try {
       if (!(in instanceof ReaderBase)) {
@@ -78,9 +82,9 @@ public class Compressor {
       }
       boolean compress = ((ReaderBase)in).hasCompression();
       conf.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, !compress);
-      out = HLogFactory.createWALWriter(outFS, output, conf);
+      out = WALFactory.createWALWriter(outFS, output, conf);
 
-      HLog.Entry e = null;
+      WAL.Entry e = null;
       while ((e = in.next()) != null) out.append(e);
     } finally {
       in.close();

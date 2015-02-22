@@ -18,7 +18,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -29,7 +30,7 @@ import static junit.framework.Assert.fail;
  * Tests to make sure that the default environment edge conforms to appropriate
  * behaviour.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestDefaultEnvironmentEdge {
 
   @Test

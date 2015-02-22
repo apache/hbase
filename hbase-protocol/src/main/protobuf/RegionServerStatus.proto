@@ -74,7 +74,7 @@ message GetLastFlushedSequenceIdRequest {
 }
 
 message GetLastFlushedSequenceIdResponse {
-  /** the last HLog sequence id flushed from MemStore to HFile for the region */
+  /* the last WAL sequence id flushed from MemStore to HFile for the region */
   required uint64 last_flushed_sequence_id = 1;
 }
 

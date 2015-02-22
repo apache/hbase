@@ -30,10 +30,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Row;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 public class MultiHConnection {
   private static final Log LOG = LogFactory.getLog(MultiHConnection.class);
   private HConnection[] hConnections;
+  private final Object hConnectionsLock =  new Object();
   private int noOfConnections;
   private ExecutorService batchPool;
 
@@ -59,10 +61,12 @@ public class MultiHConnection {
   public MultiHConnection(Configuration conf, int noOfConnections)
       throws IOException {
     this.noOfConnections = noOfConnections;
-    hConnections = new HConnection[noOfConnections];
-    for (int i = 0; i < noOfConnections; i++) {
-      HConnection conn = HConnectionManager.createConnection(conf);
-      hConnections[i] = conn;
+    synchronized (this.hConnectionsLock) {
+      hConnections = new HConnection[noOfConnections];
+      for (int i = 0; i < noOfConnections; i++) {
+        HConnection conn = HConnectionManager.createConnection(conf);
+        hConnections[i] = conn;
+      }
     }
     createBatchPool(conf);
   }
@@ -71,22 +75,20 @@ public class MultiHConnection {
    * Close the open connections and shutdown the batchpool
    */
   public void close() {
-    if (hConnections != null) {
-      synchronized (hConnections) {
-        if (hConnections != null) {
-          for (HConnection conn : hConnections) {
-            if (conn != null) {
-              try {
-                conn.close();
-              } catch (IOException e) {
-                LOG.info("Got exception in closing connection", e);
-              } finally {
-                conn = null;
-              }
+    synchronized (hConnectionsLock) {
+      if (hConnections != null) {
+        for (Connection conn : hConnections) {
+          if (conn != null) {
+            try {
+              conn.close();
+            } catch (IOException e) {
+              LOG.info("Got exception in closing connection", e);
+            } finally {
+              conn = null;
             }
           }
-          hConnections = null;
         }
+        hConnections = null;
       }
     }
     if (this.batchPool != null && !this.batchPool.isShutdown()) {

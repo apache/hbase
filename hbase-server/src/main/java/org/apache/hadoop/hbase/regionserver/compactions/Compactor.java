@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -25,13 +26,12 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -47,6 +47,8 @@ import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
 /**
  * A compactor is a compaction algorithm associated a given policy. Base class also contains
@@ -77,11 +79,8 @@ public abstract class Compactor {
       HConstants.MIN_KEEP_SEQID_PERIOD), HConstants.MIN_KEEP_SEQID_PERIOD);
   }
 
-  /**
-   * TODO: Replace this with CellOutputStream when StoreFile.Writer uses cells.
-   */
   public interface CellSink {
-    void append(KeyValue kv) throws IOException;
+    void append(Cell cell) throws IOException;
   }
 
   public CompactionProgress getProgress() {
@@ -133,16 +132,24 @@ public abstract class Compactor {
         LOG.warn("Null reader for " + file.getPath());
         continue;
       }
-      // NOTE: getFilterEntries could cause under-sized blooms if the user
-      // switches bloom type (e.g. from ROW to ROWCOL)
-      long keyCount = (r.getBloomFilterType() == store.getFamily().getBloomFilterType())
-          ? r.getFilterEntries() : r.getEntries();
+      // NOTE: use getEntries when compacting instead of getFilterEntries, otherwise under-sized
+      // blooms can cause progress to be miscalculated or if the user switches bloom
+      // type (e.g. from ROW to ROWCOL)
+      long keyCount = r.getEntries();
       fd.maxKeyCount += keyCount;
       // calculate the latest MVCC readpoint in any of the involved store files
       Map<byte[], byte[]> fileInfo = r.loadFileInfo();
-      byte tmp[] = fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
-      if (tmp != null) {
-        fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, Bytes.toLong(tmp));
+      byte tmp[] = null;
+      // Get and set the real MVCCReadpoint for bulk loaded files, which is the
+      // SeqId number.
+      if (r.isBulkLoaded()) {
+        fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, r.getSequenceID());
+      }
+      else {
+        tmp = fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
+        if (tmp != null) {
+          fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, Bytes.toLong(tmp));
+        }
       }
       tmp = fileInfo.get(FileInfo.MAX_TAGS_LEN);
       if (tmp != null) {
@@ -174,7 +181,7 @@ public abstract class Compactor {
         LOG.debug("Compacting " + file +
           ", keycount=" + keyCount +
           ", bloomtype=" + r.getBloomFilterType().toString() +
-          ", size=" + StringUtils.humanReadableInt(r.length()) +
+          ", size=" + TraditionalBinaryPrefix.long2String(r.length(), "", 1) +
           ", encoding=" + r.getHFileReader().getDataBlockEncoding() +
           ", seqNum=" + seqNum +
           (allFiles ? ", earliestPutTs=" + earliestPutTs: ""));
@@ -226,9 +233,10 @@ public abstract class Compactor {
     return store.getCoprocessorHost().preCompact(store, scanner, scanType, request);
   }
 
+  // TODO mob introduced the fd parameter; can we make this cleaner and easier to extend in future?
   /**
    * Performs the compaction.
-   * @param fd File details
+   * @param fd FileDetails of cell sink writer
    * @param scanner Where to read from.
    * @param writer Where to write to.
    * @param smallestReadPoint Smallest read point.
@@ -237,53 +245,78 @@ public abstract class Compactor {
    * @return Whether compaction ended; false if it was interrupted for some reason.
    */
   protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
-      long smallestReadPoint, boolean cleanSeqId, boolean major) throws IOException {
-    int bytesWritten = 0;
+      long smallestReadPoint, boolean cleanSeqId,
+      CompactionThroughputController throughputController, boolean major) throws IOException {
+    long bytesWritten = 0;
+    long bytesWrittenProgress = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
-    List<Cell> kvs = new ArrayList<Cell>();
-    int closeCheckInterval = HStore.getCloseCheckInterval();
-    long lastMillis;
+    List<Cell> cells = new ArrayList<Cell>();
+    long closeCheckInterval = HStore.getCloseCheckInterval();
+    long lastMillis = 0;
     if (LOG.isDebugEnabled()) {
-      lastMillis = System.currentTimeMillis();
-    } else {
-      lastMillis = 0;
+      lastMillis = EnvironmentEdgeManager.currentTime();
     }
+    String compactionName =
+        store.getRegionInfo().getRegionNameAsString() + "#" + store.getFamily().getNameAsString();
+    long now = 0;
     boolean hasMore;
-    do {
-      hasMore = scanner.next(kvs, compactionKVMax);
-      // output to writer:
-      for (Cell c : kvs) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-        resetSeqId(smallestReadPoint, cleanSeqId, kv);
-        writer.append(kv);
-        ++progress.currentCompactedKVs;
-        progress.totalCompactedSize += kv.getLength();
-
-        // check periodically to see if a system stop is requested
-        if (closeCheckInterval > 0) {
-          bytesWritten += kv.getLength();
-          if (bytesWritten > closeCheckInterval) {
-            // Log the progress of long running compactions every minute if
-            // logging at DEBUG level
-            if (LOG.isDebugEnabled()) {
-              long now = System.currentTimeMillis();
-              if ((now - lastMillis) >= 60 * 1000) {
-                LOG.debug("Compaction progress: " + progress + String.format(", rate=%.2f kB/sec",
-                  (bytesWritten / 1024.0) / ((now - lastMillis) / 1000.0)));
-                lastMillis = now;
+    throughputController.start(compactionName);
+    try {
+      do {
+        hasMore = scanner.next(cells, compactionKVMax);
+        if (LOG.isDebugEnabled()) {
+          now = EnvironmentEdgeManager.currentTime();
+        }
+        // output to writer:
+        for (Cell c : cells) {
+          if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
+            CellUtil.setSequenceId(c, 0);
+          }
+          writer.append(c);
+          int len = KeyValueUtil.length(c);
+          ++progress.currentCompactedKVs;
+          progress.totalCompactedSize += len;
+          if (LOG.isDebugEnabled()) {
+            bytesWrittenProgress += len;
+          }
+          throughputController.control(compactionName, len);
+          // check periodically to see if a system stop is requested
+          if (closeCheckInterval > 0) {
+            bytesWritten += len;
+            if (bytesWritten > closeCheckInterval) {
+              bytesWritten = 0;
+              if (!store.areWritesEnabled()) {
+                progress.cancel();
+                return false;
               }
-            }
-            bytesWritten = 0;
-            if (!store.areWritesEnabled()) {
-              progress.cancel();
-              return false;
             }
           }
         }
-      }
-      kvs.clear();
-    } while (hasMore);
+        // Log the progress of long running compactions every minute if
+        // logging at DEBUG level
+        if (LOG.isDebugEnabled()) {
+          if ((now - lastMillis) >= 60 * 1000) {
+            LOG.debug("Compaction progress: "
+                + compactionName
+                + " "
+                + progress
+                + String.format(", rate=%.2f kB/sec", (bytesWrittenProgress / 1024.0)
+                    / ((now - lastMillis) / 1000.0)) + ", throughputController is "
+                + throughputController);
+            lastMillis = now;
+            bytesWrittenProgress = 0;
+          }
+        }
+        cells.clear();
+      } while (hasMore);
+    } catch (InterruptedException e) {
+      progress.cancel();
+      throw new InterruptedIOException("Interrupted while control throughput of compacting "
+          + compactionName);
+    } finally {
+      throughputController.finish(compactionName);
+    }
     progress.complete();
     return true;
   }
@@ -320,18 +353,6 @@ public abstract class Compactor {
     scan.setMaxVersions(store.getFamily().getMaxVersions());
     return new StoreScanner(store, store.getScanInfo(), scan, scanners, smallestReadPoint,
         earliestPutTs, dropDeletesFromRow, dropDeletesToRow);
-  }
-
-  /**
-   * Resets the sequence id.
-   * @param smallestReadPoint The smallest mvcc readPoint across all the scanners in this region.
-   * @param cleanSeqId Should clean the sequence id.
-   * @param kv The current KeyValue.
-   */
-  protected void resetSeqId(long smallestReadPoint, boolean cleanSeqId, KeyValue kv) {
-    if (cleanSeqId && kv.getSequenceId() <= smallestReadPoint) {
-      kv.setSequenceId(0);
-    }
   }
 
   /**

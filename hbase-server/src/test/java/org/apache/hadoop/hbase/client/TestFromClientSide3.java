@@ -36,9 +36,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -48,7 +49,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestFromClientSide3 {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL
@@ -98,7 +99,7 @@ public class TestFromClientSide3 {
     // Nothing to do.
   }
 
-  private void randomCFPuts(HTable table, byte[] row, byte[] family, int nPuts)
+  private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts)
       throws Exception {
     Put put = new Put(row);
     for (int i = 0; i < nPuts; i++) {
@@ -110,13 +111,13 @@ public class TestFromClientSide3 {
   }
 
   private void performMultiplePutAndFlush(HBaseAdmin admin, HTable table,
-      byte[] row, byte[] family, int nFlushes, int nPuts) throws Exception {
+      byte[] row, byte[] family, int nFlushes, int nPuts)
+  throws Exception {
 
     // connection needed for poll-wait
-    HConnection conn = HConnectionManager.getConnection(TEST_UTIL
-        .getConfiguration());
     HRegionLocation loc = table.getRegionLocation(row, true);
-    AdminProtos.AdminService.BlockingInterface server = conn.getAdmin(loc.getServerName());
+    AdminProtos.AdminService.BlockingInterface server =
+      admin.getConnection().getAdmin(loc.getServerName());
     byte[] regName = loc.getRegionInfo().getRegionName();
 
     for (int i = 0; i < nFlushes; i++) {
@@ -125,7 +126,7 @@ public class TestFromClientSide3 {
       int sfCount = sf.size();
 
       // TODO: replace this api with a synchronous flush after HBASE-2949
-      admin.flush(table.getTableName());
+      admin.flush(table.getName());
 
       // synchronously poll wait for a new storefile to appear (flush happened)
       while (ProtobufUtil.getStoreFiles(
@@ -150,12 +151,10 @@ public class TestFromClientSide3 {
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 3);
 
     String tableName = "testAdvancedConfigOverride";
-    TableName TABLE =
-        TableName.valueOf(tableName);
+    TableName TABLE = TableName.valueOf(tableName);
     HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    HConnection connection = HConnectionManager.getConnection(TEST_UTIL
-        .getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    ClusterConnection connection = (ClusterConnection)TEST_UTIL.getConnection();
 
     // Create 3 store files.
     byte[] row = Bytes.toBytes(random.nextInt());
@@ -221,7 +220,7 @@ public class TestFromClientSide3 {
     LOG.info("hbase.hstore.compaction.min should now be 2");
     HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
     hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
-    htd.addFamily(hcd);
+    htd.modifyFamily(hcd);
     admin.modifyTable(TABLE, htd);
     while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
       LOG.debug(st.getFirst() + " regions left to update");
@@ -256,7 +255,7 @@ public class TestFromClientSide3 {
     LOG.info("hbase.hstore.compaction.min should now be 5");
     hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
     hcd.setValue("hbase.hstore.compaction.min", null);
-    htd.addFamily(hcd);
+    htd.modifyFamily(hcd);
     admin.modifyTable(TABLE, htd);
     while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
       LOG.debug(st.getFirst() + " regions left to update");
@@ -269,7 +268,7 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableBatchWithEmptyPut() throws Exception {
-    HTable table = TEST_UTIL.createTable(
+    Table table = TEST_UTIL.createTable(
       Bytes.toBytes("testHTableBatchWithEmptyPut"), new byte[][] { FAMILY });
     try {
       List actions = (List) new ArrayList();
@@ -296,7 +295,7 @@ public class TestFromClientSide3 {
 
     // Test with a single region table.
 
-    HTable table = TEST_UTIL.createTable(
+    Table table = TEST_UTIL.createTable(
       Bytes.toBytes("testHTableExistsMethodSingleRegionSingleGet"), new byte[][] { FAMILY });
 
     Put put = new Put(ROW);
@@ -336,9 +335,9 @@ public class TestFromClientSide3 {
   @Test
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
 
-    HTable table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableExistsMethodMultipleRegionsSingleGet"), new byte[][] { FAMILY }, 1,
-      new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
+    Table table = TEST_UTIL.createTable(
+      TableName.valueOf("testHTableExistsMethodMultipleRegionsSingleGet"), new byte[][] { FAMILY },
+      1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
 
@@ -356,8 +355,8 @@ public class TestFromClientSide3 {
   @Test
   public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
     HTable table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableExistsMethodMultipleRegionsMultipleGets"), new byte[][] { FAMILY },
-      1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
+      TableName.valueOf("testHTableExistsMethodMultipleRegionsMultipleGets"), 
+      new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
     table.put (put);
@@ -409,12 +408,11 @@ public class TestFromClientSide3 {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), "test");
+    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
 
     Put put = new Put(ROW_BYTES);
     put.add(FAMILY, COL_QUAL, VAL_BYTES);
     table.put(put);
-    table.flushCommits();
 
     //Try getting the row with an empty row key
     Result res = null;

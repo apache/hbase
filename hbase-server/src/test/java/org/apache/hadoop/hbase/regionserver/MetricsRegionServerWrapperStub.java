@@ -202,12 +202,12 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public long getNumHLogFiles() {
+  public long getNumWALFiles() {
     return 10;
   }
 
   @Override
-  public long getHLogFileSize() {
+  public long getWALFileSize() {
     return 1024000;
   }
 
@@ -239,6 +239,26 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   @Override
   public long getMajorCompactedCellsSize() {
     return 10240000;
+  }
+
+  @Override
+  public long getHedgedReadOps() {
+    return 100;
+  }
+
+  @Override
+  public long getHedgedReadWins() {
+    return 10;
+  }
+
+  @Override
+  public long getBlockedRequestsCount() {
+    return 0;
+  }
+
+  @Override
+  public int getSplitQueueSize() {
+    return 0;
   }
 
   @Override
@@ -310,5 +330,4 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   public int getMobFileCacheHitPercent() {
     return 50;
   }
-
 }

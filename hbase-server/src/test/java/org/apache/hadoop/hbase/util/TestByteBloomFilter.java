@@ -24,10 +24,11 @@ import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestByteBloomFilter extends TestCase {
 
   public void testBasicBloom() throws Exception {

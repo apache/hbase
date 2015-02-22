@@ -90,8 +90,8 @@ else
     (tableNameMetaPrefix + HConstants::META_ROW_DELIMITER.chr).to_java_bytes
   )
 end
-scan.cache_blocks = false
-scan.caching = 10
+scan.setCacheBlocks(false)
+scan.setCaching(10)
 scan.setFilter(FirstKeyOnlyFilter.new)
 INFO = 'info'.to_java_bytes
 REGION_INFO = 'regioninfo'.to_java_bytes

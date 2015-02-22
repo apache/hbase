@@ -18,17 +18,26 @@
 package org.apache.hadoop.hbase.protobuf;
 
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.Parser;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
+import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableSet;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -40,7 +49,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -60,6 +68,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -80,7 +89,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -108,13 +116,20 @@ import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.quotas.QuotaScope;
+import org.apache.hadoop.hbase.quotas.QuotaType;
+import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -131,27 +146,24 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableSet;
-
-import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 
 /**
  * Protobufs utility.
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED",
+  justification="None. Address sometime.")
+@InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
 
   private ProtobufUtil() {
@@ -162,7 +174,6 @@ public final class ProtobufUtil {
    */
   private final static Map<String, Class<?>>
     PRIMITIVES = new HashMap<String, Class<?>>();
-
 
   /**
    * Many results are simple: no cell, exists true or false. To save on object creations,
@@ -232,39 +243,34 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Magic we put ahead of a serialized protobuf message.
-   * For example, all znode content is protobuf messages with the below magic
-   * for preamble.
-   */
-  public static final byte [] PB_MAGIC = new byte [] {'P', 'B', 'U', 'F'};
-  private static final String PB_MAGIC_STR = Bytes.toString(PB_MAGIC);
-
-  /**
-   * Prepend the passed bytes with four bytes of magic, {@link #PB_MAGIC}, to flag what
-   * follows as a protobuf in hbase.  Prepend these bytes to all content written to znodes, etc.
+   * Prepend the passed bytes with four bytes of magic, {@link ProtobufMagic#PB_MAGIC},
+   * to flag what follows as a protobuf in hbase.  Prepend these bytes to all content written to
+   * znodes, etc.
    * @param bytes Bytes to decorate
    * @return The passed <code>bytes</codes> with magic prepended (Creates a new
-   * byte array that is <code>bytes.length</code> plus {@link #PB_MAGIC}.length.
+   * byte array that is <code>bytes.length</code> plus {@link ProtobufMagic#PB_MAGIC}.length.
    */
   public static byte [] prependPBMagic(final byte [] bytes) {
-    return Bytes.add(PB_MAGIC, bytes);
+    return Bytes.add(ProtobufMagic.PB_MAGIC, bytes);
   }
 
   /**
    * @param bytes Bytes to check.
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
+   * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes) {
+    if (bytes == null) return false;
     return isPBMagicPrefix(bytes, 0, bytes.length);
   }
 
   /**
    * @param bytes Bytes to check.
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
+   * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
-    if (bytes == null || len < PB_MAGIC.length) return false;
-    return Bytes.compareTo(PB_MAGIC, 0, PB_MAGIC.length, bytes, offset, PB_MAGIC.length) == 0;
+    if (bytes == null || len < ProtobufMagic.PB_MAGIC.length) return false;
+    return Bytes.compareTo(ProtobufMagic.PB_MAGIC, 0, ProtobufMagic.PB_MAGIC.length,
+      bytes, offset, ProtobufMagic.PB_MAGIC.length) == 0;
   }
 
   /**
@@ -273,15 +279,16 @@ public final class ProtobufUtil {
    */
   public static void expectPBMagicPrefix(final byte [] bytes) throws DeserializationException {
     if (!isPBMagicPrefix(bytes)) {
-      throw new DeserializationException("Missing pb magic " + PB_MAGIC_STR + " prefix");
+      throw new DeserializationException("Missing pb magic " +
+          Bytes.toString(ProtobufMagic.PB_MAGIC) + " prefix");
     }
   }
 
   /**
-   * @return Length of {@link #PB_MAGIC}
+   * @return Length of {@link ProtobufMagic#PB_MAGIC}
    */
   public static int lengthOfPBMagic() {
-    return PB_MAGIC.length;
+    return ProtobufMagic.PB_MAGIC.length;
   }
 
   /**
@@ -653,7 +660,7 @@ public final class ProtobufUtil {
           delete =
             new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
         }
-        delete.addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
+        delete.addDeleteMarker(cell);
       }
     } else {
       delete = new Delete(row, timestamp);
@@ -717,7 +724,7 @@ public final class ProtobufUtil {
         if (append == null) {
           append = new Append(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
         }
-        append.add(KeyValueUtil.ensureKeyValue(cell));
+        append.add(cell);
       }
     } else {
       append = new Append(row);
@@ -796,7 +803,7 @@ public final class ProtobufUtil {
         if (increment == null) {
           increment = new Increment(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
         }
-        increment.add(KeyValueUtil.ensureKeyValue(cell));
+        increment.add(cell);
       }
     } else {
       increment = new Increment(row);
@@ -1106,14 +1113,14 @@ public final class ProtobufUtil {
       List<Cell> values = family.getValue();
       if (values != null && values.size() > 0) {
         for (Cell cell: values) {
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+          valueBuilder.clear();
           valueBuilder.setQualifier(ByteStringer.wrap(
-              kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+              cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
           valueBuilder.setValue(ByteStringer.wrap(
-              kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
-          if (kv.getTagsLength() > 0) {
-            valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(),
-                kv.getTagsOffset(), kv.getTagsLength()));
+              cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+          if (cell.getTagsLength() > 0) {
+            valueBuilder.setTags(ByteStringer.wrap(cell.getTagsArray(),
+                cell.getTagsOffset(), cell.getTagsLength()));
           }
           columnBuilder.addQualifierValue(valueBuilder.build());
         }
@@ -1169,18 +1176,18 @@ public final class ProtobufUtil {
       columnBuilder.clear();
       columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
       for (Cell cell: family.getValue()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        valueBuilder.clear();
         valueBuilder.setQualifier(ByteStringer.wrap(
-            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
         valueBuilder.setValue(ByteStringer.wrap(
-            kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
-        valueBuilder.setTimestamp(kv.getTimestamp());
+            cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+        valueBuilder.setTimestamp(cell.getTimestamp());
         if(cell.getTagsLength() > 0) {
-          valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(), kv.getTagsOffset(),
-              kv.getTagsLength()));
+          valueBuilder.setTags(ByteStringer.wrap(cell.getTagsArray(), cell.getTagsOffset(),
+              cell.getTagsLength()));
         }
-        if (type == MutationType.DELETE || (type == MutationType.PUT && CellUtil.isDelete(kv))) {
-          KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());
+        if (type == MutationType.DELETE || (type == MutationType.PUT && CellUtil.isDelete(cell))) {
+          KeyValue.Type keyValueType = KeyValue.Type.codeToType(cell.getTypeByte());
           valueBuilder.setDeleteType(toDeleteType(keyValueType));
         }
         columnBuilder.addQualifierValue(valueBuilder.build());
@@ -1441,7 +1448,9 @@ public final class ProtobufUtil {
       }
       return (Filter)parseFrom.invoke(c, value);
     } catch (Exception e) {
-      throw new IOException(e);
+      // Either we couldn't instantiate the method object, or "parseFrom" failed.
+      // In either case, let's not retry.
+      throw new DoNotRetryIOException(e);
     }
   }
 
@@ -1484,8 +1493,8 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer DeleteType to delete KeyValue type.
    *
-   * @param protocol buffer DeleteType
-   * @return type
+   * @param type The DeleteType
+   * @return The type.
    * @throws IOException
    */
   public static KeyValue.Type fromDeleteType(
@@ -1609,6 +1618,31 @@ public final class ProtobufUtil {
     try {
       CoprocessorServiceResponse response =
           client.execMasterService(null, request);
+      return response;
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
+  /**
+   * Make a region server endpoint call
+   * @param client
+   * @param call
+   * @return CoprocessorServiceResponse
+   * @throws IOException
+   */
+  public static CoprocessorServiceResponse execRegionServerService(
+      final ClientService.BlockingInterface client, final CoprocessorServiceCall call)
+      throws IOException {
+    CoprocessorServiceRequest request =
+        CoprocessorServiceRequest
+            .newBuilder()
+            .setCall(call)
+            .setRegion(
+              RequestConverter.buildRegionSpecifier(REGION_NAME, HConstants.EMPTY_BYTE_ARRAY))
+            .build();
+    try {
+      CoprocessorServiceResponse response = client.execRegionServerService(null, request);
       return response;
     } catch (ServiceException se) {
       throw getRemoteException(se);
@@ -1846,7 +1880,7 @@ public final class ProtobufUtil {
   public static byte [] toDelimitedByteArray(final Message m) throws IOException {
     // Allocate arbitrary big size so we avoid resizing.
     ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);
-    baos.write(PB_MAGIC);
+    baos.write(ProtobufMagic.PB_MAGIC);
     m.writeDelimitedTo(baos);
     return baos.toByteArray();
   }
@@ -1933,7 +1967,7 @@ public final class ProtobufUtil {
           for (Permission.Action a : actions) {
             builder.addAction(toPermissionAction(a));
           }
-	}
+        }
         ret.setNamespacePermission(builder);
         return ret.build();
       } else if (tablePerm.hasTable()) {
@@ -2248,7 +2282,7 @@ public final class ProtobufUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>();
+    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(ProtobufUtil.toUserPermission(perm));
     }
@@ -2276,7 +2310,7 @@ public final class ProtobufUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>();
+    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(ProtobufUtil.toUserPermission(perm));
     }
@@ -2304,7 +2338,7 @@ public final class ProtobufUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>();
+    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(ProtobufUtil.toUserPermission(perm));
     }
@@ -2576,8 +2610,7 @@ public final class ProtobufUtil {
         .setServer(toServerName(server));
 
     for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
-      RegionEventDescriptor.StoreDescriptor.Builder builder
-        = RegionEventDescriptor.StoreDescriptor.newBuilder()
+      StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
           .setFamilyName(ByteStringer.wrap(entry.getKey()))
           .setStoreHomeDir(Bytes.toString(entry.getKey()));
       for (Path path : entry.getValue()) {
@@ -2793,5 +2826,172 @@ public final class ProtobufUtil {
       }
     }
     return result;
+  }
+
+  /**
+   * Convert a protocol buffer TimeUnit to a client TimeUnit
+   *
+   * @param proto
+   * @return the converted client TimeUnit
+   */
+  public static TimeUnit toTimeUnit(final HBaseProtos.TimeUnit proto) {
+    switch (proto) {
+      case NANOSECONDS:  return TimeUnit.NANOSECONDS;
+      case MICROSECONDS: return TimeUnit.MICROSECONDS;
+      case MILLISECONDS: return TimeUnit.MILLISECONDS;
+      case SECONDS:      return TimeUnit.SECONDS;
+      case MINUTES:      return TimeUnit.MINUTES;
+      case HOURS:        return TimeUnit.HOURS;
+      case DAYS:         return TimeUnit.DAYS;
+    }
+    throw new RuntimeException("Invalid TimeUnit " + proto);
+  }
+
+  /**
+   * Convert a client TimeUnit to a protocol buffer TimeUnit
+   *
+   * @param timeUnit
+   * @return the converted protocol buffer TimeUnit
+   */
+  public static HBaseProtos.TimeUnit toProtoTimeUnit(final TimeUnit timeUnit) {
+    switch (timeUnit) {
+      case NANOSECONDS:  return HBaseProtos.TimeUnit.NANOSECONDS;
+      case MICROSECONDS: return HBaseProtos.TimeUnit.MICROSECONDS;
+      case MILLISECONDS: return HBaseProtos.TimeUnit.MILLISECONDS;
+      case SECONDS:      return HBaseProtos.TimeUnit.SECONDS;
+      case MINUTES:      return HBaseProtos.TimeUnit.MINUTES;
+      case HOURS:        return HBaseProtos.TimeUnit.HOURS;
+      case DAYS:         return HBaseProtos.TimeUnit.DAYS;
+    }
+    throw new RuntimeException("Invalid TimeUnit " + timeUnit);
+  }
+
+  /**
+   * Convert a protocol buffer ThrottleType to a client ThrottleType
+   *
+   * @param proto
+   * @return the converted client ThrottleType
+   */
+  public static ThrottleType toThrottleType(final QuotaProtos.ThrottleType proto) {
+    switch (proto) {
+      case REQUEST_NUMBER: return ThrottleType.REQUEST_NUMBER;
+      case REQUEST_SIZE:   return ThrottleType.REQUEST_SIZE;
+    }
+    throw new RuntimeException("Invalid ThrottleType " + proto);
+  }
+
+  /**
+   * Convert a client ThrottleType to a protocol buffer ThrottleType
+   *
+   * @param type
+   * @return the converted protocol buffer ThrottleType
+   */
+  public static QuotaProtos.ThrottleType toProtoThrottleType(final ThrottleType type) {
+    switch (type) {
+      case REQUEST_NUMBER: return QuotaProtos.ThrottleType.REQUEST_NUMBER;
+      case REQUEST_SIZE:   return QuotaProtos.ThrottleType.REQUEST_SIZE;
+    }
+    throw new RuntimeException("Invalid ThrottleType " + type);
+  }
+
+  /**
+   * Convert a protocol buffer QuotaScope to a client QuotaScope
+   *
+   * @param proto
+   * @return the converted client QuotaScope
+   */
+  public static QuotaScope toQuotaScope(final QuotaProtos.QuotaScope proto) {
+    switch (proto) {
+      case CLUSTER: return QuotaScope.CLUSTER;
+      case MACHINE: return QuotaScope.MACHINE;
+    }
+    throw new RuntimeException("Invalid QuotaScope " + proto);
+  }
+
+  /**
+   * Convert a client QuotaScope to a protocol buffer QuotaScope
+   *
+   * @param scope
+   * @return the converted protocol buffer QuotaScope
+   */
+  public static QuotaProtos.QuotaScope toProtoQuotaScope(final QuotaScope scope) {
+    switch (scope) {
+      case CLUSTER: return QuotaProtos.QuotaScope.CLUSTER;
+      case MACHINE: return QuotaProtos.QuotaScope.MACHINE;
+    }
+    throw new RuntimeException("Invalid QuotaScope " + scope);
+  }
+
+  /**
+   * Convert a protocol buffer QuotaType to a client QuotaType
+   *
+   * @param proto
+   * @return the converted client QuotaType
+   */
+  public static QuotaType toQuotaScope(final QuotaProtos.QuotaType proto) {
+    switch (proto) {
+      case THROTTLE: return QuotaType.THROTTLE;
+    }
+    throw new RuntimeException("Invalid QuotaType " + proto);
+  }
+
+  /**
+   * Convert a client QuotaType to a protocol buffer QuotaType
+   *
+   * @param type
+   * @return the converted protocol buffer QuotaType
+   */
+  public static QuotaProtos.QuotaType toProtoQuotaScope(final QuotaType type) {
+    switch (type) {
+      case THROTTLE: return QuotaProtos.QuotaType.THROTTLE;
+    }
+    throw new RuntimeException("Invalid QuotaType " + type);
+  }
+
+  /**
+   * Build a protocol buffer TimedQuota
+   *
+   * @param limit the allowed number of request/data per timeUnit
+   * @param timeUnit the limit time unit
+   * @param scope the quota scope
+   * @return the protocol buffer TimedQuota
+   */
+  public static QuotaProtos.TimedQuota toTimedQuota(final long limit, final TimeUnit timeUnit,
+      final QuotaScope scope) {
+    return QuotaProtos.TimedQuota.newBuilder()
+            .setSoftLimit(limit)
+            .setTimeUnit(toProtoTimeUnit(timeUnit))
+            .setScope(toProtoQuotaScope(scope))
+            .build();
+  }
+
+  /**
+   * Generates a marker for the WAL so that we propagate the notion of a bulk region load
+   * throughout the WAL.
+   *
+   * @param tableName         The tableName into which the bulk load is being imported into.
+   * @param encodedRegionName Encoded region name of the region which is being bulk loaded.
+   * @param storeFiles        A set of store files of a column family are bulk loaded.
+   * @param bulkloadSeqId     sequence ID (by a force flush) used to create bulk load hfile
+   *                          name
+   * @return The WAL log marker for bulk loads.
+   */
+  public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
+      ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles, long bulkloadSeqId) {
+    BulkLoadDescriptor.Builder desc = BulkLoadDescriptor.newBuilder()
+        .setTableName(ProtobufUtil.toProtoTableName(tableName))
+        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
+
+    for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
+      WALProtos.StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
+          .setFamilyName(ByteStringer.wrap(entry.getKey()))
+          .setStoreHomeDir(Bytes.toString(entry.getKey())); // relative to region
+      for (Path path : entry.getValue()) {
+        builder.addStoreFile(path.getName());
+      }
+      desc.addStores(builder);
+    }
+
+    return desc.build();
   }
 }

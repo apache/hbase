@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
@@ -92,9 +92,9 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
   }
 
   @Override
-  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
-    return this.encoding.getEncoder().encode(kv, encodingCtx, out);
+    return this.encoding.getEncoder().encode(cell, encodingCtx, out);
   }
 
   @Override

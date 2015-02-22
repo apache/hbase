@@ -26,8 +26,10 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Assert;
 import org.junit.Test;
@@ -169,7 +171,13 @@ public class IntegrationTestIngest extends IntegrationTestBase {
         , startKey, numKeys));
       if (0 != ret) {
         String errorMsg = "Verification failed with error code " + ret;
-        LOG.error(errorMsg);
+        LOG.error(errorMsg + " Rerunning verification after 1 minute for debugging");
+        Threads.sleep(1000 * 60);
+        ret = loadTool.run(getArgsForLoadTestTool("-read", String.format("100:%d", readThreads)
+            , startKey, numKeys));
+        if (0 != ret) {
+          LOG.error("Rerun of Verification failed with error code " + ret);
+        }
         Assert.fail(errorMsg);
       }
       startKey += numKeys;

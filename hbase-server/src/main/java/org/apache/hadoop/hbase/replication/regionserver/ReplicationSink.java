@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -41,15 +41,14 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
@@ -59,7 +58,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
  * <p/>
  * This replication process is currently waiting for the edits to be applied
  * before the method can return. This means that the replication of edits
- * is synchronized (after reading from HLogs in ReplicationSource) and that a
+ * is synchronized (after reading from WALs in ReplicationSource) and that a
  * single region server cannot receive edits from two sources at the same time
  * <p/>
  * This class uses the native HBase client in order to replicate entries.
@@ -72,7 +71,7 @@ public class ReplicationSink {
 
   private static final Log LOG = LogFactory.getLog(ReplicationSink.class);
   private final Configuration conf;
-  private final HConnection sharedHtableCon;
+  private final Connection sharedHtableCon;
   private final MetricsSink metrics;
   private final AtomicLong totalReplicatedEdits = new AtomicLong();
 
@@ -88,7 +87,7 @@ public class ReplicationSink {
     this.conf = HBaseConfiguration.create(conf);
     decorateConf();
     this.metrics = new MetricsSink();
-    this.sharedHtableCon = HConnectionManager.createConnection(this.conf);
+    this.sharedHtableCon = ConnectionFactory.createConnection(this.conf);
   }
 
   /**
@@ -149,9 +148,9 @@ public class ReplicationSink {
             addToHashMultiMap(rowMap, table, clusterIds, m);
           }
           if (CellUtil.isDelete(cell)) {
-            ((Delete)m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
+            ((Delete)m).addDeleteMarker(cell);
           } else {
-            ((Put)m).add(KeyValueUtil.ensureKeyValue(cell));
+            ((Put)m).add(cell);
           }
           previousCell = cell;
         }
@@ -230,7 +229,7 @@ public class ReplicationSink {
     if (allRows.isEmpty()) {
       return;
     }
-    HTableInterface table = null;
+    Table table = null;
     try {
       table = this.sharedHtableCon.getTable(tableName);
       for (List<Row> rows : allRows) {

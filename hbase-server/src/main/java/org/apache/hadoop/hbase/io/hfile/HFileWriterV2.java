@@ -27,13 +27,15 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -74,8 +76,11 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   /** The offset of the last data block or 0 if the file is empty. */
   protected long lastDataBlockOffset;
 
-  /** The last(stop) Key of the previous data block. */
-  private byte[] lastKeyOfPreviousBlock = null;
+  /**
+   * The last(stop) Cell of the previous data block.
+   * This reference should be short-lived since we write hfiles in a burst.
+   */
+  private Cell lastCellOfPreviousBlock = null;
 
   /** Additional data items to be written to the "load-on-open" section. */
   private List<BlockWritable> additionalLoadOnOpenData =
@@ -118,7 +123,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(fsBlockWriter,
-        cacheIndexesOnWrite ? cacheConf.getBlockCache(): null,
+        cacheIndexesOnWrite ? cacheConf : null,
         cacheIndexesOnWrite ? name : null);
     dataBlockIndexWriter.setMaxChunkSize(
         HFileBlockIndex.getMaxChunkSize(conf));
@@ -143,7 +148,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     newBlock();
   }
 
-  /** Clean up the current block */
+  /** Clean up the current data block */
   private void finishBlock() throws IOException {
     if (!fsBlockWriter.isWriting() || fsBlockWriter.blockSizeWritten() == 0)
       return;
@@ -157,8 +162,10 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     fsBlockWriter.writeHeaderAndData(outputStream);
     int onDiskSize = fsBlockWriter.getOnDiskSizeWithHeader();
 
-    byte[] indexKey = comparator.calcIndexKey(lastKeyOfPreviousBlock, firstKeyInBlock);
-    dataBlockIndexWriter.addEntry(indexKey, lastDataBlockOffset, onDiskSize);
+    Cell indexEntry =
+      CellComparator.getMidpoint(this.comparator, lastCellOfPreviousBlock, firstCellInBlock);
+    dataBlockIndexWriter.addEntry(CellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
+      lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
     if (cacheConf.shouldCacheDataOnWrite()) {
       doCacheOnWrite(lastDataBlockOffset);
@@ -191,7 +198,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    *          the cache key.
    */
   private void doCacheOnWrite(long offset) {
-    HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching();
+    HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching(cacheConf);
     cacheConf.getBlockCache().cacheBlock(
         new BlockCacheKey(name, offset), cacheFormatBlock);
   }
@@ -204,10 +211,9 @@ public class HFileWriterV2 extends AbstractHFileWriter {
   protected void newBlock() throws IOException {
     // This is where the next block begins.
     fsBlockWriter.startWriting(BlockType.DATA);
-    firstKeyInBlock = null;
-    if (lastKeyLength > 0) {
-      lastKeyOfPreviousBlock = new byte[lastKeyLength];
-      System.arraycopy(lastKeyBuffer, lastKeyOffset, lastKeyOfPreviousBlock, 0, lastKeyLength);
+    firstCellInBlock = null;
+    if (lastCell != null) {
+      lastCellOfPreviousBlock = lastCell;
     }
   }
 
@@ -242,66 +248,42 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * Add key/value to file. Keys must be added in an order that agrees with the
    * Comparator passed on construction.
    *
-   * @param kv
-   *          KeyValue to add. Cannot be empty nor null.
+   * @param cell Cell to add. Cannot be empty nor null.
    * @throws IOException
    */
   @Override
-  public void append(final KeyValue kv) throws IOException {
-    byte[] key = kv.getBuffer();
-    int koffset = kv.getKeyOffset();
-    int klength = kv.getKeyLength();
-    byte[] value = kv.getValueArray();
-    int voffset = kv.getValueOffset();
-    int vlength = kv.getValueLength();
-    boolean dupKey = checkKey(key, koffset, klength);
+  public void append(final Cell cell) throws IOException {
+    byte[] value = cell.getValueArray();
+    int voffset = cell.getValueOffset();
+    int vlength = cell.getValueLength();
+    // checkKey uses comparator to check we are writing in order.
+    boolean dupKey = checkKey(cell);
     checkValue(value, voffset, vlength);
     if (!dupKey) {
       checkBlockBoundary();
     }
 
-    if (!fsBlockWriter.isWriting())
+    if (!fsBlockWriter.isWriting()) {
       newBlock();
+    }
 
-    fsBlockWriter.write(kv);
+    fsBlockWriter.write(cell);
 
-    totalKeyLength += klength;
+    totalKeyLength += CellUtil.estimatedSerializedSizeOfKey(cell);
     totalValueLength += vlength;
 
     // Are we the first key in this block?
-    if (firstKeyInBlock == null) {
-      // Copy the key.
-      firstKeyInBlock = new byte[klength];
-      System.arraycopy(key, koffset, firstKeyInBlock, 0, klength);
+    if (firstCellInBlock == null) {
+      // If cell is big, block will be closed and this firstCellInBlock reference will only last
+      // a short while.
+      firstCellInBlock = cell;
     }
 
-    lastKeyBuffer = key;
-    lastKeyOffset = koffset;
-    lastKeyLength = klength;
+    // TODO: What if cell is 10MB and we write infrequently?  We'll hold on to the cell here
+    // indefinetly?
+    lastCell = cell;
     entryCount++;
-    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMvccVersion());
-  }
-
-  /**
-   * Add key/value to file. Keys must be added in an order that agrees with the
-   * Comparator passed on construction.
-   *
-   * @param key
-   *          Key to add. Cannot be empty nor null.
-   * @param value
-   *          Value to add. Cannot be empty nor null.
-   * @throws IOException
-   */
-  @Override
-  public void append(final byte[] key, final byte[] value) throws IOException {
-    int kvlen = (int) KeyValue.getKeyValueDataStructureSize(key.length, value.length, 0);
-    byte[] b = new byte[kvlen];
-    int pos = 0;
-    pos = Bytes.putInt(b, pos, key.length);
-    pos = Bytes.putInt(b, pos, value.length);
-    pos = Bytes.putBytes(b, pos, key, 0, key.length);
-    Bytes.putBytes(b, pos, value, 0, value.length);
-    append(new KeyValue(b, 0, kvlen));
+    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, cell.getSequenceId());
   }
 
   @Override
@@ -425,11 +407,6 @@ public class HFileWriterV2 extends AbstractHFileWriter {
           dataWriter.write(out);
       }
     });
-  }
-
-  @Override
-  public void append(byte[] key, byte[] value, byte[] tag) throws IOException {
-    throw new UnsupportedOperationException("KV tags are supported only from HFile V3");
   }
 
   protected int getMajorVersion() {

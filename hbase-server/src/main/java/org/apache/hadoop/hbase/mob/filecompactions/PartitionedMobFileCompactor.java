@@ -142,7 +142,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
       // group the del files and small files.
       FileStatus linkedFile = file;
       if (HFileLink.isHFileLink(file.getPath())) {
-        HFileLink link = new HFileLink(conf, file.getPath());
+        HFileLink link = HFileLink.buildFromHFileLinkPattern(conf, file.getPath());
         linkedFile = getLinkedFileStatus(link);
         if (linkedFile == null) {
           // If the linked file cannot be found, regard it as an irrelevantFileCount file

@@ -24,10 +24,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -108,7 +111,9 @@ public class RestartMetaTest extends AbstractHBaseTool {
         " seconds....\n\n");
     Threads.sleep(5 * SLEEP_SEC_AFTER_DATA_LOAD);
 
-    int metaRSPort = HBaseTestingUtility.getMetaRSPort(conf);
+    Connection connection = ConnectionFactory.createConnection(conf);
+
+    int metaRSPort = HBaseTestingUtility.getMetaRSPort(connection);
 
     LOG.debug("Killing hbase:meta region server running on port " + metaRSPort);
     hbaseCluster.killRegionServer(metaRSPort);
@@ -120,7 +125,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     LOG.debug("Trying to scan meta");
 
-    HTable metaTable = new HTable(conf, TableName.META_TABLE_NAME);
+    Table metaTable = connection.getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = metaTable.getScanner(new Scan());
     Result result;
     while ((result = scanner.next()) != null) {
@@ -130,6 +135,8 @@ public class RestartMetaTest extends AbstractHBaseTool {
           + Bytes.toStringBinary(result.getFamilyMap(HConstants.CATALOG_FAMILY)
               .get(HConstants.SERVER_QUALIFIER)));
     }
+    metaTable.close();
+    connection.close();
     return 0;
   }
 

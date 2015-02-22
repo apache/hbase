@@ -19,10 +19,8 @@ package org.apache.hadoop.hbase.protobuf;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.regex.Pattern;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
-
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -31,6 +29,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -90,6 +89,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
@@ -101,6 +102,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunnin
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -259,6 +261,52 @@ public final class RequestConverter {
       MutationProto.newBuilder()));
     builder.setCondition(condition);
     return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer MutateRequest for conditioned row mutations
+   *
+   * @param regionName
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param comparator
+   * @param compareType
+   * @param rowMutations
+   * @return a mutate request
+   * @throws IOException
+   */
+  public static ClientProtos.MultiRequest buildMutateRequest(
+      final byte[] regionName, final byte[] row, final byte[] family,
+      final byte [] qualifier, final ByteArrayComparable comparator,
+      final CompareType compareType, final RowMutations rowMutations) throws IOException {
+    RegionAction.Builder builder =
+        getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
+    builder.setAtomic(true);
+    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
+    MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
+    Condition condition = buildCondition(
+        row, family, qualifier, comparator, compareType);
+    for (Mutation mutation: rowMutations.getMutations()) {
+      MutationType mutateType = null;
+      if (mutation instanceof Put) {
+        mutateType = MutationType.PUT;
+      } else if (mutation instanceof Delete) {
+        mutateType = MutationType.DELETE;
+      } else {
+        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
+            mutation.getClass().getName());
+      }
+      mutationBuilder.clear();
+      MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation, mutationBuilder);
+      actionBuilder.clear();
+      actionBuilder.setMutation(mp);
+      builder.addAction(actionBuilder.build());
+    }
+    ClientProtos.MultiRequest request =
+        ClientProtos.MultiRequest.newBuilder().addRegionAction(builder.build())
+            .setCondition(condition).build();
+    return request;
   }
 
   /**
@@ -701,17 +749,21 @@ public final class RequestConverter {
  /**
   * Create a protocol buffer OpenRegionRequest to open a list of regions
   *
+  * @param server the serverName for the RPC
   * @param regionOpenInfos info of a list of regions to open
   * @param openForReplay
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest
-     buildOpenRegionRequest(final List<Pair<HRegionInfo,
+     buildOpenRegionRequest(ServerName server, final List<Pair<HRegionInfo,
          List<ServerName>>> regionOpenInfos, Boolean openForReplay) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
    for (Pair<HRegionInfo, List<ServerName>> regionOpenInfo: regionOpenInfos) {
      builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(),
        regionOpenInfo.getSecond(), openForReplay));
+   }
+   if (server != null) {
+     builder.setServerStartCode(server.getStartcode());
    }
    return builder.build();
  }
@@ -999,7 +1051,7 @@ public final class RequestConverter {
   public static MoveRegionRequest buildMoveRegionRequest(
       final byte [] encodedRegionName, final byte [] destServerName) throws
       DeserializationException {
-	MoveRegionRequest.Builder builder = MoveRegionRequest.newBuilder();
+    MoveRegionRequest.Builder builder = MoveRegionRequest.newBuilder();
     builder.setRegion(
       buildRegionSpecifier(RegionSpecifierType.ENCODED_REGION_NAME,encodedRegionName));
     if (destServerName != null) {
@@ -1174,6 +1226,49 @@ public final class RequestConverter {
       }
     }
     return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetTableDescriptorsRequest
+   *
+   * @param pattern The compiled regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return a GetTableDescriptorsRequest
+   */
+  public static GetTableDescriptorsRequest buildGetTableDescriptorsRequest(final Pattern pattern,
+      boolean includeSysTables) {
+    GetTableDescriptorsRequest.Builder builder = GetTableDescriptorsRequest.newBuilder();
+    if (pattern != null) builder.setRegex(pattern.toString());
+    builder.setIncludeSysTables(includeSysTables);
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetTableNamesRequest
+   *
+   * @param pattern The compiled regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return a GetTableNamesRequest
+   */
+  public static GetTableNamesRequest buildGetTableNamesRequest(final Pattern pattern,
+      boolean includeSysTables) {
+    GetTableNamesRequest.Builder builder = GetTableNamesRequest.newBuilder();
+    if (pattern != null) builder.setRegex(pattern.toString());
+    builder.setIncludeSysTables(includeSysTables);
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetTableStateRequest
+   *
+   * @param tableName table to get request for
+   * @return a GetTableStateRequest
+   */
+  public static GetTableStateRequest buildGetTableStateRequest(
+          final TableName tableName) {
+    return GetTableStateRequest.newBuilder()
+            .setTableName(ProtobufUtil.toProtoTableName(tableName))
+            .build();
   }
 
   /**

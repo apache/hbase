@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.codec.prefixtree.scanner;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * An indicator of the state of the scanner after an operation such as nextCell() or

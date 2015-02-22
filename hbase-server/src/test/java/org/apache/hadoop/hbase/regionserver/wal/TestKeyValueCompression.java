@@ -24,7 +24,8 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -36,7 +37,7 @@ import static org.junit.Assert.*;
 
 import com.google.common.collect.Lists;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestKeyValueCompression {
   private static final byte[] VALUE = Bytes.toBytes("fake value");
   private static final int BUF_SIZE = 256*1024;

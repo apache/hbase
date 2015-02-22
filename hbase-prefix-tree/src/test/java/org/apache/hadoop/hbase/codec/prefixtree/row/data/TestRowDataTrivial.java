@@ -33,12 +33,12 @@ import com.google.common.collect.Lists;
 
 public class TestRowDataTrivial extends BaseTestRowData{
 
-	static byte[]
-        rA = Bytes.toBytes("rA"),
-        rB = Bytes.toBytes("rB"),//turn "r" into a branch for the Searcher tests
-        cf = Bytes.toBytes("fam"),
-        cq0 = Bytes.toBytes("q0"),
-        v0 = Bytes.toBytes("v0");
+  static byte[]
+    rA = Bytes.toBytes("rA"),
+    rB = Bytes.toBytes("rB"),//turn "r" into a branch for the Searcher tests
+    cf = Bytes.toBytes("fam"),
+    cq0 = Bytes.toBytes("q0"),
+    v0 = Bytes.toBytes("v0");
 
   static long ts = 55L;
 

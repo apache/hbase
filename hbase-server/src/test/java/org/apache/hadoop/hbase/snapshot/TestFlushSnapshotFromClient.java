@@ -25,39 +25,30 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.ScannerCallable;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
-import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -73,13 +64,12 @@ import org.junit.experimental.categories.Category;
  * TODO This is essentially a clone of TestSnapshotFromClient.  This is worth refactoring this
  * because there will be a few more flavors of snapshots that need to run these tests.
  */
-@Category(LargeTests.class)
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestFlushSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestFlushSnapshotFromClient.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 2;
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
-  private static final byte[] TEST_QUAL = Bytes.toBytes("q");
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private final int DEFAULT_NUM_ROWS = 100;
 
@@ -89,9 +79,11 @@ public class TestFlushSnapshotFromClient {
    */
   @BeforeClass
   public static void setupCluster() throws Exception {
-    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
+    // Uncomment the following lines if more verbosity is needed for
+    // debugging (see HBASE-12285 for details).
+    //((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    //((Log4JLogger)AbstractRpcClient.LOG).getLogger().setLevel(Level.ALL);
+    //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
   }
@@ -146,8 +138,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
+    SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
@@ -185,7 +176,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    Table table = UTIL.getConnection().getTable(TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
@@ -229,8 +220,7 @@ public class TestFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
+    SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),

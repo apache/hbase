@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class CurrentHourProvider {

@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category(SmallTests.class)
+@Category({RPCTests.class, SmallTests.class})
 public class TestCallRunner {
   /**
    * Does nothing but exercise a {@link CallRunner} outside of {@link RpcServer} context.

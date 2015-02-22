@@ -111,26 +111,26 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.master.logcleaner.plugins</name>
     <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner</value>
-    <description>A comma-separated list of LogCleanerDelegate invoked by
-    the LogsCleaner service. These WAL/HLog cleaners are called in order,
-    so put the HLog cleaner that prunes the most HLog files in front. To
-    implement your own LogCleanerDelegate, just put it in HBase's classpath
+    <description>A comma-separated list of BaseLogCleanerDelegate invoked by
+    the LogsCleaner service. These WAL cleaners are called in order,
+    so put the cleaner that prunes the most files in front. To
+    implement your own BaseLogCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
     default log cleaners in the list.</description>
   </property>
   <property>
     <name>hbase.master.logcleaner.ttl</name>
     <value>600000</value>
-    <description>Maximum time a HLog can stay in the .oldlogdir directory,
+    <description>Maximum time a WAL can stay in the .oldlogdir directory,
     after which it will be cleaned by a Master thread.</description>
   </property>
   <property>
     <name>hbase.master.hfilecleaner.plugins</name>
     <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
-    <description>A comma-separated list of HFileCleanerDelegate invoked by
+    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
     the HFileCleaner service. These HFiles cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
-    implement your own HFileCleanerDelegate, just put it in HBase's classpath
+    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
     default log cleaners in the list as they will be overwritten in
     hbase-site.xml.</description>
@@ -187,7 +187,7 @@ possible configurations would overwhelm and obscure the important.
       A value of 0 means a single queue shared between all the handlers.
       A value of 1 means that each handler has its own queue.</description>
   </property>
-<property>
+  <property>
     <name>hbase.ipc.server.callqueue.read.ratio</name>
     <value>0</value>
     <description>Split the call queues into read and write queues.
@@ -265,12 +265,12 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.regionserver.hlog.reader.impl</name>
     <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader</value>
-    <description>The HLog file reader implementation.</description>
+    <description>The WAL file reader implementation.</description>
   </property>
   <property>
     <name>hbase.regionserver.hlog.writer.impl</name>
     <value>org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter</value>
-    <description>The HLog file writer implementation.</description>
+    <description>The WAL file writer implementation.</description>
   </property>
   <property>
     <name>hbase.master.distributed.log.replay</name>
@@ -329,8 +329,8 @@ possible configurations would overwhelm and obscure the important.
     <value>org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy</value>
     <description>
       A split policy determines when a region should be split. The various other split policies that
-      are available currently are ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy, 
-      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.  
+      are available currently are ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy,
+      DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.
     </description>
   </property>
 
@@ -404,7 +404,7 @@ possible configurations would overwhelm and obscure the important.
   <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
   <property>
     <name>hbase.zookeeper.useMulti</name>
-    <value>false</value>
+    <value>true</value>
     <description>Instructs HBase to make use of ZooKeeper's multi-update functionality.
     This allows certain ZooKeeper operations to complete more quickly and prevents some issues
     with rare Replication failure scenarios (see the release note of HBASE-2611 for an example).
@@ -549,7 +549,7 @@ possible configurations would overwhelm and obscure the important.
   <!--Miscellaneous configuration-->
   <property>
     <name>hbase.bulkload.retries.number</name>
-    <value>0</value>
+    <value>10</value>
     <description>Maximum retries.  This is maximum number of iterations
     to atomic bulk loads are attempted in the face of splitting operations
     0 means never give up.</description>
@@ -559,15 +559,6 @@ possible configurations would overwhelm and obscure the important.
     </name>
     <value>300000</value>
     <description>Period at which the region balancer runs in the Master.</description>
-  </property>
-  <property>
-    <name>hbase.balancer.backupMasterWeight</name>
-    <value>1</value>
-    <description>Used to control how many regions the region balancer can assign to
-    backup Masters, compared to normal region servers. The default value 1 means a
-    backup Master can host as many regions as a normal region server. The bigger the
-    weight, the less the regions a backup Master will host. If the weight is less than 1,
-    the balancer will not assign any region to any backup Master</description>
   </property>
   <property>
     <name>hbase.regions.slop</name>
@@ -595,6 +586,19 @@ possible configurations would overwhelm and obscure the important.
     Memstore will be flushed to disk if size of the memstore
     exceeds this number of bytes.  Value is checked by a thread that runs
     every hbase.server.thread.wakefrequency.</description>
+  </property>
+  <property>
+    <name>hbase.hregion.percolumnfamilyflush.size.lower.bound</name>
+    <value>16777216</value>
+    <description>
+    If FlushLargeStoresPolicy is used, then every time that we hit the
+    total memstore limit, we find out all the column families whose memstores
+    exceed this value, and only flush them, while retaining the others whose
+    memstores are lower than this limit. If none of the families have their
+    memstore size more than this, all the memstores will be flushed
+    (just as usual). This value should be less than half of the total memstore
+    threshold (hbase.hregion.memstore.flush.size).
+    </description>
   </property>
   <property>
     <name>hbase.hregion.preclose.flush.size</name>
@@ -776,12 +780,12 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.regionserver.thread.compaction.throttle</name>
-    <value>2560</value>
+    <value>2684354560</value>
     <description>There are two different thread pools for compactions, one for large compactions and
       the other for small compactions. This helps to keep compaction of lean tables (such as
         <systemitem>hbase:meta</systemitem>) fast. If a compaction is larger than this threshold, it
       goes into the large compaction pool. In most cases, the default value is appropriate. Default:
-      2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size (which defaults to 128).
+      2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size (which defaults to 128MB).
       The value field assumes that the value of hbase.hregion.memstore.flush.size is unchanged from
       the default.</description>
   </property>
@@ -880,12 +884,6 @@ possible configurations would overwhelm and obscure the important.
       <value>false</value>
       <description>Whether an HFile block should be added to the block cache when the
           block is finished.</description>
-  </property>
-  <property>
-    <name>hbase.rpc.server.engine</name>
-    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcServerEngine</value>
-    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcServerEngine to be
-    used for server RPC call marshalling.</description>
   </property>
   <property>
     <name>hbase.rpc.timeout</name>
@@ -1261,6 +1259,16 @@ possible configurations would overwhelm and obscure the important.
   </property>
 
   <property>
+    <name>hbase.client.scanner.max.result.size</name>
+    <value>2097152</value>
+    <description>Maximum number of bytes returned when calling a scanner's next method.
+    Note that when a single row is larger than this limit the row is still returned completely.
+    The default value is 2MB, which is good for 1ge networks.
+    With faster and/or high latency networks this value should be increased.
+    </description>
+  </property>
+
+  <property>
     <name>hbase.status.published</name>
     <value>false</value>
     <description>
@@ -1567,5 +1575,13 @@ possible configurations would overwhelm and obscure the important.
     <description>
       The max number of threads used in MobFileCompactionChore.
     </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.handler.abort.on.error.percent</name>
+    <value>0.5</value>
+    <description>The percent of region server RPC threads failed to abort RS.
+    -1 Disable aborting; 0 Abort if even a single handler has died;
+    0.x Abort only when this percent of handlers have died;
+    1 Abort only all of the handers have died.</description>
   </property>
 </configuration>

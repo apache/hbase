@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -31,13 +32,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -72,11 +74,15 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
@@ -85,20 +91,23 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -106,7 +115,7 @@ import com.google.protobuf.ServiceException;
  * Use this when you can't bend Mockito to your liking (e.g. return null result
  * when 'scanning' until master timesout and then return a coherent meta row
  * result thereafter.  Have some facility for faking gets and scans.  See
- * {@link #setGetResult(byte[], byte[], Result)} for how to fill the backing data
+ * setGetResult(byte[], byte[], Result) for how to fill the backing data
  * store that the get pulls from.
  */
 class MockRegionServer
@@ -276,7 +285,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public HConnection getShortCircuitConnection() {
+  public ClusterConnection getConnection() {
     return null;
   }
 
@@ -313,8 +322,13 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
     return null;
   }
 
+  @Override
   public TableLockManager getTableLockManager() {
     return new NullTableLockManager();
+  }
+
+  public RegionServerQuotaManager getRegionServerQuotaManager() {
+    return null;
   }
 
   @Override
@@ -515,19 +529,30 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
+  public Set<TableName> getOnlineTables() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
   public Leases getLeases() {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
-  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
+  public WAL getWAL(HRegionInfo regionInfo) throws IOException {
     // TODO Auto-generated method stub
     return null;
   }
 
   @Override
   public ExecutorService getExecutorService() {
+    return null;
+  }
+
+  @Override
+  public ChoreService getChoreService() {
     return null;
   }
 
@@ -575,5 +600,35 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
       HRegionInfo... hris) {
     return false;
+  }
+
+  @Override
+  public boolean registerService(Service service) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public CoprocessorServiceResponse execRegionServerService(RpcController controller,
+      CoprocessorServiceRequest request) throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public UpdateConfigurationResponse updateConfiguration(
+      RpcController controller, UpdateConfigurationRequest request)
+      throws ServiceException {
+    return null;
+  }
+
+  @Override
+  public HeapMemoryManager getHeapMemoryManager() {
+    return null;
+  }
+
+  @Override
+  public double getCompactionPressure() {
+    return 0;
   }
 }

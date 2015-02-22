@@ -27,15 +27,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -47,7 +49,7 @@ import org.junit.experimental.categories.Category;
  * Test the HFileLink Cleaner.
  * HFiles with links cannot be deleted until a link is present.
  */
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestHFileLinkCleaner {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -120,8 +122,6 @@ public class TestHFileLinkCleaner {
     }
     assertFalse("HFile should be deleted", fs.exists(FSUtils.getTableDir(archiveDir, tableName)));
     assertFalse("Link should be deleted", fs.exists(FSUtils.getTableDir(archiveDir, tableLinkName)));
-
-    cleaner.interrupt();
   }
 
   private static Path getFamilyDirPath (final Path rootDir, final TableName table,
@@ -152,7 +152,7 @@ public class TestHFileLinkCleaner {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -180,6 +180,11 @@ public class TestHFileLinkCleaner {
     @Override
     public boolean isStopped() {
       return false;
+    }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
     }
   }
 }

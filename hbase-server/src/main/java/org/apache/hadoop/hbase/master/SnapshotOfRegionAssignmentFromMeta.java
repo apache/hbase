@@ -30,7 +30,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
@@ -55,7 +55,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
   private static final Log LOG = LogFactory.getLog(SnapshotOfRegionAssignmentFromMeta.class
       .getName());
 
-  private final HConnection hConnection;
+  private final Connection connection;
 
   /** the table name to region map */
   private final Map<TableName, List<HRegionInfo>> tableToRegionMap;
@@ -72,13 +72,13 @@ public class SnapshotOfRegionAssignmentFromMeta {
   private final Set<TableName> disabledTables;
   private final boolean excludeOfflinedSplitParents;
 
-  public SnapshotOfRegionAssignmentFromMeta(HConnection hConnection) {
-    this(hConnection, new HashSet<TableName>(), false);
+  public SnapshotOfRegionAssignmentFromMeta(Connection connection) {
+    this(connection, new HashSet<TableName>(), false);
   }
 
-  public SnapshotOfRegionAssignmentFromMeta(HConnection hConnection, Set<TableName> disabledTables,
+  public SnapshotOfRegionAssignmentFromMeta(Connection connection, Set<TableName> disabledTables,
       boolean excludeOfflinedSplitParents) {
-    this.hConnection = hConnection;
+    this.connection = connection;
     tableToRegionMap = new HashMap<TableName, List<HRegionInfo>>();
     regionToRegionServerMap = new HashMap<HRegionInfo, ServerName>();
     regionServerToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
@@ -94,7 +94,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
    */
   public void initialize() throws IOException {
     LOG.info("Start to scan the hbase:meta for the current region assignment " +
-		"snappshot");
+      "snappshot");
     // TODO: at some point this code could live in the MetaTableAccessor
     Visitor v = new Visitor() {
       @Override
@@ -141,7 +141,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
       }
     };
     // Scan hbase:meta to pick up user regions
-    MetaTableAccessor.fullScan(hConnection, v);
+    MetaTableAccessor.fullScanRegions(connection, v);
     //regionToRegionServerMap = regions;
     LOG.info("Finished to scan the hbase:meta for the current region assignment" +
       "snapshot");

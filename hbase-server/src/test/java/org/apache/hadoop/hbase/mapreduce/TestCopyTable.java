@@ -30,12 +30,13 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
@@ -48,10 +49,9 @@ import org.junit.experimental.categories.Category;
 /**
  * Basic test for the CopyTable M/R tool
  */
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestCopyTable {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static MiniHBaseCluster cluster;
   private static final byte[] ROW1 = Bytes.toBytes("row1");
   private static final byte[] ROW2 = Bytes.toBytes("row2");
   private static final String FAMILY_A_STRING = "a";
@@ -63,7 +63,7 @@ public class TestCopyTable {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    cluster = TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.startMiniMapReduceCluster();
   }
 
@@ -73,19 +73,14 @@ public class TestCopyTable {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * Simple end-to-end test
-   * @throws Exception
-   */
-  @Test
-  public void testCopyTable() throws Exception {
-    final byte[] TABLENAME1 = Bytes.toBytes("testCopyTable1");
-    final byte[] TABLENAME2 = Bytes.toBytes("testCopyTable2");
+  private void doCopyTableTest(boolean bulkload) throws Exception {
+    final TableName TABLENAME1 = TableName.valueOf("testCopyTable1");
+    final TableName TABLENAME2 = TableName.valueOf("testCopyTable2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
 
-    HTable t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    HTable t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
 
     // put rows into the first table
     for (int i = 0; i < 10; i++) {
@@ -96,10 +91,15 @@ public class TestCopyTable {
 
     CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
 
-    assertEquals(
-      0,
-      copy.run(new String[] { "--new.name=" + Bytes.toString(TABLENAME2),
-          Bytes.toString(TABLENAME1) }));
+    int code;
+    if (bulkload) {
+      code = copy.run(new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
+          "--bulkload", TABLENAME1.getNameAsString() });
+    } else {
+      code = copy.run(new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
+          TABLENAME1.getNameAsString() });
+    }
+    assertEquals("copy job failed", 0, code);
 
     // verify the data was copied into table 2
     for (int i = 0; i < 10; i++) {
@@ -115,18 +115,35 @@ public class TestCopyTable {
     TEST_UTIL.deleteTable(TABLENAME2);
   }
 
+  /**
+   * Simple end-to-end test
+   * @throws Exception
+   */
+  @Test
+  public void testCopyTable() throws Exception {
+    doCopyTableTest(false);
+  }
+  
+  /**
+   * Simple end-to-end test with bulkload.
+   */
+  @Test
+  public void testCopyTableWithBulkload() throws Exception {
+    doCopyTableTest(true);
+  }
+  
   @Test
   public void testStartStopRow() throws Exception {
-    final byte[] TABLENAME1 = Bytes.toBytes("testStartStopRow1");
-    final byte[] TABLENAME2 = Bytes.toBytes("testStartStopRow2");
+    final TableName TABLENAME1 = TableName.valueOf("testStartStopRow1");
+    final TableName TABLENAME2 = TableName.valueOf("testStartStopRow2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
     final byte[] ROW0 = Bytes.toBytes("row0");
     final byte[] ROW1 = Bytes.toBytes("row1");
     final byte[] ROW2 = Bytes.toBytes("row2");
 
-    HTable t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    HTable t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
 
     // put rows into the first table
     Put p = new Put(ROW0);
@@ -142,8 +159,8 @@ public class TestCopyTable {
     CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
     assertEquals(
       0,
-      copy.run(new String[] { "--new.name=" + Bytes.toString(TABLENAME2), "--startrow=row1",
-          "--stoprow=row2", Bytes.toString(TABLENAME1) }));
+      copy.run(new String[] { "--new.name=" + TABLENAME2, "--startrow=row1",
+          "--stoprow=row2", TABLENAME1.getNameAsString() }));
 
     // verify the data was copied into table 2
     // row1 exist, row0, row2 do not exist
@@ -176,8 +193,8 @@ public class TestCopyTable {
 
     byte[][] families = { FAMILY_A, FAMILY_B };
 
-    HTable t = TEST_UTIL.createTable(Bytes.toBytes(sourceTable), families);
-    HTable t2 = TEST_UTIL.createTable(Bytes.toBytes(targetTable), families);
+    Table t = TEST_UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    Table t2 = TEST_UTIL.createTable(Bytes.toBytes(targetTable), families);
     Put p = new Put(ROW1);
     p.add(FAMILY_A, QUALIFIER,  Bytes.toBytes("Data11"));
     p.add(FAMILY_B, QUALIFIER,  Bytes.toBytes("Data12"));
@@ -194,7 +211,6 @@ public class TestCopyTable {
         "--starttime=" + (currentTime - 100000), "--endtime=" + (currentTime + 100000),
         "--versions=1", sourceTable };
     assertNull(t2.get(new Get(ROW1)).getRow());
-    clean();
 
     assertTrue(runCopy(args));
 
@@ -243,24 +259,8 @@ public class TestCopyTable {
         new Configuration(TEST_UTIL.getConfiguration()), args);
     Configuration configuration = opts.getConfiguration();
     args = opts.getRemainingArgs();
-    clean();
-    Job job = CopyTable.createSubmittableJob(configuration, args);
+    Job job = new CopyTable(configuration).createSubmittableJob(args);
     job.waitForCompletion(false);
     return job.isSuccessful();
-  }
-
-
-  private void clean() {
-
-      CopyTable.startTime = 0;
-      CopyTable.endTime = 0;
-      CopyTable.versions = -1;
-      CopyTable.tableName = null;
-      CopyTable.startRow = null;
-      CopyTable.stopRow = null;
-      CopyTable.newTableName = null;
-      CopyTable.peerAddress = null;
-      CopyTable.families = null;
-      CopyTable.allCells = false;
   }
 }

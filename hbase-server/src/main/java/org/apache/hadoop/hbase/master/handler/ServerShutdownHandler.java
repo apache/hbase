@@ -27,11 +27,13 @@ import java.util.concurrent.locks.Lock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -39,10 +41,9 @@ import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 
 /**
@@ -56,19 +57,19 @@ public class ServerShutdownHandler extends EventHandler {
   protected final ServerName serverName;
   protected final MasterServices services;
   protected final DeadServer deadServers;
-  protected final boolean shouldSplitHlog; // whether to split HLog or not
+  protected final boolean shouldSplitWal; // whether to split WAL or not
   protected final int regionAssignmentWaitTimeout;
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
       final DeadServer deadServers, final ServerName serverName,
-      final boolean shouldSplitHlog) {
+      final boolean shouldSplitWal) {
     this(server, services, deadServers, serverName, EventType.M_SERVER_SHUTDOWN,
-        shouldSplitHlog);
+        shouldSplitWal);
   }
 
   ServerShutdownHandler(final Server server, final MasterServices services,
       final DeadServer deadServers, final ServerName serverName, EventType type,
-      final boolean shouldSplitHlog) {
+      final boolean shouldSplitWal) {
     super(server, type);
     this.serverName = serverName;
     this.server = server;
@@ -77,7 +78,7 @@ public class ServerShutdownHandler extends EventHandler {
     if (!this.deadServers.isDeadServer(this.serverName)) {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
-    this.shouldSplitHlog = shouldSplitHlog;
+    this.shouldSplitWal = shouldSplitWal;
     this.regionAssignmentWaitTimeout = server.getConfiguration().getInt(
       HConstants.LOG_REPLAY_WAIT_REGION_TIMEOUT, 15000);
   }
@@ -131,9 +132,9 @@ public class ServerShutdownHandler extends EventHandler {
       // we are not ready to assign dead regions either. So we re-queue up
       // the dead server for further processing too.
       AssignmentManager am = services.getAssignmentManager();
-      if (isCarryingMeta() // hbase:meta
-          || !am.isFailoverCleanupDone()) {
-        this.services.getServerManager().processDeadServer(serverName, this.shouldSplitHlog);
+      ServerManager serverManager = services.getServerManager();
+      if (isCarryingMeta() /* hbase:meta */ || !am.isFailoverCleanupDone()) {
+        serverManager.processDeadServer(serverName, this.shouldSplitWal);
         return;
       }
 
@@ -153,15 +154,21 @@ public class ServerShutdownHandler extends EventHandler {
       // {@link SplitTransaction}.  We'd also have to be figure another way for
       // doing the below hbase:meta daughters fixup.
       Set<HRegionInfo> hris = null;
-      while (!this.server.isStopped()) {
-        try {
-          server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
-          hris = am.getRegionStates().getServerRegions(serverName);
-          break;
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+      try {
+        server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
+        if (BaseLoadBalancer.tablesOnMaster(server.getConfiguration())) {
+          while (!this.server.isStopped() && serverManager.countOfRegionServers() < 2) {
+            // Wait till at least another regionserver is up besides the active master
+            // so that we don't assign all regions to the active master.
+            // This is best of efforts, because newly joined regionserver
+            // could crash right after that.
+            Thread.sleep(100);
+          }
         }
+        hris = am.getRegionStates().getServerRegions(serverName);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
       if (this.server.isStopped()) {
         throw new IOException("Server is stopped");
@@ -174,13 +181,15 @@ public class ServerShutdownHandler extends EventHandler {
         (this.services.getMasterFileSystem().getLogRecoveryMode() == RecoveryMode.LOG_REPLAY);
 
       try {
-        if (this.shouldSplitHlog) {
-          LOG.info("Splitting logs for " + serverName + " before assignment.");
+        if (this.shouldSplitWal) {
           if (distributedLogReplay) {
-            LOG.info("Mark regions in recovery before assignment.");
+            LOG.info("Mark regions in recovery for crashed server " + serverName +
+              " before assignment; regions=" + hris);
             MasterFileSystem mfs = this.services.getMasterFileSystem();
             mfs.prepareLogReplay(serverName, hris);
           } else {
+            LOG.info("Splitting logs for " + serverName +
+              " before assignment; region count=" + (hris == null ? 0 : hris.size()));
             this.services.getMasterFileSystem().splitLog(serverName);
           }
           am.getRegionStates().logSplit(serverName);
@@ -190,7 +199,17 @@ public class ServerShutdownHandler extends EventHandler {
       } catch (IOException ioe) {
         resubmit(serverName, ioe);
       }
-
+      List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
+      int replicaCount = services.getConfiguration().getInt(HConstants.META_REPLICAS_NUM,
+          HConstants.DEFAULT_META_REPLICA_NUM);
+      for (int i = 1; i < replicaCount; i++) {
+        HRegionInfo metaHri =
+            RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, i);
+        if (am.isCarryingMetaReplica(serverName, metaHri)) {
+          LOG.info("Reassigning meta replica" + metaHri + " that was on " + serverName);
+          toAssignRegions.add(metaHri);
+        }
+      }
       // Clean out anything in regions in transition.  Being conservative and
       // doing after log splitting.  Could do some states before -- OPENING?
       // OFFLINE? -- and then others after like CLOSING that depend on log
@@ -200,8 +219,7 @@ public class ServerShutdownHandler extends EventHandler {
         " region(s) that " + (serverName == null? "null": serverName)  +
         " was carrying (and " + regionsInTransition.size() +
         " regions(s) that were opening on this server)");
-
-      List<HRegionInfo> toAssignRegions = new ArrayList<HRegionInfo>();
+      
       toAssignRegions.addAll(regionsInTransition);
 
       // Iterate regions that were on this server and assign them
@@ -231,23 +249,23 @@ public class ServerShutdownHandler extends EventHandler {
                   continue;
                 }
                 LOG.info("Reassigning region with rs = " + rit);
-                regionStates.updateRegionState(hri, State.OFFLINE);
+                regionStates.updateRegionState(hri, RegionState.State.OFFLINE);
               } else if (regionStates.isRegionInState(
-                  hri, State.SPLITTING_NEW, State.MERGING_NEW)) {
-                regionStates.updateRegionState(hri, State.OFFLINE);
+                  hri, RegionState.State.SPLITTING_NEW, RegionState.State.MERGING_NEW)) {
+                regionStates.updateRegionState(hri, RegionState.State.OFFLINE);
               }
               toAssignRegions.add(hri);
             } else if (rit != null) {
-              if ((rit.isPendingCloseOrClosing() || rit.isOffline())
+              if ((rit.isClosing() || rit.isFailedClose() || rit.isOffline())
                   && am.getTableStateManager().isTableState(hri.getTable(),
-                  ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+                  TableState.State.DISABLED, TableState.State.DISABLING) ||
                   am.getReplicasToClose().contains(hri)) {
                 // If the table was partially disabled and the RS went down, we should clear the RIT
                 // and remove the node for the region.
                 // The rit that we use may be stale in case the table was in DISABLING state
                 // but though we did assign we will not be clearing the znode in CLOSING state.
                 // Doing this will have no harm. See HBASE-5927
-                regionStates.updateRegionState(hri, State.OFFLINE);
+                regionStates.updateRegionState(hri, RegionState.State.OFFLINE);
                 am.offlineDisabledRegion(hri);
               } else {
                 LOG.warn("THIS SHOULD NOT HAPPEN: unexpected region in transition "
@@ -265,9 +283,15 @@ public class ServerShutdownHandler extends EventHandler {
       } catch (InterruptedException ie) {
         LOG.error("Caught " + ie + " during round-robin assignment");
         throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
+      } catch (IOException ioe) {
+        LOG.info("Caught " + ioe + " during region assignment, will retry");
+        // Only do wal splitting if shouldSplitWal and in DLR mode
+        serverManager.processDeadServer(serverName,
+          this.shouldSplitWal && distributedLogReplay);
+        return;
       }
 
-      if (this.shouldSplitHlog && distributedLogReplay) {
+      if (this.shouldSplitWal && distributedLogReplay) {
         // wait for region assignment completes
         for (HRegionInfo hri : toAssignRegions) {
           try {
@@ -323,7 +347,7 @@ public class ServerShutdownHandler extends EventHandler {
     }
     // If table is not disabled but the region is offlined,
     boolean disabled = assignmentManager.getTableStateManager().isTableState(hri.getTable(),
-      ZooKeeperProtos.Table.State.DISABLED);
+      TableState.State.DISABLED);
     if (disabled){
       LOG.info("The table " + hri.getTable()
           + " was disabled.  Hence not proceeding.");
@@ -336,7 +360,7 @@ public class ServerShutdownHandler extends EventHandler {
       return false;
     }
     boolean disabling = assignmentManager.getTableStateManager().isTableState(hri.getTable(),
-      ZooKeeperProtos.Table.State.DISABLING);
+      TableState.State.DISABLING);
     if (disabling) {
       LOG.info("The table " + hri.getTable()
           + " is disabled.  Hence not assigning region" + hri.getEncodedName());

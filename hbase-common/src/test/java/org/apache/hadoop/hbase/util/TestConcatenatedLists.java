@@ -18,19 +18,23 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestConcatenatedLists {
   @Test
   public void testUnsupportedOps() {
@@ -118,7 +122,7 @@ public class TestConcatenatedLists {
     assertEquals((last == -1), c.isEmpty());
     assertEquals(last + 1, c.size());
     assertTrue(c.containsAll(c));
-    Long[] array = c.toArray(new Long[0]);
+    Long[] array = c.toArray(new Long[c.size()]);
     List<Long> all = new ArrayList<Long>();
     Iterator<Long> iter = c.iterator();
     for (Long i = 0L; i <= last; ++i) {

@@ -21,22 +21,32 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -44,7 +54,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({ReplicationTests.class, LargeTests.class})
 public class TestMultiSlaveReplication {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationBase.class);
@@ -59,7 +69,7 @@ public class TestMultiSlaveReplication {
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 100;
 
-  private static final byte[] tableName = Bytes.toBytes("test");
+  private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] famName = Bytes.toBytes("f");
   private static final byte[] row = Bytes.toBytes("row");
   private static final byte[] row1 = Bytes.toBytes("row1");
@@ -99,13 +109,13 @@ public class TestMultiSlaveReplication {
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
-    new ZooKeeperWatcher(conf2, "cluster3", null, true);
+    new ZooKeeperWatcher(conf2, "cluster2", null, true);
 
     utility3 = new HBaseTestingUtility(conf3);
     utility3.setZkCluster(miniZK);
     new ZooKeeperWatcher(conf3, "cluster3", null, true);
 
-    table = new HTableDescriptor(TableName.valueOf(tableName));
+    table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);
@@ -121,14 +131,14 @@ public class TestMultiSlaveReplication {
     utility3.startMiniCluster();
     ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
 
-    new HBaseAdmin(conf1).createTable(table);
-    new HBaseAdmin(conf2).createTable(table);
-    new HBaseAdmin(conf3).createTable(table);
-    HTable htable1 = new HTable(conf1, tableName);
+    utility1.getHBaseAdmin().createTable(table);
+    utility2.getHBaseAdmin().createTable(table);
+    utility3.getHBaseAdmin().createTable(table);
+    Table htable1 = utility1.getConnection().getTable(tableName);
     htable1.setWriteBufferSize(1024);
-    HTable htable2 = new HTable(conf2, tableName);
+    Table htable2 = utility2.getConnection().getTable(tableName);
     htable2.setWriteBufferSize(1024);
-    HTable htable3 = new HTable(conf3, tableName);
+    Table htable3 = utility3.getConnection().getTable(tableName);
     htable3.setWriteBufferSize(1024);
     
     admin1.addPeer("1", utility2.getClusterKey());
@@ -142,7 +152,8 @@ public class TestMultiSlaveReplication {
     putAndWait(row2, famName, htable1, htable2);
 
     // now roll the region server's logs
-    new HBaseAdmin(conf1).rollHLogWriter(master.getRegionServer(0).getServerName().toString());
+    rollWALAndWait(utility1, htable1.getName(), row2);
+
     // after the log was rolled put a new row
     putAndWait(row3, famName, htable1, htable2);
 
@@ -165,8 +176,7 @@ public class TestMultiSlaveReplication {
     p.add(famName, row, row);
     htable1.put(p);
     // now roll the logs again
-    new HBaseAdmin(conf1).rollHLogWriter(master.getRegionServer(0)
-        .getServerName().toString());
+    rollWALAndWait(utility1, htable1.getName(), row);
 
     // cleanup "row2", also conveniently use this to wait replication
     // to finish
@@ -186,8 +196,50 @@ public class TestMultiSlaveReplication {
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
   }
+
+  private void rollWALAndWait(final HBaseTestingUtility utility, final TableName table,
+      final byte[] row) throws IOException {
+    final Admin admin = utility.getHBaseAdmin();
+    final MiniHBaseCluster cluster = utility.getMiniHBaseCluster();
+
+    // find the region that corresponds to the given row.
+    HRegion region = null;
+    for (HRegion candidate : cluster.getRegions(table)) {
+      if (HRegion.rowIsInRange(candidate.getRegionInfo(), row)) {
+        region = candidate;
+        break;
+      }
+    }
+    assertNotNull("Couldn't find the region for row '" + Arrays.toString(row) + "'", region);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    // listen for successful log rolls
+    final WALActionsListener listener = new WALActionsListener.Base() {
+          @Override
+          public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
+            latch.countDown();
+          }
+        };
+    region.getWAL().registerWALActionsListener(listener);
+
+    // request a roll
+    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getTableDesc().getTableName(),
+      region.getRegionName()));
+
+    // wait
+    try {
+      latch.await();
+    } catch (InterruptedException exception) {
+      LOG.warn("Interrupted while waiting for the wal of '" + region + "' to roll. If later " +
+          "replication tests fail, it's probably because we should still be waiting.");
+      Thread.currentThread().interrupt();
+    }
+    region.getWAL().unregisterWALActionsListener(listener);
+  }
+
  
-  private void checkWithWait(byte[] row, int count, HTable table) throws Exception {
+  private void checkWithWait(byte[] row, int count, Table table) throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i == NB_RETRIES - 1) {
@@ -198,7 +250,8 @@ public class TestMultiSlaveReplication {
       if (res.size() >= 1) {
         LOG.info("Row is replicated");
         rowReplicated = true;
-        assertEquals(count, res.size());
+        assertEquals("Table '" + table + "' did not have the expected number of  results.",
+            count, res.size());
         break;
       }
       if (rowReplicated) {
@@ -209,15 +262,16 @@ public class TestMultiSlaveReplication {
     }
   }
   
-  private void checkRow(byte[] row, int count, HTable... tables) throws IOException {
+  private void checkRow(byte[] row, int count, Table... tables) throws IOException {
     Get get = new Get(row);
-    for (HTable table : tables) {
+    for (Table table : tables) {
       Result res = table.get(get);
-      assertEquals(count, res.size());
+      assertEquals("Table '" + table + "' did not have the expected number of results.",
+          count, res.size());
     }
   }
 
-  private void deleteAndWait(byte[] row, HTable source, HTable... targets)
+  private void deleteAndWait(byte[] row, Table source, Table... targets)
   throws Exception {
     Delete del = new Delete(row);
     source.delete(del);
@@ -228,7 +282,7 @@ public class TestMultiSlaveReplication {
         fail("Waited too much time for del replication");
       }
       boolean removedFromAll = true;
-      for (HTable target : targets) {
+      for (Table target : targets) {
         Result res = target.get(get);
         if (res.size() >= 1) {
           LOG.info("Row not deleted");
@@ -244,7 +298,7 @@ public class TestMultiSlaveReplication {
     }
   }
 
-  private void putAndWait(byte[] row, byte[] fam, HTable source, HTable... targets)
+  private void putAndWait(byte[] row, byte[] fam, Table source, Table... targets)
   throws Exception {
     Put put = new Put(row);
     put.add(fam, row, row);
@@ -256,7 +310,7 @@ public class TestMultiSlaveReplication {
         fail("Waited too much time for put replication");
       }
       boolean replicatedToAll = true;
-      for (HTable target : targets) {
+      for (Table target : targets) {
         Result res = target.get(get);
         if (res.size() == 0) {
           LOG.info("Row not available");

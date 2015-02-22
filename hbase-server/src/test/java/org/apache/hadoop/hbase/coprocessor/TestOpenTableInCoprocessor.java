@@ -18,8 +18,26 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Threads;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -28,32 +46,13 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test that a coprocessor can open a connection and write to another table, inside a hook.
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestOpenTableInCoprocessor {
 
   private static final TableName otherTable = TableName.valueOf("otherTable");
@@ -69,9 +68,8 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      HTableInterface table = e.getEnvironment().getTable(otherTable);
+      Table table = e.getEnvironment().getTable(otherTable);
       table.put(put);
-      table.flushCommits();
       completed[0] = true;
       table.close();
     }
@@ -102,7 +100,7 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      HTableInterface table = e.getEnvironment().getTable(otherTable, getPool());
+      Table table = e.getEnvironment().getTable(otherTable, getPool());
       Put p = new Put(new byte[] { 'a' });
       p.add(family, null, new byte[] { 'a' });
       try {
@@ -162,14 +160,13 @@ public class TestOpenTableInCoprocessor {
     admin.createTable(primary);
     admin.createTable(other);
 
-    HTable table = new HTable(UTIL.getConfiguration(), "primary");
+    Table table = UTIL.getConnection().getTable(TableName.valueOf("primary"));
     Put p = new Put(new byte[] { 'a' });
     p.add(family, null, new byte[] { 'a' });
     table.put(p);
-    table.flushCommits();
     table.close();
 
-    HTable target = new HTable(UTIL.getConfiguration(), otherTable);
+    Table target = UTIL.getConnection().getTable(otherTable);
     assertTrue("Didn't complete update to target table!", completeCheck[0]);
     assertEquals("Didn't find inserted row", 1, getKeyValueCount(target));
     target.close();
@@ -181,7 +178,7 @@ public class TestOpenTableInCoprocessor {
    * @return number of keyvalues over all rows in the table
    * @throws IOException
    */
-  private int getKeyValueCount(HTable table) throws IOException {
+  private int getKeyValueCount(Table table) throws IOException {
     Scan scan = new Scan();
     scan.setMaxVersions(Integer.MAX_VALUE - 1);
 

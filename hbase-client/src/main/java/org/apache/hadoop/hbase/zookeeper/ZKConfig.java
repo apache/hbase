@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -29,10 +27,9 @@ import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Utility methods for reading, and building the ZooKeeper configuration.
@@ -87,16 +84,19 @@ public class ZKConfig {
     Properties zkProperties = new Properties();
 
     // Directly map all of the hbase.zookeeper.property.KEY properties.
-    for (Entry<String, String> entry : new Configuration(conf)) { // copy for mt safety
-      String key = entry.getKey();
-      if (key.startsWith(HConstants.ZK_CFG_PROPERTY_PREFIX)) {
-        String zkKey = key.substring(HConstants.ZK_CFG_PROPERTY_PREFIX_LEN);
-        String value = entry.getValue();
-        // If the value has variables substitutions, need to do a get.
-        if (value.contains(VARIABLE_START)) {
-          value = conf.get(key);
+    // Synchronize on conf so no loading of configs while we iterate
+    synchronized (conf) {
+      for (Entry<String, String> entry : conf) {
+        String key = entry.getKey();
+        if (key.startsWith(HConstants.ZK_CFG_PROPERTY_PREFIX)) {
+          String zkKey = key.substring(HConstants.ZK_CFG_PROPERTY_PREFIX_LEN);
+          String value = entry.getValue();
+          // If the value has variables substitutions, need to do a get.
+          if (value.contains(VARIABLE_START)) {
+            value = conf.get(key);
+          }
+          zkProperties.put(zkKey, value);
         }
-        zkProperties.put(zkKey, value);
       }
     }
 

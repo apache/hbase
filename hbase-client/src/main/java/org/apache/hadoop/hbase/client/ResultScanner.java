@@ -18,15 +18,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.io.Closeable;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * Interface for client-side scanning.
- * Go to {@link HTable} to obtain instances.
+ * Go to {@link Table} to obtain instances.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -50,5 +50,6 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
   /**
    * Closes the scanner and releases any resources it has allocated
    */
+  @Override
   void close();
 }

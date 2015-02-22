@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +30,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  *
@@ -282,7 +281,7 @@ public class PoolMap<K, V> implements Map<K, V> {
 
   /**
    * The <code>ReusablePool</code> represents a {@link PoolMap.Pool} that builds
-   * on the {@link LinkedList} class. It essentially allows resources to be
+   * on the {@link java.util.LinkedList} class. It essentially allows resources to be
    * checked out, at which point it is removed from this pool. When the resource
    * is no longer required, it should be returned to the pool in order to be
    * reused.

@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.lang.annotation.*;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A package attribute that captures the version of hbase that was compiled.
@@ -57,4 +60,10 @@ public @interface VersionAnnotation {
    * @return the revision number as a string (eg. "451451")
    */
   String revision();
+
+  /**
+   * Get a checksum of the source files from which HBase was compiled.
+   * @return a string that uniquely identifies the source
+   **/
+  String srcChecksum();
 }

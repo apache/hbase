@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Optionally carries Cells across the proxy/service interface down into ipc. On its
@@ -42,7 +42,7 @@ public class PayloadCarryingRpcController
    */
   // Currently only multi call makes use of this.  Eventually this should be only way to set
   // priority.
-  private int priority = 0;
+  private int priority = HConstants.NORMAL_QOS;
 
   /**
    * They are optionally set on construction, cleared after we make the call, and then optionally
@@ -87,7 +87,8 @@ public class PayloadCarryingRpcController
    * @param tn Set priority based off the table we are going against.
    */
   public void setPriority(final TableName tn) {
-    this.priority = tn != null && tn.isSystemTable()? HConstants.HIGH_QOS: HConstants.NORMAL_QOS;
+    this.priority =
+        (tn != null && tn.isSystemTable())? HConstants.SYSTEMTABLE_QOS: HConstants.NORMAL_QOS;
   }
 
   /**
@@ -95,5 +96,11 @@ public class PayloadCarryingRpcController
    */
   public int getPriority() {
     return priority;
+  }
+
+  @Override public void reset() {
+    super.reset();
+    priority = 0;
+    cellScanner = null;
   }
 }

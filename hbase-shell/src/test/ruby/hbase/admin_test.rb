@@ -36,6 +36,10 @@ module Hbase
       create_test_table(@test_name)
     end
 
+    def teardown
+      shutdown
+    end
+
     define_test "exists? should return true when a table exists" do
       assert(admin.exists?('hbase:meta'))
     end
@@ -67,6 +71,10 @@ module Hbase
 
       # Create table test table name
       @create_test_name = 'hbase_create_table_test_table'
+    end
+
+    def teardown
+      shutdown
     end
 
     define_test "list should return a list of tables" do
@@ -241,6 +249,10 @@ module Hbase
       create_test_table(@test_name)
     end
 
+    def teardown
+      shutdown
+    end
+
     #-------------------------------------------------------------------------------
 
     define_test "alter should fail with non-string table names" do
@@ -310,9 +322,9 @@ module Hbase
       create_test_table(@test_name)
 
       cp_key = "coprocessor"
-      class_name = "SimpleRegionObserver"
+      class_name = "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver"
 
-      cp_value = "hdfs:///foo.jar|" + class_name + "|12|arg1=1,arg2=2"
+      cp_value = "|" + class_name + "|12|arg1=1,arg2=2"
 
       # eval() is used to convert a string to regex
       assert_no_match(eval("/" + class_name + "/"), admin.describe(@test_name))
@@ -326,22 +338,14 @@ module Hbase
       drop_test_table(@test_name)
       create_test_table(@test_name)
 
-      key1 = "coprocessor"
-      key2 = "MAX_FILESIZE"
-      admin.alter(@test_name, true, 'METHOD' => 'table_att', key1 => "|TestCP||")
-      admin.alter(@test_name, true, 'METHOD' => 'table_att', key2 => 12345678)
+      key = "MAX_FILESIZE"
+      admin.alter(@test_name, true, 'METHOD' => 'table_att', key => 12345678)
 
       # eval() is used to convert a string to regex
-      assert_match(eval("/" + key1 + "\\$(\\d+)/"), admin.describe(@test_name))
-      assert_match(eval("/" + key2 + "/"), admin.describe(@test_name))
+      assert_match(eval("/" + key + "/"), admin.describe(@test_name))
 
-      # get the cp key
-      cp_keys = admin.describe(@test_name).scan(/(coprocessor\$\d+)/i)
-
-      admin.alter(@test_name, true, 'METHOD' => 'table_att_unset', 'NAME' => cp_keys[0][0])
-      admin.alter(@test_name, true, 'METHOD' => 'table_att_unset', 'NAME' => key2)
-      assert_no_match(eval("/" + key1 + "\\$(\\d+)/"), admin.describe(@test_name))
-      assert_no_match(eval("/" + key2 + "/"), admin.describe(@test_name))
+      admin.alter(@test_name, true, 'METHOD' => 'table_att_unset', 'NAME' => key)
+      assert_no_match(eval("/" + key + "/"), admin.describe(@test_name))
     end
 
     define_test "get_table should get a real table" do
@@ -350,6 +354,7 @@ module Hbase
 
       table = table(@test_name)
       assert_not_equal(nil, table)
+      table.close
     end
   end
 end

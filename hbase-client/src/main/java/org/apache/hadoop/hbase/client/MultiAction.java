@@ -19,13 +19,14 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -37,8 +38,7 @@ public final class MultiAction<R> {
   // TODO: This class should not be visible outside of the client package.
 
   // map of regions to lists of puts/gets/deletes for that region.
-  public Map<byte[], List<Action<R>>> actions =
-    new TreeMap<byte[], List<Action<R>>>(Bytes.BYTES_COMPARATOR);
+  protected Map<byte[], List<Action<R>>> actions = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   private long nonceGroup = HConstants.NO_NONCE;
 
@@ -68,12 +68,24 @@ public final class MultiAction<R> {
    * @param a
    */
   public void add(byte[] regionName, Action<R> a) {
+    add(regionName, Arrays.asList(a));
+  }
+
+  /**
+   * Add an Action to this container based on it's regionName. If the regionName
+   * is wrong, the initial execution will fail, but will be automatically
+   * retried after looking up the correct region.
+   *
+   * @param regionName
+   * @param actionList list of actions to add for the region
+   */
+  public void add(byte[] regionName, List<Action<R>> actionList){
     List<Action<R>> rsActions = actions.get(regionName);
     if (rsActions == null) {
-      rsActions = new ArrayList<Action<R>>();
+      rsActions = new ArrayList<Action<R>>(actionList.size());
       actions.put(regionName, rsActions);
     }
-    rsActions.add(a);
+    rsActions.addAll(actionList);
   }
 
   public void setNonceGroup(long nonceGroup) {

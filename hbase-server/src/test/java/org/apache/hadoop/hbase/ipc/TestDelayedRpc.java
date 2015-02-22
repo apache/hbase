@@ -33,7 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestDelayedRpcProtos.TestArg;
@@ -57,7 +58,7 @@ import com.google.protobuf.ServiceException;
  * be delayed. Check that the last two, which are undelayed, return before the
  * first one.
  */
-@Category(MediumTests.class) // Fails sometimes with small tests
+@Category({RPCTests.class, MediumTests.class}) // Fails sometimes with small tests
 public class TestDelayedRpc {
   private static final Log LOG = LogFactory.getLog(TestDelayedRpc.class);
   public static RpcServerInterface rpcServer;
@@ -88,7 +89,8 @@ public class TestDelayedRpc {
         conf,
         new FifoRpcScheduler(conf, 1));
     rpcServer.start();
-    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
+    RpcClient rpcClient = RpcClientFactory.createClient(
+        conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
@@ -117,7 +119,7 @@ public class TestDelayedRpc {
       assertEquals(UNDELAYED, results.get(1).intValue());
       assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :  0xDEADBEEF);
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 
@@ -169,7 +171,8 @@ public class TestDelayedRpc {
         conf,
         new FifoRpcScheduler(conf, 1));
     rpcServer.start();
-    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
+    RpcClient rpcClient = RpcClientFactory.createClient(
+        conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
@@ -199,7 +202,7 @@ public class TestDelayedRpc {
 
       log.removeAppender(listAppender);
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 
@@ -292,7 +295,8 @@ public class TestDelayedRpc {
         conf,
         new FifoRpcScheduler(conf, 1));
     rpcServer.start();
-    RpcClient rpcClient = new RpcClient(conf, HConstants.DEFAULT_CLUSTER_ID.toString());
+    RpcClient rpcClient = RpcClientFactory.createClient(
+        conf, HConstants.DEFAULT_CLUSTER_ID.toString());
     try {
       BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(
           ServerName.valueOf(rpcServer.getListenerAddress().getHostName(),
@@ -322,7 +326,7 @@ public class TestDelayedRpc {
       }
       assertTrue(caughtException);
     } finally {
-      rpcClient.stop();
+      rpcClient.close();
     }
   }
 

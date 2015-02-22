@@ -28,14 +28,15 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Assert;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
  * Test the invocation logic of the filters. A filter must be invoked only for
  * the columns that are requested for.
  */
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestInvocationRecordFilter {
 
   private static final byte[] TABLE_NAME_BYTES = Bytes
@@ -67,7 +68,7 @@ public class TestInvocationRecordFilter {
         TableName.valueOf(TABLE_NAME_BYTES));
     htd.addFamily(new HColumnDescriptor(FAMILY_NAME_BYTES));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    this.region = HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(),
+    this.region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);
 
     Put put = new Put(ROW_BYTES);
@@ -86,33 +87,33 @@ public class TestInvocationRecordFilter {
     List<Integer> expectedQualifiers = new ArrayList<Integer>();
 
     selectQualifiers.add(-1);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.clear();
 
     selectQualifiers.add(0);
     expectedQualifiers.add(0);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(3);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(4);
     expectedQualifiers.add(4);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(5);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(8);
     expectedQualifiers.add(8);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
   }
 
   public void verifyInvocationResults(Integer[] selectQualifiers,
@@ -149,9 +150,9 @@ public class TestInvocationRecordFilter {
 
   @After
   public void tearDown() throws Exception {
-    HLog hlog = region.getLog();
+    WAL wal = region.getWAL();
     region.close();
-    hlog.closeAndDelete();
+    wal.close();
   }
 
   /**

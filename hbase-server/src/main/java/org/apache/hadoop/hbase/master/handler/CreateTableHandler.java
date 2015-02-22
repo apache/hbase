@@ -20,26 +20,30 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateException;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -47,7 +51,8 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -65,7 +70,9 @@ public class CreateTableHandler extends EventHandler {
   private final AssignmentManager assignmentManager;
   private final TableLockManager tableLockManager;
   private final HRegionInfo [] newRegions;
+  private final MasterServices masterServices;
   private final TableLock tableLock;
+  private User activeUser;
 
   public CreateTableHandler(Server server, MasterFileSystem fileSystemManager,
       HTableDescriptor hTableDescriptor, Configuration conf, HRegionInfo [] newRegions,
@@ -76,6 +83,7 @@ public class CreateTableHandler extends EventHandler {
     this.hTableDescriptor = hTableDescriptor;
     this.conf = conf;
     this.newRegions = newRegions;
+    this.masterServices = masterServices;
     this.assignmentManager = masterServices.getAssignmentManager();
     this.tableLockManager = masterServices.getTableLockManager();
 
@@ -93,6 +101,14 @@ public class CreateTableHandler extends EventHandler {
           server.getZooKeeper(), timeout) == null) {
         throw new NotAllMetaRegionsOnlineException();
       }
+      // If we are creating the table in service to an RPC request, record the
+      // active user for later, so proper permissions will be applied to the
+      // new table by the AccessController if it is active
+      if (RequestContext.isInRequestContext()) {
+        this.activeUser = RequestContext.getRequestUser();
+      } else {
+        this.activeUser = UserProvider.instantiate(conf).getCurrent();
+      }
     } catch (InterruptedException e) {
       LOG.warn("Interrupted waiting for meta availability", e);
       InterruptedIOException ie = new InterruptedIOException(e.getMessage());
@@ -105,11 +121,9 @@ public class CreateTableHandler extends EventHandler {
     boolean success = false;
     try {
       TableName tableName = this.hTableDescriptor.getTableName();
-      if (MetaTableAccessor.tableExists(this.server.getShortCircuitConnection(), tableName)) {
+      if (MetaTableAccessor.tableExists(this.server.getConnection(), tableName)) {
         throw new TableExistsException(tableName);
       }
-
-      checkAndSetEnablingTable(assignmentManager, tableName);
       success = true;
     } finally {
       if (!success) {
@@ -117,47 +131,6 @@ public class CreateTableHandler extends EventHandler {
       }
     }
     return this;
-  }
-
-  static void checkAndSetEnablingTable(final AssignmentManager assignmentManager,
-      final TableName tableName) throws IOException {
-    // If we have multiple client threads trying to create the table at the
-    // same time, given the async nature of the operation, the table
-    // could be in a state where hbase:meta table hasn't been updated yet in
-    // the process() function.
-    // Use enabling state to tell if there is already a request for the same
-    // table in progress. This will introduce a new zookeeper call. Given
-    // createTable isn't a frequent operation, that should be ok.
-    // TODO: now that we have table locks, re-evaluate above -- table locks are not enough.
-    // We could have cleared the hbase.rootdir and not zk.  How can we detect this case?
-    // Having to clean zk AND hdfs is awkward.
-    try {
-      if (!assignmentManager.getTableStateManager().setTableStateIfNotInStates(tableName,
-        ZooKeeperProtos.Table.State.ENABLING,
-        ZooKeeperProtos.Table.State.ENABLING,
-        ZooKeeperProtos.Table.State.ENABLED)) {
-        throw new TableExistsException(tableName);
-      }
-    } catch (CoordinatedStateException e) {
-      throw new IOException("Unable to ensure that the table will be" +
-        " enabling because of a ZooKeeper issue", e);
-    }
-  }
-
-  static void removeEnablingTable(final AssignmentManager assignmentManager,
-      final TableName tableName) {
-    // Try deleting the enabling node in case of error
-    // If this does not happen then if the client tries to create the table
-    // again with the same Active master
-    // It will block the creation saying TableAlreadyExists.
-    try {
-      assignmentManager.getTableStateManager().checkAndRemoveTableState(tableName,
-        ZooKeeperProtos.Table.State.ENABLING, false);
-    } catch (CoordinatedStateException e) {
-      // Keeper exception should not happen here
-      LOG.error("Got a keeper exception while removing the ENABLING table znode "
-          + tableName, e);
-    }
   }
 
   @Override
@@ -174,20 +147,35 @@ public class CreateTableHandler extends EventHandler {
   public void process() {
     TableName tableName = this.hTableDescriptor.getTableName();
     LOG.info("Create table " + tableName);
-
+    HMaster master = ((HMaster) this.server);
     try {
-      MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
+      final MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
       if (cpHost != null) {
         cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
       }
       handleCreateTable(tableName);
       completed(null);
       if (cpHost != null) {
-        cpHost.postCreateTableHandler(this.hTableDescriptor, this.newRegions);
+        this.activeUser.runAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            cpHost.postCreateTableHandler(hTableDescriptor, newRegions);
+            return null;
+          }
+        });
       }
     } catch (Throwable e) {
       LOG.error("Error trying to create the table " + tableName, e);
+      if (master.isInitialized()) {
+        try {
+          ((HMaster) this.server).getMasterQuotaManager().removeTableFromNamespaceQuota(
+            hTableDescriptor.getTableName());
+        } catch (IOException e1) {
+          LOG.error("Error trying to update namespace quota " + e1);
+        }
+      }
       completed(e);
+      
     }
   }
 
@@ -199,9 +187,6 @@ public class CreateTableHandler extends EventHandler {
     releaseTableLock();
     LOG.info("Table, " + this.hTableDescriptor.getTableName() + ", creation " +
         (exception == null ? "successful" : "failed. " + exception));
-    if (exception != null) {
-      removeEnablingTable(this.assignmentManager, this.hTableDescriptor.getTableName());
-    }
   }
 
   /**
@@ -224,9 +209,13 @@ public class CreateTableHandler extends EventHandler {
     FileSystem fs = fileSystemManager.getFileSystem();
 
     // 1. Create Table Descriptor
+    // using a copy of descriptor, table will be created enabling first
+    TableDescriptor underConstruction = new TableDescriptor(
+        this.hTableDescriptor);
     Path tempTableDir = FSUtils.getTableDir(tempdir, tableName);
-    new FSTableDescriptors(this.conf).createTableDescriptorForTableDirectory(
-      tempTableDir, this.hTableDescriptor, false);
+    ((FSTableDescriptors)(masterServices.getTableDescriptors()))
+        .createTableDescriptorForTableDirectory(
+        tempTableDir, underConstruction, false);
     Path tableDir = FSUtils.getTableDir(fileSystemManager.getRootDir(), tableName);
 
     // 2. Create Regions
@@ -237,9 +226,15 @@ public class CreateTableHandler extends EventHandler {
         " to hbase root=" + tableDir);
     }
 
+    // populate descriptors cache to be visible in getAll
+    masterServices.getTableDescriptors().get(tableName);
+
+    MetaTableAccessor.updateTableState(this.server.getConnection(), hTableDescriptor.getTableName(),
+        TableState.State.ENABLING);
+
     if (regionInfos != null && regionInfos.size() > 0) {
       // 4. Add regions to META
-      addRegionsToMeta(regionInfos);
+      addRegionsToMeta(regionInfos, hTableDescriptor.getRegionReplication());
       // 5. Add replicas if needed
       regionInfos = addReplicas(hTableDescriptor, regionInfos);
 
@@ -252,20 +247,18 @@ public class CreateTableHandler extends EventHandler {
       ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);
     }
 
-    // 8. Set table enabled flag up in zk.
-    try {
-      assignmentManager.getTableStateManager().setTableState(tableName,
-        ZooKeeperProtos.Table.State.ENABLED);
-    } catch (CoordinatedStateException e) {
-      throw new IOException("Unable to ensure that " + tableName + " will be" +
-        " enabled because of a ZooKeeper issue", e);
-    }
+    // 8. Enable table
+    assignmentManager.getTableStateManager().setTableState(tableName,
+            TableState.State.ENABLED);
+
+    // 9. Update the tabledescriptor cache.
+    ((HMaster) this.server).getTableDescriptors().get(tableName);
   }
 
   /**
    * Create any replicas for the regions (the default replicas that was
    * already created is passed to the method)
-   * @param hTableDescriptor
+   * @param hTableDescriptor descriptor to use
    * @param regions default replicas
    * @return the combined list of default and non-default replicas
    */
@@ -312,8 +305,8 @@ public class CreateTableHandler extends EventHandler {
   /**
    * Add the specified set of regions to the hbase:meta table.
    */
-  protected void addRegionsToMeta(final List<HRegionInfo> regionInfos)
+  protected void addRegionsToMeta(final List<HRegionInfo> regionInfos, int regionReplication)
       throws IOException {
-    MetaTableAccessor.addRegionsToMeta(this.server.getShortCircuitConnection(), regionInfos);
+    MetaTableAccessor.addRegionsToMeta(this.server.getConnection(), regionInfos, regionReplication);
   }
 }

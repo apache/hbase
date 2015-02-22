@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -26,7 +28,7 @@ import java.util.Map;
 
 import static junit.framework.Assert.assertEquals;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestHDFSBlocksDistribution {
   @Test
   public void testAddHostsAndBlockWeight() throws Exception {

@@ -42,8 +42,11 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -60,7 +63,7 @@ import org.junit.experimental.categories.Category;
  * Test cases that ensure that file system level errors are bubbled up
  * appropriately to clients, rather than swallowed.
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestFSErrorsExposed {
   private static final Log LOG = LogFactory.getLog(TestFSErrorsExposed.class);
 
@@ -180,42 +183,39 @@ public class TestFSErrorsExposed {
     Assume.assumeTrue(!util.isReadShortCircuitOn());
 
     try {
-      // We set it not to run or it will trigger server shutdown while sync'ing
-      // because all the datanodes are bad
-      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+      // Make it fail faster.
+      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
 
       util.startMiniCluster(1);
-      byte[] tableName = Bytes.toBytes("table");
+      TableName tableName = TableName.valueOf("table");
       byte[] fam = Bytes.toBytes("fam");
 
-      HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+      Admin admin = util.getHBaseAdmin();
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(fam)
           .setMaxVersions(1)
           .setBlockCacheEnabled(false)
       );
       admin.createTable(desc);
-      // Make it fail faster.
-      util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+
       // Make a new Configuration so it makes a new connection that has the
       // above configuration on it; else we use the old one w/ 10 as default.
-      HTable table = new HTable(new Configuration(util.getConfiguration()), tableName);
-
-      // Load some data
-      util.loadTable(table, fam, false);
-      table.flushCommits();
-      util.flush();
-      util.countRows(table);
-
-      // Kill the DFS cluster
-      util.getDFSCluster().shutdownDataNodes();
-
-      try {
+      try (Table table = util.getConnection().getTable(tableName)) {
+        // Load some data
+        util.loadTable(table, fam, false);
+        util.flush();
         util.countRows(table);
-        fail("Did not fail to count after removing data");
-      } catch (Exception e) {
-        LOG.info("Got expected error", e);
-        assertTrue(e.getMessage().contains("Could not seek"));
+
+        // Kill the DFS cluster
+        util.getDFSCluster().shutdownDataNodes();
+
+        try {
+          util.countRows(table);
+          fail("Did not fail to count after removing data");
+        } catch (Exception e) {
+          LOG.info("Got expected error", e);
+          assertTrue(e.getMessage().contains("Could not seek"));
+        }
       }
 
       // Restart data nodes so that HBase can shut down cleanly.
@@ -264,6 +264,7 @@ public class TestFSErrorsExposed {
       faultsStarted = true;
     }
 
+    @Override
     public int read(long position, byte[] buffer, int offset, int length)
       throws IOException {
       injectFault();

@@ -21,21 +21,23 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * Default StoreEngine creates the default compactor, policy, and store file manager, or
  * their derivatives.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class DefaultStoreEngine extends StoreEngine<
   DefaultStoreFlusher, RatioBasedCompactionPolicy, DefaultCompactor, DefaultStoreFileManager> {
 
@@ -62,17 +64,18 @@ public class DefaultStoreEngine extends StoreEngine<
   @Override
   protected void createComponents(
       Configuration conf, Store store, KVComparator kvComparator) throws IOException {
-    storeFileManager = new DefaultStoreFileManager(kvComparator, conf);
     createCompactor(conf, store);
     createCompactionPolicy(conf, store);
     createStoreFlusher(conf, store);
+    storeFileManager = new DefaultStoreFileManager(kvComparator, conf, compactionPolicy.getConf());
+
   }
 
   protected void createCompactor(Configuration conf, Store store) throws IOException {
     String className = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class, Store.class }, new Object[] { conf, store });
+              new Class[]{Configuration.class, Store.class}, new Object[]{conf, store});
     } catch (Exception e) {
       throw new IOException("Unable to load configured compactor '" + className + "'", e);
     }
@@ -80,11 +83,11 @@ public class DefaultStoreEngine extends StoreEngine<
 
   protected void createCompactionPolicy(Configuration conf, Store store) throws IOException {
     String className = conf.get(
-        DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
+            DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
     try {
       compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
-          new Class[] { Configuration.class, StoreConfigInformation.class },
-          new Object[] { conf, store });
+              new Class[]{Configuration.class, StoreConfigInformation.class},
+              new Object[]{conf, store});
     } catch (Exception e) {
       throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
     }
@@ -101,7 +104,6 @@ public class DefaultStoreEngine extends StoreEngine<
     }
   }
 
-
   @Override
   public CompactionContext createCompaction() {
     return new DefaultCompactionContext();
@@ -117,8 +119,9 @@ public class DefaultStoreEngine extends StoreEngine<
     }
 
     @Override
-    public List<Path> compact() throws IOException {
-      return compactor.compact(request);
+    public List<Path> compact(CompactionThroughputController throughputController)
+        throws IOException {
+      return compactor.compact(request, throughputController);
     }
 
     @Override

@@ -22,9 +22,10 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,7 +41,7 @@ import org.junit.experimental.categories.Category;
  * another entry to the root-level block, and that would prevent us from upgrading the leaf-level
  * chunk to the root chunk, thus not triggering the bug. 
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestHFileInlineToRootChunkConversion {
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private final Configuration conf = testUtil.getConfiguration();
@@ -71,17 +72,17 @@ public class TestHFileInlineToRootChunkConversion {
       sb.setLength(0);
 
       byte[] k = Bytes.toBytes(keyStr);
-      System.out.println("Key: " + Bytes.toString(k));
       keys.add(k);
       byte[] v = Bytes.toBytes("value" + i);
-      hfw.append(k, v);
+      hfw.append(CellUtil.createCell(k, v));
     }
     hfw.close();
 
     HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs, hfPath, cacheConf, conf);
+    // Scanner doesn't do Cells yet.  Fix.
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {
-      scanner.seekTo(KeyValue.createKeyValueFromKey(keys.get(i)));
+      scanner.seekTo(CellUtil.createCell(keys.get(i)));
     }
     reader.close();
   }

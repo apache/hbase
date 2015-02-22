@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Tags are part of cells and helps to add metadata about the KVs.
@@ -35,7 +35,7 @@ public class Tag {
   public final static int TYPE_LENGTH_SIZE = Bytes.SIZEOF_BYTE;
   public final static int TAG_LENGTH_SIZE = Bytes.SIZEOF_SHORT;
   public final static int INFRASTRUCTURE_SIZE = TYPE_LENGTH_SIZE + TAG_LENGTH_SIZE;
-  private static final int MAX_TAG_LENGTH = (2 * Short.MAX_VALUE) + 1 - TAG_LENGTH_SIZE;
+  public static final int MAX_TAG_LENGTH = (2 * Short.MAX_VALUE) + 1 - TAG_LENGTH_SIZE;
 
   private final byte type;
   private final byte[] bytes;
@@ -173,7 +173,26 @@ public class Tag {
     }
     return tags;
   }
-  
+
+  /**
+   * Write a list of tags into a byte array
+   * @param tags
+   * @return the serialized tag data as bytes
+   */
+  public static byte[] fromList(List<Tag> tags) {
+    int length = 0;
+    for (Tag tag: tags) {
+      length += tag.length;
+    }
+    byte[] b = new byte[length];
+    int pos = 0;
+    for (Tag tag: tags) {
+      System.arraycopy(tag.bytes, tag.offset, b, pos, tag.length);
+      pos += tag.length;
+    }
+    return b;
+  }
+
   /**
    * Retrieve the first tag from the tags byte array matching the passed in tag type
    * @param b

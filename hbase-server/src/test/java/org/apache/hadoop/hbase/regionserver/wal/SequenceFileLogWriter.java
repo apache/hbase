@@ -26,13 +26,15 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
@@ -41,10 +43,15 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
- * Implementation of {@link HLog.Writer} that delegates to
+ * Implementation of {@link WALProvider.Writer} that delegates to
  * SequenceFile.Writer. Legacy implementation only used for compat tests.
+ *
+ * Note that because this class writes to the legacy hadoop-specific SequenceFile
+ * format, users of it must write {@link HLogKey} keys and not arbitrary
+ * {@link WALKey}s because the latter are not Writables (nor made to work with
+ * Hadoop serialization).
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SequenceFileLogWriter extends WriterBase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   // The sequence file we delegate to.
@@ -162,7 +169,7 @@ public class SequenceFileLogWriter extends WriterBase {
   }
 
   @Override
-  public void append(HLog.Entry entry) throws IOException {
+  public void append(WAL.Entry entry) throws IOException {
     entry.setCompressionContext(compressionContext);
     try {
       this.writer.append(entry.getKey(), entry.getEdit());
@@ -211,12 +218,5 @@ public class SequenceFileLogWriter extends WriterBase {
    */
   public FSDataOutputStream getWriterFSDataOutputStream() {
     return this.writer_out;
-  }
-
-  /**
-   * This method is empty as trailer is added only in Protobuf based hlog readers/writers.
-   */
-  @Override
-  public void setWALTrailer(WALTrailer walTrailer) {
   }
 }

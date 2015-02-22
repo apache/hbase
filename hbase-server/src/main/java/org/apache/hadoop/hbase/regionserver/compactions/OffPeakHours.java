@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 @InterfaceAudience.Private
@@ -32,8 +32,8 @@ public abstract class OffPeakHours {
   };
 
   public static OffPeakHours getInstance(Configuration conf) {
-    int startHour = conf.getInt("hbase.offpeak.start.hour", -1);
-    int endHour = conf.getInt("hbase.offpeak.end.hour", -1);
+    int startHour = conf.getInt(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_START_HOUR, -1);
+    int endHour = conf.getInt(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_END_HOUR, -1);
     return getInstance(startHour, endHour);
   }
 

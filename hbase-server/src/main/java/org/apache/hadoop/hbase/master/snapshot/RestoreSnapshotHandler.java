@@ -26,14 +26,14 @@ import java.util.concurrent.CancellationException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -109,7 +109,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
     MasterFileSystem fileSystemManager = masterServices.getMasterFileSystem();
-    HConnection conn = masterServices.getShortCircuitConnection();
+    Connection conn = masterServices.getConnection();
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
     TableName tableName = hTableDescriptor.getTableName();
@@ -159,11 +159,12 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       // in the snapshot folder.
       hris.clear();
       if (metaChanges.hasRegionsToAdd()) hris.addAll(metaChanges.getRegionsToAdd());
-      MetaTableAccessor.addRegionsToMeta(conn, hris);
+      MetaTableAccessor.addRegionsToMeta(conn, hris, hTableDescriptor.getRegionReplication());
       if (metaChanges.hasRegionsToRestore()) {
-        MetaTableAccessor.overwriteRegions(conn, metaChanges.getRegionsToRestore());
+        MetaTableAccessor.overwriteRegions(conn, metaChanges.getRegionsToRestore(),
+          hTableDescriptor.getRegionReplication());
       }
-      metaChanges.updateMetaParentRegions(this.server.getShortCircuitConnection(), hris);
+      metaChanges.updateMetaParentRegions(this.server.getConnection(), hris);
 
       // At this point the restore is complete. Next step is enabling the table.
       LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +

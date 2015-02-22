@@ -19,15 +19,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -48,14 +47,13 @@ import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
-import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -67,6 +65,9 @@ import com.google.common.collect.ImmutableList;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
+// TODO as method signatures need to break, update to
+// ObserverContext<? extends RegionCoprocessorEnvironment>
+// so we can use additional environment state that isn't exposed to coprocessors.
 public interface RegionObserver extends Coprocessor {
 
   /** Mutation type for postMutationBeforeWAL hook */
@@ -118,6 +119,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated use {@link #preFlush(ObserverContext, Store, InternalScanner)} instead
    */
+  @Deprecated
   void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
@@ -138,6 +140,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated use {@link #preFlush(ObserverContext, Store, InternalScanner)} instead.
    */
+  @Deprecated
   void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
@@ -209,8 +212,9 @@ public interface RegionObserver extends Coprocessor {
    * options:
    * <ul>
    * <li>Wrap the provided {@link InternalScanner} with a custom implementation that is returned
-   * from this method. The custom scanner can then inspect {@link KeyValue}s from the wrapped
-   * scanner, applying its own policy to what gets written.</li>
+   * from this method. The custom scanner can then inspect
+   *  {@link org.apache.hadoop.hbase.KeyValue}s from the wrapped scanner, applying its own
+   *   policy to what gets written.</li>
    * <li>Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} and provide a
    * custom implementation for writing of new {@link StoreFile}s. <strong>Note: any implementations
    * bypassing core compaction using this approach must write out new store files themselves or the
@@ -235,8 +239,9 @@ public interface RegionObserver extends Coprocessor {
    * options:
    * <ul>
    * <li>Wrap the provided {@link InternalScanner} with a custom implementation that is returned
-   * from this method. The custom scanner can then inspect {@link KeyValue}s from the wrapped
-   * scanner, applying its own policy to what gets written.</li>
+   * from this method. The custom scanner can then inspect
+   *  {@link org.apache.hadoop.hbase.KeyValue}s from the wrapped scanner, applying its own
+   *   policy to what gets written.</li>
    * <li>Call {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} and provide a
    * custom implementation for writing of new {@link StoreFile}s. <strong>Note: any implementations
    * bypassing core compaction using this approach must write out new store files themselves or the
@@ -266,7 +271,8 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being compacted
-   * @param scanners the list {@link StoreFileScanner}s to be read from
+   * @param scanners the list {@link org.apache.hadoop.hbase.regionserver.StoreFileScanner}s
+   *  to be read from
    * @param scanType the {@link ScanType} indicating whether this is a major or minor compaction
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files
@@ -290,7 +296,8 @@ public interface RegionObserver extends Coprocessor {
    * effect in this hook.
    * @param c the environment provided by the region server
    * @param store the store being compacted
-   * @param scanners the list {@link StoreFileScanner}s to be read from
+   * @param scanners the list {@link org.apache.hadoop.hbase.regionserver.StoreFileScanner}s
+   *  to be read from
    * @param scanType the {@link ScanType} indicating whether this is a major or minor compaction
    * @param earliestPutTs timestamp of the earliest put that was found in any of the involved store
    *          files
@@ -339,6 +346,7 @@ public interface RegionObserver extends Coprocessor {
    * @deprecated Use preSplit(
    *    final ObserverContext<RegionCoprocessorEnvironment> c, byte[] splitRow)
    */
+  @Deprecated
   void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
@@ -359,6 +367,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated Use postCompleteSplit() instead
    */
+  @Deprecated
   void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final HRegion l,
       final HRegion r) throws IOException;
 
@@ -476,15 +485,6 @@ public interface RegionObserver extends Coprocessor {
     throws IOException;
 
   /**
-   * WARNING: please override preGetOp instead of this method.  This is to maintain some
-   * compatibility and to ease the transition from 0.94 -> 0.96.
-   */
-  @Deprecated
-  void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<KeyValue> result)
-    throws IOException;
-
-  /**
    * Called after the client performs a Get
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
@@ -496,15 +496,6 @@ public interface RegionObserver extends Coprocessor {
    */
   void postGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final List<Cell> result)
-    throws IOException;
-
-  /**
-   * WARNING: please override postGetOp instead of this method.  This is to maintain some
-   * compatibility and to ease the transition from 0.94 -> 0.96.
-   */
-  @Deprecated
-  void postGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<KeyValue> result)
     throws IOException;
 
   /**
@@ -1123,26 +1114,62 @@ public interface RegionObserver extends Coprocessor {
   /**
    * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * replayed for this region.
-   *
-   * @param ctx
-   * @param info
-   * @param logKey
-   * @param logEdit
-   * @throws IOException
    */
+  void preWALRestore(final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException;
+
+  /**
+   * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
+   * replayed for this region.
+   *
+   * This method is left in place to maintain binary compatibility with older
+   * {@link RegionObserver}s. If an implementation directly overrides
+   * {@link #preWALRestore(ObserverContext, HRegionInfo, WALKey, WALEdit)} then this version
+   * won't be called at all, barring problems with the Security Manager. To work correctly
+   * in the presence of a strict Security Manager, or in the case of an implementation that
+   * relies on a parent class to implement preWALRestore, you should implement this method
+   * as a call to the non-deprecated version.
+   *
+   * Users of this method will see all edits that can be treated as HLogKey. If there are
+   * edits that can't be treated as HLogKey they won't be offered to coprocessors that rely
+   * on this method. If a coprocessor gets skipped because of this mechanism, a log message
+   * at ERROR will be generated per coprocessor on the logger for {@link CoprocessorHost} once per
+   * classloader.
+   *
+   * @deprecated use {@link #preWALRestore(ObserverContext, HRegionInfo, WALKey, WALEdit)}
+   */
+  @Deprecated
   void preWALRestore(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 
   /**
    * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
    * replayed for this region.
-   *
-   * @param ctx
-   * @param info
-   * @param logKey
-   * @param logEdit
-   * @throws IOException
    */
+  void postWALRestore(final ObserverContext<? extends RegionCoprocessorEnvironment> ctx,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException;
+
+  /**
+   * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
+   * replayed for this region.
+   *
+   * This method is left in place to maintain binary compatibility with older
+   * {@link RegionObserver}s. If an implementation directly overrides
+   * {@link #postWALRestore(ObserverContext, HRegionInfo, WALKey, WALEdit)} then this version
+   * won't be called at all, barring problems with the Security Manager. To work correctly
+   * in the presence of a strict Security Manager, or in the case of an implementation that
+   * relies on a parent class to implement preWALRestore, you should implement this method
+   * as a call to the non-deprecated version.
+   *
+   * Users of this method will see all edits that can be treated as HLogKey. If there are
+   * edits that can't be treated as HLogKey they won't be offered to coprocessors that rely
+   * on this method. If a coprocessor gets skipped because of this mechanism, a log message
+   * at ERROR will be generated per coprocessor on the logger for {@link CoprocessorHost} once per
+   * classloader.
+   *
+   * @deprecated use {@link #postWALRestore(ObserverContext, HRegionInfo, WALKey, WALEdit)}
+   */
+  @Deprecated
   void postWALRestore(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 

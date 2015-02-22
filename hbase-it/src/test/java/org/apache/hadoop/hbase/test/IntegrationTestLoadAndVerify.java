@@ -40,11 +40,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -110,8 +112,6 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
 
   private static final int SCANNER_CACHING = 500;
 
-  protected IntegrationTestingUtility util;
-
   private String toRun = null;
 
   private enum Counters {
@@ -125,10 +125,10 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     util = getTestingUtil(getConf());
     util.initializeCluster(3);
     this.setConf(util.getConfiguration());
-    getConf().setLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT / 100);
-    getConf().setInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT / 100);
-    getConf().setInt(NUM_REDUCE_TASKS_KEY, NUM_REDUCE_TASKS_DEFAULT / 10);
     if (!util.isDistributedCluster()) {
+      getConf().setLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT / 100);
+      getConf().setInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT / 100);
+      getConf().setInt(NUM_REDUCE_TASKS_KEY, NUM_REDUCE_TASKS_DEFAULT / 10);
       util.startMiniMapReduceCluster();
     }
   }
@@ -164,13 +164,14 @@ public void cleanUpCluster() throws Exception {
       extends Mapper<NullWritable, NullWritable, NullWritable, NullWritable>
   {
     protected long recordsToWrite;
-    protected HTable table;
+    protected Connection connection;
+    protected BufferedMutator mutator;
     protected Configuration conf;
     protected int numBackReferencesPerRow;
+
     protected String shortTaskId;
 
     protected Random rand = new Random();
-
     protected Counter rowsWritten, refsWritten;
 
     @Override
@@ -179,9 +180,10 @@ public void cleanUpCluster() throws Exception {
       recordsToWrite = conf.getLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT);
       String tableName = conf.get(TABLE_NAME_KEY, TABLE_NAME_DEFAULT);
       numBackReferencesPerRow = conf.getInt(NUM_BACKREFS_KEY, NUM_BACKREFS_DEFAULT);
-      table = new HTable(conf, tableName);
-      table.setWriteBufferSize(4*1024*1024);
-      table.setAutoFlush(false, true);
+      this.connection = ConnectionFactory.createConnection(conf);
+      mutator = connection.getBufferedMutator(
+          new BufferedMutatorParams(TableName.valueOf(tableName))
+              .writeBufferSize(4 * 1024 * 1024));
 
       String taskId = conf.get("mapreduce.task.attempt.id");
       Matcher matcher = Pattern.compile(".+_m_(\\d+_\\d+)").matcher(taskId);
@@ -196,8 +198,8 @@ public void cleanUpCluster() throws Exception {
 
     @Override
     public void cleanup(Context context) throws IOException {
-      table.flushCommits();
-      table.close();
+      mutator.close();
+      connection.close();
     }
 
     @Override
@@ -229,7 +231,7 @@ public void cleanUpCluster() throws Exception {
             refsWritten.increment(1);
           }
           rowsWritten.increment(1);
-          table.put(p);
+          mutator.mutate(p);
 
           if (i % 100 == 0) {
             context.setStatus("Written " + i + "/" + recordsToWrite + " records");
@@ -238,7 +240,7 @@ public void cleanUpCluster() throws Exception {
         }
         // End of block, flush all of them before we start writing anything
         // pointing to these!
-        table.flushCommits();
+        mutator.flush();
       }
     }
   }
@@ -314,7 +316,7 @@ public void cleanUpCluster() throws Exception {
     NMapInputFormat.setNumMapTasks(conf, conf.getInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT));
     conf.set(TABLE_NAME_KEY, htd.getTableName().getNameAsString());
 
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.setJobName(TEST_NAME + " Load for " + htd.getTableName());
     job.setJarByClass(this.getClass());
     setMapperClass(job);
@@ -338,7 +340,7 @@ public void cleanUpCluster() throws Exception {
   protected void doVerify(Configuration conf, HTableDescriptor htd) throws Exception {
     Path outputDir = getTestDir(TEST_NAME, "verify-output");
 
-    Job job = new Job(conf);
+    Job job = Job.getInstance(conf);
     job.setJarByClass(this.getClass());
     job.setJobName(TEST_NAME + " Verification for " + htd.getTableName());
     setJobScannerConf(job);
@@ -392,7 +394,7 @@ public void cleanUpCluster() throws Exception {
 
     // Only disable and drop if we succeeded to verify - otherwise it's useful
     // to leave it around for post-mortem
-    getTestingUtil(getConf()).deleteTable(htd.getName());
+    getTestingUtil(getConf()).deleteTable(htd.getTableName());
   }
 
   public void usage() {
@@ -448,15 +450,17 @@ public void cleanUpCluster() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
-    HBaseAdmin admin = new HBaseAdmin(getConf());
-    if (doLoad) {
-      admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
-      doLoad(getConf(), htd);
+    try (Connection conn = ConnectionFactory.createConnection(getConf());
+        Admin admin = conn.getAdmin()) {
+      if (doLoad) {
+        admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
+        doLoad(getConf(), htd);
+      }
     }
     if (doVerify) {
       doVerify(getConf(), htd);
       if (doDelete) {
-        getTestingUtil(getConf()).deleteTable(htd.getName());
+        getTestingUtil(getConf()).deleteTable(htd.getTableName());
       }
     }
     return 0;

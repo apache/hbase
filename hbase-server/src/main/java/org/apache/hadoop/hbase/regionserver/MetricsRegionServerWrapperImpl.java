@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -34,8 +35,11 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.mob.MobFileCache;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 
 /**
@@ -53,8 +57,8 @@ class MetricsRegionServerWrapperImpl
   private MobFileCache mobFileCache;
 
   private volatile long numStores = 0;
-  private volatile long numHLogFiles = 0;
-  private volatile long hlogFileSize = 0;
+  private volatile long numWALFiles = 0;
+  private volatile long walFileSize = 0;
   private volatile long numStoreFiles = 0;
   private volatile long memstoreSize = 0;
   private volatile long storeFileSize = 0;
@@ -89,11 +93,17 @@ class MetricsRegionServerWrapperImpl
   private volatile double mobFileCacheHitRatio = 0;
   private volatile long mobFileCacheEvictedCount = 0;
   private volatile long mobFileCacheCount = 0;
+  private volatile long blockedRequestsCount = 0L;
 
   private CacheStats cacheStats;
   private ScheduledExecutorService executor;
   private Runnable runnable;
   private long period;
+
+  /**
+   * Can be null if not on hdfs.
+   */
+  private DFSHedgedReadMetrics dfsHedgedReadMetrics;
 
   public MetricsRegionServerWrapperImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
@@ -109,6 +119,11 @@ class MetricsRegionServerWrapperImpl
     this.executor.scheduleWithFixedDelay(this.runnable, this.period, this.period,
       TimeUnit.MILLISECONDS);
 
+    try {
+      this.dfsHedgedReadMetrics = FSUtils.getDFSHedgedReadMetrics(regionServer.getConfiguration());
+    } catch (IOException e) {
+      LOG.warn("Failed to get hedged metrics", e);
+    }
     if (LOG.isInfoEnabled()) {
       LOG.info("Computing regionserver metrics every " + this.period + " milliseconds");
     }
@@ -189,6 +204,14 @@ class MetricsRegionServerWrapperImpl
   @Override
   public long getTotalRequestCount() {
     return regionServer.rpcServices.requestCount.get();
+  }
+
+  @Override
+  public int getSplitQueueSize() {
+    if (this.regionServer.compactSplitThread == null) {
+      return 0;
+    }
+    return this.regionServer.compactSplitThread.getSplitQueueSize();
   }
 
   @Override
@@ -301,13 +324,13 @@ class MetricsRegionServerWrapperImpl
   }
   
   @Override
-  public long getNumHLogFiles() {
-    return numHLogFiles;
+  public long getNumWALFiles() {
+    return numWALFiles;
   }
 
   @Override
-  public long getHLogFileSize() {
-    return hlogFileSize;
+  public long getWALFileSize() {
+    return walFileSize;
   }
   
   @Override
@@ -535,6 +558,7 @@ class MetricsRegionServerWrapperImpl
       long tempMobFlushedCellsSize = 0;
       long tempMobScanCellsCount = 0;
       long tempMobScanCellsSize = 0;
+      long tempBlockedRequestsCount = 0L;
 
       for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
         tempNumMutationsWithoutWAL += r.numMutationsWithoutWAL.get();
@@ -543,6 +567,7 @@ class MetricsRegionServerWrapperImpl
         tempWriteRequestsCount += r.writeRequestsCount.get();
         tempCheckAndMutateChecksFailed += r.checkAndMutateChecksFailed.get();
         tempCheckAndMutateChecksPassed += r.checkAndMutateChecksPassed.get();
+        tempBlockedRequestsCount += r.getBlockedRequestsCount();
         tempNumStores += r.stores.size();
         for (Store store : r.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
@@ -597,21 +622,11 @@ class MetricsRegionServerWrapperImpl
       }
       lastRan = currentTime;
 
+      numWALFiles = DefaultWALProvider.getNumLogFiles(regionServer.walFactory);
+      walFileSize = DefaultWALProvider.getLogFileSize(regionServer.walFactory);
+
       //Copy over computed values so that no thread sees half computed values.
       numStores = tempNumStores;
-      long tempNumHLogFiles = regionServer.hlog.getNumLogFiles();
-      // meta logs
-      if (regionServer.hlogForMeta != null) {
-        tempNumHLogFiles += regionServer.hlogForMeta.getNumLogFiles();
-      }
-      numHLogFiles = tempNumHLogFiles;
-      
-      long tempHlogFileSize = regionServer.hlog.getLogFileSize();
-      if (regionServer.hlogForMeta != null) {
-        tempHlogFileSize += regionServer.hlogForMeta.getLogFileSize();
-      }
-      hlogFileSize = tempHlogFileSize;
-      
       numStoreFiles = tempNumStoreFiles;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
@@ -645,6 +660,22 @@ class MetricsRegionServerWrapperImpl
       mobFileCacheHitRatio = mobFileCache.getHitRatio();
       mobFileCacheEvictedCount = mobFileCache.getEvictedFileCount();
       mobFileCacheCount = mobFileCache.getCacheSize();
+      blockedRequestsCount = tempBlockedRequestsCount;
     }
+  }
+
+  @Override
+  public long getHedgedReadOps() {
+    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadOps();
+  }
+
+  @Override
+  public long getHedgedReadWins() {
+    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadWins();
+  }
+
+  @Override
+  public long getBlockedRequestsCount() {
+    return blockedRequestsCount;
   }
 }

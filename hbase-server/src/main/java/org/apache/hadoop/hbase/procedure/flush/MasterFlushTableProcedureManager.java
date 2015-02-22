@@ -26,7 +26,9 @@ import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -43,10 +45,12 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.collect.Lists;
 
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
   public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";
@@ -121,18 +125,16 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // It is possible that regions may move after we get the region server list.
     // Each region server will get its own online regions for the table.
     // We may still miss regions that need to be flushed.
-    List<Pair<HRegionInfo, ServerName>> regionsAndLocations = null;
-    try {
-      regionsAndLocations =
-          MetaTableAccessor.getTableRegionsAndLocations(this.master.getZooKeeper(),
-            this.master.getShortCircuitConnection(),
-            TableName.valueOf(desc.getInstance()), false);
-    } catch (InterruptedException e1) {
-      String msg = "Failed to get regions for '" + desc.getInstance() + "'";
-      LOG.error(msg);
-      throw new IOException(msg, e1);
+    List<Pair<HRegionInfo, ServerName>> regionsAndLocations;
 
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
+        master.getZooKeeper());
+    } else {
+      regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
+        master.getConnection(), tableName, false);
     }
+
     Set<String> regionServers = new HashSet<String>(regionsAndLocations.size());
     for (Pair<HRegionInfo, ServerName> region : regionsAndLocations) {
       if (region != null && region.getFirst() != null && region.getSecond() != null) {

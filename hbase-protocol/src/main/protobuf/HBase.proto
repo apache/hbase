@@ -44,6 +44,24 @@ message TableSchema {
   repeated NameStringPair configuration = 4;
 }
 
+/** Denotes state of the table */
+message TableState {
+  // Table's current state
+  enum State {
+    ENABLED = 0;
+    DISABLED = 1;
+    DISABLING = 2;
+    ENABLING = 3;
+  }
+  // This is the table's state.
+  required State state = 1;
+}
+
+/** On HDFS representation of table state. */
+message TableDescriptor {
+  required TableSchema schema = 1;
+}
+
 /**
  * Column Family Schema
  * Inspired by the rest ColumSchemaMessage
@@ -164,6 +182,7 @@ message SnapshotDescription {
   }
   optional Type type = 4 [default = FLUSH];
   optional int32 version = 5;
+  optional string owner = 6;
 }
 
 /**
@@ -177,6 +196,16 @@ message ProcedureDescription {
 }
 
 message EmptyMsg {
+}
+
+enum TimeUnit {
+  NANOSECONDS = 1;
+  MICROSECONDS = 2;
+  MILLISECONDS = 3;
+  SECONDS = 4;
+  MINUTES = 5;
+  HOURS = 6;
+  DAYS = 7;
 }
 
 message LongMsg {

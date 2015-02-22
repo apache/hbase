@@ -20,19 +20,18 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Strings;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Strings;
 
 /**
  * This class is used for exporting current state of load on a RegionServer.
@@ -46,8 +45,8 @@ public class ServerLoad {
   private int storefileSizeMB = 0;
   private int memstoreSizeMB = 0;
   private int storefileIndexSizeMB = 0;
-  private int readRequestsCount = 0;
-  private int writeRequestsCount = 0;
+  private long readRequestsCount = 0;
+  private long writeRequestsCount = 0;
   private int rootIndexSizeKB = 0;
   private int totalStaticIndexSizeKB = 0;
   private int totalStaticBloomSizeKB = 0;
@@ -139,11 +138,11 @@ public class ServerLoad {
     return storefileIndexSizeMB;
   }
 
-  public int getReadRequestsCount() {
+  public long getReadRequestsCount() {
     return readRequestsCount;
   }
 
-  public int getWriteRequestsCount() {
+  public long getWriteRequestsCount() {
     return writeRequestsCount;
   }
 
@@ -235,7 +234,7 @@ public class ServerLoad {
     for (Coprocessor coprocessor : obtainServerLoadPB().getCoprocessorsList()) {
       coprocessSet.add(coprocessor.getName());
     }
-    return coprocessSet.toArray(new String[0]);
+    return coprocessSet.toArray(new String[coprocessSet.size()]);
   }
 
   /**

@@ -22,14 +22,20 @@ module Shell
       def help
         return <<-EOF
 Grant users specific rights.
-Syntax : grant <user> <permissions> [<table> [<column family> [<column qualifier>]]
+Syntax : grant <user> <permissions> [<@namespace> [<table> [<column family> [<column qualifier>]]]
 
 permissions is either zero or more letters from the set "RWXCA".
 READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A')
 
+Note: Groups and users are granted access in the same way, but groups are prefixed with an '@' 
+      character. In the same way, tables and namespaces are specified, but namespaces are 
+      prefixed with an '@' character.
+
 For example:
 
     hbase> grant 'bobsmith', 'RWXCA'
+    hbase> grant '@admins', 'RWXCA'
+    hbase> grant 'bobsmith', 'RWXCA', '@ns1'
     hbase> grant 'bobsmith', 'RW', 't1', 'f1', 'col1'
     hbase> grant 'bobsmith', 'RW', 'ns1:t1', 'f1', 'col1'
 EOF
@@ -92,7 +98,7 @@ EOF
           iter = scanner.iterator
           while iter.hasNext
             row = iter.next
-            row.list.each do |cell|
+            row.listCells.each do |cell|
               put = org.apache.hadoop.hbase.client.Put.new(row.getRow)
               put.add(cell)
               t.set_cell_permissions(put, permissions)

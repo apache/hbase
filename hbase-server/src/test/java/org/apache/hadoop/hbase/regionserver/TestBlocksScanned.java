@@ -25,7 +25,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -34,11 +35,12 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @SuppressWarnings("deprecation")
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestBlocksScanned extends HBaseTestCase {
   private static byte [] FAMILY = Bytes.toBytes("family");
   private static byte [] COL = Bytes.toBytes("col");
@@ -48,7 +50,7 @@ public class TestBlocksScanned extends HBaseTestCase {
 
   private static HBaseTestingUtility TEST_UTIL = null;
 
-  @Override
+  @Before
   public void setUp() throws Exception {
     super.setUp();
 

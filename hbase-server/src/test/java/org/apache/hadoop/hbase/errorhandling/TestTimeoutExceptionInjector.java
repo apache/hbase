@@ -21,7 +21,8 @@ import static org.junit.Assert.fail;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -29,7 +30,7 @@ import org.mockito.Mockito;
 /**
  * Test the {@link TimeoutExceptionInjector} to ensure we fulfill contracts
  */
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestTimeoutExceptionInjector {
 
   private static final Log LOG = LogFactory.getLog(TestTimeoutExceptionInjector.class);

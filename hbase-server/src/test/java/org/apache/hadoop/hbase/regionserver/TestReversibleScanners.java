@@ -31,17 +31,19 @@ import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -64,7 +66,7 @@ import com.google.common.collect.Lists;
 /**
  * Test cases against ReversibleKeyValueScanner
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestReversibleScanners {
   private static final Log LOG = LogFactory.getLog(TestReversibleScanners.class);
   HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -251,7 +253,7 @@ public class TestReversibleScanners {
 
     ScanType scanType = ScanType.USER_SCAN;
     ScanInfo scanInfo = new ScanInfo(FAMILYNAME, 0, Integer.MAX_VALUE,
-        Long.MAX_VALUE, false, 0, KeyValue.COMPARATOR);
+        Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, KeyValue.COMPARATOR);
 
     // Case 1.Test a full reversed scan
     Scan scan = new Scan();
@@ -306,12 +308,11 @@ public class TestReversibleScanners {
 
   @Test
   public void testReversibleRegionScanner() throws IOException {
-    byte[] tableName = Bytes.toBytes("testtable");
     byte[] FAMILYNAME2 = Bytes.toBytes("testCf2");
-    Configuration conf = HBaseConfiguration.create();
-    HRegion region = TEST_UTIL.createLocalHRegion(tableName, null, null,
-        "testReversibleRegionScanner", conf, false, Durability.SYNC_WAL, null,
-        FAMILYNAME, FAMILYNAME2);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testtable"))
+        .addFamily(new HColumnDescriptor(FAMILYNAME))
+        .addFamily(new HColumnDescriptor(FAMILYNAME2));
+    HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     loadDataToRegion(region, FAMILYNAME2);
 
     // verify row count with forward scan

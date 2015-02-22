@@ -29,24 +29,28 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -59,7 +63,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
-@Category(MediumTests.class)
+@Category({SecurityTests.class, MediumTests.class})
 public class TestCellACLs extends SecureTestUtil {
   private static final Log LOG = LogFactory.getLog(TestCellACLs.class);
 
@@ -110,7 +114,7 @@ public class TestCellACLs extends SecureTestUtil {
     rsHost.createEnvironment(AccessController.class, ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
 
     // create a set of test users
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
@@ -132,7 +136,9 @@ public class TestCellACLs extends SecureTestUtil {
     htd.setOwner(USER_OWNER);
     htd.addFamily(hcd);
     admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
+    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
+    LOG.info("Sleeping a second because of HBASE-12581");
+    Threads.sleep(1000);
   }
 
   @Test
@@ -141,7 +147,8 @@ public class TestCellACLs extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           Put p;
           // with ro ACL
@@ -159,6 +166,7 @@ public class TestCellACLs extends SecureTestUtil {
           t.put(p);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -170,11 +178,13 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
           t.close();
+          connection.close();
         }
       }
     };
@@ -183,11 +193,13 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
           t.close();
+          connection.close();
         }
       }
     };
@@ -196,11 +208,13 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q3);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
           t.close();
+          connection.close();
         }
       }
     };
@@ -209,7 +223,8 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q4);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
@@ -241,7 +256,8 @@ public class TestCellACLs extends SecureTestUtil {
         scan.setStartRow(TEST_ROW);
         scan.setStopRow(Bytes.add(TEST_ROW, new byte[]{ 0 } ));
         scan.addFamily(TEST_FAMILY);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           ResultScanner scanner = t.getScanner(scan);
           Result result = null;
@@ -253,6 +269,7 @@ public class TestCellACLs extends SecureTestUtil {
           } while (result != null);
         } finally {
           t.close();
+          connection.close();
         }
         return scanResults;
       }
@@ -274,11 +291,13 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1, 1L);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           t.increment(i);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -288,11 +307,13 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2, 1L);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           t.increment(i);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -304,11 +325,13 @@ public class TestCellACLs extends SecureTestUtil {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2, 1L);
         // Tag this increment with an ACL that denies write permissions to USER_OTHER
         i.setACL(USER_OTHER.getShortName(), new Permission(Action.READ));
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           t.increment(i);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -318,11 +341,13 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q3, 1L);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           t.increment(i);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -345,11 +370,13 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Delete delete = new Delete(TEST_ROW).deleteFamily(TEST_FAMILY);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           t.delete(delete);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -358,12 +385,14 @@ public class TestCellACLs extends SecureTestUtil {
     AccessTestAction deleteQ1 = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Delete delete = new Delete(TEST_ROW).deleteColumn(TEST_FAMILY, TEST_Q1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Delete delete = new Delete(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           t.delete(delete);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -390,7 +419,7 @@ public class TestCellACLs extends SecureTestUtil {
     verifyDenied(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
         try {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
@@ -406,7 +435,7 @@ public class TestCellACLs extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
         try {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
@@ -422,7 +451,7 @@ public class TestCellACLs extends SecureTestUtil {
     verifyDenied(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
         try {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ONE);
@@ -438,7 +467,7 @@ public class TestCellACLs extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
         try {
           return t.get(new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1));
         } finally {

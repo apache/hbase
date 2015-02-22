@@ -21,20 +21,11 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -46,7 +37,7 @@ import org.junit.experimental.categories.Category;
  * It tests the entire work flow from when a string is given by the user
  * and how it is parsed to construct the corresponding Filter object
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestParseFilter {
 
   ParseFilter f;
@@ -624,7 +615,7 @@ public class TestParseFilter {
 
   @Test
   public void testUnescapedQuote3 () throws IOException {
-    String filterString = "	InclusiveStopFilter ('''')";
+    String filterString = " InclusiveStopFilter ('''')";
     InclusiveStopFilter inclusiveStopFilter =
       doTestFilter(filterString, InclusiveStopFilter.class);
     byte [] stopRowKey = inclusiveStopFilter.getStopRowKey();

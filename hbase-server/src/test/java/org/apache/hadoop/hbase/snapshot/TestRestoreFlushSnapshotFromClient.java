@@ -23,15 +23,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
  * TODO This is essentially a clone of TestRestoreSnapshotFromClient.  This is worth refactoring
  * this because there will be a few more flavors of snapshots that need to run these tests.
  */
-@Category(LargeTests.class)
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestRestoreFlushSnapshotFromClient {
   final Log LOG = LogFactory.getLog(getClass());
 
@@ -102,8 +102,8 @@ public class TestRestoreFlushSnapshotFromClient {
 
     // create Table and disable it
     SnapshotTestingUtils.createTable(UTIL, tableName, FAMILY);
-    HTable table = new HTable(UTIL.getConfiguration(), tableName);
-    SnapshotTestingUtils.loadData(UTIL, table, 500, FAMILY);
+    SnapshotTestingUtils.loadData(UTIL, tableName, 500, FAMILY);
+    Table table = UTIL.getConnection().getTable(tableName);
     snapshot0Rows = UTIL.countRows(table);
     LOG.info("=== before snapshot with 500 rows");
     logFSTree();
@@ -116,7 +116,7 @@ public class TestRestoreFlushSnapshotFromClient {
     logFSTree();
 
     // insert more data
-    SnapshotTestingUtils.loadData(UTIL, table, 500, FAMILY);
+    SnapshotTestingUtils.loadData(UTIL, tableName, 500, FAMILY);
     snapshot1Rows = UTIL.countRows(table);
     LOG.info("=== before snapshot with 1000 rows");
     logFSTree();

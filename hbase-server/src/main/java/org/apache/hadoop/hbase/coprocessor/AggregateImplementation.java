@@ -26,7 +26,7 @@ import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -92,8 +92,9 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
-        for (Cell kv : results) {
-          temp = ci.getValue(colFamily, qualifier, kv);
+        int listSize = results.size();
+        for (int i = 0; i < listSize; i++) {
+          temp = ci.getValue(colFamily, qualifier, results.get(i));
           max = (max == null || (temp != null && ci.compare(temp, max) > 0)) ? temp : max;
         }
         results.clear();
@@ -145,8 +146,9 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
-        for (Cell kv : results) {
-          temp = ci.getValue(colFamily, qualifier, kv);
+        int listSize = results.size();
+        for (int i = 0; i < listSize; i++) {
+          temp = ci.getValue(colFamily, qualifier, results.get(i));
           min = (min == null || (temp != null && ci.compare(temp, min) < 0)) ? temp : min;
         }
         results.clear();
@@ -198,8 +200,9 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       boolean hasMoreRows = false;
       do {
         hasMoreRows = scanner.next(results);
-        for (Cell kv : results) {
-          temp = ci.getValue(colFamily, qualifier, kv);
+        int listSize = results.size();
+        for (int i = 0; i < listSize; i++) {
+          temp = ci.getValue(colFamily, qualifier, results.get(i));
           if (temp != null)
             sumVal = ci.add(sumVal, ci.castToReturnType(temp));
         }
@@ -310,9 +313,10 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       do {
         results.clear();
         hasMoreRows = scanner.next(results);
-        for (Cell kv : results) {
+        int listSize = results.size();
+        for (int i = 0; i < listSize; i++) {
           sumVal = ci.add(sumVal, ci.castToReturnType(ci.getValue(colFamily,
-              qualifier, kv)));
+              qualifier, results.get(i))));
         }
         rowCountVal++;
       } while (hasMoreRows);
@@ -370,9 +374,10 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       do {
         tempVal = null;
         hasMoreRows = scanner.next(results);
-        for (Cell kv : results) {
+        int listSize = results.size();
+        for (int i = 0; i < listSize; i++) {
           tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily,
-              qualifier, kv)));
+              qualifier, results.get(i))));
         }
         results.clear();
         sumVal = ci.add(sumVal, tempVal);
@@ -436,7 +441,9 @@ extends AggregateService implements CoprocessorService, Coprocessor {
         tempVal = null;
         tempWeight = null;
         hasMoreRows = scanner.next(results);
-        for (Cell kv : results) {
+        int listSize = results.size();
+        for (int i = 0; i < listSize; i++) {
+          Cell kv = results.get(i);
           tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily,
               valQualifier, kv)));
           if (weightQualifier != null) {

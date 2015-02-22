@@ -17,13 +17,18 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  *  A read only version of the {@link ByteRange}.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class SimpleByteRange extends AbstractByteRange {
   public SimpleByteRange() {
   }
-  
+
   public SimpleByteRange(int capacity) {
     this(new byte[capacity]);
   }
@@ -110,7 +115,7 @@ public class SimpleByteRange extends AbstractByteRange {
     }
     return clone;
   }
-  
+
   @Override
   public ByteRange shallowCopySubRange(int innerOffset, int copyLength) {
     SimpleByteRange clone = new SimpleByteRange(bytes, offset + innerOffset,
@@ -120,7 +125,7 @@ public class SimpleByteRange extends AbstractByteRange {
     }
     return clone;
   }
-  
+
   @Override
   public boolean equals(Object thatObject) {
     if (thatObject == null){

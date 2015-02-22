@@ -31,25 +31,28 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
@@ -70,7 +73,7 @@ import org.junit.experimental.categories.Category;
  * since minicluster startup and tear downs seem to leak file handles and
  * eventually cause out of file handle exceptions.
  */
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 public class OfflineMetaRebuildTestCore {
   protected final static Log LOG = LogFactory
       .getLog(OfflineMetaRebuildTestCore.class);
@@ -79,13 +82,14 @@ public class OfflineMetaRebuildTestCore {
   private final static byte[] FAM = Bytes.toBytes("fam");
 
   // for the instance, reset every test run
-  protected HTable htbl;
+  protected Table htbl;
   protected final static byte[][] splits = new byte[][] { Bytes.toBytes("A"),
       Bytes.toBytes("B"), Bytes.toBytes("C") };
 
   private final static String TABLE_BASE = "tableMetaRebuild";
   private static int tableIdx = 0;
   protected TableName table = TableName.valueOf("tableMetaRebuild");
+  protected Connection connection;
 
   @Before
   public void setUpBefore() throws Exception {
@@ -93,6 +97,7 @@ public class OfflineMetaRebuildTestCore {
     TEST_UTIL.getConfiguration().setInt("dfs.datanode.max.xceivers", 9192);
     TEST_UTIL.startMiniCluster(3);
     conf = TEST_UTIL.getConfiguration();
+    this.connection = ConnectionFactory.createConnection(conf);
     assertEquals(0, TEST_UTIL.getHBaseAdmin().listTables().length);
 
     // setup the table
@@ -110,8 +115,12 @@ public class OfflineMetaRebuildTestCore {
 
   @After
   public void tearDownAfter() throws Exception {
+    if (this.htbl != null) {
+      this.htbl.close();
+      this.htbl = null;
+    }
+    this.connection.close();
     TEST_UTIL.shutdownMiniCluster();
-    HConnectionManager.deleteConnection(conf);
   }
 
   /**
@@ -121,12 +130,12 @@ public class OfflineMetaRebuildTestCore {
    * @throws InterruptedException
    * @throws KeeperException
    */
-  private HTable setupTable(TableName tablename) throws Exception {
+  private Table setupTable(TableName tablename) throws Exception {
     HTableDescriptor desc = new HTableDescriptor(tablename);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
     TEST_UTIL.getHBaseAdmin().createTable(desc, splits);
-    return new HTable(TEST_UTIL.getConfiguration(), tablename);
+    return this.connection.getTable(tablename);
   }
 
   private void dumpMeta(HTableDescriptor htd) throws IOException {
@@ -136,17 +145,18 @@ public class OfflineMetaRebuildTestCore {
     }
   }
 
-  private void populateTable(HTable tbl) throws IOException {
+  private void populateTable(Table tbl) throws IOException {
     byte[] values = { 'A', 'B', 'C', 'D' };
+    List<Put> puts = new ArrayList<>();
     for (int i = 0; i < values.length; i++) {
       for (int j = 0; j < values.length; j++) {
         Put put = new Put(new byte[] { values[i], values[j] });
         put.add(Bytes.toBytes("fam"), new byte[] {}, new byte[] { values[i],
             values[j] });
-        tbl.put(put);
+        puts.add(put);
       }
     }
-    tbl.flushCommits();
+    tbl.put(puts);
   }
 
   /**
@@ -165,14 +175,14 @@ public class OfflineMetaRebuildTestCore {
     }
   }
 
-  protected void deleteRegion(Configuration conf, final HTable tbl,
+  protected void deleteRegion(Configuration conf, final Table tbl,
       byte[] startKey, byte[] endKey) throws IOException {
 
     LOG.info("Before delete:");
     HTableDescriptor htd = tbl.getTableDescriptor();
     dumpMeta(htd);
 
-    Map<HRegionInfo, ServerName> hris = tbl.getRegionLocations();
+    Map<HRegionInfo, ServerName> hris = ((HTable)tbl).getRegionLocations();
     for (Entry<HRegionInfo, ServerName> e : hris.entrySet()) {
       HRegionInfo hri = e.getKey();
       ServerName hsa = e.getValue();
@@ -190,10 +200,10 @@ public class OfflineMetaRebuildTestCore {
             hri.getEncodedName());
         fs.delete(p, true);
 
-        HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
-        Delete delete = new Delete(deleteRow);
-        meta.delete(delete);
-        meta.close();
+        try (Table meta = this.connection.getTable(TableName.META_TABLE_NAME)) {
+          Delete delete = new Delete(deleteRow);
+          meta.delete(delete);
+        }
       }
       LOG.info(hri.toString() + hsa.toString());
     }
@@ -203,9 +213,9 @@ public class OfflineMetaRebuildTestCore {
     dumpMeta(htd);
   }
 
-  protected HRegionInfo createRegion(Configuration conf, final HTable htbl,
+  protected HRegionInfo createRegion(Configuration conf, final Table htbl,
       byte[] startKey, byte[] endKey) throws IOException {
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     HTableDescriptor htd = htbl.getTableDescriptor();
     HRegionInfo hri = new HRegionInfo(htbl.getName(), startKey, endKey);
 
@@ -230,7 +240,7 @@ public class OfflineMetaRebuildTestCore {
     // Mess it up by blowing up meta.
     Admin admin = TEST_UTIL.getHBaseAdmin();
     Scan s = new Scan();
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = meta.getScanner(s);
     List<Delete> dels = new ArrayList<Delete>();
     for (Result r : scanner) {
@@ -244,7 +254,6 @@ public class OfflineMetaRebuildTestCore {
       }
     }
     meta.delete(dels);
-    meta.flushCommits();
     scanner.close();
     meta.close();
   }
@@ -257,7 +266,7 @@ public class OfflineMetaRebuildTestCore {
    */
   protected int tableRowCount(Configuration conf, TableName table)
       throws IOException {
-    HTable t = new HTable(conf, table);
+    Table t = TEST_UTIL.getConnection().getTable(table);
     Scan st = new Scan();
 
     ResultScanner rst = t.getScanner(st);
@@ -276,15 +285,18 @@ public class OfflineMetaRebuildTestCore {
    * @return # of entries in meta.
    */
   protected int scanMeta() throws IOException {
-    int count = 0;
-    HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
-    ResultScanner scanner = meta.getScanner(new Scan());
-    LOG.info("Table: " + Bytes.toString(meta.getTableName()));
-    for (Result res : scanner) {
-      LOG.info(Bytes.toString(res.getRow()));
-      count++;
+    LOG.info("Scanning META");
+    MetaTableAccessor.fullScanMetaAndPrint(TEST_UTIL.getConnection());
+    return MetaTableAccessor.fullScanRegions(TEST_UTIL.getConnection()).size();
+  }
+
+  protected HTableDescriptor[] getTables(final Configuration configuration) throws IOException {
+    HTableDescriptor[] htbls = null;
+    try (Connection connection = ConnectionFactory.createConnection(configuration)) {
+      try (Admin admin = connection.getAdmin()) {
+        htbls = admin.listTables();
+      }
     }
-    meta.close();
-    return count;
+    return htbls;
   }
 }

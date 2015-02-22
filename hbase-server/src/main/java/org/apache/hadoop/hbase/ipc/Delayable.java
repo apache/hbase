@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A call whose response can be delayed by the server.

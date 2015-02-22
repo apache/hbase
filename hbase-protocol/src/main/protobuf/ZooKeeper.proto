@@ -52,6 +52,7 @@ message Master {
   required ServerName master = 1;
   // Major RPC version so that clients can know what version the master can accept.
   optional uint32 rpc_version = 2;
+  optional uint32 info_port = 3;
 }
 
 /**
@@ -87,8 +88,9 @@ message SplitLogTask {
 
 /**
  * The znode that holds state of table.
+ * Deprected, table state is stored in table descriptor on HDFS.
  */
-message Table {
+message DeprecatedTableState {
   // Table's current state
   enum State {
     ENABLED = 0;
@@ -126,7 +128,7 @@ message ReplicationState {
 }
 
 /**
- * Used by replication. Holds the current position in an HLog file.
+ * Used by replication. Holds the current position in an WAL file.
  */
 message ReplicationHLogPosition {
   required int64 position = 1;

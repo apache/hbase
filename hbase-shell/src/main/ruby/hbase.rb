@@ -18,8 +18,8 @@
 #
 
 # HBase ruby classes.
-# Has wrapper classes for org.apache.hadoop.hbase.client.HBaseAdmin
-# and for org.apache.hadoop.hbase.client.HTable.  Classes take
+# Has wrapper classes for org.apache.hadoop.hbase.client.Admin
+# and for org.apache.hadoop.hbase.client.Table.  Classes take
 # Formatters on construction and outputs any results using
 # Formatter methods.  These classes are only really for use by
 # the hirb.rb HBase Shell script; they don't make much sense elsewhere.
@@ -42,6 +42,7 @@ module HBaseConstants
   METADATA = org.apache.hadoop.hbase.HConstants::METADATA
   STOPROW = "STOPROW"
   STARTROW = "STARTROW"
+  ROWPREFIXFILTER = "ROWPREFIXFILTER"
   ENDROW = STOPROW
   RAW = "RAW"
   LIMIT = "LIMIT"
@@ -65,6 +66,12 @@ module HBaseConstants
   AUTHORIZATIONS = "AUTHORIZATIONS"
   SKIP_FLUSH = 'SKIP_FLUSH'
   CONSISTENCY = "CONSISTENCY"
+  USER = 'USER'
+  TABLE = 'TABLE'
+  NAMESPACE = 'NAMESPACE'
+  TYPE = 'TYPE'
+  NONE = 'NONE'
+  VALUE = 'VALUE'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)
@@ -84,6 +91,9 @@ end
 require 'hbase/hbase'
 require 'hbase/admin'
 require 'hbase/table'
+require 'hbase/quotas'
 require 'hbase/replication_admin'
 require 'hbase/security'
 require 'hbase/visibility_labels'
+
+include HBaseQuotasConstants

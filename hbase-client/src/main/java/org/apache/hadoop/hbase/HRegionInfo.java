@@ -18,30 +18,26 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.EOFException;
 import java.io.IOException;
-import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -80,30 +76,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HRegionInfo implements Comparable<HRegionInfo> {
-  /*
-   * There are two versions associated with HRegionInfo: HRegionInfo.VERSION and
-   * HConstants.META_VERSION. HRegionInfo.VERSION indicates the data structure's versioning
-   * while HConstants.META_VERSION indicates the versioning of the serialized HRIs stored in
-   * the hbase:meta table.
-   *
-   * Pre-0.92:
-   *   HRI.VERSION == 0 and HConstants.META_VERSION does not exist (is not stored at hbase:meta table)
-   *   HRegionInfo had an HTableDescriptor reference inside it.
-   *   HRegionInfo is serialized as Writable to hbase:meta table.
-   * For 0.92.x and 0.94.x:
-   *   HRI.VERSION == 1 and HConstants.META_VERSION == 0
-   *   HRI no longer has HTableDescriptor in it.
-   *   HRI is serialized as Writable to hbase:meta table.
-   * For 0.96.x:
-   *   HRI.VERSION == 1 and HConstants.META_VERSION == 1
-   *   HRI data structure is the same as 0.92 and 0.94
-   *   HRI is serialized as PB to hbase:meta table.
-   *
-   * Versioning of HRegionInfo is deprecated. HRegionInfo does protobuf
-   * serialization using RegionInfo class, which has it's own versioning.
-   */
-  @Deprecated
-  public static final byte VERSION = 1;
+
   private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
 
   /**
@@ -247,12 +220,16 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * first meta regions
    */
   private HRegionInfo(long regionId, TableName tableName) {
+    this(regionId, tableName, DEFAULT_REPLICA_ID);
+  }
+
+  public HRegionInfo(long regionId, TableName tableName, int replicaId) {
     super();
     this.regionId = regionId;
     this.tableName = tableName;
-    // Note: First Meta regions names are still in old format
-    this.regionName = createRegionName(tableName, null,
-                                       regionId, false);
+    this.replicaId = replicaId;
+    // Note: First Meta region replicas names are in old format
+    this.regionName = createRegionName(tableName, null, regionId, replicaId, false);
     setHashCode();
   }
 
@@ -741,6 +718,13 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
+   * @return true if this region is from a system table
+   */
+  public boolean isSystemTable() {
+    return tableName.isSystemTable();
+  }
+
+  /**
    * @return True if has been split and has daughters.
    */
   public boolean isSplit() {
@@ -827,86 +811,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   @Override
   public int hashCode() {
     return this.hashCode;
-  }
-
-  /** @return the object version number
-   * @deprecated HRI is no longer a VersionedWritable */
-  @Deprecated
-  public byte getVersion() {
-    return VERSION;
-  }
-
-  /**
-   * @deprecated Use protobuf serialization instead.  See {@link #toByteArray()} and
-   * {@link #toDelimitedByteArray()}
-   */
-  @Deprecated
-  public void write(DataOutput out) throws IOException {
-    out.writeByte(getVersion());
-    Bytes.writeByteArray(out, endKey);
-    out.writeBoolean(offLine);
-    out.writeLong(regionId);
-    Bytes.writeByteArray(out, regionName);
-    out.writeBoolean(split);
-    Bytes.writeByteArray(out, startKey);
-    Bytes.writeByteArray(out, tableName.getName());
-    out.writeInt(hashCode);
-  }
-
-  /**
-   * @deprecated Use protobuf deserialization instead.
-   * @see #parseFrom(byte[])
-   */
-  @Deprecated
-  public void readFields(DataInput in) throws IOException {
-    // Read the single version byte.  We don't ask the super class do it
-    // because freaks out if its not the current classes' version.  This method
-    // can deserialize version 0 and version 1 of HRI.
-    byte version = in.readByte();
-    if (version == 0) {
-      // This is the old HRI that carried an HTD.  Migrate it.  The below
-      // was copied from the old 0.90 HRI readFields.
-      this.endKey = Bytes.readByteArray(in);
-      this.offLine = in.readBoolean();
-      this.regionId = in.readLong();
-      this.regionName = Bytes.readByteArray(in);
-      this.split = in.readBoolean();
-      this.startKey = Bytes.readByteArray(in);
-      try {
-        HTableDescriptor htd = new HTableDescriptor();
-        htd.readFields(in);
-        this.tableName = htd.getTableName();
-      } catch(EOFException eofe) {
-         throw new IOException("HTD not found in input buffer", eofe);
-      }
-      this.hashCode = in.readInt();
-    } else if (getVersion() == version) {
-      this.endKey = Bytes.readByteArray(in);
-      this.offLine = in.readBoolean();
-      this.regionId = in.readLong();
-      this.regionName = Bytes.readByteArray(in);
-      this.split = in.readBoolean();
-      this.startKey = Bytes.readByteArray(in);
-      this.tableName = TableName.valueOf(Bytes.readByteArray(in));
-      this.hashCode = in.readInt();
-    } else {
-      throw new IOException("Non-migratable/unknown version=" + getVersion());
-    }
-  }
-
-  @Deprecated
-  private void readFields(byte[] bytes, int offset, int len) throws IOException {
-    if (bytes == null || len <= 0) {
-      throw new IllegalArgumentException("Can't build a writable with empty " +
-          "bytes array");
-    }
-    DataInputBuffer in = new DataInputBuffer();
-    try {
-      in.reset(bytes, offset, len);
-      this.readFields(in);
-    } finally {
-      in.close();
-    }
   }
 
   //
@@ -1015,7 +919,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     TableName tableName =
         ProtobufUtil.toTableName(proto.getTableName());
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return FIRST_META_REGIONINFO;
+      return RegionReplicaUtil.getRegionInfoForReplica(FIRST_META_REGIONINFO,
+          proto.getReplicaId());
     }
     long regionId = proto.getRegionId();
     int replicaId = proto.hasReplicaId() ? proto.getReplicaId() : DEFAULT_REPLICA_ID;
@@ -1106,13 +1011,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
         throw new DeserializationException(e);
       }
     } else {
-      try {
-        HRegionInfo hri = new HRegionInfo();
-        hri.readFields(bytes, offset, len);
-        return hri;
-      } catch (IOException e) {
-        throw new DeserializationException(e);
-      }
+      throw new DeserializationException("PB encoded HRegionInfo expected");
     }
   }
 
@@ -1354,25 +1253,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     if (in.markSupported()) { //read it with mark()
       in.mark(pblen);
     }
-    int read = in.read(pbuf); //assumption: if Writable serialization, it should be longer than pblen.
+    int read = in.read(pbuf); //assumption: it should be longer than pblen.
     if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
     if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
       return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(in));
     } else {
-        // Presume Writables.  Need to reset the stream since it didn't start w/ pb.
-      if (in.markSupported()) {
-        in.reset();
-        HRegionInfo hri = new HRegionInfo();
-        hri.readFields(in);
-        return hri;
-      } else {
-        //we cannot use BufferedInputStream, it consumes more than we read from the underlying IS
-        ByteArrayInputStream bais = new ByteArrayInputStream(pbuf);
-        SequenceInputStream sis = new SequenceInputStream(bais, in); //concatenate input streams
-        HRegionInfo hri = new HRegionInfo();
-        hri.readFields(new DataInputStream(sis));
-        return hri;
-      }
+      throw new IOException("PB encoded HRegionInfo expected");
     }
   }
 

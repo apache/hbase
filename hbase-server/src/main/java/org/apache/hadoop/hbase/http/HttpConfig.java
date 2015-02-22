@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -27,13 +27,13 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class HttpConfig {
-  private static Policy policy;
+  private Policy policy;
   public enum Policy {
     HTTP_ONLY,
     HTTPS_ONLY,
     HTTP_AND_HTTPS;
 
-    public static Policy fromString(String value) {
+    public Policy fromString(String value) {
       if (HTTPS_ONLY.name().equalsIgnoreCase(value)) {
         return HTTPS_ONLY;
       } else if (HTTP_AND_HTTPS.name().equalsIgnoreCase(value)) {
@@ -51,27 +51,30 @@ public class HttpConfig {
     }
   }
 
-  static {
-    Configuration conf = new Configuration();
+   public HttpConfig(final Configuration conf) {
     boolean sslEnabled = conf.getBoolean(
-            ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY,
-            ServerConfigurationKeys.HBASE_SSL_ENABLED_DEFAULT);
+      ServerConfigurationKeys.HBASE_SSL_ENABLED_KEY,
+      ServerConfigurationKeys.HBASE_SSL_ENABLED_DEFAULT);
     policy = sslEnabled ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY;
+    if (sslEnabled) {
+      conf.addResource("ssl-server.xml");
+      conf.addResource("ssl-client.xml");
+    }
   }
 
-  public static void setPolicy(Policy policy) {
-    HttpConfig.policy = policy;
+  public void setPolicy(Policy policy) {
+    this.policy = policy;
   }
 
-  public static boolean isSecure() {
+  public boolean isSecure() {
     return policy == Policy.HTTPS_ONLY;
   }
 
-  public static String getSchemePrefix() {
+  public String getSchemePrefix() {
     return (isSecure()) ? "https://" : "http://";
   }
 
-  public static String getScheme(Policy policy) {
+  public String getScheme(Policy policy) {
     return policy == Policy.HTTPS_ONLY ? "https://" : "http://";
   }
 }

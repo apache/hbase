@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -31,15 +32,17 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -71,19 +74,32 @@ import com.google.protobuf.Message;
  * <li>For methods to find maximum, minimum, sum, rowcount, it returns the
  * parameter type. For average and std, it returns a double value. For row
  * count, it returns a long value.
+ * <p>Call {@link #close()} when done.
  */
 @InterfaceAudience.Private
-public class AggregationClient {
-
+public class AggregationClient implements Closeable {
+  // TODO: This class is not used.  Move to examples?
   private static final Log log = LogFactory.getLog(AggregationClient.class);
-  Configuration conf;
+  private final Connection connection;
 
   /**
    * Constructor with Conf object
    * @param cfg
    */
   public AggregationClient(Configuration cfg) {
-    this.conf = cfg;
+    try {
+      // Create a connection on construction. Will use it making each of the calls below.
+      this.connection = ConnectionFactory.createConnection(cfg);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (this.connection != null && !this.connection.isClosed()) {
+      this.connection.close();
+    }
   }
 
   /**
@@ -100,15 +116,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R max(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    HTable table = null;
-    try {
-      table = new HTable(conf, tableName);
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
       return max(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
@@ -125,7 +135,7 @@ public class AggregationClient {
    *           & propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> 
-  R max(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
+  R max(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MaxCallBack implements Batch.Callback<R> {
@@ -170,12 +180,11 @@ public class AggregationClient {
    */
   private void validateParameters(Scan scan, boolean canFamilyBeAbsent) throws IOException {
     if (scan == null
-        || (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes
-            .equals(scan.getStartRow(), HConstants.EMPTY_START_ROW))
-        || ((Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) > 0) &&
-        	!Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
-      throw new IOException(
-          "Agg client Exception: Startrow should be smaller than Stoprow");
+        || (Bytes.equals(scan.getStartRow(), scan.getStopRow()) && !Bytes.equals(
+          scan.getStartRow(), HConstants.EMPTY_START_ROW))
+        || ((Bytes.compareTo(scan.getStartRow(), scan.getStopRow()) > 0) && !Bytes.equals(
+          scan.getStopRow(), HConstants.EMPTY_END_ROW))) {
+      throw new IOException("Agg client Exception: Startrow should be smaller than Stoprow");
     } else if (!canFamilyBeAbsent) {
       if (scan.getFamilyMap().size() != 1) {
         throw new IOException("There must be only one family.");
@@ -195,15 +204,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R min(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    HTable table = null;
-    try {
-      table = new HTable(conf, tableName);
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
       return min(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 
@@ -218,7 +221,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> 
-  R min(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
+  R min(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class MinCallBack implements Batch.Callback<R> {
@@ -275,15 +278,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> long rowCount(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    HTable table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return rowCount(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
+        return rowCount(table, ci, scan);
     }
   }
 
@@ -301,7 +298,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> 
-  long rowCount(final HTable table,
+  long rowCount(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, true);
     class RowNumCallback implements Batch.Callback<Long> {
@@ -349,15 +346,9 @@ public class AggregationClient {
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> S sum(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
-      throws Throwable {
-    HTable table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return sum(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+  throws Throwable {
+    try (Table table = connection.getTable(tableName)) {
+        return sum(table, ci, scan);
     }
   }
 
@@ -371,7 +362,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> 
-  S sum(final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci,
+  S sum(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
       final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     
@@ -423,14 +414,8 @@ public class AggregationClient {
   private <R, S, P extends Message, Q extends Message, T extends Message> Pair<S, Long> getAvgArgs(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
       throws Throwable {
-    HTable table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return getAvgArgs(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return getAvgArgs(table, ci, scan);
     }
   }
 
@@ -443,7 +428,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
-  Pair<S, Long> getAvgArgs(final HTable table,
+  Pair<S, Long> getAvgArgs(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class AvgCallBack implements Batch.Callback<Pair<S, Long>> {
@@ -523,7 +508,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> double avg(
-      final HTable table, final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+      final Table table, final ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<S, Long> p = getAvgArgs(table, ci, scan);
     return ci.divideForAvg(p.getFirst(), p.getSecond());
   }
@@ -540,7 +525,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
-  Pair<List<S>, Long> getStdArgs(final HTable table,
+  Pair<List<S>, Long> getStdArgs(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     class StdCallback implements Batch.Callback<Pair<List<S>, Long>> {
@@ -614,14 +599,8 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message>
   double std(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
-    HTable table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return std(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return std(table, ci, scan);
     }
   }
 
@@ -638,7 +617,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> double std(
-      final HTable table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
+      final Table table, ColumnInterpreter<R, S, P, Q, T> ci, Scan scan) throws Throwable {
     Pair<List<S>, Long> p = getStdArgs(table, ci, scan);
     double res = 0d;
     double avg = ci.divideForAvg(p.getFirst().get(0), p.getSecond());
@@ -662,7 +641,7 @@ public class AggregationClient {
    */
   private <R, S, P extends Message, Q extends Message, T extends Message>
   Pair<NavigableMap<byte[], List<S>>, List<S>>
-  getMedianArgs(final HTable table,
+  getMedianArgs(final Table table,
       final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan) throws Throwable {
     final AggregateRequest requestArg = validateArgAndGetPB(scan, ci, false);
     final NavigableMap<byte[], List<S>> map =
@@ -727,14 +706,8 @@ public class AggregationClient {
   public <R, S, P extends Message, Q extends Message, T extends Message>
   R median(final TableName tableName, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
-    HTable table = null;
-    try {
-      table = new HTable(conf, tableName);
-      return median(table, ci, scan);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
+    try (Table table = connection.getTable(tableName)) {
+        return median(table, ci, scan);
     }
   }
 
@@ -749,7 +722,7 @@ public class AggregationClient {
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
-  R median(final HTable table, ColumnInterpreter<R, S, P, Q, T> ci,
+  R median(final Table table, ColumnInterpreter<R, S, P, Q, T> ci,
       Scan scan) throws Throwable {
     Pair<NavigableMap<byte[], List<S>>, List<S>> p = getMedianArgs(table, ci, scan);
     byte[] startRow = null;
@@ -797,7 +770,7 @@ public class AggregationClient {
           for (int i = 0; i < results.length; i++) {
             Result r = results[i];
             // retrieve weight
-            Cell kv = r.getColumnLatest(colFamily, weightQualifier);
+            Cell kv = r.getColumnLatestCell(colFamily, weightQualifier);
             R newValue = ci.getValue(colFamily, weightQualifier, kv);
             S s = ci.castToReturnType(newValue);
             double newSumVal = movingSumVal + ci.divideForAvg(s, 1L);
@@ -806,7 +779,7 @@ public class AggregationClient {
               return value;
             }
             movingSumVal = newSumVal;
-            kv = r.getColumnLatest(colFamily, qualifier);
+            kv = r.getColumnLatestCell(colFamily, qualifier);
             value = ci.getValue(colFamily, qualifier, kv);
             }
           }

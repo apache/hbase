@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
@@ -51,7 +53,7 @@ import org.junit.experimental.categories.Category;
 /**
  * A client-side test, mostly testing scanners with various parameters.
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestScannersFromClientSide {
   private static final Log LOG = LogFactory.getLog(TestScannersFromClientSide.class);
 
@@ -100,10 +102,10 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanBatch() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testScanBatch");
+    TableName TABLE = TableName.valueOf("testScanBatch");
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 8);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
 
     Put put;
     Scan scan;
@@ -179,7 +181,7 @@ public class TestScannersFromClientSide {
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
 
     Get get;
     Put put;
@@ -300,7 +302,7 @@ public class TestScannersFromClientSide {
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
 
     Put put;
     Scan scan;
@@ -349,7 +351,7 @@ public class TestScannersFromClientSide {
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
 
     Get get;
     Put put;
@@ -441,7 +443,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanOnReopenedRegion() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testScanOnReopenedRegion");
+    TableName TABLE = TableName.valueOf("testScanOnReopenedRegion");
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 2);
 
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);

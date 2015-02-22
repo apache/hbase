@@ -86,6 +86,13 @@ fi
 hostname=$1
 filename="/tmp/$hostname"
 
+local=false
+localhostname=`/bin/hostname`
+
+if [ "$localhostname" == "$hostname" ]; then
+  local=true
+fi
+
 log "Disabling load balancer"
 HBASE_BALANCER_STATE=`echo 'balance_switch false' | "$bin"/hbase --config ${HBASE_CONF_DIR} shell | tail -3 | head -1`
 log "Previous balancer state was $HBASE_BALANCER_STATE"
@@ -99,26 +106,49 @@ hosts="/tmp/$(basename $0).$$.tmp"
 echo $hostname >> $hosts
 if [ "$thrift" != "" ]; then
   log "Stopping thrift"
-  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop thrift
+  if [ "$local" ]; then
+    "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop thrift
+  else
+    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop thrift
+  fi
 fi
 if [ "$rest" != "" ]; then
   log "Stopping rest"
-  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop rest
+  if [ "$local" ]; then
+    "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop rest
+  else
+    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop rest
+  fi
 fi
 log "Stopping regionserver"
-"$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop regionserver
-
+if [ "$local" ]; then
+  "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop regionserver
+else
+  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop regionserver
+fi
 if [ "$restart" != "" ]; then
   log "Restarting regionserver"
-  "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start regionserver
+  if [ "$local" ]; then
+    "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start regionserver
+  else
+    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start regionserver
+  fi
   if [ "$thrift" != "" ]; then
     log "Restarting thrift"
     # -b 0.0.0.0 says listen on all interfaces rather than just default.
-    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start thrift -b 0.0.0.0
+    if [ "$local" ]; then
+      "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start thrift -b 0.0.0.0
+    else
+      "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start thrift -b 0.0.0.0
+    fi
   fi
   if [ "$rest" != "" ]; then
     log "Restarting rest"
-    "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start rest
+    if [ "$local" ]; then
+      "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start rest
+    else
+      "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start rest
+    fi
   fi
   if [ "$reload" != "" ]; then
     log "Reloading $hostname region(s)"
@@ -130,7 +160,7 @@ fi
 # Restore balancer state
 if [ $HBASE_BALANCER_STATE != "false" ]; then
   log "Restoring balancer state to " $HBASE_BALANCER_STATE
-  log "balance_switch $HBASE_BALANCER_STATE" | "$bin"/hbase --config ${HBASE_CONF_DIR} shell &> /dev/null
+  echo "balance_switch $HBASE_BALANCER_STATE" | "$bin"/hbase --config ${HBASE_CONF_DIR} shell &> /dev/null
 fi
 
 # Cleanup tmp files.

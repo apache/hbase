@@ -29,13 +29,17 @@ import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -46,7 +50,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category(LargeTests.class)
+@Category({SecurityTests.class, LargeTests.class})
 public class TestAccessControlFilter extends SecureTestUtil {
   @Rule public TestName name = new TestName();
   private static HBaseTestingUtility TEST_UTIL;
@@ -90,7 +94,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
 
   @Test
   public void testQualifierAccess() throws Exception {
-    final HTable table = TEST_UTIL.createTable(TABLE, FAMILY);
+    final Table table = TEST_UTIL.createTable(TABLE, FAMILY);
     try {
       doQualifierAccess(table);
     } finally {
@@ -98,7 +102,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
     }
   }
 
-  private void doQualifierAccess(final HTable table) throws Exception {
+  private void doQualifierAccess(final Table table) throws Exception {
     // set permissions
     SecureTestUtil.grantOnTable(TEST_UTIL, READER.getShortName(), TABLE, null, null,
       Permission.Action.READ);
@@ -121,7 +125,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TABLE);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TABLE);
         try {
           ResultScanner rs = t.getScanner(new Scan());
           int rowcnt = 0;
@@ -137,6 +142,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     });
@@ -147,7 +153,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TABLE);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TABLE);
         try {
           ResultScanner rs = t.getScanner(new Scan());
           int rowcnt = 0;
@@ -162,6 +169,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     });
@@ -172,7 +180,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TABLE);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TABLE);
         try {
           ResultScanner rs = t.getScanner(new Scan());
           int rowcnt = 0;
@@ -187,6 +196,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     });

@@ -28,18 +28,21 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TestTableName;
 import org.apache.log4j.Level;
@@ -52,7 +55,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({SecurityTests.class, MediumTests.class})
 public class TestScanEarlyTermination extends SecureTestUtil {
   private static final Log LOG = LogFactory.getLog(TestScanEarlyTermination.class);
 
@@ -98,7 +101,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     rsHost.createEnvironment(AccessController.class, ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
 
     // create a set of test users
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
@@ -127,8 +130,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     htd.setConfiguration(AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT, "true");
 
     admin.createTable(htd);
-
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE.getTableName());
   }
 
   @After
@@ -155,7 +157,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           Put put = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
           t.put(put);
@@ -169,6 +172,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
           t.put(put);
         } finally {
           t.close();
+          connection.close();
         }
         return null;
       }
@@ -180,7 +184,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           Scan scan = new Scan().addFamily(TEST_FAMILY1);
           Result result = t.getScanner(scan).next();
@@ -192,6 +197,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     }, USER_OTHER);
@@ -204,7 +210,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           Scan scan = new Scan();
           Result result = t.getScanner(scan).next();
@@ -216,6 +223,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     }, USER_OTHER);
@@ -226,7 +234,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           Scan scan = new Scan().addFamily(TEST_FAMILY2);
           Result result = t.getScanner(scan).next();
@@ -236,6 +245,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     }, USER_OTHER);
@@ -252,7 +262,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
           Scan scan = new Scan();
           Result result = t.getScanner(scan).next();
@@ -265,6 +276,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
           return null;
         } finally {
           t.close();
+          connection.close();
         }
       }
     }, USER_OTHER);

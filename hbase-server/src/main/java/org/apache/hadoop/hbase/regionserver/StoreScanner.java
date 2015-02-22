@@ -29,7 +29,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -76,6 +77,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final Scan scan;
   protected final NavigableSet<byte[]> columns;
   protected final long oldestUnexpiredTS;
+  protected final long now;
   protected final int minVersions;
   protected final long maxRowSize;
 
@@ -122,15 +124,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     explicitColumnQuery = numCol > 0;
     this.scan = scan;
     this.columns = columns;
-    oldestUnexpiredTS = EnvironmentEdgeManager.currentTime() - ttl;
+    this.now = EnvironmentEdgeManager.currentTime();
+    this.oldestUnexpiredTS = now - ttl;
     this.minVersions = minVersions;
 
     if (store != null && ((HStore)store).getHRegion() != null
         && ((HStore)store).getHRegion().getBaseConf() != null) {
-      this.maxRowSize = ((HStore) store).getHRegion().getBaseConf().getLong(
-        HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
+      Configuration conf = ((HStore) store).getHRegion().getBaseConf();
+      this.maxRowSize =
+          conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
+      this.scanUsePread = conf.getBoolean("hbase.storescanner.use.pread", scan.isSmall());
     } else {
       this.maxRowSize = HConstants.TABLE_MAX_ROWSIZE_DEFAULT;
+      this.scanUsePread = scan.isSmall();
     }
 
     // We look up row-column Bloom filters for multi-column queries as part of
@@ -138,7 +144,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // for multi-row (non-"get") scans because this is not done in
     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
     useRowColBloom = numCol > 1 || (!isGet && numCol == 1);
-    this.scanUsePread = scan.isSmall();
+
     // The parallel-seeking is on :
     // 1) the config value is *true*
     // 2) store has more than one store file
@@ -172,7 +178,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
     matcher = new ScanQueryMatcher(scan, scanInfo, columns,
         ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP,
-        oldestUnexpiredTS, store.getCoprocessorHost());
+        oldestUnexpiredTS, now, store.getCoprocessorHost());
 
     this.store.addChangedReaderObserver(this);
 
@@ -237,10 +243,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
     if (dropDeletesFromRow == null) {
       matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType, smallestReadPoint,
-          earliestPutTs, oldestUnexpiredTS, store.getCoprocessorHost());
+          earliestPutTs, oldestUnexpiredTS, now, store.getCoprocessorHost());
     } else {
       matcher = new ScanQueryMatcher(scan, scanInfo, null, smallestReadPoint, earliestPutTs,
-          oldestUnexpiredTS, dropDeletesFromRow, dropDeletesToRow, store.getCoprocessorHost());
+          oldestUnexpiredTS, now, dropDeletesFromRow, dropDeletesToRow, store.getCoprocessorHost());
     }
 
     // Filter the list of scanners using Bloom filters, time range, TTL, etc.
@@ -280,7 +286,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this(null, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
         scanInfo.getMinVersions(), readPt);
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
-        Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS, null);
+        Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS, now, null);
 
     // In unit tests, the store could be null
     if (this.store != null) {
@@ -332,7 +338,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           scanner.seek(seekKey);
           Cell c = scanner.peek();
           if (c != null ) {
-            totalScannersSoughtBytes += CellUtil.estimatedSizeOf(c);
+            totalScannersSoughtBytes += CellUtil.estimatedSerializedSizeOf(c);
           }
         }
       } else {
@@ -515,7 +521,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (this.countPerRow > storeOffset) {
             outResult.add(cell);
             count++;
-            totalBytesRead += CellUtil.estimatedSizeOf(cell);
+            totalBytesRead += CellUtil.estimatedSerializedSizeOf(cell);
             if (totalBytesRead > maxRowSize) {
               throw new RowTooBigException("Max row size allowed: " + maxRowSize
               + ", but the row is bigger than that.");

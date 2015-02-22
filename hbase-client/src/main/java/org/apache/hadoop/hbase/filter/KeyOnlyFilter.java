@@ -22,13 +22,14 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -49,15 +50,24 @@ public class KeyOnlyFilter extends FilterBase {
   public KeyOnlyFilter(boolean lenAsVal) { this.lenAsVal = lenAsVal; }
 
   @Override
-  public Cell transformCell(Cell kv) {
-    // TODO Move to KeyValueUtil
+  public Cell transformCell(Cell cell) {
+    return createKeyOnlyCell(cell);
+  }
 
-    // TODO make matching Column a cell method or CellUtil method.
-    // Even if we want to make use of KeyValue.KeyOnlyKeyValue we need to convert
-    // the cell to KV so that we can make use of kv.getKey() to form the key part
-    KeyValue v = KeyValueUtil.ensureKeyValue(kv);
-
-    return v.createKeyOnly(this.lenAsVal);
+  private Cell createKeyOnlyCell(Cell c) {
+    // KV format: <keylen:4><valuelen:4><key:keylen><value:valuelen>
+    // Rebuild as: <keylen:4><0:4><key:keylen>
+    int dataLen = lenAsVal ? Bytes.SIZEOF_INT : 0;
+    int keyOffset = (2 * Bytes.SIZEOF_INT);
+    int keyLen = KeyValueUtil.keyLength(c);
+    byte[] newBuffer = new byte[keyLen + keyOffset + dataLen];
+    Bytes.putInt(newBuffer, 0, keyLen);
+    Bytes.putInt(newBuffer, Bytes.SIZEOF_INT, dataLen);
+    KeyValueUtil.appendKeyTo(c, newBuffer, keyOffset);
+    if (lenAsVal) {
+      Bytes.putInt(newBuffer, newBuffer.length - dataLen, c.getValueLength());
+    }
+    return new KeyValue(newBuffer);
   }
 
   @Override

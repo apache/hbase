@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.master.handler;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -50,7 +50,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
   @Override
   protected void prepareWithTableLock() throws IOException {
     super.prepareWithTableLock();
-    HTableDescriptor htd = getTableDescriptor();
+    HTableDescriptor htd = getTableDescriptor().getHTableDescriptor();
     this.familyName = hasColumnFamily(htd, familyName);
   }
 

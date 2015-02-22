@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -35,7 +36,7 @@ import com.google.common.base.Preconditions;
  *      0.94.0
  * @see ConstantSizeRegionSplitPolicy Default split policy before 0.94.0
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public abstract class RegionSplitPolicy extends Configured {
   private static final Class<? extends RegionSplitPolicy>
     DEFAULT_SPLIT_POLICY_CLASS = IncreasingToUpperBoundRegionSplitPolicy.class;
@@ -123,5 +124,17 @@ public abstract class RegionSplitPolicy extends Configured {
           className + "' for table '" + htd.getTableName() + "'",
           e);
     }
+  }
+
+  /**
+   * In {@link HRegionFileSystem#splitStoreFile(org.apache.hadoop.hbase.HRegionInfo, String,
+   * StoreFile, byte[], boolean, RegionSplitPolicy)} we are not creating the split reference
+   * if split row not lies in the StoreFile range. But in some use cases we may need to create
+   * the split reference even when the split row not lies in the range. This method can be used
+   * to decide, whether to skip the the StoreFile range check or not.
+   * @return whether to skip the StoreFile range check or not
+   */
+  protected boolean skipStoreFileRangeCheck() {
+    return false;
   }
 }

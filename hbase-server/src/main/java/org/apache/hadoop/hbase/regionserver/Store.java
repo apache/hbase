@@ -22,8 +22,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -48,7 +50,7 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface Store extends HeapSize, StoreConfigInformation {
+public interface Store extends HeapSize, StoreConfigInformation, PropagatingConfigurationObserver {
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)
@@ -148,10 +150,10 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * see deletes before we come across cells we are to delete. Presumption is that the
    * memstore#kvset is processed before memstore#snapshot and so on.
    * @param row The row key of the targeted row.
-   * @return Found keyvalue or null if none found.
+   * @return Found Cell or null if none found.
    * @throws IOException
    */
-  KeyValue getRowKeyAtOrBefore(final byte[] row) throws IOException;
+  Cell getRowKeyAtOrBefore(final byte[] row) throws IOException;
 
   FileSystem getFileSystem();
 
@@ -187,7 +189,8 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   void cancelRequestedCompaction(CompactionContext compaction);
 
-  List<StoreFile> compact(CompactionContext compaction) throws IOException;
+  List<StoreFile> compact(CompactionContext compaction,
+      CompactionThroughputController throughputController) throws IOException;
 
   /**
    * @return true if we should run a major compaction.
@@ -395,5 +398,22 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * the primary region files.
    * @throws IOException
    */
-   void refreshStoreFiles() throws IOException;
+  void refreshStoreFiles() throws IOException;
+
+  /**
+   * This value can represent the degree of emergency of compaction for this store. It should be
+   * greater than or equal to 0.0, any value greater than 1.0 means we have too many store files.
+   * <ul>
+   * <li>if getStorefilesCount &lt;= getMinFilesToCompact, return 0.0</li>
+   * <li>return (getStorefilesCount - getMinFilesToCompact) / (blockingFileCount -
+   * getMinFilesToCompact)</li>
+   * </ul>
+   * <p>
+   * And for striped stores, we should calculate this value by the files in each stripe separately
+   * and return the maximum value.
+   * <p>
+   * It is similar to {@link #getCompactPriority()} except that it is more suitable to use in a
+   * linear formula.
+   */
+  double getCompactionPressure();
 }

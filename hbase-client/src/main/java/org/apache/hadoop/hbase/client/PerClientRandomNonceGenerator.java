@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.client;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * NonceGenerator implementation that uses client ID hash + random int as nonce group,

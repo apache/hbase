@@ -15,7 +15,7 @@
 #set -x
 
 ### Setup some variables.  
-### SVN_REVISION and BUILD_URL are set by Hudson if it is run by patch process
+### GIT_COMMIT and BUILD_URL are set by Hudson if it is run by patch process
 ### Read variables from properties file
 bindir=$(dirname $0)
 
@@ -26,15 +26,19 @@ else
   MVN=$MAVEN_HOME/bin/mvn
 fi
 
+NEWLINE=$'\n'
+
 PROJECT_NAME=HBase
 JENKINS=false
 PATCH_DIR=/tmp
 BASEDIR=$(pwd)
+BRANCH_NAME="master"
+
+. $BASEDIR/dev-support/test-patch.properties
 
 PS=${PS:-ps}
 AWK=${AWK:-awk}
 WGET=${WGET:-wget}
-SVN=${SVN:-svn}
 GREP=${GREP:-grep}
 EGREP=${EGREP:-egrep}
 PATCH=${PATCH:-patch}
@@ -42,6 +46,7 @@ JIRACLI=${JIRA:-jira}
 FINDBUGS_HOME=${FINDBUGS_HOME}
 FORREST_HOME=${FORREST_HOME}
 ECLIPSE_HOME=${ECLIPSE_HOME}
+GIT=${GIT:-git}
 
 ###############################################################################
 printUsage() {
@@ -57,12 +62,12 @@ printUsage() {
   echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \$MAVEN_HOME/bin/mvn, or 'mvn')"
   echo "--ps-cmd=<cmd>         The 'ps' command to use (default 'ps')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
-  echo "--svn-cmd=<cmd>        The 'svn' command to use (default 'svn')"
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
   echo "--patch-cmd=<cmd>      The 'patch' command to use (default 'patch')"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
   echo "--forrest-home=<path>  Forrest home directory (default FORREST_HOME environment variable)"
-  echo "--dirty-workspace      Allow the local SVN workspace to have uncommitted changes"
+  echo "--dirty-workspace      Allow the local workspace to have uncommitted changes"
+  echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
   echo
   echo "Jenkins-only options:"
   echo "--jenkins              Run by Jenkins (runs tests and posts results to JIRA)"
@@ -98,9 +103,6 @@ parseArgs() {
     --wget-cmd=*)
       WGET=${i#*=}
       ;;
-    --svn-cmd=*)
-      SVN=${i#*=}
-      ;;
     --grep-cmd=*)
       GREP=${i#*=}
       ;;
@@ -124,6 +126,9 @@ parseArgs() {
       ;;
     --dirty-workspace)
       DIRTY_WORKSPACE=true
+      ;;
+    --git-cmd=*)
+      GIT=${i#*=}
       ;;
     *)
       PATCH_OR_DEFECT=$i
@@ -175,21 +180,62 @@ checkout () {
   echo ""
   ### When run by a developer, if the workspace contains modifications, do not continue
   ### unless the --dirty-workspace option was set
-  status=`$SVN stat --ignore-externals | sed -e '/^X[ ]*/D'`
   if [[ $JENKINS == "false" ]] ; then
-    if [[ "$status" != "" && -z $DIRTY_WORKSPACE ]] ; then
-      echo "ERROR: can't run in a workspace that contains the following modifications"
-      echo "$status"
-      cleanupAndExit 1
+    if [[ -z $DIRTY_WORKSPACE ]] ; then
+      # Ref http://stackoverflow.com/a/2659808 for details on checking dirty status
+      ${GIT} diff-index --quiet HEAD
+      if [[ $? -ne 0 ]] ; then
+        uncommitted=`${GIT} diff --name-only HEAD`
+        uncommitted="You have the following files with uncommitted changes:${NEWLINE}${uncommitted}"
+      fi
+      untracked="$(${GIT} ls-files --exclude-standard --others)" && test -z "${untracked}"
+      if [[ $? -ne 0 ]] ; then
+        untracked="You have untracked and unignored files:${NEWLINE}${untracked}"
+      fi
+      if [[ $uncommitted || $untracked ]] ; then
+        echo "ERROR: can't run in a workspace that contains modifications."
+        echo "Pass the '--dirty-workspace' flag to bypass."
+        echo ""
+        echo "${uncommitted}"
+        echo ""
+        echo "${untracked}"
+        cleanupAndExit 1
+      fi
     fi
     echo
-  else   
-    cd $BASEDIR
-    $SVN revert -R .
-    rm -rf `$SVN status --no-ignore`
-    $SVN update
   fi
   return $?
+}
+
+findBranchNameFromPatchName() {
+  local patchName=$1
+  for LOCAL_BRANCH_NAME in $BRANCH_NAMES; do
+    if [[ $patchName =~ .*$LOCAL_BRANCH_NAME.* ]]; then
+      BRANCH_NAME=$LOCAL_BRANCH_NAME
+      break
+    fi
+  done
+  return 0
+}
+
+checkoutBranch() {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Testing patch on branch ${BRANCH_NAME}."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  if [[ $JENKINS == "true" ]] ; then
+    if [[ "$BRANCH_NAME" != "master" ]]; then
+      echo "${GIT} checkout ${BRANCH_NAME}"
+      ${GIT} checkout ${BRANCH_NAME}
+      echo "${GIT} status"
+      ${GIT} status
+    fi
+  fi
 }
 
 ###############################################################################
@@ -214,13 +260,14 @@ setup () {
     echo "$defect patch is being downloaded at `date` from"
     echo "$patchURL"
     $WGET -q -O $PATCH_DIR/patch $patchURL
-    VERSION=${SVN_REVISION}_${defect}_PATCH-${patchNum}
+    VERSION=${GIT_COMMIT}_${defect}_PATCH-${patchNum}
+    findBranchNameFromPatchName ${relativePatchURL}
+    checkoutBranch
     JIRA_COMMENT="Here are the results of testing the latest attachment 
   $patchURL
-  against trunk revision ${SVN_REVISION}.
+  against ${BRANCH_NAME} branch at commit ${GIT_COMMIT}.
   ATTACHMENT ID: ${ATTACHMENT_ID}"
 
-    #PENDING: cp -f $SUPPORT_DIR/etc/checkstyle* ./src/test
   ### Copy the patch file to $PATCH_DIR
   else
     VERSION=PATCH-${defect}
@@ -232,7 +279,6 @@ setup () {
       cleanupAndExit 0
     fi
   fi
-  . $BASEDIR/dev-support/test-patch.properties
   ### exit if warnings are NOT defined in the properties file
   if [ -z "$OK_FINDBUGS_WARNINGS" ] || [[ -z "$OK_JAVADOC_WARNINGS" ]] || [[ -z $OK_RELEASEAUDIT_WARNINGS ]] ; then
     echo "Please define the following properties in test-patch.properties file"
@@ -245,21 +291,22 @@ setup () {
   echo ""
   echo "======================================================================"
   echo "======================================================================"
-  echo " Pre-build trunk to verify trunk stability and javac warnings" 
+  echo " Pre-build master to verify stability and javac warnings"
   echo "======================================================================"
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+  echo "$MVN clean package checkstyle:checkstyle-aggregate -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
-  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
+  $MVN clean package checkstyle:checkstyle-aggregate -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     ERR=`$GREP -A 5 'Compilation failure' $PATCH_DIR/trunkJavacWarnings.txt`
     echo "Trunk compilation is broken?
     {code}$ERR{code}"
     cleanupAndExit 1
   fi
+  mv target/checkstyle-result.xml $PATCH_DIR/trunkCheckstyle.xml
 }
 
 ###############################################################################
@@ -446,6 +493,9 @@ checkJavadocWarnings () {
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 javadoc{color}.  The javadoc tool appears to have generated `expr $(($javadocWarnings-$OK_JAVADOC_WARNINGS))` warning messages."
+    # Add javadoc output url
+    JIRA_COMMENT_FOOTER="Javadoc warnings: $BUILD_URL/artifact/patchprocess/patchJavadocWarnings.txt
+$JIRA_COMMENT_FOOTER"
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
@@ -479,7 +529,7 @@ checkJavacWarnings () {
       if [[ $patchJavacWarnings -gt $trunkJavacWarnings ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 javac{color}.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
+    {color:red}-1 javac{color}.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the master's current $trunkJavacWarnings warnings)."
         return 1
       fi
     fi
@@ -490,6 +540,45 @@ checkJavacWarnings () {
   return 0
 }
 
+checkCheckstyleErrors() {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Determining number of patched Checkstyle errors."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  if [[ -f $PATCH_DIR/trunkCheckstyle.xml ]] ; then
+    $MVN package -DskipTests checkstyle:checkstyle-aggregate > /dev/null 2>&1
+    mv target/checkstyle-result.xml $PATCH_DIR/patchCheckstyle.xml
+    mv target/site/checkstyle-aggregate.html $PATCH_DIR
+    mv target/site/checkstyle.css $PATCH_DIR
+    trunkCheckstyleErrors=`$GREP '<error' $PATCH_DIR/trunkCheckstyle.xml | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
+    patchCheckstyleErrors=`$GREP '<error' $PATCH_DIR/patchCheckstyle.xml | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
+    if [[ $patchCheckstyleErrors -gt $trunkCheckstyleErrors ]] ; then
+                JIRA_COMMENT_FOOTER="Checkstyle Errors: $BUILD_URL/artifact/patchprocess/checkstyle-aggregate.html
+
+                $JIRA_COMMENT_FOOTER"
+
+                JIRA_COMMENT="$JIRA_COMMENT
+
+                {color:red}-1 checkstyle{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the master's current $trunkCheckstyleErrors errors)."
+        return 1
+    fi
+    echo "There were $patchCheckstyleErrors checkstyle errors in this patch compared to $trunkCheckstyleErrors on master."
+  fi
+  JIRA_COMMENT_FOOTER="Checkstyle Errors: $BUILD_URL/artifact/patchprocess/checkstyle-aggregate.html
+
+  $JIRA_COMMENT_FOOTER"
+
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+1 checkstyle{color}.  The applied patch does not increase the total number of checkstyle errors"
+  return 0
+
+}
 ###############################################################################
 checkProtocErrors () {
   echo ""
@@ -538,10 +627,10 @@ checkReleaseAuditWarnings () {
       if [[ $patchReleaseAuditWarnings -gt $OK_RELEASEAUDIT_WARNINGS ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 release audit{color}.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $OK_RELEASEAUDIT_WARNINGS warnings)."
+    {color:red}-1 release audit{color}.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the master's current $OK_RELEASEAUDIT_WARNINGS warnings)."
         $GREP '\!?????' $PATCH_DIR/patchReleaseAuditWarnings.txt > $PATCH_DIR/patchReleaseAuditProblems.txt
         echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." >> $PATCH_DIR/patchReleaseAuditProblems.txt
-        JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/trunk/patchprocess/patchReleaseAuditProblems.txt
+        JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/patchprocess/patchReleaseAuditWarnings.txt
 $JIRA_COMMENT_FOOTER"
         return 1
       fi
@@ -550,41 +639,6 @@ $JIRA_COMMENT_FOOTER"
   JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 release audit{color}.  The applied patch does not increase the total number of release audit warnings."
-  return 0
-}
-
-###############################################################################
-### Check there are no changes in the number of Checkstyle warnings
-checkStyle () {
-  echo ""
-  echo ""
-  echo "======================================================================"
-  echo "======================================================================"
-  echo "    Determining number of patched checkstyle warnings."
-  echo "======================================================================"
-  echo "======================================================================"
-  echo ""
-  echo ""
-  echo "THIS IS NOT IMPLEMENTED YET"
-  echo ""
-  echo ""
-  echo "$MVN package checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess -DskipTests"
-  export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN package checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess -DskipTests
-
-  JIRA_COMMENT_FOOTER="Checkstyle results: $BUILD_URL/artifact/trunk/build/test/checkstyle-errors.html
-$JIRA_COMMENT_FOOTER"
-  ### TODO: calculate actual patchStyleErrors
-#  patchStyleErrors=0
-#  if [[ $patchStyleErrors != 0 ]] ; then
-#    JIRA_COMMENT="$JIRA_COMMENT
-#
-#    {color:red}-1 checkstyle{color}.  The patch generated $patchStyleErrors code style errors."
-#    return 1
-#  fi
-#  JIRA_COMMENT="$JIRA_COMMENT
-#
-#    {color:green}+1 checkstyle{color}.  The patch generated 0 code style errors."
   return 0
 }
 
@@ -702,10 +756,10 @@ runTests () {
   condemnedCount=`$PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
   echo "WARNING: $condemnedCount rogue build processes detected, terminating."
   $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
-  echo "$MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess"
+  echo "$MVN clean test -Dsurefire.rerunFailingTestsCount=2 -P runAllTests -D${PROJECT_NAME}PatchProcess"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   ulimit -a
-  $MVN clean test -P runAllTests -D${PROJECT_NAME}PatchProcess
+  $MVN clean test -Dsurefire.rerunFailingTestsCount=2 -P runAllTests -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
      ### Find and format names of failed tests
      failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
@@ -760,9 +814,9 @@ checkSiteXml () {
   echo ""
   echo ""
 
-  echo "$MVN compile site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
+  echo "$MVN package site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN compile site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
+  $MVN package site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -908,9 +962,8 @@ checkProtocErrors
 (( RESULT = RESULT + $? ))
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
-### Checkstyle not implemented yet
-#checkStyle
-#(( RESULT = RESULT + $? ))
+checkCheckstyleErrors
+(( RESULT = RESULT + $? ))
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings

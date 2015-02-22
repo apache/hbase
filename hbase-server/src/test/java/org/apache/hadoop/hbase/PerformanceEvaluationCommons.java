@@ -45,11 +45,22 @@ public class PerformanceEvaluationCommons {
     assertKey(expected, b);
   }
 
+  public static void assertKey(final byte [] expected, final Cell c) {
+    assertKey(expected, c.getRowArray(), c.getRowOffset(), c.getRowLength());
+  }
+
   public static void assertKey(final byte [] expected, final byte [] got) {
-    if (!org.apache.hadoop.hbase.util.Bytes.equals(expected, got)) {
+    assertKey(expected, got, 0, got.length);
+  }
+
+  public static void assertKey(final byte [] expected, final byte [] gotArray,
+      final int gotArrayOffset, final int gotArrayLength) {
+    if (!org.apache.hadoop.hbase.util.Bytes.equals(expected, 0, expected.length,
+        gotArray, gotArrayOffset, gotArrayLength)) {
       throw new AssertionError("Expected " +
         org.apache.hadoop.hbase.util.Bytes.toString(expected) +
-        " but got " + org.apache.hadoop.hbase.util.Bytes.toString(got));
+        " but got " +
+        org.apache.hadoop.hbase.util.Bytes.toString(gotArray, gotArrayOffset, gotArrayLength));
     }
   }
 

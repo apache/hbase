@@ -25,6 +25,11 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -54,7 +58,7 @@ import com.google.protobuf.ServiceException;
 /**
  * TestEndpoint: test cases to verify the batch execution of coprocessor Endpoint
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestBatchCoprocessorEndpoint {
   private static final Log LOG = LogFactory.getLog(TestBatchCoprocessorEndpoint.class);
 
@@ -83,14 +87,14 @@ public class TestBatchCoprocessorEndpoint {
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         ProtobufCoprocessorService.class.getName());
     util.startMiniCluster(2);
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = util.getHBaseAdmin();
     HTableDescriptor desc = new HTableDescriptor(TEST_TABLE);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
     util.waitUntilAllRegionsAssigned(TEST_TABLE);
     admin.close();
 
-    HTable table = new HTable(conf, TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
       put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
@@ -106,7 +110,7 @@ public class TestBatchCoprocessorEndpoint {
 
   @Test
   public void testAggregationNullResponse() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     ColumnAggregationWithNullResponseProtos.SumRequest.Builder builder =
         ColumnAggregationWithNullResponseProtos.SumRequest
         .newBuilder();
@@ -143,7 +147,7 @@ public class TestBatchCoprocessorEndpoint {
     return ret;
   }
 
-  private Map<byte[], SumResponse> sum(final HTable table, final byte[] family,
+  private Map<byte[], SumResponse> sum(final Table table, final byte[] family,
       final byte[] qualifier, final byte[] start, final byte[] end) throws ServiceException,
       Throwable {
     ColumnAggregationProtos.SumRequest.Builder builder = ColumnAggregationProtos.SumRequest
@@ -159,7 +163,7 @@ public class TestBatchCoprocessorEndpoint {
 
   @Test
   public void testAggregationWithReturnValue() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     Map<byte[], SumResponse> results = sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[0],
         ROWS[ROWS.length - 1]);
     int sumResult = 0;
@@ -195,7 +199,7 @@ public class TestBatchCoprocessorEndpoint {
 
   @Test
   public void testAggregation() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     Map<byte[], SumResponse> results = sum(table, TEST_FAMILY, TEST_QUALIFIER,
         ROWS[0], ROWS[ROWS.length - 1]);
     int sumResult = 0;
@@ -228,7 +232,7 @@ public class TestBatchCoprocessorEndpoint {
 
   @Test
   public void testAggregationWithErrors() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = util.getConnection().getTable(TEST_TABLE);
     final Map<byte[], ColumnAggregationWithErrorsProtos.SumResponse> results =
         Collections.synchronizedMap(
             new TreeMap<byte[], ColumnAggregationWithErrorsProtos.SumResponse>(

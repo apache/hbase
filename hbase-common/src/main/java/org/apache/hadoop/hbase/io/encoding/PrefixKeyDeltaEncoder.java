@@ -21,9 +21,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -45,32 +48,76 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
   @Override
-  public int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingContext,
+  public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
       DataOutputStream out) throws IOException {
-    byte[] kvBuf = kv.getBuffer();
-    int klength = kv.getKeyLength();
-    int vlength = kv.getValueLength();
+    int klength = KeyValueUtil.keyLength(cell);
+    int vlength = cell.getValueLength();
     EncodingState state = encodingContext.getEncodingState();
-    if (state.prevKv == null) {
+    if (state.prevCell == null) {
       // copy the key, there is no common prefix with none
       ByteBufferUtils.putCompressedInt(out, klength);
       ByteBufferUtils.putCompressedInt(out, vlength);
       ByteBufferUtils.putCompressedInt(out, 0);
-      out.write(kvBuf, kv.getKeyOffset(), klength + vlength);
+      CellUtil.writeFlatKey(cell, out);
     } else {
       // find a common prefix and skip it
-      int common = ByteBufferUtils.findCommonPrefix(state.prevKv.getBuffer(),
-          state.prevKv.getKeyOffset(), state.prevKv.getKeyLength(), kvBuf, kv.getKeyOffset(),
-          kv.getKeyLength());
+      int common = CellUtil.findCommonPrefixInFlatKey(cell, state.prevCell, true, true);
       ByteBufferUtils.putCompressedInt(out, klength - common);
       ByteBufferUtils.putCompressedInt(out, vlength);
       ByteBufferUtils.putCompressedInt(out, common);
-      out.write(kvBuf, kv.getKeyOffset() + common, klength - common + vlength);
+      writeKeyExcludingCommon(cell, common, out);
     }
+    // Write the value part
+    out.write(cell.getValueArray(), cell.getValueOffset(), vlength);
     int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
-    size += afterEncodingKeyValue(kv, out, encodingContext);
-    state.prevKv = kv;
+    size += afterEncodingKeyValue(cell, out, encodingContext);
+    state.prevCell = cell;
     return size;
+  }
+
+  private void writeKeyExcludingCommon(Cell cell, int commonPrefix, DataOutputStream out)
+      throws IOException {
+    short rLen = cell.getRowLength();
+    if (commonPrefix < rLen + KeyValue.ROW_LENGTH_SIZE) {
+      // Previous and current rows are different. Need to write the differing part followed by
+      // cf,q,ts and type
+      CellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
+      byte fLen = cell.getFamilyLength();
+      out.writeByte(fLen);
+      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), fLen);
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+      out.writeLong(cell.getTimestamp());
+      out.writeByte(cell.getTypeByte());
+    } else {
+      // The full row key part is common. CF part will be common for sure as we deal with Cells in
+      // same family. Just need write the differing part in q, ts and type
+      commonPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
+          - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
+      int qLen = cell.getQualifierLength();
+      int commonQualPrefix = Math.min(commonPrefix, qLen);
+      int qualPartLenToWrite = qLen - commonQualPrefix;
+      if (qualPartLenToWrite > 0) {
+        out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonQualPrefix,
+            qualPartLenToWrite);
+      }
+      commonPrefix -= commonQualPrefix;
+      // Common part in TS also?
+      if (commonPrefix > 0) {
+        int commonTimestampPrefix = Math.min(commonPrefix, KeyValue.TIMESTAMP_SIZE);
+        if (commonTimestampPrefix < KeyValue.TIMESTAMP_SIZE) {
+          byte[] curTsBuf = Bytes.toBytes(cell.getTimestamp());
+          out.write(curTsBuf, commonTimestampPrefix, KeyValue.TIMESTAMP_SIZE
+              - commonTimestampPrefix);
+        }
+        commonPrefix -= commonTimestampPrefix;
+        if (commonPrefix == 0) {
+          out.writeByte(cell.getTypeByte());
+        }
+      } else {
+        out.writeLong(cell.getTimestamp());
+        out.writeByte(cell.getTypeByte());
+      }
+    }
   }
 
   @Override
@@ -137,8 +184,10 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
     int pos = block.position();
     block.reset();
-    return ByteBuffer.wrap(block.array(), block.arrayOffset() + pos, keyLength)
-        .slice();
+    ByteBuffer dup = block.duplicate();
+    dup.position(pos);
+    dup.limit(pos + keyLength);
+    return dup.slice();
   }
 
   @Override

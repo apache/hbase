@@ -31,10 +31,9 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -121,9 +120,9 @@ public final class Constraints {
     disable(desc);
 
     // remove all the constraint settings
-    List<ImmutableBytesWritable> keys = new ArrayList<ImmutableBytesWritable>();
+    List<Bytes> keys = new ArrayList<Bytes>();
     // loop through all the key, values looking for constraints
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e : desc
+    for (Map.Entry<Bytes, Bytes> e : desc
         .getValues().entrySet()) {
       String key = Bytes.toString((e.getKey().get()));
       String[] className = CONSTRAINT_HTD_ATTR_KEY_PATTERN.split(key);
@@ -132,7 +131,7 @@ public final class Constraints {
       }
     }
     // now remove all the keys we found
-    for (ImmutableBytesWritable key : keys) {
+    for (Bytes key : keys) {
       desc.remove(key);
     }
   }
@@ -562,7 +561,7 @@ public final class Constraints {
       ClassLoader classloader) throws IOException {
     List<Constraint> constraints = new ArrayList<Constraint>();
     // loop through all the key, values looking for constraints
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e : desc
+    for (Map.Entry<Bytes, Bytes> e : desc
         .getValues().entrySet()) {
       // read out the constraint
       String key = Bytes.toString(e.getKey().get()).trim();

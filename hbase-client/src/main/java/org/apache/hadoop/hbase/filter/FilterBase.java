@@ -23,10 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Abstract base class to help you implement new Filters.  Common "ignore" or NOOP type
@@ -78,20 +76,7 @@ public abstract class FilterBase extends Filter {
    */
   @Override
   public Cell transformCell(Cell v) throws IOException {
-    // Old filters based off of this class will override KeyValue transform(KeyValue).
-    // Thus to maintain compatibility we need to call the old version.
-    return transform(KeyValueUtil.ensureKeyValue(v));
-  }
-
-  /**
-   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
-   *
-   * This is for transition from 0.94 -> 0.96
-   */
-  @Override
-  @Deprecated
-  public KeyValue transform(KeyValue currentKV) throws IOException {
-    return currentKV;
+    return v;
   }
 
   /**
@@ -127,15 +112,6 @@ public abstract class FilterBase extends Filter {
     return false;
   }
 
-  /**
-   * This method is deprecated and you should override Cell getNextKeyHint(Cell) instead.
-   */
-  @Override
-  @Deprecated
-  public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
-    return null;
-  }
-  
   /**
    * Filters that are not sure which key must be next seeked to, can inherit
    * this implementation that, by default, returns a null Cell.

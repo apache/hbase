@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.token;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -33,22 +34,26 @@ import java.util.concurrent.ExecutorService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -58,6 +63,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -87,7 +94,7 @@ import com.google.protobuf.ServiceException;
 /**
  * Tests for authentication token creation and usage
  */
-@Category(MediumTests.class)
+@Category({SecurityTests.class, MediumTests.class})
 public class TestTokenAuthentication {
   static {
     // Setting whatever system properties after recommendation from
@@ -145,7 +152,7 @@ public class TestTokenAuthentication {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -238,6 +245,11 @@ public class TestTokenAuthentication {
         public ClassLoader getClassLoader() {
           return Thread.currentThread().getContextClassLoader();
         }
+
+        @Override
+        public HRegionInfo getRegionInfo() {
+          return null;
+        }
       });
 
       started = true;
@@ -314,8 +326,12 @@ public class TestTokenAuthentication {
         throw new ServiceException(ioe);
       }
     }
-  }
 
+    @Override
+    public ChoreService getChoreService() {
+      return null;
+    }
+  }
 
   private static HBaseTestingUtility TEST_UTIL;
   private static TokenServer server;
@@ -397,26 +413,53 @@ public class TestTokenAuthentication {
     testuser.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws Exception {
         Configuration c = server.getConfiguration();
-        RpcClient rpcClient = new RpcClient(c, clusterId.toString());
+        RpcClient rpcClient = RpcClientFactory.createClient(c, clusterId.toString());
         ServerName sn =
             ServerName.valueOf(server.getAddress().getHostName(), server.getAddress().getPort(),
                 System.currentTimeMillis());
         try {
           BlockingRpcChannel channel = rpcClient.createBlockingRpcChannel(sn,
-            User.getCurrent(), HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+              User.getCurrent(), HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
           AuthenticationProtos.AuthenticationService.BlockingInterface stub =
-            AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
+              AuthenticationProtos.AuthenticationService.newBlockingStub(channel);
           AuthenticationProtos.WhoAmIResponse response =
-            stub.whoAmI(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
+              stub.whoAmI(null, AuthenticationProtos.WhoAmIRequest.getDefaultInstance());
           String myname = response.getUsername();
           assertEquals("testuser", myname);
           String authMethod = response.getAuthMethod();
           assertEquals("TOKEN", authMethod);
         } finally {
-          rpcClient.stop();
+          rpcClient.close();
         }
         return null;
       }
     });
+  }
+
+  @Test
+  public void testUseExistingToken() throws Exception {
+    User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "testuser2",
+        new String[]{"testgroup"});
+    Token<AuthenticationTokenIdentifier> token =
+        secretManager.generateToken(user.getName());
+    assertNotNull(token);
+    user.addToken(token);
+
+    // make sure we got a token
+    Token<AuthenticationTokenIdentifier> firstToken =
+        new AuthenticationTokenSelector().selectToken(token.getService(), user.getTokens());
+    assertNotNull(firstToken);
+    assertEquals(token, firstToken);
+
+    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    try {
+      assertFalse(TokenUtil.addTokenIfMissing(conn, user));
+      // make sure we still have the same token
+      Token<AuthenticationTokenIdentifier> secondToken =
+          new AuthenticationTokenSelector().selectToken(token.getService(), user.getTokens());
+      assertEquals(firstToken, secondToken);
+    } finally {
+      conn.close();
+    }
   }
 }

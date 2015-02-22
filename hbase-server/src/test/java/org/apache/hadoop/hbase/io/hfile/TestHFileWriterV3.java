@@ -42,11 +42,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
@@ -63,7 +64,7 @@ import org.junit.runners.Parameterized.Parameters;
  * during the development of {@link HFileWriterV3}.
  */
 @RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestHFileWriterV3 {
 
   private static final Log LOG = LogFactory.getLog(TestHFileWriterV3.class);
@@ -175,7 +176,7 @@ public class TestHFileWriterV3 {
                         .withIncludesTags(useTags)
                         .withHBaseCheckSum(true).build();
     HFileBlock.FSReader blockReader =
-        new HFileBlock.FSReaderV2(fsdis, fileSize, meta);
+        new HFileBlock.FSReaderImpl(fsdis, fileSize, meta);
  // Comparator class name is stored in the trailer in version 2.
     KVComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
@@ -191,8 +192,7 @@ public class TestHFileWriterV3 {
     // Data index. We also read statistics about the block index written after
     // the root level.
     dataBlockIndexReader.readMultiLevelIndexRoot(
-        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
-        trailer.getDataIndexCount());
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
     
     if (findMidKey) {
       byte[] midkey = dataBlockIndexReader.midkey();
@@ -201,8 +201,8 @@ public class TestHFileWriterV3 {
     
     // Meta index.
     metaBlockIndexReader.readRootIndex(
-        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX).getByteStream(),
-        trailer.getMetaIndexCount());
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX)
+          .getByteStream(), trailer.getMetaIndexCount());
     // File info
     FileInfo fileInfo = new FileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
@@ -220,7 +220,8 @@ public class TestHFileWriterV3 {
     fsdis.seek(0);
     long curBlockPos = 0;
     while (curBlockPos <= trailer.getLastDataBlockOffset()) {
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false)
+        .unpack(context, blockReader);
       assertEquals(BlockType.DATA, block.getBlockType());
       ByteBuffer buf = block.getBufferWithoutHeader();
       int keyLen = -1;
@@ -278,7 +279,8 @@ public class TestHFileWriterV3 {
     while (fsdis.getPos() < trailer.getLoadOnOpenDataOffset()) {
       LOG.info("Current offset: " + fsdis.getPos() + ", scanning until " +
           trailer.getLoadOnOpenDataOffset());
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false)
+        .unpack(context, blockReader);
       assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
       ByteBuffer buf = block.getBufferWithoutHeader();

@@ -28,13 +28,15 @@ import java.util.concurrent.Semaphore;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -51,7 +53,7 @@ import org.mockito.Mockito;
 /**
  * Test the {@link ActiveMasterManager}.
  */
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestActiveMasterManager {
   private final static Log LOG = LogFactory.getLog(TestActiveMasterManager.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -258,7 +260,7 @@ public class TestActiveMasterManager {
       this.clusterStatusTracker =
         new ClusterStatusTracker(zk, this);
       clusterStatusTracker.start();
-      
+
       this.activeMasterManager =
         new ActiveMasterManager(zk, master, this);
       zk.registerListener(activeMasterManager);
@@ -303,7 +305,7 @@ public class TestActiveMasterManager {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -319,6 +321,10 @@ public class TestActiveMasterManager {
     public ActiveMasterManager getActiveMasterManager() {
       return activeMasterManager;
     }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
+    }
   }
 }
-

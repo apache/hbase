@@ -33,10 +33,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -56,7 +57,6 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -165,9 +165,6 @@ public class StoreFile {
    */
   private final BloomType cfBloomType;
 
-  // the last modification time stamp
-  private long modificationTimeStamp = 0L;
-
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a
    * substantial amount of ram depending on the underlying files (10-20MB?).
@@ -217,9 +214,17 @@ public class StoreFile {
           "cfBloomType=" + cfBloomType + " (disabled in config)");
       this.cfBloomType = BloomType.NONE;
     }
+  }
 
-    // cache the modification time stamp of this store file
-    this.modificationTimeStamp = fileInfo.getModificationTime();
+  /**
+   * Clone
+   * @param other The StoreFile to clone from
+   */
+  public StoreFile(final StoreFile other) {
+    this.fs = other.fs;
+    this.fileInfo = other.fileInfo;
+    this.cacheConf = other.cacheConf;
+    this.cfBloomType = other.cfBloomType;
   }
 
   /**
@@ -276,10 +281,15 @@ public class StoreFile {
     return this.sequenceid;
   }
 
-  public long getModificationTimeStamp() {
-    return modificationTimeStamp;
+  public long getModificationTimeStamp() throws IOException {
+    return (fileInfo == null) ? 0 : fileInfo.getModificationTime();
   }
 
+  /**
+   * Only used by the Striped Compaction Policy
+   * @param key
+   * @return value associated with the metadata key
+   */
   public byte[] getMetadataValue(byte[] key) {
     return metadataMap.get(key);
   }
@@ -318,18 +328,31 @@ public class StoreFile {
   }
 
   /**
-   * @return true if this storefile was created by HFileOutputFormat
-   * for a bulk load.
+   * Check if this storefile was created by bulk load.
+   * When a hfile is bulk loaded into HBase, we append
+   * '_SeqId_<id-when-loaded>' to the hfile name, unless
+   * "hbase.mapreduce.bulkload.assign.sequenceNumbers" is
+   * explicitly turned off.
+   * If "hbase.mapreduce.bulkload.assign.sequenceNumbers"
+   * is turned off, fall back to BULKLOAD_TIME_KEY.
+   * @return true if this storefile was created by bulk load.
    */
   boolean isBulkLoadResult() {
-    return metadataMap.containsKey(BULKLOAD_TIME_KEY);
+    boolean bulkLoadedHFile = false;
+    String fileName = this.getPath().getName();
+    int startPos = fileName.indexOf("SeqId_");
+    if (startPos != -1) {
+      bulkLoadedHFile = true;
+    }
+    return bulkLoadedHFile || metadataMap.containsKey(BULKLOAD_TIME_KEY);
   }
 
   /**
    * Return the timestamp at which this bulk load file was generated.
    */
   public long getBulkLoadTimestamp() {
-    return Bytes.toLong(metadataMap.get(BULKLOAD_TIME_KEY));
+    byte[] bulkLoadTimestamp = metadataMap.get(BULKLOAD_TIME_KEY);
+    return (bulkLoadTimestamp == null) ? 0 : Bytes.toLong(bulkLoadTimestamp);
   }
 
   /**
@@ -375,7 +398,8 @@ public class StoreFile {
       // generate the sequenceId from the fileName
       // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
       String fileName = this.getPath().getName();
-      int startPos = fileName.indexOf("SeqId_");
+      // Use lastIndexOf() to get the last, most recent bulk load seqId.
+      int startPos = fileName.lastIndexOf("SeqId_");
       if (startPos != -1) {
         this.sequenceid = Long.parseLong(fileName.substring(startPos + 6,
             fileName.indexOf('_', startPos + 6)));
@@ -688,14 +712,10 @@ public class StoreFile {
     private byte[] lastBloomKey;
     private int lastBloomKeyOffset, lastBloomKeyLen;
     private KVComparator kvComparator;
-    private KeyValue lastKv = null;
+    private Cell lastCell = null;
     private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
-    private KeyValue lastDeleteFamilyKV = null;
+    private Cell lastDeleteFamilyCell = null;
     private long deleteFamilyCnt = 0;
-
-
-    /** Checksum type */
-    protected ChecksumType checksumType;
 
     /** Bytes per Checksum */
     protected int bytesPerChecksum;
@@ -820,28 +840,28 @@ public class StoreFile {
      *
      * If the timeRangeTracker is not set,
      * update TimeRangeTracker to include the timestamp of this key
-     * @param kv
+     * @param cell
      */
-    public void trackTimestamps(final KeyValue kv) {
-      if (KeyValue.Type.Put.getCode() == kv.getTypeByte()) {
-        earliestPutTs = Math.min(earliestPutTs, kv.getTimestamp());
+    public void trackTimestamps(final Cell cell) {
+      if (KeyValue.Type.Put.getCode() == cell.getTypeByte()) {
+        earliestPutTs = Math.min(earliestPutTs, cell.getTimestamp());
       }
       if (!isTimeRangeTrackerSet) {
-        timeRangeTracker.includeTimestamp(kv);
+        timeRangeTracker.includeTimestamp(cell);
       }
     }
 
-    private void appendGeneralBloomfilter(final KeyValue kv) throws IOException {
+    private void appendGeneralBloomfilter(final Cell cell) throws IOException {
       if (this.generalBloomFilterWriter != null) {
         // only add to the bloom filter on a new, unique key
         boolean newKey = true;
-        if (this.lastKv != null) {
+        if (this.lastCell != null) {
           switch(bloomType) {
           case ROW:
-            newKey = ! kvComparator.matchingRows(kv, lastKv);
+            newKey = ! kvComparator.matchingRows(cell, lastCell);
             break;
           case ROWCOL:
-            newKey = ! kvComparator.matchingRowColumn(kv, lastKv);
+            newKey = ! kvComparator.matchingRowColumn(cell, lastCell);
             break;
           case NONE:
             newKey = false;
@@ -865,17 +885,17 @@ public class StoreFile {
 
           switch (bloomType) {
           case ROW:
-            bloomKey = kv.getRowArray();
-            bloomKeyOffset = kv.getRowOffset();
-            bloomKeyLen = kv.getRowLength();
+            bloomKey = cell.getRowArray();
+            bloomKeyOffset = cell.getRowOffset();
+            bloomKeyLen = cell.getRowLength();
             break;
           case ROWCOL:
             // merge(row, qualifier)
             // TODO: could save one buffer copy in case of compound Bloom
             // filters when this involves creating a KeyValue
-            bloomKey = generalBloomFilterWriter.createBloomKey(kv.getRowArray(),
-                kv.getRowOffset(), kv.getRowLength(), kv.getQualifierArray(),
-                kv.getQualifierOffset(), kv.getQualifierLength());
+            bloomKey = generalBloomFilterWriter.createBloomKey(cell.getRowArray(),
+                cell.getRowOffset(), cell.getRowLength(), cell.getQualifierArray(),
+                cell.getQualifierOffset(), cell.getQualifierLength());
             bloomKeyOffset = 0;
             bloomKeyLen = bloomKey.length;
             break;
@@ -897,14 +917,14 @@ public class StoreFile {
           lastBloomKey = bloomKey;
           lastBloomKeyOffset = bloomKeyOffset;
           lastBloomKeyLen = bloomKeyLen;
-          this.lastKv = kv;
+          this.lastCell = cell;
         }
       }
     }
 
-    private void appendDeleteFamilyBloomFilter(final KeyValue kv)
+    private void appendDeleteFamilyBloomFilter(final Cell cell)
         throws IOException {
-      if (!CellUtil.isDeleteFamily(kv) && !CellUtil.isDeleteFamilyVersion(kv)) {
+      if (!CellUtil.isDeleteFamily(cell) && !CellUtil.isDeleteFamilyVersion(cell)) {
         return;
       }
 
@@ -912,22 +932,22 @@ public class StoreFile {
       deleteFamilyCnt++;
       if (null != this.deleteFamilyBloomFilterWriter) {
         boolean newKey = true;
-        if (lastDeleteFamilyKV != null) {
-          newKey = !kvComparator.matchingRows(kv, lastDeleteFamilyKV);
+        if (lastDeleteFamilyCell != null) {
+          newKey = !kvComparator.matchingRows(cell, lastDeleteFamilyCell);
         }
         if (newKey) {
-          this.deleteFamilyBloomFilterWriter.add(kv.getRowArray(),
-              kv.getRowOffset(), kv.getRowLength());
-          this.lastDeleteFamilyKV = kv;
+          this.deleteFamilyBloomFilterWriter.add(cell.getRowArray(),
+              cell.getRowOffset(), cell.getRowLength());
+          this.lastDeleteFamilyCell = cell;
         }
       }
     }
 
-    public void append(final KeyValue kv) throws IOException {
-      appendGeneralBloomfilter(kv);
-      appendDeleteFamilyBloomFilter(kv);
-      writer.append(kv);
-      trackTimestamps(kv);
+    public void append(final Cell cell) throws IOException {
+      appendGeneralBloomfilter(cell);
+      appendDeleteFamilyBloomFilter(cell);
+      writer.append(cell);
+      trackTimestamps(cell);
     }
 
     public Path getPath() {

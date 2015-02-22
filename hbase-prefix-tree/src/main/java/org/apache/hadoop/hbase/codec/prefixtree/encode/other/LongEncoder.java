@@ -24,7 +24,7 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
@@ -75,7 +75,7 @@ public class LongEncoder {
   }
 
 
-	/************* methods ***************************/
+  /************* methods ***************************/
 
   public void add(long timestamp) {
     uniqueValues.add(timestamp);
@@ -158,7 +158,7 @@ public class LongEncoder {
   }
 
 
-	/******************** get/set **************************/
+  /******************** get/set **************************/
 
   public long getMin() {
     return min;

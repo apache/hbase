@@ -33,7 +33,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,11 +42,10 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -71,6 +69,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -91,7 +92,7 @@ import com.google.protobuf.ServiceException;
  * Test client behavior w/o setting up a cluster.
  * Mock up cluster emissions.
  */
-@Category(SmallTests.class)
+@Category({ClientTests.class, SmallTests.class})
 public class TestClientNoCluster extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(TestClientNoCluster.class);
   private Configuration conf;
@@ -114,7 +115,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     final ServerName META_HOST = META_SERVERNAME;
 
     @Override
-    public void init(HConnection connection) {
+    public void init(Connection connection) {
     }
 
     @Override
@@ -126,12 +127,6 @@ public class TestClientNoCluster extends Configured implements Tool {
     @Override
     public String getClusterId() {
       return HConstants.CLUSTER_ID_DEFAULT;
-    }
-
-    @Override
-    public boolean isTableOnlineState(TableName tableName, boolean enabled)
-    throws IOException {
-      return enabled;
     }
 
     @Override
@@ -150,7 +145,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     Configuration localConfig = HBaseConfiguration.create(this.conf);
     // This override mocks up our exists/get call to throw a RegionServerStoppedException.
     localConfig.set("hbase.client.connection.impl", RpcTimeoutConnection.class.getName());
-    HTable table = new HTable(localConfig, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(localConfig);
+    Table table = connection.getTable(TableName.META_TABLE_NAME);
     Throwable t = null;
     LOG.info("Start");
     try {
@@ -166,6 +162,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     } finally {
       table.close();
     }
+    connection.close();
     LOG.info("Stop");
     assertTrue(t != null);
   }
@@ -175,7 +172,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * @throws IOException
    */
   @Test
-  public void testRocTimeout() throws IOException {
+  public void testRpcTimeout() throws IOException {
     Configuration localConfig = HBaseConfiguration.create(this.conf);
     // This override mocks up our exists/get call to throw a RegionServerStoppedException.
     localConfig.set("hbase.client.connection.impl", RpcTimeoutConnection.class.getName());
@@ -187,7 +184,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     // and it has expired.  Otherwise, if this functionality is broke, all retries will be run --
     // all ten of them -- and we'll get the RetriesExhaustedException exception.
     localConfig.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, pause - 1);
-    HTable table = new HTable(localConfig, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(localConfig);
+    Table table = connection.getTable(TableName.META_TABLE_NAME);
     Throwable t = null;
     try {
       // An exists call turns into a get w/ a flag.
@@ -201,6 +199,7 @@ public class TestClientNoCluster extends Configured implements Tool {
       fail();
     } finally {
       table.close();
+      connection.close();
     }
     assertTrue(t != null);
   }
@@ -209,7 +208,9 @@ public class TestClientNoCluster extends Configured implements Tool {
   public void testDoNotRetryMetaScanner() throws IOException {
     this.conf.set("hbase.client.connection.impl",
       RegionServerStoppedOnScannerOpenConnection.class.getName());
-    MetaScanner.metaScan(this.conf, null);
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      MetaScanner.metaScan(connection, null);
+    }
   }
 
   @Test
@@ -219,7 +220,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Go against meta else we will try to find first region for the table on construction which
     // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
     // good for a bit of testing.
-    HTable table = new HTable(this.conf, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(this.conf);
+    Table table = connection.getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = table.getScanner(HConstants.CATALOG_FAMILY);
     try {
       Result result = null;
@@ -229,6 +231,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     } finally {
       scanner.close();
       table.close();
+      connection.close();
     }
   }
 
@@ -239,7 +242,8 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Go against meta else we will try to find first region for the table on construction which
     // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
     // good for a bit of testing.
-    HTable table = new HTable(this.conf, TableName.META_TABLE_NAME);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(TableName.META_TABLE_NAME);
     ResultScanner scanner = table.getScanner(HConstants.CATALOG_FAMILY);
     try {
       Result result = null;
@@ -249,6 +253,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     } finally {
       scanner.close();
       table.close();
+      connection.close();
     }
   }
 
@@ -497,6 +502,12 @@ public class TestClientNoCluster extends Configured implements Tool {
         this.multiInvocationsCount.decrementAndGet();
       }
     }
+
+    @Override
+    public CoprocessorServiceResponse execRegionServerService(RpcController controller,
+        CoprocessorServiceRequest request) throws ServiceException {
+      throw new NotImplementedException();
+    }
   }
 
   static ScanResponse doMetaScanResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,
@@ -699,37 +710,48 @@ public class TestClientNoCluster extends Configured implements Tool {
    * @param sharedConnection
    * @throws IOException
    */
-  static void cycle(int id, final Configuration c, final HConnection sharedConnection) throws IOException {
-    HTableInterface table = sharedConnection.getTable(BIG_USER_TABLE);
-    table.setAutoFlushTo(false);
+  static void cycle(int id, final Configuration c, final Connection sharedConnection) throws IOException {
     long namespaceSpan = c.getLong("hbase.test.namespace.span", 1000000);
     long startTime = System.currentTimeMillis();
     final int printInterval = 100000;
     Random rd = new Random(id);
     boolean get = c.getBoolean("hbase.test.do.gets", false);
-    try {
-      Stopwatch stopWatch = new Stopwatch();
-      stopWatch.start();
-      for (int i = 0; i < namespaceSpan; i++) {
-        byte [] b = format(rd.nextLong());
-        if (get){
+    TableName tableName = TableName.valueOf(BIG_USER_TABLE);
+    if (get) {
+      try (Table table = sharedConnection.getTable(tableName)){
+        Stopwatch stopWatch = new Stopwatch();
+        stopWatch.start();
+        for (int i = 0; i < namespaceSpan; i++) {
+          byte [] b = format(rd.nextLong());
           Get g = new Get(b);
           table.get(g);
-        } else {
+          if (i % printInterval == 0) {
+            LOG.info("Get " + printInterval + "/" + stopWatch.elapsedMillis());
+            stopWatch.reset();
+            stopWatch.start();
+          }
+        }
+        LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
+            (System.currentTimeMillis() - startTime) + "ms");
+      }
+    } else {
+      try (BufferedMutator mutator = sharedConnection.getBufferedMutator(tableName)) {
+        Stopwatch stopWatch = new Stopwatch();
+        stopWatch.start();
+        for (int i = 0; i < namespaceSpan; i++) {
+          byte [] b = format(rd.nextLong());
           Put p = new Put(b);
           p.add(HConstants.CATALOG_FAMILY, b, b);
-          table.put(p);
+          mutator.mutate(p);
+          if (i % printInterval == 0) {
+            LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());
+            stopWatch.reset();
+            stopWatch.start();
+          }
         }
-        if (i % printInterval == 0) {
-          LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());
-          stopWatch.reset();
-          stopWatch.start();
+        LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
+            (System.currentTimeMillis() - startTime) + "ms");
         }
-      }
-      LOG.info("Finished a cycle putting " + namespaceSpan + " in " +
-          (System.currentTimeMillis() - startTime) + "ms");
-    } finally {
-      table.close();
     }
   }
 
@@ -777,7 +799,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     final ExecutorService pool = Executors.newCachedThreadPool(Threads.getNamedThreadFactory("p"));
       // Executors.newFixedThreadPool(servers * 10, Threads.getNamedThreadFactory("p"));
     // Share a connection so I can keep counts in the 'server' on concurrency.
-    final HConnection sharedConnection = HConnectionManager.createConnection(getConf()/*, pool*/);
+    final Connection sharedConnection = ConnectionFactory.createConnection(getConf()/*, pool*/);
     try {
       Thread [] ts = new Thread[clients];
       for (int j = 0; j < ts.length; j++) {

@@ -19,16 +19,17 @@ package org.apache.hadoop.hbase.master.cleaner;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * HFile cleaner that uses the timestamp of the hfile to determine if it should be deleted. By
  * default they are allowed to live for {@value #DEFAULT_TTL}
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
 
   public static final Log LOG = LogFactory.getLog(TimeToLiveHFileCleaner.class.getName());

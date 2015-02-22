@@ -23,7 +23,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
@@ -71,7 +71,7 @@ public class ColumnSectionWriter {
   private List<Integer> outputArrayOffsets;
 
 
-	/*********************** construct *********************/
+  /*********************** construct *********************/
 
   public ColumnSectionWriter() {
     this.nonLeaves = Lists.newArrayList();
@@ -100,7 +100,7 @@ public class ColumnSectionWriter {
   }
 
 
-	/****************** methods *******************************/
+  /****************** methods *******************************/
 
   public ColumnSectionWriter compile() {
     if (this.nodeType == ColumnNodeType.FAMILY) {

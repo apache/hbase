@@ -25,7 +25,8 @@ import static org.junit.Assert.assertFalse;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
@@ -38,7 +39,7 @@ import com.google.common.collect.Multimap;
  * This builds a table, builds an overlap, and then fails when attempting to
  * rebuild meta.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
 
   @Test(timeout = 120000)
@@ -91,7 +92,7 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
 
     // Meta still messed up.
     assertEquals(1, scanMeta());
-    HTableDescriptor[] htbls = TEST_UTIL.getHBaseAdmin().listTables();
+    HTableDescriptor[] htbls = getTables(TEST_UTIL.getConfiguration());
     LOG.info("Tables present after restart: " + Arrays.toString(htbls));
 
     // After HBASE-451 HBaseAdmin.listTables() gets table descriptors from FS,
@@ -104,6 +105,4 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
             ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
   }
-
 }
-

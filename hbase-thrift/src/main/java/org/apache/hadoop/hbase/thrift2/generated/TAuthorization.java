@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -239,7 +240,14 @@ public class TAuthorization implements org.apache.thrift.TBase<TAuthorization, T
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_labels = true && (isSetLabels());
+    builder.append(present_labels);
+    if (present_labels)
+      builder.append(labels);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TAuthorization other) {

@@ -22,18 +22,19 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 
 /**
  * Defines coprocessor hooks for interacting with operations on the
@@ -597,6 +598,26 @@ public interface MasterObserver extends Coprocessor {
       throws IOException;
 
   /**
+   * Called before listSnapshots request has been processed.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor of the snapshot to list
+   * @throws IOException
+   */
+  void preListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException;
+
+  /**
+   * Called after listSnapshots request has been processed.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor of the snapshot to list
+   * @throws IOException
+   */
+  void postListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException;
+
+  /**
    * Called before a snapshot is cloned.
    * Called as part of restoreSnapshot RPC call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
@@ -672,20 +693,46 @@ public interface MasterObserver extends Coprocessor {
    * @param ctx the environment to interact with the framework and master
    * @param tableNamesList the list of table names, or null if querying for all
    * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @param regex regular expression used for filtering the table names
    * @throws IOException
    */
   void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<TableName> tableNamesList,
-      List<HTableDescriptor> descriptors) throws IOException;
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      String regex) throws IOException;
 
   /**
    * Called after a getTableDescriptors request has been processed.
    * @param ctx the environment to interact with the framework and master
+   * @param tableNamesList the list of table names, or null if querying for all
    * @param descriptors the list of descriptors about to be returned
+   * @param regex regular expression used for filtering the table names
    * @throws IOException
    */
   void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<HTableDescriptor> descriptors) throws IOException;
+      List<TableName> tableNamesList, List<HTableDescriptor> descriptors,
+      String regex) throws IOException;
+
+  /**
+   * Called before a getTableNames request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @param regex regular expression used for filtering the table names
+   * @throws IOException
+   */
+  void preGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors, String regex) throws IOException;
+
+  /**
+   * Called after a getTableNames request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors the list of descriptors about to be returned
+   * @param regex regular expression used for filtering the table names
+   * @throws IOException
+   */
+  void postGetTableNames(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<HTableDescriptor> descriptors, String regex) throws IOException;
+
+
 
   /**
    * Called before a new namespace is created by
@@ -742,6 +789,43 @@ public interface MasterObserver extends Coprocessor {
       NamespaceDescriptor ns) throws IOException;
 
   /**
+   * Called before a getNamespaceDescriptor request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param namespace the name of the namespace
+   * @throws IOException
+   */
+  void preGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      String namespace) throws IOException;
+
+  /**
+   * Called after a getNamespaceDescriptor request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param ns the NamespaceDescriptor
+   * @throws IOException
+   */
+  void postGetNamespaceDescriptor(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      NamespaceDescriptor ns) throws IOException;
+
+  /**
+   * Called before a listNamespaceDescriptors request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors an empty list, can be filled with what to return if bypassing
+   * @throws IOException
+   */
+  void preListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<NamespaceDescriptor> descriptors) throws IOException;
+
+  /**
+   * Called after a listNamespaceDescriptors request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param descriptors the list of descriptors about to be returned
+   * @throws IOException
+   */
+  void postListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<NamespaceDescriptor> descriptors) throws IOException;
+
+
+  /**
    * Called before the table memstore is flushed to disk.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
@@ -758,4 +842,108 @@ public interface MasterObserver extends Coprocessor {
    */
   void postTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName) throws IOException;
+
+  /**
+   * Called before the quota for the user is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param userName the name of user
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String userName, final Quotas quotas) throws IOException;
+
+  /**
+   * Called after the quota for the user is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param userName the name of user
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String userName, final Quotas quotas) throws IOException;
+
+  /**
+   * Called before the quota for the user on the specified table is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param userName the name of user
+   * @param tableName the name of the table
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String userName, final TableName tableName, final Quotas quotas) throws IOException;
+
+  /**
+   * Called after the quota for the user on the specified table is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param userName the name of user
+   * @param tableName the name of the table
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String userName, final TableName tableName, final Quotas quotas) throws IOException;
+
+  /**
+   * Called before the quota for the user on the specified namespace is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param userName the name of user
+   * @param namespace the name of the namespace
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String userName, final String namespace, final Quotas quotas) throws IOException;
+
+  /**
+   * Called after the quota for the user on the specified namespace is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param userName the name of user
+   * @param namespace the name of the namespace
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String userName, final String namespace, final Quotas quotas) throws IOException;
+
+  /**
+   * Called before the quota for the table is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void preSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName, final Quotas quotas) throws IOException;
+
+  /**
+   * Called after the quota for the table is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void postSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName, final Quotas quotas) throws IOException;
+
+  /**
+   * Called before the quota for the namespace is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param namespace the name of the namespace
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void preSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String namespace, final Quotas quotas) throws IOException;
+
+  /**
+   * Called after the quota for the namespace is stored.
+   * @param ctx the environment to interact with the framework and master
+   * @param namespace the name of the namespace
+   * @param quotas the quota settings
+   * @throws IOException
+   */
+  void postSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final String namespace, final Quotas quotas) throws IOException;
 }

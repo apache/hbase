@@ -27,15 +27,17 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test {@link HFileScanner#seekTo(byte[])} and its variants.
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestSeekTo extends HBaseTestCase {
 
   static boolean switchKVs = false;
@@ -70,7 +72,7 @@ public class TestSeekTo extends HBaseTestCase {
   }
 
   Path makeNewFile(TagUsage tagUsage) throws IOException {
-    Path ncTFile = new Path(this.testDir, "basic.hfile");
+    Path ncTFile = new Path(testDir, "basic.hfile");
     if (tagUsage != TagUsage.NO_TAG) {
       conf.setInt("hfile.format.version", 3);
     } else {
@@ -96,6 +98,7 @@ public class TestSeekTo extends HBaseTestCase {
     return ncTFile;
   }
 
+  @Test
   public void testSeekBefore() throws Exception {
     testSeekBeforeInternals(TagUsage.NO_TAG);
     testSeekBeforeInternals(TagUsage.ONLY_TAG);
@@ -137,6 +140,7 @@ public class TestSeekTo extends HBaseTestCase {
     reader.close();
   }
 
+  @Test
   public void testSeekBeforeWithReSeekTo() throws Exception {
     testSeekBeforeWithReSeekToInternals(TagUsage.NO_TAG);
     testSeekBeforeWithReSeekToInternals(TagUsage.ONLY_TAG);
@@ -226,6 +230,7 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals("k", toRowStr(scanner.getKeyValue()));
   }
 
+  @Test
   public void testSeekTo() throws Exception {
     testSeekToInternals(TagUsage.NO_TAG);
     testSeekToInternals(TagUsage.ONLY_TAG);
@@ -245,8 +250,8 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals("c", toRowStr(scanner.getKeyValue()));
 
     // Across a block boundary now.
-    // h goes to the next block
-    assertEquals(-2, scanner.seekTo(toKV("h", tagUsage)));
+    // 'h' does not exist so we will get a '1' back for not found.
+    assertEquals(0, scanner.seekTo(toKV("i", tagUsage)));
     assertEquals("i", toRowStr(scanner.getKeyValue()));
 
     assertEquals(1, scanner.seekTo(toKV("l", tagUsage)));
@@ -254,6 +259,8 @@ public class TestSeekTo extends HBaseTestCase {
 
     reader.close();
   }
+
+  @Test
   public void testBlockContainingKey() throws Exception {
     testBlockContainingKeyInternals(TagUsage.NO_TAG);
     testBlockContainingKeyInternals(TagUsage.ONLY_TAG);
@@ -267,7 +274,6 @@ public class TestSeekTo extends HBaseTestCase {
     HFileBlockIndex.BlockIndexReader blockIndexReader = 
       reader.getDataBlockIndexReader();
     System.out.println(blockIndexReader.toString());
-    int klen = toKV("a", tagUsage).getKey().length;
     // falls before the start of the file.
     assertEquals(-1, blockIndexReader.rootBlockContainingKey(
         toKV("a", tagUsage)));
@@ -279,8 +285,7 @@ public class TestSeekTo extends HBaseTestCase {
         toKV("e", tagUsage)));
     assertEquals(0, blockIndexReader.rootBlockContainingKey(
         toKV("g", tagUsage)));
-    assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("h", tagUsage)));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(toKV("h", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
         toKV("i", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
@@ -291,7 +296,4 @@ public class TestSeekTo extends HBaseTestCase {
         toKV("l", tagUsage)));
     reader.close();
   }
-
-
 }
-

@@ -19,43 +19,57 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.util.StringUtils;
-
 
 /**
  * Class used to push numbers about the WAL into the metrics subsystem.  This will take a
  * single function call and turn it into multiple manipulations of the hadoop metrics system.
  */
 @InterfaceAudience.Private
-public class MetricsWAL {
+public class MetricsWAL extends WALActionsListener.Base {
   static final Log LOG = LogFactory.getLog(MetricsWAL.class);
 
   private final MetricsWALSource source;
 
   public MetricsWAL() {
-    source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+    this(CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
   }
 
-  public void finishSync(long time) {
-    source.incrementSyncTime(time);
+  @VisibleForTesting
+  MetricsWAL(MetricsWALSource s) {
+    this.source = s;
   }
 
-  public void finishAppend(long time, long size) {
+  @Override
+  public void postSync(final long timeInNanos, final int handlerSyncs) {
+    source.incrementSyncTime(timeInNanos/1000000L);
+  }
 
+  @Override
+  public void postAppend(final long size, final long time) {
     source.incrementAppendCount();
     source.incrementAppendTime(time);
     source.incrementAppendSize(size);
 
     if (time > 1000) {
       source.incrementSlowAppendCount();
-      LOG.warn(String.format("%s took %d ms appending an edit to hlog; len~=%s",
+      LOG.warn(String.format("%s took %d ms appending an edit to wal; len~=%s",
           Thread.currentThread().getName(),
           time,
           StringUtils.humanReadableInt(size)));
+    }
+  }
+
+  @Override
+  public void logRollRequested(boolean underReplicated) {
+    source.incrementLogRollRequested();
+    if (underReplicated) {
+      source.incrementLowReplicationLogRoll();
     }
   }
 }

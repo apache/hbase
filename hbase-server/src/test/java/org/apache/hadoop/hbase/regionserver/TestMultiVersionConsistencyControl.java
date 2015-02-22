@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
 import java.util.Random;
@@ -29,7 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * This is a hammer test that verifies MultiVersionConsistencyControl in a
  * multiple writer single reader scenario.
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestMultiVersionConsistencyControl extends TestCase {
   static class Writer implements Runnable {
     final AtomicBoolean finished;

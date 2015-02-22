@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -631,7 +632,39 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_columns = true && (isSetColumns());
+    builder.append(present_columns);
+    if (present_columns)
+      builder.append(columns);
+
+    boolean present_timestamp = true && (isSetTimestamp());
+    builder.append(present_timestamp);
+    if (present_timestamp)
+      builder.append(timestamp);
+
+    boolean present_deleteType = true && (isSetDeleteType());
+    builder.append(present_deleteType);
+    if (present_deleteType)
+      builder.append(deleteType.getValue());
+
+    boolean present_attributes = true && (isSetAttributes());
+    builder.append(present_attributes);
+    if (present_attributes)
+      builder.append(attributes);
+
+    boolean present_durability = true && (isSetDurability());
+    builder.append(present_durability);
+    if (present_durability)
+      builder.append(durability.getValue());
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TDelete other) {
@@ -834,14 +867,14 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           case 2: // COLUMNS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list44 = iprot.readListBegin();
-                struct.columns = new ArrayList<TColumn>(_list44.size);
-                for (int _i45 = 0; _i45 < _list44.size; ++_i45)
+                org.apache.thrift.protocol.TList _list52 = iprot.readListBegin();
+                struct.columns = new ArrayList<TColumn>(_list52.size);
+                for (int _i53 = 0; _i53 < _list52.size; ++_i53)
                 {
-                  TColumn _elem46; // optional
-                  _elem46 = new TColumn();
-                  _elem46.read(iprot);
-                  struct.columns.add(_elem46);
+                  TColumn _elem54; // required
+                  _elem54 = new TColumn();
+                  _elem54.read(iprot);
+                  struct.columns.add(_elem54);
                 }
                 iprot.readListEnd();
               }
@@ -869,15 +902,15 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           case 6: // ATTRIBUTES
             if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
               {
-                org.apache.thrift.protocol.TMap _map47 = iprot.readMapBegin();
-                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map47.size);
-                for (int _i48 = 0; _i48 < _map47.size; ++_i48)
+                org.apache.thrift.protocol.TMap _map55 = iprot.readMapBegin();
+                struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map55.size);
+                for (int _i56 = 0; _i56 < _map55.size; ++_i56)
                 {
-                  ByteBuffer _key49; // required
-                  ByteBuffer _val50; // required
-                  _key49 = iprot.readBinary();
-                  _val50 = iprot.readBinary();
-                  struct.attributes.put(_key49, _val50);
+                  ByteBuffer _key57; // required
+                  ByteBuffer _val58; // required
+                  _key57 = iprot.readBinary();
+                  _val58 = iprot.readBinary();
+                  struct.attributes.put(_key57, _val58);
                 }
                 iprot.readMapEnd();
               }
@@ -919,9 +952,9 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.columns.size()));
-            for (TColumn _iter51 : struct.columns)
+            for (TColumn _iter59 : struct.columns)
             {
-              _iter51.write(oprot);
+              _iter59.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -945,10 +978,10 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           oprot.writeFieldBegin(ATTRIBUTES_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, struct.attributes.size()));
-            for (Map.Entry<ByteBuffer, ByteBuffer> _iter52 : struct.attributes.entrySet())
+            for (Map.Entry<ByteBuffer, ByteBuffer> _iter60 : struct.attributes.entrySet())
             {
-              oprot.writeBinary(_iter52.getKey());
-              oprot.writeBinary(_iter52.getValue());
+              oprot.writeBinary(_iter60.getKey());
+              oprot.writeBinary(_iter60.getValue());
             }
             oprot.writeMapEnd();
           }
@@ -1000,9 +1033,9 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       if (struct.isSetColumns()) {
         {
           oprot.writeI32(struct.columns.size());
-          for (TColumn _iter53 : struct.columns)
+          for (TColumn _iter61 : struct.columns)
           {
-            _iter53.write(oprot);
+            _iter61.write(oprot);
           }
         }
       }
@@ -1015,10 +1048,10 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       if (struct.isSetAttributes()) {
         {
           oprot.writeI32(struct.attributes.size());
-          for (Map.Entry<ByteBuffer, ByteBuffer> _iter54 : struct.attributes.entrySet())
+          for (Map.Entry<ByteBuffer, ByteBuffer> _iter62 : struct.attributes.entrySet())
           {
-            oprot.writeBinary(_iter54.getKey());
-            oprot.writeBinary(_iter54.getValue());
+            oprot.writeBinary(_iter62.getKey());
+            oprot.writeBinary(_iter62.getValue());
           }
         }
       }
@@ -1035,14 +1068,14 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       BitSet incoming = iprot.readBitSet(5);
       if (incoming.get(0)) {
         {
-          org.apache.thrift.protocol.TList _list55 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.columns = new ArrayList<TColumn>(_list55.size);
-          for (int _i56 = 0; _i56 < _list55.size; ++_i56)
+          org.apache.thrift.protocol.TList _list63 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.columns = new ArrayList<TColumn>(_list63.size);
+          for (int _i64 = 0; _i64 < _list63.size; ++_i64)
           {
-            TColumn _elem57; // optional
-            _elem57 = new TColumn();
-            _elem57.read(iprot);
-            struct.columns.add(_elem57);
+            TColumn _elem65; // required
+            _elem65 = new TColumn();
+            _elem65.read(iprot);
+            struct.columns.add(_elem65);
           }
         }
         struct.setColumnsIsSet(true);
@@ -1057,15 +1090,15 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
       }
       if (incoming.get(3)) {
         {
-          org.apache.thrift.protocol.TMap _map58 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
-          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map58.size);
-          for (int _i59 = 0; _i59 < _map58.size; ++_i59)
+          org.apache.thrift.protocol.TMap _map66 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRING, iprot.readI32());
+          struct.attributes = new HashMap<ByteBuffer,ByteBuffer>(2*_map66.size);
+          for (int _i67 = 0; _i67 < _map66.size; ++_i67)
           {
-            ByteBuffer _key60; // required
-            ByteBuffer _val61; // required
-            _key60 = iprot.readBinary();
-            _val61 = iprot.readBinary();
-            struct.attributes.put(_key60, _val61);
+            ByteBuffer _key68; // required
+            ByteBuffer _val69; // required
+            _key68 = iprot.readBinary();
+            _val69 = iprot.readBinary();
+            struct.attributes.put(_key68, _val69);
           }
         }
         struct.setAttributesIsSet(true);

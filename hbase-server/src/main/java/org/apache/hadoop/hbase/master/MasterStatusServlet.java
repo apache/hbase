@@ -27,10 +27,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -53,7 +52,6 @@ public class MasterStatusServlet extends HttpServlet {
     response.setContentType("text/html");
 
     Configuration conf = master.getConfiguration();
-    HBaseAdmin admin = new HBaseAdmin(conf);
 
     Map<String, Integer> frags = getFragmentationInfo(master, conf);
     ServerName metaLocation = null;
@@ -80,8 +78,7 @@ public class MasterStatusServlet extends HttpServlet {
       tmpl.setFilter(request.getParameter("filter"));
     if (request.getParameter("format") != null)
       tmpl.setFormat(request.getParameter("format"));
-    tmpl.render(response.getWriter(),
-          master, admin);
+    tmpl.render(response.getWriter(), master);
   }
 
   private ServerName getMetaLocationOrNull(HMaster master) {

@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -69,7 +69,7 @@ public class CellCreator {
       byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
       int vlength) throws IOException {
     return create(row, roffset, rlength, family, foffset, flength, qualifier, qoffset, qlength,
-        timestamp, value, voffset, vlength, null);
+        timestamp, value, voffset, vlength, (List<Tag>)null);
   }
 
   /**
@@ -90,6 +90,7 @@ public class CellCreator {
    * @return created Cell
    * @throws IOException
    */
+  @Deprecated
   public Cell create(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
       byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
       int vlength, String visExpression) throws IOException {
@@ -99,5 +100,37 @@ public class CellCreator {
     }
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
         qlength, timestamp, KeyValue.Type.Put, value, voffset, vlength, visTags);
+  }
+
+  /**
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @param timestamp version timestamp
+   * @param value column value
+   * @param voffset value offset
+   * @param vlength value length
+   * @param tags
+   * @return created Cell
+   * @throws IOException
+   */
+  public Cell create(byte[] row, int roffset, int rlength, byte[] family, int foffset, int flength,
+      byte[] qualifier, int qoffset, int qlength, long timestamp, byte[] value, int voffset,
+      int vlength, List<Tag> tags) throws IOException {
+    return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
+        qlength, timestamp, KeyValue.Type.Put, value, voffset, vlength, tags);
+  }
+
+  /**
+   * @return Visibility expression resolver
+   */
+  public VisibilityExpressionResolver getVisibilityExpressionResolver() {
+    return this.visExpResolver;
   }
 }

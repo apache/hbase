@@ -24,13 +24,15 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
+
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test order preservation characteristics of ordered Base64 dialect
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestBase64 extends TestCase {
   // Note: uris is sorted. We need to prove that the ordered Base64
   // preserves that ordering

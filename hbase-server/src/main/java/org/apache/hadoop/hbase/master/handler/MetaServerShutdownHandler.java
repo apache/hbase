@@ -25,7 +25,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -67,7 +67,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       boolean distributedLogReplay = 
         (this.services.getMasterFileSystem().getLogRecoveryMode() == RecoveryMode.LOG_REPLAY);
       try {
-        if (this.shouldSplitHlog) {
+        if (this.shouldSplitWal) {
           LOG.info("Splitting hbase:meta logs for " + serverName);
           if (distributedLogReplay) {
             Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
@@ -95,7 +95,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       }
 
       try {
-        if (this.shouldSplitHlog && distributedLogReplay) {
+        if (this.shouldSplitWal && distributedLogReplay) {
           if (!am.waitOnRegionToClearRegionsInTransition(HRegionInfo.FIRST_META_REGIONINFO,
             regionAssignmentWaitTimeout)) {
             // Wait here is to avoid log replay hits current dead server and incur a RPC timeout
@@ -148,9 +148,9 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       throws InterruptedException, IOException, KeeperException {
     long timeout = this.server.getConfiguration().
         getLong("hbase.catalog.verification.timeout", 1000);
-    if (!server.getMetaTableLocator().verifyMetaRegionLocation(server.getShortCircuitConnection(),
+    if (!server.getMetaTableLocator().verifyMetaRegionLocation(server.getConnection(),
       this.server.getZooKeeper(), timeout)) {
-      this.services.getAssignmentManager().assignMeta();
+      this.services.getAssignmentManager().assignMeta(HRegionInfo.FIRST_META_REGIONINFO);
     } else if (serverName.equals(server.getMetaTableLocator().getMetaRegionLocation(
       this.server.getZooKeeper()))) {
       throw new IOException("hbase:meta is onlined on the dead server "

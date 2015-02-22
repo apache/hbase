@@ -26,7 +26,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -658,7 +658,7 @@ public class RegionMergeTransaction {
     // Get merge regions if it is a merged region and already has merge
     // qualifier
     Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaTableAccessor
-        .getRegionsFromMergeQualifier(services.getShortCircuitConnection(), regionName);
+        .getRegionsFromMergeQualifier(services.getConnection(), regionName);
     if (mergeRegions != null &&
         (mergeRegions.getFirst() != null || mergeRegions.getSecond() != null)) {
       // It has merge qualifier

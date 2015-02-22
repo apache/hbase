@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -30,31 +29,30 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 
 /**
- * An internal class that adapts a {@link HConnection}.
- * HConnection is created from HConnectionManager. The default
- * implementation talks to region servers over RPC since it
- * doesn't know if the connection is used by one region server
- * itself. This adapter makes it possible to change some of the
- * default logic. Especially, when the connection is used
- * internally by some the region server.
+ * An internal class that delegates to an {@link HConnection} instance.
+ * A convenience to override when customizing method implementations.
+ *
  *
  * @see ConnectionUtils#createShortCircuitHConnection(HConnection, ServerName,
- * AdminService.BlockingInterface, ClientService.BlockingInterface)
+ * AdminService.BlockingInterface, ClientService.BlockingInterface) for case where we make
+ * Connections skip RPC if request is to local server.
  */
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 //NOTE: DO NOT make this class public. It was made package-private on purpose.
-class ConnectionAdapter implements ClusterConnection {
+abstract class ConnectionAdapter implements ClusterConnection {
 
   private final ClusterConnection wrappedConnection;
 
-  public ConnectionAdapter(HConnection c) {
+  public ConnectionAdapter(Connection c) {
     wrappedConnection = (ClusterConnection)c;
   }
 
@@ -109,6 +107,17 @@ class ConnectionAdapter implements ClusterConnection {
   public HTableInterface getTable(TableName tableName, ExecutorService pool)
       throws IOException {
     return wrappedConnection.getTable(tableName, pool);
+  }
+
+  @Override
+  public BufferedMutator getBufferedMutator(BufferedMutatorParams params)
+      throws IOException {
+    return wrappedConnection.getBufferedMutator(params);
+  }
+
+  @Override
+  public BufferedMutator getBufferedMutator(TableName tableName) throws IOException {
+    return wrappedConnection.getBufferedMutator(tableName);
   }
 
   @Override
@@ -167,6 +176,11 @@ class ConnectionAdapter implements ClusterConnection {
   public boolean isTableAvailable(byte[] tableName, byte[][] splitKeys)
       throws IOException {
     return wrappedConnection.isTableAvailable(tableName, splitKeys);
+  }
+
+  @Override
+  public TableState getTableState(TableName tableName) throws IOException {
+    return wrappedConnection.getTableState(tableName);
   }
 
   @Override
@@ -300,7 +314,7 @@ class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
-  public HRegionLocation relocateRegion(TableName tableName, byte[] row, int replicaId)
+  public RegionLocations relocateRegion(TableName tableName, byte[] row, int replicaId)
       throws IOException {
     return wrappedConnection.relocateRegion(tableName, row, replicaId);
   }
@@ -434,5 +448,25 @@ class ConnectionAdapter implements ClusterConnection {
   @Override
   public AsyncProcess getAsyncProcess() {
     return wrappedConnection.getAsyncProcess();
+  }
+
+  @Override
+  public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
+    return wrappedConnection.getNewRpcRetryingCallerFactory(conf);
+  }
+  
+  @Override
+  public boolean isManaged() {
+    return wrappedConnection.isManaged();
+  }
+
+  @Override
+  public ServerStatisticTracker getStatisticsTracker() {
+    return wrappedConnection.getStatisticsTracker();
+  }
+
+  @Override
+  public ClientBackoffPolicy getBackoffPolicy() {
+    return wrappedConnection.getBackoffPolicy();
   }
 }

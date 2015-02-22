@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
-import static org.apache.hadoop.hbase.HConstants.LAST_ROW;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
-
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -34,12 +34,9 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos;
 import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.token.Token;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Client proxy for SecureBulkLoadProtocol
@@ -47,41 +44,37 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 public class SecureBulkLoadClient {
-  private HTable table;
+  private Table table;
 
-  public SecureBulkLoadClient(HTable table) {
+  public SecureBulkLoadClient(Table table) {
     this.table = table;
   }
 
   public String prepareBulkLoad(final TableName tableName) throws IOException {
     try {
-      return
-        table.coprocessorService(SecureBulkLoadProtos.SecureBulkLoadService.class,
-          EMPTY_START_ROW,
-          LAST_ROW,
-          new Batch.Call<SecureBulkLoadProtos.SecureBulkLoadService,String>() {
-            @Override
-            public String call(SecureBulkLoadProtos.SecureBulkLoadService instance) throws IOException {
-              ServerRpcController controller = new ServerRpcController();
+      CoprocessorRpcChannel channel = table.coprocessorService(HConstants.EMPTY_START_ROW);
+      SecureBulkLoadProtos.SecureBulkLoadService instance =
+          ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
 
-              BlockingRpcCallback<SecureBulkLoadProtos.PrepareBulkLoadResponse> rpcCallback =
-                  new BlockingRpcCallback<SecureBulkLoadProtos.PrepareBulkLoadResponse>();
+      ServerRpcController controller = new ServerRpcController();
 
-              SecureBulkLoadProtos.PrepareBulkLoadRequest request =
-                  SecureBulkLoadProtos.PrepareBulkLoadRequest.newBuilder()
-                  .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
+      BlockingRpcCallback<SecureBulkLoadProtos.PrepareBulkLoadResponse> rpcCallback =
+          new BlockingRpcCallback<SecureBulkLoadProtos.PrepareBulkLoadResponse>();
 
-              instance.prepareBulkLoad(controller,
-                  request,
-                  rpcCallback);
+      SecureBulkLoadProtos.PrepareBulkLoadRequest request =
+          SecureBulkLoadProtos.PrepareBulkLoadRequest.newBuilder()
+          .setTableName(ProtobufUtil.toProtoTableName(tableName)).build();
 
-              SecureBulkLoadProtos.PrepareBulkLoadResponse response = rpcCallback.get();
-              if (controller.failedOnException()) {
-                throw controller.getFailedOn();
-              }
-              return response.getBulkToken();
-            }
-          }).entrySet().iterator().next().getValue();
+      instance.prepareBulkLoad(controller,
+          request,
+          rpcCallback);
+
+      SecureBulkLoadProtos.PrepareBulkLoadResponse response = rpcCallback.get();
+      if (controller.failedOnException()) {
+        throw controller.getFailedOn();
+      }
+      
+      return response.getBulkToken();
     } catch (Throwable throwable) {
       throw new IOException(throwable);
     }
@@ -89,32 +82,26 @@ public class SecureBulkLoadClient {
 
   public void cleanupBulkLoad(final String bulkToken) throws IOException {
     try {
-        table.coprocessorService(SecureBulkLoadProtos.SecureBulkLoadService.class,
-            EMPTY_START_ROW,
-            LAST_ROW,
-            new Batch.Call<SecureBulkLoadProtos.SecureBulkLoadService, String>() {
+      CoprocessorRpcChannel channel = table.coprocessorService(HConstants.EMPTY_START_ROW);
+      SecureBulkLoadProtos.SecureBulkLoadService instance =
+          ProtobufUtil.newServiceStub(SecureBulkLoadProtos.SecureBulkLoadService.class, channel);
 
-              @Override
-              public String call(SecureBulkLoadProtos.SecureBulkLoadService instance) throws IOException {
-                ServerRpcController controller = new ServerRpcController();
+      ServerRpcController controller = new ServerRpcController();
 
-                BlockingRpcCallback<SecureBulkLoadProtos.CleanupBulkLoadResponse> rpcCallback =
-                    new BlockingRpcCallback<SecureBulkLoadProtos.CleanupBulkLoadResponse>();
+      BlockingRpcCallback<SecureBulkLoadProtos.CleanupBulkLoadResponse> rpcCallback =
+          new BlockingRpcCallback<SecureBulkLoadProtos.CleanupBulkLoadResponse>();
 
-                SecureBulkLoadProtos.CleanupBulkLoadRequest request =
-                    SecureBulkLoadProtos.CleanupBulkLoadRequest.newBuilder()
-                        .setBulkToken(bulkToken).build();
+      SecureBulkLoadProtos.CleanupBulkLoadRequest request =
+          SecureBulkLoadProtos.CleanupBulkLoadRequest.newBuilder()
+              .setBulkToken(bulkToken).build();
 
-                instance.cleanupBulkLoad(controller,
-                    request,
-                    rpcCallback);
+      instance.cleanupBulkLoad(controller,
+          request,
+          rpcCallback);
 
-                if (controller.failedOnException()) {
-                  throw controller.getFailedOn();
-                }
-                return null;
-              }
-            });
+      if (controller.failedOnException()) {
+        throw controller.getFailedOn();
+      }
     } catch (Throwable throwable) {
       throw new IOException(throwable);
     }

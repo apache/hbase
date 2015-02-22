@@ -29,12 +29,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -50,7 +51,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
+@Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {
 
   private static final byte[] bbb = Bytes.toBytes("bbb");
@@ -76,37 +77,42 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     Configuration conf = UTIL.getConfiguration();
 
     HDFSBlocksDistribution blockDistribution = new HDFSBlocksDistribution();
-    Assert.assertEquals(Lists.newArrayList(), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList(),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h1"}, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1"),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h1"}, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1"),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1"),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution = new HDFSBlocksDistribution();
     blockDistribution.addHostsAndBlockWeight(new String[] {"h1"}, 10);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 7);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h3"}, 5);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h4"}, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1"),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 2);
     Assert.assertEquals(Lists.newArrayList("h1", "h2"),
-      tsif.getBestLocations(conf, blockDistribution));
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 3);
     Assert.assertEquals(Lists.newArrayList("h2", "h1"),
-      tsif.getBestLocations(conf, blockDistribution));
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h3"}, 6);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h4"}, 9);
 
     Assert.assertEquals(Lists.newArrayList("h2", "h3", "h4", "h1"),
-      tsif.getBestLocations(conf, blockDistribution));
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
   }
 
   public static enum TestTableSnapshotCounters {

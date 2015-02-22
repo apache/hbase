@@ -32,8 +32,9 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -50,7 +51,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestKeepDeletes {
   HBaseTestingUtility hbu = HBaseTestingUtility.createLocalHTU();
   private final byte[] T0 = Bytes.toBytes("0");
@@ -96,7 +97,7 @@ public class TestKeepDeletes {
   public void testBasicScenario() throws Exception {
     // keep 3 versions, rows do not expire
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
-        HConstants.FOREVER, true);
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -178,7 +179,7 @@ public class TestKeepDeletes {
     checkResult(r, c0, c0, T1);
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -193,7 +194,7 @@ public class TestKeepDeletes {
   public void testRawScanWithoutKeepingDeletes() throws Exception {
     // KEEP_DELETED_CELLS is NOT enabled
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
-        HConstants.FOREVER, false);
+        HConstants.FOREVER, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -228,7 +229,7 @@ public class TestKeepDeletes {
     scan.next(kvs);
     assertTrue(kvs.isEmpty());
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -238,7 +239,7 @@ public class TestKeepDeletes {
   public void testWithoutKeepingDeletes() throws Exception {
     // KEEP_DELETED_CELLS is NOT enabled
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
-        HConstants.FOREVER, false);
+        HConstants.FOREVER, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -273,7 +274,7 @@ public class TestKeepDeletes {
     // major compaction deleted it
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -282,7 +283,7 @@ public class TestKeepDeletes {
   @Test
   public void testRawScanWithColumns() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
-        HConstants.FOREVER, true);
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     Scan s = new Scan();
@@ -297,7 +298,7 @@ public class TestKeepDeletes {
       // ok!
     }
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -306,7 +307,7 @@ public class TestKeepDeletes {
   @Test
   public void testRawScan() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
-        HConstants.FOREVER, true);
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -387,7 +388,7 @@ public class TestKeepDeletes {
     assertTrue(CellUtil.isDelete(kvs.get(1)));
 
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -396,7 +397,7 @@ public class TestKeepDeletes {
   @Test
   public void testDeleteMarkerExpirationEmptyStore() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
-        HConstants.FOREVER, true);
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -430,7 +431,7 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -439,7 +440,7 @@ public class TestKeepDeletes {
   @Test
   public void testDeleteMarkerExpiration() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
-        HConstants.FOREVER, true);
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -493,7 +494,85 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
+  }
+
+  /**
+   * Test delete marker removal from store files.
+   */
+  @Test
+  public void testWithOldRow() throws Exception {
+    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
+
+    long ts = EnvironmentEdgeManager.currentTime();
+
+    Put p = new Put(T1, ts);
+    p.add(c0, c0, T1);
+    region.put(p);
+
+    // a put another (older) row in the same store
+    p = new Put(T2, ts-10);
+    p.add(c0, c0, T1);
+    region.put(p);
+
+    // all the following deletes affect the put
+    Delete d = new Delete(T1, ts);
+    d.deleteColumns(c0, c0, ts);
+    region.delete(d);
+
+    d = new Delete(T1, ts);
+    d.deleteFamily(c0, ts);
+    region.delete(d);
+
+    d = new Delete(T1, ts);
+    d.deleteColumn(c0, c0, ts+1);
+    region.delete(d);
+
+    d = new Delete(T1, ts);
+    d.deleteColumn(c0, c0, ts+2);
+    region.delete(d);
+
+    // 1 family marker, 1 column marker, 2 version markers
+    assertEquals(4, countDeleteMarkers(region));
+
+    region.flushcache();
+    assertEquals(4, countDeleteMarkers(region));
+    region.compactStores(false);
+    assertEquals(4, countDeleteMarkers(region));
+
+    // another put will push out the earlier put...
+    p = new Put(T1, ts+3);
+    p.add(c0, c0, T1);
+    region.put(p);
+
+    region.flushcache();
+    // no markers are collected, since there is an affected put
+    region.compactStores(true);
+    assertEquals(4, countDeleteMarkers(region));
+
+    // all markers remain, since we have the older row
+    // and we haven't pushed the inlined markers past MAX_VERSIONS
+    region.compactStores(true);
+    assertEquals(4, countDeleteMarkers(region));
+
+    // another put will push out the earlier put...
+    p = new Put(T1, ts+4);
+    p.add(c0, c0, T1);
+    region.put(p);
+
+    // this pushed out the column and version marker
+    // but the family markers remains. THIS IS A PROBLEM!
+    region.compactStores(true);
+    assertEquals(1, countDeleteMarkers(region));
+
+    // no amount of compacting is getting this of this one
+    // KEEP_DELETED_CELLS=>TTL is an option to avoid this.
+    region.compactStores(true);
+    assertEquals(1, countDeleteMarkers(region));
+
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -502,7 +581,7 @@ public class TestKeepDeletes {
   @Test
   public void testRanges() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 3,
-        HConstants.FOREVER, true);
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -573,7 +652,7 @@ public class TestKeepDeletes {
     checkGet(region, T2, c1, c0, ts+3, T2, T1);
     checkGet(region, T2, c1, c1, ts+3, T2, T1);
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -584,7 +663,7 @@ public class TestKeepDeletes {
   @Test
   public void testDeleteMarkerVersioning() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
-        HConstants.FOREVER, true);
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -668,7 +747,7 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(1, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -676,7 +755,7 @@ public class TestKeepDeletes {
    */
   public void testWithMixedCFs() throws Exception {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 0, 1,
-        HConstants.FOREVER, true);
+        HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime();
@@ -718,7 +797,7 @@ public class TestKeepDeletes {
     assertEquals(4, kvs.size());
     scanner.close();
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   /**
@@ -727,7 +806,8 @@ public class TestKeepDeletes {
    */
   @Test
   public void testWithMinVersions() throws Exception {
-    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, true);
+    HTableDescriptor htd =
+        hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime() - 2000; // 2s in the past
@@ -796,7 +876,52 @@ public class TestKeepDeletes {
     region.compactStores(true);
     assertEquals(0, countDeleteMarkers(region));
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
+  }
+
+  /**
+   * Test keeping deleted rows together with min versions set
+   * @throws Exception
+   */
+  @Test
+  public void testWithTTL() throws Exception {
+    HTableDescriptor htd =
+        hbu.createTableDescriptor(name.getMethodName(), 1, 1000, 1, KeepDeletedCells.TTL);
+    HRegion region = hbu.createLocalHRegion(htd, null, null);
+
+    long ts = EnvironmentEdgeManager.currentTime() - 2000; // 2s in the past
+
+    Put p = new Put(T1, ts);
+    p.add(c0, c0, T3);
+    region.put(p);
+
+    // place an old row, to make the family marker expires anyway
+    p = new Put(T2, ts-10);
+    p.add(c0, c0, T1);
+    region.put(p);
+
+    checkGet(region, T1, c0, c0, ts+1, T3);
+    // place a family delete marker
+    Delete d = new Delete(T1, ts+2);
+    region.delete(d);
+
+    checkGet(region, T1, c0, c0, ts+1, T3);
+
+    // 3 families, one column delete marker
+    assertEquals(3, countDeleteMarkers(region));
+
+    region.flushcache();
+    // no delete marker removes by the flush
+    assertEquals(3, countDeleteMarkers(region));
+
+    // but the Put is gone
+    checkGet(region, T1, c0, c0, ts+1);
+
+    region.compactStores(true);
+    // all delete marker gone
+    assertEquals(0, countDeleteMarkers(region));
+
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   private void checkGet(HRegion region, byte[] row, byte[] fam, byte[] col,

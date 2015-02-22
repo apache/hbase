@@ -23,24 +23,21 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.RpcController;
 
 /**
  * A reversed ScannerCallable which supports backward scanning.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ReversedScannerCallable extends ScannerCallable {
   /**
    * The start row for locating regions. In reversed scanner, may locate the
@@ -55,7 +52,8 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param scan
    * @param scanMetrics
    * @param locateStartRow The start row for locating regions
-   * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
+   * @param rpcFactory to create an {@link com.google.protobuf.RpcController} 
+   * to talk to the regionserver
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory) {
@@ -69,18 +67,21 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param scan
    * @param scanMetrics
    * @param locateStartRow The start row for locating regions
-   * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
+   * @param rpcFactory to create an {@link com.google.protobuf.RpcController} 
+   *        to talk to the regionserver
    * @param replicaId the replica id
    */
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
-      ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory, int replicaId) {
+      ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory,
+      int replicaId) {
     super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId);
     this.locateStartRow = locateStartRow;
   }
 
   /**
    * @deprecated use
-   *             {@link #ReversedScannerCallable(ClusterConnection, TableName, Scan, ScanMetrics, byte[], RpcControllerFactory )}
+   *  {@link #ReversedScannerCallable(ClusterConnection, TableName, Scan, 
+   *     ScanMetrics, byte[], RpcControllerFactory )}
    */
   @Deprecated
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName,

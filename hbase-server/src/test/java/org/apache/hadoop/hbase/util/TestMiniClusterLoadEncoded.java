@@ -20,8 +20,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.Parameterized.Parameters;
 
@@ -31,7 +32,7 @@ import org.junit.runners.Parameterized.Parameters;
  * amount of data, but goes through all available data block encoding
  * algorithms.
  */
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 public class TestMiniClusterLoadEncoded extends TestMiniClusterLoadParallel {
 
   /** We do not alternate the multi-put flag in this test. */

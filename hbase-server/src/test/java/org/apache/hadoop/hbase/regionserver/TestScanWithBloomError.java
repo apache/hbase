@@ -42,7 +42,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -61,7 +62,7 @@ import org.junit.runners.Parameterized.Parameters;
  * This is needed for the multi-column Bloom filter optimization.
  */
 @RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestScanWithBloomError {
 
   private static final Log LOG =
@@ -112,7 +113,7 @@ public class TestScanWithBloomError {
     createStoreFile(new int[] {1, 9});
     scanColSet(new int[]{1, 4, 6, 7}, new int[]{1, 6, 7});
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   private void scanColSet(int[] colSet, int[] expectedResultCols)
@@ -150,7 +151,7 @@ public class TestScanWithBloomError {
     for (StoreFileScanner sfScanner : scanners)
       lastStoreFileReader = sfScanner.getReader();
 
-    new HFilePrettyPrinter().run(new String[]{ "-m", "-p", "-f",
+    new HFilePrettyPrinter(conf).run(new String[]{ "-m", "-p", "-f",
         lastStoreFileReader.getHFileReader().getPath().toString()});
 
     // Disable Bloom filter for the last store file. The disabled Bloom filter

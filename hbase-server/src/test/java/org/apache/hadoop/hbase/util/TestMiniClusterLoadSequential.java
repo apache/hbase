@@ -31,11 +31,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.junit.After;
 import org.junit.Before;
@@ -49,7 +51,7 @@ import org.junit.runners.Parameterized.Parameters;
  * A write/read/verify load test on a mini HBase cluster. Tests reading
  * and then writing.
  */
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 @RunWith(Parameterized.class)
 public class TestMiniClusterLoadSequential {
 
@@ -150,7 +152,7 @@ public class TestMiniClusterLoadSequential {
     LOG.info("Starting load test: dataBlockEncoding=" + dataBlockEncoding +
         ", isMultiPut=" + isMultiPut);
     numKeys = numKeys();
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     while (admin.getClusterStatus().getServers().size() < NUM_RS) {
       LOG.info("Sleeping until " + NUM_RS + " RSs are online");
       Threads.sleepWithoutInterrupt(1000);
@@ -172,7 +174,7 @@ public class TestMiniClusterLoadSequential {
     return 1000;
   }
 
-  protected HColumnDescriptor getColumnDesc(HBaseAdmin admin)
+  protected HColumnDescriptor getColumnDesc(Admin admin)
       throws TableNotFoundException, IOException {
     return admin.getTableDescriptor(TABLE).getFamily(CF);
   }

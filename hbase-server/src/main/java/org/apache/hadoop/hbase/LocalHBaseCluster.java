@@ -26,10 +26,12 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -362,12 +364,10 @@ public class LocalHBaseCluster {
    * @return Name of master that just went down.
    */
   public String waitOnMaster(int serverNumber) {
-    JVMClusterUtil.MasterThread masterThread =
-      this.masterThreads.remove(serverNumber);
+    JVMClusterUtil.MasterThread masterThread = this.masterThreads.remove(serverNumber);
     while (masterThread.isAlive()) {
       try {
-        LOG.info("Waiting on " +
-          masterThread.getMaster().getServerName().toString());
+        LOG.info("Waiting on " + masterThread.getMaster().getServerName().toString());
         masterThread.join();
       } catch (InterruptedException e) {
         e.printStackTrace();
@@ -462,10 +462,16 @@ public class LocalHBaseCluster {
     Configuration conf = HBaseConfiguration.create();
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    HTableDescriptor htd =
-      new HTableDescriptor(TableName.valueOf(cluster.getClass().getName()));
-    admin.createTable(htd);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Admin admin = connection.getAdmin();
+    try {
+      HTableDescriptor htd =
+        new HTableDescriptor(TableName.valueOf(cluster.getClass().getName()));
+      admin.createTable(htd);
+    } finally {
+      admin.close();
+    }
+    connection.close();
     cluster.shutdown();
   }
 }

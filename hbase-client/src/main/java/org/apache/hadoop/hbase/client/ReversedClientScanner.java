@@ -24,10 +24,10 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -57,7 +57,8 @@ public class ReversedClientScanner extends ClientScanner {
       TableName tableName, ClusterConnection connection,
       RpcRetryingCallerFactory rpcFactory, RpcControllerFactory controllerFactory,
       ExecutorService pool, int primaryOperationTimeout) throws IOException {
-    super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool, primaryOperationTimeout);
+    super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
+        primaryOperationTimeout);
   }
 
   @Override
@@ -166,7 +167,7 @@ public class ReversedClientScanner extends ClientScanner {
    * @param row
    * @return a new byte array which is the closest front row of the specified one
    */
-  protected byte[] createClosestRowBefore(byte[] row) {
+  protected static byte[] createClosestRowBefore(byte[] row) {
     if (row == null) {
       throw new IllegalArgumentException("The passed row is empty");
     }

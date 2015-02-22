@@ -31,8 +31,8 @@ import java.util.Set;
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -262,7 +262,7 @@ public class FSHDFSUtils extends FSUtils {
     } catch (IOException e) {
       if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {
         // This exception comes out instead of FNFE, fix it
-        throw new FileNotFoundException("The given HLog wasn't found at " + p);
+        throw new FileNotFoundException("The given WAL wasn't found at " + p);
       } else if (e instanceof FileNotFoundException) {
         throw (FileNotFoundException)e;
       }

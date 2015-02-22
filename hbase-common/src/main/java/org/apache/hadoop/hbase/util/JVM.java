@@ -29,7 +29,7 @@ import java.lang.reflect.Method;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 
 /**
@@ -69,6 +69,15 @@ public class JVM {
       return false;
     }
     return (ibmvendor ? linux : true);
+  }
+
+  /**
+   * Check if the OS is linux.
+   *
+   * @return whether this is linux or not.
+   */
+  public static boolean isLinux() {
+    return linux;
   }
   
   /**

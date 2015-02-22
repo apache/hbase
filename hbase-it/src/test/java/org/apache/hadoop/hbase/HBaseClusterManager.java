@@ -23,8 +23,11 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseClusterManager.CommandProvider.Operation;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -37,10 +40,15 @@ import org.apache.hadoop.util.Shell;
  * to manage the cluster. Assumes Unix-like commands are available like 'ps',
  * 'kill', etc. Also assumes the user running the test has enough "power" to start & stop
  * servers on the remote machines (for example, the test user could be the same user as the
- * user the daemon isrunning as)
+ * user the daemon is running as)
  */
 @InterfaceAudience.Private
-public class HBaseClusterManager extends ClusterManager {
+public class HBaseClusterManager extends Configured implements ClusterManager {
+  private static final String SIGKILL = "SIGKILL";
+  private static final String SIGSTOP = "SIGSTOP";
+  private static final String SIGCONT = "SIGCONT";
+
+  protected static final Log LOG = LogFactory.getLog(HBaseClusterManager.class);
   private String sshUserName;
   private String sshOptions;
 
@@ -181,7 +189,6 @@ public class HBaseClusterManager extends ClusterManager {
   }
 
   public HBaseClusterManager() {
-    super();
   }
 
   protected CommandProvider getCommandProvider(ServiceType service) {
@@ -249,30 +256,43 @@ public class HBaseClusterManager extends ClusterManager {
   }
 
   @Override
-  public void start(ServiceType service, String hostname) throws IOException {
+  public void start(ServiceType service, String hostname, int port) throws IOException {
     exec(hostname, service, Operation.START);
   }
 
   @Override
-  public void stop(ServiceType service, String hostname) throws IOException {
+  public void stop(ServiceType service, String hostname, int port) throws IOException {
     exec(hostname, service, Operation.STOP);
   }
 
   @Override
-  public void restart(ServiceType service, String hostname) throws IOException {
+  public void restart(ServiceType service, String hostname, int port) throws IOException {
     exec(hostname, service, Operation.RESTART);
   }
 
-  @Override
   public void signal(ServiceType service, String signal, String hostname) throws IOException {
     execWithRetries(hostname, getCommandProvider(service).signalCommand(service, signal));
   }
 
   @Override
-  public boolean isRunning(ServiceType service, String hostname) throws IOException {
+  public boolean isRunning(ServiceType service, String hostname, int port) throws IOException {
     String ret = execWithRetries(hostname, getCommandProvider(service).isRunningCommand(service))
         .getSecond();
     return ret.length() > 0;
   }
 
+  @Override
+  public void kill(ServiceType service, String hostname, int port) throws IOException {
+    signal(service, SIGKILL, hostname);
+  }
+
+  @Override
+  public void suspend(ServiceType service, String hostname, int port) throws IOException {
+    signal(service, SIGSTOP, hostname);
+  }
+
+  @Override
+  public void resume(ServiceType service, String hostname, int port) throws IOException {
+    signal(service, SIGCONT, hostname);
+  }
 }

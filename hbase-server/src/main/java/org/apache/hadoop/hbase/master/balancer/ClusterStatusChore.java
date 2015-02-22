@@ -18,28 +18,27 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
+import java.io.InterruptedIOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ScheduledChore;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-
-import java.io.InterruptedIOException;
 
 /**
  * Chore that will feed the balancer the cluster status.
  */
 @InterfaceAudience.Private
-public class ClusterStatusChore extends Chore {
+public class ClusterStatusChore extends ScheduledChore {
   private static final Log LOG = LogFactory.getLog(ClusterStatusChore.class);
   private final HMaster master;
   private final LoadBalancer balancer;
 
   public ClusterStatusChore(HMaster master, LoadBalancer balancer) {
-    super(master.getServerName() + "-ClusterStatusChore",
-          master.getConfiguration().getInt("hbase.balancer.statusPeriod", 60000),
-          master);
+    super(master.getServerName() + "-ClusterStatusChore", master, master.getConfiguration().getInt(
+      "hbase.balancer.statusPeriod", 60000));
     this.master = master;
     this.balancer = balancer;
   }

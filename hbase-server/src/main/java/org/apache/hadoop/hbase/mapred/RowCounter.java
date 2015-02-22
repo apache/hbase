@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -32,16 +32,14 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A job with a map to count rows.
  * Map outputs table rows IF the input row has columns that have content.
- * Uses an {@link IdentityReducer}
+ * Uses a org.apache.hadoop.mapred.lib.IdentityReducer
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class RowCounter extends Configured implements Tool {

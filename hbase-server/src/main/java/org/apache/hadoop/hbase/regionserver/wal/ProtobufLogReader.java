@@ -29,8 +29,10 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.Builder;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -55,20 +58,35 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * which is appended at the end of the WAL. This is empty for now; it can contain some meta
  * information such as Region level stats, etc in future.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX, HBaseInterfaceAudience.CONFIG})
 public class ProtobufLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(ProtobufLogReader.class);
-  static final byte[] PB_WAL_MAGIC = Bytes.toBytes("PWAL");
-  static final byte[] PB_WAL_COMPLETE_MAGIC = Bytes.toBytes("LAWP");
+  // public for WALFactory until we move everything to o.a.h.h.wal
+  @InterfaceAudience.Private
+  public static final byte[] PB_WAL_MAGIC = Bytes.toBytes("PWAL");
+  // public for TestWALSplit
+  @InterfaceAudience.Private
+  public static final byte[] PB_WAL_COMPLETE_MAGIC = Bytes.toBytes("LAWP");
+  /**
+   * Configuration name of WAL Trailer's warning size. If a waltrailer's size is greater than the
+   * configured size, providers should log a warning. e.g. this is used with Protobuf reader/writer.
+   */
+  static final String WAL_TRAILER_WARN_SIZE = "hbase.regionserver.waltrailer.warn.size";
+  static final int DEFAULT_WAL_TRAILER_WARN_SIZE = 1024 * 1024; // 1MB
+
   protected FSDataInputStream inputStream;
   protected Codec.Decoder cellDecoder;
   protected WALCellCodec.ByteStringUncompressor byteStringUncompressor;
   protected boolean hasCompression = false;
   protected boolean hasTagCompression = false;
   // walEditsStopOffset is the position of the last byte to read. After reading the last WALEdit entry
-  // in the hlog, the inputstream's position is equal to walEditsStopOffset.
+  // in the wal, the inputstream's position is equal to walEditsStopOffset.
   private long walEditsStopOffset;
   private boolean trailerPresent;
+  protected WALTrailer trailer;
+  // maximum size of the wal Trailer in bytes. If a user writes/reads a trailer with size larger
+  // than this size, it is written/read respectively, with a WARN message in the log.
+  protected int trailerWarnSize;
   private static List<String> writerClsNames = new ArrayList<String>();
   static {
     writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
@@ -118,6 +136,13 @@ public class ProtobufLogReader extends ReaderBase {
   public void reset() throws IOException {
     String clsName = initInternal(null, false);
     initAfterCompression(clsName); // We need a new decoder (at least).
+  }
+
+  @Override
+  public void init(FileSystem fs, Path path, Configuration conf, FSDataInputStream stream)
+      throws IOException {
+    this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
+    super.init(fs, path, conf, stream);
   }
 
   @Override
@@ -268,7 +293,7 @@ public class ProtobufLogReader extends ReaderBase {
   }
 
   @Override
-  protected boolean readNext(HLog.Entry entry) throws IOException {
+  protected boolean readNext(Entry entry) throws IOException {
     while (true) {
       // OriginalPosition might be < 0 on local fs; if so, it is useless to us.
       long originalPosition = this.inputStream.getPos();
@@ -332,7 +357,7 @@ public class ProtobufLogReader extends ReaderBase {
               initCause(realEofEx != null ? realEofEx : ex);
         }
         if (trailerPresent && this.inputStream.getPos() > this.walEditsStopOffset) {
-          LOG.error("Read WALTrailer while reading WALEdits. hlog: " + this.path
+          LOG.error("Read WALTrailer while reading WALEdits. wal: " + this.path
               + ", inputStream.getPos(): " + this.inputStream.getPos() + ", walEditsStopOffset: "
               + this.walEditsStopOffset);
           throw new EOFException("Read WALTrailer while reading WALEdits");
@@ -367,11 +392,6 @@ public class ProtobufLogReader extends ReaderBase {
       return null;
     }
     return null;
-  }
-
-  @Override
-  public WALTrailer getWALTrailer() {
-    return trailer;
   }
 
   @Override

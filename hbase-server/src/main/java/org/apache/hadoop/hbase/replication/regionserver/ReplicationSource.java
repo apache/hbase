@@ -31,18 +31,19 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.SystemTableWALEntryFilter;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.collect.Lists;
@@ -94,8 +96,8 @@ public class ReplicationSource extends Thread
   private long replicationQueueSizeCapacity;
   // Max number of entries in entriesArray
   private int replicationQueueNbCapacity;
-  // Our reader for the current log
-  private HLog.Reader reader;
+  // Our reader for the current log. open/close handled by repLogReader
+  private WAL.Reader reader;
   // Last position in the log that we sent to ZooKeeper
   private long lastLoggedPosition = -1;
   // Path of the current log
@@ -122,7 +124,7 @@ public class ReplicationSource extends Thread
   // Metrics for this source
   private MetricsSource metrics;
   // Handle on the log reader helper
-  private ReplicationHLogReaderManager repLogReader;
+  private ReplicationWALReaderManager repLogReader;
   //WARN threshold for the number of queued logs, defaults to 2
   private int logQueueWarnThreshold;
   // ReplicationEndpoint which will handle the actual replication
@@ -161,7 +163,10 @@ public class ReplicationSource extends Thread
         this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
     this.replicationQueueNbCapacity =
         this.conf.getInt("replication.source.nb.capacity", 25000);
-    this.maxRetriesMultiplier = this.conf.getInt("replication.source.maxretriesmultiplier", 10);
+    this.sleepForRetries =
+        this.conf.getLong("replication.source.sleepforretries", 1000);    // 1 second
+    this.maxRetriesMultiplier =
+        this.conf.getInt("replication.source.maxretriesmultiplier", 300); // 5 minutes @ 1 sec per
     this.queue =
         new PriorityBlockingQueue<Path>(
             this.conf.getInt("hbase.regionserver.maxlogs", 32),
@@ -171,11 +176,9 @@ public class ReplicationSource extends Thread
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.manager = manager;
-    this.sleepForRetries =
-        this.conf.getLong("replication.source.sleepforretries", 1000);
     this.fs = fs;
     this.metrics = metrics;
-    this.repLogReader = new ReplicationHLogReaderManager(this.fs, this.conf);
+    this.repLogReader = new ReplicationWALReaderManager(this.fs, this.conf);
     this.clusterId = clusterId;
 
     this.peerClusterZnode = peerClusterZnode;
@@ -341,7 +344,7 @@ public class ReplicationSource extends Thread
 
       boolean gotIOE = false;
       currentNbOperations = 0;
-      List<HLog.Entry> entries = new ArrayList<HLog.Entry>(1);
+      List<WAL.Entry> entries = new ArrayList<WAL.Entry>(1);
       currentSize = 0;
       try {
         if (readAllEntriesToReplicateOrNextFile(currentWALisBeingWrittenTo, entries)) {
@@ -419,7 +422,7 @@ public class ReplicationSource extends Thread
    * @throws IOException
    */
   protected boolean readAllEntriesToReplicateOrNextFile(boolean currentWALisBeingWrittenTo,
-      List<HLog.Entry> entries) throws IOException{
+      List<WAL.Entry> entries) throws IOException {
     long seenEntries = 0;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Seeking in " + this.currentPath + " at position "
@@ -427,7 +430,7 @@ public class ReplicationSource extends Thread
     }
     this.repLogReader.seek();
     long positionBeforeRead = this.repLogReader.getPosition();
-    HLog.Entry entry =
+    WAL.Entry entry =
         this.repLogReader.readNextAndSetPosition();
     while (entry != null) {
       this.metrics.incrLogEditsRead();
@@ -439,7 +442,7 @@ public class ReplicationSource extends Thread
         // Remove all KVs that should not be replicated
         entry = walEntryFilter.filter(entry);
         WALEdit edit = null;
-        HLogKey logKey = null;
+        WALKey logKey = null;
         if (entry != null) {
           edit = entry.getEdit();
           logKey = entry.getKey();
@@ -520,12 +523,13 @@ public class ReplicationSource extends Thread
           // to look at)
           List<String> deadRegionServers = this.replicationQueueInfo.getDeadRegionServers();
           LOG.info("NB dead servers : " + deadRegionServers.size());
+          final Path rootDir = FSUtils.getRootDir(this.conf);
           for (String curDeadServerName : deadRegionServers) {
-            Path deadRsDirectory =
-                new Path(manager.getLogDir().getParent(), curDeadServerName);
+            final Path deadRsDirectory = new Path(rootDir,
+                DefaultWALProvider.getWALDirectoryName(curDeadServerName));
             Path[] locs = new Path[] {
                 new Path(deadRsDirectory, currentPath.getName()),
-                new Path(deadRsDirectory.suffix(HLog.SPLITTING_EXT),
+                new Path(deadRsDirectory.suffix(DefaultWALProvider.SPLITTING_EXT),
                                           currentPath.getName()),
             };
             for (Path possibleLogLocation : locs) {
@@ -535,6 +539,7 @@ public class ReplicationSource extends Thread
                 LOG.info("Log " + this.currentPath + " still exists at " +
                     possibleLogLocation);
                 // Breaking here will make us sleep since reader is null
+                // TODO why don't we need to set currentPath and call openReader here?
                 return true;
               }
             }
@@ -542,6 +547,8 @@ public class ReplicationSource extends Thread
           // In the case of disaster/recovery, HMaster may be shutdown/crashed before flush data
           // from .logs to .oldlogs. Loop into .logs folders and check whether a match exists
           if (stopper instanceof ReplicationSyncUp.DummyServer) {
+            // N.B. the ReplicationSyncUp tool sets the manager.getLogDir to the root of the wal
+            //      area rather than to the wal area for a particular region server.
             FileStatus[] rss = fs.listStatus(manager.getLogDir());
             for (FileStatus rs : rss) {
               Path p = rs.getPath();
@@ -550,7 +557,7 @@ public class ReplicationSource extends Thread
                 p = new Path(p, log.getPath().getName());
                 if (p.getName().equals(currentPath.getName())) {
                   currentPath = p;
-                  LOG.info("Log " + this.currentPath + " exists under " + manager.getLogDir());
+                  LOG.info("Log " + currentPath.getName() + " found at " + currentPath);
                   // Open the log at the new location
                   this.openReader(sleepMultiplier);
                   return true;
@@ -590,7 +597,7 @@ public class ReplicationSource extends Thread
       if (ioe.getCause() instanceof NullPointerException) {
         // Workaround for race condition in HDFS-4380
         // which throws a NPE if we open a file before any data node has the most recent block
-        // Just sleep and retry. Will require re-reading compressed HLogs for compressionContext.
+        // Just sleep and retry. Will require re-reading compressed WALs for compressionContext.
         LOG.warn("Got NPE opening reader, will retry.");
       } else if (sleepMultiplier == this.maxRetriesMultiplier) {
         // TODO Need a better way to determine if a file is really gone but
@@ -634,16 +641,16 @@ public class ReplicationSource extends Thread
 
   /**
    * Count the number of different row keys in the given edit because of
-   * mini-batching. We assume that there's at least one KV in the WALEdit.
+   * mini-batching. We assume that there's at least one Cell in the WALEdit.
    * @param edit edit to count row keys from
    * @return number of different row keys
    */
   private int countDistinctRowKeys(WALEdit edit) {
-    List<KeyValue> kvs = edit.getKeyValues();
+    List<Cell> cells = edit.getCells();
     int distinctRowKeys = 1;
-    KeyValue lastKV = kvs.get(0);
+    Cell lastCell = cells.get(0);
     for (int i = 0; i < edit.size(); i++) {
-      if (!CellUtil.matchingRow(kvs.get(i), lastKV)) {
+      if (!CellUtil.matchingRow(cells.get(i), lastCell)) {
         distinctRowKeys++;
       }
     }
@@ -655,7 +662,7 @@ public class ReplicationSource extends Thread
    * @param currentWALisBeingWrittenTo was the current WAL being (seemingly)
    * written to when this method was called
    */
-  protected void shipEdits(boolean currentWALisBeingWrittenTo, List<HLog.Entry> entries) {
+  protected void shipEdits(boolean currentWALisBeingWrittenTo, List<WAL.Entry> entries) {
     int sleepMultiplier = 1;
     if (entries.isEmpty()) {
       LOG.warn("Was given 0 edits to ship");
@@ -735,6 +742,8 @@ public class ReplicationSource extends Thread
    * @return true if we're done with the current file, false if we should
    * continue trying to read from it
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
+      justification="Yeah, this is how it works")
   protected boolean processEndOfFile() {
     if (this.queue.size() != 0) {
       if (LOG.isTraceEnabled()) {

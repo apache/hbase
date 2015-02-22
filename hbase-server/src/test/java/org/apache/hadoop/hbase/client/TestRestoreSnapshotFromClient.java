@@ -33,12 +33,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
@@ -51,7 +52,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test restore snapshots from the client
  */
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestRestoreSnapshotFromClient {
   final Log LOG = LogFactory.getLog(getClass());
 
@@ -110,11 +111,12 @@ public class TestRestoreSnapshotFromClient {
     // take an empty snapshot
     admin.snapshot(emptySnapshot, tableName);
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     // enable table and insert data
     admin.enableTable(tableName);
-    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
-    snapshot0Rows = TEST_UTIL.countRows(table);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      snapshot0Rows = TEST_UTIL.countRows(table);
+    }
     admin.disableTable(tableName);
 
     // take a snapshot
@@ -122,9 +124,10 @@ public class TestRestoreSnapshotFromClient {
 
     // enable table and insert more data
     admin.enableTable(tableName);
-    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, FAMILY);
-    snapshot1Rows = TEST_UTIL.countRows(table);
-    table.close();
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      snapshot1Rows = TEST_UTIL.countRows(table);
+    }
   }
 
   @After
@@ -174,7 +177,7 @@ public class TestRestoreSnapshotFromClient {
   public void testRestoreSchemaChange() throws Exception {
     byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
 
     // Add one column family and put some data in it
     admin.disableTable(tableName);
@@ -183,7 +186,7 @@ public class TestRestoreSnapshotFromClient {
     assertEquals(2, table.getTableDescriptor().getFamilies().size());
     HTableDescriptor htd = admin.getTableDescriptor(tableName);
     assertEquals(2, htd.getFamilies().size());
-    SnapshotTestingUtils.loadData(TEST_UTIL, table, 500, TEST_FAMILY2);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, TEST_FAMILY2);
     long snapshot2Rows = snapshot1Rows + 500;
     assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
     assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));

@@ -26,17 +26,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+
 import org.apache.commons.collections.map.AbstractReferenceMap;
 import org.apache.commons.collections.map.ReferenceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,8 +52,10 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -65,25 +75,23 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver.MutationType;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
  * loaded within a {@link HRegion}.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
 public class RegionCoprocessorHost
     extends CoprocessorHost<RegionCoprocessorHost.RegionEnvironment> {
 
@@ -104,6 +112,8 @@ public class RegionCoprocessorHost
     private static final int LATENCY_BUFFER_SIZE = 100;
     private final BlockingQueue<Long> coprocessorTimeNanos = new ArrayBlockingQueue<Long>(
         LATENCY_BUFFER_SIZE);
+    private final boolean useLegacyPre;
+    private final boolean useLegacyPost;
 
     /**
      * Constructor
@@ -117,6 +127,14 @@ public class RegionCoprocessorHost
       this.region = region;
       this.rsServices = services;
       this.sharedData = sharedData;
+      // Pick which version of the WAL related events we'll call.
+      // This way we avoid calling the new version on older RegionObservers so
+      // we can maintain binary compatibility.
+      // See notes in javadoc for RegionObserver
+      useLegacyPre = useLegacyMethod(impl.getClass(), "preWALRestore", ObserverContext.class,
+          HRegionInfo.class, WALKey.class, WALEdit.class);
+      useLegacyPost = useLegacyMethod(impl.getClass(), "postWALRestore", ObserverContext.class,
+          HRegionInfo.class, WALKey.class, WALEdit.class);
     }
 
     /** @return the region */
@@ -150,6 +168,42 @@ public class RegionCoprocessorHost
       return latencies;
     }
 
+    @Override
+    public HRegionInfo getRegionInfo() {
+      return region.getRegionInfo();
+    }
+
+  }
+
+  static class TableCoprocessorAttribute {
+    private Path path;
+    private String className;
+    private int priority;
+    private Configuration conf;
+
+    public TableCoprocessorAttribute(Path path, String className, int priority,
+        Configuration conf) {
+      this.path = path;
+      this.className = className;
+      this.priority = priority;
+      this.conf = conf;
+    }
+
+    public Path getPath() {
+      return path;
+    }
+
+    public String getClassName() {
+      return className;
+    }
+
+    public int getPriority() {
+      return priority;
+    }
+
+    public Configuration getConf() {
+      return conf;
+    }
   }
 
   /** The region server services */
@@ -183,15 +237,13 @@ public class RegionCoprocessorHost
     loadTableCoprocessors(conf);
   }
 
-  void loadTableCoprocessors(final Configuration conf) {
-    // scan the table attributes for coprocessor load specifications
-    // initialize the coprocessors
-    List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
-    for (Map.Entry<ImmutableBytesWritable,ImmutableBytesWritable> e:
-        region.getTableDesc().getValues().entrySet()) {
+  static List<TableCoprocessorAttribute> getTableCoprocessorAttrsFromSchema(Configuration conf,
+      HTableDescriptor htd) {
+    List<TableCoprocessorAttribute> result = Lists.newArrayList();
+    for (Map.Entry<Bytes, Bytes> e: htd.getValues().entrySet()) {
       String key = Bytes.toString(e.getKey().get()).trim();
-      String spec = Bytes.toString(e.getValue().get()).trim();
       if (HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(key).matches()) {
+        String spec = Bytes.toString(e.getValue().get()).trim();
         // found one
         try {
           Matcher matcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
@@ -201,6 +253,11 @@ public class RegionCoprocessorHost
             Path path = matcher.group(1).trim().isEmpty() ?
                 null : new Path(matcher.group(1).trim());
             String className = matcher.group(2).trim();
+            if (className.isEmpty()) {
+              LOG.error("Malformed table coprocessor specification: key=" +
+                key + ", spec: " + spec);
+              continue;
+            }
             int priority = matcher.group(3).trim().isEmpty() ?
                 Coprocessor.PRIORITY_USER : Integer.valueOf(matcher.group(3));
             String cfgSpec = null;
@@ -222,20 +279,7 @@ public class RegionCoprocessorHost
             } else {
               ourConf = conf;
             }
-            // Load encompasses classloading and coprocessor initialization
-            try {
-              RegionEnvironment env = load(path, className, priority, ourConf);
-              configured.add(env);
-              LOG.info("Loaded coprocessor " + className + " from HTD of " +
-                region.getTableDesc().getTableName().getNameAsString() + " successfully.");
-            } catch (Throwable t) {
-              // Coprocessor failed to load, do we abort on error?
-              if (conf.getBoolean(ABORT_ON_ERROR_KEY, DEFAULT_ABORT_ON_ERROR)) {
-                abortServer(className, t);
-              } else {
-                LOG.error("Failed to load coprocessor " + className, t);
-              }
-            }
+            result.add(new TableCoprocessorAttribute(path, className, priority, ourConf));
           } else {
             LOG.error("Malformed table coprocessor specification: key=" + key +
               ", spec: " + spec);
@@ -243,6 +287,65 @@ public class RegionCoprocessorHost
         } catch (Exception ioe) {
           LOG.error("Malformed table coprocessor specification: key=" + key +
             ", spec: " + spec);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Sanity check the table coprocessor attributes of the supplied schema. Will
+   * throw an exception if there is a problem.
+   * @param conf
+   * @param htd
+   * @throws IOException
+   */
+  public static void testTableCoprocessorAttrs(final Configuration conf,
+      final HTableDescriptor htd) throws IOException {
+    String pathPrefix = UUID.randomUUID().toString();
+    for (TableCoprocessorAttribute attr: getTableCoprocessorAttrsFromSchema(conf, htd)) {
+      if (attr.getPriority() < 0) {
+        throw new IOException("Priority for coprocessor " + attr.getClassName() +
+          " cannot be less than 0");
+      }
+      ClassLoader old = Thread.currentThread().getContextClassLoader();
+      try {
+        ClassLoader cl;
+        if (attr.getPath() != null) {
+          cl = CoprocessorClassLoader.getClassLoader(attr.getPath(),
+            CoprocessorHost.class.getClassLoader(), pathPrefix, conf);
+        } else {
+          cl = CoprocessorHost.class.getClassLoader();
+        }
+        Thread.currentThread().setContextClassLoader(cl);
+        cl.loadClass(attr.getClassName());
+      } catch (ClassNotFoundException e) {
+        throw new IOException("Class " + attr.getClassName() + " cannot be loaded", e);
+      } finally {
+        Thread.currentThread().setContextClassLoader(old);
+      }
+    }
+  }
+
+  void loadTableCoprocessors(final Configuration conf) {
+    // scan the table attributes for coprocessor load specifications
+    // initialize the coprocessors
+    List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
+    for (TableCoprocessorAttribute attr: getTableCoprocessorAttrsFromSchema(conf, 
+        region.getTableDesc())) {
+      // Load encompasses classloading and coprocessor initialization
+      try {
+        RegionEnvironment env = load(attr.getPath(), attr.getClassName(), attr.getPriority(),
+          attr.getConf());
+        configured.add(env);
+        LOG.info("Loaded coprocessor " + attr.getClassName() + " from HTD of " +
+            region.getTableDesc().getTableName().getNameAsString() + " successfully.");
+      } catch (Throwable t) {
+        // Coprocessor failed to load, do we abort on error?
+        if (conf.getBoolean(ABORT_ON_ERROR_KEY, DEFAULT_ABORT_ON_ERROR)) {
+          abortServer(attr.getClassName(), t);
+        } else {
+          LOG.error("Failed to load coprocessor " + attr.getClassName(), t);
         }
       }
     }
@@ -564,6 +667,7 @@ public class RegionCoprocessorHost
    * Invoked just before a split
    * @throws IOException
    */
+  // TODO: Deprecate this
   public void preSplit() throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
@@ -1303,15 +1407,36 @@ public class RegionCoprocessorHost
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
-  public boolean preWALRestore(final HRegionInfo info, final HLogKey logKey,
+  public boolean preWALRestore(final HRegionInfo info, final WALKey logKey,
       final WALEdit logEdit) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.preWALRestore(ctx, info, logKey, logEdit);
+        // Once we don't need to support the legacy call, replace RegionOperation with a version
+        // that's ObserverContext<RegionEnvironment> and avoid this cast.
+        final RegionEnvironment env = (RegionEnvironment)ctx.getEnvironment();
+        if (env.useLegacyPre) {
+          if (logKey instanceof HLogKey) {
+            oserver.preWALRestore(ctx, info, (HLogKey)logKey, logEdit);
+          } else {
+            legacyWarning(oserver.getClass(), "There are wal keys present that are not HLogKey.");
+          }
+        } else {
+          oserver.preWALRestore(ctx, info, logKey, logEdit);
+        }
       }
     });
+  }
+
+  /**
+   * @return true if default behavior should be bypassed, false otherwise
+   * @deprecated use {@link #preWALRestore(HRegionInfo, WALKey, WALEdit)}
+   */
+  @Deprecated
+  public boolean preWALRestore(final HRegionInfo info, final HLogKey logKey,
+      final WALEdit logEdit) throws IOException {
+    return preWALRestore(info, (WALKey)logKey, logEdit);
   }
 
   /**
@@ -1320,15 +1445,35 @@ public class RegionCoprocessorHost
    * @param logEdit
    * @throws IOException
    */
-  public void postWALRestore(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
+  public void postWALRestore(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.postWALRestore(ctx, info, logKey, logEdit);
+        // Once we don't need to support the legacy call, replace RegionOperation with a version
+        // that's ObserverContext<RegionEnvironment> and avoid this cast.
+        final RegionEnvironment env = (RegionEnvironment)ctx.getEnvironment();
+        if (env.useLegacyPost) {
+          if (logKey instanceof HLogKey) {
+            oserver.postWALRestore(ctx, info, (HLogKey)logKey, logEdit);
+          } else {
+            legacyWarning(oserver.getClass(), "There are wal keys present that are not HLogKey.");
+          }
+        } else {
+          oserver.postWALRestore(ctx, info, logKey, logEdit);
+        }
       }
     });
+  }
+
+  /**
+   * @deprecated use {@link #postWALRestore(HRegionInfo, WALKey, WALEdit)}
+   */
+  @Deprecated
+  public void postWALRestore(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
+      throws IOException {
+    postWALRestore(info, (WALKey)logKey, logEdit);
   }
 
   /**

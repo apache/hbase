@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -200,7 +200,7 @@ public class StoreFileScanner implements KeyValueScanner {
 
   protected void setCurrentCell(Cell newVal) throws IOException {
     this.cur = newVal;
-    if (this.cur != null && this.reader.isBulkLoaded() && cur.getSequenceId() <= 0) {
+    if (this.cur != null && this.reader.isBulkLoaded()) {
       CellUtil.setSequenceId(cur, this.reader.getSequenceID());
     }
   }

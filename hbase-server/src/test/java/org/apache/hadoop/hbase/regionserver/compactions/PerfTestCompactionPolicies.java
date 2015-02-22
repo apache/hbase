@@ -22,7 +22,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -41,7 +42,7 @@ import static org.mockito.Mockito.mock;
 
 import static org.mockito.Mockito.when;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class PerfTestCompactionPolicies extends MockStoreFileGenerator {
 

@@ -24,7 +24,7 @@ import java.util.UUID;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Test;

@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.SortedSet;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Scan;
 

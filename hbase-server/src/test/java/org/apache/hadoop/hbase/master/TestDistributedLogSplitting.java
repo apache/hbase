@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -60,13 +61,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -75,33 +76,38 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.NonceGenerator;
 import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -110,12 +116,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({MasterTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
 public class TestDistributedLogSplitting {
   private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
   static {
-    Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
+    // Uncomment the following line if more verbosity is needed for
+    // debugging (see HBASE-12285 for details).
+    //Logger.getLogger("org.apache.hadoop.hbase").setLevel(Level.DEBUG);
 
     // test ThreeRSAbort fails under hadoop2 (2.0.2-alpha) if shortcircuit-read (scr) is on. this
     // turns it off for this test.  TODO: Figure out why scr breaks recovery.
@@ -229,7 +237,7 @@ public class TestDistributedLogSplitting {
       }
       if (foundRs) break;
     }
-    final Path logDir = new Path(rootdir, HLogUtil.getHLogDirectoryName(hrs
+    final Path logDir = new Path(rootdir, DefaultWALProvider.getWALDirectoryName(hrs
         .getServerName().toString()));
 
     LOG.info("#regions = " + regions.size());
@@ -241,7 +249,8 @@ public class TestDistributedLogSplitting {
         it.remove();
       }
     }
-    makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    
+    makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
 
     slm.splitLogDistributed(logDir);
 
@@ -250,12 +259,21 @@ public class TestDistributedLogSplitting {
 
       Path tdir = FSUtils.getTableDir(rootdir, table);
       Path editsdir =
-        HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
+        WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
-      FileStatus[] files = fs.listStatus(editsdir);
-      assertTrue(files.length > 1);
+      FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
+        @Override
+        public boolean accept(Path p) {
+          if (WALSplitter.isSequenceIdFile(p)) {
+            return false;
+          }
+          return true;
+        }
+      });
+      assertTrue("edits dir should have more than a single file in it. instead has " + files.length,
+          files.length > 1);
       for (int i = 0; i < files.length; i++) {
-        int c = countHLog(files[i].getPath(), fs, conf);
+        int c = countWAL(files[i].getPath(), fs, conf);
         count += c;
       }
       LOG.info(count + " edits in " + files.length + " recovered edits files.");
@@ -280,11 +298,11 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
-    makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
 
     // wait for abort completes
     this.abortRSAndVerifyRecovery(hrs, ht, zkw, NUM_REGIONS_TO_CREATE, NUM_LOG_LINES);
@@ -326,7 +344,7 @@ public class TestDistributedLogSplitting {
     HTable ht = installTable(zkw, TABLE_NAME, FAMILY_NAME, NUM_REGIONS_TO_CREATE);
     NonceGeneratorWithDups ng = new NonceGeneratorWithDups();
     NonceGenerator oldNg =
-        ConnectionUtils.injectNonceGeneratorForTesting(ht.getConnection(), ng);
+        ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection)ht.getConnection(), ng);
 
     try {
       List<Increment> reqs = new ArrayList<Increment>();
@@ -360,7 +378,7 @@ public class TestDistributedLogSplitting {
         }
       }
     } finally {
-      ConnectionUtils.injectNonceGeneratorForTesting(ht.getConnection(), oldNg);
+      ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection) ht.getConnection(), oldNg);
       ht.close();
       zkw.close();
     }
@@ -378,18 +396,18 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(true, "table");
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
-    makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
 
     this.abortRSAndVerifyRecovery(hrs, ht, zkw, NUM_REGIONS_TO_CREATE, NUM_LOG_LINES);
     ht.close();
     zkw.close();
   }
 
-  private void abortRSAndVerifyRecovery(HRegionServer hrs, HTable ht, final ZooKeeperWatcher zkw,
+  private void abortRSAndVerifyRecovery(HRegionServer hrs, Table ht, final ZooKeeperWatcher zkw,
       final int numRegions, final int numofLines) throws Exception {
 
     abortRSAndWaitForRecovery(hrs, zkw, numRegions);
@@ -446,11 +464,11 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
-    makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
 
     // abort master
     abortMaster(cluster);
@@ -503,11 +521,11 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
-    makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
 
     // abort master
     abortMaster(cluster);
@@ -525,8 +543,7 @@ public class TestDistributedLogSplitting {
     });
 
     Thread.sleep(2000);
-    LOG.info("Current Open Regions:"
-        + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
+    LOG.info("Current Open Regions:" + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
 
     // wait for all regions are fully recovered
     TEST_UTIL.waitFor(180000, 200, new Waiter.Predicate<Exception>() {
@@ -534,7 +551,11 @@ public class TestDistributedLogSplitting {
       public boolean evaluate() throws Exception {
         List<String> recoveringRegions = zkw.getRecoverableZooKeeper().getChildren(
           zkw.recoveringRegionsZNode, false);
-        return (recoveringRegions != null && recoveringRegions.size() == 0);
+        boolean done = recoveringRegions != null && recoveringRegions.size() == 0;
+        if (!done) {
+          LOG.info("Recovering regions: " + recoveringRegions);
+        }
+        return done;
       }
     });
 
@@ -561,13 +582,13 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     List<HRegionInfo> regions = null;
     HRegionServer hrs1 = findRSToKill(false, "table");
     regions = ProtobufUtil.getOnlineRegions(hrs1.getRSRpcServices());
 
-    makeHLog(hrs1.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    makeWAL(hrs1, regions, "table", "family", NUM_LOG_LINES, 100);
 
     // abort RS1
     LOG.info("Aborting region server: " + hrs1.getServerName());
@@ -638,7 +659,7 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = master.getZooKeeper();
-    HTable ht = installTable(zkw, "table", "family", 40);
+    Table ht = installTable(zkw, "table", "family", 40);
     final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
 
     Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
@@ -731,8 +752,8 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable disablingHT = installTable(zkw, "disableTable", "family", NUM_REGIONS_TO_CREATE);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE, NUM_REGIONS_TO_CREATE);
+    Table disablingHT = installTable(zkw, "disableTable", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE, NUM_REGIONS_TO_CREATE);
 
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
@@ -781,11 +802,12 @@ public class TestDistributedLogSplitting {
         it.remove();
       }
     }
-    makeHLog(hrs.getWAL(), regions, "disableTable", "family", NUM_LOG_LINES, 100, false);
-    makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
+    makeWAL(hrs, regions, "disableTable", "family", NUM_LOG_LINES, 100, false);
+    makeWAL(hrs, regions, "table", "family", NUM_LOG_LINES, 100);
 
     LOG.info("Disabling table\n");
     TEST_UTIL.getHBaseAdmin().disableTable(TableName.valueOf("disableTable"));
+    TEST_UTIL.waitTableDisabled(TableName.valueOf("disableTable").getName());
 
     // abort RS
     LOG.info("Aborting region server: " + hrs.getServerName());
@@ -826,13 +848,21 @@ public class TestDistributedLogSplitting {
     Path tdir = FSUtils.getTableDir(rootdir, TableName.valueOf("disableTable"));
     for (HRegionInfo hri : regions) {
       Path editsdir =
-        HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
+        WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       LOG.debug("checking edits dir " + editsdir);
       if(!fs.exists(editsdir)) continue;
-      FileStatus[] files = fs.listStatus(editsdir);
+      FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
+        @Override
+        public boolean accept(Path p) {
+          if (WALSplitter.isSequenceIdFile(p)) {
+            return false;
+          }
+          return true;
+        }
+      });
       if(files != null) {
         for(FileStatus file : files) {
-          int c = countHLog(file.getPath(), fs, conf);
+          int c = countWAL(file.getPath(), fs, conf);
           count += c;
           LOG.info(c + " edits in " + file.getPath());
         }
@@ -847,7 +877,7 @@ public class TestDistributedLogSplitting {
     // clean up
     for (HRegionInfo hri : regions) {
       Path editsdir =
-        HLogUtil.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
+        WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
       fs.delete(editsdir, true);
     }
     disablingHT.close();
@@ -908,7 +938,6 @@ public class TestDistributedLogSplitting {
       if (key == null || key.length == 0) {
         key = new byte[] { 0, 0, 0, 0, 1 };
       }
-      ht.setAutoFlush(true, true);
       Put put = new Put(key);
       put.add(Bytes.toBytes("family"), Bytes.toBytes("c1"), new byte[]{'b'});
       ht.put(put);
@@ -952,12 +981,12 @@ public class TestDistributedLogSplitting {
     HRegionServer hrs = findRSToKill(false, "table");
     Path rootdir = FSUtils.getRootDir(conf);
     final Path logDir = new Path(rootdir,
-        HLogUtil.getHLogDirectoryName(hrs.getServerName().toString()));
+        DefaultWALProvider.getWALDirectoryName(hrs.getServerName().toString()));
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
 
-    makeHLog(hrs.getWAL(), ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices()),
+    makeWAL(hrs, ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices()),
       "table", "family", NUM_LOG_LINES, 100);
 
     new Thread() {
@@ -1009,7 +1038,7 @@ public class TestDistributedLogSplitting {
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
         "distributed log splitting test", null);
 
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
     populateDataInTable(NUM_ROWS_PER_REGION, "family");
 
 
@@ -1175,7 +1204,6 @@ public class TestDistributedLogSplitting {
     LOG.info("testSameVersionUpdatesRecovery");
     conf.setLong("hbase.regionserver.hlog.blocksize", 15 * 1024);
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    conf.setInt("hfile.format.version", 3);
     startCluster(NUM_RS);
     final AtomicLong sequenceId = new AtomicLong(100);
     final int NUM_REGIONS_TO_CREATE = 40;
@@ -1186,7 +1214,7 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
@@ -1231,15 +1259,17 @@ public class TestDistributedLogSplitting {
     long timeStamp = System.currentTimeMillis();
     HTableDescriptor htd = new HTableDescriptor();
     htd.addFamily(new HColumnDescriptor(family));
+    final WAL wal = hrs.getWAL(curRegionInfo);
     for (int i = 0; i < NUM_LOG_LINES; i += 1) {
       WALEdit e = new WALEdit();
       value++;
       e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
-      hrs.getWAL().append(curRegionInfo, tableName, e,
-        System.currentTimeMillis(), htd, sequenceId);
+      wal.append(htd, curRegionInfo,
+          new HLogKey(curRegionInfo.getEncodedNameAsBytes(), tableName, System.currentTimeMillis()),
+          e, sequenceId, true, null);
     }
-    hrs.getWAL().sync();
-    hrs.getWAL().close();
+    wal.sync();
+    wal.shutdown();
 
     // wait for abort completes
     this.abortRSAndWaitForRecovery(hrs, zkw, NUM_REGIONS_TO_CREATE);
@@ -1267,18 +1297,17 @@ public class TestDistributedLogSplitting {
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 30 * 1024);
     conf.setInt("hbase.hstore.compactionThreshold", 3);
-    conf.setInt("hfile.format.version", 3);
     startCluster(NUM_RS);
     final AtomicLong sequenceId = new AtomicLong(100);
     final int NUM_REGIONS_TO_CREATE = 40;
-    final int NUM_LOG_LINES = 1000;
+    final int NUM_LOG_LINES = 2000;
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
     master.balanceSwitch(false);
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
@@ -1323,15 +1352,16 @@ public class TestDistributedLogSplitting {
     long timeStamp = System.currentTimeMillis();
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(family));
+    final WAL wal = hrs.getWAL(curRegionInfo);
     for (int i = 0; i < NUM_LOG_LINES; i += 1) {
       WALEdit e = new WALEdit();
       value++;
       e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
-      hrs.getWAL().append(curRegionInfo, tableName, e,
-        System.currentTimeMillis(), htd, sequenceId);
+      wal.append(htd, curRegionInfo, new HLogKey(curRegionInfo.getEncodedNameAsBytes(),
+          tableName, System.currentTimeMillis()), e, sequenceId, true, null);
     }
-    hrs.getWAL().sync();
-    hrs.getWAL().close();
+    wal.sync();
+    wal.shutdown();
 
     // wait for abort completes
     this.abortRSAndWaitForRecovery(hrs, zkw, NUM_REGIONS_TO_CREATE);
@@ -1362,6 +1392,37 @@ public class TestDistributedLogSplitting {
     ht.close();
   }
 
+  @Test(timeout = 300000)
+  public void testReadWriteSeqIdFiles() throws Exception {
+    LOG.info("testReadWriteSeqIdFiles");
+    startCluster(2);
+    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
+    HTable ht = installTable(zkw, "table", "family", 10);
+    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf("table"));
+    List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
+    long newSeqId = WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 1L, 1000L);
+    WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);
+    assertEquals(newSeqId + 2000,
+      WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 3L, 1000L));
+    
+    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regionDirs.get(0));
+    FileStatus[] files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
+      @Override
+      public boolean accept(Path p) {
+        return WALSplitter.isSequenceIdFile(p);
+      }
+    });
+    // only one seqid file should exist
+    assertEquals(1, files.length);
+    
+    // verify all seqId files aren't treated as recovered.edits files
+    NavigableSet<Path> recoveredEdits = WALSplitter.getSplitEditFilesSorted(fs, regionDirs.get(0));
+    assertEquals(0, recoveredEdits.size());
+    
+    ht.close();
+  } 
+  
   HTable installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {
     return installTable(zkw, tname, fname, nrs, 0);
   }
@@ -1372,8 +1433,11 @@ public class TestDistributedLogSplitting {
     TableName table = TableName.valueOf(tname);
     byte [] family = Bytes.toBytes(fname);
     LOG.info("Creating table with " + nrs + " regions");
-    HTable ht = TEST_UTIL.createTable(table, family);
-    int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family, nrs);
+    HTable ht = TEST_UTIL.createMultiRegionTable(table, family, nrs);
+    int numRegions = -1;
+    try (RegionLocator r = ht.getRegionLocator()) {
+      numRegions = r.getStartKeys().length;
+    }
     assertEquals(nrs, numRegions);
       LOG.info("Waiting for no more RIT\n");
     blockUntilNoRIT(zkw, master);
@@ -1423,7 +1487,13 @@ public class TestDistributedLogSplitting {
 
     for (MasterThread mt : cluster.getLiveMasterThreads()) {
       HRegionServer hrs = mt.getMaster();
-      List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
+      List<HRegionInfo> hris;
+      try {
+        hris = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
+      } catch (ServerNotRunningYetException e) {
+        // It's ok: this master may be a backup. Ignored.
+        continue;
+      }
       for (HRegionInfo hri : hris) {
         if (hri.getTable().isSystemTable()) {
           continue;
@@ -1437,13 +1507,13 @@ public class TestDistributedLogSplitting {
     }
   }
 
-  public void makeHLog(HLog log, List<HRegionInfo> regions, String tname, String fname,
+  public void makeWAL(HRegionServer hrs, List<HRegionInfo> regions, String tname, String fname,
       int num_edits, int edit_size) throws IOException {
-    makeHLog(log, regions, tname, fname, num_edits, edit_size, true);
+    makeWAL(hrs, regions, tname, fname, num_edits, edit_size, true);
   }
 
-  public void makeHLog(HLog log, List<HRegionInfo> regions, String tname, String fname,
-      int num_edits, int edit_size, boolean closeLog) throws IOException {
+  public void makeWAL(HRegionServer hrs, List<HRegionInfo> regions, String tname, String fname,
+      int num_edits, int edit_size, boolean cleanShutdown) throws IOException {
     TableName fullTName = TableName.valueOf(tname);
     // remove root and meta region
     regions.remove(HRegionInfo.FIRST_META_REGIONINFO);
@@ -1475,10 +1545,13 @@ public class TestDistributedLogSplitting {
     }
     int n = hris.size();
     int[] counts = new int[n];
+    // sync every ~30k to line up with desired wal rolls
+    final int syncEvery = 30 * 1024 / edit_size;
     if (n > 0) {
       for (int i = 0; i < num_edits; i += 1) {
         WALEdit e = new WALEdit();
         HRegionInfo curRegionInfo = hris.get(i % n);
+        final WAL log = hrs.getWAL(curRegionInfo);
         byte[] startRow = curRegionInfo.getStartKey();
         if (startRow == null || startRow.length == 0) {
           startRow = new byte[] { 0, 0, 0, 0, 1 };
@@ -1489,13 +1562,25 @@ public class TestDistributedLogSplitting {
                                              // key
         byte[] qualifier = Bytes.toBytes("c" + Integer.toString(i));
         e.add(new KeyValue(row, family, qualifier, System.currentTimeMillis(), value));
-        log.append(curRegionInfo, fullTName, e, System.currentTimeMillis(), htd, sequenceId);
+        log.append(htd, curRegionInfo, new HLogKey(curRegionInfo.getEncodedNameAsBytes(), fullTName,
+            System.currentTimeMillis()), e, sequenceId, true, null);
+        if (0 == i % syncEvery) {
+          log.sync();
+        }
         counts[i % n] += 1;
       }
     }
-    log.sync();
-    if(closeLog) {
-      log.close();
+    // done as two passes because the regions might share logs. shutdown is idempotent, but sync
+    // will cause errors if done after.
+    for (HRegionInfo info : hris) {
+      final WAL log = hrs.getWAL(info);
+      log.sync();
+    }
+    if (cleanShutdown) {
+      for (HRegionInfo info : hris) {
+        final WAL log = hrs.getWAL(info);
+        log.shutdown();
+      }
     }
     for (int i = 0; i < n; i++) {
       LOG.info("region " + hris.get(i).getRegionNameAsString() + " has " + counts[i] + " edits");
@@ -1503,14 +1588,23 @@ public class TestDistributedLogSplitting {
     return;
   }
 
-  private int countHLog(Path log, FileSystem fs, Configuration conf)
+  private int countWAL(Path log, FileSystem fs, Configuration conf)
   throws IOException {
     int count = 0;
-    HLog.Reader in = HLogFactory.createReader(fs, log, conf);
-    HLog.Entry e;
-    while ((e = in.next()) != null) {
-      if (!WALEdit.isMetaEditFamily(e.getEdit().getKeyValues().get(0))) {
-        count++;
+    WAL.Reader in = WALFactory.createReader(fs, log, conf);
+    try {
+      WAL.Entry e;
+      while ((e = in.next()) != null) {
+        if (!WALEdit.isMetaEditFamily(e.getEdit().getCells().get(0))) {
+          count++;
+        }
+      }
+    } finally {
+      try {
+        in.close();
+      } catch (IOException exception) {
+        LOG.warn("Problem closing wal: " + exception.getMessage());
+        LOG.debug("exception details.", exception);
       }
     }
     return count;
@@ -1535,11 +1629,11 @@ public class TestDistributedLogSplitting {
   /**
    * Load table with puts and deletes with expected values so that we can verify later
    */
-  private void prepareData(final HTable t, final byte[] f, final byte[] column) throws IOException {
-    t.setAutoFlush(false, true);
+  private void prepareData(final Table t, final byte[] f, final byte[] column) throws IOException {
     byte[] k = new byte[3];
 
     // add puts
+    List<Put> puts = new ArrayList<>();
     for (byte b1 = 'a'; b1 <= 'z'; b1++) {
       for (byte b2 = 'a'; b2 <= 'z'; b2++) {
         for (byte b3 = 'a'; b3 <= 'z'; b3++) {
@@ -1548,11 +1642,11 @@ public class TestDistributedLogSplitting {
           k[2] = b3;
           Put put = new Put(k);
           put.add(f, column, k);
-          t.put(put);
+          puts.add(put);
         }
       }
     }
-    t.flushCommits();
+    t.put(puts);
     // add deletes
     for (byte b3 = 'a'; b3 <= 'z'; b3++) {
       k[0] = 'a';
@@ -1561,7 +1655,6 @@ public class TestDistributedLogSplitting {
       Delete del = new Delete(k);
       t.delete(del);
     }
-    t.flushCommits();
   }
 
   private void waitForCounter(AtomicLong ctr, long oldval, long newval,

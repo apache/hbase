@@ -38,8 +38,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -102,32 +104,32 @@ public class SecureTestUtil {
     }
   }
 
-  public static void checkTablePerms(Configuration conf, byte[] table, byte[] family, byte[] column,
+  public static void checkTablePerms(Configuration conf, TableName table, byte[] family, byte[] column,
       Permission.Action... actions) throws IOException {
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
-      perms[i] = new TablePermission(TableName.valueOf(table), family, column, actions[i]);
+      perms[i] = new TablePermission(table, family, column, actions[i]);
     }
 
     checkTablePerms(conf, table, perms);
   }
 
-  public static void checkTablePerms(Configuration conf, byte[] table, Permission... perms) throws IOException {
+  public static void checkTablePerms(Configuration conf, TableName table, Permission... perms)
+  throws IOException {
     CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
     for (Permission p : perms) {
       request.addPermission(ProtobufUtil.toPermission(p));
     }
-    HTable acl = new HTable(conf, table);
-    try {
-      AccessControlService.BlockingInterface protocol =
-        AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
-      try {
-        protocol.checkPermissions(null, request.build());
-      } catch (ServiceException se) {
-        ProtobufUtil.toIOException(se);
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Table acl = connection.getTable(table)) {
+        AccessControlService.BlockingInterface protocol =
+            AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
+        try {
+          protocol.checkPermissions(null, request.build());
+        } catch (ServiceException se) {
+          ProtobufUtil.toIOException(se);
+        }
       }
-    } finally {
-      acl.close();
     }
   }
 
@@ -327,14 +329,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, user, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.grant(protocol, user, actions);
+          }
         }
         return null;
       }
@@ -351,14 +352,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, user, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.revoke(protocol, user, actions);
+          }
         }
         return null;
       }
@@ -375,14 +375,55 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.grant(protocol, user, namespace, actions);
+          }
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Grant permissions on a namespace to the given user using AccessControl Client.
+   * Will wait until all active AccessController instances have updated their permissions caches
+   * or will throw an exception upon timeout (10 seconds).
+   */
+  public static void grantOnNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final String namespace,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
         try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, user, namespace, actions);
-        } finally {
-          acl.close();
+          AccessControlClient.grant(conf, namespace, user, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke permissions on a namespace from the given user using AccessControl Client.
+   * Will wait until all active AccessController instances have updated their permissions caches
+   * or will throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeFromNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final String namespace,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.revoke(conf, namespace, user, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
         }
         return null;
       }
@@ -399,14 +440,13 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
-        try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, user, namespace, actions);
-        } finally {
-          acl.close();
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.revoke(protocol, user, namespace, actions);
+          }
         }
         return null;
       }
@@ -424,14 +464,55 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
+          }
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Grant permissions on a table to the given user using AccessControlClient. Will wait until all
+   * active AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void grantOnTableUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final TableName table, final byte[] family,
+      final byte[] qualifier, final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
         try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.grant(protocol, user, table, family, qualifier, actions);
-        } finally {
-          acl.close();
+          AccessControlClient.grant(conf, table, user, family, qualifier, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Grant global permissions to the given user using AccessControlClient. Will wait until all
+   * active AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void grantGlobalUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final Permission.Action... actions)
+      throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.grant(conf, user, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
         }
         return null;
       }
@@ -449,14 +530,55 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        try (Connection connection = ConnectionFactory.createConnection(util.getConfiguration())) {
+          try (Table acl = connection.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
+            AccessControlService.BlockingInterface protocol =
+                AccessControlService.newBlockingStub(service);
+            ProtobufUtil.revoke(protocol, user, table, family, qualifier, actions);
+          }
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke permissions on a table from the given user using AccessControlClient. Will wait until
+   * all active AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeFromTableUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final TableName table, final byte[] family,
+      final byte[] qualifier, final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
         try {
-          BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
-          AccessControlService.BlockingInterface protocol =
-              AccessControlService.newBlockingStub(service);
-          ProtobufUtil.revoke(protocol, user, table, family, qualifier, actions);
-        } finally {
-          acl.close();
+          AccessControlClient.revoke(conf, table, user, family, qualifier, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke global permissions from the given user using AccessControlClient. Will wait until
+   * all active AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeGlobalUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user,final Permission.Action... actions)
+      throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.revoke(conf, user, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
         }
         return null;
       }

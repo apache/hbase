@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
@@ -175,7 +176,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
           p.add(TEST_FAMILY, TEST_QUALIFIER, HConstants.EMPTY_BYTE_ARRAY);
           p.setCellVisibility(new CellVisibility(exp));
           getCounter(expIdx).increment(1);
-          table.put(p);
+          mutator.mutate(p);
 
           if (i % 100 == 0) {
             context.setStatus("Written " + i + "/" + recordsToWrite + " records");
@@ -184,7 +185,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
         }
         // End of block, flush all of them before we start writing anything
         // pointing to these!
-        table.flushCommits();
+        mutator.flush();
       }
     }
 
@@ -369,7 +370,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     HTableDescriptor htd = new HTableDescriptor(getTablename());
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
-    HBaseAdmin admin = new HBaseAdmin(getConf());
+    Admin admin = new HBaseAdmin(getConf());
     try {
       admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
     } finally {

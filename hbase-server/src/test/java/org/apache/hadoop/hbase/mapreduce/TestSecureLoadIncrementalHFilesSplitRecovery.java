@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
@@ -31,7 +32,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Reruns TestSecureLoadIncrementalHFilesSplitRecovery
  * using LoadIncrementalHFiles in secure mode.
- * This suite is unable to verify the security handoff/turnover
+ * This suite is unable to verify the security handoff/turnove
  * as miniCluster is running as system user thus has root privileges
  * and delegation tokens don't seem to work on miniDFS.
  *
@@ -40,7 +41,7 @@ import org.junit.experimental.categories.Category;
  * invaluable as it verifies the other mechanisms that need to be
  * supported as part of a LoadIncrementalFiles call.
  */
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestSecureLoadIncrementalHFilesSplitRecovery extends TestLoadIncrementalHFilesSplitRecovery {
 
   //This "overrides" the parent static method
@@ -57,13 +58,12 @@ public class TestSecureLoadIncrementalHFilesSplitRecovery extends TestLoadIncrem
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
-    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
   }
 
   //Disabling this test as it does not work in secure mode
-  @Test
+  @Test (timeout=180000)
   @Override
   public void testBulkLoadPhaseFailure() {
   }
 }
-

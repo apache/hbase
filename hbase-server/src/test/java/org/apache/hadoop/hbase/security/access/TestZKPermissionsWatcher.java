@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertFalse;
@@ -31,9 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -43,7 +43,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test the reading and writing of access permissions to and from zookeeper.
  */
-@Category(LargeTests.class)
+@Category({SecurityTests.class, LargeTests.class})
 public class TestZKPermissionsWatcher {
   private static final Log LOG = LogFactory.getLog(TestZKPermissionsWatcher.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

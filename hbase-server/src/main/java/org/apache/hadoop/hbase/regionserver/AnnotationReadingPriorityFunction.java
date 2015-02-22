@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -66,6 +67,7 @@ import com.google.protobuf.TextFormat;
 //All the argument classes declare a 'getRegion' method that returns a
 //RegionSpecifier object. Methods can be invoked on the returned object
 //to figure out whether it is a meta region or not.
+@InterfaceAudience.Private
 class AnnotationReadingPriorityFunction implements PriorityFunction {
   public static final Log LOG =
     LogFactory.getLog(AnnotationReadingPriorityFunction.class.getName());
@@ -175,11 +177,11 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
         Method getRegion = methodMap.get("getRegion").get(rpcArgClass);
         regionSpecifier = (RegionSpecifier)getRegion.invoke(param, (Object[])null);
         HRegion region = rpcServices.getRegion(regionSpecifier);
-        if (region.getRegionInfo().isMetaTable()) {
+        if (region.getRegionInfo().isSystemTable()) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("High priority because region=" + region.getRegionNameAsString());
           }
-          return HConstants.HIGH_QOS;
+          return HConstants.SYSTEMTABLE_QOS;
         }
       }
     } catch (Exception ex) {
@@ -195,12 +197,12 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
         return HConstants.NORMAL_QOS;
       }
       RegionScanner scanner = rpcServices.getScanner(request.getScannerId());
-      if (scanner != null && scanner.getRegionInfo().isMetaRegion()) {
+      if (scanner != null && scanner.getRegionInfo().isSystemTable()) {
         if (LOG.isTraceEnabled()) {
           // Scanner requests are small in size so TextFormat version should not overwhelm log.
           LOG.trace("High priority scanner request " + TextFormat.shortDebugString(request));
         }
-        return HConstants.HIGH_QOS;
+        return HConstants.SYSTEMTABLE_QOS;
       }
     }
     return HConstants.NORMAL_QOS;

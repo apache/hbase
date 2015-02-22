@@ -68,14 +68,14 @@ public interface MetricsRegionServerWrapper {
   long getNumStores();
 
   /**
-   * Get the number of HLog files of this region server.
+   * Get the number of WAL files of this region server.
    */
-  public long getNumHLogFiles();
+  public long getNumWALFiles();
   
   /**
-   * Get the size of HLog files of this region server.
+   * Get the size of WAL files of this region server.
    */
-  public long getHLogFileSize();
+  public long getWALFileSize();
   
   /**
    * Get the number of store files hosted on this region server.
@@ -152,6 +152,11 @@ public interface MetricsRegionServerWrapper {
    * Get the percent of HFiles' that are local.
    */
   int getPercentFileLocal();
+
+  /**
+   * Get the size of the split queue
+   */
+  int getSplitQueueSize();
 
   /**
    * Get the size of the compaction queue
@@ -248,6 +253,7 @@ public interface MetricsRegionServerWrapper {
   long getMajorCompactedCellsSize();
 
   /**
+<<<<<<< HEAD
    * Gets the number of cells move to mob during compaction.
    */
   long getMobCompactedIntoMobCellsCount();
@@ -316,4 +322,19 @@ public interface MetricsRegionServerWrapper {
    * Gets the hit percent to the mob file cache.
    */
   int getMobFileCacheHitPercent();
+
+  /**
+   * @return Count of hedged read operations
+   */
+  public long getHedgedReadOps();
+
+  /**
+   * @return Count of times a hedged read beat out the primary read.
+   */
+  public long getHedgedReadWins();
+
+  /**
+   * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
+   */
+  public long getBlockedRequestsCount();
 }

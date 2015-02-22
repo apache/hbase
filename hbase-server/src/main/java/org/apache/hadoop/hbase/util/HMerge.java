@@ -26,7 +26,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,17 +36,19 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -124,7 +126,7 @@ class HMerge {
         throw new IllegalStateException(
             "HBase instance must be running to merge a normal table");
       }
-      HBaseAdmin admin = new HBaseAdmin(conf);
+      Admin admin = new HBaseAdmin(conf);
       try {
         if (!admin.isTableDisabled(tableName)) {
           throw new TableNotDisabledException(tableName);
@@ -141,7 +143,7 @@ class HMerge {
     protected final FileSystem fs;
     protected final Path rootDir;
     protected final HTableDescriptor htd;
-    protected final HLog hlog;
+    protected final WALFactory walFactory;
     private final long maxFilesize;
 
 
@@ -154,10 +156,13 @@ class HMerge {
 
       this.rootDir = FSUtils.getRootDir(conf);
       Path tabledir = FSUtils.getTableDir(this.rootDir, tableName);
-      this.htd = FSTableDescriptors.getTableDescriptorFromFs(this.fs, tabledir);
+      this.htd = FSTableDescriptors.getTableDescriptorFromFs(this.fs, tabledir)
+          .getHTableDescriptor();
       String logname = "merge_" + System.currentTimeMillis() + HConstants.HREGION_LOGDIR_NAME;
 
-      this.hlog = HLogFactory.createHLog(fs, tabledir, logname, conf);
+      final Configuration walConf = new Configuration(conf);
+      FSUtils.setRootDir(walConf, tabledir);
+      this.walFactory = new WALFactory(walConf, null, logname);
     }
 
     void process() throws IOException {
@@ -171,8 +176,7 @@ class HMerge {
         }
       } finally {
         try {
-          hlog.closeAndDelete();
-
+          walFactory.close();
         } catch(IOException e) {
           LOG.error(e);
         }
@@ -191,10 +195,12 @@ class HMerge {
       long nextSize = 0;
       for (int i = 0; i < info.length - 1; i++) {
         if (currentRegion == null) {
-          currentRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i], this.htd, hlog);
+          currentRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i], this.htd,
+              walFactory.getWAL(info[i].getEncodedNameAsBytes()));
           currentSize = currentRegion.getLargestHStoreSize();
         }
-        nextRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i + 1], this.htd, hlog);
+        nextRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i + 1], this.htd,
+            walFactory.getWAL(info[i+1].getEncodedNameAsBytes()));
         nextSize = nextRegion.getLargestHStoreSize();
 
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
@@ -231,7 +237,7 @@ class HMerge {
   /** Instantiated to compact a normal user table */
   private static class OnlineMerger extends Merger {
     private final TableName tableName;
-    private final HTable table;
+    private final Table table;
     private final ResultScanner metaScanner;
     private HRegionInfo latestRegion;
 
@@ -240,7 +246,8 @@ class HMerge {
     throws IOException {
       super(conf, fs, tableName);
       this.tableName = tableName;
-      this.table = new HTable(conf, TableName.META_TABLE_NAME);
+      Connection connection = ConnectionFactory.createConnection(conf);
+      this.table = connection.getTable(TableName.META_TABLE_NAME);
       this.metaScanner = table.getScanner(HConstants.CATALOG_FAMILY,
           HConstants.REGIONINFO_QUALIFIER);
       this.latestRegion = null;

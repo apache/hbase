@@ -21,22 +21,28 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 
 /**
- * Compact passed set of files. Create an instance and then call {@link #compact(CompactionRequest)}
+ * Compact passed set of files. Create an instance and then call
+ * {@link #compact(CompactionRequest, CompactionThroughputController)}
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor {
+  private static final Log LOG = LogFactory.getLog(DefaultCompactor.class);
+
   public DefaultCompactor(final Configuration conf, final Store store) {
     super(conf, store);
   }
@@ -44,17 +50,33 @@ public class DefaultCompactor extends Compactor {
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    */
-  public List<Path> compact(final CompactionRequest request) throws IOException {
+  public List<Path> compact(final CompactionRequest request,
+      CompactionThroughputController throughputController) throws IOException {
     FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles());
     this.progress = new CompactionProgress(fd.maxKeyCount);
 
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = getSmallestReadPoint();
-    List<StoreFileScanner> scanners = createFileScanners(request.getFiles(), smallestReadPoint);
+
+    List<StoreFileScanner> scanners;
+    Collection<StoreFile> readersToClose;
+    if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", false)) {
+      // clone all StoreFiles, so we'll do the compaction on a independent copy of StoreFiles,
+      // HFileFiles, and their readers
+      readersToClose = new ArrayList<StoreFile>(request.getFiles().size());
+      for (StoreFile f : request.getFiles()) {
+        readersToClose.add(new StoreFile(f));
+      }
+      scanners = createFileScanners(readersToClose, smallestReadPoint);
+    } else {
+      readersToClose = Collections.emptyList();
+      scanners = createFileScanners(request.getFiles(), smallestReadPoint);
+    }
 
     StoreFile.Writer writer = null;
     List<Path> newFiles = new ArrayList<Path>();
     boolean cleanSeqId = false;
+    IOException e = null;
     try {
       InternalScanner scanner = null;
       try {
@@ -77,8 +99,9 @@ public class DefaultCompactor extends Compactor {
           cleanSeqId = true;
         }
         writer = createTmpWriter(fd, smallestReadPoint);
-        boolean finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
-            request.isAllFiles());
+        boolean finished =
+            performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId, throughputController,
+                    request.isAllFiles());
         if (!finished) {
           writer.close();
           store.getFileSystem().delete(writer.getPath(), false);
@@ -92,10 +115,30 @@ public class DefaultCompactor extends Compactor {
            scanner.close();
          }
       }
-    } finally {
-      if (writer != null) {
-        appendMetadataAndCloseWriter(writer, fd, request.isAllFiles());
-        newFiles.add(writer.getPath());
+    } catch (IOException ioe) {
+      e = ioe;
+      // Throw the exception
+      throw ioe;
+    }
+    finally {
+      try {
+        if (writer != null) {
+          if (e != null) {
+            writer.close();
+          } else {
+            writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
+            writer.close();
+            newFiles.add(writer.getPath());
+          }
+        }
+      } finally {
+        for (StoreFile f : readersToClose) {
+          try {
+            f.closeReader(true);
+          } catch (IOException ioe) {
+            LOG.warn("Exception closing " + f, ioe);
+          }
+        }
       }
     }
     return newFiles;
@@ -117,7 +160,7 @@ public class DefaultCompactor extends Compactor {
 
   /**
    * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to
-   * {@link #compact(CompactionRequest)};
+   * {@link #compact(CompactionRequest, CompactionThroughputController)};
    * @param filesToCompact the files to compact. These are used as the compactionSelection for
    *          the generated {@link CompactionRequest}.
    * @param isMajor true to major compact (prune all deletes, max versions, etc)
@@ -129,6 +172,6 @@ public class DefaultCompactor extends Compactor {
       throws IOException {
     CompactionRequest cr = new CompactionRequest(filesToCompact);
     cr.setIsMajor(isMajor, isMajor);
-    return this.compact(cr);
+    return this.compact(cr, NoLimitCompactionThroughputController.INSTANCE);
   }
 }

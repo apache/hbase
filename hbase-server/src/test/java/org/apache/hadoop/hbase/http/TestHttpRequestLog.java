@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.HttpRequestLog;
-import org.apache.hadoop.hbase.http.HttpRequestLogAppender;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -30,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestHttpRequestLog {
 
   @Test

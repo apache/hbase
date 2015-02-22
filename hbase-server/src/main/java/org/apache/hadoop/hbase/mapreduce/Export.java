@@ -22,8 +22,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -58,6 +58,8 @@ public class Export extends Configured implements Tool {
   final static String RAW_SCAN = "hbase.mapreduce.include.deleted.rows";
   final static String EXPORT_BATCHING = "hbase.export.scanner.batch";
 
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   /**
    * Sets up the actual job.
    *
@@ -70,7 +72,7 @@ public class Export extends Configured implements Tool {
   throws IOException {
     String tableName = args[0];
     Path outputDir = new Path(args[1]);
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJobName(NAME + "_" + tableName);
     job.setJarByClass(Export.class);
     // Set optional scan parameters
@@ -166,6 +168,8 @@ public class Export extends Configured implements Tool {
     System.err.println("   -D " + RAW_SCAN + "=true");
     System.err.println("   -D " + TableInputFormat.SCAN_ROW_START + "=<ROWSTART>");
     System.err.println("   -D " + TableInputFormat.SCAN_ROW_STOP + "=<ROWSTOP>");
+    System.err.println("   -D " + JOB_NAME_CONF_KEY
+        + "=jobName - use the specified mapreduce job name for the export");
     System.err.println("For performance consider the following properties:\n"
         + "   -Dhbase.client.scanner.caching=100\n"
         + "   -Dmapreduce.map.speculative=false\n"

@@ -31,12 +31,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
@@ -44,15 +45,15 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({MasterTests.class, LargeTests.class})
 public class TestRestartCluster {
   private static final Log LOG = LogFactory.getLog(TestRestartCluster.class);
   private HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static final byte [][] TABLES = {
-      Bytes.toBytes("restartTableOne"),
-      Bytes.toBytes("restartTableTwo"),
-      Bytes.toBytes("restartTableThree")
+  private static final TableName[] TABLES = {
+      TableName.valueOf("restartTableOne"),
+      TableName.valueOf("restartTableTwo"),
+      TableName.valueOf("restartTableThree")
   };
   private static final byte [] FAMILY = Bytes.toBytes("family");
 
@@ -67,15 +68,15 @@ public class TestRestartCluster {
       Threads.sleep(1);
     }
     LOG.info("\n\nCreating tables");
-    for(byte [] TABLE : TABLES) {
+    for(TableName TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
     }
-    for(byte [] TABLE : TABLES) {
+    for(TableName TABLE : TABLES) {
       UTIL.waitTableEnabled(TABLE);
     }
 
     List<HRegionInfo> allRegions =
-      MetaScanner.listAllRegions(UTIL.getConfiguration(), true);
+        MetaScanner.listAllRegions(UTIL.getConfiguration(), UTIL.getConnection(), true);
     assertEquals(4, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
@@ -90,10 +91,11 @@ public class TestRestartCluster {
     // Need to use a new 'Configuration' so we make a new HConnection.
     // Otherwise we're reusing an HConnection that has gone stale because
     // the shutdown of the cluster also called shut of the connection.
-    allRegions = MetaScanner.listAllRegions(new Configuration(UTIL.getConfiguration()), true);
+    allRegions = MetaScanner
+        .listAllRegions(new Configuration(UTIL.getConfiguration()), UTIL.getConnection(), true);
     assertEquals(4, allRegions.size());
     LOG.info("\n\nWaiting for tables to be available");
-    for(byte [] TABLE: TABLES) {
+    for(TableName TABLE: TABLES) {
       try {
         UTIL.createTable(TABLE, FAMILY);
         assertTrue("Able to create table that should already exist", false);
@@ -117,10 +119,10 @@ public class TestRestartCluster {
     UTIL.getMiniHBaseCluster().getMaster().
       getMasterRpcServices().synchronousBalanceSwitch(false);
     LOG.info("\n\nCreating tables");
-    for(byte [] TABLE : TABLES) {
+    for(TableName TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
     }
-    for(byte [] TABLE : TABLES) {
+    for(TableName TABLE : TABLES) {
       UTIL.waitTableEnabled(TABLE);
     }
 
@@ -130,7 +132,7 @@ public class TestRestartCluster {
     // We don't have to use SnapshotOfRegionAssignmentFromMeta.
     // We use it here because AM used to use it to load all user region placements
     SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
-      master.getShortCircuitConnection());
+      master.getConnection());
     snapshot.initialize();
     Map<HRegionInfo, ServerName> regionToRegionServerMap
       = snapshot.getRegionToRegionServerMap();
@@ -196,7 +198,7 @@ public class TestRestartCluster {
       Threads.sleep(100);
     }
 
-    snapshot =new SnapshotOfRegionAssignmentFromMeta(master.getShortCircuitConnection());
+    snapshot =new SnapshotOfRegionAssignmentFromMeta(master.getConnection());
     snapshot.initialize();
     Map<HRegionInfo, ServerName> newRegionToRegionServerMap =
       snapshot.getRegionToRegionServerMap();

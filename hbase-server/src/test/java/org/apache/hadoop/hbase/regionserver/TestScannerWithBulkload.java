@@ -26,12 +26,17 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -47,7 +52,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestScannerWithBulkload {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -56,7 +61,7 @@ public class TestScannerWithBulkload {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  private static void createTable(HBaseAdmin admin, String tableName) throws IOException {
+  private static void createTable(Admin admin, TableName tableName) throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("col");
     hcd.setMaxVersions(3);
@@ -66,18 +71,19 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoad() throws Exception {
-    String tableName = "testBulkLoad";
+    TableName tableName = TableName.valueOf("testBulkLoad");
     long l = System.currentTimeMillis();
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
-    final HTable table = init(admin, l, scan, tableName);
+    final Table table = init(admin, l, scan, tableName);
     // use bulkload
-    final Path hfilePath = writeToHFile(l, "/temp/testBulkLoad/", "/temp/testBulkLoad/col/file");
+    final Path hfilePath = writeToHFile(l, "/temp/testBulkLoad/", "/temp/testBulkLoad/col/file",
+      false);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-    bulkload.doBulkLoad(hfilePath, table);
+    bulkload.doBulkLoad(hfilePath, (HTable) table);
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     result = scanAfterBulkLoad(scanner, result, "version2");
@@ -85,35 +91,35 @@ public class TestScannerWithBulkload {
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version3")));
     table.put(put0);
-    table.flushCommits();
     admin.flush(tableName);
     scanner = table.getScanner(scan);
     result = scanner.next();
     while (result != null) {
-      List<KeyValue> kvs = result.getColumn(Bytes.toBytes("col"), Bytes.toBytes("q"));
-      for (KeyValue _kv : kvs) {
-        if (Bytes.toString(_kv.getRow()).equals("row1")) {
-          System.out.println(Bytes.toString(_kv.getRow()));
-          System.out.println(Bytes.toString(_kv.getQualifier()));
-          System.out.println(Bytes.toString(_kv.getValue()));
-          Assert.assertEquals("version3", Bytes.toString(_kv.getValue()));
+      List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
+      for (Cell _c : cells) {
+        if (Bytes.toString(_c.getRow()).equals("row1")) {
+          System.out.println(Bytes.toString(_c.getRow()));
+          System.out.println(Bytes.toString(_c.getQualifier()));
+          System.out.println(Bytes.toString(_c.getValue()));
+          Assert.assertEquals("version3", Bytes.toString(_c.getValue()));
         }
       }
       result = scanner.next();
     }
+    scanner.close();
     table.close();
   }
 
   private Result scanAfterBulkLoad(ResultScanner scanner, Result result, String expctedVal)
       throws IOException {
     while (result != null) {
-      List<KeyValue> kvs = result.getColumn(Bytes.toBytes("col"), Bytes.toBytes("q"));
-      for (KeyValue _kv : kvs) {
-        if (Bytes.toString(_kv.getRow()).equals("row1")) {
-          System.out.println(Bytes.toString(_kv.getRow()));
-          System.out.println(Bytes.toString(_kv.getQualifier()));
-          System.out.println(Bytes.toString(_kv.getValue()));
-          Assert.assertEquals(expctedVal, Bytes.toString(_kv.getValue()));
+      List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
+      for (Cell _c : cells) {
+        if (Bytes.toString(_c.getRow()).equals("row1")) {
+          System.out.println(Bytes.toString(_c.getRow()));
+          System.out.println(Bytes.toString(_c.getQualifier()));
+          System.out.println(Bytes.toString(_c.getValue()));
+          Assert.assertEquals(expctedVal, Bytes.toString(_c.getValue()));
         }
       }
       result = scanner.next();
@@ -121,7 +127,10 @@ public class TestScannerWithBulkload {
     return result;
   }
 
-  private Path writeToHFile(long l, String hFilePath, String pathStr) throws IOException {
+  // If nativeHFile is true, we will set cell seq id and MAX_SEQ_ID_KEY in the file.
+  // Else, we will set BULKLOAD_TIME_KEY.
+  private Path writeToHFile(long l, String hFilePath, String pathStr, boolean nativeHFile)
+      throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     final Path hfilePath = new Path(hFilePath);
     fs.mkdirs(hfilePath);
@@ -132,57 +141,69 @@ public class TestScannerWithBulkload {
     HFile.Writer writer = wf.withPath(fs, path).withFileContext(context).create();
     KeyValue kv = new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
         Bytes.toBytes("version2"));
+
+    // Set cell seq id to test bulk load native hfiles.
+    if (nativeHFile) {
+      // Set a big seq id. Scan should not look at this seq id in a bulk loaded file.
+      // Scan should only look at the seq id appended at the bulk load time, and not skip
+      // this kv.
+      kv.setSequenceId(9999999);
+    }
+
     writer.append(kv);
-    // Add the bulk load time_key. otherwise we cannot ensure that it is a bulk
-    // loaded file
+
+    if (nativeHFile) {
+      // Set a big MAX_SEQ_ID_KEY. Scan should not look at this seq id in a bulk loaded file.
+      // Scan should only look at the seq id appended at the bulk load time, and not skip its
+      // kv.
+      writer.appendFileInfo(StoreFile.MAX_SEQ_ID_KEY, Bytes.toBytes(new Long(9999999)));
+    }
+    else {
     writer.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY, Bytes.toBytes(System.currentTimeMillis()));
+    }
     writer.close();
     return hfilePath;
   }
 
-  private HTable init(HBaseAdmin admin, long l, Scan scan, String tableName) throws Exception {
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+  private Table init(HBaseAdmin admin, long l, Scan scan, TableName tableName) throws Exception {
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     Put put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version0")));
     table.put(put0);
-    table.flushCommits();
     admin.flush(tableName);
     Put put1 = new Put(Bytes.toBytes("row2"));
     put1.add(new KeyValue(Bytes.toBytes("row2"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version0")));
     table.put(put1);
-    table.flushCommits();
     admin.flush(tableName);
-    admin.close();
     put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version1")));
     table.put(put0);
-    table.flushCommits();
     admin.flush(tableName);
     admin.compact(tableName);
 
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
-    List<KeyValue> kvs = result.getColumn(Bytes.toBytes("col"), Bytes.toBytes("q"));
-    Assert.assertEquals(1, kvs.size());
-    Assert.assertEquals("version1", Bytes.toString(kvs.get(0).getValue()));
+    List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
+    Assert.assertEquals(1, cells.size());
+    Assert.assertEquals("version1", Bytes.toString(cells.get(0).getValue()));
     scanner.close();
     return table;
   }
 
   @Test
   public void testBulkLoadWithParallelScan() throws Exception {
-    String tableName = "testBulkLoadWithParallelScan";
-    final long l = System.currentTimeMillis();
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
+      final long l = System.currentTimeMillis();
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
-    final HTable table = init(admin, l, scan, tableName);
+    final Table table = init(admin, l, scan, tableName);
     // use bulkload
     final Path hfilePath = writeToHFile(l, "/temp/testBulkLoadWithParallelScan/",
-        "/temp/testBulkLoadWithParallelScan/col/file");
+        "/temp/testBulkLoadWithParallelScan/col/file", false);
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
@@ -196,8 +217,7 @@ public class TestScannerWithBulkload {
           put1.add(new KeyValue(Bytes.toBytes("row5"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
               Bytes.toBytes("version0")));
           table.put(put1);
-          table.flushCommits();
-          bulkload.doBulkLoad(hfilePath, table);
+          bulkload.doBulkLoad(hfilePath, (HTable) table);
           latch.countDown();
         } catch (TableNotFoundException e) {
         } catch (IOException e) {
@@ -209,8 +229,52 @@ public class TestScannerWithBulkload {
     // scanner
     Result result = scanner.next();
     scanAfterBulkLoad(scanner, result, "version1");
+    scanner.close();
     table.close();
 
+  }
+
+  @Test
+  public void testBulkLoadNativeHFile() throws Exception {
+    TableName tableName = TableName.valueOf("testBulkLoadNativeHFile");
+    long l = System.currentTimeMillis();
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    createTable(admin, tableName);
+    Scan scan = createScan();
+    final Table table = init(admin, l, scan, tableName);
+    // use bulkload
+    final Path hfilePath = writeToHFile(l, "/temp/testBulkLoadNativeHFile/",
+      "/temp/testBulkLoadNativeHFile/col/file", true);
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
+    final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
+    bulkload.doBulkLoad(hfilePath, (HTable) table);
+    ResultScanner scanner = table.getScanner(scan);
+    Result result = scanner.next();
+    // We had 'version0', 'version1' for 'row1,col:q' in the table.
+    // Bulk load added 'version2'  scanner should be able to see 'version2'
+    result = scanAfterBulkLoad(scanner, result, "version2");
+    Put put0 = new Put(Bytes.toBytes("row1"));
+    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
+        .toBytes("version3")));
+    table.put(put0);
+    admin.flush(tableName);
+    scanner = table.getScanner(scan);
+    result = scanner.next();
+    while (result != null) {
+      List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
+      for (Cell _c : cells) {
+        if (Bytes.toString(_c.getRow()).equals("row1")) {
+          System.out.println(Bytes.toString(_c.getRow()));
+          System.out.println(Bytes.toString(_c.getQualifier()));
+          System.out.println(Bytes.toString(_c.getValue()));
+          Assert.assertEquals("version3", Bytes.toString(_c.getValue()));
+        }
+      }
+      result = scanner.next();
+    }
+    scanner.close();
+    table.close();
   }
 
   private Scan createScan() {

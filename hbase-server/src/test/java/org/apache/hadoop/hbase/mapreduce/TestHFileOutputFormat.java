@@ -52,15 +52,17 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -72,6 +74,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -93,7 +97,7 @@ import org.mockito.Mockito;
  * Creates a few inner classes to implement splits and an inputformat that
  * emits keys and values like those of {@link PerformanceEvaluation}.
  */
-@Category(LargeTests.class)
+@Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestHFileOutputFormat  {
   private final static int ROWSPERSPLIT = 1024;
 
@@ -333,9 +337,10 @@ public class TestHFileOutputFormat  {
   public void testJobConfiguration() throws Exception {
     Job job = new Job(util.getConfiguration());
     job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
-    HTable table = Mockito.mock(HTable.class);
-    setupMockStartKeys(table);
-    HFileOutputFormat.configureIncrementalLoad(job, table);
+    HTableDescriptor tableDescriptor = Mockito.mock(HTableDescriptor.class);
+    RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
+    setupMockStartKeys(regionLocator);
+    HFileOutputFormat2.configureIncrementalLoad(job, tableDescriptor, regionLocator);
     assertEquals(job.getNumReduceTasks(), 4);
   }
 
@@ -347,6 +352,16 @@ public class TestHFileOutputFormat  {
     for (int i = 1; i < numKeys; i++) {
       ret[i] =
         PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
+    }
+    return ret;
+  }
+
+  private byte[][] generateRandomSplitKeys(int numKeys) {
+    Random random = new Random();
+    byte[][] ret = new byte[numKeys][];
+    for (int i = 0; i < numKeys; i++) {
+      ret[i] =
+          PerformanceEvaluation.generateData(random, PerformanceEvaluation.DEFAULT_VALUE_LENGTH);
     }
     return ret;
   }
@@ -367,17 +382,19 @@ public class TestHFileOutputFormat  {
       boolean shouldChangeRegions) throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
-    byte[][] startKeys = generateRandomStartKeys(5);
+    byte[][] splitKeys = generateRandomSplitKeys(4);
     HBaseAdmin admin = null;
     try {
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
-      admin = new HBaseAdmin(conf);
-      HTable table = util.createTable(TABLE_NAME, FAMILIES);
+      admin = util.getHBaseAdmin();
+      HTable table = util.createTable(TABLE_NAME, FAMILIES, splitKeys);
       assertEquals("Should start with empty table",
           0, util.countRows(table));
-      int numRegions = util.createMultiRegions(
-          util.getConfiguration(), table, FAMILIES[0], startKeys);
+      int numRegions = -1;
+      try(RegionLocator r = table.getRegionLocator()) {
+        numRegions = r.getStartKeys().length;
+      }
       assertEquals("Should make 5 regions", numRegions, 5);
 
       // Generate the bulk load files
@@ -402,18 +419,17 @@ public class TestHFileOutputFormat  {
       // handle the split case
       if (shouldChangeRegions) {
         LOG.info("Changing regions in table");
-        admin.disableTable(table.getTableName());
+        admin.disableTable(table.getName());
         while(util.getMiniHBaseCluster().getMaster().getAssignmentManager().
             getRegionStates().isRegionsInTransition()) {
           Threads.sleep(200);
           LOG.info("Waiting on table to finish disabling");
         }
-        byte[][] newStartKeys = generateRandomStartKeys(15);
-        util.createMultiRegions(
-            util.getConfiguration(), table, FAMILIES[0], newStartKeys);
-        admin.enableTable(table.getTableName());
+        util.deleteTable(table.getName());
+        byte[][] newSplitKeys = generateRandomSplitKeys(14);
+        table = util.createTable(TABLE_NAME, FAMILIES, newSplitKeys);
         while (table.getRegionLocations().size() != 15 ||
-            !admin.isTableAvailable(table.getTableName())) {
+            !admin.isTableAvailable(table.getName())) {
           Thread.sleep(200);
           LOG.info("Waiting for new region assignment to happen");
         }
@@ -446,7 +462,7 @@ public class TestHFileOutputFormat  {
         LOG.info("Waiting for table to disable");
       }
       admin.enableTable(TABLE_NAME);
-      util.waitTableAvailable(TABLE_NAME.getName());
+      util.waitTableAvailable(TABLE_NAME);
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
     } finally {
@@ -465,18 +481,19 @@ public class TestHFileOutputFormat  {
         MutationSerialization.class.getName(), ResultSerialization.class.getName(),
         KeyValueSerialization.class.getName());
     setupRandomGeneratorMapper(job);
-    HFileOutputFormat.configureIncrementalLoad(job, table);
+    HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
+        table.getRegionLocator());
     FileOutputFormat.setOutputPath(job, outDir);
 
     Assert.assertFalse( util.getTestFileSystem().exists(outDir)) ;
 
-    assertEquals(table.getRegionLocations().size(), job.getNumReduceTasks());
+    assertEquals(table.getRegionLocator().getAllRegionLocations().size(), job.getNumReduceTasks());
 
     assertTrue(job.waitForCompletion(true));
   }
 
   /**
-   * Test for {@link HFileOutputFormat#configureCompression(HTable,
+   * Test for {@link HFileOutputFormat#configureCompression(org.apache.hadoop.hbase.client.Table,
    * Configuration)} and {@link HFileOutputFormat#createFamilyCompressionMap
    * (Configuration)}.
    * Tests that the compression map is correctly serialized into
@@ -490,7 +507,7 @@ public class TestHFileOutputFormat  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, Compression.Algorithm> familyToCompression =
           getMockColumnFamiliesForCompression(numCfs);
-      HTable table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(HTable.class);
       setupMockColumnFamiliesForCompression(table, familyToCompression);
       HFileOutputFormat.configureCompression(table, conf);
 
@@ -508,7 +525,7 @@ public class TestHFileOutputFormat  {
     }
   }
 
-  private void setupMockColumnFamiliesForCompression(HTable table,
+  private void setupMockColumnFamiliesForCompression(Table table,
       Map<String, Compression.Algorithm> familyToCompression) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, Compression.Algorithm> entry : familyToCompression.entrySet()) {
@@ -546,7 +563,7 @@ public class TestHFileOutputFormat  {
 
 
   /**
-   * Test for {@link HFileOutputFormat#configureBloomType(HTable,
+   * Test for {@link HFileOutputFormat#configureBloomType(org.apache.hadoop.hbase.client.Table,
    * Configuration)} and {@link HFileOutputFormat#createFamilyBloomTypeMap
    * (Configuration)}.
    * Tests that the compression map is correctly serialized into
@@ -560,7 +577,7 @@ public class TestHFileOutputFormat  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, BloomType> familyToBloomType =
           getMockColumnFamiliesForBloomType(numCfs);
-      HTable table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(HTable.class);
       setupMockColumnFamiliesForBloomType(table,
           familyToBloomType);
       HFileOutputFormat.configureBloomType(table, conf);
@@ -581,7 +598,7 @@ public class TestHFileOutputFormat  {
     }
   }
 
-  private void setupMockColumnFamiliesForBloomType(HTable table,
+  private void setupMockColumnFamiliesForBloomType(Table table,
       Map<String, BloomType> familyToDataBlockEncoding) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, BloomType> entry : familyToDataBlockEncoding.entrySet()) {
@@ -617,7 +634,7 @@ public class TestHFileOutputFormat  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat#configureBlockSize(HTable,
+   * Test for {@link HFileOutputFormat#configureBlockSize(org.apache.hadoop.hbase.client.Table,
    * Configuration)} and {@link HFileOutputFormat#createFamilyBlockSizeMap
    * (Configuration)}.
    * Tests that the compression map is correctly serialized into
@@ -631,7 +648,7 @@ public class TestHFileOutputFormat  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, Integer> familyToBlockSize =
           getMockColumnFamiliesForBlockSize(numCfs);
-      HTable table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(HTable.class);
       setupMockColumnFamiliesForBlockSize(table,
           familyToBlockSize);
       HFileOutputFormat.configureBlockSize(table, conf);
@@ -653,7 +670,7 @@ public class TestHFileOutputFormat  {
     }
   }
 
-  private void setupMockColumnFamiliesForBlockSize(HTable table,
+  private void setupMockColumnFamiliesForBlockSize(Table table,
       Map<String, Integer> familyToDataBlockEncoding) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, Integer> entry : familyToDataBlockEncoding.entrySet()) {
@@ -693,7 +710,7 @@ public class TestHFileOutputFormat  {
   }
 
     /**
-   * Test for {@link HFileOutputFormat#configureDataBlockEncoding(HTable,
+   * Test for {@link HFileOutputFormat#configureDataBlockEncoding(org.apache.hadoop.hbase.client.Table,
    * Configuration)} and {@link HFileOutputFormat#createFamilyDataBlockEncodingMap
    * (Configuration)}.
    * Tests that the compression map is correctly serialized into
@@ -707,7 +724,7 @@ public class TestHFileOutputFormat  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, DataBlockEncoding> familyToDataBlockEncoding =
           getMockColumnFamiliesForDataBlockEncoding(numCfs);
-      HTable table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(HTable.class);
       setupMockColumnFamiliesForDataBlockEncoding(table,
           familyToDataBlockEncoding);
       HFileOutputFormat.configureDataBlockEncoding(table, conf);
@@ -728,7 +745,7 @@ public class TestHFileOutputFormat  {
     }
   }
 
-  private void setupMockColumnFamiliesForDataBlockEncoding(HTable table,
+  private void setupMockColumnFamiliesForDataBlockEncoding(Table table,
       Map<String, DataBlockEncoding> familyToDataBlockEncoding) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, DataBlockEncoding> entry : familyToDataBlockEncoding.entrySet()) {
@@ -767,14 +784,14 @@ public class TestHFileOutputFormat  {
     return familyToDataBlockEncoding;
   }
 
-  private void setupMockStartKeys(HTable table) throws IOException {
+  private void setupMockStartKeys(RegionLocator regionLocator) throws IOException {
     byte[][] mockKeys = new byte[][] {
         HConstants.EMPTY_BYTE_ARRAY,
         Bytes.toBytes("aaa"),
         Bytes.toBytes("ggg"),
         Bytes.toBytes("zzz")
     };
-    Mockito.doReturn(mockKeys).when(table).getStartKeys();
+    Mockito.doReturn(mockKeys).when(regionLocator).getStartKeys();
   }
 
   /**
@@ -789,15 +806,16 @@ public class TestHFileOutputFormat  {
     Path dir = util.getDataTestDir("testColumnFamilySettings");
 
     // Setup table descriptor
-    HTable table = Mockito.mock(HTable.class);
+    Table table = Mockito.mock(Table.class);
+    RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     Mockito.doReturn(htd).when(table).getTableDescriptor();
-    for (HColumnDescriptor hcd: this.util.generateColumnDescriptors()) {
+    for (HColumnDescriptor hcd: HBaseTestingUtility.generateColumnDescriptors()) {
       htd.addFamily(hcd);
     }
 
     // set up the table to return some mock keys
-    setupMockStartKeys(table);
+    setupMockStartKeys(regionLocator);
 
     try {
       // partial map red setup to get an operational writer for testing
@@ -807,7 +825,7 @@ public class TestHFileOutputFormat  {
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
       setupRandomGeneratorMapper(job);
-      HFileOutputFormat.configureIncrementalLoad(job, table);
+      HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(), regionLocator);
       FileOutputFormat.setOutputPath(job, dir);
       context = createTestTaskAttemptContext(job);
       HFileOutputFormat hof = new HFileOutputFormat();
@@ -959,7 +977,7 @@ public class TestHFileOutputFormat  {
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testExcludeMinorCompaction");
       final FileSystem fs = util.getDFSCluster().getFileSystem();
-      HBaseAdmin admin = new HBaseAdmin(conf);
+      Admin admin = util.getHBaseAdmin();
       HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table", 0, util.countRows(table));
 
@@ -974,7 +992,7 @@ public class TestHFileOutputFormat  {
       Put p = new Put(Bytes.toBytes("test"));
       p.add(FAMILIES[0], Bytes.toBytes("1"), Bytes.toBytes("1"));
       table.put(p);
-      admin.flush(TABLE_NAME.getName());
+      admin.flush(TABLE_NAME);
       assertEquals(1, util.countRows(table));
       quickPoll(new Callable<Boolean>() {
         public Boolean call() throws Exception {
@@ -1000,7 +1018,7 @@ public class TestHFileOutputFormat  {
       assertEquals(2, fs.listStatus(storePath).length);
 
       // minor compactions shouldn't get rid of the file
-      admin.compact(TABLE_NAME.getName());
+      admin.compact(TABLE_NAME);
       try {
         quickPoll(new Callable<Boolean>() {
           public Boolean call() throws Exception {
@@ -1013,7 +1031,7 @@ public class TestHFileOutputFormat  {
       }
 
       // a major compaction should work though
-      admin.majorCompact(TABLE_NAME.getName());
+      admin.majorCompact(TABLE_NAME);
       quickPoll(new Callable<Boolean>() {
         public Boolean call() throws Exception {
           return fs.listStatus(storePath).length == 1;
@@ -1046,16 +1064,12 @@ public class TestHFileOutputFormat  {
     Configuration conf = HBaseConfiguration.create();
     util = new HBaseTestingUtility(conf);
     if ("newtable".equals(args[0])) {
-      byte[] tname = args[1].getBytes();
-      HTable table = util.createTable(tname, FAMILIES);
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.disableTable(tname);
-      byte[][] startKeys = generateRandomStartKeys(5);
-      util.createMultiRegions(conf, table, FAMILIES[0], startKeys);
-      admin.enableTable(tname);
+      TableName tname = TableName.valueOf(args[1]);
+      byte[][] splitKeys = generateRandomSplitKeys(4);
+      HTable table = util.createTable(tname, FAMILIES, splitKeys);
     } else if ("incremental".equals(args[0])) {
-      byte[] tname = args[1].getBytes();
-      HTable table = new HTable(conf, tname);
+      TableName tname = TableName.valueOf(args[1]);
+      HTable table = (HTable) util.getConnection().getTable(tname);
       Path outDir = new Path("incremental-out");
       runIncrementalPELoad(conf, table, outDir);
     } else {

@@ -27,7 +27,8 @@ import static org.junit.Assert.fail;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.ParsedLine;
@@ -43,7 +44,7 @@ import com.google.common.collect.Iterables;
 /**
  * Tests for {@link TsvParser}.
  */
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestImportTsvParser {
 
   private void assertBytesEquals(byte[] a, byte[] b) {

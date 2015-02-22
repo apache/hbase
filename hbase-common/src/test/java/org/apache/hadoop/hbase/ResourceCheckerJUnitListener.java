@@ -29,9 +29,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.hbase.ResourceChecker.Phase;
-import org.junit.runner.notification.RunListener;
-
 import org.apache.hadoop.hbase.util.JVM;
+import org.junit.runner.notification.RunListener;
 
 /**
  * Listen to the test progress and check the usage of:

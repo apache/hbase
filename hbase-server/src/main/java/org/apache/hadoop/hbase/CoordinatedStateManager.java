@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Implementations of this interface will keep and return to clients 
@@ -55,12 +55,4 @@ public interface CoordinatedStateManager {
    * @return instance of Server coordinated state manager runs within
    */
   Server getServer();
-
-  /**
-   * Returns implementation of TableStateManager.
-   * @throws InterruptedException if operation is interrupted
-   * @throws CoordinatedStateException if error happens in underlying coordination mechanism
-   */
-  TableStateManager getTableStateManager() throws InterruptedException,
-    CoordinatedStateException;
 }

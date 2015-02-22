@@ -24,15 +24,27 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTableFactory;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.HTableInterfaceFactory;
+import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -221,8 +233,7 @@ public class HTablePool implements Closeable {
    * @param tableName
    *          table name
    * @return a reference to the specified table
-   * @throws RuntimeException
-   *           if there is a problem instantiating the HTable
+   * @throws RuntimeException if there is a problem instantiating the HTable
    */
   public HTableInterface getTable(byte[] tableName) {
     return getTable(Bytes.toString(tableName));
@@ -236,6 +247,7 @@ public class HTablePool implements Closeable {
    *          the proxy table user got from pool
    * @deprecated
    */
+  @Deprecated
   public void putTable(HTableInterface table) throws IOException {
     // we need to be sure nobody puts a proxy implementation in the pool
     // but if the client code is not updated
@@ -396,6 +408,7 @@ public class HTablePool implements Closeable {
      * @deprecated If any exception is thrown by one of the actions, there is no way to
      * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
      */
+    @Deprecated
     @Override
     public Object[] batch(List<? extends Row> actions) throws IOException,
         InterruptedException {
@@ -589,6 +602,7 @@ public class HTablePool implements Closeable {
      * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
      * instead.
      */
+    @Deprecated
     @Override
     public <R> Object[] batchCallback(List<? extends Row> actions,
         Callback<R> callback) throws IOException, InterruptedException {
@@ -643,7 +657,7 @@ public class HTablePool implements Closeable {
 
     private void checkState() {
       if (!isOpen()) {
-        throw new IllegalStateException("Table=" + new String(table.getTableName())
+        throw new IllegalStateException("Table=" + table.getName()
                 + " already closed");
       }
     }
@@ -670,6 +684,13 @@ public class HTablePool implements Closeable {
         throws ServiceException, Throwable {
       checkState();
       table.batchCoprocessorService(method, request, startKey, endKey, responsePrototype, callback);
+    }
+
+    @Override
+    public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
+        byte[] value, RowMutations mutation) throws IOException {
+      checkState();
+      return table.checkAndMutate(row, family, qualifier, compareOp, value, mutation);
     }
   }
 }

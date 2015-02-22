@@ -28,7 +28,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
@@ -45,8 +45,8 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 /**
  * A zookeeper that can handle 'recoverable' errors.
@@ -75,7 +75,7 @@ import org.htrace.TraceScope;
 public class RecoverableZooKeeper {
   private static final Log LOG = LogFactory.getLog(RecoverableZooKeeper.class);
   // the actual ZooKeeper client instance
-  volatile private ZooKeeper zk;
+  private ZooKeeper zk;
   private final RetryCounterFactory retryCounterFactory;
   // An identifier of this process in the cluster
   private final String identifier;
@@ -105,6 +105,8 @@ public class RecoverableZooKeeper {
         null);
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
+      justification="None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis, String identifier)
   throws IOException {
@@ -134,7 +136,7 @@ public class RecoverableZooKeeper {
    * @return The created Zookeeper connection object
    * @throws KeeperException
    */
-  protected ZooKeeper checkZk() throws KeeperException {
+  protected synchronized ZooKeeper checkZk() throws KeeperException {
     if (this.zk == null) {
       try {
         this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
@@ -146,7 +148,7 @@ public class RecoverableZooKeeper {
     return zk;
   }
 
-  public void reconnectAfterExpiration()
+  public synchronized void reconnectAfterExpiration()
         throws IOException, KeeperException, InterruptedException {
     if (zk != null) {
       LOG.info("Closing dead ZooKeeper connection, session" +
@@ -690,23 +692,23 @@ public class RecoverableZooKeeper {
     return newData;
   }
 
-  public long getSessionId() {
-    return zk == null ? null : zk.getSessionId();
+  public synchronized long getSessionId() {
+    return zk == null ? -1 : zk.getSessionId();
   }
 
-  public void close() throws InterruptedException {
+  public synchronized void close() throws InterruptedException {
     if (zk != null) zk.close();
   }
 
-  public States getState() {
+  public synchronized States getState() {
     return zk == null ? null : zk.getState();
   }
 
-  public ZooKeeper getZooKeeper() {
+  public synchronized ZooKeeper getZooKeeper() {
     return zk;
   }
 
-  public byte[] getSessionPasswd() {
+  public synchronized byte[] getSessionPasswd() {
     return zk == null ? null : zk.getSessionPasswd();
   }
 

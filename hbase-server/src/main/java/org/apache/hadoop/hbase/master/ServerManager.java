@@ -36,19 +36,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
@@ -65,6 +64,8 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.RetryCounter;
+import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -136,14 +137,14 @@ public class ServerManager {
 
   private final Server master;
   private final MasterServices services;
-  private final HConnection connection;
+  private final ClusterConnection connection;
 
   private final DeadServer deadservers = new DeadServer();
 
   private final long maxSkew;
   private final long warningSkew;
-  private final boolean checkingBackupMaster;
-  private BaseLoadBalancer balancer;
+
+  private final RetryCounterFactory pingRetryCounterFactory;
 
   /**
    * Set of region servers which are dead but not processed immediately. If one
@@ -202,19 +203,12 @@ public class ServerManager {
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
-    this.connection = connect ? HConnectionManager.getConnection(c) : null;
-
-    // Put this in constructor so we don't cast it every time
-    //
-    // We need to check if a newly added server is a backup master
-    // only if we are configured not to assign any region to it.
-    checkingBackupMaster = (master instanceof HMaster)
-      && ((HMaster)master).balancer instanceof BaseLoadBalancer
-      && (c.getInt(BaseLoadBalancer.BACKUP_MASTER_WEIGHT_KEY,
-        BaseLoadBalancer.DEFAULT_BACKUP_MASTER_WEIGHT) < 1);
-    if (checkingBackupMaster) {
-      balancer = (BaseLoadBalancer)((HMaster)master).balancer;
-    }
+    this.connection = connect ? (ClusterConnection)ConnectionFactory.createConnection(c) : null;
+    int pingMaxAttempts = Math.max(1, master.getConfiguration().getInt(
+      "hbase.master.maximum.ping.server.attempts", 10));
+    int pingSleepInterval = Math.max(1, master.getConfiguration().getInt(
+      "hbase.master.ping.server.retry.sleep.interval", 100));
+    this.pingRetryCounterFactory = new RetryCounterFactory(pingMaxAttempts, pingSleepInterval);
   }
 
   /**
@@ -270,7 +264,8 @@ public class ServerManager {
   private void updateLastFlushedSequenceIds(ServerName sn, ServerLoad hsl) {
     Map<byte[], RegionLoad> regionsLoad = hsl.getRegionsLoad();
     for (Entry<byte[], RegionLoad> entry : regionsLoad.entrySet()) {
-      Long existingValue = flushedSequenceIdByRegion.get(entry.getKey());
+      byte[] encodedRegionName = Bytes.toBytes(HRegionInfo.encodeRegionName(entry.getKey()));
+      Long existingValue = flushedSequenceIdByRegion.get(encodedRegionName);
       long l = entry.getValue().getCompleteSequenceId();
       if (existingValue != null) {
         if (l != -1 && l < existingValue) {
@@ -280,11 +275,10 @@ public class ServerManager {
               existingValue + ") for region " +
               Bytes.toString(entry.getKey()) + " Ignoring.");
 
-          continue; // Don't let smaller sequence ids override greater
-          // sequence ids.
+          continue; // Don't let smaller sequence ids override greater sequence ids.
         }
       }
-      flushedSequenceIdByRegion.put(entry.getKey(), l);
+      flushedSequenceIdByRegion.put(encodedRegionName, l);
     }
   }
 
@@ -419,26 +413,14 @@ public class ServerManager {
   @VisibleForTesting
   void recordNewServerWithLock(final ServerName serverName, final ServerLoad sl) {
     LOG.info("Registering server=" + serverName);
-    if (checkingBackupMaster) {
-      ZooKeeperWatcher zooKeeper = master.getZooKeeper();
-      String backupZNode = ZKUtil.joinZNode(
-        zooKeeper.backupMasterAddressesZNode, serverName.toString());
-      try {
-        if (ZKUtil.checkExists(zooKeeper, backupZNode) != -1) {
-          balancer.excludeServer(serverName);
-        }
-      } catch (KeeperException e) {
-        master.abort("Failed to check if a new server a backup master", e);
-      }
-    }
     this.onlineServers.put(serverName, sl);
     this.rsAdmins.remove(serverName);
   }
 
-  public long getLastFlushedSequenceId(byte[] regionName) {
-    long seqId = -1;
-    if (flushedSequenceIdByRegion.containsKey(regionName)) {
-      seqId = flushedSequenceIdByRegion.get(regionName);
+  public long getLastFlushedSequenceId(byte[] encodedRegionName) {
+    long seqId = -1L;
+    if (flushedSequenceIdByRegion.containsKey(encodedRegionName)) {
+      seqId = flushedSequenceIdByRegion.get(encodedRegionName);
     }
     return seqId;
   }
@@ -468,19 +450,10 @@ public class ServerManager {
       (double)totalLoad / (double)numServers;
   }
 
-  /**
-   * Get the count of active regionservers that are not backup
-   * masters. This count may not be accurate depending on timing.
-   * @return the count of active regionservers
-   */
-  private int countOfRegionServers() {
+  /** @return the count of active regionservers */
+  public int countOfRegionServers() {
     // Presumes onlineServers is a concurrent map
-    int count = this.onlineServers.size();
-    if (balancer != null) {
-      count -= balancer.getExcludedServers().size();
-      if (count < 0) count = 0;
-    }
-    return count;
+    return this.onlineServers.size();
   }
 
   /**
@@ -535,7 +508,7 @@ public class ServerManager {
 
       try {
         List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.rsZNode);
-        if (servers == null || (servers.size() == 1
+        if (servers == null || servers.size() == 0 || (servers.size() == 1
             && servers.contains(sn.toString()))) {
           LOG.info("ZK shows there is only the master self online, exiting now");
           // Master could have lost some ZK events, no need to wait more.
@@ -625,7 +598,7 @@ public class ServerManager {
     this.processDeadServer(serverName, false);
   }
 
-  public synchronized void processDeadServer(final ServerName serverName, boolean shouldSplitHlog) {
+  public synchronized void processDeadServer(final ServerName serverName, boolean shouldSplitWal) {
     // When assignment manager is cleaning up the zookeeper nodes and rebuilding the
     // in-memory region states, region servers could be down. Meta table can and
     // should be re-assigned, log splitting can be done too. However, it is better to
@@ -635,14 +608,14 @@ public class ServerManager {
     // the handler threads and meta table could not be re-assigned in case
     // the corresponding server is down. So we queue them up here instead.
     if (!services.getAssignmentManager().isFailoverCleanupDone()) {
-      requeuedDeadServers.put(serverName, shouldSplitHlog);
+      requeuedDeadServers.put(serverName, shouldSplitWal);
       return;
     }
 
     this.deadservers.add(serverName);
     this.services.getExecutorService().submit(
       new ServerShutdownHandler(this.master, this.services, this.deadservers, serverName,
-          shouldSplitHlog));
+          shouldSplitWal));
   }
 
   /**
@@ -724,9 +697,8 @@ public class ServerManager {
   throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
-      LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
+      throw new IOException("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
-      return RegionOpeningState.FAILED_OPENING;
     }
     OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server,
       region, favoredNodes,
@@ -753,12 +725,11 @@ public class ServerManager {
   throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
-      LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
+      throw new IOException("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
-      return null;
     }
 
-    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(regionOpenInfos,
+    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server, regionOpenInfos,
       (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
@@ -798,6 +769,35 @@ public class ServerManager {
   }
 
   /**
+   * Contacts a region server and waits up to timeout ms
+   * to close the region.  This bypasses the active hmaster.
+   */
+  public static void closeRegionSilentlyAndWait(ClusterConnection connection, 
+    ServerName server, HRegionInfo region, long timeout) throws IOException, InterruptedException {
+    AdminService.BlockingInterface rs = connection.getAdmin(server);
+    try {
+      ProtobufUtil.closeRegion(rs, server, region.getRegionName());
+    } catch (IOException e) {
+      LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
+    }
+    long expiration = timeout + System.currentTimeMillis();
+    while (System.currentTimeMillis() < expiration) {
+      try {
+        HRegionInfo rsRegion =
+          ProtobufUtil.getRegionInfo(rs, region.getRegionName());
+        if (rsRegion == null) return;
+      } catch (IOException ioe) {
+        if (ioe instanceof NotServingRegionException) // no need to retry again
+          return;
+        LOG.warn("Exception when retrieving regioninfo from: " + region.getRegionNameAsString(), ioe);
+      }
+      Thread.sleep(1000);
+    }
+    throw new IOException("Region " + region + " failed to close within"
+        + " timeout " + timeout);
+  }
+
+  /**
    * Sends an MERGE REGIONS RPC to the specified server to merge the specified
    * regions.
    * <p>
@@ -832,9 +832,9 @@ public class ServerManager {
    */
   public boolean isServerReachable(ServerName server) {
     if (server == null) throw new NullPointerException("Passed server is null");
-    int maximumAttempts = Math.max(1, master.getConfiguration().getInt(
-      "hbase.master.maximum.ping.server.attempts", 10));
-    for (int i = 0; i < maximumAttempts; i++) {
+
+    RetryCounter retryCounter = pingRetryCounterFactory.create();
+    while (retryCounter.shouldRetry()) {
       try {
         AdminService.BlockingInterface admin = getRsAdmin(server);
         if (admin != null) {
@@ -843,8 +843,13 @@ public class ServerManager {
             && server.getStartcode() == info.getServerName().getStartCode();
         }
       } catch (IOException ioe) {
-        LOG.debug("Couldn't reach " + server + ", try=" + i
-          + " of " + maximumAttempts, ioe);
+        LOG.debug("Couldn't reach " + server + ", try=" + retryCounter.getAttemptTimes()
+          + " of " + retryCounter.getMaxAttempts(), ioe);
+        try {
+          retryCounter.sleepUntilNextRetry();
+        } catch(InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
       }
     }
     return false;
@@ -856,7 +861,6 @@ public class ServerManager {
     * @throws IOException
     * @throws RetriesExhaustedException wrapping a ConnectException if failed
     */
-  @SuppressWarnings("deprecation")
   private AdminService.BlockingInterface getRsAdmin(final ServerName sn)
   throws IOException {
     AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
@@ -892,8 +896,16 @@ public class ServerManager {
       getLong(WAIT_ON_REGIONSERVERS_INTERVAL, 1500);
     final long timeout = this.master.getConfiguration().
       getLong(WAIT_ON_REGIONSERVERS_TIMEOUT, 4500);
+    int defaultMinToStart = 1;
+    if (BaseLoadBalancer.tablesOnMaster(master.getConfiguration())) {
+      // If we assign regions to master, we'd like to start
+      // at least another region server so that we don't
+      // assign all regions to master if other region servers
+      // don't come up in time.
+      defaultMinToStart = 2;
+    }
     int minToStart = this.master.getConfiguration().
-      getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
+      getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, defaultMinToStart);
     if (minToStart < 1) {
       LOG.warn(String.format(
         "The value of '%s' (%d) can not be less than 1, ignoring.",
@@ -917,10 +929,8 @@ public class ServerManager {
     long lastCountChange = startTime;
     int count = countOfRegionServers();
     int oldCount = 0;
-    ServerName masterSn = master.getServerName();
-    boolean selfCheckedIn = isServerOnline(masterSn);
-    while (!this.master.isStopped() && (!selfCheckedIn || (count < maxToStart
-        && (lastCountChange+interval > now || timeout > slept || count < minToStart)))) {
+    while (!this.master.isStopped() && count < maxToStart
+        && (lastCountChange+interval > now || timeout > slept || count < minToStart)) {
       // Log some info at every interval time or if there is a change
       if (oldCount != count || lastLogTime+interval < now){
         lastLogTime = now;
@@ -928,8 +938,7 @@ public class ServerManager {
           "Waiting for region servers count to settle; currently"+
             " checked in " + count + ", slept for " + slept + " ms," +
             " expecting minimum of " + minToStart + ", maximum of "+ maxToStart+
-            ", timeout of "+timeout+" ms, interval of "+interval+" ms," +
-            " selfCheckedIn " + selfCheckedIn;
+            ", timeout of "+timeout+" ms, interval of "+interval+" ms.";
         LOG.info(msg);
         status.setStatus(msg);
       }
@@ -939,8 +948,6 @@ public class ServerManager {
       Thread.sleep(sleepTime);
       now =  System.currentTimeMillis();
       slept = now - startTime;
-
-      selfCheckedIn = isServerOnline(masterSn);
 
       oldCount = count;
       count = countOfRegionServers();
@@ -952,8 +959,7 @@ public class ServerManager {
     LOG.info("Finished waiting for region servers count to settle;" +
       " checked in " + count + ", slept for " + slept + " ms," +
       " expecting minimum of " + minToStart + ", maximum of "+ maxToStart+","+
-      " master is "+ (this.master.isStopped() ? "stopped.": "running," +
-      " selfCheckedIn " + selfCheckedIn)
+      " master is "+ (this.master.isStopped() ? "stopped.": "running")
     );
   }
 
@@ -982,7 +988,7 @@ public class ServerManager {
 
   /**
    * During startup, if we figure it is not a failover, i.e. there is
-   * no more HLog files to split, we won't try to recover these dead servers.
+   * no more WAL files to split, we won't try to recover these dead servers.
    * So we just remove them from the queue. Use caution in calling this.
    */
   void removeRequeuedDeadServers() {

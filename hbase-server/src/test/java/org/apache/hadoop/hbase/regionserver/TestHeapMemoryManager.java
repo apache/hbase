@@ -27,14 +27,14 @@ import java.lang.management.ManagementFactory;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -43,12 +43,14 @@ import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestHeapMemoryManager {
 
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
@@ -110,13 +112,14 @@ public class TestHeapMemoryManager {
         new RegionServerStub(conf));
     long oldMemstoreHeapSize = memStoreFlusher.memstoreSize;
     long oldBlockCacheSize = blockCache.maxSize;
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     memStoreFlusher.flushType = FlushType.ABOVE_HIGHER_MARK;
-    memStoreFlusher.requestFlush(null);
-    memStoreFlusher.requestFlush(null);
-    memStoreFlusher.requestFlush(null);
+    memStoreFlusher.requestFlush(null, false);
+    memStoreFlusher.requestFlush(null, false);
+    memStoreFlusher.requestFlush(null, false);
     memStoreFlusher.flushType = FlushType.ABOVE_LOWER_MARK;
-    memStoreFlusher.requestFlush(null);
+    memStoreFlusher.requestFlush(null, false);
     Thread.sleep(1500); // Allow the tuner to run once and do necessary memory up
     assertHeapSpaceDelta(DefaultHeapMemoryTuner.DEFAULT_STEP_VALUE, oldMemstoreHeapSize,
         memStoreFlusher.memstoreSize);
@@ -126,8 +129,8 @@ public class TestHeapMemoryManager {
     oldBlockCacheSize = blockCache.maxSize;
     // Do some more flushes before the next run of HeapMemoryTuner
     memStoreFlusher.flushType = FlushType.ABOVE_HIGHER_MARK;
-    memStoreFlusher.requestFlush(null);
-    memStoreFlusher.requestFlush(null);
+    memStoreFlusher.requestFlush(null, false);
+    memStoreFlusher.requestFlush(null, false);
     Thread.sleep(1500);
     assertHeapSpaceDelta(DefaultHeapMemoryTuner.DEFAULT_STEP_VALUE, oldMemstoreHeapSize,
         memStoreFlusher.memstoreSize);
@@ -150,7 +153,8 @@ public class TestHeapMemoryManager {
         new RegionServerStub(conf));
     long oldMemstoreHeapSize = memStoreFlusher.memstoreSize;
     long oldBlockCacheSize = blockCache.maxSize;
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     blockCache.evictBlock(null);
     blockCache.evictBlock(null);
     blockCache.evictBlock(null);
@@ -185,7 +189,8 @@ public class TestHeapMemoryManager {
     // Let the system start with default values for memstore heap and block cache size.
     HeapMemoryManager heapMemoryManager = new HeapMemoryManager(blockCache, memStoreFlusher,
         new RegionServerStub(conf));
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     // Now we wants to be in write mode. Set bigger memstore size from CustomHeapMemoryTuner
     CustomHeapMemoryTuner.memstoreSize = 0.78f;
     CustomHeapMemoryTuner.blockCacheSize = 0.02f;
@@ -214,7 +219,8 @@ public class TestHeapMemoryManager {
         HeapMemoryTuner.class);
     HeapMemoryManager heapMemoryManager = new HeapMemoryManager(blockCache, memStoreFlusher,
         new RegionServerStub(conf));
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     CustomHeapMemoryTuner.memstoreSize = 0.78f;
     CustomHeapMemoryTuner.blockCacheSize = 0.02f;
     Thread.sleep(1500); // Allow the tuner to run once and do necessary memory up
@@ -240,7 +246,8 @@ public class TestHeapMemoryManager {
         new RegionServerStub(conf));
     long oldMemstoreSize = memStoreFlusher.memstoreSize;
     long oldBlockCacheSize = blockCache.maxSize;
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     CustomHeapMemoryTuner.memstoreSize = 0.7f;
     CustomHeapMemoryTuner.blockCacheSize = 0.3f;
     Thread.sleep(1500);
@@ -282,7 +289,8 @@ public class TestHeapMemoryManager {
         conf));
     long oldMemstoreSize = memStoreFlusher.memstoreSize;
     long oldBlockCacheSize = blockCache.maxSize;
-    heapMemoryManager.start();
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
+    heapMemoryManager.start(choreService);
     CustomHeapMemoryTuner.memstoreSize = 0.4f;
     CustomHeapMemoryTuner.blockCacheSize = 0.4f;
     Thread.sleep(1500);
@@ -407,12 +415,12 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public void requestFlush(HRegion region) {
+    public void requestFlush(HRegion region, boolean forceFlushAllStores) {
       this.listener.flushRequested(flushType, region);
     }
 
     @Override
-    public void requestDelayedFlush(HRegion region, long delay) {
+    public void requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores) {
 
     }
 
@@ -476,7 +484,7 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -488,6 +496,11 @@ public class TestHeapMemoryManager {
     @Override
     public ServerName getServerName() {
       return ServerName.valueOf("server1",4000,12345);
+    }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
     }
   }
 

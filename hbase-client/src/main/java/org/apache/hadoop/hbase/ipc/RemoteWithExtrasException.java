@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * A {@link RemoteException} with some extra information.  If source exception
- * was a {@link DoNotRetryIOException}, {@link #isDoNotRetry()} will return true.
+ * was a {@link org.apache.hadoop.hbase.DoNotRetryIOException}, 
+ * {@link #isDoNotRetry()} will return true.
  * <p>A {@link RemoteException} hosts exceptions we got from the server.
  */
 @SuppressWarnings("serial")

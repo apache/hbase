@@ -18,16 +18,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.RegionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when no region server can be found for a region
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class NoServerForRegionException extends RegionException {
+public class NoServerForRegionException extends DoNotRetryRegionException {
   private static final long serialVersionUID = 1L << 11 - 1L;
 
   /** default constructor */

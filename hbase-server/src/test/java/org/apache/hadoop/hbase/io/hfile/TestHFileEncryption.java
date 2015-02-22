@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -41,19 +36,22 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+import static org.junit.Assert.*;
+
+@Category({IOTests.class, SmallTests.class})
 public class TestHFileEncryption {
   private static final Log LOG = LogFactory.getLog(TestHFileEncryption.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -95,11 +93,13 @@ public class TestHFileEncryption {
     return hbw.getOnDiskSizeWithHeader();
   }
 
-  private long readAndVerifyBlock(long pos, HFileBlock.FSReaderV2 hbr, int size)
+  private long readAndVerifyBlock(long pos, HFileContext ctx, HFileBlock.FSReaderImpl hbr, int size)
       throws IOException {
     HFileBlock b = hbr.readBlockData(pos, -1, -1, false);
     assertEquals(0, HFile.getChecksumFailuresCount());
     b.sanityCheck();
+    assertFalse(b.isUnpacked());
+    b = b.unpack(ctx, hbr);
     LOG.info("Read a block at " + pos + " with" +
         " onDiskSizeWithHeader=" + b.getOnDiskSizeWithHeader() +
         " uncompressedSizeWithoutHeader=" + b.getOnDiskSizeWithoutHeader() +
@@ -139,10 +139,10 @@ public class TestHFileEncryption {
       }
       FSDataInputStream is = fs.open(path);
       try {
-        HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, totalSize, fileContext);
+        HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(is, totalSize, fileContext);
         long pos = 0;
         for (int i = 0; i < blocks; i++) {
-          pos += readAndVerifyBlock(pos, hbr, blockSizes[i]);
+          pos += readAndVerifyBlock(pos, fileContext, hbr, blockSizes[i]);
         }
       } finally {
         is.close();
@@ -166,7 +166,8 @@ public class TestHFileEncryption {
       .withOutputStream(out)
       .withFileContext(fileContext)
       .create();
-    writer.append("foo".getBytes(), "value".getBytes());
+    KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
+    writer.append(kv);
     writer.close();
     out.close();
 

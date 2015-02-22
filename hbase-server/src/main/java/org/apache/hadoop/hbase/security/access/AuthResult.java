@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.security.access;
 import java.util.Collection;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -140,9 +140,10 @@ public class AuthResult {
             String qualifier;
             if (o instanceof byte[]) {
               qualifier = Bytes.toString((byte[])o);
-            } else if (o instanceof KeyValue) {
-              byte[] rawQualifier = ((KeyValue)o).getQualifier();
-              qualifier = Bytes.toString(rawQualifier);
+            } else if (o instanceof Cell) {
+              Cell c = (Cell) o;
+              qualifier = Bytes.toString(c.getQualifierArray(), c.getQualifierOffset(),
+                  c.getQualifierLength());
             } else {
               // Shouldn't really reach this?
               qualifier = o.toString();

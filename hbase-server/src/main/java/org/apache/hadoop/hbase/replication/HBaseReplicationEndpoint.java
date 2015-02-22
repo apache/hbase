@@ -26,7 +26,7 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -93,7 +93,11 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
-  public UUID getPeerUUID() {
+  // Synchronize peer cluster connection attempts to avoid races and rate
+  // limit connections when multiple replication sources try to connect to
+  // the peer cluster. If the peer cluster is down we can get out of control
+  // over time.
+  public synchronized UUID getPeerUUID() {
     UUID peerUUID = null;
     try {
       peerUUID = ZKClusterId.getUUIDForCluster(zkw);
@@ -158,12 +162,16 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * @return list of addresses
    * @throws KeeperException
    */
-  public List<ServerName> getRegionServers() {
+  // Synchronize peer cluster connection attempts to avoid races and rate
+  // limit connections when multiple replication sources try to connect to
+  // the peer cluster. If the peer cluster is down we can get out of control
+  // over time.
+  public synchronized List<ServerName> getRegionServers() {
     try {
       setRegionServers(fetchSlavesAddresses(this.getZkw()));
     } catch (KeeperException ke) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Fetch salves addresses failed.", ke);
+        LOG.debug("Fetch slaves addresses failed", ke);
       }
       reconnect(ke);
     }

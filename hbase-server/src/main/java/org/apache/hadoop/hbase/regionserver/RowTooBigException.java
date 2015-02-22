@@ -18,15 +18,20 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.RegionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Gets or Scans throw this exception if running without in-row scan flag
  * set and row size appears to exceed max configured size (configurable via
  * hbase.table.max.rowsize).
+ *
+ * @deprecated use {@link org.apache.hadoop.hbase.client.RowTooBigException} instead.
  */
-public class RowTooBigException extends RegionException {
-
+@InterfaceAudience.Public
+@Deprecated
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS",
+  justification="Temporary glue. To be removed")
+public class RowTooBigException extends org.apache.hadoop.hbase.client.RowTooBigException {
   public RowTooBigException(String message) {
     super(message);
   }

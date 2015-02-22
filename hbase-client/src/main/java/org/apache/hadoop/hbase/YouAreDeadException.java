@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.io.IOException;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This exception is thrown by the master when a region server reports and is
@@ -29,7 +29,7 @@ import java.io.IOException;
  * its session but didn't figure it yet.
  */
 @SuppressWarnings("serial")
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class YouAreDeadException extends IOException {
   public YouAreDeadException(String message) {

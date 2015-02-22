@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Counters kept by the distributed WAL split log process.
@@ -32,7 +32,7 @@ public class SplitLogCounters {
   public final static AtomicLong tot_mgr_log_split_batch_start = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_batch_success = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_batch_err = new AtomicLong(0);
-  public final static AtomicLong tot_mgr_new_unexpected_hlogs = new AtomicLong(0);
+  public final static AtomicLong tot_mgr_new_unexpected_wals = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_start = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_success = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_err = new AtomicLong(0);
@@ -86,9 +86,9 @@ public class SplitLogCounters {
   public final static AtomicLong tot_wkr_task_grabing = new AtomicLong(0);
 
   public static void resetCounters() throws Exception {
-    Class<?> cl = (new SplitLogCounters()).getClass();
+    Class<?> cl = SplitLogCounters.class;
     for (Field fld : cl.getDeclaredFields()) {
-      ((AtomicLong)fld.get(null)).set(0);
+      if (!fld.isSynthetic()) ((AtomicLong)fld.get(null)).set(0);
     }
   }
 }

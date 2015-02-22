@@ -23,11 +23,12 @@ import java.util.TreeSet;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestFirstKeyValueMatchingQualifiersFilter extends TestCase {
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");

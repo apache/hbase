@@ -22,11 +22,10 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.OutputFormat;
 
 /**
  * Convenience class that simply writes all values (which must be
@@ -60,9 +59,9 @@ extends TableReducer<Writable, Mutation, Writable> {
 
   /**
    * Writes each given record, consisting of the row key and the given values,
-   * to the configured {@link OutputFormat}. It is emitting the row key and each
-   * {@link org.apache.hadoop.hbase.client.Put Put} or
-   * {@link org.apache.hadoop.hbase.client.Delete Delete} as separate pairs.
+   * to the configured {@link org.apache.hadoop.mapreduce.OutputFormat}. 
+   * It is emitting the row key and each {@link org.apache.hadoop.hbase.client.Put Put} 
+   * or {@link org.apache.hadoop.hbase.client.Delete Delete} as separate pairs.
    *
    * @param key  The current row key.
    * @param values  The {@link org.apache.hadoop.hbase.client.Put Put} or

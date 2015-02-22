@@ -28,25 +28,28 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CoordinatedStateException;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.BulkReOpen;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -124,13 +127,16 @@ public abstract class TableEventHandler extends EventHandler {
       LOG.info("Handling table operation " + eventType + " on table " +
           tableName);
 
-      List<HRegionInfo> hris =
-        MetaTableAccessor.getTableRegions(this.server.getZooKeeper(),
-          this.server.getShortCircuitConnection(), tableName);
+      List<HRegionInfo> hris;
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        hris = new MetaTableLocator().getMetaRegions(server.getZooKeeper());
+      } else {
+        hris = MetaTableAccessor.getTableRegions(server.getConnection(), tableName);
+      }
       handleTableOperation(hris);
       if (eventType.isOnlineSchemaChangeSupported() && this.masterServices.
           getAssignmentManager().getTableStateManager().isTableState(
-          tableName, ZooKeeperProtos.Table.State.ENABLED)) {
+          tableName, TableState.State.ENABLED)) {
         if (reOpenAllRegions(hris)) {
           LOG.info("Completed table operation " + eventType + " on table " +
               tableName);
@@ -170,32 +176,32 @@ public abstract class TableEventHandler extends EventHandler {
   public boolean reOpenAllRegions(List<HRegionInfo> regions) throws IOException {
     boolean done = false;
     LOG.info("Bucketing regions by region server...");
-    HTable table = new HTable(masterServices.getConfiguration(), tableName);
-    TreeMap<ServerName, List<HRegionInfo>> serverToRegions = Maps
-        .newTreeMap();
-    NavigableMap<HRegionInfo, ServerName> hriHserverMapping;
-    try {
-      hriHserverMapping = table.getRegionLocations();
-    } finally {
-      table.close();
+    List<HRegionLocation> regionLocations = null;
+    Connection connection = this.masterServices.getConnection();
+    try (RegionLocator locator = connection.getRegionLocator(tableName)) {
+      regionLocations = locator.getAllRegionLocations();
     }
-
+    // Convert List<HRegionLocation> to Map<HRegionInfo, ServerName>.
+    NavigableMap<HRegionInfo, ServerName> hri2Sn = new TreeMap<HRegionInfo, ServerName>();
+    for (HRegionLocation location: regionLocations) {
+      hri2Sn.put(location.getRegionInfo(), location.getServerName());
+    }
+    TreeMap<ServerName, List<HRegionInfo>> serverToRegions = Maps.newTreeMap();
     List<HRegionInfo> reRegions = new ArrayList<HRegionInfo>();
     for (HRegionInfo hri : regions) {
-      ServerName rsLocation = hriHserverMapping.get(hri);
-
+      ServerName sn = hri2Sn.get(hri);
       // Skip the offlined split parent region
       // See HBASE-4578 for more information.
-      if (null == rsLocation) {
+      if (null == sn) {
         LOG.info("Skip " + hri);
         continue;
       }
-      if (!serverToRegions.containsKey(rsLocation)) {
+      if (!serverToRegions.containsKey(sn)) {
         LinkedList<HRegionInfo> hriList = Lists.newLinkedList();
-        serverToRegions.put(rsLocation, hriList);
+        serverToRegions.put(sn, hriList);
       }
       reRegions.add(hri);
-      serverToRegions.get(rsLocation).add(hri);
+      serverToRegions.get(sn).add(hri);
     }
 
     LOG.info("Reopening " + reRegions.size() + " regions on "
@@ -230,10 +236,10 @@ public abstract class TableEventHandler extends EventHandler {
    * @throws FileNotFoundException
    * @throws IOException
    */
-  public HTableDescriptor getTableDescriptor()
+  public TableDescriptor getTableDescriptor()
   throws FileNotFoundException, IOException {
-    HTableDescriptor htd =
-      this.masterServices.getTableDescriptors().get(tableName);
+    TableDescriptor htd =
+      this.masterServices.getTableDescriptors().getDescriptor(tableName);
     if (htd == null) {
       throw new IOException("HTableDescriptor missing for " + tableName);
     }

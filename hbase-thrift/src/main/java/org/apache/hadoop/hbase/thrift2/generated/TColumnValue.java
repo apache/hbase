@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -506,7 +507,34 @@ public class TColumnValue implements org.apache.thrift.TBase<TColumnValue, TColu
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_family = true && (isSetFamily());
+    builder.append(present_family);
+    if (present_family)
+      builder.append(family);
+
+    boolean present_qualifier = true && (isSetQualifier());
+    builder.append(present_qualifier);
+    if (present_qualifier)
+      builder.append(qualifier);
+
+    boolean present_value = true && (isSetValue());
+    builder.append(present_value);
+    if (present_value)
+      builder.append(value);
+
+    boolean present_timestamp = true && (isSetTimestamp());
+    builder.append(present_timestamp);
+    if (present_timestamp)
+      builder.append(timestamp);
+
+    boolean present_tags = true && (isSetTags());
+    builder.append(present_tags);
+    if (present_tags)
+      builder.append(tags);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TColumnValue other) {

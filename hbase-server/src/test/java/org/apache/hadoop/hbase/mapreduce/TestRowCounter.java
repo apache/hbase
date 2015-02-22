@@ -25,15 +25,20 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.sql.Time;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mapreduce.RowCounter.RowCounterMapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
@@ -48,7 +53,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test the rowcounter map reduce job.
  */
-@Category(MediumTests.class)
+@Category({MapReduceTests.class, MediumTests.class})
 public class TestRowCounter {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -67,8 +72,7 @@ public class TestRowCounter {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.startMiniMapReduceCluster();
-    HTable table = TEST_UTIL.createTable(Bytes.toBytes(TABLE_NAME),
-        Bytes.toBytes(COL_FAM));
+    Table table = TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME), Bytes.toBytes(COL_FAM));
     writeRows(table);
     table.close();
   }
@@ -84,7 +88,7 @@ public class TestRowCounter {
 
   /**
    * Test a case when no column was specified in command line arguments.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -98,7 +102,7 @@ public class TestRowCounter {
   /**
    * Test a case when the column specified in command line arguments is
    * exclusive for few rows.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -126,7 +130,7 @@ public class TestRowCounter {
   /**
    * Test a case when the column specified in command line arguments is not part
    * of first KV for a row.
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -137,9 +141,67 @@ public class TestRowCounter {
     runRowCount(args, 10);
   }
 
+   /**
+   * Test a case when the timerange is specified with --starttime and --endtime options
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterTimeRange() throws Exception {
+    final byte[] family = Bytes.toBytes(COL_FAM);
+    final byte[] col1 = Bytes.toBytes(COL1);
+    Put put1 = new Put(Bytes.toBytes("row_timerange_" + 1));
+    Put put2 = new Put(Bytes.toBytes("row_timerange_" + 2));
+    Put put3 = new Put(Bytes.toBytes("row_timerange_" + 3));
+
+    long ts;
+
+    // clean up content of TABLE_NAME
+    HTable table = TEST_UTIL.deleteTableData(TableName.valueOf(TABLE_NAME));
+    ts = System.currentTimeMillis();
+    put1.add(family, col1, ts, Bytes.toBytes("val1"));
+    table.put(put1);
+    Thread.sleep(100);
+
+    ts = System.currentTimeMillis();
+    put2.add(family, col1, ts, Bytes.toBytes("val2"));
+    put3.add(family, col1, ts, Bytes.toBytes("val3"));
+    table.put(put2);
+    table.put(put3);
+    table.close();
+
+    String[] args = new String[] {
+        TABLE_NAME, COL_FAM + ":" + COL1,
+        "--starttime=" + 0,
+        "--endtime=" + ts
+    };
+    runRowCount(args, 1);
+
+    args = new String[] {
+        TABLE_NAME, COL_FAM + ":" + COL1,
+        "--starttime=" + 0,
+        "--endtime=" + (ts - 10)
+    };
+    runRowCount(args, 1);
+
+    args = new String[] {
+        TABLE_NAME, COL_FAM + ":" + COL1,
+        "--starttime=" + ts,
+        "--endtime=" + (ts + 1000)
+    };
+    runRowCount(args, 2);
+
+    args = new String[] {
+        TABLE_NAME, COL_FAM + ":" + COL1,
+        "--starttime=" + (ts - 30 * 1000),
+        "--endtime=" + (ts + 30 * 1000),
+    };
+    runRowCount(args, 3);
+  }
+
   /**
    * Run the RowCounter map reduce job and verify the row count.
-   * 
+   *
    * @param args the command line arguments to be used for rowcounter job.
    * @param expectedCount the expected row count (result of map reduce job).
    * @throws Exception
@@ -160,11 +222,11 @@ public class TestRowCounter {
   /**
    * Writes TOTAL_ROWS number of distinct rows in to the table. Few rows have
    * two columns, Few have one.
-   * 
+   *
    * @param table
    * @throws IOException
    */
-  private static void writeRows(HTable table) throws IOException {
+  private static void writeRows(Table table) throws IOException {
     final byte[] family = Bytes.toBytes(COL_FAM);
     final byte[] value = Bytes.toBytes("abcd");
     final byte[] col1 = Bytes.toBytes(COL1);
@@ -214,7 +276,9 @@ public class TestRowCounter {
         assertEquals(-1, newSecurityManager.getExitCode());
         assertTrue(data.toString().contains("Wrong number of parameters:"));
         assertTrue(data.toString().contains(
-            "Usage: RowCounter [options] <tablename> [--range=[startKey],[endKey]] " +
+            "Usage: RowCounter [options] <tablename> " +
+            "[--starttime=[start] --endtime=[end] " +
+            "[--range=[startKey],[endKey]] " +
             "[<column1> <column2>...]"));
         assertTrue(data.toString().contains("-Dhbase.client.scanner.caching=100"));
         assertTrue(data.toString().contains("-Dmapreduce.map.speculative=false"));
@@ -232,7 +296,9 @@ public class TestRowCounter {
             "Please specify range in such format as \"--range=a,b\" or, with only one boundary," +
             " \"--range=,b\" or \"--range=a,\""));
         assertTrue(data.toString().contains(
-            "Usage: RowCounter [options] <tablename> [--range=[startKey],[endKey]] " +
+            "Usage: RowCounter [options] <tablename> " +
+            "[--starttime=[start] --endtime=[end] " +
+            "[--range=[startKey],[endKey]] " +
             "[<column1> <column2>...]"));
       }
 

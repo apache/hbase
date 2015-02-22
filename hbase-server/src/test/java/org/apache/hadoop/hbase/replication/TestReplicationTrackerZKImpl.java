@@ -15,8 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,26 +28,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.Ignore;
-
-import static org.junit.Assert.*;
-
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -54,7 +55,7 @@ import org.junit.experimental.categories.Category;
  * interfaces (i.e. ReplicationPeers, etc.). Each test case in this class should ensure that the
  * MiniZKCluster is cleaned and returned to it's initial state (i.e. nothing but the rsZNode).
  */
-@Category(MediumTests.class)
+@Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationTrackerZKImpl {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationTrackerZKImpl.class);
@@ -143,7 +144,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("hostname2.example.org:1234", rsRemovedData);
   }
 
-  @Ignore ("Flakey") @Test(timeout = 30000)
+  @Test(timeout = 30000)
   public void testPeerRemovedEvent() throws Exception {
     rp.addPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
     rt.registerListener(new DummyReplicationListener());
@@ -155,26 +156,53 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("5", peerRemovedData);
   }
 
-  @Ignore ("Flakey") @Test(timeout = 30000)
+  @Test(timeout = 30000)
   public void testPeerListChangedEvent() throws Exception {
     // add a peer
     rp.addPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
     zkw.getRecoverableZooKeeper().getZooKeeper().getChildren("/hbase/replication/peers/5", true);
     rt.registerListener(new DummyReplicationListener());
     rp.disablePeer("5");
+    int tmp = plChangedCount.get();
+    LOG.info("Peer count=" + tmp);
     ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5/peer-state");
     // wait for event
-    int tmp = plChangedCount.get();
     while (plChangedCount.get() <= tmp) {
-      Thread.sleep(5);
+      Thread.sleep(100);
+      LOG.info("Peer count=" + tmp);
     }
     assertEquals(1, plChangedData.size());
     assertTrue(plChangedData.contains("5"));
 
     // clean up
-    ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5");
+    //ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5");
+    rp.removePeer("5");
   }
 
+  @Test(timeout = 30000)
+  public void testPeerNameControl() throws Exception {
+    int exists = 0;
+    int hyphen = 0;
+    rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+    
+    try{
+      rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+    }catch(IllegalArgumentException e){
+      exists++;
+    }
+
+    try{
+      rp.addPeer("6-ec2", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+    }catch(IllegalArgumentException e){
+      hyphen++;
+    }
+    assertEquals(1, exists);
+    assertEquals(1, hyphen);
+    
+    // clean up
+    rp.removePeer("6");
+  }
+  
   private class DummyReplicationListener implements ReplicationListener {
 
     @Override
@@ -195,8 +223,8 @@ public class TestReplicationTrackerZKImpl {
     public void peerListChanged(List<String> peerIds) {
       plChangedData.clear();
       plChangedData.addAll(peerIds);
-      plChangedCount.getAndIncrement();
-      LOG.debug("Received peerListChanged event");
+      int count = plChangedCount.getAndIncrement();
+      LOG.debug("Received peerListChanged event " + count);
     }
   }
 
@@ -225,7 +253,7 @@ public class TestReplicationTrackerZKImpl {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -259,6 +287,10 @@ public class TestReplicationTrackerZKImpl {
     public boolean isStopped() {
       return this.isStopped;
     }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
+    }
   }
 }
-

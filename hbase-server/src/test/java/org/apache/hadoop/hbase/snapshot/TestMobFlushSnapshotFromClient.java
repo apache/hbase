@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -49,6 +48,8 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.log4j.Level;
@@ -67,7 +68,7 @@ import org.junit.experimental.categories.Category;
  * TODO This is essentially a clone of TestSnapshotFromClient.  This is worth refactoring this
  * because there will be a few more flavors of snapshots that need to run these tests.
  */
-@Category(LargeTests.class)
+@Category({ClientTests.class, LargeTests.class})
 public class TestMobFlushSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestFlushSnapshotFromClient.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -85,7 +86,6 @@ public class TestMobFlushSnapshotFromClient {
   @BeforeClass
   public static void setupCluster() throws Exception {
     ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
@@ -143,7 +143,7 @@ public class TestMobFlushSnapshotFromClient {
 
     // put some stuff in the table
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
+    SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
@@ -226,7 +226,7 @@ public class TestMobFlushSnapshotFromClient {
 
     // put some stuff in the table
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
-    SnapshotTestingUtils.loadData(UTIL, table, DEFAULT_NUM_ROWS, TEST_FAM);
+    SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),

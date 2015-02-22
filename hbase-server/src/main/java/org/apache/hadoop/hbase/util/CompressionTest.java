@@ -23,25 +23,30 @@ import java.io.IOException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.io.compress.Compressor;
 
 /**
  * Compression validation test.  Checks compression is working.  Be sure to run
  * on every node in your cluster.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class CompressionTest {
   static final Log LOG = LogFactory.getLog(CompressionTest.class);
@@ -119,19 +124,25 @@ public class CompressionTest {
         .withPath(fs, path)
         .withFileContext(context)
         .create();
-    writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
-    writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
+    // Write any-old Cell...
+    final byte [] rowKey = Bytes.toBytes("compressiontestkey");
+    Cell c = CellUtil.createCell(rowKey, Bytes.toBytes("compressiontestval"));
+    writer.append(c);
+    writer.appendFileInfo(Bytes.toBytes("compressioninfokey"), Bytes.toBytes("compressioninfoval"));
     writer.close();
-
+    Cell cc = null;
     HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), conf);
-    reader.loadFileInfo();
-    byte[] key = reader.getFirstKey();
-    boolean rc = Bytes.toString(key).equals("testkey");
-    reader.close();
-
-    if (!rc) {
-      throw new Exception("Read back incorrect result: " +
-                          Bytes.toStringBinary(key));
+    try {
+      reader.loadFileInfo();
+      HFileScanner scanner = reader.getScanner(false, true);
+      scanner.seekTo(); // position to the start of file
+      // Scanner does not do Cells yet. Do below for now till fixed.
+      cc = scanner.getKeyValue();
+      if (CellComparator.compareRows(c, cc) != 0) {
+        throw new Exception("Read back incorrect result: " + c.toString() + " vs " + cc.toString());
+      }
+    } finally {
+      reader.close();
     }
   }
 
@@ -144,6 +155,11 @@ public class CompressionTest {
     Configuration conf = new Configuration();
     Path path = new Path(args[0]);
     FileSystem fs = path.getFileSystem(conf);
+    if (fs.exists(path)) {
+      System.err.println("The specified path exists, aborting!");
+      System.exit(1);
+    }
+
     try {
       doSmokeTest(fs, path, args[1]);
     } finally {

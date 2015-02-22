@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -640,7 +641,9 @@ public class Hbase {
      * 
      * @param column column name
      * 
-     * @param value value for perfomring the check
+     * @param value the expected value for the column parameter, if not
+     * provided the check is for the non-existence of the
+     * column in question
      * 
      * @param mput mutation for the put
      * 
@@ -5133,7 +5136,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(enableTable_args other) {
@@ -5487,7 +5497,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(enableTable_result other) {
@@ -5865,7 +5882,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(disableTable_args other) {
@@ -6219,7 +6243,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(disableTable_result other) {
@@ -6597,7 +6628,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(isTableEnabled_args other) {
@@ -7012,7 +7050,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(isTableEnabled_result other) {
@@ -7417,7 +7467,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableNameOrRegionName = true && (isSetTableNameOrRegionName());
+      builder.append(present_tableNameOrRegionName);
+      if (present_tableNameOrRegionName)
+        builder.append(tableNameOrRegionName);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(compact_args other) {
@@ -7771,7 +7828,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(compact_result other) {
@@ -8137,7 +8201,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableNameOrRegionName = true && (isSetTableNameOrRegionName());
+      builder.append(present_tableNameOrRegionName);
+      if (present_tableNameOrRegionName)
+        builder.append(tableNameOrRegionName);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(majorCompact_args other) {
@@ -8491,7 +8562,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(majorCompact_result other) {
@@ -8782,7 +8860,9 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getTableNames_args other) {
@@ -9172,7 +9252,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getTableNames_result other) {
@@ -9623,7 +9715,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getColumnDescriptors_args other) {
@@ -10061,7 +10160,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getColumnDescriptors_result other) {
@@ -10520,7 +10631,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getTableRegions_args other) {
@@ -10953,7 +11071,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getTableRegions_result other) {
@@ -11497,7 +11627,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_columnFamilies = true && (isSetColumnFamilies());
+      builder.append(present_columnFamilies);
+      if (present_columnFamilies)
+        builder.append(columnFamilies);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(createTable_args other) {
@@ -12044,7 +12186,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      boolean present_exist = true && (isSetExist());
+      builder.append(present_exist);
+      if (present_exist)
+        builder.append(exist);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(createTable_result other) {
@@ -12508,7 +12667,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteTable_args other) {
@@ -12862,7 +13028,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteTable_result other) {
@@ -13498,7 +13671,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(get_args other) {
@@ -14092,7 +14287,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(get_result other) {
@@ -14876,7 +15083,34 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_numVersions = true;
+      builder.append(present_numVersions);
+      if (present_numVersions)
+        builder.append(numVersions);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getVer_args other) {
@@ -15507,7 +15741,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getVer_result other) {
@@ -16362,7 +16608,39 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_numVersions = true;
+      builder.append(present_numVersions);
+      if (present_numVersions)
+        builder.append(numVersions);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getVerTs_args other) {
@@ -17028,7 +17306,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getVerTs_result other) {
@@ -17658,7 +17948,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRow_args other) {
@@ -18211,7 +18518,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRow_result other) {
@@ -18932,7 +19251,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowWithColumns_args other) {
@@ -19558,7 +19899,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowWithColumns_result other) {
@@ -20261,7 +20614,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowTs_args other) {
@@ -20851,7 +21226,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowTs_result other) {
@@ -21633,7 +22020,34 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowWithColumnsTs_args other) {
@@ -22296,7 +22710,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowWithColumnsTs_result other) {
@@ -22936,7 +23362,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rows = true && (isSetRows());
+      builder.append(present_rows);
+      if (present_rows)
+        builder.append(rows);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRows_args other) {
@@ -23521,7 +23964,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRows_result other) {
@@ -24252,7 +24707,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rows = true && (isSetRows());
+      builder.append(present_rows);
+      if (present_rows)
+        builder.append(rows);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowsWithColumns_args other) {
@@ -24910,7 +25387,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowsWithColumns_result other) {
@@ -25623,7 +26112,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rows = true && (isSetRows());
+      builder.append(present_rows);
+      if (present_rows)
+        builder.append(rows);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowsTs_args other) {
@@ -26245,7 +26756,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowsTs_result other) {
@@ -27037,7 +27560,34 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rows = true && (isSetRows());
+      builder.append(present_rows);
+      if (present_rows)
+        builder.append(rows);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowsWithColumnsTs_args other) {
@@ -27732,7 +28282,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowsWithColumnsTs_result other) {
@@ -28453,7 +29015,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_mutations = true && (isSetMutations());
+      builder.append(present_mutations);
+      if (present_mutations)
+        builder.append(mutations);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRow_args other) {
@@ -29061,7 +29645,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRow_result other) {
@@ -29823,7 +30419,34 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_mutations = true && (isSetMutations());
+      builder.append(present_mutations);
+      if (present_mutations)
+        builder.append(mutations);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRowTs_args other) {
@@ -30468,7 +31091,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRowTs_result other) {
@@ -31076,7 +31711,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rowBatches = true && (isSetRowBatches());
+      builder.append(present_rowBatches);
+      if (present_rowBatches)
+        builder.append(rowBatches);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRows_args other) {
@@ -31643,7 +32295,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRows_result other) {
@@ -32324,7 +32988,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_rowBatches = true && (isSetRowBatches());
+      builder.append(present_rowBatches);
+      if (present_rowBatches)
+        builder.append(rowBatches);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRowsTs_args other) {
@@ -32928,7 +33614,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRowsTs_result other) {
@@ -33584,7 +34282,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_value = true;
+      builder.append(present_value);
+      if (present_value)
+        builder.append(value);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(atomicIncrement_args other) {
@@ -34177,7 +34897,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(atomicIncrement_result other) {
@@ -34895,7 +35632,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteAll_args other) {
@@ -35410,7 +36169,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteAll_result other) {
@@ -36119,7 +36885,34 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteAllTs_args other) {
@@ -36671,7 +37464,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteAllTs_result other) {
@@ -37226,7 +38026,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteAllRow_args other) {
@@ -37700,7 +38517,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteAllRow_result other) {
@@ -38068,7 +38892,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_increment = true && (isSetIncrement());
+      builder.append(present_increment);
+      if (present_increment)
+        builder.append(increment);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(increment_args other) {
@@ -38427,7 +39258,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(increment_result other) {
@@ -38815,7 +39653,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_increments = true && (isSetIncrements());
+      builder.append(present_increments);
+      if (present_increments)
+        builder.append(increments);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(incrementRows_args other) {
@@ -39203,7 +40048,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(incrementRows_result other) {
@@ -39831,7 +40683,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteAllRowTs_args other) {
@@ -40342,7 +41216,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteAllRowTs_result other) {
@@ -40887,7 +41768,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_scan = true && (isSetScan());
+      builder.append(present_scan);
+      if (present_scan)
+        builder.append(scan);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenWithScan_args other) {
@@ -41427,7 +42325,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenWithScan_result other) {
@@ -42124,7 +43034,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startRow = true && (isSetStartRow());
+      builder.append(present_startRow);
+      if (present_startRow)
+        builder.append(startRow);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpen_args other) {
@@ -42732,7 +43664,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpen_result other) {
@@ -43514,7 +44458,34 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startRow = true && (isSetStartRow());
+      builder.append(present_startRow);
+      if (present_startRow)
+        builder.append(startRow);
+
+      boolean present_stopRow = true && (isSetStopRow());
+      builder.append(present_stopRow);
+      if (present_stopRow)
+        builder.append(stopRow);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenWithStop_args other) {
@@ -44163,7 +45134,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenWithStop_result other) {
@@ -44848,7 +45831,29 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startAndPrefix = true && (isSetStartAndPrefix());
+      builder.append(present_startAndPrefix);
+      if (present_startAndPrefix)
+        builder.append(startAndPrefix);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenWithPrefix_args other) {
@@ -45456,7 +46461,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenWithPrefix_result other) {
@@ -46226,7 +47243,34 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startRow = true && (isSetStartRow());
+      builder.append(present_startRow);
+      if (present_startRow)
+        builder.append(startRow);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenTs_args other) {
@@ -46871,7 +47915,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenTs_result other) {
@@ -47726,7 +48782,39 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_startRow = true && (isSetStartRow());
+      builder.append(present_startRow);
+      if (present_startRow)
+        builder.append(startRow);
+
+      boolean present_stopRow = true && (isSetStopRow());
+      builder.append(present_stopRow);
+      if (present_stopRow)
+        builder.append(stopRow);
+
+      boolean present_columns = true && (isSetColumns());
+      builder.append(present_columns);
+      if (present_columns)
+        builder.append(columns);
+
+      boolean present_timestamp = true;
+      builder.append(present_timestamp);
+      if (present_timestamp)
+        builder.append(timestamp);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenWithStopTs_args other) {
@@ -48412,7 +49500,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerOpenWithStopTs_result other) {
@@ -48821,7 +49921,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_id = true;
+      builder.append(present_id);
+      if (present_id)
+        builder.append(id);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerGet_args other) {
@@ -49309,7 +50416,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerGet_result other) {
@@ -49868,7 +50992,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_id = true;
+      builder.append(present_id);
+      if (present_id)
+        builder.append(id);
+
+      boolean present_nbRows = true;
+      builder.append(present_nbRows);
+      if (present_nbRows)
+        builder.append(nbRows);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerGetList_args other) {
@@ -50391,7 +51527,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerGetList_result other) {
@@ -50879,7 +52032,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_id = true;
+      builder.append(present_id);
+      if (present_id)
+        builder.append(id);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerClose_args other) {
@@ -51288,7 +52448,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(scannerClose_result other) {
@@ -51871,7 +53043,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_family = true && (isSetFamily());
+      builder.append(present_family);
+      if (present_family)
+        builder.append(family);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowOrBefore_args other) {
@@ -52386,7 +53575,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRowOrBefore_result other) {
@@ -52839,7 +54040,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRegionInfo_args other) {
@@ -53252,7 +54460,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getRegionInfo_result other) {
@@ -53666,7 +54886,14 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_append = true && (isSetAppend());
+      builder.append(present_append);
+      if (present_append)
+        builder.append(append);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(append_args other) {
@@ -54104,7 +55331,19 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(append_result other) {
@@ -54369,7 +55608,9 @@ public class Hbase {
      */
     public ByteBuffer column; // required
     /**
-     * value for perfomring the check
+     * the expected value for the column parameter, if not
+     * provided the check is for the non-existence of the
+     * column in question
      */
     public ByteBuffer value; // required
     /**
@@ -54396,7 +55637,9 @@ public class Hbase {
        */
       COLUMN((short)3, "column"),
       /**
-       * value for perfomring the check
+       * the expected value for the column parameter, if not
+       * provided the check is for the non-existence of the
+       * column in question
        */
       VALUE((short)5, "value"),
       /**
@@ -54685,7 +55928,9 @@ public class Hbase {
     }
 
     /**
-     * value for perfomring the check
+     * the expected value for the column parameter, if not
+     * provided the check is for the non-existence of the
+     * column in question
      */
     public byte[] getValue() {
       setValue(org.apache.thrift.TBaseHelper.rightSize(value));
@@ -54697,7 +55942,9 @@ public class Hbase {
     }
 
     /**
-     * value for perfomring the check
+     * the expected value for the column parameter, if not
+     * provided the check is for the non-existence of the
+     * column in question
      */
     public checkAndPut_args setValue(byte[] value) {
       setValue(value == null ? (ByteBuffer)null : ByteBuffer.wrap(value));
@@ -54967,7 +56214,39 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_tableName = true && (isSetTableName());
+      builder.append(present_tableName);
+      if (present_tableName)
+        builder.append(tableName);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_column = true && (isSetColumn());
+      builder.append(present_column);
+      if (present_column)
+        builder.append(column);
+
+      boolean present_value = true && (isSetValue());
+      builder.append(present_value);
+      if (present_value)
+        builder.append(value);
+
+      boolean present_mput = true && (isSetMput());
+      builder.append(present_mput);
+      if (present_mput)
+        builder.append(mput);
+
+      boolean present_attributes = true && (isSetAttributes());
+      builder.append(present_attributes);
+      if (present_attributes)
+        builder.append(attributes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndPut_args other) {
@@ -55689,7 +56968,24 @@ public class Hbase {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndPut_result other) {

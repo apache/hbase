@@ -20,19 +20,18 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -45,9 +44,9 @@ import static junit.framework.Assert.*;
  * Test case demonstrating client interactions with the {@link RowCountEndpoint}
  * sample coprocessor Service implementation.
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestRowCountEndpoint {
-  private static final byte[] TEST_TABLE = Bytes.toBytes("testrowcounter");
+  private static final TableName TEST_TABLE = TableName.valueOf("testrowcounter");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f");
   private static final byte[] TEST_COLUMN = Bytes.toBytes("col");
 
@@ -62,7 +61,7 @@ public class TestRowCountEndpoint {
         RowCountEndpoint.class.getName());
 
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
+    TEST_UTIL.createTable(TEST_TABLE, new byte[][]{TEST_FAMILY});
   }
 
   // @Ignore @AfterClass
@@ -72,7 +71,7 @@ public class TestRowCountEndpoint {
 
   // @Ignore @Test
   public void testEndpoint() throws Throwable {
-    HTable table = new HTable(CONF, TEST_TABLE);
+    Table table = TEST_UTIL.getConnection().getTable(TEST_TABLE);
 
     // insert some test rows
     for (int i=0; i<5; i++) {

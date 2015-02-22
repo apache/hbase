@@ -26,9 +26,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileConte
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
 
@@ -160,7 +160,7 @@ public class ClusterStatus extends VersionedWritable {
   public int getRequestsCount() {
     int count = 0;
     for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-      count += e.getValue().getTotalNumberOfRequests();
+      count += e.getValue().getNumberOfRequests();
     }
     return count;
   }
@@ -216,6 +216,7 @@ public class ClusterStatus extends VersionedWritable {
    * @return region server information
    * @deprecated Use {@link #getServers()}
    */
+  @Deprecated
   public Collection<ServerName> getServerInfo() {
     return getServers();
   }
@@ -267,6 +268,29 @@ public class ClusterStatus extends VersionedWritable {
     return masterCoprocessors;
   }
 
+  public long getLastMajorCompactionTsForTable(TableName table) {
+    long result = Long.MAX_VALUE;
+    for (ServerName server : getServers()) {
+      ServerLoad load = getLoad(server);
+      for (RegionLoad rl : load.getRegionsLoad().values()) {
+        if (table.equals(HRegionInfo.getTable(rl.getName()))) {
+          result = Math.min(result, rl.getLastMajorCompactionTs());
+        }
+      }
+    }
+    return result == Long.MAX_VALUE ? 0 : result;
+  }
+
+  public long getLastMajorCompactionTsForRegion(final byte[] region) {
+    for (ServerName server : getServers()) {
+      ServerLoad load = getLoad(server);
+      RegionLoad rl = load.getRegionsLoad().get(region);
+      if (rl != null) {
+        return rl.getLastMajorCompactionTs();
+      }
+    }
+    return 0;
+  }
 
   public boolean isBalancerOn() {
     return balancerOn != null && balancerOn;
@@ -378,47 +402,37 @@ public class ClusterStatus extends VersionedWritable {
   public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
 
     Map<ServerName, ServerLoad> servers = null;
-    if (proto.getLiveServersList() != null) {
-      servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
-      for (LiveServerInfo lsi : proto.getLiveServersList()) {
-        servers.put(ProtobufUtil.toServerName(
-            lsi.getServer()), new ServerLoad(lsi.getServerLoad()));
-      }
+    servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
+    for (LiveServerInfo lsi : proto.getLiveServersList()) {
+      servers.put(ProtobufUtil.toServerName(
+          lsi.getServer()), new ServerLoad(lsi.getServerLoad()));
     }
 
     Collection<ServerName> deadServers = null;
-    if (proto.getDeadServersList() != null) {
-      deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
-      for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
-        deadServers.add(ProtobufUtil.toServerName(sn));
-      }
+    deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
+    for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
+      deadServers.add(ProtobufUtil.toServerName(sn));
     }
 
     Collection<ServerName> backupMasters = null;
-    if (proto.getBackupMastersList() != null) {
-      backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
-      for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
-        backupMasters.add(ProtobufUtil.toServerName(sn));
-      }
+    backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
+    for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
+      backupMasters.add(ProtobufUtil.toServerName(sn));
     }
 
     Map<String, RegionState> rit = null;
-    if (proto.getRegionsInTransitionList() != null) {
-      rit = new HashMap<String, RegionState>(proto.getRegionsInTransitionList().size());
-      for (RegionInTransition region : proto.getRegionsInTransitionList()) {
-        String key = new String(region.getSpec().getValue().toByteArray());
-        RegionState value = RegionState.convert(region.getRegionState());
-        rit.put(key, value);
-      }
+    rit = new HashMap<String, RegionState>(proto.getRegionsInTransitionList().size());
+    for (RegionInTransition region : proto.getRegionsInTransitionList()) {
+      String key = new String(region.getSpec().getValue().toByteArray());
+      RegionState value = RegionState.convert(region.getRegionState());
+      rit.put(key, value);
     }
 
     String[] masterCoprocessors = null;
-    if (proto.getMasterCoprocessorsList() != null) {
-      final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
-      masterCoprocessors = new String[numMasterCoprocessors];
-      for (int i = 0; i < numMasterCoprocessors; i++) {
-        masterCoprocessors[i] = proto.getMasterCoprocessors(i).getName();
-      }
+    final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
+    masterCoprocessors = new String[numMasterCoprocessors];
+    for (int i = 0; i < numMasterCoprocessors; i++) {
+      masterCoprocessors[i] = proto.getMasterCoprocessors(i).getName();
     }
 
     return new ClusterStatus(proto.getHbaseVersion().getVersion(),

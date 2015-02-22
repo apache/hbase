@@ -24,9 +24,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.TestServerCustomProtocol;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -49,7 +50,7 @@ import static org.junit.Assert.assertFalse;
 /**
  * Test coprocessors class loading.
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestClassLoading {
   private static final Log LOG = LogFactory.getLog(TestClassLoading.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -530,9 +531,22 @@ public class TestClassLoading {
     assertEquals(loadedMasterCoprocessorsVerify, loadedMasterCoprocessors);
   }
 
+  @Test
+  public void testFindCoprocessors() {
+    // HBASE 12277: 
+    CoprocessorHost masterCpHost =
+                             TEST_UTIL.getHBaseCluster().getMaster().getMasterCoprocessorHost();
+
+    List<MasterObserver> masterObservers = masterCpHost.findCoprocessors(MasterObserver.class);
+
+    assertTrue(masterObservers != null && masterObservers.size() > 0);
+    assertEquals(masterCoprocessor.getSimpleName(),
+                 masterObservers.get(0).getClass().getSimpleName());
+  }
+
   private void waitForTable(TableName name) throws InterruptedException, IOException {
     // First wait until all regions are online
-    TEST_UTIL.waitTableEnabled(name.getName());
+    TEST_UTIL.waitTableEnabled(name);
     // Now wait a bit longer for the coprocessor hosts to load the CPs
     Thread.sleep(1000);
   }

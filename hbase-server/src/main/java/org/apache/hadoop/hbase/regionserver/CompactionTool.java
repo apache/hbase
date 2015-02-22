@@ -27,21 +27,20 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -49,14 +48,15 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -72,7 +72,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *  <li>family folder (the store files will be compacted)
  * </ul>
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class CompactionTool extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(CompactionTool.class);
 
@@ -112,13 +112,14 @@ public class CompactionTool extends Configured implements Tool {
       if (isFamilyDir(fs, path)) {
         Path regionDir = path.getParent();
         Path tableDir = regionDir.getParent();
-        HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
+        TableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
         HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-        compactStoreFiles(tableDir, htd, hri, path.getName(), compactOnce, major);
+        compactStoreFiles(tableDir, htd.getHTableDescriptor(), hri,
+            path.getName(), compactOnce, major);
       } else if (isRegionDir(fs, path)) {
         Path tableDir = path.getParent();
-        HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
-        compactRegion(tableDir, htd, path, compactOnce, major);
+        TableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
+        compactRegion(tableDir, htd.getHTableDescriptor(), path, compactOnce, major);
       } else if (isTableDir(fs, path)) {
         compactTable(path, compactOnce, major);
       } else {
@@ -129,9 +130,9 @@ public class CompactionTool extends Configured implements Tool {
 
     private void compactTable(final Path tableDir, final boolean compactOnce, final boolean major)
         throws IOException {
-      HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
+      TableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
       for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
-        compactRegion(tableDir, htd, regionDir, compactOnce, major);
+        compactRegion(tableDir, htd.getHTableDescriptor(), regionDir, compactOnce, major);
       }
     }
 
@@ -162,7 +163,8 @@ public class CompactionTool extends Configured implements Tool {
       do {
         CompactionContext compaction = store.requestCompaction(Store.PRIORITY_USER, null);
         if (compaction == null) break;
-        List<StoreFile> storeFiles = store.compact(compaction);
+        List<StoreFile> storeFiles =
+            store.compact(compaction, NoLimitCompactionThroughputController.INSTANCE);
         if (storeFiles != null && !storeFiles.isEmpty()) {
           if (keepCompactedFiles && deleteCompacted) {
             for (StoreFile storeFile: storeFiles) {

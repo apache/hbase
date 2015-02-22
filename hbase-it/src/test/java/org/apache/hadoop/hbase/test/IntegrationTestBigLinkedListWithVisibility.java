@@ -35,14 +35,15 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -50,13 +51,14 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.Import;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
@@ -130,7 +132,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       if(!acl) {
         LOG.info("No ACL available.");
       }
-      HBaseAdmin admin = new HBaseAdmin(getConf());
+      Admin admin = new HBaseAdmin(getConf());
       for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
         TableName tableName = IntegrationTestBigLinkedListWithVisibility.getTableName(i);
         createTable(admin, tableName, false, acl);
@@ -140,7 +142,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       admin.close();
     }
 
-    private void createTable(HBaseAdmin admin, TableName tableName, boolean setVersion, 
+    private void createTable(Admin admin, TableName tableName, boolean setVersion,
         boolean acl) throws IOException {
       if (!admin.tableExists(tableName)) {
         HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -152,7 +154,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
         admin.createTable(htd);
         if (acl) {
           LOG.info("Granting permissions for user " + USER.getShortName());
-          AccessControlProtos.Permission.Action[] actions = { AccessControlProtos.Permission.Action.READ };
+          Permission.Action[] actions = { Permission.Action.READ };
           try {
             AccessControlClient.grant(getConf(), tableName, USER.getShortName(), null, null,
                 actions);
@@ -170,8 +172,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     }
 
     static class VisibilityGeneratorMapper extends GeneratorMapper {
-      HTable[] tables = new HTable[DEFAULT_TABLES_COUNT];
-      HTable commonTable = null;
+      BufferedMutator[] tables = new BufferedMutator[DEFAULT_TABLES_COUNT];
 
       @Override
       protected void setup(org.apache.hadoop.mapreduce.Mapper.Context context) throws IOException,
@@ -180,11 +181,11 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       }
 
       @Override
-      protected void instantiateHTable(Configuration conf) throws IOException {
+      protected void instantiateHTable() throws IOException {
         for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
-          HTable table = new HTable(conf, getTableName(i));
-          table.setAutoFlush(true, true);
-          //table.setWriteBufferSize(4 * 1024 * 1024);
+          BufferedMutatorParams params = new BufferedMutatorParams(getTableName(i));
+          params.writeBufferSize(4 * 1024 * 1024);
+          BufferedMutator table = connection.getBufferedMutator(params);
           this.tables[i] = table;
         }
       }
@@ -217,7 +218,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
             }
             visibilityExps = split[j * 2] + OR + split[(j * 2) + 1];
             put.setCellVisibility(new CellVisibility(visibilityExps));
-            tables[j].put(put);
+            tables[j].mutate(put);
             try {
               Thread.sleep(1);
             } catch (InterruptedException e) {
@@ -228,9 +229,6 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
             // Tickle progress every so often else maprunner will think us hung
             output.progress();
           }
-        }
-        for (int j = 0; j < DEFAULT_TABLES_COUNT; j++) {
-          tables[j].flushCommits();
         }
       }
     }
@@ -581,8 +579,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       if (args.length < 5) {
         System.err
             .println("Usage: Loop <num iterations> " +
-            		"<num mappers> <num nodes per mapper> <output dir> " +
-            		"<num reducers> [<width> <wrap multiplier>]");
+                "<num mappers> <num nodes per mapper> <output dir> " +
+                "<num reducers> [<width> <wrap multiplier>]");
         return 1;
       }
       LOG.info("Running Loop with args:" + Arrays.deepToString(args));

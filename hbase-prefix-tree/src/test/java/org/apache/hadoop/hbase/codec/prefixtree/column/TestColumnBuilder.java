@@ -23,7 +23,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.column.ColumnReader;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.column.ColumnSectionWriter;
@@ -43,7 +44,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.Lists;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestColumnBuilder {
 

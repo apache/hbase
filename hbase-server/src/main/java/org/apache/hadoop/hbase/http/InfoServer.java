@@ -24,7 +24,7 @@ import java.net.URI;
 
 import javax.servlet.http.HttpServlet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -37,8 +37,9 @@ import org.apache.hadoop.conf.Configuration;
  */
 @InterfaceAudience.Private
 public class InfoServer {
+  
   private static final String HBASE_APP_DIR = "hbase-webapps";
-  private final HttpServer httpServer;
+  private final org.apache.hadoop.hbase.http.HttpServer httpServer;
 
   /**
    * Create a status server on the given port.
@@ -53,14 +54,25 @@ public class InfoServer {
   public InfoServer(String name, String bindAddress, int port, boolean findPort,
       final Configuration c)
   throws IOException {
-    HttpServer.Builder builder = new HttpServer.Builder();
-    builder
-      .setName(name)
-      .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
-      .setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
-    String logDir = System.getProperty("hbase.log.dir");
-    if (logDir != null) {
-      builder.setLogDir(logDir);
+    HttpConfig httpConfig = new HttpConfig(c);
+    HttpServer.Builder builder =
+      new org.apache.hadoop.hbase.http.HttpServer.Builder();
+
+      builder.setName(name).addEndpoint(URI.create(httpConfig.getSchemePrefix() +
+        bindAddress + ":" +
+        port)).setAppDir(HBASE_APP_DIR).setFindPort(findPort).setConf(c);
+      String logDir = System.getProperty("hbase.log.dir");
+      if (logDir != null) {
+        builder.setLogDir(logDir);
+      }
+    if (httpConfig.isSecure()) {
+    builder.keyPassword(c.get("ssl.server.keystore.keypassword"))
+      .keyStore(c.get("ssl.server.keystore.location"),
+        c.get("ssl.server.keystore.password"),
+        c.get("ssl.server.keystore.type", "jks"))
+      .trustStore(c.get("ssl.server.truststore.location"),
+        c.get("ssl.server.truststore.password"),
+        c.get("ssl.server.truststore.type", "jks"));
     }
     this.httpServer = builder.build();
   }

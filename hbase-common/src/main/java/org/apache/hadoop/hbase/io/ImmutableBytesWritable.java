@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.hbase.io;
 
-import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
@@ -228,6 +228,8 @@ implements WritableComparable<ImmutableBytesWritable> {
 
   /** A Comparator optimized for ImmutableBytesWritable.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static class Comparator extends WritableComparator {
     private BytesWritable.Comparator comparator =
       new BytesWritable.Comparator();

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 
 import com.google.protobuf.Service;
 
@@ -66,9 +67,19 @@ public interface MasterServices extends Server {
   TableLockManager getTableLockManager();
 
   /**
+   * @return Master's instance of {@link TableStateManager}
+   */
+  TableStateManager getTableStateManager();
+
+  /**
    * @return Master's instance of {@link MasterCoprocessorHost}
    */
   MasterCoprocessorHost getMasterCoprocessorHost();
+
+  /**
+   * @return Master's instance of {@link MasterQuotaManager}
+   */
+  MasterQuotaManager getMasterQuotaManager();
 
   /**
    * Check table is modifiable; i.e. exists and is offline.
@@ -250,4 +261,20 @@ public interface MasterServices extends Server {
    * @throws IOException
    */
   public List<TableName> listTableNamesByNamespace(String name) throws IOException;
+
+  /**
+   * @param table
+   * @return the timestamp of the last successful major compaction for the passed table,
+   * or 0 if no HFile resulting from a major compaction exists
+   * @throws IOException
+   */
+  public long getLastMajorCompactionTimestamp(TableName table) throws IOException;
+
+  /**
+   * @param regionName
+   * @return the timestamp of the last successful major compaction for the passed region
+   * or 0 if no HFile resulting from a major compaction exists
+   * @throws IOException
+   */
+  public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException;
 }

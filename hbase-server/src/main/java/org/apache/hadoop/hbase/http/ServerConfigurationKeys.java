@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /** 
  * This interface contains constants for configuration keys used

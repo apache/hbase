@@ -34,7 +34,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -66,7 +68,7 @@ import org.junit.rules.TestName;
 /**
  * Class that test tags
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestTags {
   static boolean useFilter = false;
 
@@ -96,7 +98,7 @@ public class TestTags {
 
   @Test
   public void testTags() throws Exception {
-    HTable table = null;
+    Table table = null;
     try {
       TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
       byte[] fam = Bytes.toBytes("info");
@@ -117,19 +119,18 @@ public class TestTags {
       Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
       byte[] value = Bytes.toBytes("value");
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row);
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setAttribute("visibility", Bytes.toBytes("myTag"));
       table.put(put);
       admin.flush(tableName);
-      List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 0)) {
-          Thread.sleep(10);
-        }
-      }
+      // We are lacking an API for confirming flush request compaction.
+      // Just sleep for a short time. We won't be able to confirm flush
+      // completion but the test won't hang now or in the future if
+      // default compaction policy causes compaction between flush and
+      // when we go to confirm it.
+      Thread.sleep(1000);
 
       Put put1 = new Put(row1);
       byte[] value1 = Bytes.toBytes("1000dfsdf");
@@ -137,29 +138,18 @@ public class TestTags {
       // put1.setAttribute("visibility", Bytes.toBytes("myTag3"));
       table.put(put1);
       admin.flush(tableName);
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 1)) {
-          Thread.sleep(10);
-        }
-      }
+      Thread.sleep(1000);
 
       Put put2 = new Put(row2);
       byte[] value2 = Bytes.toBytes("1000dfsdf");
       put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
       put2.setAttribute("visibility", Bytes.toBytes("myTag3"));
       table.put(put2);
-
       admin.flush(tableName);
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 2)) {
-          Thread.sleep(10);
-        }
-      }
+      Thread.sleep(1000);
+
       result(fam, row, qual, row2, table, value, value2, row1, value1);
+
       admin.compact(tableName);
       while (admin.getCompactionState(tableName) != CompactionState.NONE) {
         Thread.sleep(10);
@@ -174,7 +164,7 @@ public class TestTags {
 
   @Test
   public void testFlushAndCompactionWithoutTags() throws Exception {
-    HTable table = null;
+    Table table = null;
     try {
       TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
       byte[] fam = Bytes.toBytes("info");
@@ -195,46 +185,33 @@ public class TestTags {
       Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
 
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row);
       byte[] value = Bytes.toBytes("value");
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       table.put(put);
       admin.flush(tableName);
-      List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 0)) {
-          Thread.sleep(10);
-        }
-      }
+      // We are lacking an API for confirming flush request compaction.
+      // Just sleep for a short time. We won't be able to confirm flush
+      // completion but the test won't hang now or in the future if
+      // default compaction policy causes compaction between flush and
+      // when we go to confirm it.
+      Thread.sleep(1000);
 
       Put put1 = new Put(row1);
       byte[] value1 = Bytes.toBytes("1000dfsdf");
       put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
       table.put(put1);
       admin.flush(tableName);
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 1)) {
-          Thread.sleep(10);
-        }
-      }
+      Thread.sleep(1000);
 
       Put put2 = new Put(row2);
       byte[] value2 = Bytes.toBytes("1000dfsdf");
       put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
       table.put(put2);
-
       admin.flush(tableName);
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 2)) {
-          Thread.sleep(10);
-        }
-      }
+      Thread.sleep(1000);
+
       Scan s = new Scan(row);
       ResultScanner scanner = table.getScanner(s);
       try {
@@ -288,7 +265,7 @@ public class TestTags {
     byte[] row2 = Bytes.toBytes("rowc");
     byte[] rowd = Bytes.toBytes("rowd");
     byte[] rowe = Bytes.toBytes("rowe");
-    HTable table = null;
+    Table table = null;
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       HTableDescriptor desc = new HTableDescriptor(tableName);
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
@@ -298,7 +275,7 @@ public class TestTags {
       Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
       try {
-        table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+        table = TEST_UTIL.getConnection().getTable(tableName);
         Put put = new Put(row);
         byte[] value = Bytes.toBytes("value");
         put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
@@ -310,26 +287,20 @@ public class TestTags {
         put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
         admin.flush(tableName);
-        List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-        for (HRegion region : regions) {
-          Store store = region.getStore(fam);
-          while (!(store.getStorefilesCount() > 0)) {
-            Thread.sleep(10);
-          }
-        }
+        // We are lacking an API for confirming flush request compaction.
+        // Just sleep for a short time. We won't be able to confirm flush
+        // completion but the test won't hang now or in the future if
+        // default compaction policy causes compaction between flush and
+        // when we go to confirm it.
+        Thread.sleep(1000);
 
         put1 = new Put(row2);
         value1 = Bytes.toBytes("1000dfsdf");
         put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
         admin.flush(tableName);
-        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-        for (HRegion region : regions) {
-          Store store = region.getStore(fam);
-          while (!(store.getStorefilesCount() > 1)) {
-            Thread.sleep(10);
-          }
-        }
+        Thread.sleep(1000);
+
         Put put2 = new Put(rowd);
         byte[] value2 = Bytes.toBytes("1000dfsdf");
         put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
@@ -340,13 +311,8 @@ public class TestTags {
         put.setAttribute("visibility", Bytes.toBytes("ram"));
         table.put(put2);
         admin.flush(tableName);
-        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-        for (HRegion region : regions) {
-          Store store = region.getStore(fam);
-          while (!(store.getStorefilesCount() > 2)) {
-            Thread.sleep(10);
-          }
-        }
+        Thread.sleep(1000);
+
         TestCoprocessorForTags.checkTagPresence = true;
         Scan s = new Scan(row);
         s.setCaching(1);
@@ -420,9 +386,9 @@ public class TestTags {
     desc.addFamily(colDesc);
     TEST_UTIL.getHBaseAdmin().createTable(desc);
 
-    HTable table = null;
+    Table table = null;
     try {
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row1);
       byte[] v = Bytes.toBytes(2L);
       put.add(f, q, v);
@@ -453,8 +419,13 @@ public class TestTags {
       tags = TestCoprocessorForTags.tags;
       assertEquals(5L, Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
       assertEquals(2, tags.size());
-      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
-      assertEquals("tag2", Bytes.toString(tags.get(1).getValue()));
+      // We cannot assume the ordering of tags
+      List<String> tagValues = new ArrayList<String>();
+      for (Tag tag: tags) {
+        tagValues.add(Bytes.toString(tag.getValue()));
+      }
+      assertTrue(tagValues.contains("tag1"));
+      assertTrue(tagValues.contains("tag2"));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -510,8 +481,13 @@ public class TestTags {
       kv = KeyValueUtil.ensureKeyValue(result.getColumnLatestCell(f, q));
       tags = TestCoprocessorForTags.tags;
       assertEquals(2, tags.size());
-      assertEquals("tag1", Bytes.toString(tags.get(0).getValue()));
-      assertEquals("tag2", Bytes.toString(tags.get(1).getValue()));
+      // We cannot assume the ordering of tags
+      tagValues.clear();
+      for (Tag tag: tags) {
+        tagValues.add(Bytes.toString(tag.getValue()));
+      }
+      assertTrue(tagValues.contains("tag1"));
+      assertTrue(tagValues.contains("tag2"));
       TestCoprocessorForTags.checkTagPresence = false;
       TestCoprocessorForTags.tags = null;
 
@@ -541,7 +517,7 @@ public class TestTags {
     }
   }
 
-  private void result(byte[] fam, byte[] row, byte[] qual, byte[] row2, HTable table, byte[] value,
+  private void result(byte[] fam, byte[] row, byte[] qual, byte[] row2, Table table, byte[] value,
       byte[] value2, byte[] row1, byte[] value1) throws IOException {
     Scan s = new Scan(row);
     // If filters are used this attribute can be specifically check for in

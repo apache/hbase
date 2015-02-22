@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.htrace.Span;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.htrace.Span;
 
 import com.lmax.disruptor.EventFactory;
 

@@ -28,8 +28,10 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,7 +42,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
@@ -50,19 +51,21 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -77,12 +80,13 @@ import org.junit.experimental.categories.Category;
 /**
  * This tests AssignmentManager with a testing cluster.
  */
-@Category(MediumTests.class)
+@SuppressWarnings("deprecation")
+@Category({MasterTests.class, MediumTests.class})
 public class TestAssignmentManagerOnCluster {
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final static Configuration conf = TEST_UTIL.getConfiguration();
-  private static Admin admin;
+  private static HBaseAdmin admin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -93,6 +97,8 @@ public class TestAssignmentManagerOnCluster {
       MyRegionObserver.class, RegionObserver.class);
     // Reduce the maximum attempts to speed up the test
     conf.setInt("hbase.assignment.maximum.attempts", 3);
+    conf.setInt("hbase.master.maximum.ping.server.attempts", 3);
+    conf.setInt("hbase.master.ping.server.retry.sleep.interval", 1);
 
     TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, MyRegionServer.class);
     admin = TEST_UTIL.getHBaseAdmin();
@@ -125,7 +131,8 @@ public class TestAssignmentManagerOnCluster {
       }
       RegionState metaState =
         MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-      assertEquals("Meta should be not in transition", metaState.getState(), State.OPEN);
+      assertEquals("Meta should be not in transition",
+          metaState.getState(), RegionState.State.OPEN);
       assertNotEquals("Meta should be moved off master",
         metaState.getServerName(), master.getServerName());
       assertEquals("Meta should be on the meta server",
@@ -151,7 +158,8 @@ public class TestAssignmentManagerOnCluster {
         regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
       // Now, make sure meta is registered in zk
       metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-      assertEquals("Meta should be not in transition", metaState.getState(), State.OPEN);
+      assertEquals("Meta should be not in transition",
+          metaState.getState(), RegionState.State.OPEN);
       assertEquals("Meta should be assigned", metaState.getServerName(),
         regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
       assertNotEquals("Meta should be assigned on a different server",
@@ -174,7 +182,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -190,17 +198,15 @@ public class TestAssignmentManagerOnCluster {
 
       // Region is assigned now. Let's assign it again.
       // Master should not abort, and region should be assigned.
-      RegionState oldState = regionStates.getRegionState(hri);
       TEST_UTIL.getHBaseAdmin().assign(hri.getRegionName());
       master.getAssignmentManager().waitForAssignment(hri);
       RegionState newState = regionStates.getRegionState(hri);
-      assertTrue(newState.isOpened()
-        && newState.getStamp() != oldState.getStamp());
+      assertTrue(newState.isOpened());
     } finally {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-  
+
   /**
    * This tests region assignment on a simulated restarted server
    */
@@ -209,7 +215,8 @@ public class TestAssignmentManagerOnCluster {
     String table = "testAssignRegionOnRestartedServer";
     TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 20);
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
-    TEST_UTIL.getMiniHBaseCluster().startMaster(); //restart the master so that conf take into affect
+    //restart the master so that conf take into affect
+    TEST_UTIL.getMiniHBaseCluster().startMaster();
 
     ServerName deadServer = null;
     HMaster master = null;
@@ -218,7 +225,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       final HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -230,7 +237,7 @@ public class TestAssignmentManagerOnCluster {
       // Use the first server as the destination server
       ServerName destServer = onlineServers.iterator().next();
 
-      // Created faked dead server
+      // Created faked dead server that is still online in master
       deadServer = ServerName.valueOf(destServer.getHostname(),
           destServer.getPort(), destServer.getStartcode() - 100L);
       master.serverManager.recordNewServerWithLock(deadServer, ServerLoad.EMPTY_SERVERLOAD);
@@ -254,6 +261,12 @@ public class TestAssignmentManagerOnCluster {
       }
 
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
+
+      // reset the value for other tests
+      TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 3);
+      ServerName masterServerName = TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName();
+      TEST_UTIL.getMiniHBaseCluster().stopMaster(masterServerName);
+      TEST_UTIL.getMiniHBaseCluster().startMaster();
     }
   }
 
@@ -275,9 +288,9 @@ public class TestAssignmentManagerOnCluster {
 
       long timeoutTime = System.currentTimeMillis() + 800;
       while (true) {
-        List<HRegionInfo> regions =
-          regionStates.getRegionsOfTable(table);
-        if (!regions.contains(hri)) break;
+        if (regionStates.getRegionByStateOfTable(table)
+            .get(RegionState.State.OFFLINE).contains(hri))
+          break;
         long now = System.currentTimeMillis();
         if (now > timeoutTime) {
           fail("Failed to offline the region in time");
@@ -414,20 +427,17 @@ public class TestAssignmentManagerOnCluster {
   }
 
   /**
-   * This test should not be flaky. If it is flaky, it means something
-   * wrong with AssignmentManager which should be reported and fixed
-   *
-   * This tests forcefully assign a region while it's closing and re-assigned.
+   * This tests assign a region while it's closing.
    */
   @Test (timeout=60000)
-  public void testForceAssignWhileClosing() throws Exception {
-    String table = "testForceAssignWhileClosing";
+  public void testAssignWhileClosing() throws Exception {
+    String table = "testAssignWhileClosing";
     try {
       HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -476,7 +486,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -522,7 +532,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -564,7 +574,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -622,9 +632,9 @@ public class TestAssignmentManagerOnCluster {
         }
       }
       am.regionOffline(hri);
-      am.getRegionStates().updateRegionState(hri, State.PENDING_OPEN, destServerName);
+      am.getRegionStates().updateRegionState(hri, RegionState.State.PENDING_OPEN, destServerName);
 
-      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLING);
+      am.getTableStateManager().setTableState(table, TableState.State.DISABLING);
       List<HRegionInfo> toAssignRegions = am.processServerShutdown(destServerName);
       assertTrue("Regions to be assigned should be empty.", toAssignRegions.isEmpty());
       assertTrue("Regions to be assigned should be empty.", am.getRegionStates()
@@ -633,7 +643,8 @@ public class TestAssignmentManagerOnCluster {
       if (hri != null && serverName != null) {
         am.regionOnline(hri, serverName);
       }
-      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLED);
+      am.getTableStateManager().setTableState(table, TableState.State.ENABLED);
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
       TEST_UTIL.deleteTable(table);
     }
   }
@@ -649,7 +660,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -662,14 +673,6 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
 
       MyRegionObserver.postCloseEnabled.set(true);
-      am.unassign(hri);
-      // Now region should pending_close or closing
-      // Unassign it again so that we can trigger already
-      // in transition exception. This test is to make sure this scenario
-      // is handled properly.
-      am.server.getConfiguration().setLong(
-        AssignmentManager.ALREADY_IN_TRANSITION_WAITTIME, 1000);
-      am.getRegionStates().updateRegionState(hri, RegionState.State.FAILED_CLOSE);
       am.unassign(hri);
 
       // Let region closing move ahead. The region should be closed
@@ -702,7 +705,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -726,7 +729,7 @@ public class TestAssignmentManagerOnCluster {
       am.unassign(hri);
       RegionState state = am.getRegionStates().getRegionState(hri);
       ServerName oldServerName = state.getServerName();
-      assertTrue(state.isPendingOpenOrOpening() && oldServerName != null);
+      assertTrue(state.isOpening() && oldServerName != null);
 
       // Now the region is stuck in opening
       // Let's forcefully re-assign it to trigger closing/opening
@@ -775,7 +778,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -815,6 +818,7 @@ public class TestAssignmentManagerOnCluster {
 
       // You can't unassign a dead region before SSH either
       am.unassign(hri);
+      state = regionStates.getRegionState(hri);
       assertTrue(state.isFailedClose());
 
       // Enable SSH so that log can be split
@@ -838,6 +842,58 @@ public class TestAssignmentManagerOnCluster {
   }
 
   /**
+   * Test SSH waiting for extra region server for assignment
+   */
+  @Test (timeout=300000)
+  public void testSSHWaitForServerToAssignRegion() throws Exception {
+    TableName table = TableName.valueOf("testSSHWaitForServerToAssignRegion");
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    boolean startAServer = false;
+    try {
+      HTableDescriptor desc = new HTableDescriptor(table);
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HMaster master = cluster.getMaster();
+      final ServerManager serverManager = master.getServerManager();
+      MyLoadBalancer.countRegionServers = Integer.valueOf(
+        serverManager.countOfRegionServers());
+      HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(table);
+      assertNotNull("First region should be assigned", rs);
+      final ServerName serverName = rs.getServerName();
+      // Wait till SSH tried to assign regions a several times
+      int counter = MyLoadBalancer.counter.get() + 5;
+      cluster.killRegionServer(serverName);
+      startAServer = true;
+      cluster.waitForRegionServerToStop(serverName, -1);
+      while (counter > MyLoadBalancer.counter.get()) {
+        Thread.sleep(1000);
+      }
+      cluster.startRegionServer();
+      startAServer = false;
+      // Wait till the dead server is processed by SSH
+      TEST_UTIL.waitFor(120000, 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return serverManager.isServerDead(serverName)
+            && !serverManager.areDeadServersInProgress();
+        }
+      });
+      TEST_UTIL.waitUntilNoRegionsInTransition(300000);
+
+      rs = TEST_UTIL.getRSForFirstRegionInTable(table);
+      assertTrue("First region should be re-assigned to a different server",
+        rs != null && !serverName.equals(rs.getServerName()));
+    } finally {
+      MyLoadBalancer.countRegionServers = null;
+      TEST_UTIL.deleteTable(table);
+      if (startAServer) {
+        cluster.startRegionServer();
+      }
+    }
+  }
+
+  /**
    * Test force unassign/assign a region of a disabled table
    */
   @Test (timeout=60000)
@@ -850,7 +906,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -891,7 +947,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -970,7 +1026,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -1033,7 +1089,7 @@ public class TestAssignmentManagerOnCluster {
       cluster.startRegionServer();
     }
   }
-  
+
   /**
    * Test that region state transition call is idempotent
    */
@@ -1045,7 +1101,7 @@ public class TestAssignmentManagerOnCluster {
       HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
       HRegionInfo hri =
           new HRegionInfo(desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -1067,7 +1123,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-  
+
   /**
    * Test concurrent updates to meta when meta is not on master
    * @throws Exception
@@ -1109,7 +1165,7 @@ public class TestAssignmentManagerOnCluster {
         tableNameList.add(TableName.valueOf(name + "_" + i));
       }
     }
-    List<Result> metaRows = MetaTableAccessor.fullScanOfMeta(admin.getConnection());
+    List<Result> metaRows = MetaTableAccessor.fullScanRegions(admin.getConnection());
     int count = 0;
     // Check all 100 rows are in meta
     for (Result result : metaRows) {
@@ -1123,10 +1179,13 @@ public class TestAssignmentManagerOnCluster {
     assertTrue(count == 100);
     rss.stop();
   }
-  
+
   static class MyLoadBalancer extends StochasticLoadBalancer {
     // For this region, if specified, always assign to nowhere
     static volatile String controledRegion = null;
+
+    static volatile Integer countRegionServers = null;
+    static AtomicInteger counter = new AtomicInteger(0);
 
     @Override
     public ServerName randomAssignment(HRegionInfo regionInfo,
@@ -1135,6 +1194,21 @@ public class TestAssignmentManagerOnCluster {
         return null;
       }
       return super.randomAssignment(regionInfo, servers);
+    }
+
+    @Override
+    public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(
+        List<HRegionInfo> regions, List<ServerName> servers) {
+      if (countRegionServers != null && services != null) {
+        int regionServers = services.getServerManager().countOfRegionServers();
+        if (regionServers < countRegionServers.intValue()) {
+          // Let's wait till more region servers join in.
+          // Before that, fail region assignments.
+          counter.incrementAndGet();
+          return null;
+        }
+      }
+      return super.roundRobinAssignment(regions, servers);
     }
   }
 

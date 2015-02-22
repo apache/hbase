@@ -20,8 +20,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Get, remove and modify table descriptors.
@@ -36,6 +35,14 @@ public interface TableDescriptors {
    */
   HTableDescriptor get(final TableName tableName)
   throws IOException;
+
+  /**
+   * @param tableName
+   * @return TableDescriptor for tablename
+   * @throws IOException
+   */
+  TableDescriptor getDescriptor(final TableName tableName)
+      throws IOException;
 
   /**
    * Get Map of all NamespaceDescriptors for a given namespace.
@@ -55,6 +62,15 @@ public interface TableDescriptors {
   throws IOException;
 
   /**
+   * Get Map of all TableDescriptors. Populates the descriptor cache as a
+   * side effect.
+   * @return Map of all descriptors.
+   * @throws IOException
+   */
+  Map<String, TableDescriptor> getAllDescriptors()
+      throws IOException;
+
+  /**
    * Add or update descriptor
    * @param htd Descriptor to set into TableDescriptors
    * @throws IOException
@@ -63,10 +79,28 @@ public interface TableDescriptors {
   throws IOException;
 
   /**
+   * Add or update descriptor
+   * @param htd Descriptor to set into TableDescriptors
+   * @throws IOException
+   */
+  void add(final TableDescriptor htd)
+      throws IOException;
+
+  /**
    * @param tablename
    * @return Instance of table descriptor or null if none found.
    * @throws IOException
    */
   HTableDescriptor remove(final TableName tablename)
   throws IOException;
+
+  /**
+   * Enables the tabledescriptor cache
+   */
+  void setCacheOn() throws IOException;
+
+  /**
+   * Disables the tabledescriptor cache
+   */
+  void setCacheOff() throws IOException;
 }

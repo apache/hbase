@@ -27,13 +27,17 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -42,7 +46,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -50,15 +53,18 @@ import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -67,10 +73,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -79,6 +88,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
@@ -99,21 +109,29 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.quotas.RegionStateListener;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -123,13 +141,11 @@ import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.servlet.Context;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Service;
@@ -147,19 +163,71 @@ import com.google.protobuf.Service;
  *
  * <p>You can also shutdown just this master.  Call {@link #stopMaster()}.
  *
- * @see Watcher
+ * @see org.apache.zookeeper.Watcher
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings("deprecation")
 public class HMaster extends HRegionServer implements MasterServices, Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
+
+  /**
+   * Protection against zombie master. Started once Master accepts active responsibility and
+   * starts taking over responsibilities. Allows a finite time window before giving up ownership.
+   */
+  private static class InitializationMonitor extends HasThread {
+    /** The amount of time in milliseconds to sleep before checking initialization status. */
+    public static final String TIMEOUT_KEY = "hbase.master.initializationmonitor.timeout";
+    public static final long TIMEOUT_DEFAULT = TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES);
+
+    /**
+     * When timeout expired and initialization has not complete, call {@link System#exit(int)} when
+     * true, do nothing otherwise.
+     */
+    public static final String HALT_KEY = "hbase.master.initializationmonitor.haltontimeout";
+    public static final boolean HALT_DEFAULT = false;
+
+    private final HMaster master;
+    private final long timeout;
+    private final boolean haltOnTimeout;
+
+    /** Creates a Thread that monitors the {@link #isInitialized()} state. */
+    InitializationMonitor(HMaster master) {
+      super("MasterInitializationMonitor");
+      this.master = master;
+      this.timeout = master.getConfiguration().getLong(TIMEOUT_KEY, TIMEOUT_DEFAULT);
+      this.haltOnTimeout = master.getConfiguration().getBoolean(HALT_KEY, HALT_DEFAULT);
+      this.setDaemon(true);
+    }
+
+    @Override
+    public void run() {
+      try {
+        while (!master.isStopped() && master.isActiveMaster()) {
+          Thread.sleep(timeout);
+          if (master.isInitialized()) {
+            LOG.debug("Initialization completed within allotted tolerance. Monitor exiting.");
+          } else {
+            LOG.error("Master failed to complete initialization after " + timeout + "ms. Please"
+                + " consider submitting a bug report including a thread dump of this process.");
+            if (haltOnTimeout) {
+              LOG.error("Zombie Master exiting. Thread dump to stdout");
+              Threads.printThreadInfo(System.out, "Zombie HMaster");
+              System.exit(-1);
+            }
+          }
+        }
+      } catch (InterruptedException ie) {
+        LOG.trace("InitMonitor thread interrupted. Existing.");
+      }
+    }
+  }
 
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
   public static final String MASTER = "master";
 
   // Manager and zk listener for master election
-  private ActiveMasterManager activeMasterManager;
+  private final ActiveMasterManager activeMasterManager;
   // Region server tracker
   RegionServerTracker regionServerTracker;
   // Draining region server tracker
@@ -213,11 +281,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   MasterCoprocessorHost cpHost;
 
+  private final boolean preLoadTableDescriptors;
+
   // Time stamps for when a hmaster became active
   private long masterActiveTime;
 
   //should we check the compression codec type at master side, default true, HBASE-6370
   private final boolean masterCheckCompression;
+
+  //should we check encryption settings at master side, default true
+  private final boolean masterCheckEncryption;
 
   Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
@@ -225,6 +298,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   SnapshotManager snapshotManager;
   // monitor for distributed procedures
   MasterProcedureManagerHost mpmHost;
+
+  private MasterQuotaManager quotaManager;
+
+  // handle table states
+  private TableStateManager tableStateManager;
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
@@ -255,7 +333,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * </ol>
    * <p>
    * Remaining steps of initialization occur in
-   * {@link #finishActiveMasterInitialization(MonitoredTask)} after
+   * #finishActiveMasterInitialization(MonitoredTask) after
    * the master becomes the active one.
    *
    * @throws KeeperException
@@ -268,7 +346,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
     LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
-        ", hbase.cluster.distributed=" + this.conf.getBoolean("hbase.cluster.distributed", false));
+        ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
+
+    // Disable usage of meta replicas in the master
+    this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
 
     Replication.decorateMasterConfiguration(this.conf);
 
@@ -278,12 +359,19 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       this.conf.set("mapreduce.task.attempt.id", "hb_m_" + this.serverName.toString());
     }
 
-    //should we check the compression codec type at master side, default true, HBASE-6370
+    // should we check the compression codec type at master side, default true, HBASE-6370
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
+
+    // should we check encryption settings at master side, default true
+    this.masterCheckEncryption = conf.getBoolean("hbase.master.check.encryption", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
 
+    // preload table descriptor at startup
+    this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
+
     // Do we publish the status?
+
     boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
         HConstants.STATUS_PUBLISHED_DEFAULT);
     Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
@@ -298,28 +386,39 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
             " is not set - not publishing status");
       } else {
         clusterStatusPublisherChore = new ClusterStatusPublisher(this, conf, publisherClass);
-        Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
+        getChoreService().scheduleChore(clusterStatusPublisherChore);
       }
     }
-    startActiveMasterManager();
-    putUpJettyServer();
+    activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
+    int infoPort = putUpJettyServer();
+    startActiveMasterManager(infoPort);
   }
 
-  private void putUpJettyServer() throws IOException {
+  // return the actual infoPort, -1 means disable info server.
+  private int putUpJettyServer() throws IOException {
     if (!conf.getBoolean("hbase.master.infoserver.redirect", true)) {
-      return;
+      return -1;
     }
     int infoPort = conf.getInt("hbase.master.info.port.orig",
       HConstants.DEFAULT_MASTER_INFOPORT);
     // -1 is for disabling info server, so no redirecting
     if (infoPort < 0 || infoServer == null) {
-      return;
+      return -1;
+    }
+    String addr = conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+    if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
+      String msg =
+          "Failed to start redirecting jetty server. Address " + addr
+              + " does not belong to this host. Correct configuration parameter: "
+              + "hbase.master.info.bindAddress";
+      LOG.error(msg);
+      throw new IOException(msg);
     }
 
     RedirectServlet.regionServerInfoPort = infoServer.getPort();
     masterJettyServer = new org.mortbay.jetty.Server();
     Connector connector = new SelectChannelConnector();
-    connector.setHost(conf.get("hbase.master.info.bindAddress", "0.0.0.0"));
+    connector.setHost(addr);
     connector.setPort(infoPort);
     masterJettyServer.addConnector(connector);
     masterJettyServer.setStopAtShutdown(true);
@@ -330,17 +429,38 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     } catch (Exception e) {
       throw new IOException("Failed to start redirecting jetty server", e);
     }
+    return connector.getLocalPort();
+  }
+
+  @Override
+  protected TableDescriptors getFsTableDescriptors() throws IOException {
+    return super.getFsTableDescriptors();
   }
 
   /**
    * For compatibility, if failed with regionserver credentials, try the master one
    */
+  @Override
   protected void login(UserProvider user, String host) throws IOException {
     try {
       super.login(user, host);
     } catch (IOException ie) {
       user.login("hbase.master.keytab.file",
         "hbase.master.kerberos.principal", host);
+    }
+  }
+
+  /**
+   * If configured to put regions on active master,
+   * wait till a backup master becomes active.
+   * Otherwise, loop till the server is stopped or aborted.
+   */
+  @Override
+  protected void waitForMasterActive(){
+    boolean tablesOnMaster = BaseLoadBalancer.tablesOnMaster(conf);
+    while (!(tablesOnMaster && isActiveMaster)
+        && !isStopped() && !isAborted()) {
+      sleeper.sleep();
     }
   }
 
@@ -353,28 +473,36 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return getMasterRpcServices().switchBalancer(b, BalanceSwitchMode.ASYNC);
   }
 
+  @Override
   protected String getProcessName() {
     return MASTER;
   }
 
+  @Override
   protected boolean canCreateBaseZNode() {
     return true;
   }
 
+  @Override
   protected boolean canUpdateTableDescriptor() {
     return true;
   }
 
+  @Override
   protected RSRpcServices createRpcServices() throws IOException {
     return new MasterRpcServices(this);
   }
 
+  @Override
   protected void configureInfoServer() {
     infoServer.addServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
-    super.configureInfoServer();
+    if (BaseLoadBalancer.tablesOnMaster(conf)) {
+      super.configureInfoServer();
+    }
   }
 
+  @Override
   protected Class<? extends HttpServlet> getDumpServlet() {
     return MasterDumpServlet.class;
   }
@@ -383,6 +511,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * Emit the HMaster metrics, such as region in transition metrics.
    * Surrounding in a try block just to be sure metrics doesn't abort HMaster.
    */
+  @Override
   protected void doMetrics() {
     try {
       if (assignmentManager != null) {
@@ -411,7 +540,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.loadBalancerTracker.start();
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.balancer, this.service, this.metricsMaster,
-      this.tableLockManager);
+      this.tableLockManager, tableStateManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
         this.serverManager);
@@ -438,6 +567,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
+
+    // migrating existent table state from zk
+    for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
+        .queryForTableStates(getZooKeeper()).entrySet()) {
+      LOG.info("Converting state from zk to new states:" + entry);
+      tableStateManager.setTableState(entry.getKey(), entry.getValue());
+    }
+    ZKUtil.deleteChildrenRecursively(getZooKeeper(), getZooKeeper().tableZNode);
   }
 
   /**
@@ -464,6 +601,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
 
     isActiveMaster = true;
+    Thread zombieDetector = new Thread(new InitializationMonitor(this));
+    zombieDetector.start();
 
     /*
      * We are active master now... go initialize components we need to run.
@@ -477,20 +616,27 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, this);
 
+    // enable table descriptors cache
+    this.tableDescriptors.setCacheOn();
+    // set the META's descriptor to the correct replication
+    this.tableDescriptors.get(TableName.META_TABLE_NAME).setRegionReplication(
+        conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM));
+    // warm-up HTDs cache on master initialization
+    if (preLoadTableDescriptors) {
+      status.setStatus("Pre-loading table descriptors");
+      this.tableDescriptors.getAll();
+    }
+
     // publish cluster ID
     status.setStatus("Publishing Cluster ID in ZooKeeper");
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.serverManager = createServerManager(this, this);
 
-    synchronized (this) {
-      if (shortCircuitConnection == null) {
-        shortCircuitConnection = createShortCircuitConnection();
-        metaTableLocator = new MetaTableLocator();
-      }
-    }
+    setupClusterConnection();
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
+    this.tableStateManager = new TableStateManager(this);
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -547,10 +693,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.initializationBeforeMetaAssignment = true;
 
     // Wait for regionserver to finish initialization.
-    synchronized (online) {
-      while (!isStopped() && !isOnline()) {
-        online.wait(100);
-      }
+    if (BaseLoadBalancer.tablesOnMaster(conf)) {
+      waitForServerOnline();
     }
 
     //initialize load balancer
@@ -564,7 +708,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");
-    assignMeta(status, previouslyFailedMetaRSs);
+    assignMeta(status, previouslyFailedMetaRSs, HRegionInfo.DEFAULT_REPLICA_ID);
     // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
     if(isStopped()) return;
@@ -587,11 +731,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // been assigned.
     status.setStatus("Starting balancer and catalog janitor");
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
-    Threads.setDaemonThreadRunning(clusterStatusChore.getThread());
+    getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
-    Threads.setDaemonThreadRunning(balancerChore.getThread());
+    getChoreService().scheduleChore(balancerChore);
     this.catalogJanitorChore = new CatalogJanitor(this, this);
-    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
+    getChoreService().scheduleChore(catalogJanitorChore);
 
     status.setStatus("Starting namespace manager");
     initNamespace();
@@ -606,16 +750,30 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
+    configurationManager.registerObserver(this.balancer);
     initialized = true;
+    // assign the meta replicas
+    Set<ServerName> EMPTY_SET = new HashSet<ServerName>();
+    int numReplicas = conf.getInt(HConstants.META_REPLICAS_NUM,
+           HConstants.DEFAULT_META_REPLICA_NUM);
+    for (int i = 1; i < numReplicas; i++) {
+      assignMeta(status, EMPTY_SET, i);
+    }
+    unassignExcessMetaReplica(zooKeeper, numReplicas);
+
+    status.setStatus("Starting quota manager");
+    initQuotaManager();
+
     // clear the dead servers with same host name and port of online server because we are not
     // removing dead server with same hostname and port of rs which is trying to check in before
     // master initialization. See HBASE-5916.
     this.serverManager.clearDeadServersWithSameHostNameAndPortOfOnlineServer();
 
     this.expiredMobFileCleanerChore = new ExpiredMobFileCleanerChore(this);
-    Threads.setDaemonThreadRunning(expiredMobFileCleanerChore.getThread());
+    getChoreService().scheduleChore(expiredMobFileCleanerChore);
+
     this.mobFileCompactChore = new MobFileCompactionChore(this);
-    Threads.setDaemonThreadRunning(mobFileCompactChore.getThread());
+    getChoreService().scheduleChore(mobFileCompactChore);
 
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
@@ -625,6 +783,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         LOG.error("Coprocessor postStartMaster() hook failed", ioe);
       }
     }
+
+    zombieDetector.interrupt();
   }
 
   /**
@@ -643,47 +803,87 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return new ServerManager(master, services);
   }
 
+  private void unassignExcessMetaReplica(ZooKeeperWatcher zkw, int numMetaReplicasConfigured) {
+    // unassign the unneeded replicas (for e.g., if the previous master was configured
+    // with a replication of 3 and now it is 2, we need to unassign the 1 unneeded replica)
+    try {
+      List<String> metaReplicaZnodes = zooKeeper.getMetaReplicaNodes();
+      for (String metaReplicaZnode : metaReplicaZnodes) {
+        int replicaId = zooKeeper.getMetaReplicaIdFromZnode(metaReplicaZnode);
+        if (replicaId >= numMetaReplicasConfigured) {
+          RegionState r = MetaTableLocator.getMetaRegionState(zkw, replicaId);
+          LOG.info("Closing excess replica of meta region " + r.getRegion());
+          // send a close and wait for a max of 30 seconds
+          ServerManager.closeRegionSilentlyAndWait(getConnection(), r.getServerName(),
+              r.getRegion(), 30000);
+          ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(replicaId));
+        }
+      }
+    } catch (Exception ex) {
+      // ignore the exception since we don't want the master to be wedged due to potential
+      // issues in the cleanup of the extra regions. We can do that cleanup via hbck or manually
+      LOG.warn("Ignoring exception " + ex);
+    }
+  }
+
   /**
    * Check <code>hbase:meta</code> is assigned. If not, assign it.
    * @param status MonitoredTask
    * @param previouslyFailedMetaRSs
+   * @param replicaId
    * @throws InterruptedException
    * @throws IOException
    * @throws KeeperException
    */
-  void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMetaRSs)
+  void assignMeta(MonitoredTask status, Set<ServerName> previouslyFailedMetaRSs, int replicaId)
       throws InterruptedException, IOException, KeeperException {
     // Work on meta region
     int assigned = 0;
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
-    status.setStatus("Assigning hbase:meta region");
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+      status.setStatus("Assigning hbase:meta region");
+    } else {
+      status.setStatus("Assigning hbase:meta region, replicaId " + replicaId);
+    }
 
     // Get current meta state from zk.
-    RegionState metaState = MetaTableLocator.getMetaRegionState(getZooKeeper());
-
+    RegionState metaState = MetaTableLocator.getMetaRegionState(getZooKeeper(), replicaId);
+    HRegionInfo hri = RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO,
+        replicaId);
     RegionStates regionStates = assignmentManager.getRegionStates();
-    regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO,
-      metaState.getState(), metaState.getServerName(), null);
+    regionStates.createRegionState(hri, metaState.getState(),
+        metaState.getServerName(), null);
 
     if (!metaState.isOpened() || !metaTableLocator.verifyMetaRegionLocation(
-        this.getShortCircuitConnection(), this.getZooKeeper(), timeout)) {
+        this.getConnection(), this.getZooKeeper(), timeout, replicaId)) {
       ServerName currentMetaServer = metaState.getServerName();
       if (serverManager.isServerOnline(currentMetaServer)) {
-        LOG.info("Meta was in transition on " + currentMetaServer);
+        if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+          LOG.info("Meta was in transition on " + currentMetaServer);
+        } else {
+          LOG.info("Meta with replicaId " + replicaId + " was in transition on " +
+                    currentMetaServer);
+        }
         assignmentManager.processRegionsInTransition(Arrays.asList(metaState));
       } else {
         if (currentMetaServer != null) {
-          splitMetaLogBeforeAssignment(currentMetaServer);
-          regionStates.logSplit(HRegionInfo.FIRST_META_REGIONINFO);
-          previouslyFailedMetaRSs.add(currentMetaServer);
+          if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) {
+            splitMetaLogBeforeAssignment(currentMetaServer);
+            regionStates.logSplit(HRegionInfo.FIRST_META_REGIONINFO);
+            previouslyFailedMetaRSs.add(currentMetaServer);
+          }
         }
-        LOG.info("Re-assigning hbase:meta, it was on " + currentMetaServer);
-        assignmentManager.assignMeta();
+        LOG.info("Re-assigning hbase:meta with replicaId, " + replicaId +
+            " it was on " + currentMetaServer);
+        assignmentManager.assignMeta(hri);
       }
       assigned++;
     }
 
-    enableMeta(TableName.META_TABLE_NAME);
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID)
+      getTableStateManager().setTableState(TableName.META_TABLE_NAME, TableState.State.ENABLED);
+    // TODO: should we prevent from using state manager before meta was initialized?
+    // tableStateManager.start();
 
     if ((RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode())
         && (!previouslyFailedMetaRSs.isEmpty())) {
@@ -692,14 +892,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
     }
 
+    this.assignmentManager.setEnabledTable(TableName.META_TABLE_NAME);
+    tableStateManager.start();
+
     // Make sure a hbase:meta location is set. We need to enable SSH here since
     // if the meta region server is died at this time, we need it to be re-assigned
     // by SSH so that system tables can be assigned.
     // No need to wait for meta is assigned = 0 when meta is just verified.
-    enableServerShutdownHandler(assigned != 0);
-
-    LOG.info("hbase:meta assigned=" + assigned + ", location="
-      + metaTableLocator.getMetaRegionLocation(this.getZooKeeper()));
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableServerShutdownHandler(assigned != 0);
+    LOG.info("hbase:meta with replicaId " + replicaId + " assigned=" + assigned + ", location="
+      + metaTableLocator.getMetaRegionLocation(this.getZooKeeper(), replicaId));
     status.setStatus("META assigned.");
   }
 
@@ -707,6 +909,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     //create namespace manager
     tableNamespaceManager = new TableNamespaceManager(this);
     tableNamespaceManager.start();
+  }
+
+  void initQuotaManager() throws IOException {
+    quotaManager = new MasterQuotaManager(this);
+    this.assignmentManager.setRegionStateListener((RegionStateListener)quotaManager);
+    quotaManager.start();
   }
 
   boolean isCatalogJanitorEnabled() {
@@ -740,13 +948,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     if (waitForMeta) {
       metaTableLocator.waitMetaRegionLocation(this.getZooKeeper());
-    }
-  }
-
-  private void enableMeta(TableName metaTableName) {
-    if (!this.assignmentManager.getTableStateManager().isTableState(metaTableName,
-        ZooKeeperProtos.Table.State.ENABLED)) {
-      this.assignmentManager.setEnabledTable(metaTableName);
     }
   }
 
@@ -784,6 +985,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return this.fileSystemManager;
   }
 
+  @Override
+  public TableStateManager getTableStateManager() {
+    return tableStateManager;
+  }
+
   /*
    * Start up all services. If any of these threads gets an unhandled exception
    * then they just die with a logged message.  This should be fine because
@@ -817,21 +1023,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       new LogCleaner(cleanerInterval,
          this, conf, getMasterFileSystem().getFileSystem(),
          getMasterFileSystem().getOldLogDir());
-         Threads.setDaemonThreadRunning(logCleaner.getThread(), getName() + ".oldLogCleaner");
+    getChoreService().scheduleChore(logCleaner);
 
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
         .getFileSystem(), archiveDir);
-    Threads.setDaemonThreadRunning(hfileCleaner.getThread(),
-      getName() + ".archivedHFileCleaner");
-
+    getChoreService().scheduleChore(hfileCleaner);
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
       LOG.trace("Started service threads");
     }
   }
 
+  @Override
   protected void stopServiceThreads() {
     if (masterJettyServer != null) {
       LOG.info("Stopping master jetty server");
@@ -853,8 +1058,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       LOG.debug("Stopping service threads");
     }
     // Clean up and close up shop
-    if (this.logCleaner!= null) this.logCleaner.interrupt();
-    if (this.hfileCleaner != null) this.hfileCleaner.interrupt();
+    if (this.logCleaner != null) this.logCleaner.cancel(true);
+    if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
+    if (this.quotaManager != null) this.quotaManager.stop();
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
     if (this.serverManager != null) this.serverManager.stop();
     if (this.assignmentManager != null) this.assignmentManager.stop();
@@ -864,22 +1070,22 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private void stopChores() {
     if (this.expiredMobFileCleanerChore != null) {
-      this.expiredMobFileCleanerChore.interrupt();
+      this.expiredMobFileCleanerChore.cancel(true);
     }
     if (this.mobFileCompactChore != null) {
-      this.mobFileCompactChore.interrupt();
+      this.mobFileCompactChore.cancel(true);
     }
     if (this.balancerChore != null) {
-      this.balancerChore.interrupt();
+      this.balancerChore.cancel(true);
     }
     if (this.clusterStatusChore != null) {
-      this.clusterStatusChore.interrupt();
+      this.clusterStatusChore.cancel(true);
     }
     if (this.catalogJanitorChore != null) {
-      this.catalogJanitorChore.interrupt();
+      this.catalogJanitorChore.cancel(true);
     }
     if (this.clusterStatusPublisherChore != null){
-      clusterStatusPublisherChore.interrupt();
+      clusterStatusPublisherChore.cancel(true);
     }
   }
 
@@ -983,7 +1189,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           if (rpCount < plans.size() &&
               // if performing next balance exceeds cutoff time, exit the loop
               (System.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
-            //TODO: After balance, there should not be a cutoff time (keeping it as a security net for now)
+            //TODO: After balance, there should not be a cutoff time (keeping it as
+            // a security net for now)
             LOG.debug("No more balancing till next balance run; maximumBalanceTime=" +
               maximumBalanceTime);
             break;
@@ -1046,13 +1253,28 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       final List<ServerName> destServers = this.serverManager.createDestinationServersList(
         regionState.getServerName());
       dest = balancer.randomAssignment(hri, destServers);
-    } else {
-      dest = ServerName.valueOf(Bytes.toString(destServerName));
-      if (dest.equals(regionState.getServerName())) {
-        LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
-          + " because region already assigned to the same server " + dest + ".");
+      if (dest == null) {
+        LOG.debug("Unable to determine a plan to assign " + hri);
         return;
       }
+    } else {
+      dest = ServerName.valueOf(Bytes.toString(destServerName));
+      if (dest.equals(serverName) && balancer instanceof BaseLoadBalancer
+          && !((BaseLoadBalancer)balancer).shouldBeOnMaster(hri)) {
+        // To avoid unnecessary region moving later by balancer. Don't put user
+        // regions on master. Regions on master could be put on other region
+        // server intentionally by test however.
+        LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
+          + " to avoid unnecessary region moving later by load balancer,"
+          + " because it should not be on master");
+        return;
+      }
+    }
+
+    if (dest.equals(regionState.getServerName())) {
+      LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
+        + " because region already assigned to the same server " + dest + ".");
+      return;
     }
 
     // Now we can do the move
@@ -1086,11 +1308,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
 
     String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
-    getNamespaceDescriptor(namespace); // ensure namespace exists
+    ensureNamespaceExists(namespace);
 
     HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     sanityCheckTableDescriptor(hTableDescriptor);
+    this.quotaManager.checkNamespaceTableAndRegionQuota(hTableDescriptor.getTableName(),
+      newRegions.length);
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
@@ -1146,15 +1370,26 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           + "if you want to bypass sanity checks");
     }
 
-    // check split policy class can be loaded
+    // check that coprocessors and other specified plugin classes can be loaded
     try {
-      RegionSplitPolicy.getSplitPolicyClass(htd, conf);
+      checkClassLoading(conf, htd);
     } catch (Exception ex) {
       throw new DoNotRetryIOException(ex);
     }
 
     // check compression can be loaded
-    checkCompression(htd);
+    try {
+      checkCompression(htd);
+    } catch (IOException e) {
+      throw new DoNotRetryIOException(e.getMessage(), e);
+    }
+
+    // check encryption can be loaded
+    try {
+      checkEncryption(conf, htd);
+    } catch (IOException e) {
+      throw new DoNotRetryIOException(e.getMessage(), e);
+    }
 
     // check that we have at least 1 CF
     if (htd.getColumnFamilies().length == 0) {
@@ -1195,7 +1430,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  private void startActiveMasterManager() throws KeeperException {
+  private void startActiveMasterManager(int infoPort) throws KeeperException {
     String backupZNode = ZKUtil.joinZNode(
       zooKeeper.backupMasterAddressesZNode, serverName.toString());
     /*
@@ -1208,12 +1443,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     * this node explicitly.  If we crash before then, ZooKeeper will delete
     * this node for us since it is ephemeral.
     */
-    LOG.info("Adding ZNode for " + backupZNode + " in backup master directory");
-    MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName);
+    LOG.info("Adding backup master ZNode " + backupZNode);
+    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode,
+        serverName, infoPort)) {
+      LOG.warn("Failed create of " + backupZNode + " by " + serverName);
+    }
 
-    activeMasterManager = new ActiveMasterManager(zooKeeper, serverName, this);
+    activeMasterManager.setInfoPort(infoPort);
     // Start a thread to try to become the active master, so we won't block here
     Threads.setDaemonThreadRunning(new Thread(new Runnable() {
+      @Override
       public void run() {
         int timeout = conf.getInt(HConstants.ZK_SESSION_TIMEOUT,
           HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
@@ -1241,7 +1480,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           LOG.fatal("Failed to become active master", t);
           // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
           if (t instanceof NoClassDefFoundError &&
-              t.getMessage().contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
+              t.getMessage()
+                  .contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
             // improved error message for this special case
             abort("HBase is having a problem with its Hadoop jars.  You may need to "
               + "recompile HBase against Hadoop version "
@@ -1254,7 +1494,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           status.cleanup();
         }
       }
-    }, "ActiveMasterManager"));
+    }, getServerName().toShortString() + ".activeMasterManager"));
   }
 
   private void checkCompression(final HTableDescriptor htd)
@@ -1270,6 +1510,26 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (!this.masterCheckCompression) return;
     CompressionTest.testCompression(hcd.getCompression());
     CompressionTest.testCompression(hcd.getCompactionCompression());
+  }
+
+  private void checkEncryption(final Configuration conf, final HTableDescriptor htd)
+  throws IOException {
+    if (!this.masterCheckEncryption) return;
+    for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
+      checkEncryption(conf, hcd);
+    }
+  }
+
+  private void checkEncryption(final Configuration conf, final HColumnDescriptor hcd)
+  throws IOException {
+    if (!this.masterCheckEncryption) return;
+    EncryptionTest.testEncryption(conf, hcd.getEncryptionType(), hcd.getEncryptionKey());
+  }
+
+  private void checkClassLoading(final Configuration conf, final HTableDescriptor htd)
+  throws IOException {
+    RegionSplitPolicy.getSplitPolicyClass(htd, conf);
+    RegionCoprocessorHost.testTableCoprocessorAttrs(conf, htd);
   }
 
   private HRegionInfo[] getHRegionInfos(HTableDescriptor hTableDescriptor,
@@ -1328,18 +1588,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void addColumn(final TableName tableName, final HColumnDescriptor column)
+  public void addColumn(final TableName tableName, final HColumnDescriptor columnDescriptor)
       throws IOException {
     checkInitialized();
+    checkCompression(columnDescriptor);
+    checkEncryption(conf, columnDescriptor);
     if (cpHost != null) {
-      if (cpHost.preAddColumn(tableName, column)) {
+      if (cpHost.preAddColumn(tableName, columnDescriptor)) {
         return;
       }
     }
     //TODO: we should process this (and some others) in an executor
-    new TableAddFamilyHandler(tableName, column, this, this).prepare().process();
+    new TableAddFamilyHandler(tableName, columnDescriptor, this, this).prepare().process();
     if (cpHost != null) {
-      cpHost.postAddColumn(tableName, column);
+      cpHost.postAddColumn(tableName, columnDescriptor);
     }
   }
 
@@ -1348,6 +1610,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throws IOException {
     checkInitialized();
     checkCompression(descriptor);
+    checkEncryption(conf, descriptor);
     if (cpHost != null) {
       if (cpHost.preModifyColumn(tableName, descriptor)) {
         return;
@@ -1411,6 +1674,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * is found, but not currently deployed, the second element of the pair
    * may be null.
    */
+  @VisibleForTesting // Used by TestMaster.
   Pair<HRegionInfo, ServerName> getTableRegionForRow(
       final TableName tableName, final byte [] rowKey)
   throws IOException {
@@ -1436,7 +1700,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         }
     };
 
-    MetaScanner.metaScan(conf, visitor, tableName, rowKey, 1);
+    MetaScanner.metaScan(clusterConnection, visitor, tableName, rowKey, 1);
     return result.get();
   }
 
@@ -1461,11 +1725,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    if (!MetaTableAccessor.tableExists(getShortCircuitConnection(), tableName)) {
+    if (!MetaTableAccessor.tableExists(getConnection(), tableName)) {
       throw new TableNotFoundException(tableName);
     }
     if (!getAssignmentManager().getTableStateManager().
-        isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED)) {
+        isTableState(tableName, TableState.State.DISABLED)) {
       throw new TableNotDisabledException(tableName);
     }
   }
@@ -1577,6 +1841,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   @Override
   public void abort(final String msg, final Throwable t) {
+    if (isAborted() || isStopped()) {
+      return;
+    }
     if (cpHost != null) {
       // HBASE-4014: dump a list of loaded coprocessors.
       LOG.fatal("Master server abort: loaded coprocessors are: " +
@@ -1594,6 +1861,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return cpHost;
+  }
+
+  @Override
+  public MasterQuotaManager getMasterQuotaManager() {
+    return quotaManager;
   }
 
   @Override
@@ -1840,35 +2112,210 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  @Override
-  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
+  /**
+   * Ensure that the specified namespace exists, otherwise throws a NamespaceNotFoundException
+   *
+   * @param name the namespace to check
+   * @throws IOException if the namespace manager is not ready yet.
+   * @throws NamespaceNotFoundException if the namespace does not exists
+   */
+  private void ensureNamespaceExists(final String name)
+      throws IOException, NamespaceNotFoundException {
     checkNamespaceManagerReady();
     NamespaceDescriptor nsd = tableNamespaceManager.get(name);
     if (nsd == null) {
       throw new NamespaceNotFoundException(name);
     }
+  }
+
+  @Override
+  public NamespaceDescriptor getNamespaceDescriptor(String name) throws IOException {
+    checkNamespaceManagerReady();
+
+    if (cpHost != null) {
+      cpHost.preGetNamespaceDescriptor(name);
+    }
+
+    NamespaceDescriptor nsd = tableNamespaceManager.get(name);
+    if (nsd == null) {
+      throw new NamespaceNotFoundException(name);
+    }
+
+    if (cpHost != null) {
+      cpHost.postGetNamespaceDescriptor(nsd);
+    }
+
     return nsd;
   }
 
   @Override
   public List<NamespaceDescriptor> listNamespaceDescriptors() throws IOException {
     checkNamespaceManagerReady();
-    return Lists.newArrayList(tableNamespaceManager.list());
+
+    final List<NamespaceDescriptor> descriptors = new ArrayList<NamespaceDescriptor>();
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preListNamespaceDescriptors(descriptors);
+    }
+
+    if (!bypass) {
+      descriptors.addAll(tableNamespaceManager.list());
+
+      if (cpHost != null) {
+        cpHost.postListNamespaceDescriptors(descriptors);
+      }
+    }
+    return descriptors;
   }
 
   @Override
   public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
-    getNamespaceDescriptor(name); // check that namespace exists
-    return Lists.newArrayList(tableDescriptors.getByNamespace(name).values());
+    ensureNamespaceExists(name);
+    return listTableDescriptors(name, null, null, true);
   }
 
   @Override
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
-    List<TableName> tableNames = Lists.newArrayList();
-    getNamespaceDescriptor(name); // check that namespace exists
-    for (HTableDescriptor descriptor: tableDescriptors.getByNamespace(name).values()) {
-      tableNames.add(descriptor.getTableName());
+    ensureNamespaceExists(name);
+    return listTableNames(name, null, true);
+  }
+
+  /**
+   * Returns the list of table descriptors that match the specified request
+   *
+   * @param namespace the namespace to query, or null if querying for all
+   * @param regex The regular expression to match against, or null if querying for all
+   * @param tableNameList the list of table names, or null if querying for all
+   * @param includeSysTables False to match only against userspace tables
+   * @return the list of table descriptors
+   */
+  public List<HTableDescriptor> listTableDescriptors(final String namespace, final String regex,
+      final List<TableName> tableNameList, final boolean includeSysTables)
+      throws IOException {
+    final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
+
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preGetTableDescriptors(tableNameList, descriptors, regex);
     }
-    return tableNames;
+
+    if (!bypass) {
+      if (tableNameList == null || tableNameList.size() == 0) {
+        // request for all TableDescriptors
+        Collection<HTableDescriptor> htds;
+        if (namespace != null && namespace.length() > 0) {
+          htds = tableDescriptors.getByNamespace(namespace).values();
+        } else {
+          htds = tableDescriptors.getAll().values();
+        }
+
+        for (HTableDescriptor desc: htds) {
+          if (tableStateManager.isTablePresent(desc.getTableName())
+              && (includeSysTables || !desc.getTableName().isSystemTable())) {
+            descriptors.add(desc);
+          }
+        }
+      } else {
+        for (TableName s: tableNameList) {
+          if (tableStateManager.isTablePresent(s)) {
+            HTableDescriptor desc = tableDescriptors.get(s);
+            if (desc != null) {
+              descriptors.add(desc);
+            }
+          }
+        }
+      }
+
+      // Retains only those matched by regular expression.
+      if (regex != null) {
+        filterTablesByRegex(descriptors, Pattern.compile(regex));
+      }
+
+      if (cpHost != null) {
+        cpHost.postGetTableDescriptors(tableNameList, descriptors, regex);
+      }
+    }
+    return descriptors;
+  }
+
+  /**
+   * Returns the list of table names that match the specified request
+   * @param regex The regular expression to match against, or null if querying for all
+   * @param namespace the namespace to query, or null if querying for all
+   * @param includeSysTables False to match only against userspace tables
+   * @return the list of table names
+   */
+  public List<TableName> listTableNames(final String namespace, final String regex,
+      final boolean includeSysTables) throws IOException {
+    final List<HTableDescriptor> descriptors = new ArrayList<HTableDescriptor>();
+
+    boolean bypass = false;
+    if (cpHost != null) {
+      bypass = cpHost.preGetTableNames(descriptors, regex);
+    }
+
+    if (!bypass) {
+      // get all descriptors
+      Collection<HTableDescriptor> htds;
+      if (namespace != null && namespace.length() > 0) {
+        htds = tableDescriptors.getByNamespace(namespace).values();
+      } else {
+        htds = tableDescriptors.getAll().values();
+      }
+
+      for (HTableDescriptor htd: htds) {
+        if (includeSysTables || !htd.getTableName().isSystemTable()) {
+          descriptors.add(htd);
+        }
+      }
+
+      // Retains only those matched by regular expression.
+      if (regex != null) {
+        filterTablesByRegex(descriptors, Pattern.compile(regex));
+      }
+
+      if (cpHost != null) {
+        cpHost.postGetTableNames(descriptors, regex);
+      }
+    }
+
+    List<TableName> result = new ArrayList<TableName>(descriptors.size());
+    for (HTableDescriptor htd: descriptors) {
+      result.add(htd.getTableName());
+    }
+    return result;
+  }
+
+
+  /**
+   * Removes the table descriptors that don't match the pattern.
+   * @param descriptors list of table descriptors to filter
+   * @param pattern the regex to use
+   */
+  private static void filterTablesByRegex(final Collection<HTableDescriptor> descriptors,
+      final Pattern pattern) {
+    final String defaultNS = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
+    Iterator<HTableDescriptor> itr = descriptors.iterator();
+    while (itr.hasNext()) {
+      HTableDescriptor htd = itr.next();
+      String tableName = htd.getTableName().getNameAsString();
+      boolean matched = pattern.matcher(tableName).matches();
+      if (!matched && htd.getTableName().getNamespaceAsString().equals(defaultNS)) {
+        matched = pattern.matcher(defaultNS + TableName.NAMESPACE_DELIM + tableName).matches();
+      }
+      if (!matched) {
+        itr.remove();
+      }
+    }
+  }
+
+  @Override
+  public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
+    return getClusterStatus().getLastMajorCompactionTsForTable(table);
+  }
+
+  @Override
+  public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
+    return getClusterStatus().getLastMajorCompactionTsForRegion(regionName);
   }
 }

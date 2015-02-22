@@ -29,11 +29,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -45,7 +47,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Do the complex testing of constraints against a minicluster
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestConstraint {
   private static final Log LOG = LogFactory
       .getLog(TestConstraint.class);
@@ -80,7 +82,7 @@ public class TestConstraint {
     Constraints.add(desc, CheckWasRunConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail on a valid put
       Put put = new Put(row1);
@@ -112,7 +114,7 @@ public class TestConstraint {
     Constraints.add(desc, AllFailConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
     Put put = new Put(row1);
@@ -155,7 +157,7 @@ public class TestConstraint {
     Constraints.disableConstraint(desc, AllFailConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       // test that we don't fail because its disabled
       Put put = new Put(row1);
@@ -187,7 +189,7 @@ public class TestConstraint {
     Constraints.disable(desc);
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     try {
       // test that we do fail on violation
       Put put = new Put(row1);
@@ -219,7 +221,7 @@ public class TestConstraint {
     CheckWasRunConstraint.wasRun = false;
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
 
     // test that we do fail on violation
     Put put = new Put(row1);

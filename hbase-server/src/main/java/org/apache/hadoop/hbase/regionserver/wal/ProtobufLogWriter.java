@@ -23,21 +23,26 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+
+import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WAL_TRAILER_WARN_SIZE;
+import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.DEFAULT_WAL_TRAILER_WARN_SIZE;
 
 /**
  * Writer for protobuf-based WAL.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ProtobufLogWriter extends WriterBase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   protected FSDataOutputStream output;
@@ -76,8 +81,7 @@ public class ProtobufLogWriter extends WriterBase {
     super.init(fs, path, conf, overwritable);
     assert this.output == null;
     boolean doCompress = initializeCompressionContext(conf, path);
-    this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
-      HLog.DEFAULT_WAL_TRAILER_WARN_SIZE);
+    this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
     int bufferSize = FSUtils.getDefaultBufferSize(fs);
     short replication = (short)conf.getInt(
         "hbase.regionserver.hlog.replication", FSUtils.getDefaultReplication(fs, path));
@@ -109,13 +113,13 @@ public class ProtobufLogWriter extends WriterBase {
   }
 
   @Override
-  public void append(HLog.Entry entry) throws IOException {
+  public void append(Entry entry) throws IOException {
     entry.setCompressionContext(compressionContext);
     entry.getKey().getBuilder(compressor).
       setFollowingKvCount(entry.getEdit().size()).build().writeDelimitedTo(output);
-    for (KeyValue kv : entry.getEdit().getKeyValues()) {
+    for (Cell cell : entry.getEdit().getCells()) {
       // cellEncoder must assume little about the stream, since we write PB and cells in turn.
-      cellEncoder.write(kv);
+      cellEncoder.write(cell);
     }
   }
 
@@ -133,7 +137,7 @@ public class ProtobufLogWriter extends WriterBase {
     }
   }
 
-  protected WALTrailer buildWALTrailer(WALTrailer.Builder builder) {
+  WALTrailer buildWALTrailer(WALTrailer.Builder builder) {
     return builder.build();
   }
 
@@ -162,8 +166,11 @@ public class ProtobufLogWriter extends WriterBase {
   @Override
   public void sync() throws IOException {
     try {
+      // This looks to be a noop but its what we have always done.  Leaving for now.
       this.output.flush();
-      this.output.sync();
+      // TODO: Add in option to call hsync. See HBASE-5954 Allow proper fsync support for HBase
+      //
+      this.output.hflush();
     } catch (NullPointerException npe) {
       // Concurrent close...
       throw new IOException(npe);
@@ -184,8 +191,7 @@ public class ProtobufLogWriter extends WriterBase {
     return this.output;
   }
 
-  @Override
-  public void setWALTrailer(WALTrailer walTrailer) {
+  void setWALTrailer(WALTrailer walTrailer) {
     this.trailer = walTrailer;
   }
 }

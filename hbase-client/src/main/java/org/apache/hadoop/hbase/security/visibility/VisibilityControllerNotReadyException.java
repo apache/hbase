@@ -19,12 +19,14 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /*
  * This exception indicates that VisibilityController hasn't finished initialization.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class VisibilityControllerNotReadyException extends IOException {
 
   private static final long serialVersionUID = 1725986525207989173L;

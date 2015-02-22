@@ -22,10 +22,9 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 
 /**
@@ -36,10 +35,10 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
  *   <li> {@link #reset()} : reset the filter state before filtering a new row. </li>
  *   <li> {@link #filterAllRemaining()}: true means row scan is over; false means keep going. </li>
  *   <li> {@link #filterRowKey(byte[],int,int)}: true means drop this row; false means include.</li>
- *   <li> {@link #filterKeyValue(Cell)}: decides whether to include or exclude this KeyValue.
+ *   <li> {@link #filterKeyValue(Cell)}: decides whether to include or exclude this Cell.
  *        See {@link ReturnCode}. </li>
- *   <li> {@link #transform(KeyValue)}: if the KeyValue is included, let the filter transform the
- *        KeyValue. </li>
+ *   <li> {@link #transformCell(Cell)}: if the Cell is included, let the filter transform the
+ *        Cell. </li>
  *   <li> {@link #filterRowCells(List)}: allows direct modification of the final list to be submitted
  *   <li> {@link #filterRow()}: last chance to drop entire row based on the sequence of
  *        filter calls. Eg: filter a row if it doesn't contain a specified column. </li>
@@ -56,7 +55,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class Filter {
-  protected boolean reversed;
+  protected transient boolean reversed;
   /**
    * Reset the state of the filter between rows.
    * 
@@ -123,7 +122,7 @@ public abstract class Filter {
    * @see org.apache.hadoop.hbase.KeyValue#shallowCopy()
    *      The transformed KeyValue is what is eventually returned to the client. Most filters will
    *      return the passed KeyValue unchanged.
-   * @see org.apache.hadoop.hbase.filter.KeyOnlyFilter#transform(KeyValue) for an example of a
+   * @see org.apache.hadoop.hbase.filter.KeyOnlyFilter#transformCell(Cell) for an example of a
    *      transformation.
    * 
    *      Concrete implementers can signal a failure condition in their code by throwing an
@@ -135,14 +134,6 @@ public abstract class Filter {
    */
   abstract public Cell transformCell(final Cell v) throws IOException;
 
-  /**
-   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
-   * This is for transition from 0.94 -> 0.96
-   **/
-  @Deprecated // use Cell transformCell(final Cell)
-  abstract public KeyValue transform(final KeyValue currentKV) throws IOException;
- 
-  
   /**
    * Return codes for filterValue().
    */
@@ -207,9 +198,6 @@ public abstract class Filter {
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
    */
   abstract public boolean filterRow() throws IOException;
-
-  @Deprecated // use Cell GetNextKeyHint(final Cell)
-  abstract public KeyValue getNextKeyHint(final KeyValue currentKV) throws IOException;
 
   /**
    * If the filter returns the match code SEEK_NEXT_USING_HINT, then it should also tell which is

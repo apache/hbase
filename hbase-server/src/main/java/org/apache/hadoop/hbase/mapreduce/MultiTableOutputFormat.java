@@ -24,12 +24,15 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
@@ -50,7 +53,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * </p>
  *
  * <p>
- * Write-ahead logging (HLog) for Puts can be disabled by setting
+ * Write-ahead logging (WAL) for Puts can be disabled by setting
  * {@link #WAL_PROPERTY} to {@link #WAL_OFF}. Default value is {@link #WAL_ON}.
  * Note that disabling write-ahead logging is only appropriate for jobs where
  * loss of data due to region server failure can be tolerated (for example,
@@ -60,7 +63,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable, Mutation> {
-  /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (HLog) */
+  /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (WAL) */
   public static final String WAL_PROPERTY = "hbase.mapreduce.multitableoutputformat.wal";
   /** Property value to use write-ahead logging */
   public static final boolean WAL_ON = true;
@@ -72,7 +75,8 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
   protected static class MultiTableRecordWriter extends
       RecordWriter<ImmutableBytesWritable, Mutation> {
     private static final Log LOG = LogFactory.getLog(MultiTableRecordWriter.class);
-    Map<ImmutableBytesWritable, HTable> tables;
+    Connection connection;
+    Map<ImmutableBytesWritable, BufferedMutator> mutatorMap = new HashMap<>();
     Configuration conf;
     boolean useWriteAheadLogging;
 
@@ -84,10 +88,9 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
      *          <tt>false</tt>) to improve performance when bulk loading data.
      */
     public MultiTableRecordWriter(Configuration conf,
-        boolean useWriteAheadLogging) {
+        boolean useWriteAheadLogging) throws IOException {
       LOG.debug("Created new MultiTableRecordReader with WAL "
           + (useWriteAheadLogging ? "on" : "off"));
-      this.tables = new HashMap<ImmutableBytesWritable, HTable>();
       this.conf = conf;
       this.useWriteAheadLogging = useWriteAheadLogging;
     }
@@ -95,24 +98,31 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     /**
      * @param tableName
      *          the name of the table, as a string
-     * @return the named table
+     * @return the named mutator
      * @throws IOException
      *           if there is a problem opening a table
      */
-    HTable getTable(ImmutableBytesWritable tableName) throws IOException {
-      if (!tables.containsKey(tableName)) {
-        LOG.debug("Opening HTable \"" + Bytes.toString(tableName.get())+ "\" for writing");
-        HTable table = new HTable(conf, tableName.get());
-        table.setAutoFlush(false, true);
-        tables.put(tableName, table);
+    BufferedMutator getBufferedMutator(ImmutableBytesWritable tableName) throws IOException {
+      if(this.connection == null){
+        this.connection = ConnectionFactory.createConnection(conf);
       }
-      return tables.get(tableName);
+      if (!mutatorMap.containsKey(tableName)) {
+        LOG.debug("Opening HTable \"" + Bytes.toString(tableName.get())+ "\" for writing");
+
+        BufferedMutator mutator =
+            connection.getBufferedMutator(TableName.valueOf(tableName.get()));
+        mutatorMap.put(tableName, mutator);
+      }
+      return mutatorMap.get(tableName);
     }
 
     @Override
     public void close(TaskAttemptContext context) throws IOException {
-      for (HTable table : tables.values()) {
-        table.flushCommits();
+      for (BufferedMutator mutator : mutatorMap.values()) {
+        mutator.flush();
+      }
+      if(connection != null){
+        connection.close();
       }
     }
 
@@ -128,16 +138,16 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
      */
     @Override
     public void write(ImmutableBytesWritable tableName, Mutation action) throws IOException {
-      HTable table = getTable(tableName);
+      BufferedMutator mutator = getBufferedMutator(tableName);
       // The actions are not immutable, so we defensively copy them
       if (action instanceof Put) {
         Put put = new Put((Put) action);
         put.setDurability(useWriteAheadLogging ? Durability.SYNC_WAL
             : Durability.SKIP_WAL);
-        table.put(put);
+        mutator.mutate(put);
       } else if (action instanceof Delete) {
         Delete delete = new Delete((Delete) action);
-        table.delete(delete);
+        mutator.mutate(delete);
       } else
         throw new IllegalArgumentException(
             "action must be either Delete or Put");

@@ -60,6 +60,14 @@ message GetAuthsResponse {
   repeated bytes auth = 2;
 }
 
+message ListLabelsRequest {
+  optional string regex = 1;
+}
+
+message ListLabelsResponse {
+  repeated bytes label = 1;
+}
+
 service VisibilityLabelsService {
   rpc addLabels(VisibilityLabelsRequest)
     returns (VisibilityLabelsResponse);
@@ -69,4 +77,6 @@ service VisibilityLabelsService {
     returns (VisibilityLabelsResponse);
   rpc getAuths(GetAuthsRequest)
     returns (GetAuthsResponse);
+  rpc listLabels(ListLabelsRequest)
+    returns (ListLabelsResponse);
 }

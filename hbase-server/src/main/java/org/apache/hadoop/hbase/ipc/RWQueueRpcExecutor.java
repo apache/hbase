@@ -20,16 +20,17 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
@@ -50,7 +51,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private static final Log LOG = LogFactory.getLog(RWQueueRpcExecutor.class);
 
   private final List<BlockingQueue<CallRunner>> queues;
-  private final Random balancer = new Random();
+  private final QueueBalancer writeBalancer;
+  private final QueueBalancer readBalancer;
+  private final QueueBalancer scanBalancer;
   private final int writeHandlersCount;
   private final int readHandlersCount;
   private final int scanHandlersCount;
@@ -59,25 +62,35 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private final int numScanQueues;
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
-      final float readShare, final int maxQueueLength) {
-    this(name, handlerCount, numQueues, readShare, maxQueueLength, 0, LinkedBlockingQueue.class);
+      final float readShare, final int maxQueueLength,
+      final Configuration conf, final Abortable abortable) {
+    this(name, handlerCount, numQueues, readShare, maxQueueLength, 0,
+      conf, abortable, LinkedBlockingQueue.class);
   }
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final float readShare, final float scanShare, final int maxQueueLength) {
+    this(name, handlerCount, numQueues, readShare, scanShare, maxQueueLength, null, null);
+  }
+
+  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
+      final float readShare, final float scanShare, final int maxQueueLength,
+      final Configuration conf, final Abortable abortable) {
     this(name, handlerCount, numQueues, readShare, scanShare, maxQueueLength,
-      LinkedBlockingQueue.class);
+      conf, abortable, LinkedBlockingQueue.class);
   }
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final float readShare, final int maxQueueLength,
+      final Configuration conf, final Abortable abortable,
       final Class<? extends BlockingQueue> readQueueClass, Object... readQueueInitArgs) {
-    this(name, handlerCount, numQueues, readShare, 0, maxQueueLength,
+    this(name, handlerCount, numQueues, readShare, 0, maxQueueLength, conf, abortable,
       readQueueClass, readQueueInitArgs);
   }
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final float readShare, final float scanShare, final int maxQueueLength,
+      final Configuration conf, final Abortable abortable,
       final Class<? extends BlockingQueue> readQueueClass, Object... readQueueInitArgs) {
     this(name, calcNumWriters(handlerCount, readShare), calcNumReaders(handlerCount, readShare),
       calcNumWriters(numQueues, readShare), calcNumReaders(numQueues, readShare), scanShare,
@@ -115,6 +128,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     this.numWriteQueues = numWriteQueues;
     this.numReadQueues = numReadQueues;
     this.numScanQueues = numScanQueues;
+    this.writeBalancer = getBalancer(numWriteQueues);
+    this.readBalancer = getBalancer(numReadQueues);
+    this.scanBalancer = getBalancer(numScanQueues);
 
     queues = new ArrayList<BlockingQueue<CallRunner>>(writeHandlersCount + readHandlersCount);
     LOG.debug(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount +
@@ -146,11 +162,11 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     RpcServer.Call call = callTask.getCall();
     int queueIndex;
     if (isWriteRequest(call.getHeader(), call.param)) {
-      queueIndex = balancer.nextInt(numWriteQueues);
+      queueIndex = writeBalancer.getNextQueue();
     } else if (numScanQueues > 0 && isScanRequest(call.getHeader(), call.param)) {
-      queueIndex = numWriteQueues + numReadQueues + balancer.nextInt(numScanQueues);
+      queueIndex = numWriteQueues + numReadQueues + scanBalancer.getNextQueue();
     } else {
-      queueIndex = numWriteQueues + balancer.nextInt(numReadQueues);
+      queueIndex = numWriteQueues + readBalancer.getNextQueue();
     }
     queues.get(queueIndex).put(callTask);
   }

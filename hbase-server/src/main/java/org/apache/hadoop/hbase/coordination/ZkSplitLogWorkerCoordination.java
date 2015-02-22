@@ -30,7 +30,7 @@ import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,15 +39,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
-import org.apache.hadoop.hbase.regionserver.handler.HLogSplitterHandler;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -318,8 +317,8 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
     splitTaskDetails.setTaskNode(curTask);
     splitTaskDetails.setCurTaskZKVersion(zkVersion);
 
-    HLogSplitterHandler hsh =
-        new HLogSplitterHandler(server, this, splitTaskDetails, reporter,
+    WALSplitterHandler hsh =
+        new WALSplitterHandler(server, this, splitTaskDetails, reporter,
             this.tasksInProgress, splitTaskExecutor, mode);
     server.getExecutorService().submit(hsh);
   }
@@ -418,7 +417,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       // pick meta wal firstly
       int offset = (int) (Math.random() * paths.size());
       for (int i = 0; i < paths.size(); i++) {
-        if (HLogUtil.isMetaFile(paths.get(i))) {
+        if (DefaultWALProvider.isMetaFile(paths.get(i))) {
           offset = i;
           break;
         }
@@ -450,9 +449,10 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
               // Make a local copy to prevent ConcurrentModificationException when other threads
               // modify recoveringRegions
               List<String> tmpCopy = new ArrayList<String>(recoveringRegions.keySet());
-              for (String region : tmpCopy) {
-                String nodePath =
-                    ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
+              int listSize = tmpCopy.size();
+              for (int i = 0; i < listSize; i++) {
+                String region = tmpCopy.get(i);
+                String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
                 try {
                   if (ZKUtil.checkExists(watcher, nodePath) == -1) {
                     HRegion r = recoveringRegions.remove(region);
@@ -580,11 +580,11 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   }
 
   /*
-   * Next part is related to HLogSplitterHandler
+   * Next part is related to WALSplitterHandler
    */
   /**
-   * endTask() can fail and the only way to recover out of it is for the {@link SplitLogManager} to
-   * timeout the task node.
+   * endTask() can fail and the only way to recover out of it is for the 
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} to timeout the task node.
    * @param slt
    * @param ctr
    */

@@ -21,9 +21,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
@@ -36,28 +39,28 @@ import org.apache.hadoop.io.WritableUtils;
 public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
   @Override
-  public int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingContext,
+  public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
       DataOutputStream out) throws IOException {
-    int klength = kv.getKeyLength();
-    int vlength = kv.getValueLength();
+    int klength = KeyValueUtil.keyLength(cell);
+    int vlength = cell.getValueLength();
 
     out.writeInt(klength);
     out.writeInt(vlength);
-    out.write(kv.getBuffer(), kv.getKeyOffset(), klength);
-    out.write(kv.getValueArray(), kv.getValueOffset(), vlength);
+    CellUtil.writeFlatKey(cell, out);
+    out.write(cell.getValueArray(), cell.getValueOffset(), vlength);
     int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     // Write the additional tag into the stream
     if (encodingContext.getHFileContext().isIncludesTags()) {
-      int tagsLength = kv.getTagsLength();
+      int tagsLength = cell.getTagsLength();
       out.writeShort(tagsLength);
       if (tagsLength > 0) {
-        out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
+        out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
       }
       size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
     }
     if (encodingContext.getHFileContext().isIncludesMvcc()) {
-      WritableUtils.writeVLong(out, kv.getMvccVersion());
-      size += WritableUtils.getVIntSize(kv.getMvccVersion());
+      WritableUtils.writeVLong(out, cell.getSequenceId());
+      size += WritableUtils.getVIntSize(cell.getSequenceId());
     }
     return size;
   }
@@ -65,10 +68,12 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   @Override
   public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
     int keyLength = block.getInt(Bytes.SIZEOF_INT);
-    return ByteBuffer.wrap(block.array(),
-        block.arrayOffset() + 3 * Bytes.SIZEOF_INT, keyLength).slice();
+    ByteBuffer dup = block.duplicate();
+    int pos = 3 * Bytes.SIZEOF_INT;
+    dup.position(pos);
+    dup.limit(pos + keyLength);
+    return dup.slice();
   }
-
 
   @Override
   public String toString() {
@@ -120,5 +125,4 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
     return buffer;
   }
-
 }

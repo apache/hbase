@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 
@@ -419,7 +420,8 @@ public class HMobStore extends HStore {
    * The major compaction is marked as retainDeleteMarkers when a sweeping is in progress.
    */
   @Override
-  public List<StoreFile> compact(CompactionContext compaction) throws IOException {
+  public List<StoreFile> compact(CompactionContext compaction,
+      CompactionThroughputController throughputController) throws IOException {
     // If it's major compaction, try to find whether there's a sweeper is running
     // If yes, mark the major compaction as retainDeleteMarkers
     if (compaction.getRequest().isAllFiles()) {
@@ -456,7 +458,7 @@ public class HMobStore extends HStore {
               + tableName + "], forcing the delete markers to be retained");
           compaction.getRequest().forceRetainDeleteMarkers();
         }
-        return super.compact(compaction);
+        return super.compact(compaction, throughputController);
       } finally {
         if (tableLocked && lock != null) {
           try {
@@ -468,7 +470,7 @@ public class HMobStore extends HStore {
       }
     } else {
       // If it's not a major compaction, continue the compaction.
-      return super.compact(compaction);
+      return super.compact(compaction, throughputController);
     }
   }
 

@@ -22,14 +22,14 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -65,7 +65,6 @@ import org.apache.hadoop.mapred.Reporter;
  * </pre>
  */
 
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class TableInputFormatBase
@@ -105,9 +104,11 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * Calculates the splits that will serve as input for the map tasks.
    * <ul>
    * Splits are created in number equal to the smallest between numSplits and
-   * the number of {@link HRegion}s in the table. If the number of splits is
-   * smaller than the number of {@link HRegion}s then splits are spanned across
-   * multiple {@link HRegion}s and are grouped the most evenly possible. In the
+   * the number of {@link org.apache.hadoop.hbase.regionserver.HRegion}s in the table. 
+   * If the number of splits is smaller than the number of 
+   * {@link org.apache.hadoop.hbase.regionserver.HRegion}s then splits are spanned across
+   * multiple {@link org.apache.hadoop.hbase.regionserver.HRegion}s 
+   * and are grouped the most evenly possible. In the
    * case splits are uneven the bigger splits are placed first in the
    * {@link InputSplit} array.
    *
@@ -158,7 +159,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   /**
    * Allows subclasses to get the {@link HTable}.
    */
-  protected HTable getHTable() {
+  protected Table getHTable() {
     return this.table;
   }
 

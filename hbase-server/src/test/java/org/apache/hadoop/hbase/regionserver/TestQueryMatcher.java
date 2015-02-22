@@ -29,18 +29,22 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestQueryMatcher extends HBaseTestCase {
   private static final boolean PRINT = false;
 
@@ -63,6 +67,7 @@ public class TestQueryMatcher extends HBaseTestCase {
   KVComparator rowComparator;
   private Scan scan;
 
+  @Before
   public void setUp() throws Exception {
     super.setUp();
     row1 = Bytes.toBytes("row1");
@@ -90,11 +95,12 @@ public class TestQueryMatcher extends HBaseTestCase {
 
   }
 
-    private void _testMatch_ExplicitColumns(Scan scan, List<MatchCode> expected) throws IOException {
-    // 2,4,5    
+  private void _testMatch_ExplicitColumns(Scan scan, List<MatchCode> expected) throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    // 2,4,5
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
-        0, 1, ttl, false, 0, rowComparator), get.getFamilyMap().get(fam2),
-        EnvironmentEdgeManager.currentTime() - ttl);
+        0, 1, ttl, KeepDeletedCells.FALSE, 0, rowComparator), get.getFamilyMap().get(fam2),
+        now - ttl, now);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -123,6 +129,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testMatch_ExplicitColumns()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
@@ -140,6 +147,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     _testMatch_ExplicitColumns(scan, expected);
   }
 
+  @Test
   public void testMatch_ExplicitColumnsWithLookAhead()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
@@ -160,6 +168,7 @@ public class TestQueryMatcher extends HBaseTestCase {
   }
 
 
+  @Test
   public void testMatch_Wildcard()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
@@ -174,9 +183,10 @@ public class TestQueryMatcher extends HBaseTestCase {
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
+    long now = EnvironmentEdgeManager.currentTime();
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
-        0, 1, ttl, false, 0, rowComparator), null,
-        EnvironmentEdgeManager.currentTime() - ttl);
+        0, 1, ttl, KeepDeletedCells.FALSE, 0, rowComparator), null,
+        now - ttl, now);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -214,6 +224,7 @@ public class TestQueryMatcher extends HBaseTestCase {
    *
    * @throws IOException
    */
+  @Test
   public void testMatch_ExpiredExplicit()
   throws IOException {
 
@@ -228,9 +239,9 @@ public class TestQueryMatcher extends HBaseTestCase {
     };
 
     long now = EnvironmentEdgeManager.currentTime();
-    ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
-        0, 1, testTTL, false, 0, rowComparator), get.getFamilyMap().get(fam2),
-        now - testTTL);
+    ScanQueryMatcher qm =
+      new ScanQueryMatcher(scan, new ScanInfo(fam2, 0, 1, testTTL, KeepDeletedCells.FALSE, 0,
+        rowComparator), get.getFamilyMap().get(fam2), now - testTTL, now);
 
     KeyValue [] kvs = new KeyValue[] {
         new KeyValue(row1, fam2, col1, now-100, data),
@@ -268,6 +279,7 @@ public class TestQueryMatcher extends HBaseTestCase {
    *
    * @throws IOException
    */
+  @Test
   public void testMatch_ExpiredWildcard()
   throws IOException {
 
@@ -283,8 +295,8 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     long now = EnvironmentEdgeManager.currentTime();
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
-        0, 1, testTTL, false, 0, rowComparator), null,
-        now - testTTL);
+        0, 1, testTTL, KeepDeletedCells.FALSE, 0, rowComparator), null,
+        now - testTTL, now);
 
     KeyValue [] kvs = new KeyValue[] {
         new KeyValue(row1, fam2, col1, now-100, data),
@@ -313,6 +325,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testMatch_PartialRangeDropDeletes() throws Exception {
     // Some ranges.
     testDropDeletes(
@@ -338,11 +351,11 @@ public class TestQueryMatcher extends HBaseTestCase {
       byte[] from, byte[] to, byte[][] rows, MatchCode... expected) throws IOException {
     long now = EnvironmentEdgeManager.currentTime();
     // Set time to purge deletes to negative value to avoid it ever happening.
-    ScanInfo scanInfo = new ScanInfo(fam2, 0, 1, ttl, false, -1L, rowComparator);
+    ScanInfo scanInfo = new ScanInfo(fam2, 0, 1, ttl, KeepDeletedCells.FALSE, -1L, rowComparator);
     NavigableSet<byte[]> cols = get.getFamilyMap().get(fam2);
 
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, scanInfo, cols, Long.MAX_VALUE,
-        HConstants.OLDEST_TIMESTAMP, HConstants.OLDEST_TIMESTAMP, from, to, null);
+        HConstants.OLDEST_TIMESTAMP, HConstants.OLDEST_TIMESTAMP, now, from, to, null);
     List<ScanQueryMatcher.MatchCode> actual =
         new ArrayList<ScanQueryMatcher.MatchCode>(rows.length);
     byte[] prevRow = null;

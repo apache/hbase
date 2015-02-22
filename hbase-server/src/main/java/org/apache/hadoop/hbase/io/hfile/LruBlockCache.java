@@ -34,11 +34,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.base.Objects;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -57,16 +57,16 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * {@link ConcurrentHashMap} and with a non-blocking eviction thread giving
  * constant-time {@link #cacheBlock} and {@link #getBlock} operations.<p>
  *
- * Contains three levels of block priority to allow for
- * scan-resistance and in-memory families {@link HColumnDescriptor#setInMemory(boolean)} (An
- * in-memory column family is a column family that should be served from memory if possible):
+ * Contains three levels of block priority to allow for scan-resistance and in-memory families 
+ * {@link org.apache.hadoop.hbase.HColumnDescriptor#setInMemory(boolean)} (An in-memory column 
+ * family is a column family that should be served from memory if possible):
  * single-access, multiple-accesses, and in-memory priority.
  * A block is added with an in-memory priority flag if
- * {@link HColumnDescriptor#isInMemory()}, otherwise a block becomes a single access
- * priority the first time it is read into this block cache.  If a block is accessed again while
- * in cache, it is marked as a multiple access priority block.  This delineation of blocks is used
- * to prevent scans from thrashing the cache adding a least-frequently-used
- * element to the eviction algorithm.<p>
+ * {@link org.apache.hadoop.hbase.HColumnDescriptor#isInMemory()}, otherwise a block becomes a
+ *  single access priority the first time it is read into this block cache.  If a block is
+ *  accessed again while in cache, it is marked as a multiple access priority block.  This
+ *  delineation of blocks is used to prevent scans from thrashing the cache adding a 
+ *  least-frequently-used element to the eviction algorithm.<p>
  *
  * Each priority is given its own chunk of the total cache to ensure
  * fairness during eviction.  Each priority will retain close to its maximum
@@ -340,9 +340,32 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     cb = new LruCachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
-    elements.incrementAndGet();
+    long val = elements.incrementAndGet();
+    if (LOG.isTraceEnabled()) {
+      long size = map.size();
+      assertCounterSanity(size, val);
+    }
     if (newSize > acceptableSize() && !evictionInProgress) {
       runEviction();
+    }
+  }
+
+  /**
+   * Sanity-checking for parity between actual block cache content and metrics.
+   * Intended only for use with TRACE level logging and -ea JVM.
+   */
+  private static void assertCounterSanity(long mapSize, long counterVal) {
+    if (counterVal < 0) {
+      LOG.trace("counterVal overflow. Assertions unreliable. counterVal=" + counterVal +
+        ", mapSize=" + mapSize);
+      return;
+    }
+    if (mapSize < Integer.MAX_VALUE) {
+      double pct_diff = Math.abs((((double) counterVal) / ((double) mapSize)) - 1.);
+      if (pct_diff > 0.05) {
+        LOG.trace("delta between reported and actual size > 5%. counterVal=" + counterVal +
+          ", mapSize=" + mapSize);
+      }
     }
   }
 
@@ -459,7 +482,11 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
     map.remove(block.getCacheKey());
     updateSizeMetrics(block, true);
-    elements.decrementAndGet();
+    long val = elements.decrementAndGet();
+    if (LOG.isTraceEnabled()) {
+      long size = map.size();
+      assertCounterSanity(size, val);
+    }
     stats.evicted(block.getCachedTime());
     if (evictedByEvictionProcess && victimHandler != null) {
       boolean wait = getCurrentSize() < acceptableSize();
@@ -503,9 +530,12 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       if(bytesToFree <= 0) return;
 
       // Instantiate priority buckets
-      BlockBucket bucketSingle = new BlockBucket(bytesToFree, blockSize, singleSize());
-      BlockBucket bucketMulti = new BlockBucket(bytesToFree, blockSize, multiSize());
-      BlockBucket bucketMemory = new BlockBucket(bytesToFree, blockSize, memorySize());
+      BlockBucket bucketSingle = new BlockBucket("single", bytesToFree, blockSize,
+          singleSize());
+      BlockBucket bucketMulti = new BlockBucket("multi", bytesToFree, blockSize,
+          multiSize());
+      BlockBucket bucketMemory = new BlockBucket("memory", bytesToFree, blockSize,
+          memorySize());
 
       // Scan entire map putting into appropriate buckets
       for(LruCachedBlock cachedBlock : map.values()) {
@@ -534,7 +564,15 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
           // so the single and multi buckets will be emptied
           bytesFreed = bucketSingle.free(s);
           bytesFreed += bucketMulti.free(m);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("freed " + StringUtils.byteDesc(bytesFreed) +
+              " from single and multi buckets");
+          }
           bytesFreed += bucketMemory.free(bytesToFree - bytesFreed);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("freed " + StringUtils.byteDesc(bytesFreed) +
+              " total from all three buckets ");
+          }
         } else {
           // this means no need to evict block in memory bucket,
           // and we try best to make the ratio between single-bucket and
@@ -596,6 +634,23 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     }
   }
 
+  @Override
+  public String toString() {
+    return Objects.toStringHelper(this)
+      .add("blockCount", getBlockCount())
+      .add("currentSize", getCurrentSize())
+      .add("freeSize", getFreeSize())
+      .add("maxSize", getMaxSize())
+      .add("heapSize", heapSize())
+      .add("minSize", minSize())
+      .add("minFactor", minFactor)
+      .add("multiSize", multiSize())
+      .add("multiFactor", multiFactor)
+      .add("singleSize", singleSize())
+      .add("singleFactor", singleFactor)
+      .toString();
+  }
+
   /**
    * Used to group blocks into priority buckets.  There will be a BlockBucket
    * for each priority (single, multi, memory).  Once bucketed, the eviction
@@ -603,11 +658,14 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * to configuration parameters and their relatives sizes.
    */
   private class BlockBucket implements Comparable<BlockBucket> {
+
+    private final String name;
     private LruCachedBlockQueue queue;
     private long totalSize = 0;
     private long bucketSize;
 
-    public BlockBucket(long bytesToFree, long blockSize, long bucketSize) {
+    public BlockBucket(String name, long bytesToFree, long blockSize, long bucketSize) {
+      this.name = name;
       this.bucketSize = bucketSize;
       queue = new LruCachedBlockQueue(bytesToFree, blockSize);
       totalSize = 0;
@@ -619,6 +677,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     }
 
     public long free(long toFree) {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("freeing " + StringUtils.byteDesc(toFree) + " from " + this);
+      }
       LruCachedBlock cb;
       long freedBytes = 0;
       while ((cb = queue.pollLast()) != null) {
@@ -626,6 +687,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         if (freedBytes >= toFree) {
           return freedBytes;
         }
+      }
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("freed " + StringUtils.byteDesc(freedBytes) + " from " + this);
       }
       return freedBytes;
     }
@@ -653,8 +717,16 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
     @Override
     public int hashCode() {
-      // Nothing distingushing about each instance unless I pass in a 'name' or something
-      return super.hashCode();
+      return Objects.hashCode(name, bucketSize, queue, totalSize);
+    }
+
+    @Override
+    public String toString() {
+      return Objects.toStringHelper(this)
+        .add("name", name)
+        .add("totalSize", StringUtils.byteDesc(totalSize))
+        .add("bucketSize", StringUtils.byteDesc(bucketSize))
+        .toString();
     }
   }
 
@@ -769,6 +841,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     LruBlockCache.LOG.info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " +
         "freeSize=" + StringUtils.byteDesc(freeSize) + ", " +
         "max=" + StringUtils.byteDesc(this.maxSize) + ", " +
+        "blockCount=" + getBlockCount() + ", " +
         "accesses=" + stats.getRequestCount() + ", " +
         "hits=" + stats.getHitCount() + ", " +
         "hitRatio=" + (stats.getHitCount() == 0 ?
@@ -940,6 +1013,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   /** Clears the cache. Used in tests. */
+  @VisibleForTesting
   public void clearCache() {
     this.map.clear();
     this.elements.set(0);
@@ -949,6 +1023,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * Used in testing. May be very inefficient.
    * @return the set of cached file names
    */
+  @VisibleForTesting
   SortedSet<String> getCachedFileNamesForTest() {
     SortedSet<String> fileNames = new TreeSet<String>();
     for (BlockCacheKey cacheKey : map.keySet()) {
@@ -969,6 +1044,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return counts;
   }
 
+  @VisibleForTesting
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts =
         new EnumMap<DataBlockEncoding, Integer>(DataBlockEncoding.class);
@@ -984,6 +1060,11 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public void setVictimCache(BucketCache handler) {
     assert victimHandler == null;
     victimHandler = handler;
+  }
+
+  @VisibleForTesting
+  Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
+    return map;
   }
 
   BucketCache getVictimHandler() {

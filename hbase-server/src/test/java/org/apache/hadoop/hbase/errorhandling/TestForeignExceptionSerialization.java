@@ -22,7 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -31,7 +32,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 /**
  * Test that we correctly serialize exceptions from a remote source
  */
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestForeignExceptionSerialization {
   private static final String srcName = "someNode";
 

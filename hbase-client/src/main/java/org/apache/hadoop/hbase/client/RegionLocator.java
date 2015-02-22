@@ -18,19 +18,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Pair;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Used to view region location information for a single HBase table.
- * Obtain an instance from an {@link HConnection}.
+ * Obtain an instance from an {@link Connection}.
  *
+ * @see ConnectionFactory
+ * @see Connection
+ * @see Table
  * @since 0.99.0
  */
 @InterfaceAudience.Public
@@ -52,6 +56,14 @@ public interface RegionLocator extends Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation getRegionLocation(final byte [] row, boolean reload)
+    throws IOException;
+
+  /**
+   * Retrieves all of the regions associated with this table.
+   * @return a {@link List} of all regions associated with this table.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public List<HRegionLocation> getAllRegionLocations()
     throws IOException;
 
   /**

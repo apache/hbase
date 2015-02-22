@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
@@ -32,7 +33,7 @@ import java.util.Set;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestDeadServer {
   final ServerName hostname123 = ServerName.valueOf("127.0.0.1", 123, 3L);
   final ServerName hostname123_2 = ServerName.valueOf("127.0.0.1", 123, 4L);

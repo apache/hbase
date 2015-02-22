@@ -32,22 +32,31 @@ import java.util.SortedMap;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -56,6 +65,8 @@ import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Metric;
@@ -67,9 +78,9 @@ import com.yammer.metrics.reporting.ConsoleReporter;
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
-public class HFilePrettyPrinter {
+public class HFilePrettyPrinter extends Configured implements Tool {
 
   private static final Log LOG = LogFactory.getLog(HFilePrettyPrinter.class);
 
@@ -79,7 +90,8 @@ public class HFilePrettyPrinter {
   private boolean printValue;
   private boolean printKey;
   private boolean shouldPrintMeta;
-  private boolean printBlocks;
+  private boolean printBlockIndex;
+  private boolean printBlockHeaders;
   private boolean printStats;
   private boolean checkRow;
   private boolean checkFamily;
@@ -89,7 +101,6 @@ public class HFilePrettyPrinter {
    * The row which the user wants to specify and print all the KeyValues for.
    */
   private byte[] row = null;
-  private Configuration conf;
 
   private List<Path> files = new ArrayList<Path>();
   private int count;
@@ -97,22 +108,36 @@ public class HFilePrettyPrinter {
   private static final String FOUR_SPACES = "    ";
 
   public HFilePrettyPrinter() {
+    super();
+    init();
+  }
+
+  public HFilePrettyPrinter(Configuration conf) {
+    super(conf);
+    init();
+  }
+
+  private void init() {
     options.addOption("v", "verbose", false,
         "Verbose output; emits file and meta data delimiters");
     options.addOption("p", "printkv", false, "Print key/value pairs");
     options.addOption("e", "printkey", false, "Print keys");
     options.addOption("m", "printmeta", false, "Print meta data of file");
     options.addOption("b", "printblocks", false, "Print block index meta data");
+    options.addOption("h", "printblockheaders", false, "Print block headers for each block.");
     options.addOption("k", "checkrow", false,
         "Enable row order check; looks for out-of-order keys");
     options.addOption("a", "checkfamily", false, "Enable family check");
-    options.addOption("f", "file", true,
-        "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/hbase:meta/12/34");
     options.addOption("w", "seekToRow", true,
       "Seek to this row and print all the kvs for this row only");
-    options.addOption("r", "region", true,
-        "Region to scan. Pass region name; e.g. 'hbase:meta,,1'");
     options.addOption("s", "stats", false, "Print statistics");
+
+    OptionGroup files = new OptionGroup();
+    files.addOption(new Option("f", "file", true,
+      "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/hbase:meta/12/34"));
+    files.addOption(new Option("r", "region", true,
+      "Region to scan. Pass region name; e.g. 'hbase:meta,,1'"));
+    options.addOptionGroup(files);
   }
 
   public boolean parseOptions(String args[]) throws ParseException,
@@ -129,7 +154,8 @@ public class HFilePrettyPrinter {
     printValue = cmd.hasOption("p");
     printKey = cmd.hasOption("e") || printValue;
     shouldPrintMeta = cmd.hasOption("m");
-    printBlocks = cmd.hasOption("b");
+    printBlockIndex = cmd.hasOption("b");
+    printBlockHeaders = cmd.hasOption("h");
     printStats = cmd.hasOption("s");
     checkRow = cmd.hasOption("k");
     checkFamily = cmd.hasOption("a");
@@ -153,13 +179,13 @@ public class HFilePrettyPrinter {
       String regionName = cmd.getOptionValue("r");
       byte[] rn = Bytes.toBytes(regionName);
       byte[][] hri = HRegionInfo.parseRegionName(rn);
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = FSUtils.getRootDir(getConf());
       Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
       String enc = HRegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
       if (verbose)
         System.out.println("region dir -> " + regionDir);
-      List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(conf),
+      List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(getConf()),
           regionDir);
       if (verbose)
         System.out.println("Number of region files found -> "
@@ -181,10 +207,13 @@ public class HFilePrettyPrinter {
    * Runs the command-line pretty-printer, and returns the desired command
    * exit code (zero for success, non-zero for failure).
    */
+  @Override
   public int run(String[] args) {
-    conf = HBaseConfiguration.create();
+    if (getConf() == null) {
+      throw new RuntimeException("A Configuration instance must be provided.");
+    }
     try {
-      FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
+      FSUtils.setFsDefault(getConf(), FSUtils.getRootDir(getConf()));
       if (!parseOptions(args))
         return 1;
     } catch (IOException ex) {
@@ -201,6 +230,7 @@ public class HFilePrettyPrinter {
         processFile(fileName);
       } catch (IOException ex) {
         LOG.error("Error reading " + fileName, ex);
+        System.exit(-2);
       }
     }
 
@@ -214,12 +244,13 @@ public class HFilePrettyPrinter {
   private void processFile(Path file) throws IOException {
     if (verbose)
       System.out.println("Scanning -> " + file);
-    FileSystem fs = file.getFileSystem(conf);
+    FileSystem fs = file.getFileSystem(getConf());
     if (!fs.exists(file)) {
       System.err.println("ERROR, file doesnt exist: " + file);
+      System.exit(-2);
     }
 
-    HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(getConf()), getConf());
 
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
@@ -232,7 +263,7 @@ public class HFilePrettyPrinter {
       boolean shouldScanKeysValues = false;
       if (this.isSeekToRow) {
         // seek to the first kv on this row
-        shouldScanKeysValues = 
+        shouldScanKeysValues =
           (scanner.seekTo(KeyValueUtil.createFirstOnRow(this.row).getKey()) != -1);
       } else {
         shouldScanKeysValues = scanner.seekTo();
@@ -246,9 +277,30 @@ public class HFilePrettyPrinter {
       printMeta(reader, fileInfo);
     }
 
-    if (printBlocks) {
+    if (printBlockIndex) {
       System.out.println("Block Index:");
       System.out.println(reader.getDataBlockIndexReader());
+    }
+
+    if (printBlockHeaders) {
+      System.out.println("Block Headers:");
+      /*
+       * TODO: this same/similar block iteration logic is used in HFileBlock#blockRange and
+       * TestLazyDataBlockDecompression. Refactor?
+       */
+      FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, file);
+      long fileSize = fs.getFileStatus(file).getLen();
+      FixedFileTrailer trailer =
+        FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+      long offset = trailer.getFirstDataBlockOffset(),
+        max = trailer.getLastDataBlockOffset();
+      HFileBlock block;
+      while (offset <= max) {
+        block = reader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
+          /* isCompaction */ false, /* updateCacheMetrics */ false, null, null);
+        offset += block.getOnDiskSizeWithHeader();
+        System.out.println(block);
+      }
     }
 
     if (printStats) {
@@ -261,11 +313,12 @@ public class HFilePrettyPrinter {
 
   private void scanKeysValues(Path file, KeyValueStatsCollector fileStats,
       HFileScanner scanner,  byte[] row) throws IOException {
-    KeyValue pkv = null;
+    Cell pCell = null;
     do {
-      KeyValue kv = KeyValueUtil.ensureKeyValue(scanner.getKeyValue());
+      Cell cell = scanner.getKeyValue();
       if (row != null && row.length != 0) {
-        int result = Bytes.compareTo(kv.getRow(), row);
+        int result = CellComparator.compareRows(cell.getRowArray(), cell.getRowOffset(),
+            cell.getRowLength(), row, 0, row.length);
         if (result > 0) {
           break;
         } else if (result < 0) {
@@ -274,48 +327,51 @@ public class HFilePrettyPrinter {
       }
       // collect stats
       if (printStats) {
-        fileStats.collect(kv);
+        fileStats.collect(cell);
       }
       // dump key value
       if (printKey) {
-        System.out.print("K: " + kv);
+        System.out.print("K: " + cell);
         if (printValue) {
-          System.out.print(" V: " + Bytes.toStringBinary(kv.getValue()));
+          System.out.print(" V: "
+              + Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
+                  cell.getValueLength()));
           int i = 0;
-          List<Tag> tags = kv.getTags();
+          List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+              cell.getTagsLength());
           for (Tag tag : tags) {
-            System.out
-                .print(String.format(" T[%d]: %s", i++, Bytes.toStringBinary(tag.getValue())));
+            System.out.print(String.format(" T[%d]: %s", i++,
+                Bytes.toStringBinary(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength())));
           }
         }
         System.out.println();
       }
       // check if rows are in order
-      if (checkRow && pkv != null) {
-        if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
+      if (checkRow && pCell != null) {
+        if (CellComparator.compareRows(pCell, cell) > 0) {
           System.err.println("WARNING, previous row is greater then"
               + " current row\n\tfilename -> " + file + "\n\tprevious -> "
-              + Bytes.toStringBinary(pkv.getKey()) + "\n\tcurrent  -> "
-              + Bytes.toStringBinary(kv.getKey()));
+              + CellUtil.getCellKeyAsString(pCell) + "\n\tcurrent  -> "
+              + CellUtil.getCellKeyAsString(cell));
         }
       }
       // check if families are consistent
       if (checkFamily) {
-        String fam = Bytes.toString(kv.getFamily());
+        String fam = Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(),
+            cell.getFamilyLength());
         if (!file.toString().contains(fam)) {
           System.err.println("WARNING, filename does not match kv family,"
               + "\n\tfilename -> " + file + "\n\tkeyvalue -> "
-              + Bytes.toStringBinary(kv.getKey()));
+              + CellUtil.getCellKeyAsString(cell));
         }
-        if (pkv != null
-            && !Bytes.equals(pkv.getFamily(), kv.getFamily())) {
+        if (pCell != null && CellComparator.compareFamilies(pCell, cell) != 0) {
           System.err.println("WARNING, previous kv has different family"
               + " compared to current key\n\tfilename -> " + file
-              + "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey())
-              + "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+              + "\n\tprevious -> " + CellUtil.getCellKeyAsString(pCell)
+              + "\n\tcurrent  -> " + CellUtil.getCellKeyAsString(cell));
         }
       }
-      pkv = kv;
+      pCell = cell;
       ++count;
     } while (scanner.next());
   }
@@ -405,21 +461,21 @@ public class HFilePrettyPrinter {
 
     byte[] biggestRow = null;
 
-    private KeyValue prevKV = null;
+    private Cell prevCell = null;
     private long maxRowBytes = 0;
     private long curRowKeyLength;
 
-    public void collect(KeyValue kv) {
-      valLen.update(kv.getValueLength());
-      if (prevKV != null &&
-          KeyValue.COMPARATOR.compareRows(prevKV, kv) != 0) {
+    public void collect(Cell cell) {
+      valLen.update(cell.getValueLength());
+      if (prevCell != null &&
+          KeyValue.COMPARATOR.compareRows(prevCell, cell) != 0) {
         // new row
         collectRow();
       }
-      curRowBytes += kv.getLength();
-      curRowKeyLength = kv.getKeyLength();
+      curRowBytes += KeyValueUtil.length(cell);
+      curRowKeyLength = KeyValueUtil.keyLength(cell);
       curRowCols++;
-      prevKV = kv;
+      prevCell = cell;
     }
 
     private void collectRow() {
@@ -427,8 +483,8 @@ public class HFilePrettyPrinter {
       rowSizeCols.update(curRowCols);
       keyLen.update(curRowKeyLength);
 
-      if (curRowBytes > maxRowBytes && prevKV != null) {
-        biggestRow = prevKV.getRow();
+      if (curRowBytes > maxRowBytes && prevCell != null) {
+        biggestRow = prevCell.getRow();
         maxRowBytes = curRowBytes;
       }
 
@@ -444,7 +500,7 @@ public class HFilePrettyPrinter {
 
     @Override
     public String toString() {
-      if (prevKV == null)
+      if (prevCell == null)
         return "no data available for statistics";
 
       // Dump the metrics to the output stream
@@ -486,7 +542,15 @@ public class HFilePrettyPrinter {
     @Override
     public void processHistogram(MetricName name, Histogram histogram, PrintStream stream) {
       super.processHistogram(name, histogram, stream);
-      stream.printf(Locale.getDefault(), "             count = %d\n", histogram.count());
+      stream.printf(Locale.getDefault(), "             count = %d%n", histogram.count());
     }
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    // no need for a block cache
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
+    int ret = ToolRunner.run(conf, new HFilePrettyPrinter(), args);
+    System.exit(ret);
   }
 }

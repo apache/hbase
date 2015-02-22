@@ -19,24 +19,30 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on a regionserver..
@@ -44,7 +50,7 @@ import static org.junit.Assert.*;
  * error message describing the set of its loaded coprocessors for crash
  * diagnosis. (HBASE-4014).
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestRegionServerCoprocessorExceptionWithAbort {
   static final Log LOG = LogFactory.getLog(TestRegionServerCoprocessorExceptionWithAbort.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -91,8 +97,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
       // hosts the region we attempted to write to) to abort.
       final byte[] TEST_FAMILY = Bytes.toBytes("aaa");
 
-      HTable table = TEST_UTIL.createTable(TABLE_NAME, TEST_FAMILY);
-      TEST_UTIL.createMultiRegions(table, TEST_FAMILY);
+      HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, TEST_FAMILY);
       TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
 
       // Note which regionServer will abort (after put is attempted).

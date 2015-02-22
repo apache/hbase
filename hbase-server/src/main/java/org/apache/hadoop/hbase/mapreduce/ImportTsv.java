@@ -20,17 +20,13 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static java.lang.String.format;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -39,9 +35,15 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,9 +58,11 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Tool to import data from a TSV file.
@@ -93,6 +97,8 @@ public class ImportTsv extends Configured implements Tool {
   final static String DEFAULT_ATTRIBUTES_SEPERATOR = "=>";
   final static String DEFAULT_MULTIPLE_ATTRIBUTES_SEPERATOR = ",";
   final static Class DEFAULT_MAPPER = TsvImporterMapper.class;
+  public final static String CREATE_TABLE_CONF_KEY = "create.table";
+  public final static String NO_STRICT_COL_FAMILY = "no.strict";
 
   public static class TsvParser {
     /**
@@ -120,17 +126,24 @@ public class ImportTsv extends Configured implements Tool {
 
     public static final String CELL_VISIBILITY_COLUMN_SPEC = "HBASE_CELL_VISIBILITY";
 
+    public static final String CELL_TTL_COLUMN_SPEC = "HBASE_CELL_TTL";
+
     private int attrKeyColumnIndex = DEFAULT_ATTRIBUTES_COLUMN_INDEX;
 
     public static final int DEFAULT_ATTRIBUTES_COLUMN_INDEX = -1;
 
     public static final int DEFAULT_CELL_VISIBILITY_COLUMN_INDEX = -1;
 
+    public static final int DEFAULT_CELL_TTL_COLUMN_INDEX = -1;
+
     private int cellVisibilityColumnIndex = DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
+
+    private int cellTTLColumnIndex = DEFAULT_CELL_TTL_COLUMN_INDEX;
+
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.
      * The row key should be the special token TsvParser.ROWKEY_COLUMN_SPEC
-     * @param separatorStr 
+     * @param separatorStr
      */
     public TsvParser(String columnsSpecification, String separatorStr) {
       // Configure separator
@@ -157,12 +170,16 @@ public class ImportTsv extends Configured implements Tool {
           timestampKeyColumnIndex = i;
           continue;
         }
-        if(ATTRIBUTES_COLUMN_SPEC.equals(str)) {
+        if (ATTRIBUTES_COLUMN_SPEC.equals(str)) {
           attrKeyColumnIndex = i;
           continue;
         }
-        if(CELL_VISIBILITY_COLUMN_SPEC.equals(str)) {
+        if (CELL_VISIBILITY_COLUMN_SPEC.equals(str)) {
           cellVisibilityColumnIndex = i;
+          continue;
+        }
+        if (CELL_TTL_COLUMN_SPEC.equals(str)) {
+          cellTTLColumnIndex = i;
           continue;
         }
         String[] parts = str.split(":", 2);
@@ -192,6 +209,10 @@ public class ImportTsv extends Configured implements Tool {
       return cellVisibilityColumnIndex != DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
     }
 
+    public boolean hasCellTTL() {
+      return cellTTLColumnIndex != DEFAULT_CELL_VISIBILITY_COLUMN_INDEX;
+    }
+
     public int getAttributesKeyColumnIndex() {
       return attrKeyColumnIndex;
     }
@@ -199,9 +220,15 @@ public class ImportTsv extends Configured implements Tool {
     public int getCellVisibilityColumnIndex() {
       return cellVisibilityColumnIndex;
     }
+
+    public int getCellTTLColumnIndex() {
+      return cellTTLColumnIndex;
+    }
+
     public int getRowKeyColumnIndex() {
       return rowKeyColumnIndex;
     }
+
     public byte[] getFamily(int idx) {
       return families[idx];
     }
@@ -233,8 +260,10 @@ public class ImportTsv extends Configured implements Tool {
         throw new BadTsvLineException("No timestamp");
       } else if (hasAttributes() && tabOffsets.size() <= getAttributesKeyColumnIndex()) {
         throw new BadTsvLineException("No attributes specified");
-      } else if(hasCellVisibility() && tabOffsets.size() <= getCellVisibilityColumnIndex()) {
+      } else if (hasCellVisibility() && tabOffsets.size() <= getCellVisibilityColumnIndex()) {
         throw new BadTsvLineException("No cell visibility specified");
+      } else if (hasCellTTL() && tabOffsets.size() <= getCellTTLColumnIndex()) {
+        throw new BadTsvLineException("No cell TTL specified");
       }
       return new ParsedLine(tabOffsets, lineBytes);
     }
@@ -254,7 +283,7 @@ public class ImportTsv extends Configured implements Tool {
       public int getRowKeyLength() {
         return getColumnLength(rowKeyColumnIndex);
       }
-      
+
       public long getTimestamp(long ts) throws BadTsvLineException {
         // Return ts if HBASE_TS_KEY is not configured in column spec
         if (!hasTimestamp()) {
@@ -280,7 +309,7 @@ public class ImportTsv extends Configured implements Tool {
               getColumnLength(attrKeyColumnIndex));
         }
       }
-      
+
       public String[] getIndividualAttributes() {
         String attributes = getAttributes();
         if (attributes != null) {
@@ -289,7 +318,7 @@ public class ImportTsv extends Configured implements Tool {
           return null;
         }
       }
-       
+
       public int getAttributeKeyOffset() {
         if (hasAttributes()) {
           return getColumnOffset(attrKeyColumnIndex);
@@ -328,6 +357,31 @@ public class ImportTsv extends Configured implements Tool {
         } else {
           return Bytes.toString(lineBytes, getColumnOffset(cellVisibilityColumnIndex),
               getColumnLength(cellVisibilityColumnIndex));
+        }
+      }
+
+      public int getCellTTLColumnOffset() {
+        if (hasCellTTL()) {
+          return getColumnOffset(cellTTLColumnIndex);
+        } else {
+          return DEFAULT_CELL_TTL_COLUMN_INDEX;
+        }
+      }
+
+      public int getCellTTLColumnLength() {
+        if (hasCellTTL()) {
+          return getColumnLength(cellTTLColumnIndex);
+        } else {
+          return DEFAULT_CELL_TTL_COLUMN_INDEX;
+        }
+      }
+
+      public long getCellTTL() {
+        if (!hasCellTTL()) {
+          return 0;
+        } else {
+          return Bytes.toLong(lineBytes, getColumnOffset(cellTTLColumnIndex),
+              getColumnLength(cellTTLColumnIndex));
         }
       }
 
@@ -398,90 +452,125 @@ public class ImportTsv extends Configured implements Tool {
    */
   public static Job createSubmittableJob(Configuration conf, String[] args)
       throws IOException, ClassNotFoundException {
+    Job job = null;
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Admin admin = connection.getAdmin()) {
+        // Support non-XML supported characters
+        // by re-encoding the passed separator as a Base64 string.
+        String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
+        if (actualSeparator != null) {
+          conf.set(SEPARATOR_CONF_KEY,
+              Base64.encodeBytes(actualSeparator.getBytes()));
+        }
 
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    // Support non-XML supported characters
-    // by re-encoding the passed separator as a Base64 string.
-    String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
-    if (actualSeparator != null) {
-      conf.set(SEPARATOR_CONF_KEY,
-               Base64.encodeBytes(actualSeparator.getBytes()));
-    }
+        // See if a non-default Mapper was set
+        String mapperClassName = conf.get(MAPPER_CONF_KEY);
+        Class mapperClass =
+          mapperClassName != null ? Class.forName(mapperClassName) : DEFAULT_MAPPER;
 
-    // See if a non-default Mapper was set
-    String mapperClassName = conf.get(MAPPER_CONF_KEY);
-    Class mapperClass = mapperClassName != null ?
-        Class.forName(mapperClassName) : DEFAULT_MAPPER;
+          TableName tableName = TableName.valueOf(args[0]);
+          Path inputDir = new Path(args[1]);
+          String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName.getNameAsString());
+          job = Job.getInstance(conf, jobName);
+          job.setJarByClass(mapperClass);
+          FileInputFormat.setInputPaths(job, inputDir);
+          job.setInputFormatClass(TextInputFormat.class);
+          job.setMapperClass(mapperClass);
+          String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
+          String[] columns = conf.getStrings(COLUMNS_CONF_KEY);
+          if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
+            String fileLoc = conf.get(CREDENTIALS_LOCATION);
+            Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
+            job.getCredentials().addAll(cred);
+          }
 
-    String tableName = args[0];
-    Path inputDir = new Path(args[1]);
-    String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName);
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
-    job.setJarByClass(mapperClass);
-    FileInputFormat.setInputPaths(job, inputDir);
-    job.setInputFormatClass(TextInputFormat.class);
-    job.setMapperClass(mapperClass);
-    String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
-    String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
-    if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
-      String fileLoc = conf.get(CREDENTIALS_LOCATION);
-      Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
-      job.getCredentials().addAll(cred);
-    }
+          if (hfileOutPath != null) {
+            if (!admin.tableExists(tableName)) {
+              String errorMsg = format("Table '%s' does not exist.", tableName);
+              if ("yes".equalsIgnoreCase(conf.get(CREATE_TABLE_CONF_KEY, "yes"))) {
+                LOG.warn(errorMsg);
+                // TODO: this is backwards. Instead of depending on the existence of a table,
+                // create a sane splits file for HFileOutputFormat based on data sampling.
+                createTable(admin, tableName, columns);
+              } else {
+                LOG.error(errorMsg);
+                throw new TableNotFoundException(errorMsg);
+              }
+            }
+            try (Table table = connection.getTable(tableName);
+                RegionLocator regionLocator = connection.getRegionLocator(tableName)) {
+              boolean noStrict = conf.getBoolean(NO_STRICT_COL_FAMILY, false);
+              // if no.strict is false then check column family
+              if(!noStrict) {
+                ArrayList<String> unmatchedFamilies = new ArrayList<String>();
+                Set<String> cfSet = getColumnFamilies(columns);
+                HTableDescriptor tDesc = table.getTableDescriptor();
+                for (String cf : cfSet) {
+                  if(tDesc.getFamily(Bytes.toBytes(cf)) == null) {
+                    unmatchedFamilies.add(cf);
+                  }
+                }
+                if(unmatchedFamilies.size() > 0) {
+                  ArrayList<String> familyNames = new ArrayList<String>();
+                  for (HColumnDescriptor family : table.getTableDescriptor().getFamilies()) {
+                    familyNames.add(family.getNameAsString());
+                  }
+                  String msg =
+                      "Column Families " + unmatchedFamilies + " specified in " + COLUMNS_CONF_KEY
+                      + " does not match with any of the table " + tableName
+                      + " column families " + familyNames + ".\n"
+                      + "To disable column family check, use -D" + NO_STRICT_COL_FAMILY
+                      + "=true.\n";
+                  usage(msg);
+                  System.exit(-1);
+                } 
+              }
+              job.setReducerClass(PutSortReducer.class);
+              Path outputDir = new Path(hfileOutPath);
+              FileOutputFormat.setOutputPath(job, outputDir);
+              job.setMapOutputKeyClass(ImmutableBytesWritable.class);
+              if (mapperClass.equals(TsvImporterTextMapper.class)) {
+                job.setMapOutputValueClass(Text.class);
+                job.setReducerClass(TextSortReducer.class);
+              } else {
+                job.setMapOutputValueClass(Put.class);
+                job.setCombinerClass(PutCombiner.class);
+              }
+              HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
+                  regionLocator);
+            }
+          } else {
+            if (!admin.tableExists(tableName)) {
+              String errorMsg = format("Table '%s' does not exist.", tableName);
+              LOG.error(errorMsg);
+              throw new TableNotFoundException(errorMsg);
+            }
+            if (mapperClass.equals(TsvImporterTextMapper.class)) {
+              usage(TsvImporterTextMapper.class.toString()
+                  + " should not be used for non bulkloading case. use "
+                  + TsvImporterMapper.class.toString()
+                  + " or custom mapper whose value type is Put.");
+              System.exit(-1);
+            }
+            // No reducers. Just write straight to table. Call initTableReducerJob
+            // to set up the TableOutputFormat.
+            TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null,
+                job);
+            job.setNumReduceTasks(0);
+          }
 
-    if (hfileOutPath != null) {
-      if (!admin.tableExists(tableName)) {
-        LOG.warn(format("Table '%s' does not exist.", tableName));
-        // TODO: this is backwards. Instead of depending on the existence of a table,
-        // create a sane splits file for HFileOutputFormat based on data sampling.
-        createTable(admin, tableName, columns);
+          TableMapReduceUtil.addDependencyJars(job);
+          TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
+              com.google.common.base.Function.class /* Guava used by TsvParser */);
       }
-      HTable table = new HTable(conf, tableName);
-      job.setReducerClass(PutSortReducer.class);
-      Path outputDir = new Path(hfileOutPath);
-      FileOutputFormat.setOutputPath(job, outputDir);
-      job.setMapOutputKeyClass(ImmutableBytesWritable.class);
-      if (mapperClass.equals(TsvImporterTextMapper.class)) {
-        job.setMapOutputValueClass(Text.class);
-        job.setReducerClass(TextSortReducer.class);
-      } else {
-        job.setMapOutputValueClass(Put.class);
-        job.setCombinerClass(PutCombiner.class);
-      }
-      HFileOutputFormat.configureIncrementalLoad(job, table);
-    } else {
-      if (mapperClass.equals(TsvImporterTextMapper.class)) {
-        usage(TsvImporterTextMapper.class.toString()
-            + " should not be used for non bulkloading case. use "
-            + TsvImporterMapper.class.toString()
-            + " or custom mapper whose value type is Put.");
-        System.exit(-1);
-      }
-      // No reducers. Just write straight to table. Call initTableReducerJob
-      // to set up the TableOutputFormat.
-      TableMapReduceUtil.initTableReducerJob(tableName, null, job);
-      job.setNumReduceTasks(0);
     }
-
-    TableMapReduceUtil.addDependencyJars(job);
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
-        com.google.common.base.Function.class /* Guava used by TsvParser */);
     return job;
   }
 
-  private static void createTable(HBaseAdmin admin, String tableName, String[] columns)
+  private static void createTable(Admin admin, TableName tableName, String[] columns)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
-    Set<String> cfSet = new HashSet<String>();
-    for (String aColumn : columns) {
-      if (TsvParser.ROWKEY_COLUMN_SPEC.equals(aColumn)
-          || TsvParser.TIMESTAMPKEY_COLUMN_SPEC.equals(aColumn)
-          || TsvParser.CELL_VISIBILITY_COLUMN_SPEC.equals(aColumn)
-          || TsvParser.ATTRIBUTES_COLUMN_SPEC.equals(aColumn))
-        continue;
-      // we are only concerned with the first one (in case this is a cf:cq)
-      cfSet.add(aColumn.split(":", 2)[0]);
-    }
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    Set<String> cfSet = getColumnFamilies(columns);
     for (String cf : cfSet) {
       HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes(cf));
       htd.addFamily(hcd);
@@ -489,6 +578,21 @@ public class ImportTsv extends Configured implements Tool {
     LOG.warn(format("Creating table '%s' with '%s' columns and default descriptors.",
       tableName, cfSet));
     admin.createTable(htd);
+  }
+  
+  private static Set<String> getColumnFamilies(String[] columns) {
+    Set<String> cfSet = new HashSet<String>();
+    for (String aColumn : columns) {
+      if (TsvParser.ROWKEY_COLUMN_SPEC.equals(aColumn)
+          || TsvParser.TIMESTAMPKEY_COLUMN_SPEC.equals(aColumn)
+          || TsvParser.CELL_VISIBILITY_COLUMN_SPEC.equals(aColumn)
+          || TsvParser.CELL_TTL_COLUMN_SPEC.equals(aColumn)
+          || TsvParser.ATTRIBUTES_COLUMN_SPEC.equals(aColumn))
+        continue;
+      // we are only concerned with the first one (in case this is a cf:cq)
+      cfSet.add(aColumn.split(":", 2)[0]);
+    }
+    return cfSet;
   }
 
   /*
@@ -498,7 +602,7 @@ public class ImportTsv extends Configured implements Tool {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    String usage = 
+    String usage =
       "Usage: " + NAME + " -D"+ COLUMNS_CONF_KEY + "=a,b,c <tablename> <inputdir>\n" +
       "\n" +
       "Imports the given input directory of TSV data into the specified table.\n" +
@@ -532,6 +636,10 @@ public class ImportTsv extends Configured implements Tool {
       "  -D" + MAPPER_CONF_KEY + "=my.Mapper - A user-defined Mapper to use instead of " +
       DEFAULT_MAPPER.getName() + "\n" +
       "  -D" + JOB_NAME_CONF_KEY + "=jobName - use the specified mapreduce job name for the import\n" +
+      "  -D" + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by this tool\n" +
+      "  Note: if you set this to 'no', then the target table must already exist in HBase\n" +
+      "  -D" + NO_STRICT_COL_FAMILY + "=true - ignore column family check in hbase table. " +
+      "Default is false\n\n" +
       "For performance consider the following options:\n" +
       "  -Dmapreduce.map.speculative=false\n" +
       "  -Dmapreduce.reduce.speculative=false";
@@ -554,7 +662,7 @@ public class ImportTsv extends Configured implements Tool {
     // TODO: validation for TsvImporterMapper, not this tool. Move elsewhere.
     if (null == getConf().get(MAPPER_CONF_KEY)) {
       // Make sure columns are specified
-      String columns[] = getConf().getStrings(COLUMNS_CONF_KEY);
+      String[] columns = getConf().getStrings(COLUMNS_CONF_KEY);
       if (columns == null) {
         usage("No columns specified. Please specify with -D" +
             COLUMNS_CONF_KEY+"=...");
@@ -582,7 +690,7 @@ public class ImportTsv extends Configured implements Tool {
             + TsvParser.TIMESTAMPKEY_COLUMN_SPEC);
         return -1;
       }
-      
+
       int attrKeysFound = 0;
       for (String col : columns) {
         if (col.equals(TsvParser.ATTRIBUTES_COLUMN_SPEC))
@@ -593,7 +701,7 @@ public class ImportTsv extends Configured implements Tool {
             + TsvParser.ATTRIBUTES_COLUMN_SPEC);
         return -1;
       }
-    
+
       // Make sure one or more columns are specified excluding rowkey and
       // timestamp key
       if (columns.length - (rowkeysFound + tskeysFound + attrKeysFound) < 1) {
@@ -608,7 +716,7 @@ public class ImportTsv extends Configured implements Tool {
     // Set it back to replace invalid timestamp (non-numeric) with current
     // system time
     getConf().setLong(TIMESTAMP_CONF_KEY, timstamp);
-    
+
     Job job = createSubmittableJob(getConf(), otherArgs);
     return job.waitForCompletion(true) ? 0 : 1;
   }

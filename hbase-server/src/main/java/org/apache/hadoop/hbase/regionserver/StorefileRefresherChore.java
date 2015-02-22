@@ -25,8 +25,9 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
@@ -40,7 +41,8 @@ import org.apache.hadoop.util.StringUtils;
  * will stop serving read requests because the referenced files might have been deleted (by the
  * primary region).
  */
-public class StorefileRefresherChore extends Chore {
+@InterfaceAudience.Private
+public class StorefileRefresherChore extends ScheduledChore {
 
   private static final Log LOG = LogFactory.getLog(StorefileRefresherChore.class);
 
@@ -51,19 +53,28 @@ public class StorefileRefresherChore extends Chore {
     = "hbase.regionserver.storefile.refresh.period";
   static final int DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD = 0; //disabled by default
 
+  /**
+   * Whether all storefiles should be refreshed, as opposed to just hbase:meta's
+   * Meta region doesn't have WAL replication for replicas enabled yet
+   */
+  public static final String REGIONSERVER_META_STOREFILE_REFRESH_PERIOD
+     = "hbase.regionserver.meta.storefile.refresh.period";
   private HRegionServer regionServer;
   private long hfileTtl;
   private int period;
+  private boolean onlyMetaRefresh = true;
 
   //ts of last time regions store files are refreshed
   private Map<String, Long> lastRefreshTimes; // encodedName -> long
 
-  public StorefileRefresherChore(int period, HRegionServer regionServer, Stoppable stoppable) {
-    super("StorefileRefresherChore", period, stoppable);
+  public StorefileRefresherChore(int period, boolean onlyMetaRefresh, HRegionServer regionServer,
+      Stoppable stoppable) {
+    super("StorefileRefresherChore", stoppable, period);
     this.period = period;
     this.regionServer = regionServer;
     this.hfileTtl = this.regionServer.getConfiguration().getLong(
       TimeToLiveHFileCleaner.TTL_CONF_KEY, TimeToLiveHFileCleaner.DEFAULT_TTL);
+    this.onlyMetaRefresh = onlyMetaRefresh;
     if (period > hfileTtl / 2) {
       throw new RuntimeException(REGIONSERVER_STOREFILE_REFRESH_PERIOD +
         " should be set smaller than half of " + TimeToLiveHFileCleaner.TTL_CONF_KEY);
@@ -78,6 +89,9 @@ public class StorefileRefresherChore extends Chore {
         // skip checking for this region if it can accept writes
         continue;
       }
+      // don't refresh unless enabled for all files, or it the meta region
+      // meta region don't have WAL replication for replicas enabled yet
+      if (onlyMetaRefresh && !r.getRegionInfo().isMetaTable()) continue;
       String encodedName = r.getRegionInfo().getEncodedName();
       long time = EnvironmentEdgeManager.currentTime();
       if (!lastRefreshTimes.containsKey(encodedName)) {

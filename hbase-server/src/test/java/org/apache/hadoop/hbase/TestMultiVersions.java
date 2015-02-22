@@ -24,24 +24,26 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestCase.FlushCache;
 import org.apache.hadoop.hbase.HBaseTestCase.HTableIncommon;
 import org.apache.hadoop.hbase.HBaseTestCase.Incommon;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -52,11 +54,11 @@ import org.junit.experimental.categories.Category;
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions
  * from old testing framework to {@link HBaseTestingUtility}.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestMultiVersions {
   private static final Log LOG = LogFactory.getLog(TestMultiVersions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private HBaseAdmin admin;
+  private Admin admin;
   
   private static final int NUM_SLAVES = 3;
 
@@ -73,12 +75,7 @@ public class TestMultiVersions {
   @Before
   public void before()
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    this.admin = new HBaseAdmin(UTIL.getConfiguration());
-  }
-
-  @After
-  public void after() throws IOException {
-    this.admin.close();
+    this.admin = UTIL.getHBaseAdmin();
   }
 
   /**
@@ -97,7 +94,7 @@ public class TestMultiVersions {
     hcd.setMaxVersions(3);
     desc.addFamily(hcd);
     this.admin.createTable(desc);
-    HTable table = new HTable(UTIL.getConfiguration(), desc.getTableName());
+    Table table = UTIL.getConnection().getTable(desc.getTableName());
     // TODO: Remove these deprecated classes or pull them in here if this is
     // only test using them.
     Incommon incommon = new HTableIncommon(table);
@@ -140,16 +137,15 @@ public class TestMultiVersions {
     this.admin.createTable(desc);
     Put put = new Put(row, timestamp1);
     put.add(contents, contents, value1);
-    HTable table = new HTable(UTIL.getConfiguration(), tableName);
+    Table table = UTIL.getConnection().getTable(desc.getTableName());
     table.put(put);
     // Shut down and restart the HBase cluster
     table.close();
     UTIL.shutdownMiniHBaseCluster();
     LOG.debug("HBase cluster shut down -- restarting");
     UTIL.startMiniHBaseCluster(1, NUM_SLAVES);
-    // Make a new connection.  Use new Configuration instance because old one
-    // is tied to an HConnection that has since gone stale.
-    table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
+    // Make a new connection.
+    table = UTIL.getConnection().getTable(desc.getTableName());
     // Overwrite previous value
     put = new Put(row, timestamp2);
     put.add(contents, contents, value2);
@@ -193,8 +189,8 @@ public class TestMultiVersions {
    */
   @Test
   public void testScanMultipleVersions() throws Exception {
-    final byte [] tableName = Bytes.toBytes("testScanMultipleVersions");
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    final TableName tableName = TableName.valueOf("testScanMultipleVersions");
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     final byte [][] rows = new byte[][] {
       Bytes.toBytes("row_0200"),
@@ -203,31 +199,34 @@ public class TestMultiVersions {
     final byte [][] splitRows = new byte[][] {Bytes.toBytes("row_0500")};
     final long [] timestamp = new long[] {100L, 1000L};
     this.admin.createTable(desc, splitRows);
-    HTable table = new HTable(UTIL.getConfiguration(), tableName);
+    Table table = UTIL.getConnection().getTable(tableName);
     // Assert we got the region layout wanted.
-    NavigableMap<HRegionInfo, ServerName> locations = table.getRegionLocations();
-    assertEquals(2, locations.size());
-    int index = 0;
-    for (Map.Entry<HRegionInfo, ServerName> e: locations.entrySet()) {
-      HRegionInfo hri = e.getKey();
-      if (index == 0) {
-        assertTrue(Bytes.equals(HConstants.EMPTY_START_ROW, hri.getStartKey()));
-        assertTrue(Bytes.equals(hri.getEndKey(), splitRows[0]));
-      } else if (index == 1) {
-        assertTrue(Bytes.equals(splitRows[0], hri.getStartKey()));
-        assertTrue(Bytes.equals(hri.getEndKey(), HConstants.EMPTY_END_ROW));
+    Pair<byte[][], byte[][]> keys = UTIL.getConnection()
+        .getRegionLocator(tableName).getStartEndKeys();
+    assertEquals(2, keys.getFirst().length);
+    byte[][] startKeys = keys.getFirst();
+    byte[][] endKeys = keys.getSecond();
+
+    for (int i = 0; i < startKeys.length; i++) {
+      if (i == 0) {
+        assertTrue(Bytes.equals(HConstants.EMPTY_START_ROW, startKeys[i]));
+        assertTrue(Bytes.equals(endKeys[i], splitRows[0]));
+      } else if (i == 1) {
+        assertTrue(Bytes.equals(splitRows[0], startKeys[i]));
+        assertTrue(Bytes.equals(endKeys[i], HConstants.EMPTY_END_ROW));
       }
-      index++;
     }
     // Insert data
-    for (int i = 0; i < locations.size(); i++) {
+    List<Put> puts = new ArrayList<>();
+    for (int i = 0; i < startKeys.length; i++) {
       for (int j = 0; j < timestamp.length; j++) {
         Put put = new Put(rows[i], timestamp[j]);
         put.add(HConstants.CATALOG_FAMILY, null, timestamp[j],
             Bytes.toBytes(timestamp[j]));
-        table.put(put);
+        puts.add(put);
       }
     }
+    table.put(puts);
     // There are 5 cases we have to test. Each is described below.
     for (int i = 0; i < rows.length; i++) {
       for (int j = 0; j < timestamp.length; j++) {
@@ -241,7 +240,6 @@ public class TestMultiVersions {
         }
         assertTrue(cellCount == 1);
       }
-      table.flushCommits();
     }
 
     // Case 1: scan with LATEST_TIMESTAMP. Should get two rows

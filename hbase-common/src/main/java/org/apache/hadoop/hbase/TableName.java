@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Immutable POJO class for representing a table name.
@@ -446,7 +446,7 @@ public final class TableName implements Comparable<TableName> {
     }
 
     for (TableName tn : tableCache) {
-      if (Arrays.equals(tn.getQualifier(), namespace) &&
+      if (Arrays.equals(tn.getQualifier(), qualifier) &&
           Arrays.equals(tn.getNamespace(), namespace)) {
         return tn;
       }

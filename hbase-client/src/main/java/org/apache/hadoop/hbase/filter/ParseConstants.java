@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.nio.ByteBuffer;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * ParseConstants holds a bunch of constants related to parsing Filter Strings

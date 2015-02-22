@@ -21,13 +21,13 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -77,59 +77,18 @@ public class HFileWriterV3 extends HFileWriterV2 {
    * Add key/value to file. Keys must be added in an order that agrees with the
    * Comparator passed on construction.
    * 
-   * @param kv
-   *          KeyValue to add. Cannot be empty nor null.
+   * @param cell
+   *          Cell to add. Cannot be empty nor null.
    * @throws IOException
    */
   @Override
-  public void append(final KeyValue kv) throws IOException {
+  public void append(final Cell cell) throws IOException {
     // Currently get the complete arrays
-    super.append(kv);
-    int tagsLength = kv.getTagsLength();
+    super.append(cell);
+    int tagsLength = cell.getTagsLength();
     if (tagsLength > this.maxTagsLength) {
       this.maxTagsLength = tagsLength;
     }
-  }
-  
-  /**
-   * Add key/value to file. Keys must be added in an order that agrees with the
-   * Comparator passed on construction.
-   * @param key
-   *          Key to add. Cannot be empty nor null.
-   * @param value
-   *          Value to add. Cannot be empty nor null.
-   * @throws IOException
-   */
-  @Override
-  public void append(final byte[] key, final byte[] value) throws IOException {
-    append(key, value, HConstants.EMPTY_BYTE_ARRAY);
-  }
-
-  /**
-   * Add key/value to file. Keys must be added in an order that agrees with the
-   * Comparator passed on construction.
-   * @param key
-   *          Key to add. Cannot be empty nor null.
-   * @param value
-   *          Value to add. Cannot be empty nor null.
-   * @param tag
-   *          Tag t add. Cannot be empty or null.
-   * @throws IOException
-   */
-  @Override
-  public void append(final byte[] key, final byte[] value, byte[] tag) throws IOException {
-    int kvlen = (int) KeyValue.getKeyValueDataStructureSize(key.length, value.length, tag.length);
-    byte[] b = new byte[kvlen];
-    int pos = 0;
-    pos = Bytes.putInt(b, pos, key.length);
-    pos = Bytes.putInt(b, pos, value.length);
-    pos = Bytes.putBytes(b, pos, key, 0, key.length);
-    pos = Bytes.putBytes(b, pos, value, 0, value.length);
-    if (tag.length > 0) {
-      pos = Bytes.putAsShort(b, pos, tag.length);
-      Bytes.putBytes(b, pos, tag, 0, tag.length);
-    }
-    append(new KeyValue(b, 0, kvlen));
   }
 
   protected void finishFileInfo() throws IOException {

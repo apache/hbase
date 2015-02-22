@@ -110,6 +110,11 @@ message RegionLoad {
 
   /** the most recent sequence Id from cache flush */
   optional uint64 complete_sequence_id = 15;
+
+  /** The current data locality for region in the regionserver */
+  optional float data_locality = 16;
+
+  optional uint64 last_major_compaction_ts = 17 [default = 0];
 }
 
 /* Server-level protobufs */

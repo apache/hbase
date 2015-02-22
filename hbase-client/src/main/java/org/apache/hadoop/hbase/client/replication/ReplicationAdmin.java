@@ -23,22 +23,26 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -47,6 +51,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 /**
  * <p>
@@ -59,7 +64,7 @@ import com.google.common.annotations.VisibleForTesting;
  * Adding a new peer results in creating new outbound connections from every
  * region server to a subset of region servers on the slave cluster. Each
  * new stream of replication will start replicating from the beginning of the
- * current HLog, meaning that edits from that past will be replicated.
+ * current WAL, meaning that edits from that past will be replicated.
  * </p>
  * <p>
  * Removing a peer is a destructive and irreversible operation that stops
@@ -85,11 +90,16 @@ public class ReplicationAdmin implements Closeable {
   public static final String REPLICATIONGLOBAL = Integer
       .toString(HConstants.REPLICATION_SCOPE_GLOBAL);
 
-  private final HConnection connection;
+  private final Connection connection;
   // TODO: replication should be managed by master. All the classes except ReplicationAdmin should
   // be moved to hbase-server. Resolve it in HBASE-11392.
   private final ReplicationQueuesClient replicationQueuesClient;
   private final ReplicationPeers replicationPeers;
+  /**
+   * A watcher used by replicationPeers and replicationQueuesClient. Keep reference so can dispose
+   * on {@link #close()}.
+   */
+  private final ZooKeeperWatcher zkw;
 
   /**
    * Constructor that creates a connection to the local ZooKeeper ensemble.
@@ -103,8 +113,8 @@ public class ReplicationAdmin implements Closeable {
       throw new RuntimeException("hbase.replication isn't true, please " +
           "enable it in order to use replication");
     }
-    this.connection = HConnectionManager.getConnection(conf);
-    ZooKeeperWatcher zkw = createZooKeeperWatcher();
+    this.connection = ConnectionFactory.createConnection(conf);
+    zkw = createZooKeeperWatcher();
     try {
       this.replicationPeers = ReplicationFactory.getReplicationPeers(zkw, conf, this.connection);
       this.replicationPeers.init();
@@ -118,19 +128,19 @@ public class ReplicationAdmin implements Closeable {
   }
 
   private ZooKeeperWatcher createZooKeeperWatcher() throws IOException {
-    return new ZooKeeperWatcher(connection.getConfiguration(),
-      "Replication Admin", new Abortable() {
+    // This Abortable doesn't 'abort'... it just logs.
+    return new ZooKeeperWatcher(connection.getConfiguration(), "ReplicationAdmin", new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
         LOG.error(why, e);
-        System.exit(1);
+        // We used to call system.exit here but this script can be embedded by other programs that
+        // want to do replication stuff... so inappropriate calling System.exit. Just log for now.
       }
 
       @Override
       public boolean isAborted() {
         return false;
       }
-
     });
   }
 
@@ -167,6 +177,55 @@ public class ReplicationAdmin implements Closeable {
   public void addPeer(String id, ReplicationPeerConfig peerConfig,
       Map<TableName, ? extends Collection<String>> tableCfs) throws ReplicationException {
     this.replicationPeers.addPeer(id, peerConfig, getTableCfsStr(tableCfs));
+  }
+
+  public static Map<TableName, List<String>> parseTableCFsFromConfig(String tableCFsConfig) {
+    if (tableCFsConfig == null || tableCFsConfig.trim().length() == 0) {
+      return null;
+    }
+
+    Map<TableName, List<String>> tableCFsMap = null;
+    // TODO: This should be a PB object rather than a String to be parsed!! See HBASE-11393
+    // parse out (table, cf-list) pairs from tableCFsConfig
+    // format: "table1:cf1,cf2;table2:cfA,cfB"
+    String[] tables = tableCFsConfig.split(";");
+    for (String tab : tables) {
+      // 1 ignore empty table config
+      tab = tab.trim();
+      if (tab.length() == 0) {
+        continue;
+      }
+      // 2 split to "table" and "cf1,cf2"
+      //   for each table: "table:cf1,cf2" or "table"
+      String[] pair = tab.split(":");
+      String tabName = pair[0].trim();
+      if (pair.length > 2 || tabName.length() == 0) {
+        LOG.error("ignore invalid tableCFs setting: " + tab);
+        continue;
+      }
+
+      // 3 parse "cf1,cf2" part to List<cf>
+      List<String> cfs = null;
+      if (pair.length == 2) {
+        String[] cfsList = pair[1].split(",");
+        for (String cf : cfsList) {
+          String cfName = cf.trim();
+          if (cfName.length() > 0) {
+            if (cfs == null) {
+              cfs = new ArrayList<String>();
+            }
+            cfs.add(cfName);
+          }
+        }
+      }
+
+      // 4 put <table, List<cf>> to map
+      if (tableCFsMap == null) {
+        tableCFsMap = new HashMap<TableName, List<String>>();
+      }
+      tableCFsMap.put(TableName.valueOf(tabName), cfs);
+    }
+    return tableCFsMap;
   }
 
   @VisibleForTesting
@@ -265,6 +324,111 @@ public class ReplicationAdmin implements Closeable {
   }
 
   /**
+   * Append the replicable table-cf config of the specified peer
+   * @param id a short that identifies the cluster
+   * @param tableCfs table-cfs config str
+   * @throws ReplicationException
+   */
+  public void appendPeerTableCFs(String id, String tableCfs) throws ReplicationException {
+    appendPeerTableCFs(id, parseTableCFsFromConfig(tableCfs));
+  }
+
+  /**
+   * Append the replicable table-cf config of the specified peer
+   * @param id a short that identifies the cluster
+   * @param tableCfs A map from tableName to column family names
+   * @throws ReplicationException
+   */
+  public void appendPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
+      throws ReplicationException {
+    if (tableCfs == null) {
+      throw new ReplicationException("tableCfs is null");
+    }
+    Map<TableName, List<String>> preTableCfs = parseTableCFsFromConfig(getPeerTableCFs(id));
+    if (preTableCfs == null) {
+      setPeerTableCFs(id, tableCfs);
+      return;
+    }
+
+    for (Map.Entry<TableName, ? extends Collection<String>> entry : tableCfs.entrySet()) {
+      TableName table = entry.getKey();
+      Collection<String> appendCfs = entry.getValue();
+      if (preTableCfs.containsKey(table)) {
+        List<String> cfs = preTableCfs.get(table);
+        if (cfs == null || appendCfs == null) {
+          preTableCfs.put(table, null);
+        } else {
+          Set<String> cfSet = new HashSet<String>(cfs);
+          cfSet.addAll(appendCfs);
+          preTableCfs.put(table, Lists.newArrayList(cfSet));
+        }
+      } else {
+        if (appendCfs == null || appendCfs.isEmpty()) {
+          preTableCfs.put(table, null);
+        } else {
+          preTableCfs.put(table, Lists.newArrayList(appendCfs));
+        }
+      }
+    }
+    setPeerTableCFs(id, preTableCfs);
+  }
+
+  /**
+   * Remove some table-cfs from table-cfs config of the specified peer
+   * @param id a short name that identifies the cluster
+   * @param tableCf table-cfs config str
+   * @throws ReplicationException
+   */
+  public void removePeerTableCFs(String id, String tableCf) throws ReplicationException {
+    removePeerTableCFs(id, parseTableCFsFromConfig(tableCf));
+  }
+
+  /**
+   * Remove some table-cfs from config of the specified peer
+   * @param id a short name that identifies the cluster
+   * @param tableCfs A map from tableName to column family names
+   * @throws ReplicationException
+   */
+  public void removePeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
+      throws ReplicationException {
+    if (tableCfs == null) {
+      throw new ReplicationException("tableCfs is null");
+    }
+
+    Map<TableName, List<String>> preTableCfs = parseTableCFsFromConfig(getPeerTableCFs(id));
+    if (preTableCfs == null) {
+      throw new ReplicationException("Table-Cfs for peer" + id + " is null");
+    }
+    for (Map.Entry<TableName, ? extends Collection<String>> entry: tableCfs.entrySet()) {
+      TableName table = entry.getKey();
+      Collection<String> removeCfs = entry.getValue();
+      if (preTableCfs.containsKey(table)) {
+        List<String> cfs = preTableCfs.get(table);
+        if (cfs == null && removeCfs == null) {
+          preTableCfs.remove(table);
+        } else if (cfs != null && removeCfs != null) {
+          Set<String> cfSet = new HashSet<String>(cfs);
+          cfSet.removeAll(removeCfs);
+          if (cfSet.isEmpty()) {
+            preTableCfs.remove(table);
+          } else {
+            preTableCfs.put(table, Lists.newArrayList(cfSet));
+          }
+        } else if (cfs == null && removeCfs != null) {
+          throw new ReplicationException("Cannot remove cf of table: " + table
+              + " which doesn't specify cfs from table-cfs config in peer: " + id);
+        } else if (cfs != null && removeCfs == null) {
+          throw new ReplicationException("Cannot remove table: " + table
+              + " which has specified cfs from table-cfs config in peer: " + id);
+        }
+      } else {
+        throw new ReplicationException("No table: " + table + " in table-cfs config of peer: " + id);
+      }
+    }
+    setPeerTableCFs(id, preTableCfs);
+  }
+
+  /**
    * Set the replicable table-cf config of the specified peer
    * @param id a short name that identifies the cluster
    * @param tableCfs the table and column-family list which will be replicated for this peer.
@@ -289,6 +453,9 @@ public class ReplicationAdmin implements Closeable {
 
   @Override
   public void close() throws IOException {
+    if (this.zkw != null) {
+      this.zkw.close();
+    }
     if (this.connection != null) {
       this.connection.close();
     }
@@ -308,7 +475,14 @@ public class ReplicationAdmin implements Closeable {
    */
   public List<HashMap<String, String>> listReplicated() throws IOException {
     List<HashMap<String, String>> replicationColFams = new ArrayList<HashMap<String, String>>();
-    HTableDescriptor[] tables = this.connection.listTables();
+
+    Admin admin = connection.getAdmin();
+    HTableDescriptor[] tables;
+    try {
+      tables = admin.listTables();
+    } finally {
+      if (admin!= null) admin.close();
+    }
 
     for (HTableDescriptor table : tables) {
       HColumnDescriptor[] columns = table.getColumnFamilies();

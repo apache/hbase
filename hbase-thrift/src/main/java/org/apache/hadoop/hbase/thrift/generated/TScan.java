@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -725,7 +726,54 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_startRow = true && (isSetStartRow());
+    builder.append(present_startRow);
+    if (present_startRow)
+      builder.append(startRow);
+
+    boolean present_stopRow = true && (isSetStopRow());
+    builder.append(present_stopRow);
+    if (present_stopRow)
+      builder.append(stopRow);
+
+    boolean present_timestamp = true && (isSetTimestamp());
+    builder.append(present_timestamp);
+    if (present_timestamp)
+      builder.append(timestamp);
+
+    boolean present_columns = true && (isSetColumns());
+    builder.append(present_columns);
+    if (present_columns)
+      builder.append(columns);
+
+    boolean present_caching = true && (isSetCaching());
+    builder.append(present_caching);
+    if (present_caching)
+      builder.append(caching);
+
+    boolean present_filterString = true && (isSetFilterString());
+    builder.append(present_filterString);
+    if (present_filterString)
+      builder.append(filterString);
+
+    boolean present_batchSize = true && (isSetBatchSize());
+    builder.append(present_batchSize);
+    if (present_batchSize)
+      builder.append(batchSize);
+
+    boolean present_sortColumns = true && (isSetSortColumns());
+    builder.append(present_sortColumns);
+    if (present_sortColumns)
+      builder.append(sortColumns);
+
+    boolean present_reversed = true && (isSetReversed());
+    builder.append(present_reversed);
+    if (present_reversed)
+      builder.append(reversed);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TScan other) {

@@ -21,9 +21,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -192,59 +195,55 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingContext,
+  public int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingContext,
       DataOutputStream out) throws IOException {
     EncodingState state = encodingContext.getEncodingState();
-    int size = compressSingleKeyValue(out, kv, state.prevKv);
-    size += afterEncodingKeyValue(kv, out, encodingContext);
-    state.prevKv = kv;
+    int size = compressSingleKeyValue(out, cell, state.prevCell);
+    size += afterEncodingKeyValue(cell, out, encodingContext);
+    state.prevCell = cell;
     return size;
   }
 
-  private int compressSingleKeyValue(DataOutputStream out, KeyValue kv, KeyValue prevKv)
+  private int compressSingleKeyValue(DataOutputStream out, Cell cell, Cell prevCell)
       throws IOException {
     byte flag = 0;
-    int kLength = kv.getKeyLength();
-    int vLength = kv.getValueLength();
+    int kLength = KeyValueUtil.keyLength(cell);
+    int vLength = cell.getValueLength();
 
     long timestamp;
     long diffTimestamp = 0;
     int diffTimestampFitsInBytes = 0;
     int timestampFitsInBytes;
-    int commonPrefix;
-    byte[] curKvBuf = kv.getBuffer();
+    int commonPrefix = 0;
 
-    if (prevKv == null) {
-      timestamp = kv.getTimestamp();
+    if (prevCell == null) {
+      timestamp = cell.getTimestamp();
       if (timestamp < 0) {
         flag |= FLAG_TIMESTAMP_SIGN;
         timestamp = -timestamp;
       }
       timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
       flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
-      commonPrefix = 0;
       // put column family
-      byte familyLength = kv.getFamilyLength();
+      byte familyLength = cell.getFamilyLength();
       out.write(familyLength);
-      out.write(kv.getFamilyArray(), kv.getFamilyOffset(), familyLength);
+      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), familyLength);
     } else {
       // Finding common prefix
-      int preKeyLength = prevKv.getKeyLength();
-      commonPrefix = ByteBufferUtils.findCommonPrefix(curKvBuf, kv.getKeyOffset(), kLength
-          - KeyValue.TIMESTAMP_TYPE_SIZE, prevKv.getBuffer(), prevKv.getKeyOffset(), preKeyLength
-          - KeyValue.TIMESTAMP_TYPE_SIZE);
+      int preKeyLength = KeyValueUtil.keyLength(prevCell);
+      commonPrefix = CellUtil.findCommonPrefixInFlatKey(cell, prevCell, true, false);
       if (kLength == preKeyLength) {
         flag |= FLAG_SAME_KEY_LENGTH;
       }
-      if (vLength == prevKv.getValueLength()) {
+      if (vLength == prevCell.getValueLength()) {
         flag |= FLAG_SAME_VALUE_LENGTH;
       }
-      if (kv.getTypeByte() == prevKv.getTypeByte()) {
+      if (cell.getTypeByte() == prevCell.getTypeByte()) {
         flag |= FLAG_SAME_TYPE;
       }
       // don't compress timestamp and type using prefix encode timestamp
-      timestamp = kv.getTimestamp();
-      diffTimestamp = prevKv.getTimestamp() - timestamp;
+      timestamp = cell.getTimestamp();
+      diffTimestamp = prevCell.getTimestamp() - timestamp;
       boolean negativeTimestamp = timestamp < 0;
       if (negativeTimestamp) {
         timestamp = -timestamp;
@@ -276,13 +275,21 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       ByteBufferUtils.putCompressedInt(out, vLength);
     }
     ByteBufferUtils.putCompressedInt(out, commonPrefix);
-    if (prevKv == null || commonPrefix < kv.getRowLength() + KeyValue.ROW_LENGTH_SIZE) {
-      int restRowLength = kv.getRowLength() + KeyValue.ROW_LENGTH_SIZE - commonPrefix;
-      out.write(curKvBuf, kv.getKeyOffset() + commonPrefix, restRowLength);
-      out.write(curKvBuf, kv.getQualifierOffset(), kv.getQualifierLength());
+    short rLen = cell.getRowLength();
+    if (commonPrefix < rLen + KeyValue.ROW_LENGTH_SIZE) {
+      // Previous and current rows are different. Copy the differing part of
+      // the row, skip the column family, and copy the qualifier.
+      CellUtil.writeRowKeyExcludingCommon(cell, rLen, commonPrefix, out);
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
     } else {
-      out.write(curKvBuf, kv.getKeyOffset() + commonPrefix, kLength - commonPrefix
-          - KeyValue.TIMESTAMP_TYPE_SIZE);
+      // The common part includes the whole row. As the column family is the
+      // same across the whole file, it will automatically be included in the
+      // common prefix, so we need not special-case it here.
+      // What we write here is the non common part of the qualifier
+      int commonQualPrefix = commonPrefix - (rLen + KeyValue.ROW_LENGTH_SIZE)
+          - (cell.getFamilyLength() + KeyValue.FAMILY_LENGTH_SIZE);
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset() + commonQualPrefix,
+          cell.getQualifierLength() - commonQualPrefix);
     }
     if ((flag & FLAG_TIMESTAMP_IS_DIFF) == 0) {
       ByteBufferUtils.putLong(out, timestamp, timestampFitsInBytes);
@@ -291,9 +298,9 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
 
     if ((flag & FLAG_SAME_TYPE) == 0) {
-      out.write(kv.getTypeByte());
+      out.write(cell.getTypeByte());
     }
-    out.write(kv.getValueArray(), kv.getValueOffset(), vLength);
+    out.write(cell.getValueArray(), cell.getValueOffset(), vLength);
     return kLength + vLength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 
@@ -310,6 +317,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBuffer result = ByteBuffer.allocate(keyLength);
 
     // copy row
+    assert !(result.isDirect());
     int pos = result.arrayOffset();
     block.get(result.array(), pos, Bytes.SIZEOF_SHORT);
     pos += Bytes.SIZEOF_SHORT;

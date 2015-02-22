@@ -23,9 +23,13 @@ module Shell
         return <<-EOF
 Show all permissions for the particular user.
 Syntax : user_permission <table>
+
+Note: A namespace must always precede with '@' character.
+
 For example:
 
     hbase> user_permission
+    hbase> user_permission '@ns1'
     hbase> user_permission 'table1'
     hbase> user_permission 'namespace1:table1'
     hbase> user_permission '.*'
@@ -33,11 +37,11 @@ For example:
 EOF
       end
 
-      def command(table_regex=".*")
+      def command(table_regex=nil)
         #format_simple_command do
         #admin.user_permission(table_regex)
         now = Time.now
-        formatter.header(["User", "Table,Family,Qualifier:Permission"])
+        formatter.header(["User", "Namespace,Table,Family,Qualifier:Permission"])
 
         count = security_admin.user_permission(table_regex) do |user, permission|
           formatter.row([ user, permission])

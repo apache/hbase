@@ -154,6 +154,7 @@
             <th>Storefile Size</th>
             <th>Index Size</th>
             <th>Bloom Size</th>
+            <th>Data Locality</th>
         </tr>
 
         <%for HRegionInfo r: onlineRegions %>
@@ -171,6 +172,7 @@
             <td><% load.getStorefileSizeMB() %>m</td>
             <td><% load.getTotalStaticIndexSizeKB() %>k</td>
             <td><% load.getTotalStaticBloomSizeKB() %>k</td>
+            <td><% load.getDataLocality() %></td>
             </%if>
         </tr>
         </%for>

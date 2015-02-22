@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +44,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -53,15 +53,18 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.Import.KeyValueImporter;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
@@ -80,7 +83,7 @@ import org.mockito.stubbing.Answer;
 /**
  * Tests the table import and table export MR job functionality
  */
-@Category(MediumTests.class)
+@Category({VerySlowMapReduceTests.class, MediumTests.class})
 public class TestImportExport {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] ROW1 = Bytes.toBytes("row1");
@@ -159,7 +162,7 @@ public class TestImportExport {
   @Test
   public void testSimpleCase() throws Exception {
     String EXPORT_TABLE = "exportSimpleCase";
-    HTable t = UTIL.createTable(Bytes.toBytes(EXPORT_TABLE), FAMILYA, 3);
+    Table t = UTIL.createTable(TableName.valueOf(EXPORT_TABLE), FAMILYA, 3);
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
     p.add(FAMILYA, QUAL, now+1, QUAL);
@@ -179,7 +182,7 @@ public class TestImportExport {
     assertTrue(runExport(args));
 
     String IMPORT_TABLE = "importTableSimpleCase";
-    t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), FAMILYB, 3);
+    t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), FAMILYB, 3);
     args = new String[] {
         "-D" + Import.CF_RENAME_PROP + "="+FAMILYA_STRING+":"+FAMILYB_STRING,
         IMPORT_TABLE,
@@ -222,7 +225,7 @@ public class TestImportExport {
     fs.copyFromLocalFile(importPath, new Path(FQ_OUTPUT_DIR + Path.SEPARATOR
         + "exportedTableIn94Format"));
     String IMPORT_TABLE = "importTableExportedFrom94";
-    HTable t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), Bytes.toBytes("f1"), 3);
+    Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), Bytes.toBytes("f1"), 3);
     String[] args = new String[] {
         "-Dhbase.import.version=0.94" ,
         IMPORT_TABLE, FQ_OUTPUT_DIR
@@ -252,7 +255,7 @@ public class TestImportExport {
         .setMaxVersions(1)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    HTable t = new HTable(UTIL.getConfiguration(), BATCH_TABLE);
+     Table t = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
@@ -283,7 +286,7 @@ public class TestImportExport {
         .setKeepDeletedCells(true)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    HTable t = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
+    Table t = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
@@ -315,7 +318,7 @@ public class TestImportExport {
     );
     UTIL.getHBaseAdmin().createTable(desc);
     t.close();
-    t = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
+    t = UTIL.getConnection().getTable(desc.getTableName());
     args = new String[] {
         IMPORT_TABLE,
         FQ_OUTPUT_DIR
@@ -337,6 +340,84 @@ public class TestImportExport {
     assertEquals(now, res[6].getTimestamp());
     t.close();
   }
+  
+  
+  @Test
+  public void testWithMultipleDeleteFamilyMarkersOfSameRowSameFamily() throws Exception {
+    TableName EXPORT_TABLE =
+        TableName.valueOf("exportWithMultipleDeleteFamilyMarkersOfSameRowSameFamily");
+    HTableDescriptor desc = new HTableDescriptor(EXPORT_TABLE);
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+        .setMaxVersions(5)
+        .setKeepDeletedCells(true)
+    );
+    UTIL.getHBaseAdmin().createTable(desc);
+
+    Table exportT = UTIL.getConnection().getTable(EXPORT_TABLE);
+
+    //Add first version of QUAL
+    Put p = new Put(ROW1);
+    p.add(FAMILYA, QUAL, now, QUAL);
+    exportT.put(p);
+
+    //Add Delete family marker
+    Delete d = new Delete(ROW1, now+3);
+    exportT.delete(d);
+
+    //Add second version of QUAL
+    p = new Put(ROW1);
+    p.add(FAMILYA, QUAL, now+5, "s".getBytes());
+    exportT.put(p);
+
+    //Add second Delete family marker
+    d = new Delete(ROW1, now+7);
+    exportT.delete(d);
+    
+    
+    String[] args = new String[] {
+        "-D" + Export.RAW_SCAN + "=true", EXPORT_TABLE.getNameAsString(),
+        FQ_OUTPUT_DIR,
+        "1000", // max number of key versions per key to export
+    };
+    assertTrue(runExport(args));
+
+    String IMPORT_TABLE = "importWithMultipleDeleteFamilyMarkersOfSameRowSameFamily";
+    desc = new HTableDescriptor(TableName.valueOf(IMPORT_TABLE));
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+        .setMaxVersions(5)
+        .setKeepDeletedCells(true)
+    );
+    UTIL.getHBaseAdmin().createTable(desc);
+
+    Table importT = UTIL.getConnection().getTable(TableName.valueOf(IMPORT_TABLE));
+    args = new String[] {
+        IMPORT_TABLE,
+        FQ_OUTPUT_DIR
+    };
+    assertTrue(runImport(args));
+
+    Scan s = new Scan();
+    s.setMaxVersions();
+    s.setRaw(true);
+    
+    ResultScanner importedTScanner = importT.getScanner(s);
+    Result importedTResult = importedTScanner.next();
+    
+    ResultScanner exportedTScanner = exportT.getScanner(s);
+    Result  exportedTResult =  exportedTScanner.next();
+    try
+    {
+      Result.compareResults(exportedTResult, importedTResult);
+    }
+    catch (Exception e) {
+      fail("Original and imported tables data comparision failed with error:"+e.getMessage());
+    }
+    finally
+    {
+      exportT.close();
+      importT.close();
+    }
+  }
 
   /**
    * Create a simple table, run an Export Job on it, Import with filtering on,  verify counts,
@@ -349,22 +430,20 @@ public class TestImportExport {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(EXPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
     UTIL.getHBaseAdmin().createTable(desc);
-    HTable exportTable = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
+    Table exportTable = UTIL.getConnection().getTable(desc.getTableName());
 
-    Put p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now, QUAL);
-    p.add(FAMILYA, QUAL, now + 1, QUAL);
-    p.add(FAMILYA, QUAL, now + 2, QUAL);
-    p.add(FAMILYA, QUAL, now + 3, QUAL);
-    p.add(FAMILYA, QUAL, now + 4, QUAL);
-    exportTable.put(p);
+    Put p1 = new Put(ROW1);
+    p1.add(FAMILYA, QUAL, now, QUAL);
+    p1.add(FAMILYA, QUAL, now + 1, QUAL);
+    p1.add(FAMILYA, QUAL, now + 2, QUAL);
+    p1.add(FAMILYA, QUAL, now + 3, QUAL);
+    p1.add(FAMILYA, QUAL, now + 4, QUAL);
 
     // Having another row would actually test the filter.
-    p = new Put(ROW2);
-    p.add(FAMILYA, QUAL, now, QUAL);
-    exportTable.put(p);
-    // Flush the commits.
-    exportTable.flushCommits();
+    Put p2 = new Put(ROW2);
+    p2.add(FAMILYA, QUAL, now, QUAL);
+
+    exportTable.put(Arrays.asList(p1, p2));
 
     // Export the simple table
     String[] args = new String[] { EXPORT_TABLE, FQ_OUTPUT_DIR, "1000" };
@@ -376,7 +455,7 @@ public class TestImportExport {
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
     UTIL.getHBaseAdmin().createTable(desc);
 
-    HTable importTable = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
+    Table importTable = UTIL.getConnection().getTable(desc.getTableName());
     args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + PrefixFilter.class.getName(),
         "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1), IMPORT_TABLE, FQ_OUTPUT_DIR,
         "1000" };
@@ -410,7 +489,7 @@ public class TestImportExport {
    * @return
    * @throws IOException
    */
-  private int getCount(HTable table, Filter filter) throws IOException {
+  private int getCount(Table table, Filter filter) throws IOException {
     Scan scan = new Scan();
     scan.setFilter(filter);
     ResultScanner results = table.getScanner(scan);
@@ -542,7 +621,7 @@ public class TestImportExport {
   public void testDurability() throws IOException, InterruptedException, ClassNotFoundException {
     // Create an export table.
     String exportTableName = "exporttestDurability";
-    HTable exportTable = UTIL.createTable(Bytes.toBytes(exportTableName), FAMILYA, 3);
+    Table exportTable = UTIL.createTable(TableName.valueOf(exportTableName), FAMILYA, 3);
 
     // Insert some data
     Put put = new Put(ROW1);
@@ -563,12 +642,12 @@ public class TestImportExport {
 
     // Create the table for import
     String importTableName = "importTestDurability1";
-    HTable importTable = UTIL.createTable(Bytes.toBytes(importTableName), FAMILYA, 3);
+    Table importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
 
-    // Register the hlog listener for the import table
+    // Register the wal listener for the import table
     TableWALActionListener walListener = new TableWALActionListener(importTableName);
-    HLog hLog = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL();
-    hLog.registerWALActionsListener(walListener);
+    WAL wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(null);
+    wal.registerWALActionsListener(walListener);
 
     // Run the import with SKIP_WAL
     args =
@@ -582,10 +661,10 @@ public class TestImportExport {
 
     // Run the import with the default durability option
     importTableName = "importTestDurability2";
-    importTable = UTIL.createTable(Bytes.toBytes(importTableName), FAMILYA, 3);
-    hLog.unregisterWALActionsListener(walListener);    
+    importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
+    wal.unregisterWALActionsListener(walListener);
     walListener = new TableWALActionListener(importTableName);
-    hLog.registerWALActionsListener(walListener);
+    wal.registerWALActionsListener(walListener);
     args = new String[] { importTableName, FQ_OUTPUT_DIR };
     assertTrue(runImport(args));
     //Assert that the wal is visisted
@@ -595,10 +674,10 @@ public class TestImportExport {
   }
 
   /**
-   * This listens to the {@link #visitLogEntryBeforeWrite(HTableDescriptor, HLogKey, WALEdit)} to
+   * This listens to the {@link #visitLogEntryBeforeWrite(HTableDescriptor, WALKey, WALEdit)} to
    * identify that an entry is written to the Write Ahead Log for the given table.
    */
-  private static class TableWALActionListener implements WALActionsListener {
+  private static class TableWALActionListener extends WALActionsListener.Base {
 
     private String tableName;
     private boolean isVisited = false;
@@ -608,42 +687,7 @@ public class TestImportExport {
     }
 
     @Override
-    public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void preLogArchive(Path oldPath, Path newPath) throws IOException {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void postLogArchive(Path oldPath, Path newPath) throws IOException {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void logRollRequested() {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void logCloseRequested() {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit) {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey, WALEdit logEdit) {
+    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit) {
       if (tableName.equalsIgnoreCase(htd.getNameAsString())) {
         isVisited = true;
       }

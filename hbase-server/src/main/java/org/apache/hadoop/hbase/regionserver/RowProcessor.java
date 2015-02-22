@@ -22,14 +22,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 import com.google.protobuf.Message;
-
-@InterfaceAudience.Private
 
 /**
  * Defines the procedure to atomically perform multiple scans and mutations
@@ -44,6 +44,8 @@ import com.google.protobuf.Message;
  * parameter S is the type of the request data sent to the server.
  * The generic type parameter T is the return type of RowProcessor.getResult().
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
 public interface RowProcessor<S extends Message, T extends Message> {
 
   /**

@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -61,7 +61,7 @@ public class TimeRange {
    * @param minStamp the minimum timestamp value, inclusive
    */
   public TimeRange(byte [] minStamp) {
-  	this.minStamp = Bytes.toLong(minStamp);
+    this.minStamp = Bytes.toLong(minStamp);
   }
 
   /**
@@ -126,8 +126,8 @@ public class TimeRange {
    * @return true if within TimeRange, false if not
    */
   public boolean withinTimeRange(byte [] bytes, int offset) {
-  	if(allTime) return true;
-  	return withinTimeRange(Bytes.toLong(bytes, offset));
+    if(allTime) return true;
+    return withinTimeRange(Bytes.toLong(bytes, offset));
   }
 
   /**
@@ -139,9 +139,9 @@ public class TimeRange {
    * @return true if within TimeRange, false if not
    */
   public boolean withinTimeRange(long timestamp) {
-  	if(allTime) return true;
-  	// check if >= minStamp
-  	return (minStamp <= timestamp && timestamp < maxStamp);
+    if(allTime) return true;
+    // check if >= minStamp
+    return (minStamp <= timestamp && timestamp < maxStamp);
   }
 
   /**

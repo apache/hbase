@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.hbase.codec.prefixtree.decode;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.SettableSequenceId;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * As the PrefixTreeArrayScanner moves through the tree bytes, it changes the values in the fields
@@ -31,7 +32,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
  * iterated through.
  */
 @InterfaceAudience.Private
-public class PrefixTreeCell implements Cell, Comparable<Cell> {
+public class PrefixTreeCell implements Cell, SettableSequenceId, Comparable<Cell> {
 
   /********************** static **********************/
 
@@ -96,17 +97,13 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   }
 
   @Override
-  public int hashCode(){
-    //Temporary hack to maintain backwards compatibility with KeyValue.hashCode
-    //I don't think this is used in any hot code paths
-    return KeyValueUtil.copyToNewKeyValue(this).hashCode();
-
-    //TODO return CellComparator.hashCode(this);//see HBASE-6907
+  public int hashCode() {
+    return CellComparator.hashCodeIgnoreMvcc(this);
   }
 
   @Override
   public int compareTo(Cell other) {
-    return CellComparator.compareStatic(this, other, false);
+    return CellComparator.compare(this, other, false);
   }
 
   @Override
@@ -236,5 +233,10 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   @Override
   public byte[] getTagsArray() {
     return this.tagsBuffer;
+  }
+
+  @Override
+  public void setSequenceId(long seqId) {
+    mvccVersion = seqId;
   }
 }

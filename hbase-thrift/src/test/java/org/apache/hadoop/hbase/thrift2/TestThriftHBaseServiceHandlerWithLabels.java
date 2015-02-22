@@ -37,8 +37,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TAuthorization;
 import org.apache.hadoop.hbase.thrift2.generated.TCellVisibility;
@@ -69,7 +71,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({ClientTests.class, MediumTests.class})
 public class TestThriftHBaseServiceHandlerWithLabels {
 
 public static final Log LOG = LogFactory
@@ -136,7 +138,7 @@ public static void beforeClass() throws Exception {
   // Wait for the labels table to become available
   UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
   createLabels();
-  HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
+  Admin admin = UTIL.getHBaseAdmin();
   HTableDescriptor tableDescriptor = new HTableDescriptor(
       TableName.valueOf(tableAname));
   for (HColumnDescriptor family : families) {

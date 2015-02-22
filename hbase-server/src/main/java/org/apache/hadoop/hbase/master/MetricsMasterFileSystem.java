@@ -31,7 +31,7 @@ public class MetricsMasterFileSystem {
   /**
    * Record a single instance of a split
    * @param time time that the split took
-   * @param size length of original HLogs that were split
+   * @param size length of original WALs that were split
    */
   public synchronized void addSplit(long time, long size) {
     source.updateSplitTime(time);
@@ -41,7 +41,7 @@ public class MetricsMasterFileSystem {
   /**
    * Record a single instance of a split
    * @param time time that the split took
-   * @param size length of original HLogs that were split
+   * @param size length of original WALs that were split
    */
   public synchronized void addMetaWALSplit(long time, long size) {
     source.updateMetaWALSplitTime(time);

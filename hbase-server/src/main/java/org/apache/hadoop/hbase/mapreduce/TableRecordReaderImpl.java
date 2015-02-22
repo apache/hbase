@@ -23,14 +23,14 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -58,7 +58,7 @@ public class TableRecordReaderImpl {
   private ResultScanner scanner = null;
   private Scan scan = null;
   private Scan currentScan = null;
-  private HTable htable = null;
+  private Table htable = null;
   private byte[] lastSuccessfulRow = null;
   private ImmutableBytesWritable key = null;
   private Result value = null;
@@ -119,9 +119,9 @@ public class TableRecordReaderImpl {
   /**
    * Sets the HBase table.
    *
-   * @param htable  The {@link HTable} to scan.
+   * @param htable  The {@link org.apache.hadoop.hbase.HTableDescriptor} to scan.
    */
-  public void setHTable(HTable htable) {
+  public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();
     logScannerActivity = conf.getBoolean(
       ScannerCallable.LOG_SCANNER_ACTIVITY, false);

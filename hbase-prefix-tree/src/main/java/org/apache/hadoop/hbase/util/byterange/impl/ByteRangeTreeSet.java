@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util.byterange.impl;
 import java.util.List;
 import java.util.TreeMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.IterableUtils;

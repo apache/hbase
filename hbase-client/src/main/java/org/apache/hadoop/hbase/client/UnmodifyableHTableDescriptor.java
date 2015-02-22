@@ -19,10 +19,10 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Read-only table descriptor.
@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   /** Default constructor */
   public UnmodifyableHTableDescriptor() {
-	  super();
+    super();
   }
 
   /*
@@ -63,7 +63,12 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @param family HColumnDescriptor of familyto add.
    */
   @Override
-  public void addFamily(final HColumnDescriptor family) {
+  public HTableDescriptor addFamily(final HColumnDescriptor family) {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
+  }
+
+  @Override
+  public HTableDescriptor modifyFamily(HColumnDescriptor family) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
@@ -81,7 +86,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @see org.apache.hadoop.hbase.HTableDescriptor#setReadOnly(boolean)
    */
   @Override
-  public void setReadOnly(boolean readOnly) {
+  public HTableDescriptor setReadOnly(boolean readOnly) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
@@ -89,7 +94,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @see org.apache.hadoop.hbase.HTableDescriptor#setValue(byte[], byte[])
    */
   @Override
-  public void setValue(byte[] key, byte[] value) {
+  public HTableDescriptor setValue(byte[] key, byte[] value) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
@@ -97,7 +102,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @see org.apache.hadoop.hbase.HTableDescriptor#setValue(java.lang.String, java.lang.String)
    */
   @Override
-  public void setValue(String key, String value) {
+  public HTableDescriptor setValue(String key, String value) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
@@ -105,7 +110,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @see org.apache.hadoop.hbase.HTableDescriptor#setMaxFileSize(long)
    */
   @Override
-  public void setMaxFileSize(long maxFileSize) {
+  public HTableDescriptor setMaxFileSize(long maxFileSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
@@ -113,15 +118,7 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
    * @see org.apache.hadoop.hbase.HTableDescriptor#setMemStoreFlushSize(long)
    */
   @Override
-  public void setMemStoreFlushSize(long memstoreFlushSize) {
+  public HTableDescriptor setMemStoreFlushSize(long memstoreFlushSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
-
-//  /**
-//   * @see org.apache.hadoop.hbase.HTableDescriptor#addIndex(org.apache.hadoop.hbase.client.tableindexed.IndexSpecification)
-//   */
-//  @Override
-//  public void addIndex(IndexSpecification index) {
-//    throw new UnsupportedOperationException("HTableDescriptor is read-only");
-//  }
 }

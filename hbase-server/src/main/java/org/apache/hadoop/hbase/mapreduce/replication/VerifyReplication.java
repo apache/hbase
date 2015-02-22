@@ -24,19 +24,25 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.mapreduce.TableSplit;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerZKImpl;
@@ -74,15 +80,23 @@ public class VerifyReplication extends Configured implements Tool {
   static String families = null;
   static String peerId = null;
 
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   /**
    * Map-only comparator for 2 tables
    */
   public static class Verifier
       extends TableMapper<ImmutableBytesWritable, Put> {
 
-    public static enum Counters {GOODROWS, BADROWS}
 
+
+    public static enum Counters {
+      GOODROWS, BADROWS, ONLY_IN_SOURCE_TABLE_ROWS, ONLY_IN_PEER_TABLE_ROWS, CONTENT_DIFFERENT_ROWS}
+
+    private Connection connection;
+    private Table replicatedTable;
     private ResultScanner replicatedScanner;
+    private Result currentCompareRowInPeerTable;
 
     /**
      * Map method that compares every scanned row with the equivalent from
@@ -113,6 +127,8 @@ public class VerifyReplication extends Configured implements Tool {
         if (versions >= 0) {
           scan.setMaxVersions(versions);
         }
+
+        final TableSplit tableSplit = (TableSplit)(context.getInputSplit());
         HConnectionManager.execute(new HConnectable<Void>(conf) {
           @Override
           public Void connect(HConnection conn) throws IOException {
@@ -120,28 +136,82 @@ public class VerifyReplication extends Configured implements Tool {
             Configuration peerConf = HBaseConfiguration.create(conf);
             ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
 
-            HTable replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
+            TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
+            connection = ConnectionFactory.createConnection(peerConf);
+            replicatedTable = connection.getTable(tableName);
             scan.setStartRow(value.getRow());
+            scan.setStopRow(tableSplit.getEndRow());
             replicatedScanner = replicatedTable.getScanner(scan);
             return null;
           }
         });
+        currentCompareRowInPeerTable = replicatedScanner.next();
       }
-      Result res = replicatedScanner.next();
-      try {
-        Result.compareResults(value, res);
-        context.getCounter(Counters.GOODROWS).increment(1);
-      } catch (Exception e) {
-        LOG.warn("Bad row", e);
-        context.getCounter(Counters.BADROWS).increment(1);
+      while (true) {
+        if (currentCompareRowInPeerTable == null) {
+          // reach the region end of peer table, row only in source table
+          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_SOURCE_TABLE_ROWS, value);
+          break;
+        }
+        int rowCmpRet = Bytes.compareTo(value.getRow(), currentCompareRowInPeerTable.getRow());
+        if (rowCmpRet == 0) {
+          // rowkey is same, need to compare the content of the row
+          try {
+            Result.compareResults(value, currentCompareRowInPeerTable);
+            context.getCounter(Counters.GOODROWS).increment(1);
+          } catch (Exception e) {
+            logFailRowAndIncreaseCounter(context, Counters.CONTENT_DIFFERENT_ROWS, value);
+          }
+          currentCompareRowInPeerTable = replicatedScanner.next();
+          break;
+        } else if (rowCmpRet < 0) {
+          // row only exists in source table
+          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_SOURCE_TABLE_ROWS, value);
+          break;
+        } else {
+          // row only exists in peer table
+          logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_PEER_TABLE_ROWS,
+            currentCompareRowInPeerTable);
+          currentCompareRowInPeerTable = replicatedScanner.next();
+        }
       }
+    }
+
+    private void logFailRowAndIncreaseCounter(Context context, Counters counter, Result row) {
+      context.getCounter(counter).increment(1);
+      context.getCounter(Counters.BADROWS).increment(1);
+      LOG.error(counter.toString() + ", rowkey=" + Bytes.toString(row.getRow()));
     }
 
     @Override
     protected void cleanup(Context context) {
       if (replicatedScanner != null) {
-        replicatedScanner.close();
-        replicatedScanner = null;
+        try {
+          while (currentCompareRowInPeerTable != null) {
+            logFailRowAndIncreaseCounter(context, Counters.ONLY_IN_PEER_TABLE_ROWS,
+              currentCompareRowInPeerTable);
+            currentCompareRowInPeerTable = replicatedScanner.next();
+          }
+        } catch (Exception e) {
+          LOG.error("fail to scan peer table in cleanup", e);
+        } finally {
+          replicatedScanner.close();
+          replicatedScanner = null;
+        }
+      }
+      if(replicatedTable != null){
+        try{
+          replicatedTable.close();
+        } catch (Exception e) {
+          LOG.error("fail to close table in cleanup", e);
+        }
+      }
+      if(connection != null){
+        try {
+          connection.close();
+        } catch (Exception e) {
+          LOG.error("fail to close connection in cleanup", e);
+        }
       }
     }
   }
@@ -207,7 +277,7 @@ public class VerifyReplication extends Configured implements Tool {
     conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
     LOG.info("Peer Quorum Address: " + peerQuorumAddress);
 
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(VerifyReplication.class);
 
     Scan scan = new Scan();

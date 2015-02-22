@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when a snapshot could not be exported due to an error during the operation.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Stable
 @SuppressWarnings("serial")
 public class ExportSnapshotException extends HBaseSnapshotException {
 

@@ -24,13 +24,18 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -41,6 +46,9 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
 /**
  * A base for {@link MultiTableInputFormat}s. Receives a list of
  * {@link Scan} instances that define the input tables and
@@ -79,13 +87,13 @@ public abstract class MultiTableInputFormatBase extends
     TableSplit tSplit = (TableSplit) split;
     LOG.info(MessageFormat.format("Input split length: {0} bytes.", tSplit.getLength()));
 
-    if (tSplit.getTableName() == null) {
+    if (tSplit.getTable() == null) {
       throw new IOException("Cannot create a record reader because of a"
           + " previous error. Please look at the previous logs lines from"
           + " the task's full log for more details.");
     }
-    HTable table =
-        new HTable(context.getConfiguration(), tSplit.getTableName());
+    Connection connection = ConnectionFactory.createConnection(context.getConfiguration());
+    Table table = connection.getTable(tSplit.getTable());
 
     TableRecordReader trr = this.tableRecordReader;
 
@@ -98,10 +106,11 @@ public abstract class MultiTableInputFormatBase extends
       sc.setStartRow(tSplit.getStartRow());
       sc.setStopRow(tSplit.getEndRow());
       trr.setScan(sc);
-      trr.setHTable(table);
+      trr.setTable(table);
     } catch (IOException ioe) {
       // If there is an exception make sure that all
       // resources are closed and released.
+      connection.close();
       table.close();
       trr.close();
       throw ioe;
@@ -123,65 +132,83 @@ public abstract class MultiTableInputFormatBase extends
     if (scans.isEmpty()) {
       throw new IOException("No scans were provided.");
     }
-    List<InputSplit> splits = new ArrayList<InputSplit>();
 
+    Map<TableName, List<Scan>> tableMaps = new HashMap<TableName, List<Scan>>();
     for (Scan scan : scans) {
-      byte[] tableName = scan.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME);
-      if (tableName == null) 
+      byte[] tableNameBytes = scan.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME);
+      if (tableNameBytes == null)
         throw new IOException("A scan object did not have a table name");
 
-      HTable table = null;
-      try {
-        table = new HTable(context.getConfiguration(), tableName);
-        Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
-        if (keys == null || keys.getFirst() == null ||
-            keys.getFirst().length == 0) {
-          throw new IOException("Expecting at least one region for table : "
-              + Bytes.toString(tableName));
-        }
-        int count = 0;
+      TableName tableName = TableName.valueOf(tableNameBytes);
 
-        byte[] startRow = scan.getStartRow();
-        byte[] stopRow = scan.getStopRow();
+      List<Scan> scanList = tableMaps.get(tableName);
+      if (scanList == null) {
+        scanList = new ArrayList<Scan>();
+        tableMaps.put(tableName, scanList);
+      }
+      scanList.add(scan);
+    }
 
-        RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(table);
+    List<InputSplit> splits = new ArrayList<InputSplit>();
+    Iterator iter = tableMaps.entrySet().iterator();
+    while (iter.hasNext()) {
+      Map.Entry<TableName, List<Scan>> entry = (Map.Entry<TableName, List<Scan>>) iter.next();
+      TableName tableName = entry.getKey();
+      List<Scan> scanList = entry.getValue();
 
-        for (int i = 0; i < keys.getFirst().length; i++) {
-          if (!includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
-            continue;
+      try (Connection conn = ConnectionFactory.createConnection(context.getConfiguration());
+        Table table = conn.getTable(tableName);
+        RegionLocator regionLocator = conn.getRegionLocator(tableName)) {
+        RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(
+                regionLocator, conn.getAdmin());
+        Pair<byte[][], byte[][]> keys = regionLocator.getStartEndKeys();
+        for (Scan scan : scanList) {
+          if (keys == null || keys.getFirst() == null || keys.getFirst().length == 0) {
+            throw new IOException("Expecting at least one region for table : "
+                    + tableName.getNameAsString());
           }
-          HRegionLocation hregionLocation = table.getRegionLocation(keys.getFirst()[i], false);
-          String regionHostname = hregionLocation.getHostname();
-          HRegionInfo regionInfo = hregionLocation.getRegionInfo();
-        
-          // determine if the given start and stop keys fall into the range
-          if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
-              Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
-              (stopRow.length == 0 ||
-                  Bytes.compareTo(stopRow, keys.getFirst()[i]) > 0)) {
-            byte[] splitStart =
-                startRow.length == 0 ||
-                    Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ? keys
-                    .getFirst()[i] : startRow;
-            byte[] splitStop =
-                (stopRow.length == 0 || Bytes.compareTo(keys.getSecond()[i],
-                    stopRow) <= 0) && keys.getSecond()[i].length > 0 ? keys
-                    .getSecond()[i] : stopRow;
+          int count = 0;
 
-            long regionSize = sizeCalculator.getRegionSize(regionInfo.getRegionName());
-            TableSplit split =
-                new TableSplit(table.getName(),
-                    scan, splitStart, splitStop, regionHostname, regionSize);
+          byte[] startRow = scan.getStartRow();
+          byte[] stopRow = scan.getStopRow();
 
-            splits.add(split);
-            if (LOG.isDebugEnabled())
-              LOG.debug("getSplits: split -> " + (count++) + " -> " + split);
+          for (int i = 0; i < keys.getFirst().length; i++) {
+            if (!includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
+              continue;
+            }
+
+            if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
+                    Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
+                    (stopRow.length == 0 || Bytes.compareTo(stopRow,
+                            keys.getFirst()[i]) > 0)) {
+              byte[] splitStart = startRow.length == 0 ||
+                      Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ?
+                      keys.getFirst()[i] : startRow;
+              byte[] splitStop = (stopRow.length == 0 ||
+                      Bytes.compareTo(keys.getSecond()[i], stopRow) <= 0) &&
+                      keys.getSecond()[i].length > 0 ?
+                      keys.getSecond()[i] : stopRow;
+
+              HRegionLocation hregionLocation = regionLocator.getRegionLocation(
+                      keys.getFirst()[i], false);
+              String regionHostname = hregionLocation.getHostname();
+              HRegionInfo regionInfo = hregionLocation.getRegionInfo();
+              long regionSize = sizeCalculator.getRegionSize(
+                      regionInfo.getRegionName());
+
+              TableSplit split = new TableSplit(table.getName(),
+                      scan, splitStart, splitStop, regionHostname, regionSize);
+
+              splits.add(split);
+
+              if (LOG.isDebugEnabled())
+                LOG.debug("getSplits: split -> " + (count++) + " -> " + split);
+            }
           }
         }
-      } finally {
-        if (null != table) table.close();
       }
     }
+
     return splits;
   }
 

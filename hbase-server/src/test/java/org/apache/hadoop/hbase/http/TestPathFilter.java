@@ -36,15 +36,13 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.FilterContainer;
-import org.apache.hadoop.hbase.http.FilterInitializer;
-import org.apache.hadoop.hbase.http.HttpServer;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestPathFilter extends HttpServerFunctionalTest {
   static final Log LOG = LogFactory.getLog(HttpServer.class);
   static final Set<String> RECORDS = new TreeSet<String>(); 

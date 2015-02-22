@@ -38,24 +38,28 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.MetaMockingUtil;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
+import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLogManagerDetails;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
@@ -69,7 +73,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -86,7 +93,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestCatalogJanitor {
   private static final Log LOG = LogFactory.getLog(TestCatalogJanitor.class);
 
@@ -95,7 +102,7 @@ public class TestCatalogJanitor {
    * Be sure to call stop on the way out else could leave some mess around.
    */
   class MockServer implements Server {
-    private final HConnection connection;
+    private final ClusterConnection connection;
     private final Configuration c;
 
     MockServer(final HBaseTestingUtility htu)
@@ -141,7 +148,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return this.connection;
     }
 
@@ -167,7 +174,12 @@ public class TestCatalogJanitor {
 
     @Override
     public CoordinatedStateManager getCoordinatedStateManager() {
-      return null;
+      BaseCoordinatedStateManager m = Mockito.mock(BaseCoordinatedStateManager.class);
+      SplitLogManagerCoordination c = Mockito.mock(SplitLogManagerCoordination.class);
+      Mockito.when(m.getSplitLogManagerCoordination()).thenReturn(c);
+      SplitLogManagerDetails d = Mockito.mock(SplitLogManagerDetails.class);
+      Mockito.when(c.getDetails()).thenReturn(d);
+      return m;
     }
 
     @Override
@@ -187,9 +199,11 @@ public class TestCatalogJanitor {
 
     @Override
     public void stop(String why) {
-      if (this.connection != null) {
-        HConnectionManager.deleteConnection(this.connection.getConfiguration());
-      }
+    }
+
+    @Override
+    public ChoreService getChoreService() {
+      return null;
     }
   }
 
@@ -227,12 +241,22 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public ChoreService getChoreService() {
+      return null;
+    }
+
+    @Override
     public MasterFileSystem getMasterFileSystem() {
       return this.mfs;
     }
 
     @Override
     public MasterCoprocessorHost getMasterCoprocessorHost() {
+      return null;
+    }
+
+    @Override
+    public MasterQuotaManager getMasterQuotaManager() {
       return null;
     }
 
@@ -257,7 +281,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public HConnection getShortCircuitConnection() {
+    public ClusterConnection getConnection() {
       return null;
     }
 
@@ -298,13 +322,18 @@ public class TestCatalogJanitor {
       return new TableDescriptors() {
         @Override
         public HTableDescriptor remove(TableName tablename) throws IOException {
-          // TODO Auto-generated method stub
+          // noop
           return null;
         }
 
         @Override
         public Map<String, HTableDescriptor> getAll() throws IOException {
-          // TODO Auto-generated method stub
+          // noop
+          return null;
+        }
+
+        @Override public Map<String, TableDescriptor> getAllDescriptors() throws IOException {
+          // noop
           return null;
         }
 
@@ -315,14 +344,32 @@ public class TestCatalogJanitor {
         }
 
         @Override
+        public TableDescriptor getDescriptor(TableName tablename)
+            throws IOException {
+          return createTableDescriptor();
+        }
+
+        @Override
         public Map<String, HTableDescriptor> getByNamespace(String name) throws IOException {
           return null;
         }
 
         @Override
         public void add(HTableDescriptor htd) throws IOException {
-          // TODO Auto-generated method stub
+          // noop
+        }
 
+        @Override
+        public void add(TableDescriptor htd) throws IOException {
+          // noop
+        }
+
+        @Override
+        public void setCacheOn() throws IOException {
+        }
+
+        @Override
+        public void setCacheOff() throws IOException {
         }
       };
     }
@@ -407,6 +454,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public TableStateManager getTableStateManager() {
+      return null;
+    }
+
+    @Override
     public void dispatchMergingRegions(HRegionInfo region_a, HRegionInfo region_b,
         boolean forcible) throws IOException {
     }
@@ -415,6 +467,18 @@ public class TestCatalogJanitor {
     public boolean isInitialized() {
       // Auto-generated method stub
       return false;
+    }
+
+    @Override
+    public long getLastMajorCompactionTimestamp(TableName table) throws IOException {
+      // Auto-generated method stub
+      return 0;
+    }
+
+    @Override
+    public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
+      // Auto-generated method stub
+      return 0;
     }
   }
 
@@ -590,7 +654,7 @@ public class TestCatalogJanitor {
     assertTrue(janitor.cleanParent(parent, regions.get(parent)));
 
     services.stop("test finished");
-    janitor.join();
+    janitor.cancel(true);
   }
 
   /**
@@ -658,7 +722,7 @@ public class TestCatalogJanitor {
     assertEquals(2, janitor.scan());
 
     services.stop("test finished");
-    janitor.join();
+    janitor.cancel(true);
   }
 
   /**
@@ -821,7 +885,7 @@ public class TestCatalogJanitor {
     FSUtils.delete(fs, rootdir, true);
     services.stop("Test finished");
     server.stop("Test finished");
-    janitor.join();
+    janitor.cancel(true);
   }
 
   /**
@@ -848,6 +912,7 @@ public class TestCatalogJanitor {
     MasterServices services = new MockMasterServices(server);
 
     // create the janitor
+    
     CatalogJanitor janitor = new CatalogJanitor(server, services);
 
     // Create regions.
@@ -905,7 +970,7 @@ public class TestCatalogJanitor {
     // cleanup
     services.stop("Test finished");
     server.stop("shutdown");
-    janitor.join();
+    janitor.cancel(true);
   }
 
   private FileStatus[] addMockStoreFiles(int count, MasterServices services, Path storedir)
@@ -975,6 +1040,10 @@ public class TestCatalogJanitor {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("t"));
     htd.addFamily(new HColumnDescriptor("f"));
     return htd;
+  }
+
+  private TableDescriptor createTableDescriptor() {
+    return new TableDescriptor(createHTableDescriptor());
   }
 
   private MultiResponse buildMultiResponse(MultiRequest req) {

@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemStoreLAB.Chunk;
@@ -50,6 +50,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * bytes, and {@link MemStoreChunkPool#putbackChunks(BlockingQueue)} is called
  * when MemStore clearing snapshot for flush
  */
+@SuppressWarnings("javadoc")
 @InterfaceAudience.Private
 public class MemStoreChunkPool {
   private static final Log LOG = LogFactory.getLog(MemStoreChunkPool.class);
@@ -180,9 +181,9 @@ public class MemStoreChunkPool {
    */
   static MemStoreChunkPool getPool(Configuration conf) {
     if (globalInstance != null) return globalInstance;
-    if (chunkPoolDisabled) return null;
 
     synchronized (MemStoreChunkPool.class) {
+      if (chunkPoolDisabled) return null;
       if (globalInstance != null) return globalInstance;
       float poolSizePercentage = conf.getFloat(CHUNK_POOL_MAXSIZE_KEY, POOL_MAX_SIZE_DEFAULT);
       if (poolSizePercentage <= 0) {

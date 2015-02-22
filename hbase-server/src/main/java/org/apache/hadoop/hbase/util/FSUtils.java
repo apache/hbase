@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -64,13 +64,14 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.RegionPlacementMaintainer;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.ipc.RemoteException;
@@ -99,6 +100,45 @@ public abstract class FSUtils {
 
   protected FSUtils() {
     super();
+  }
+
+  /*
+   * Sets storage policy for given path according to config setting
+   * @param fs
+   * @param conf
+   * @param path the Path whose storage policy is to be set
+   * @param policyKey
+   * @param defaultPolicy
+   */
+  public static void setStoragePolicy(final FileSystem fs, final Configuration conf,
+      final Path path, final String policyKey, final String defaultPolicy) {
+    String storagePolicy = conf.get(policyKey, defaultPolicy).toUpperCase();
+    if (!storagePolicy.equals(defaultPolicy) &&
+        fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs = (DistributedFileSystem)fs;
+      Class<? extends DistributedFileSystem> dfsClass = dfs.getClass();
+      Method m = null;
+      try {
+        m = dfsClass.getDeclaredMethod("setStoragePolicy",
+            new Class<?>[] { Path.class, String.class });
+        m.setAccessible(true);
+      } catch (NoSuchMethodException e) {
+        LOG.info("FileSystem doesn't support"
+            + " setStoragePolicy; --HDFS-7228 not available");
+      } catch (SecurityException e) {
+        LOG.info("Doesn't have access to setStoragePolicy on "
+            + "FileSystems --HDFS-7228 not available", e);
+        m = null; // could happen on setAccessible()
+      }
+      if (m != null) {
+        try {
+          m.invoke(dfs, path, storagePolicy);
+          LOG.info("set " + storagePolicy + " for " + path);
+        } catch (Exception e) {
+          LOG.warn("Unable to set " + storagePolicy + " for " + path, e);
+        }
+      }
+    }
   }
 
   /**
@@ -179,6 +219,21 @@ public abstract class FSUtils {
   public static boolean deleteDirectory(final FileSystem fs, final Path dir)
   throws IOException {
     return fs.exists(dir) && fs.delete(dir, true);
+  }
+
+  /**
+   * Delete the region directory if exists.
+   * @param conf
+   * @param hri
+   * @return True if deleted the region directory.
+   * @throws IOException
+   */
+  public static boolean deleteRegionDir(final Configuration conf, final HRegionInfo hri)
+  throws IOException {
+    Path rootDir = getRootDir(conf);
+    FileSystem fs = rootDir.getFileSystem(conf);
+    return deleteDirectory(fs,
+      new Path(getTableDir(rootDir, hri.getTable()), hri.getEncodedName()));
   }
 
   /**
@@ -654,11 +709,11 @@ public abstract class FSUtils {
             if (s != null) s.close();
           } catch (IOException ignore) { }
         }
-        LOG.debug("Created version file at " + rootdir.toString() + " with version=" + version);
+        LOG.info("Created version file at " + rootdir.toString() + " with version=" + version);
         return;
       } catch (IOException e) {
         if (retries > 0) {
-          LOG.warn("Unable to create version file at " + rootdir.toString() + ", retrying", e);
+          LOG.debug("Unable to create version file at " + rootdir.toString() + ", retrying", e);
           fs.delete(versionFile, false);
           try {
             if (wait > 0) {
@@ -976,15 +1031,14 @@ public abstract class FSUtils {
       final Path hbaseRootDir)
   throws IOException {
     List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
+    PathFilter regionFilter = new RegionDirFilter(fs);
+    PathFilter familyFilter = new FamilyDirFilter(fs);
     for (Path d : tableDirs) {
-      FileStatus[] regionDirs = fs.listStatus(d, new DirFilter(fs));
+      FileStatus[] regionDirs = fs.listStatus(d, regionFilter);
       for (FileStatus regionDir : regionDirs) {
         Path dd = regionDir.getPath();
-        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
-          continue;
-        }
         // Else its a region name.  Now look in region for families.
-        FileStatus[] familyDirs = fs.listStatus(dd, new DirFilter(fs));
+        FileStatus[] familyDirs = fs.listStatus(dd, familyFilter);
         for (FileStatus familyDir : familyDirs) {
           Path family = familyDir.getPath();
           // Now in family make sure only one file.
@@ -1050,19 +1104,17 @@ public abstract class FSUtils {
     Map<String, Integer> frags = new HashMap<String, Integer>();
     int cfCountTotal = 0;
     int cfFragTotal = 0;
-    DirFilter df = new DirFilter(fs);
+    PathFilter regionFilter = new RegionDirFilter(fs);
+    PathFilter familyFilter = new FamilyDirFilter(fs);
     List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
     for (Path d : tableDirs) {
       int cfCount = 0;
       int cfFrag = 0;
-      FileStatus[] regionDirs = fs.listStatus(d, df);
+      FileStatus[] regionDirs = fs.listStatus(d, regionFilter);
       for (FileStatus regionDir : regionDirs) {
         Path dd = regionDir.getPath();
-        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
-          continue;
-        }
         // else its a region name, now look in region for families
-        FileStatus[] familyDirs = fs.listStatus(dd, df);
+        FileStatus[] familyDirs = fs.listStatus(dd, familyFilter);
         for (FileStatus familyDir : familyDirs) {
           cfCount++;
           cfCountTotal++;
@@ -1077,91 +1129,12 @@ public abstract class FSUtils {
       }
       // compute percentage per table and store in result list
       frags.put(FSUtils.getTableName(d).getNameAsString(),
-          Math.round((float) cfFrag / cfCount * 100));
+        cfCount == 0? 0: Math.round((float) cfFrag / cfCount * 100));
     }
     // set overall percentage for all tables
-    frags.put("-TOTAL-", Math.round((float) cfFragTotal / cfCountTotal * 100));
+    frags.put("-TOTAL-",
+      cfCountTotal == 0? 0: Math.round((float) cfFragTotal / cfCountTotal * 100));
     return frags;
-  }
-
-  /**
-   * Expects to find -ROOT- directory.
-   * @param fs filesystem
-   * @param hbaseRootDir hbase root directory
-   * @return True if this a pre020 layout.
-   * @throws IOException e
-   */
-  public static boolean isPre020FileLayout(final FileSystem fs,
-    final Path hbaseRootDir)
-  throws IOException {
-    Path mapfiles = new Path(new Path(new Path(new Path(hbaseRootDir, "-ROOT-"),
-      "70236052"), "info"), "mapfiles");
-    return fs.exists(mapfiles);
-  }
-
-  /**
-   * Runs through the hbase rootdir and checks all stores have only
-   * one file in them -- that is, they've been major compacted.  Looks
-   * at root and meta tables too.  This version differs from
-   * {@link #isMajorCompacted(FileSystem, Path)} in that it expects a
-   * pre-0.20.0 hbase layout on the filesystem.  Used migrating.
-   * @param fs filesystem
-   * @param hbaseRootDir hbase root directory
-   * @return True if this hbase install is major compacted.
-   * @throws IOException e
-   */
-  public static boolean isMajorCompactedPre020(final FileSystem fs,
-      final Path hbaseRootDir)
-  throws IOException {
-    // Presumes any directory under hbase.rootdir is a table.
-    List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
-    for (Path d: tableDirs) {
-      // Inside a table, there are compaction.dir directories to skip.
-      // Otherwise, all else should be regions.  Then in each region, should
-      // only be family directories.  Under each of these, should be a mapfile
-      // and info directory and in these only one file.
-      if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
-        continue;
-      }
-      FileStatus[] regionDirs = fs.listStatus(d, new DirFilter(fs));
-      for (FileStatus regionDir : regionDirs) {
-        Path dd = regionDir.getPath();
-        if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
-          continue;
-        }
-        // Else its a region name.  Now look in region for families.
-        FileStatus[] familyDirs = fs.listStatus(dd, new DirFilter(fs));
-        for (FileStatus familyDir : familyDirs) {
-          Path family = familyDir.getPath();
-          FileStatus[] infoAndMapfile = fs.listStatus(family);
-          // Assert that only info and mapfile in family dir.
-          if (infoAndMapfile.length != 0 && infoAndMapfile.length != 2) {
-            LOG.debug(family.toString() +
-                " has more than just info and mapfile: " + infoAndMapfile.length);
-            return false;
-          }
-          // Make sure directory named info or mapfile.
-          for (int ll = 0; ll < 2; ll++) {
-            if (infoAndMapfile[ll].getPath().getName().equals("info") ||
-                infoAndMapfile[ll].getPath().getName().equals("mapfiles"))
-              continue;
-            LOG.debug("Unexpected directory name: " +
-                infoAndMapfile[ll].getPath());
-            return false;
-          }
-          // Now in family, there are 'mapfile' and 'info' subdirs.  Just
-          // look in the 'mapfile' subdir.
-          FileStatus[] familyStatus =
-              fs.listStatus(new Path(family, "mapfiles"));
-          if (familyStatus.length > 1) {
-            LOG.debug(family.toString() + " has " + familyStatus.length +
-                " files.");
-            return false;
-          }
-        }
-      }
-    }
-    return true;
   }
 
   /**
@@ -1231,7 +1204,7 @@ public abstract class FSUtils {
     private List<String> blacklist;
 
     /**
-     * Create a filter on the give filesystem with the specified blacklist
+     * Create a filter on the givem filesystem with the specified blacklist
      * @param fs filesystem to filter
      * @param directoryNameBlackList list of the names of the directories to filter. If
      *          <tt>null</tt>, all directories are returned
@@ -1248,16 +1221,20 @@ public abstract class FSUtils {
     public boolean accept(Path p) {
       boolean isValid = false;
       try {
-        if (blacklist.contains(p.getName().toString())) {
-          isValid = false;
-        } else {
+        if (isValidName(p.getName())) {
           isValid = fs.getFileStatus(p).isDirectory();
+        } else {
+          isValid = false;
         }
       } catch (IOException e) {
         LOG.warn("An error occurred while verifying if [" + p.toString()
             + "] is a valid directory. Returning 'not valid' and continuing.", e);
       }
       return isValid;
+    }
+
+    protected boolean isValidName(final String name) {
+      return !blacklist.contains(name);
     }
   }
 
@@ -1276,9 +1253,21 @@ public abstract class FSUtils {
    * {@link BlackListDirFilter} with a <tt>null</tt> blacklist
    */
   public static class UserTableDirFilter extends BlackListDirFilter {
-
     public UserTableDirFilter(FileSystem fs) {
       super(fs, HConstants.HBASE_NON_TABLE_DIRS);
+    }
+
+    protected boolean isValidName(final String name) {
+      if (!super.isValidName(name))
+        return false;
+
+      try {
+        TableName.isLegalTableQualifierName(Bytes.toBytes(name));
+      } catch (IllegalArgumentException e) {
+        LOG.info("INVALID NAME " + name);
+        return false;
+      }
+      return true;
     }
   }
 
@@ -1473,13 +1462,20 @@ public abstract class FSUtils {
     return familyDirs;
   }
 
+  public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir) throws IOException {
+    FileStatus[] fds = fs.listStatus(familyDir, new ReferenceFileFilter(fs));
+    List<Path> referenceFiles = new ArrayList<Path>(fds.length);
+    for (FileStatus fdfs: fds) {
+      Path fdPath = fdfs.getPath();
+      referenceFiles.add(fdPath);
+    }
+    return referenceFiles;
+  }
+
   /**
    * Filter for HFiles that excludes reference files.
    */
   public static class HFileFilter implements PathFilter {
-    // This pattern will accept 0.90+ style hex hfies files but reject reference files
-    final public static Pattern hfilePattern = Pattern.compile("^([0-9a-f]+)$");
-
     final FileSystem fs;
 
     public HFileFilter(FileSystem fs) {
@@ -1488,13 +1484,9 @@ public abstract class FSUtils {
 
     @Override
     public boolean accept(Path rd) {
-      if (!hfilePattern.matcher(rd.getName()).matches()) {
-        return false;
-      }
-
       try {
         // only files
-        return !fs.getFileStatus(rd).isDirectory();
+        return !fs.getFileStatus(rd).isDirectory() && StoreFileInfo.isHFile(rd);
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
         LOG.warn("Skipping file " + rd +" due to IOException", ioe);
@@ -1502,6 +1494,28 @@ public abstract class FSUtils {
       }
     }
   }
+
+  public static class ReferenceFileFilter implements PathFilter {
+
+    private final FileSystem fs;
+
+    public ReferenceFileFilter(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path rd) {
+      try {
+        // only files can be references.
+        return !fs.getFileStatus(rd).isDirectory() && StoreFileInfo.isReference(rd);
+      } catch (IOException ioe) {
+        // Maybe the file was moved or the fs was disconnected.
+        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        return false;
+      }
+    }
+  }
+
 
   /**
    * @param conf
@@ -1540,17 +1554,17 @@ public abstract class FSUtils {
     Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
     // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
     // should be regions.
-    PathFilter df = new BlackListDirFilter(fs, HConstants.HBASE_NON_TABLE_DIRS);
-    FileStatus[] regionDirs = fs.listStatus(tableDir);
+    PathFilter familyFilter = new FamilyDirFilter(fs);
+    FileStatus[] regionDirs = fs.listStatus(tableDir, new RegionDirFilter(fs));
     for (FileStatus regionDir : regionDirs) {
       Path dd = regionDir.getPath();
-      if (dd.getName().equals(HConstants.HREGION_COMPACTIONDIR_NAME)) {
-        continue;
-      }
       // else its a region name, now look in region for families
-      FileStatus[] familyDirs = fs.listStatus(dd, df);
+      FileStatus[] familyDirs = fs.listStatus(dd, familyFilter);
       for (FileStatus familyDir : familyDirs) {
         Path family = familyDir.getPath();
+        if (family.getName().equals(HConstants.RECOVERED_EDITS_DIR)) {
+          continue;
+        }
         // now in family, iterate over the StoreFiles and
         // put in map
         FileStatus[] familyStatus = fs.listStatus(family);
@@ -1561,6 +1575,18 @@ public abstract class FSUtils {
       }
     }
     return map;
+  }
+
+  public static int getRegionReferenceFileCount(final FileSystem fs, final Path p) {
+    int result = 0;
+    try {
+      for (Path familyDir:getFamilyDirs(fs, p)){
+        result += getReferenceFilePaths(fs, familyDir).size();
+      }
+    } catch (IOException e) {
+      LOG.warn("Error Counting reference files.", e);
+    }
+    return result;
   }
 
 
@@ -1737,7 +1763,7 @@ public abstract class FSUtils {
    * This function is to scan the root path of the file system to get the
    * degree of locality for each region on each of the servers having at least
    * one block of that region.
-   * This is used by the tool {@link RegionPlacementMaintainer}
+   * This is used by the tool {@link org.apache.hadoop.hbase.master.RegionPlacementMaintainer}
    *
    * @param conf
    *          the configuration to use
@@ -1939,5 +1965,48 @@ public abstract class FSUtils {
     // But short circuit buffer size is normally not set.  Put in place the hbase wanted size.
     int hbaseSize = conf.getInt("hbase." + dfsKey, defaultSize);
     conf.setIfUnset(dfsKey, Integer.toString(hbaseSize));
+  }
+
+  /**
+   * @param c
+   * @return The DFSClient DFSHedgedReadMetrics instance or null if can't be found or not on hdfs.
+   * @throws IOException 
+   */
+  public static DFSHedgedReadMetrics getDFSHedgedReadMetrics(final Configuration c)
+      throws IOException {
+    if (!isHDFS(c)) return null;
+    // getHedgedReadMetrics is package private. Get the DFSClient instance that is internal
+    // to the DFS FS instance and make the method getHedgedReadMetrics accessible, then invoke it
+    // to get the singleton instance of DFSHedgedReadMetrics shared by DFSClients.
+    final String name = "getHedgedReadMetrics";
+    DFSClient dfsclient = ((DistributedFileSystem)FileSystem.get(c)).getClient();
+    Method m;
+    try {
+      m = dfsclient.getClass().getDeclaredMethod(name);
+    } catch (NoSuchMethodException e) {
+      LOG.warn("Failed find method " + name + " in dfsclient; no hedged read metrics: " +
+          e.getMessage());
+      return null;
+    } catch (SecurityException e) {
+      LOG.warn("Failed find method " + name + " in dfsclient; no hedged read metrics: " +
+          e.getMessage());
+      return null;
+    }
+    m.setAccessible(true);
+    try {
+      return (DFSHedgedReadMetrics)m.invoke(dfsclient);
+    } catch (IllegalAccessException e) {
+      LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: " +
+          e.getMessage());
+      return null;
+    } catch (IllegalArgumentException e) {
+      LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: " +
+          e.getMessage());
+      return null;
+    } catch (InvocationTargetException e) {
+      LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: " +
+          e.getMessage());
+      return null;
+    }
   }
 }

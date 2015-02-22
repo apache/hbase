@@ -17,23 +17,43 @@
  */
 package org.apache.hadoop.hbase;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ServiceException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -43,20 +63,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Read/write operations on region and assignment information store in
@@ -76,6 +82,11 @@ public class MetaTableAccessor {
    * HRI defined which is called default replica.
    *
    * Meta layout (as of 0.98 + HBASE-10070) is like:
+   *
+   * For each table there is single row in column family 'table' formatted:
+   * <tableName> including namespace and columns are:
+   * table: state             => contains table state
+   *
    * For each table range, there is a single row, formatted like:
    * <tableName>,<startKey>,<regionId>,<encodedRegionName>. This row corresponds to the regionName
    * of the default region replica.
@@ -118,6 +129,24 @@ public class MetaTableAccessor {
       META_REGION_PREFIX, 0, len);
   }
 
+
+  @InterfaceAudience.Private
+  public enum QueryType {
+    ALL(HConstants.TABLE_FAMILY, HConstants.CATALOG_FAMILY),
+    REGION(HConstants.CATALOG_FAMILY),
+    TABLE(HConstants.TABLE_FAMILY);
+
+    private final byte[][] families;
+
+    QueryType(byte[]... families) {
+      this.families = families;
+    }
+
+    byte[][] getFamilies() {
+      return this.families;
+    }
+  }
+
   /** The delimiter for meta columns for replicaIds > 0 */
   protected static final char META_REPLICA_ID_DELIMITER = '_';
 
@@ -129,70 +158,93 @@ public class MetaTableAccessor {
   // Reading operations //
   ////////////////////////
 
- /**
-   * Performs a full scan of a <code>hbase:meta</code> table.
-   * @return List of {@link org.apache.hadoop.hbase.client.Result}
-   * @throws IOException
-   */
-  public static List<Result> fullScanOfMeta(HConnection hConnection)
-  throws IOException {
-    CollectAllVisitor v = new CollectAllVisitor();
-    fullScan(hConnection, v, null);
-    return v.getResults();
-  }
-
   /**
-   * Performs a full scan of <code>hbase:meta</code>.
-   * @param hConnection connection we're using
-   * @param visitor Visitor invoked against each row.
+   * Performs a full scan of <code>hbase:meta</code> for regions.
+   * @param connection connection we're using
+   * @param visitor Visitor invoked against each row in regions family.
    * @throws IOException
    */
-  public static void fullScan(HConnection hConnection,
+  public static void fullScanRegions(Connection connection,
       final Visitor visitor)
-  throws IOException {
-    fullScan(hConnection, visitor, null);
+      throws IOException {
+    fullScan(connection, visitor, null, QueryType.REGION);
+  }
+
+  /**
+   * Performs a full scan of <code>hbase:meta</code> for regions.
+   * @param connection connection we're using
+   * @throws IOException
+   */
+  public static List<Result> fullScanRegions(Connection connection)
+      throws IOException {
+    return fullScan(connection, QueryType.REGION);
+  }
+
+  /**
+   * Performs a full scan of <code>hbase:meta</code> for tables.
+   * @param connection connection we're using
+   * @param visitor Visitor invoked against each row in tables family.
+   * @throws IOException
+   */
+  public static void fullScanTables(Connection connection,
+      final Visitor visitor)
+      throws IOException {
+    fullScan(connection, visitor, null, QueryType.TABLE);
   }
 
   /**
    * Performs a full scan of <code>hbase:meta</code>.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
+   * @param visitor Visitor invoked against each row.
+   * @param type scanned part of meta
+   * @throws IOException
+   */
+  public static void fullScan(Connection connection,
+      final Visitor visitor, QueryType type)
+  throws IOException {
+    fullScan(connection, visitor, null, type);
+  }
+
+  /**
+   * Performs a full scan of <code>hbase:meta</code>.
+   * @param connection connection we're using
+   * @param type scanned part of meta
    * @return List of {@link Result}
    * @throws IOException
    */
-  public static List<Result> fullScan(HConnection hConnection)
+  public static List<Result> fullScan(Connection connection, QueryType type)
     throws IOException {
     CollectAllVisitor v = new CollectAllVisitor();
-    fullScan(hConnection, v, null);
+    fullScan(connection, v, null, type);
     return v.getResults();
   }
 
   /**
-   * Callers should call close on the returned {@link HTable} instance.
-   * @param hConnection connection we're using to access table
-   * @param tableName Table to get an {@link org.apache.hadoop.hbase.client.HTable} against.
-   * @return An {@link org.apache.hadoop.hbase.client.HTable} for <code>tableName</code>
+   * Callers should call close on the returned {@link Table} instance.
+   * @param connection connection we're using to access Meta
+   * @return An {@link Table} for <code>hbase:meta</code>
    * @throws IOException
-   * @SuppressWarnings("deprecation")
    */
-  private static HTable getHTable(final HConnection hConnection,
-      final TableName tableName)
+  static Table getMetaHTable(final Connection connection)
   throws IOException {
-    // We used to pass whole CatalogTracker in here, now we just pass in HConnection
-    if (hConnection == null || hConnection.isClosed()) {
+    // We used to pass whole CatalogTracker in here, now we just pass in Connection
+    if (connection == null || connection.isClosed()) {
       throw new NullPointerException("No connection");
     }
-    return new HTable(tableName, hConnection);
-  }
-
-  /**
-   * Callers should call close on the returned {@link HTable} instance.
-   * @param hConnection connection we're using to access Meta
-   * @return An {@link HTable} for <code>hbase:meta</code>
-   * @throws IOException
-   */
-  static HTable getMetaHTable(final HConnection hConnection)
-  throws IOException {
-    return getHTable(hConnection, TableName.META_TABLE_NAME);
+    // If the passed in 'connection' is 'managed' -- i.e. every second test uses
+    // a Table or an HBaseAdmin with managed connections -- then doing
+    // connection.getTable will throw an exception saying you are NOT to use
+    // managed connections getting tables.  Leaving this as it is for now. Will
+    // revisit when inclined to change all tests.  User code probaby makes use of
+    // managed connections too so don't change it till post hbase 1.0.
+    //
+    // There should still be a way to use this method with an unmanaged connection.
+    if (connection instanceof ClusterConnection) {
+      if (((ClusterConnection) connection).isManaged()) {
+        return new HTable(TableName.META_TABLE_NAME, connection);
+      }
+    }
+    return connection.getTable(TableName.META_TABLE_NAME);
   }
 
   /**
@@ -200,7 +252,8 @@ public class MetaTableAccessor {
    * @param g Get to run
    * @throws IOException
    */
-  private static Result get(final HTable t, final Get g) throws IOException {
+  private static Result get(final Table t, final Get g) throws IOException {
+    if (t == null) return null;
     try {
       return t.get(g);
     } finally {
@@ -210,17 +263,16 @@ public class MetaTableAccessor {
 
   /**
    * Gets the region info and assignment for the specified region.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionName Region to lookup.
    * @return Location and HRegionInfo for <code>regionName</code>
    * @throws IOException
-   * @deprecated use {@link #getRegionLocation(HConnection, byte[])} instead
+   * @deprecated use {@link #getRegionLocation(Connection, byte[])} instead
    */
   @Deprecated
-  public static Pair<HRegionInfo, ServerName> getRegion(
-    HConnection hConnection, byte [] regionName)
+  public static Pair<HRegionInfo, ServerName> getRegion(Connection connection, byte [] regionName)
     throws IOException {
-    HRegionLocation location = getRegionLocation(hConnection, regionName);
+    HRegionLocation location = getRegionLocation(connection, regionName);
     return location == null
       ? null
       : new Pair<HRegionInfo, ServerName>(location.getRegionInfo(), location.getServerName());
@@ -228,12 +280,12 @@ public class MetaTableAccessor {
 
   /**
    * Returns the HRegionLocation from meta for the given region
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionName region we're looking for
    * @return HRegionLocation for the given region
    * @throws IOException
    */
-  public static HRegionLocation getRegionLocation(HConnection hConnection,
+  public static HRegionLocation getRegionLocation(Connection connection,
                                                   byte[] regionName) throws IOException {
     byte[] row = regionName;
     HRegionInfo parsedInfo = null;
@@ -245,7 +297,7 @@ public class MetaTableAccessor {
     }
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    Result r = get(getMetaHTable(hConnection), get);
+    Result r = get(getMetaHTable(connection), get);
     RegionLocations locations = getRegionLocations(r);
     return locations == null
       ? null
@@ -254,17 +306,17 @@ public class MetaTableAccessor {
 
   /**
    * Returns the HRegionLocation from meta for the given region
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionInfo region information
    * @return HRegionLocation for the given region
    * @throws IOException
    */
-  public static HRegionLocation getRegionLocation(HConnection hConnection,
+  public static HRegionLocation getRegionLocation(Connection connection,
                                                   HRegionInfo regionInfo) throws IOException {
     byte[] row = getMetaKeyForRegion(regionInfo);
     Get get = new Get(row);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    Result r = get(getMetaHTable(hConnection), get);
+    Result r = get(getMetaHTable(connection), get);
     return getRegionLocation(r, regionInfo, regionInfo.getReplicaId());
   }
 
@@ -288,16 +340,16 @@ public class MetaTableAccessor {
 
   /**
    * Gets the result in hbase:meta for the specified region.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionName region we're looking for
    * @return result of the specified region
    * @throws IOException
    */
-  public static Result getRegionResult(HConnection hConnection,
+  public static Result getRegionResult(Connection connection,
       byte[] regionName) throws IOException {
     Get get = new Get(regionName);
     get.addFamily(HConstants.CATALOG_FAMILY);
-    return get(getMetaHTable(hConnection), get);
+    return get(getMetaHTable(connection), get);
   }
 
   /**
@@ -305,9 +357,10 @@ public class MetaTableAccessor {
    * @return null if it doesn't contain merge qualifier, else two merge regions
    * @throws IOException
    */
+  @Nullable
   public static Pair<HRegionInfo, HRegionInfo> getRegionsFromMergeQualifier(
-      HConnection hConnection, byte[] regionName) throws IOException {
-    Result result = getRegionResult(hConnection, regionName);
+      Connection connection, byte[] regionName) throws IOException {
+    Result result = getRegionResult(connection, regionName);
     HRegionInfo mergeA = getHRegionInfo(result, HConstants.MERGEA_QUALIFIER);
     HRegionInfo mergeB = getHRegionInfo(result, HConstants.MERGEB_QUALIFIER);
     if (mergeA == null && mergeB == null) {
@@ -319,89 +372,54 @@ public class MetaTableAccessor {
   /**
    * Checks if the specified table exists.  Looks at the hbase:meta table hosted on
    * the specified server.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param tableName table to check
    * @return true if the table exists in meta, false if not
    * @throws IOException
    */
-  public static boolean tableExists(HConnection hConnection,
+  public static boolean tableExists(Connection connection,
       final TableName tableName)
   throws IOException {
-    if (tableName.equals(HTableDescriptor.META_TABLEDESC.getTableName())) {
-      // Catalog tables always exist.
-      return true;
-    }
-    // Make a version of ResultCollectingVisitor that only collects the first
-    CollectingVisitor<HRegionInfo> visitor = new CollectingVisitor<HRegionInfo>() {
-      private HRegionInfo current = null;
-
-      @Override
-      public boolean visit(Result r) throws IOException {
-        RegionLocations locations = getRegionLocations(r);
-        if (locations == null || locations.getRegionLocation().getRegionInfo() == null) {
-          LOG.warn("No serialized HRegionInfo in " + r);
-          return true;
-        }
-        this.current = locations.getRegionLocation().getRegionInfo();
-        if (this.current == null) {
-          LOG.warn("No serialized HRegionInfo in " + r);
-          return true;
-        }
-        if (!isInsideTable(this.current, tableName)) return false;
-        // Else call super and add this Result to the collection.
-        super.visit(r);
-        // Stop collecting regions from table after we get one.
-        return false;
-      }
-
-      @Override
-      void add(Result r) {
-        // Add the current HRI.
-        this.results.add(this.current);
-      }
-    };
-    fullScan(hConnection, visitor, getTableStartRowForMeta(tableName));
-    // If visitor has results >= 1 then table exists.
-    return visitor.getResults().size() >= 1;
+    // Catalog tables always exist.
+    return tableName.equals(TableName.META_TABLE_NAME)
+        || getTableState(connection, tableName) != null;
   }
 
   /**
-   * Gets all of the regions of the specified table.
-   * @param zkw zookeeper connection to access meta table
-   * @param hConnection connection we're using
+   * Gets all of the regions of the specified table. Do not use this method
+   * to get meta table regions, use methods in MetaTableLocator instead.
+   * @param connection connection we're using
    * @param tableName table we're looking for
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
    */
-  public static List<HRegionInfo> getTableRegions(ZooKeeperWatcher zkw,
-      HConnection hConnection, TableName tableName)
+  public static List<HRegionInfo> getTableRegions(Connection connection, TableName tableName)
   throws IOException {
-    return getTableRegions(zkw, hConnection, tableName, false);
+    return getTableRegions(connection, tableName, false);
   }
 
   /**
-   * Gets all of the regions of the specified table.
-   * @param zkw zookeeper connection to access meta table
-   * @param hConnection connection we're using
+   * Gets all of the regions of the specified table. Do not use this method
+   * to get meta table regions, use methods in MetaTableLocator instead.
+   * @param connection connection we're using
    * @param tableName table we're looking for
    * @param excludeOfflinedSplitParents If true, do not include offlined split
    * parents in the return.
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
    */
-  public static List<HRegionInfo> getTableRegions(ZooKeeperWatcher zkw,
-      HConnection hConnection, TableName tableName, final boolean excludeOfflinedSplitParents)
-        throws IOException {
-    List<Pair<HRegionInfo, ServerName>> result = null;
-    try {
-      result = getTableRegionsAndLocations(zkw, hConnection, tableName,
-        excludeOfflinedSplitParents);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-    }
+  public static List<HRegionInfo> getTableRegions(Connection connection,
+      TableName tableName, final boolean excludeOfflinedSplitParents)
+      throws IOException {
+    List<Pair<HRegionInfo, ServerName>> result;
+
+    result = getTableRegionsAndLocations(connection, tableName,
+      excludeOfflinedSplitParents);
+
     return getListOfHRegionInfos(result);
   }
 
+  @Nullable
   static List<HRegionInfo> getListOfHRegionInfos(final List<Pair<HRegionInfo, ServerName>> pairs) {
     if (pairs == null || pairs.isEmpty()) return null;
     List<HRegionInfo> result = new ArrayList<HRegionInfo>(pairs.size());
@@ -456,40 +474,32 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @param zkw zookeeper connection to access meta table
-   * @param hConnection connection we're using
+   * Do not use this method to get meta table regions, use methods in MetaTableLocator instead.
+   * @param connection connection we're using
    * @param tableName table we're looking for
    * @return Return list of regioninfos and server.
    * @throws IOException
-   * @throws InterruptedException
    */
   public static List<Pair<HRegionInfo, ServerName>>
-  getTableRegionsAndLocations(ZooKeeperWatcher zkw,
-                              HConnection hConnection, TableName tableName)
-  throws IOException, InterruptedException {
-    return getTableRegionsAndLocations(zkw, hConnection, tableName, true);
+    getTableRegionsAndLocations(Connection connection, TableName tableName)
+      throws IOException {
+    return getTableRegionsAndLocations(connection, tableName, true);
   }
 
   /**
-   * @param zkw ZooKeeperWatcher instance we're using to get hbase:meta location
-   * @param hConnection connection we're using
+   * Do not use this method to get meta table regions, use methods in MetaTableLocator instead.
+   * @param connection connection we're using
    * @param tableName table to work with
+   * @param excludeOfflinedSplitParents don't return split parents
    * @return Return list of regioninfos and server addresses.
    * @throws IOException
-   * @throws InterruptedException
    */
   public static List<Pair<HRegionInfo, ServerName>> getTableRegionsAndLocations(
-      ZooKeeperWatcher zkw, HConnection hConnection, final TableName tableName,
-      final boolean excludeOfflinedSplitParents) throws IOException, InterruptedException {
-
+        Connection connection, final TableName tableName,
+      final boolean excludeOfflinedSplitParents) throws IOException {
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      // If meta, do a bit of special handling.
-      ServerName serverName = new MetaTableLocator().getMetaRegionLocation(zkw);
-      List<Pair<HRegionInfo, ServerName>> list =
-        new ArrayList<Pair<HRegionInfo, ServerName>>();
-      list.add(new Pair<HRegionInfo, ServerName>(HRegionInfo.FIRST_META_REGIONINFO,
-        serverName));
-      return list;
+      throw new IOException("This method can't be used to locate meta regions;"
+        + " use MetaTableLocator instead");
     }
     // Make a version of CollectingVisitor that collects HRegionInfo and ServerAddress
     CollectingVisitor<Pair<HRegionInfo, ServerName>> visitor =
@@ -523,19 +533,19 @@ public class MetaTableAccessor {
           }
         }
       };
-    fullScan(hConnection, visitor, getTableStartRowForMeta(tableName));
+    fullScan(connection, visitor, getTableStartRowForMeta(tableName), QueryType.REGION);
     return visitor.getResults();
   }
 
   /**
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param serverName server whose regions we're interested in
    * @return List of user regions installed on this server (does not include
    * catalog regions).
    * @throws IOException
    */
   public static NavigableMap<HRegionInfo, Result>
-  getServerUserRegions(HConnection hConnection, final ServerName serverName)
+  getServerUserRegions(Connection connection, final ServerName serverName)
     throws IOException {
     final NavigableMap<HRegionInfo, Result> hris = new TreeMap<HRegionInfo, Result>();
     // Fill the above hris map with entries from hbase:meta that have the passed
@@ -555,51 +565,76 @@ public class MetaTableAccessor {
         }
       }
     };
-    fullScan(hConnection, v);
+    fullScan(connection, v, QueryType.REGION);
     return hris;
   }
 
-  public static void fullScanMetaAndPrint(HConnection hConnection)
+  public static void fullScanMetaAndPrint(Connection connection)
     throws IOException {
     Visitor v = new Visitor() {
       @Override
       public boolean visit(Result r) throws IOException {
         if (r ==  null || r.isEmpty()) return true;
         LOG.info("fullScanMetaAndPrint.Current Meta Row: " + r);
-        RegionLocations locations = getRegionLocations(r);
-        if (locations == null) return true;
-        for (HRegionLocation loc : locations.getRegionLocations()) {
-          if (loc != null) {
-            LOG.info("fullScanMetaAndPrint.HRI Print= " + loc.getRegionInfo());
+        TableState state = getTableState(r);
+        if (state != null) {
+          LOG.info("Table State: " + state);
+        } else {
+          RegionLocations locations = getRegionLocations(r);
+          if (locations == null) return true;
+          for (HRegionLocation loc : locations.getRegionLocations()) {
+            if (loc != null) {
+              LOG.info("fullScanMetaAndPrint.HRI Print= " + loc.getRegionInfo());
+            }
           }
         }
         return true;
       }
     };
-    fullScan(hConnection, v);
+    fullScan(connection, v, QueryType.ALL);
   }
 
   /**
    * Performs a full scan of a catalog table.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param visitor Visitor invoked against each row.
    * @param startrow Where to start the scan. Pass null if want to begin scan
    * at first row.
+   * @param type scanned part of meta
    * <code>hbase:meta</code>, the default (pass false to scan hbase:meta)
    * @throws IOException
    */
-  public static void fullScan(HConnection hConnection,
-    final Visitor visitor, final byte [] startrow)
+  public static void fullScan(Connection connection,
+      final Visitor visitor, @Nullable final byte[] startrow, QueryType type) throws IOException {
+    fullScan(connection, visitor, startrow, type, false);
+  }
+
+  /**
+   * Performs a full scan of a catalog table.
+   * @param connection connection we're using
+   * @param visitor Visitor invoked against each row.
+   * @param startrow Where to start the scan. Pass null if want to begin scan
+   * at first row.
+   * @param type scanned part of meta
+   * @param raw read raw data including Delete tumbstones
+   * <code>hbase:meta</code>, the default (pass false to scan hbase:meta)
+   * @throws IOException
+   */
+  public static void fullScan(Connection connection,
+      final Visitor visitor, @Nullable final byte[] startrow, QueryType type, boolean raw)
   throws IOException {
     Scan scan = new Scan();
+    scan.setRaw(raw);
     if (startrow != null) scan.setStartRow(startrow);
     if (startrow == null) {
-      int caching = hConnection.getConfiguration()
+      int caching = connection.getConfiguration()
           .getInt(HConstants.HBASE_META_SCANNER_CACHING, 100);
       scan.setCaching(caching);
     }
-    scan.addFamily(HConstants.CATALOG_FAMILY);
-    HTable metaTable = getMetaHTable(hConnection);
+    for (byte[] family : type.getFamilies()) {
+      scan.addFamily(family);
+    }
+    Table metaTable = getMetaHTable(connection);
     ResultScanner scanner = null;
     try {
       scanner = metaTable.getScanner(scan);
@@ -619,8 +654,16 @@ public class MetaTableAccessor {
    * Returns the column family used for meta columns.
    * @return HConstants.CATALOG_FAMILY.
    */
-  protected static byte[] getFamily() {
+  protected static byte[] getCatalogFamily() {
     return HConstants.CATALOG_FAMILY;
+  }
+
+  /**
+   * Returns the column family used for table columns.
+   * @return HConstants.TABLE_FAMILY.
+   */
+  protected static byte[] getTableFamily() {
+    return HConstants.TABLE_FAMILY;
   }
 
   /**
@@ -629,6 +672,15 @@ public class MetaTableAccessor {
    */
   protected static byte[] getRegionInfoColumn() {
     return HConstants.REGIONINFO_QUALIFIER;
+  }
+
+  /**
+   * Returns the column qualifier for serialized table state
+   *
+   * @return HConstants.TABLE_STATE_QUALIFIER
+   */
+  protected static byte[] getStateColumn() {
+    return HConstants.TABLE_STATE_QUALIFIER;
   }
 
   /**
@@ -697,14 +749,15 @@ public class MetaTableAccessor {
    * @param r Result to pull from
    * @return A ServerName instance or null if necessary fields not found or empty.
    */
+  @Nullable
   private static ServerName getServerName(final Result r, final int replicaId) {
     byte[] serverColumn = getServerColumn(replicaId);
-    Cell cell = r.getColumnLatestCell(getFamily(), serverColumn);
+    Cell cell = r.getColumnLatestCell(getCatalogFamily(), serverColumn);
     if (cell == null || cell.getValueLength() == 0) return null;
     String hostAndPort = Bytes.toString(
       cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
     byte[] startcodeColumn = getStartCodeColumn(replicaId);
-    cell = r.getColumnLatestCell(getFamily(), startcodeColumn);
+    cell = r.getColumnLatestCell(getCatalogFamily(), startcodeColumn);
     if (cell == null || cell.getValueLength() == 0) return null;
     return ServerName.valueOf(hostAndPort,
       Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
@@ -717,7 +770,7 @@ public class MetaTableAccessor {
    * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
    */
   private static long getSeqNumDuringOpen(final Result r, final int replicaId) {
-    Cell cell = r.getColumnLatestCell(getFamily(), getSeqNumColumn(replicaId));
+    Cell cell = r.getColumnLatestCell(getCatalogFamily(), getSeqNumColumn(replicaId));
     if (cell == null || cell.getValueLength() == 0) return HConstants.NO_SEQNUM;
     return Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
@@ -727,6 +780,7 @@ public class MetaTableAccessor {
    * @return an HRegionLocationList containing all locations for the region range or null if
    *  we can't deserialize the result.
    */
+  @Nullable
   public static RegionLocations getRegionLocations(final Result r) {
     if (r == null) return null;
     HRegionInfo regionInfo = getHRegionInfo(r, getRegionInfoColumn());
@@ -737,7 +791,7 @@ public class MetaTableAccessor {
 
     locations.add(getRegionLocation(r, regionInfo, 0));
 
-    NavigableMap<byte[], byte[]> infoMap = familyMap.get(getFamily());
+    NavigableMap<byte[], byte[]> infoMap = familyMap.get(getCatalogFamily());
     if (infoMap == null) return new RegionLocations(locations);
 
     // iterate until all serverName columns are seen
@@ -751,8 +805,14 @@ public class MetaTableAccessor {
       if (replicaId < 0) {
         break;
       }
-
-      locations.add(getRegionLocation(r, regionInfo, replicaId));
+      HRegionLocation location = getRegionLocation(r, regionInfo, replicaId);
+      // In case the region replica is newly created, it's location might be null. We usually do not
+      // have HRL's in RegionLocations object with null ServerName. They are handled as null HRLs.
+      if (location == null || location.getServerName() == null) {
+        locations.add(null);
+      } else {
+        locations.add(location);
+      }
     }
 
     return new RegionLocations(locations);
@@ -793,8 +853,9 @@ public class MetaTableAccessor {
    * @param qualifier Column family qualifier
    * @return An HRegionInfo instance or null.
    */
+  @Nullable
   private static HRegionInfo getHRegionInfo(final Result r, byte [] qualifier) {
-    Cell cell = r.getColumnLatestCell(getFamily(), qualifier);
+    Cell cell = r.getColumnLatestCell(getCatalogFamily(), qualifier);
     if (cell == null) return null;
     return HRegionInfo.parseFromOrNull(cell.getValueArray(),
       cell.getValueOffset(), cell.getValueLength());
@@ -807,7 +868,7 @@ public class MetaTableAccessor {
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
    */
-  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
+  public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) {
     HRegionInfo splitA = getHRegionInfo(data, HConstants.SPLITA_QUALIFIER);
     HRegionInfo splitB = getHRegionInfo(data, HConstants.SPLITB_QUALIFIER);
 
@@ -821,11 +882,85 @@ public class MetaTableAccessor {
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
    */
-  public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) throws IOException {
+  public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) {
     HRegionInfo mergeA = getHRegionInfo(data, HConstants.MERGEA_QUALIFIER);
     HRegionInfo mergeB = getHRegionInfo(data, HConstants.MERGEB_QUALIFIER);
 
     return new PairOfSameType<HRegionInfo>(mergeA, mergeB);
+  }
+
+  /**
+   * Fetch table state for given table from META table
+   * @param conn connection to use
+   * @param tableName table to fetch state for
+   * @return state
+   * @throws IOException
+   */
+  @Nullable
+  public static TableState getTableState(Connection conn, TableName tableName)
+      throws IOException {
+    Table metaHTable = getMetaHTable(conn);
+    Get get = new Get(tableName.getName()).addColumn(getTableFamily(), getStateColumn());
+    long time = EnvironmentEdgeManager.currentTime();
+    get.setTimeRange(0, time);
+    Result result =
+        metaHTable.get(get);
+    return getTableState(result);
+  }
+
+  /**
+   * Fetch table states from META table
+   * @param conn connection to use
+   * @return map {tableName -> state}
+   * @throws IOException
+   */
+  public static Map<TableName, TableState> getTableStates(Connection conn)
+      throws IOException {
+    final Map<TableName, TableState> states = new LinkedHashMap<>();
+    Visitor collector = new Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        TableState state = getTableState(r);
+        if (state != null)
+          states.put(state.getTableName(), state);
+        return true;
+      }
+    };
+    fullScanTables(conn, collector);
+    return states;
+  }
+
+  /**
+   * Updates state in META
+   * @param conn connection to use
+   * @param tableName table to look for
+   * @throws IOException
+   */
+  public static void updateTableState(Connection conn, TableName tableName,
+      TableState.State actual) throws IOException {
+    updateTableState(conn, new TableState(tableName, actual));
+  }
+
+  /**
+   * Decode table state from META Result.
+   * Should contain cell from HConstants.TABLE_FAMILY
+   * @param r result
+   * @return null if not found
+   * @throws IOException
+   */
+  @Nullable
+  public static TableState getTableState(Result r)
+      throws IOException {
+    Cell cell = r.getColumnLatestCell(getTableFamily(), getStateColumn());
+    if (cell == null) return null;
+    try {
+      return TableState.parseFrom(TableName.valueOf(r.getRow()),
+          Arrays.copyOfRange(cell.getValueArray(),
+          cell.getValueOffset(), cell.getValueOffset() + cell.getValueLength()));
+    } catch (DeserializationException e) {
+      throw new IOException(e);
+    }
+
   }
 
   /**
@@ -881,13 +1016,38 @@ public class MetaTableAccessor {
    * @return Count or regions in table <code>tableName</code>
    * @throws IOException
    */
+  @Deprecated
   public static int getRegionCount(final Configuration c, final String tableName)
       throws IOException {
-    HTable t = new HTable(c, tableName);
-    try {
-      return t.getRegionLocations().size();
-    } finally {
-      t.close();
+    return getRegionCount(c, TableName.valueOf(tableName));
+  }
+
+  /**
+   * Count regions in <code>hbase:meta</code> for passed table.
+   * @param c Configuration object
+   * @param tableName table name to count regions for
+   * @return Count or regions in table <code>tableName</code>
+   * @throws IOException
+   */
+  public static int getRegionCount(final Configuration c, final TableName tableName)
+  throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(c)) {
+      return getRegionCount(connection, tableName);
+    }
+  }
+
+  /**
+   * Count regions in <code>hbase:meta</code> for passed table.
+   * @param connection Connection object
+   * @param tableName table name to count regions for
+   * @return Count or regions in table <code>tableName</code>
+   * @throws IOException
+   */
+  public static int getRegionCount(final Connection connection, final TableName tableName)
+  throws IOException {
+    try (RegionLocator locator = connection.getRegionLocator(tableName)) {
+      List<HRegionLocation> locations = locator.getAllRegionLocations();
+      return locations == null? 0: locations.size();
     }
   }
 
@@ -900,7 +1060,8 @@ public class MetaTableAccessor {
    */
   public static Put makePutFromRegionInfo(HRegionInfo regionInfo)
     throws IOException {
-    Put put = new Put(regionInfo.getRegionName());
+    long now = EnvironmentEdgeManager.currentTime();
+    Put put = new Put(regionInfo.getRegionName(), now);
     addRegionInfo(put, regionInfo);
     return put;
   }
@@ -913,7 +1074,9 @@ public class MetaTableAccessor {
     if (regionInfo == null) {
       throw new IllegalArgumentException("Can't make a delete for null region");
     }
+    long now = EnvironmentEdgeManager.currentTime();
     Delete delete = new Delete(regionInfo.getRegionName());
+    delete.addFamily(getCatalogFamily(), now);
     return delete;
   }
 
@@ -934,13 +1097,13 @@ public class MetaTableAccessor {
 
   /**
    * Put the passed <code>p</code> to the <code>hbase:meta</code> table.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param p Put to add to hbase:meta
    * @throws IOException
    */
-  static void putToMetaTable(final HConnection hConnection, final Put p)
+  static void putToMetaTable(final Connection connection, final Put p)
     throws IOException {
-    put(getMetaHTable(hConnection), p);
+    put(getMetaHTable(connection), p);
   }
 
   /**
@@ -948,7 +1111,7 @@ public class MetaTableAccessor {
    * @param p put to make
    * @throws IOException
    */
-  private static void put(final HTable t, final Put p) throws IOException {
+  private static void put(final Table t, final Put p) throws IOException {
     try {
       t.put(p);
     } finally {
@@ -958,13 +1121,13 @@ public class MetaTableAccessor {
 
   /**
    * Put the passed <code>ps</code> to the <code>hbase:meta</code> table.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param ps Put to add to hbase:meta
    * @throws IOException
    */
-  public static void putsToMetaTable(final HConnection hConnection, final List<Put> ps)
+  public static void putsToMetaTable(final Connection connection, final List<Put> ps)
     throws IOException {
-    HTable t = getMetaHTable(hConnection);
+    Table t = getMetaHTable(connection);
     try {
       t.put(ps);
     } finally {
@@ -974,26 +1137,26 @@ public class MetaTableAccessor {
 
   /**
    * Delete the passed <code>d</code> from the <code>hbase:meta</code> table.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param d Delete to add to hbase:meta
    * @throws IOException
    */
-  static void deleteFromMetaTable(final HConnection hConnection, final Delete d)
+  static void deleteFromMetaTable(final Connection connection, final Delete d)
     throws IOException {
     List<Delete> dels = new ArrayList<Delete>(1);
     dels.add(d);
-    deleteFromMetaTable(hConnection, dels);
+    deleteFromMetaTable(connection, dels);
   }
 
   /**
    * Delete the passed <code>deletes</code> from the <code>hbase:meta</code> table.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param deletes Deletes to add to hbase:meta  This list should support #remove.
    * @throws IOException
    */
-  public static void deleteFromMetaTable(final HConnection hConnection, final List<Delete> deletes)
+  public static void deleteFromMetaTable(final Connection connection, final List<Delete> deletes)
     throws IOException {
-    HTable t = getMetaHTable(hConnection);
+    Table t = getMetaHTable(connection);
     try {
       t.delete(deletes);
     } finally {
@@ -1006,37 +1169,38 @@ public class MetaTableAccessor {
    * @param metaRows rows in hbase:meta
    * @param replicaIndexToDeleteFrom the replica ID we would start deleting from
    * @param numReplicasToRemove how many replicas to remove
-   * @param hConnection connection we're using to access meta table
+   * @param connection connection we're using to access meta table
    * @throws IOException
    */
   public static void removeRegionReplicasFromMeta(Set<byte[]> metaRows,
-    int replicaIndexToDeleteFrom, int numReplicasToRemove, HConnection hConnection)
+    int replicaIndexToDeleteFrom, int numReplicasToRemove, Connection connection)
       throws IOException {
     int absoluteIndex = replicaIndexToDeleteFrom + numReplicasToRemove;
     for (byte[] row : metaRows) {
+      long now = EnvironmentEdgeManager.currentTime();
       Delete deleteReplicaLocations = new Delete(row);
       for (int i = replicaIndexToDeleteFrom; i < absoluteIndex; i++) {
-        deleteReplicaLocations.deleteColumns(HConstants.CATALOG_FAMILY,
-          getServerColumn(i));
-        deleteReplicaLocations.deleteColumns(HConstants.CATALOG_FAMILY,
-          getSeqNumColumn(i));
-        deleteReplicaLocations.deleteColumns(HConstants.CATALOG_FAMILY,
-          getStartCodeColumn(i));
+        deleteReplicaLocations.addColumns(getCatalogFamily(),
+          getServerColumn(i), now);
+        deleteReplicaLocations.addColumns(getCatalogFamily(),
+          getSeqNumColumn(i), now);
+        deleteReplicaLocations.addColumns(getCatalogFamily(),
+          getStartCodeColumn(i), now);
       }
-      deleteFromMetaTable(hConnection, deleteReplicaLocations);
+      deleteFromMetaTable(connection, deleteReplicaLocations);
     }
   }
 
   /**
    * Execute the passed <code>mutations</code> against <code>hbase:meta</code> table.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param mutations Puts and Deletes to execute on hbase:meta
    * @throws IOException
    */
-  public static void mutateMetaTable(final HConnection hConnection,
+  public static void mutateMetaTable(final Connection connection,
                                      final List<Mutation> mutations)
     throws IOException {
-    HTable t = getMetaHTable(hConnection);
+    Table t = getMetaHTable(connection);
     try {
       t.batch(mutations);
     } catch (InterruptedException e) {
@@ -1050,25 +1214,25 @@ public class MetaTableAccessor {
 
   /**
    * Adds a hbase:meta row for the specified new region.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionToMeta(HConnection hConnection,
+  public static void addRegionToMeta(Connection connection,
                                      HRegionInfo regionInfo)
     throws IOException {
-    putToMetaTable(hConnection, makePutFromRegionInfo(regionInfo));
+    putToMetaTable(connection, makePutFromRegionInfo(regionInfo));
     LOG.info("Added " + regionInfo.getRegionNameAsString());
   }
 
   /**
    * Adds a hbase:meta row for the specified new region to the given catalog table. The
-   * HTable is not flushed or closed.
-   * @param meta the HTable for META
+   * Table is not flushed or closed.
+   * @param meta the Table for META
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionToMeta(HTable meta, HRegionInfo regionInfo) throws IOException {
+  public static void addRegionToMeta(Table meta, HRegionInfo regionInfo) throws IOException {
     addRegionToMeta(meta, regionInfo, null, null);
   }
 
@@ -1076,16 +1240,15 @@ public class MetaTableAccessor {
    * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
    * does not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
-   * {@link #splitRegion(org.apache.hadoop.hbase.client.HConnection,
-   *   HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
+   * {@link #splitRegion(Connection, HRegionInfo, HRegionInfo, HRegionInfo, ServerName, int)}
    * if you want to do that.
-   * @param meta the HTable for META
+   * @param meta the Table for META
    * @param regionInfo region information
    * @param splitA first split daughter of the parent regionInfo
    * @param splitB second split daughter of the parent regionInfo
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionToMeta(HTable meta, HRegionInfo regionInfo,
+  public static void addRegionToMeta(Table meta, HRegionInfo regionInfo,
                                      HRegionInfo splitA, HRegionInfo splitB) throws IOException {
     Put put = makePutFromRegionInfo(regionInfo);
     addDaughtersToPut(put, splitA, splitB);
@@ -1099,17 +1262,17 @@ public class MetaTableAccessor {
    * Adds a (single) hbase:meta row for the specified new region and its daughters. Note that this
    * does not add its daughter's as different rows, but adds information about the daughters
    * in the same row as the parent. Use
-   * {@link #splitRegion(HConnection, HRegionInfo, HRegionInfo, HRegionInfo, ServerName)}
+   * {@link #splitRegion(Connection, HRegionInfo, HRegionInfo, HRegionInfo, ServerName, int)}
    * if you want to do that.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionInfo region information
    * @param splitA first split daughter of the parent regionInfo
    * @param splitB second split daughter of the parent regionInfo
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionToMeta(HConnection hConnection, HRegionInfo regionInfo,
+  public static void addRegionToMeta(Connection connection, HRegionInfo regionInfo,
                                      HRegionInfo splitA, HRegionInfo splitB) throws IOException {
-    HTable meta = getMetaHTable(hConnection);
+    Table meta = getMetaHTable(connection);
     try {
       addRegionToMeta(meta, regionInfo, splitA, splitB);
     } finally {
@@ -1119,20 +1282,27 @@ public class MetaTableAccessor {
 
   /**
    * Adds a hbase:meta row for each of the specified new regions.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionInfos region information list
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionsToMeta(HConnection hConnection,
-                                      List<HRegionInfo> regionInfos)
+  public static void addRegionsToMeta(Connection connection,
+                                      List<HRegionInfo> regionInfos, int regionReplication)
     throws IOException {
     List<Put> puts = new ArrayList<Put>();
     for (HRegionInfo regionInfo : regionInfos) {
       if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
         puts.add(makePutFromRegionInfo(regionInfo));
+        Put put = makePutFromRegionInfo(regionInfo);
+        // Add empty locations for region replicas so that number of replicas can be cached
+        // whenever the primary region is looked up from meta
+        for (int i = 1; i < regionReplication; i++) {
+          addEmptyLocation(put, i);
+        }
+        puts.add(put);
       }
     }
-    putsToMetaTable(hConnection, puts);
+    putsToMetaTable(connection, puts);
     LOG.info("Added " + puts.size());
   }
 
@@ -1142,15 +1312,16 @@ public class MetaTableAccessor {
    * @param sn the location of the region
    * @param openSeqNum the latest sequence number obtained when the region was open
    */
-  public static void addDaughter(final HConnection hConnection,
+  public static void addDaughter(final Connection connection,
       final HRegionInfo regionInfo, final ServerName sn, final long openSeqNum)
       throws NotAllMetaRegionsOnlineException, IOException {
-    Put put = new Put(regionInfo.getRegionName());
+    long now = EnvironmentEdgeManager.currentTime();
+    Put put = new Put(regionInfo.getRegionName(), now);
     addRegionInfo(put, regionInfo);
     if (sn != null) {
       addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
     }
-    putToMetaTable(hConnection, put);
+    putToMetaTable(connection, put);
     LOG.info("Added daughter " + regionInfo.getEncodedName() +
       (sn == null? ", serverName=null": ", serverName=" + sn.toString()));
   }
@@ -1159,16 +1330,17 @@ public class MetaTableAccessor {
    * Merge the two regions into one in an atomic operation. Deletes the two
    * merging regions in hbase:meta and adds the merged region with the information of
    * two merging regions.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param mergedRegion the merged region
    * @param regionA
    * @param regionB
    * @param sn the location of the region
    * @throws IOException
    */
-  public static void mergeRegions(final HConnection hConnection, HRegionInfo mergedRegion,
-      HRegionInfo regionA, HRegionInfo regionB, ServerName sn) throws IOException {
-    HTable meta = getMetaHTable(hConnection);
+  public static void mergeRegions(final Connection connection, HRegionInfo mergedRegion,
+      HRegionInfo regionA, HRegionInfo regionB, ServerName sn, int regionReplication)
+          throws IOException {
+    Table meta = getMetaHTable(connection);
     try {
       HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
@@ -1186,6 +1358,12 @@ public class MetaTableAccessor {
       // The merged is a new region, openSeqNum = 1 is fine.
       addLocation(putOfMerged, sn, 1, mergedRegion.getReplicaId());
 
+      // Add empty locations for region replicas of the merged region so that number of replicas can
+      // be cached whenever the primary region is looked up from meta
+      for (int i = 1; i < regionReplication; i++) {
+        addEmptyLocation(putOfMerged, i);
+      }
+
       byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
         + HConstants.DELIMITER);
       multiMutate(meta, tableRow, putOfMerged, deleteA, deleteB);
@@ -1199,16 +1377,16 @@ public class MetaTableAccessor {
    * region with the information that it is split into two, and also adds
    * the daughter regions. Does not add the location information to the daughter
    * regions since they are not open yet.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param parent the parent region which is split
    * @param splitA Split daughter region A
    * @param splitB Split daughter region A
    * @param sn the location of the region
    */
-  public static void splitRegion(final HConnection hConnection,
+  public static void splitRegion(final Connection connection,
                                  HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
-                                 ServerName sn) throws IOException {
-    HTable meta = getMetaHTable(hConnection);
+                                 ServerName sn, int regionReplication) throws IOException {
+    Table meta = getMetaHTable(connection);
     try {
       HRegionInfo copyOfParent = new HRegionInfo(parent);
       copyOfParent.setOffline(true);
@@ -1225,6 +1403,13 @@ public class MetaTableAccessor {
       addLocation(putA, sn, 1, splitA.getReplicaId()); //new regions, openSeqNum = 1 is fine.
       addLocation(putB, sn, 1, splitB.getReplicaId());
 
+      // Add empty locations for region replicas of daughters so that number of replicas can be
+      // cached whenever the primary region is looked up from meta
+      for (int i = 1; i < regionReplication; i++) {
+        addEmptyLocation(putA, i);
+        addEmptyLocation(putB, i);
+      }
+
       byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
       multiMutate(meta, tableRow, putParent, putA, putB);
     } finally {
@@ -1233,9 +1418,48 @@ public class MetaTableAccessor {
   }
 
   /**
+   * Update state of the table in meta.
+   * @param connection what we use for update
+   * @param state new state
+   * @throws IOException
+   */
+  public static void updateTableState(Connection connection, TableState state)
+      throws IOException {
+    Put put = makePutFromTableState(state);
+    putToMetaTable(connection, put);
+    LOG.info(
+        "Updated table " + state.getTableName() + " state to " + state.getState() + " in META");
+  }
+
+  /**
+   * Construct PUT for given state
+   * @param state new state
+   */
+  public static Put makePutFromTableState(TableState state) {
+    long time = EnvironmentEdgeManager.currentTime();
+    Put put = new Put(state.getTableName().getName(), time);
+    put.add(getTableFamily(), getStateColumn(), state.convert().toByteArray());
+    return put;
+  }
+
+  /**
+   * Remove state for table from meta
+   * @param connection to use for deletion
+   * @param table to delete state for
+   */
+  public static void deleteTableState(Connection connection, TableName table)
+      throws IOException {
+    long time = EnvironmentEdgeManager.currentTime();
+    Delete delete = new Delete(table.getName());
+    delete.addColumns(getTableFamily(), getStateColumn(), time);
+    deleteFromMetaTable(connection, delete);
+    LOG.info("Deleted table " + table + " state from META");
+  }
+
+  /**
    * Performs an atomic multi-Mutate operation against the given table.
    */
-  private static void multiMutate(HTable table, byte[] row, Mutation... mutations)
+  private static void multiMutate(Table table, byte[] row, Mutation... mutations)
       throws IOException {
     CoprocessorRpcChannel channel = table.coprocessorService(row);
     MultiRowMutationProtos.MutateRowsRequest.Builder mmrBuilder
@@ -1269,15 +1493,15 @@ public class MetaTableAccessor {
    * Uses passed catalog tracker to get a connection to the server hosting
    * hbase:meta and makes edits to that region.
    *
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionInfo region to update location of
    * @param sn Server name
    * @throws IOException
    */
-  public static void updateRegionLocation(HConnection hConnection,
+  public static void updateRegionLocation(Connection connection,
                                           HRegionInfo regionInfo, ServerName sn, long updateSeqNum)
     throws IOException {
-    updateLocation(hConnection, regionInfo, sn, updateSeqNum);
+    updateLocation(connection, regionInfo, sn, updateSeqNum);
   }
 
   /**
@@ -1286,69 +1510,75 @@ public class MetaTableAccessor {
    * Connects to the specified server which should be hosting the specified
    * catalog region name to perform the edit.
    *
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionInfo region to update location of
    * @param sn Server name
    * @param openSeqNum the latest sequence number obtained when the region was open
    * @throws IOException In particular could throw {@link java.net.ConnectException}
    * if the server is down on other end.
    */
-  private static void updateLocation(final HConnection hConnection,
+  private static void updateLocation(final Connection connection,
                                      HRegionInfo regionInfo, ServerName sn, long openSeqNum)
     throws IOException {
     // region replicas are kept in the primary region's row
-    Put put = new Put(getMetaKeyForRegion(regionInfo));
+    long time = EnvironmentEdgeManager.currentTime();
+    Put put = new Put(getMetaKeyForRegion(regionInfo), time);
     addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
-    putToMetaTable(hConnection, put);
+    putToMetaTable(connection, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " with server=" + sn);
   }
 
   /**
    * Deletes the specified region from META.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionInfo region to be deleted from META
    * @throws IOException
    */
-  public static void deleteRegion(HConnection hConnection,
+  public static void deleteRegion(Connection connection,
                                   HRegionInfo regionInfo)
     throws IOException {
+    long time = EnvironmentEdgeManager.currentTime();
     Delete delete = new Delete(regionInfo.getRegionName());
-    deleteFromMetaTable(hConnection, delete);
+    delete.addFamily(getCatalogFamily(), time);
+    deleteFromMetaTable(connection, delete);
     LOG.info("Deleted " + regionInfo.getRegionNameAsString());
   }
 
   /**
    * Deletes the specified regions from META.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionsInfo list of regions to be deleted from META
    * @throws IOException
    */
-  public static void deleteRegions(HConnection hConnection,
+  public static void deleteRegions(Connection connection,
                                    List<HRegionInfo> regionsInfo) throws IOException {
     List<Delete> deletes = new ArrayList<Delete>(regionsInfo.size());
+    long time = EnvironmentEdgeManager.currentTime();
     for (HRegionInfo hri: regionsInfo) {
-      deletes.add(new Delete(hri.getRegionName()));
+      Delete e = new Delete(hri.getRegionName());
+      e.addFamily(getCatalogFamily(), time);
+      deletes.add(e);
     }
-    deleteFromMetaTable(hConnection, deletes);
+    deleteFromMetaTable(connection, deletes);
     LOG.info("Deleted " + regionsInfo);
   }
 
   /**
    * Adds and Removes the specified regions from hbase:meta
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionsToRemove list of regions to be deleted from META
    * @param regionsToAdd list of regions to be added to META
    * @throws IOException
    */
-  public static void mutateRegions(HConnection hConnection,
+  public static void mutateRegions(Connection connection,
                                    final List<HRegionInfo> regionsToRemove,
                                    final List<HRegionInfo> regionsToAdd)
     throws IOException {
     List<Mutation> mutation = new ArrayList<Mutation>();
     if (regionsToRemove != null) {
       for (HRegionInfo hri: regionsToRemove) {
-        mutation.add(new Delete(hri.getRegionName()));
+        mutation.add(makeDeleteFromRegionInfo(hri));
       }
     }
     if (regionsToAdd != null) {
@@ -1356,7 +1586,7 @@ public class MetaTableAccessor {
         mutation.add(makePutFromRegionInfo(hri));
       }
     }
-    mutateMetaTable(hConnection, mutation);
+    mutateMetaTable(connection, mutation);
     if (regionsToRemove != null && regionsToRemove.size() > 0) {
       LOG.debug("Deleted " + regionsToRemove);
     }
@@ -1367,34 +1597,35 @@ public class MetaTableAccessor {
 
   /**
    * Overwrites the specified regions from hbase:meta
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param regionInfos list of regions to be added to META
    * @throws IOException
    */
-  public static void overwriteRegions(HConnection hConnection,
-                                      List<HRegionInfo> regionInfos) throws IOException {
-    deleteRegions(hConnection, regionInfos);
+  public static void overwriteRegions(Connection connection,
+      List<HRegionInfo> regionInfos, int regionReplication) throws IOException {
+    deleteRegions(connection, regionInfos);
     // Why sleep? This is the easiest way to ensure that the previous deletes does not
     // eclipse the following puts, that might happen in the same ts from the server.
     // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
     // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
     Threads.sleep(20);
-    addRegionsToMeta(hConnection, regionInfos);
+    addRegionsToMeta(connection, regionInfos, regionReplication);
     LOG.info("Overwritten " + regionInfos);
   }
 
   /**
    * Deletes merge qualifiers for the specified merged region.
-   * @param hConnection connection we're using
+   * @param connection connection we're using
    * @param mergedRegion
    * @throws IOException
    */
-  public static void deleteMergeQualifiers(HConnection hConnection,
+  public static void deleteMergeQualifiers(Connection connection,
                                            final HRegionInfo mergedRegion) throws IOException {
+    long time = EnvironmentEdgeManager.currentTime();
     Delete delete = new Delete(mergedRegion.getRegionName());
-    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER);
-    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER);
-    deleteFromMetaTable(hConnection, delete);
+    delete.addColumns(getCatalogFamily(), HConstants.MERGEA_QUALIFIER, time);
+    delete.addColumns(getCatalogFamily(), HConstants.MERGEB_QUALIFIER, time);
+    deleteFromMetaTable(connection, delete);
     LOG.info("Deleted references in merged region "
       + mergedRegion.getRegionNameAsString() + ", qualifier="
       + Bytes.toStringBinary(HConstants.MERGEA_QUALIFIER) + " and qualifier="
@@ -1403,7 +1634,7 @@ public class MetaTableAccessor {
 
   private static Put addRegionInfo(final Put p, final HRegionInfo hri)
     throws IOException {
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+    p.addImmutable(getCatalogFamily(), HConstants.REGIONINFO_QUALIFIER,
       hri.toByteArray());
     return p;
   }
@@ -1412,12 +1643,20 @@ public class MetaTableAccessor {
     // using regionserver's local time as the timestamp of Put.
     // See: HBASE-11536
     long now = EnvironmentEdgeManager.currentTime();
-    p.addImmutable(HConstants.CATALOG_FAMILY, getServerColumn(replicaId), now,
+    p.addImmutable(getCatalogFamily(), getServerColumn(replicaId), now,
       Bytes.toBytes(sn.getHostAndPort()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, getStartCodeColumn(replicaId), now,
+    p.addImmutable(getCatalogFamily(), getStartCodeColumn(replicaId), now,
       Bytes.toBytes(sn.getStartcode()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, getSeqNumColumn(replicaId), now,
+    p.addImmutable(getCatalogFamily(), getSeqNumColumn(replicaId), now,
       Bytes.toBytes(openSeqNum));
+    return p;
+  }
+
+  public static Put addEmptyLocation(final Put p, int replicaId) {
+    long now = EnvironmentEdgeManager.currentTime();
+    p.addImmutable(getCatalogFamily(), getServerColumn(replicaId), now, null);
+    p.addImmutable(getCatalogFamily(), getStartCodeColumn(replicaId), now, null);
+    p.addImmutable(getCatalogFamily(), getSeqNumColumn(replicaId), now, null);
     return p;
   }
 }

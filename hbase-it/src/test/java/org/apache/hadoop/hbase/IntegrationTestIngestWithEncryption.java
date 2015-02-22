@@ -26,18 +26,22 @@ import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderV3;
 import org.apache.hadoop.hbase.io.hfile.HFileWriterV3;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL.Reader;
+import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
 
 @Category(IntegrationTests.class)
 public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
+
+  boolean initialized = false;
 
   static {
     // These log level changes are only useful when running on a localhost
@@ -52,20 +56,26 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
   public void setUpCluster() throws Exception {
     util = getTestingUtil(null);
     Configuration conf = util.getConfiguration();
-    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
     if (!util.isDistributedCluster()) {
-      // Inject the test key provider and WAL alternative if running on a
-      // localhost cluster; otherwise, whether or not the schema change below
-      // takes effect depends on the distributed cluster site configuration.
+      // Inject required configuration if we are not running in distributed mode
+      conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
       conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
       conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
       conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,
-        HLog.Reader.class);
+        Reader.class);
       conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
-        HLog.Writer.class);
+        Writer.class);
       conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
     }
+    // Check if the cluster configuration can support this test
+    try {
+      EncryptionTest.testEncryption(conf, "AES", null);
+    } catch (Exception e) {
+      LOG.warn("Encryption configuration test did not pass, skipping test");
+      return;
+    }
     super.setUpCluster();
+    initialized = true;
   }
 
   @Before
@@ -74,6 +84,10 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     // Initialize the cluster. This invokes LoadTestTool -init_only, which
     // will create the test table, appropriately pre-split
     super.setUp();
+
+    if (!initialized) {
+      return;
+    }
 
     // Update the test table schema so HFiles from this point will be written with
     // encryption features enabled.
@@ -94,6 +108,22 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
         }
       });
     }
+  }
+
+  @Override
+  public int runTestFromCommandLine() throws Exception {
+    if (!initialized) {
+      return 0;
+    }
+    return super.runTestFromCommandLine();
+  }
+
+  @Override
+  public void cleanUp() throws Exception {
+    if (!initialized) {
+      return;
+    }
+    super.cleanUp();
   }
 
   public static void main(String[] args) throws Exception {

@@ -20,8 +20,6 @@
 # not move a new region until successful confirm of region loading in new
 # location. Presumes balancer is disabled when we run (not harmful if its
 # on but this script and balancer will end up fighting each other).
-# Does not work for case of multiple regionservers all running on the
-# one node.
 require 'optparse'
 require File.join(File.dirname(__FILE__), 'thread-pool')
 include Java
@@ -33,6 +31,8 @@ import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.HConnectionManager
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.util.Writables
 import org.apache.hadoop.conf.Configuration
@@ -44,41 +44,6 @@ import org.apache.hadoop.hbase.HRegionInfo
 
 # Name of this script
 NAME = "region_mover"
-
-# Get meta table reference
-def getMetaTable(config)
-  # Keep meta reference in ruby global
-  if not $META
-    $META = HTable.new(config, HConstants::META_TABLE_NAME)
-  end
-  return $META
-end
-
-# Get table instance.
-# Maintains cache of table instances.
-def getTable(config, name)
-  # Keep dictionary of tables in ruby global
-  if not $TABLES
-    $TABLES = {}
-  end
-  key = name.toString()
-  if not $TABLES[key]
-    $TABLES[key] = HTable.new(config, name)
-  end
-  return $TABLES[key]
-end
-
-def closeTables()
-  if not $TABLES
-    return
-  end
-
-  $LOG.info("Close all tables")
-  $TABLES.each do |name, table|
-    $TABLES.delete(name)
-    table.close()
-  end
-end
 
 # Returns true if passed region is still on 'original' when we look at hbase:meta.
 def isSameServer(admin, r, original)
@@ -113,44 +78,46 @@ def getServerNameForRegion(admin, r)
       zkw.close()
     end
   end
-  table = nil
-  table = getMetaTable(admin.getConfiguration())
-  g = Get.new(r.getRegionName())
-  g.addColumn(HConstants::CATALOG_FAMILY, HConstants::SERVER_QUALIFIER)
-  g.addColumn(HConstants::CATALOG_FAMILY, HConstants::STARTCODE_QUALIFIER)
-  result = table.get(g)
-  return nil unless result
-  server = result.getValue(HConstants::CATALOG_FAMILY, HConstants::SERVER_QUALIFIER)
-  startcode = result.getValue(HConstants::CATALOG_FAMILY, HConstants::STARTCODE_QUALIFIER)
-  return nil unless server
-  return java.lang.String.new(Bytes.toString(server)).replaceFirst(":", ",")  + "," + Bytes.toLong(startcode).to_s
+  table = HTable.new(admin.getConfiguration(), HConstants::META_TABLE_NAME)
+  begin
+    g = Get.new(r.getRegionName())
+    g.addColumn(HConstants::CATALOG_FAMILY, HConstants::SERVER_QUALIFIER)
+    g.addColumn(HConstants::CATALOG_FAMILY, HConstants::STARTCODE_QUALIFIER)
+    result = table.get(g)
+    return nil unless result
+    server = result.getValue(HConstants::CATALOG_FAMILY, HConstants::SERVER_QUALIFIER)
+    startcode = result.getValue(HConstants::CATALOG_FAMILY, HConstants::STARTCODE_QUALIFIER)
+    return nil unless server
+    return java.lang.String.new(Bytes.toString(server)).replaceFirst(":", ",")  + "," + Bytes.toLong(startcode).to_s
+  ensure
+    table.close()
+  end
 end
 
 # Trys to scan a row from passed region
 # Throws exception if can't
 def isSuccessfulScan(admin, r)
-  scan = Scan.new(r.getStartKey()) 
+  scan = Scan.new(r.getStartKey(), r.getStartKey())
   scan.setBatch(1)
   scan.setCaching(1)
-  scan.setFilter(FirstKeyOnlyFilter.new()) 
+  scan.setFilter(FilterList.new(FirstKeyOnlyFilter.new(),InclusiveStopFilter().new(r.getStartKey())))
   begin
-    table = getTable(admin.getConfiguration(), r.getTableName())
+    table = HTable.new(admin.getConfiguration(), r.getTableName())
     scanner = table.getScanner(scan)
+    begin
+      results = scanner.next() 
+      # We might scan into next region, this might be an empty table.
+      # But if no exception, presume scanning is working.
+    ensure
+      scanner.close()
+    end
   rescue org.apache.hadoop.hbase.TableNotFoundException,
       org.apache.hadoop.hbase.TableNotEnabledException => e
     $LOG.warn("Region " + r.getEncodedName() + " belongs to recently " +
       "deleted/disabled table. Skipping... " + e.message)
     return
-  end
-  begin
-    results = scanner.next() 
-    # We might scan into next region, this might be an empty table.
-    # But if no exception, presume scanning is working.
   ensure
-    scanner.close()
-    # Do not close the htable. It is cached in $TABLES and 
-    # may be reused in moving another region of same table. 
-    # table.close()
+    table.close() unless table.nil?
   end
 end
 
@@ -194,15 +161,9 @@ def move(admin, r, newServer, original)
     java.lang.String.format("%.3f", (Time.now - start)))
 end
 
-# Return the hostname portion of a servername (all up to first ',')
-def getHostnamePortFromServerName(serverName)
-  parts = serverName.split(',')
-  return parts[0] + ":" + parts[1]
-end
-
-# Return the hostname:port out of a servername (all up to first ',')
-def getHostnameFromServerName(serverName)
-  return serverName.split(',')[0]
+# Return the hostname:port out of a servername (all up to second ',')
+def getHostPortFromServerName(serverName)
+  return serverName.split(',')[0..1]
 end
 
 # Return array of servernames where servername is hostname+port+startcode
@@ -218,16 +179,17 @@ end
 
 # Remove the servername whose hostname portion matches from the passed
 # array of servers.  Returns as side-effect the servername removed.
-def stripServer(servers, hostname)
+def stripServer(servers, hostname, port)
   count = servers.length
   servername = nil
   for server in servers
-    if getHostnameFromServerName(server) == hostname
+    hostFromServerName, portFromServerName = getHostPortFromServerName(server)
+    if hostFromServerName == hostname and portFromServerName == port
       servername = servers.delete(server)
     end
   end
   # Check server to exclude is actually present
-  raise RuntimeError, "Server %s not online" % hostname unless servers.length < count
+  raise RuntimeError, "Server %s:%d not online" % [hostname, port] unless servers.length < count
   return servername
 end
 
@@ -235,22 +197,25 @@ end
 # matches from the passed array of servers.
 def stripExcludes(servers, excludefile)
   excludes = readExcludes(excludefile)
-  servers =  servers.find_all{|server| !excludes.contains(getHostnameFromServerName(server)) }
+  servers =  servers.find_all{|server|
+      !excludes.contains(getHostPortFromServerName(server).join(":"))
+  }
   # return updated servers list
   return servers
 end
 
 
-# Return servername that matches passed hostname
-def getServerName(servers, hostname)
+# Return servername that matches passed hostname and port
+def getServerName(servers, hostname, port)
   servername = nil
   for server in servers
-    if getHostnameFromServerName(server) == hostname
+    hostFromServerName, portFromServerName = getHostPortFromServerName(server)
+    if hostFromServerName == hostname and portFromServerName == port
       servername = server
       break
     end
   end
-  raise ArgumentError, "Server %s not online" % hostname unless servername
+  raise ArgumentError, "Server %s:%d not online" % [hostname, port] unless servername
   return servername
 end
 
@@ -321,19 +286,19 @@ def readFile(filename)
   return regions
 end
 
-# Move regions off the passed hostname
-def unloadRegions(options, hostname)
+# Move regions off the passed hostname:port
+def unloadRegions(options, hostname, port)
+  # Clean up any old files.
+  filename = getFilename(options, hostname, port)
+  deleteFile(filename)
   # Get configuration
   config = getConfiguration()
-  # Clean up any old files.
-  filename = getFilename(options, hostname)
-  deleteFile(filename)
   # Get an admin instance
-  admin = HBaseAdmin.new(config) 
+  admin = HBaseAdmin.new(config)
   servers = getServers(admin)
   # Remove the server we are unloading from from list of servers.
   # Side-effect is the servername that matches this hostname 
-  servername = stripServer(servers, hostname)
+  servername = stripServer(servers, hostname, port)
 
   # Remove the servers in our exclude list from list of servers.
   servers = stripExcludes(servers, options[:excludesFile])
@@ -342,13 +307,12 @@ def unloadRegions(options, hostname)
     puts "No regions were moved - there was no server available"
     exit 4
   end
-  movedRegions = java.util.ArrayList.new()
+  movedRegions = java.util.Collections.synchronizedList(java.util.ArrayList.new())
   while true
     rs = getRegions(config, servername)
     # Remove those already tried to move
     rs.removeAll(movedRegions)
     break if rs.length == 0
-    count = 0
     $LOG.info("Moving " + rs.length.to_s + " region(s) from " + servername +
       " on " + servers.length.to_s + " servers using " + options[:maxthreads].to_s + " threads.")
     counter = 0
@@ -379,12 +343,12 @@ def unloadRegions(options, hostname)
 end
 
 # Move regions to the passed hostname
-def loadRegions(options, hostname)
+def loadRegions(options, hostname, port)
   # Get configuration
   config = getConfiguration()
   # Get an admin instance
   admin = HBaseAdmin.new(config) 
-  filename = getFilename(options, hostname) 
+  filename = getFilename(options, hostname, port)
   regions = readFile(filename)
   return if regions.isEmpty()
   servername = nil
@@ -394,15 +358,14 @@ def loadRegions(options, hostname)
   while Time.now < maxWait
     servers = getServers(admin)
     begin
-      servername = getServerName(servers, hostname)
+      servername = getServerName(servers, hostname, port)
     rescue ArgumentError => e
-      $LOG.info("hostname=" + hostname.to_s + " is not up yet, waiting");
+      $LOG.info("hostname=" + hostname.to_s + ":" + port.to_s + " is not up yet, waiting");
     end
     break if servername
     sleep 0.5
   end
   $LOG.info("Moving " + regions.size().to_s + " regions to " + servername)
-  count = 0
   # sleep 20s to make sure the rs finished initialization.
   sleep 20
   counter = 0
@@ -419,13 +382,13 @@ def loadRegions(options, hostname)
     next unless exists
     currentServer = getServerNameForRegion(admin, r)
     if currentServer and currentServer == servername
-      $LOG.info("Region " + r.getRegionNameAsString() + " (" + count.to_s +
+      $LOG.info("Region " + r.getRegionNameAsString() + " (" + counter.to_s +
         " of " + regions.length.to_s + ") already on target server=" + servername)
       counter = counter + 1
       next
     end
-    pool.launch(r,currentServer,count) do |_r,_currentServer,_count|
-      $LOG.info("Moving region " + _r.getRegionNameAsString() + " (" + (_count + 1).to_s +
+    pool.launch(r,currentServer,counter) do |_r,_currentServer,_counter|
+      $LOG.info("Moving region " + _r.getRegionNameAsString() + " (" + (_counter + 1).to_s +
         " of " + regions.length.to_s + ") from " + _currentServer.to_s + " to server=" +
         servername);      
       move(admin, _r, servername, _currentServer)
@@ -458,10 +421,10 @@ def readExcludes(filename)
   return excludes
 end
 
-def getFilename(options, targetServer)
+def getFilename(options, targetServer, port)
   filename = options[:file]
   if not filename
-    filename = "/tmp/" + ENV['USER'] + targetServer
+    filename = "/tmp/" + ENV['USER'] + targetServer + ":" + port
   end
   return filename
 end
@@ -470,11 +433,11 @@ end
 # Do command-line parsing
 options = {}
 optparse = OptionParser.new do |opts|
-  opts.banner = "Usage: #{NAME}.rb [options] load|unload <hostname>"
+  opts.banner = "Usage: #{NAME}.rb [options] load|unload [<hostname>|<hostname:port>]"
   opts.separator 'Load or unload regions by moving one at a time'
   options[:file] = nil
   options[:maxthreads] = 1
-  opts.on('-f', '--filename=FILE', 'File to save regions list into unloading, or read from loading; default /tmp/<hostname>') do |file|
+  opts.on('-f', '--filename=FILE', 'File to save regions list into unloading, or read from loading; default /tmp/<hostname:port>') do |file|
     options[:file] = file
   end
   opts.on('-h', '--help', 'Display usage information') do
@@ -499,21 +462,27 @@ if ARGV.length < 2
   puts optparse
   exit 1
 end
-hostname = ARGV[1]
+hostname, port = ARGV[1].split(":")
 if not hostname
   opts optparse
   exit 2
 end
+
+# Get configuration
+config = getConfiguration()
+if not port
+    port = config.getInt(HConstants::REGIONSERVER_PORT, HConstants::DEFAULT_REGIONSERVER_PORT)
+end
+port = port.to_s
+
 # Create a logger and save it to ruby global
 $LOG = configureLogging(options) 
 case ARGV[0]
   when 'load'
-    loadRegions(options, hostname)
+    loadRegions(options, hostname, port)
   when 'unload'
-    unloadRegions(options, hostname)
+    unloadRegions(options, hostname, port)
   else
     puts optparse
     exit 3
 end
-
-closeTables()

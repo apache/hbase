@@ -19,9 +19,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Assert;
@@ -30,14 +29,14 @@ import org.junit.experimental.categories.Category;
 
 import java.net.InetSocketAddress;
 
-@Category(MediumTests.class)   // Can't be small, we're playing with the EnvironmentEdge
+@Category({RPCTests.class, MediumTests.class})   // Can't be small, we're playing with the EnvironmentEdge
 public class TestHBaseClient {
 
   @Test
   public void testFailedServer(){
     ManualEnvironmentEdge ee = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(  ee );
-    RpcClient.FailedServers fs = new RpcClient.FailedServers(new Configuration());
+    FailedServers fs = new FailedServers(new Configuration());
 
     InetSocketAddress ia = InetSocketAddress.createUnresolved("bad", 12);
     InetSocketAddress ia2 = InetSocketAddress.createUnresolved("bad", 12);  // same server as ia

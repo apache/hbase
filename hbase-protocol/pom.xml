@@ -103,6 +103,10 @@
 
     <dependencies>
       <!-- Intra-project dependencies -->
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-annotations</artifactId>
+      </dependency>
       <!-- General dependencies -->
       <dependency>
         <groupId>com.google.protobuf</groupId>
@@ -172,6 +176,7 @@
                           <include>MapReduce.proto</include>
                           <include>Master.proto</include>
                           <include>MultiRowMutation.proto</include>
+                          <include>Quota.proto</include>
                           <include>RegionServerStatus.proto</include>
                           <include>RowProcessor.proto</include>
                           <include>RPC.proto</include>

@@ -27,8 +27,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.conf.ConfServlet;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mortbay.util.ajax.JSON;
@@ -42,7 +42,7 @@ import org.xml.sax.InputSource;
  * Basic test case that the ConfServlet can write configuration
  * to its output in XML and JSON format.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestConfServlet extends TestCase {
   private static final String TEST_KEY = "testconfservlet.key";
   private static final String TEST_VAL = "testval";

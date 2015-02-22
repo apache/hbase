@@ -22,21 +22,22 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.htrace.Sampler;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Sampler;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -123,7 +124,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
             ResultScanner rs = null;
             try {
               innerScope = Trace.startSpan("Scan", Sampler.ALWAYS);
-              HTable ht = new HTable(util.getConfiguration(), tableName);
+              Table ht = util.getConnection().getTable(tableName);
               Scan s = new Scan();
               s.setStartRow(Bytes.toBytes(rowKeyQueue.take()));
               s.setBatch(7);
@@ -171,9 +172,9 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
         public void run() {
 
 
-          HTable ht = null;
+          Table ht = null;
           try {
-            ht = new HTable(util.getConfiguration(), tableName);
+            ht = util.getConnection().getTable(tableName);
           } catch (IOException e) {
             e.printStackTrace();
           }
@@ -233,12 +234,11 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
   private LinkedBlockingQueue<Long> insertData() throws IOException, InterruptedException {
     LinkedBlockingQueue<Long> rowKeys = new LinkedBlockingQueue<Long>(25000);
-    HTable ht = new HTable(util.getConfiguration(), this.tableName);
+    BufferedMutator ht = util.getConnection().getBufferedMutator(this.tableName);
     byte[] value = new byte[300];
     for (int x = 0; x < 5000; x++) {
       TraceScope traceScope = Trace.startSpan("insertData", Sampler.ALWAYS);
       try {
-        ht.setAutoFlush(false, true);
         for (int i = 0; i < 5; i++) {
           long rk = random.nextLong();
           rowKeys.add(rk);
@@ -247,7 +247,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
             random.nextBytes(value);
             p.add(familyName, Bytes.toBytes(random.nextLong()), value);
           }
-          ht.put(p);
+          ht.mutate(p);
         }
         if ((x % 1000) == 0) {
           admin.flush(tableName);

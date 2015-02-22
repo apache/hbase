@@ -26,9 +26,11 @@ import java.io.OutputStream;
 import java.security.SecureRandom;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -39,10 +41,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * A WALCellCodec that encrypts the WALedits.
  */
+@InterfaceAudience.Private
 public class SecureWALCellCodec extends WALCellCodec {
 
   private Encryptor encryptor;
   private Decryptor decryptor;
+
+  public SecureWALCellCodec(Configuration conf, CompressionContext compression) {
+    super(conf, compression);
+  }
 
   public SecureWALCellCodec(Configuration conf, Encryptor encryptor) {
     super(conf, null);
@@ -66,11 +73,16 @@ public class SecureWALCellCodec extends WALCellCodec {
     public EncryptedKvDecoder(InputStream in, Decryptor decryptor) {
       super(in);
       this.decryptor = decryptor;
-      this.iv = new byte[decryptor.getIvLength()];
+      if (decryptor != null) {
+        this.iv = new byte[decryptor.getIvLength()];
+      }
     }
 
     @Override
     protected Cell parseCell() throws IOException {
+      if (this.decryptor == null) {
+        return super.parseCell();
+      }
       int ivLength = 0;
       try {
         ivLength = StreamUtils.readRawVarint32(in);
@@ -168,11 +180,10 @@ public class SecureWALCellCodec extends WALCellCodec {
 
     @Override
     public void write(Cell cell) throws IOException {
-      if (!(cell instanceof KeyValue)) throw new IOException("Cannot write non-KV cells to WAL");
-
-      KeyValue kv = (KeyValue)cell;
-      byte[] kvBuffer = kv.getBuffer();
-      int offset = kv.getOffset();
+      if (encryptor == null) {
+        super.write(cell);
+        return;
+      }
 
       byte[] iv = nextIv();
       encryptor.setIv(iv);
@@ -190,23 +201,27 @@ public class SecureWALCellCodec extends WALCellCodec {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       OutputStream cout = encryptor.createEncryptionStream(baos);
 
+      int tlen = cell.getTagsLength();
       // Write the KeyValue infrastructure as VInts.
-      StreamUtils.writeRawVInt32(cout, kv.getKeyLength());
-      StreamUtils.writeRawVInt32(cout, kv.getValueLength());
+      StreamUtils.writeRawVInt32(cout, KeyValueUtil.keyLength(cell));
+      StreamUtils.writeRawVInt32(cout, cell.getValueLength());
       // To support tags
-      StreamUtils.writeRawVInt32(cout, kv.getTagsLength());
+      StreamUtils.writeRawVInt32(cout, tlen);
 
       // Write row, qualifier, and family
-      StreamUtils.writeRawVInt32(cout, kv.getRowLength());
-      cout.write(kvBuffer, kv.getRowOffset(), kv.getRowLength());
-      StreamUtils.writeRawVInt32(cout, kv.getFamilyLength());
-      cout.write(kvBuffer, kv.getFamilyOffset(), kv.getFamilyLength());
-      StreamUtils.writeRawVInt32(cout, kv.getQualifierLength());
-      cout.write(kvBuffer, kv.getQualifierOffset(), kv.getQualifierLength());
-      // Write the rest
-      int pos = kv.getTimestampOffset();
-      int remainingLength = kv.getLength() + offset - pos;
-      cout.write(kvBuffer, pos, remainingLength);
+      StreamUtils.writeRawVInt32(cout, cell.getRowLength());
+      cout.write(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+      StreamUtils.writeRawVInt32(cout, cell.getFamilyLength());
+      cout.write(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
+      StreamUtils.writeRawVInt32(cout, cell.getQualifierLength());
+      cout.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+      // Write the rest ie. ts, type, value and tags parts
+      StreamUtils.writeLong(cout, cell.getTimestamp());
+      cout.write(cell.getTypeByte());
+      cout.write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+      if (tlen > 0) {
+        cout.write(cell.getTagsArray(), cell.getTagsOffset(), tlen);
+      }
       cout.close();
 
       StreamUtils.writeRawVInt32(out, baos.size());

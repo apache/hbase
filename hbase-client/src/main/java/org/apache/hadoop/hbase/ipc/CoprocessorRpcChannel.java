@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 
 import com.google.protobuf.BlockingRpcChannel;
@@ -28,17 +32,12 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcChannel;
 import com.google.protobuf.RpcController;
-import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import java.io.IOException;
 
 /**
  * Base class which provides clients with an RPC connection to
- * call coprocessor endpoint {@link Service}s.  Note that clients should not use this class
- * directly, except through
+ * call coprocessor endpoint {@link com.google.protobuf.Service}s.  
+ * Note that clients should not use this class directly, except through
  * {@link org.apache.hadoop.hbase.client.HTableInterface#coprocessorService(byte[])}.
  */
 @InterfaceAudience.Public

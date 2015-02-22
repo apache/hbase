@@ -1,0 +1,451 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[[zookeeper]]
+= ZooKeeper(((ZooKeeper)))
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+A distributed Apache HBase installation depends on a running ZooKeeper cluster.
+All participating nodes and clients need to be able to access the running ZooKeeper ensemble.
+Apache HBase by default manages a ZooKeeper "cluster" for you.
+It will start and stop the ZooKeeper ensemble as part of the HBase start/stop process.
+You can also manage the ZooKeeper ensemble independent of HBase and just point HBase at the cluster it should use.
+To toggle HBase management of ZooKeeper, use the `HBASE_MANAGES_ZK` variable in _conf/hbase-env.sh_.
+This variable, which defaults to `true`, tells HBase whether to start/stop the ZooKeeper ensemble servers as part of HBase start/stop.
+
+When HBase manages the ZooKeeper ensemble, you can specify ZooKeeper configuration using its native _zoo.cfg_ file, or, the easier option is to just specify ZooKeeper options directly in _conf/hbase-site.xml_.
+A ZooKeeper configuration option can be set as a property in the HBase _hbase-site.xml_ XML configuration file by prefacing the ZooKeeper option name with `hbase.zookeeper.property`.
+For example, the `clientPort` setting in ZooKeeper can be changed by setting the `hbase.zookeeper.property.clientPort` property.
+For all default values used by HBase, including ZooKeeper configuration, see <<hbase_default_configurations,hbase default configurations>>.
+Look for the `hbase.zookeeper.property` prefix.
+For the full list of ZooKeeper configurations, see ZooKeeper's _zoo.cfg_.
+HBase does not ship with a _zoo.cfg_ so you will need to browse the _conf_ directory in an appropriate ZooKeeper download.
+
+You must at least list the ensemble servers in _hbase-site.xml_ using the `hbase.zookeeper.quorum` property.
+This property defaults to a single ensemble member at `localhost` which is not suitable for a fully distributed HBase.
+(It binds to the local machine only and remote clients will not be able to connect). 
+
+.How many ZooKeepers should I run?
+[NOTE]
+====
+You can run a ZooKeeper ensemble that comprises 1 node only but in production it is recommended that you run a ZooKeeper ensemble of 3, 5 or 7 machines; the more members an ensemble has, the more tolerant the ensemble is of host failures.
+Also, run an odd number of machines.
+In ZooKeeper, an even number of peers is supported, but it is normally not used because an even sized ensemble requires, proportionally, more peers to form a quorum than an odd sized ensemble requires.
+For example, an ensemble with 4 peers requires 3 to form a quorum, while an ensemble with 5 also requires 3 to form a quorum.
+Thus, an ensemble of 5 allows 2 peers to fail, and thus is more fault tolerant than the ensemble of 4, which allows only 1 down peer. 
+
+Give each ZooKeeper server around 1GB of RAM, and if possible, its own dedicated disk (A dedicated disk is the best thing you can do to ensure a performant ZooKeeper ensemble). For very heavily loaded clusters, run ZooKeeper servers on separate machines from RegionServers (DataNodes and TaskTrackers).
+====
+
+For example, to have HBase manage a ZooKeeper quorum on nodes _rs{1,2,3,4,5}.example.com_, bound to port 2222 (the default is 2181) ensure `HBASE_MANAGE_ZK` is commented out or set to `true` in _conf/hbase-env.sh_ and then edit _conf/hbase-site.xml_    and set `hbase.zookeeper.property.clientPort` and `hbase.zookeeper.quorum`.
+You should also set `hbase.zookeeper.property.dataDir` to other than the default as the default has ZooKeeper persist data under _/tmp_ which is often cleared on system restart.
+In the example below we have ZooKeeper persist to _/user/local/zookeeper_.
+
+[source,java]
+----
+
+  <configuration>
+    ...
+    <property>
+      <name>hbase.zookeeper.property.clientPort</name>
+      <value>2222</value>
+      <description>Property from ZooKeeper's config zoo.cfg.
+      The port at which the clients will connect.
+      </description>
+    </property>
+    <property>
+      <name>hbase.zookeeper.quorum</name>
+      <value>rs1.example.com,rs2.example.com,rs3.example.com,rs4.example.com,rs5.example.com</value>
+      <description>Comma separated list of servers in the ZooKeeper Quorum.
+      For example, "host1.mydomain.com,host2.mydomain.com,host3.mydomain.com".
+      By default this is set to localhost for local and pseudo-distributed modes
+      of operation. For a fully-distributed setup, this should be set to a full
+      list of ZooKeeper quorum servers. If HBASE_MANAGES_ZK is set in hbase-env.sh
+      this is the list of servers which we will start/stop ZooKeeper on.
+      </description>
+    </property>
+    <property>
+      <name>hbase.zookeeper.property.dataDir</name>
+      <value>/usr/local/zookeeper</value>
+      <description>Property from ZooKeeper's config zoo.cfg.
+      The directory where the snapshot is stored.
+      </description>
+    </property>
+    ...
+  </configuration>
+----
+
+.What verion of ZooKeeper should I use?
+[CAUTION]
+====
+The newer version, the better.
+For example, some folks have been bitten by link:https://issues.apache.org/jira/browse/ZOOKEEPER-1277[ZOOKEEPER-1277].
+If running zookeeper 3.5+, you can ask hbase to make use of the new multi operation by enabling <<hbase.zookeeper.usemulti,hbase.zookeeper.useMulti>>" in your _hbase-site.xml_. 
+====
+
+.ZooKeeper Maintenance
+[CAUTION]
+====
+Be sure to set up the data dir cleaner described under link:http://zookeeper.apache.org/doc/r3.1.2/zookeeperAdmin.html#sc_maintenance[Zookeeper
+        Maintenance] else you could have 'interesting' problems a couple of months in; i.e.
+zookeeper could start dropping sessions if it has to run through a directory of hundreds of thousands of logs which is wont to do around leader reelection time -- a process rare but run on occasion whether because a machine is dropped or happens to hiccup.
+====
+
+== Using existing ZooKeeper ensemble
+
+To point HBase at an existing ZooKeeper cluster, one that is not managed by HBase, set `HBASE_MANAGES_ZK` in _conf/hbase-env.sh_ to false
+
+----
+
+  ...
+  # Tell HBase whether it should manage its own instance of Zookeeper or not.
+  export HBASE_MANAGES_ZK=false
+----
+
+Next set ensemble locations and client port, if non-standard, in _hbase-site.xml_, or add a suitably configured _zoo.cfg_ to HBase's _CLASSPATH_.
+HBase will prefer the configuration found in _zoo.cfg_ over any settings in _hbase-site.xml_.
+
+When HBase manages ZooKeeper, it will start/stop the ZooKeeper servers as a part of the regular start/stop scripts.
+If you would like to run ZooKeeper yourself, independent of HBase start/stop, you would do the following
+
+----
+
+${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
+----
+
+Note that you can use HBase in this manner to spin up a ZooKeeper cluster, unrelated to HBase.
+Just make sure to set `HBASE_MANAGES_ZK` to `false`      if you want it to stay up across HBase restarts so that when HBase shuts down, it doesn't take ZooKeeper down with it.
+
+For more information about running a distinct ZooKeeper cluster, see the ZooKeeper link:http://hadoop.apache.org/zookeeper/docs/current/zookeeperStarted.html[Getting
+        Started Guide].
+Additionally, see the link:http://wiki.apache.org/hadoop/ZooKeeper/FAQ#A7[ZooKeeper Wiki] or the link:http://zookeeper.apache.org/doc/r3.3.3/zookeeperAdmin.html#sc_zkMulitServerSetup[ZooKeeper
+        documentation] for more information on ZooKeeper sizing. 
+
+[[zk.sasl.auth]]
+== SASL Authentication with ZooKeeper
+
+Newer releases of Apache HBase (>= 0.92) will support connecting to a ZooKeeper Quorum that supports SASL authentication (which is available in Zookeeper versions 3.4.0 or later).
+
+This describes how to set up HBase to mutually authenticate with a ZooKeeper Quorum.
+ZooKeeper/HBase mutual authentication (link:https://issues.apache.org/jira/browse/HBASE-2418[HBASE-2418]) is required as part of a complete secure HBase configuration (link:https://issues.apache.org/jira/browse/HBASE-3025[HBASE-3025]). For simplicity of explication, this section ignores additional configuration required (Secure HDFS and Coprocessor configuration). It's recommended to begin with an HBase-managed Zookeeper configuration (as opposed to a standalone Zookeeper quorum) for ease of learning. 
+
+=== Operating System Prerequisites
+
+You need to have a working Kerberos KDC setup.
+For each `$HOST` that will run a ZooKeeper server, you should have a principle `zookeeper/$HOST`.
+For each such host, add a service key (using the `kadmin` or `kadmin.local`        tool's `ktadd` command) for `zookeeper/$HOST` and copy this file to `$HOST`, and make it readable only to the user that will run zookeeper on `$HOST`.
+Note the location of this file, which we will use below as _$PATH_TO_ZOOKEEPER_KEYTAB_. 
+
+Similarly, for each `$HOST` that will run an HBase server (master or regionserver), you should have a principle: `hbase/$HOST`.
+For each host, add a keytab file called _hbase.keytab_ containing a service key for `hbase/$HOST`, copy this file to `$HOST`, and make it readable only to the user that will run an HBase service on `$HOST`.
+Note the location of this file, which we will use below as _$PATH_TO_HBASE_KEYTAB_. 
+
+Each user who will be an HBase client should also be given a Kerberos principal.
+This principal should usually have a password assigned to it (as opposed to, as with the HBase servers, a keytab file) which only this user knows.
+The client's principal's `maxrenewlife` should be set so that it can be renewed enough so that the user can complete their HBase client processes.
+For example, if a user runs a long-running HBase client process that takes at most 3 days, we might create this user's principal within `kadmin` with: `addprinc -maxrenewlife 3days`.
+The Zookeeper client and server libraries manage their own ticket refreshment by running threads that wake up periodically to do the refreshment. 
+
+On each host that will run an HBase client (e.g. `hbase shell`), add the following file to the HBase home directory's _conf_ directory:
+
+[source,java]
+----
+
+Client {
+  com.sun.security.auth.module.Krb5LoginModule required
+  useKeyTab=false
+  useTicketCache=true;
+};
+----
+
+We'll refer to this JAAS configuration file as _$CLIENT_CONF_        below.
+
+=== HBase-managed Zookeeper Configuration
+
+On each node that will run a zookeeper, a master, or a regionserver, create a link:http://docs.oracle.com/javase/1.4.2/docs/guide/security/jgss/tutorials/LoginConfigFile.html[JAAS]        configuration file in the conf directory of the node's _HBASE_HOME_        directory that looks like the following:
+
+[source,java]
+----
+
+Server {
+  com.sun.security.auth.module.Krb5LoginModule required
+  useKeyTab=true
+  keyTab="$PATH_TO_ZOOKEEPER_KEYTAB"
+  storeKey=true
+  useTicketCache=false
+  principal="zookeeper/$HOST";
+};
+Client {
+  com.sun.security.auth.module.Krb5LoginModule required
+  useKeyTab=true
+  useTicketCache=false
+  keyTab="$PATH_TO_HBASE_KEYTAB"
+  principal="hbase/$HOST";
+};
+----
+
+where the _$PATH_TO_HBASE_KEYTAB_ and _$PATH_TO_ZOOKEEPER_KEYTAB_ files are what you created above, and `$HOST` is the hostname for that node.
+
+The `Server` section will be used by the Zookeeper quorum server, while the `Client` section will be used by the HBase master and regionservers.
+The path to this file should be substituted for the text _$HBASE_SERVER_CONF_ in the _hbase-env.sh_ listing below.
+
+The path to this file should be substituted for the text _$CLIENT_CONF_ in the _hbase-env.sh_ listing below. 
+
+Modify your _hbase-env.sh_ to include the following:
+
+[source,bourne]
+----
+
+export HBASE_OPTS="-Djava.security.auth.login.config=$CLIENT_CONF"
+export HBASE_MANAGES_ZK=true
+export HBASE_ZOOKEEPER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+export HBASE_MASTER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+export HBASE_REGIONSERVER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+----
+
+where _$HBASE_SERVER_CONF_ and _$CLIENT_CONF_ are the full paths to the JAAS configuration files created above.
+
+Modify your _hbase-site.xml_ on each node that will run zookeeper, master or regionserver to contain:
+
+[source,java]
+----
+
+<configuration>
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>$ZK_NODES</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.authProvider.1</name>
+    <value>org.apache.zookeeper.server.auth.SASLAuthenticationProvider</value>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.kerberos.removeHostFromPrincipal</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.kerberos.removeRealmFromPrincipal</name>
+    <value>true</value>
+  </property>
+</configuration>
+----
+
+where `$ZK_NODES` is the comma-separated list of hostnames of the Zookeeper Quorum hosts.
+
+Start your hbase cluster by running one or more of the following set of commands on the appropriate hosts: 
+
+----
+
+bin/hbase zookeeper start
+bin/hbase master start
+bin/hbase regionserver start
+----
+
+=== External Zookeeper Configuration
+
+Add a JAAS configuration file that looks like:
+
+[source,java]
+----
+
+Client {
+  com.sun.security.auth.module.Krb5LoginModule required
+  useKeyTab=true
+  useTicketCache=false
+  keyTab="$PATH_TO_HBASE_KEYTAB"
+  principal="hbase/$HOST";
+};
+----
+
+where the _$PATH_TO_HBASE_KEYTAB_ is the keytab created above for HBase services to run on this host, and `$HOST` is the hostname for that node.
+Put this in the HBase home's configuration directory.
+We'll refer to this file's full pathname as _$HBASE_SERVER_CONF_ below.
+
+Modify your hbase-env.sh to include the following:
+
+[source,bourne]
+----
+
+export HBASE_OPTS="-Djava.security.auth.login.config=$CLIENT_CONF"
+export HBASE_MANAGES_ZK=false
+export HBASE_MASTER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+export HBASE_REGIONSERVER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
+----
+
+Modify your _hbase-site.xml_ on each node that will run a master or regionserver to contain:
+
+[source,xml]
+----
+
+<configuration>
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>$ZK_NODES</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>true</value>
+  </property>
+</configuration>
+----
+
+where `$ZK_NODES` is the comma-separated list of hostnames of the Zookeeper Quorum hosts.
+
+Add a _zoo.cfg_ for each Zookeeper Quorum host containing:
+
+[source,java]
+----
+
+authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+kerberos.removeHostFromPrincipal=true
+kerberos.removeRealmFromPrincipal=true
+----
+
+Also on each of these hosts, create a JAAS configuration file containing:
+
+[source,java]
+----
+
+Server {
+  com.sun.security.auth.module.Krb5LoginModule required
+  useKeyTab=true
+  keyTab="$PATH_TO_ZOOKEEPER_KEYTAB"
+  storeKey=true
+  useTicketCache=false
+  principal="zookeeper/$HOST";
+};
+----
+
+where `$HOST` is the hostname of each Quorum host.
+We will refer to the full pathname of this file as _$ZK_SERVER_CONF_ below. 
+
+Start your Zookeepers on each Zookeeper Quorum host with:
+
+[source,bourne]
+----
+
+SERVER_JVMFLAGS="-Djava.security.auth.login.config=$ZK_SERVER_CONF" bin/zkServer start
+----
+
+Start your HBase cluster by running one or more of the following set of commands on the appropriate nodes: 
+
+----
+
+bin/hbase master start
+bin/hbase regionserver start
+----
+
+=== Zookeeper Server Authentication Log Output
+
+If the configuration above is successful, you should see something similar to the following in your Zookeeper server logs:
+
+----
+
+11/12/05 22:43:39 INFO zookeeper.Login: successfully logged in.
+11/12/05 22:43:39 INFO server.NIOServerCnxnFactory: binding to port 0.0.0.0/0.0.0.0:2181
+11/12/05 22:43:39 INFO zookeeper.Login: TGT refresh thread started.
+11/12/05 22:43:39 INFO zookeeper.Login: TGT valid starting at:        Mon Dec 05 22:43:39 UTC 2011
+11/12/05 22:43:39 INFO zookeeper.Login: TGT expires:                  Tue Dec 06 22:43:39 UTC 2011
+11/12/05 22:43:39 INFO zookeeper.Login: TGT refresh sleeping until: Tue Dec 06 18:36:42 UTC 2011
+..
+11/12/05 22:43:59 INFO auth.SaslServerCallbackHandler:
+  Successfully authenticated client: authenticationID=hbase/ip-10-166-175-249.us-west-1.compute.internal@HADOOP.LOCALDOMAIN;
+  authorizationID=hbase/ip-10-166-175-249.us-west-1.compute.internal@HADOOP.LOCALDOMAIN.
+11/12/05 22:43:59 INFO auth.SaslServerCallbackHandler: Setting authorizedID: hbase
+11/12/05 22:43:59 INFO server.ZooKeeperServer: adding SASL authorization for authorizationID: hbase
+----
+
+=== Zookeeper Client Authentication Log Output
+
+On the Zookeeper client side (HBase master or regionserver), you should see something similar to the following:
+
+----
+
+11/12/05 22:43:59 INFO zookeeper.ZooKeeper: Initiating client connection, connectString=ip-10-166-175-249.us-west-1.compute.internal:2181 sessionTimeout=180000 watcher=master:60000
+11/12/05 22:43:59 INFO zookeeper.ClientCnxn: Opening socket connection to server /10.166.175.249:2181
+11/12/05 22:43:59 INFO zookeeper.RecoverableZooKeeper: The identifier of this process is 14851@ip-10-166-175-249
+11/12/05 22:43:59 INFO zookeeper.Login: successfully logged in.
+11/12/05 22:43:59 INFO client.ZooKeeperSaslClient: Client will use GSSAPI as SASL mechanism.
+11/12/05 22:43:59 INFO zookeeper.Login: TGT refresh thread started.
+11/12/05 22:43:59 INFO zookeeper.ClientCnxn: Socket connection established to ip-10-166-175-249.us-west-1.compute.internal/10.166.175.249:2181, initiating session
+11/12/05 22:43:59 INFO zookeeper.Login: TGT valid starting at:        Mon Dec 05 22:43:59 UTC 2011
+11/12/05 22:43:59 INFO zookeeper.Login: TGT expires:                  Tue Dec 06 22:43:59 UTC 2011
+11/12/05 22:43:59 INFO zookeeper.Login: TGT refresh sleeping until: Tue Dec 06 18:30:37 UTC 2011
+11/12/05 22:43:59 INFO zookeeper.ClientCnxn: Session establishment complete on server ip-10-166-175-249.us-west-1.compute.internal/10.166.175.249:2181, sessionid = 0x134106594320000, negotiated timeout = 180000
+----
+
+=== Configuration from Scratch
+
+This has been tested on the current standard Amazon Linux AMI.
+First setup KDC and principals as described above.
+Next checkout code and run a sanity check.
+
+----
+
+git clone git://git.apache.org/hbase.git
+cd hbase
+mvn clean test -Dtest=TestZooKeeperACL
+----
+
+Then configure HBase as described above.
+Manually edit target/cached_classpath.txt (see below): 
+
+----
+
+bin/hbase zookeeper &
+bin/hbase master &
+bin/hbase regionserver &
+----
+
+=== Future improvements
+
+==== Fix target/cached_classpath.txt
+
+You must override the standard hadoop-core jar file from the `target/cached_classpath.txt` file with the version containing the HADOOP-7070 fix.
+You can use the following script to do this:
+
+----
+
+echo `find ~/.m2 -name "*hadoop-core*7070*SNAPSHOT.jar"` ':' `cat target/cached_classpath.txt` | sed 's/ //g' > target/tmp.txt
+mv target/tmp.txt target/cached_classpath.txt
+----
+
+==== Set JAAS configuration programmatically
+
+This would avoid the need for a separate Hadoop jar that fixes link:https://issues.apache.org/jira/browse/HADOOP-7070[HADOOP-7070]. 
+
+==== Elimination of `kerberos.removeHostFromPrincipal` and`kerberos.removeRealmFromPrincipal`
+
+
+
+ifdef::backend-docbook[]
+[index]
+= Index
+// Generated automatically by the DocBook toolchain.
+endif::backend-docbook[]

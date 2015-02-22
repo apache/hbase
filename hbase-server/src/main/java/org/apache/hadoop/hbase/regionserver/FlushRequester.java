@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Request a flush.
@@ -30,26 +30,31 @@ public interface FlushRequester {
    * Tell the listener the cache needs to be flushed.
    *
    * @param region the HRegion requesting the cache flush
+   * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
+   *          rolling.
    */
-  void requestFlush(HRegion region);
+  void requestFlush(HRegion region, boolean forceFlushAllStores);
+
   /**
    * Tell the listener the cache needs to be flushed after a delay
    *
    * @param region the HRegion requesting the cache flush
    * @param delay after how much time should the flush happen
+   * @param forceFlushAllStores whether we want to flush all stores. e.g., when request from log
+   *          rolling.
    */
-  void requestDelayedFlush(HRegion region, long delay);
+  void requestDelayedFlush(HRegion region, long delay, boolean forceFlushAllStores);
 
   /**
    * Register a FlushRequestListener
-   * 
+   *
    * @param listener
    */
   void registerFlushRequestListener(final FlushRequestListener listener);
 
   /**
    * Unregister the given FlushRequestListener
-   * 
+   *
    * @param listener
    * @return true when passed listener is unregistered successfully.
    */
@@ -57,7 +62,7 @@ public interface FlushRequester {
 
   /**
    * Sets the global memstore limit to a new size.
-   * 
+   *
    * @param globalMemStoreSize
    */
   public void setGlobalMemstoreLimit(long globalMemStoreSize);

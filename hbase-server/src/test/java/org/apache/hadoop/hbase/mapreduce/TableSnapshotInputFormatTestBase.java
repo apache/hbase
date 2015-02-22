@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -50,7 +51,7 @@ public abstract class TableSnapshotInputFormatTestBase {
 
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
-    UTIL.startMiniCluster(NUM_REGION_SERVERS);
+    UTIL.startMiniCluster(NUM_REGION_SERVERS, true);
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
@@ -152,7 +153,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     Admin admin = util.getHBaseAdmin();
 
     // put some stuff in the table
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = util.getConnection().getTable(tableName);
     util.loadTable(table, FAMILIES);
 
     Path rootDir = FSUtils.getRootDir(util.getConfiguration());

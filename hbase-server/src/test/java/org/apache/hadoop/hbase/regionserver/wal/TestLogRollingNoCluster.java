@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -31,15 +32,21 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test many concurrent appenders to an {@link #HLog} while rolling the log.
+ * Test many concurrent appenders to an {@link #WAL} while rolling the log.
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestLogRollingNoCluster {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte [] EMPTY_1K_ARRAY = new byte[1024];
@@ -57,7 +64,10 @@ public class TestLogRollingNoCluster {
     Path dir = TEST_UTIL.getDataTestDir();
     // The implementation needs to know the 'handler' count.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, THREAD_COUNT);
-    HLog wal = HLogFactory.createHLog(fs, dir, "logs", TEST_UTIL.getConfiguration());
+    final Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    FSUtils.setRootDir(conf, dir);
+    final WALFactory wals = new WALFactory(conf, null, TestLogRollingNoCluster.class.getName());
+    final WAL wal = wals.getWAL(new byte[]{});
     
     Appender [] appenders = null;
 
@@ -76,7 +86,7 @@ public class TestLogRollingNoCluster {
         appenders[i].join();
       }
     } finally {
-      wal.close();
+      wals.close();
     }
     for (int i = 0; i < count; i++) {
       assertFalse(appenders[i].isException());
@@ -88,11 +98,11 @@ public class TestLogRollingNoCluster {
    */
   static class Appender extends Thread {
     private final Log log;
-    private final HLog wal;
+    private final WAL wal;
     private final int count;
     private Exception e = null;
 
-    Appender(final HLog wal, final int index, final int count) {
+    Appender(final WAL wal, final int index, final int count) {
       super("" + index);
       this.wal = wal;
       this.count = count;
@@ -117,16 +127,18 @@ public class TestLogRollingNoCluster {
       try {
         for (int i = 0; i < this.count; i++) {
           long now = System.currentTimeMillis();
-          // Roll every ten edits if the log has anything in it.
-          if (i % 10 == 0 && ((FSHLog) this.wal).getNumEntries() > 0) {
+          // Roll every ten edits
+          if (i % 10 == 0) {
             this.wal.rollWriter();
           }
           WALEdit edit = new WALEdit();
           byte[] bytes = Bytes.toBytes(i);
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
-          this.wal.append(HRegionInfo.FIRST_META_REGIONINFO,
-              HTableDescriptor.META_TABLEDESC.getTableName(),
-              edit, now, HTableDescriptor.META_TABLEDESC, sequenceId);
+          final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
+          final HTableDescriptor htd = TEST_UTIL.getMetaTableDescriptor();
+          final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(),
+              TableName.META_TABLE_NAME, now), edit, sequenceId, true, null);
+          wal.sync(txid);
         }
         String msg = getName() + " finished";
         if (isException())

@@ -42,6 +42,8 @@
 @rem
 @rem   JRUBY_OPTS       Extra options (eg '--1.9') passed to the hbase shell.
 @rem                    Empty by default.
+@rem   HBASE_SHELL_OPTS Extra options passed to the hbase shell.
+@rem                    Empty by default.
 
 
 setlocal enabledelayedexpansion
@@ -86,10 +88,15 @@ if "%hbase-command%"=="" (
 )
 
 set JAVA_HEAP_MAX=-Xmx1000m
+set JAVA_OFFHEAP_MAX=""
 
 rem check envvars which might override default args
 if defined HBASE_HEAPSIZE (
   set JAVA_HEAP_MAX=-Xmx%HBASE_HEAPSIZE%m
+)
+
+if defined HBASE_OFFHEAPSIZE (
+  set JAVA_OFFHEAP_MAX=-XX:MaxDirectMemory=%HBASE_OFFHEAPSIZE%m
 )
 
 set CLASSPATH=%HBASE_CONF_DIR%;%JAVA_HOME%\lib\tools.jar
@@ -159,6 +166,11 @@ set PATH=%PATH%;"%HADOOP_HOME%\bin"
 set HADOOP_IN_PATH=hadoop.cmd
 
 if exist "%HADOOP_HOME%\bin\%HADOOP_IN_PATH%" (
+  set hadoopCpCommand=call %HADOOP_IN_PATH% classpath 2^>nul
+  for /f "eol= delims=" %%i in ('!hadoopCpCommand!') do set CLASSPATH_FROM_HADOOP=%%i
+  if defined CLASSPATH_FROM_HADOOP (
+    set CLASSPATH=%CLASSPATH%;!CLASSPATH_FROM_HADOOP!
+  )
   set HADOOP_CLASSPATH=%CLASSPATH%
 
   set hadoopJLPCommand=call %HADOOP_IN_PATH% org.apache.hadoop.hbase.util.GetJavaProperty java.library.path 2^>nul
@@ -198,7 +210,7 @@ goto :MakeCmdArgsLoop
 set hbase-command-arguments=%_hbasearguments%
 
 @rem figure out which class to run
-set corecommands=shell master regionserver thrift thrift2 rest avro hlog hbck hfile zookeeper zkcli upgrade mapredcp
+set corecommands=shell master regionserver thrift thrift2 rest avro hlog wal hbck hfile zookeeper zkcli upgrade mapredcp
 for %%i in ( %corecommands% ) do (
   if "%hbase-command%"=="%%i" set corecommand=true
 )
@@ -237,7 +249,9 @@ if "%servercommand%" == "true" (
 if defined service_entry (
   set HBASE_LOG_PREFIX=hbase-%hbase-command%-%COMPUTERNAME%
   set HBASE_LOGFILE=!HBASE_LOG_PREFIX!.log
-  set HBASE_ROOT_LOGGER=INFO,DRFA
+  if not defined HBASE_ROOT_LOGGER (
+	set HBASE_ROOT_LOGGER=INFO,DRFA
+  )
   set HBASE_SECURITY_LOGGER=INFO,DRFAS
   set loggc=!HBASE_LOG_DIR!\!HBASE_LOG_PREFIX!.gc
   set loglog=!HBASE_LOG_DIR!\!HBASE_LOGFILE!
@@ -279,7 +293,8 @@ if not defined HBASE_SECURITY_LOGGER (
 )
 set HBASE_OPTS=%HBASE_OPTS% -Dhbase.security.logger="%HBASE_SECURITY_LOGGER%"
 
-set java_arguments=%JAVA_HEAP_MAX% %HBASE_OPTS% -classpath "%CLASSPATH%" %CLASS% %hbase-command-arguments%
+set HEAP_SETTINGS="%JAVA_HEAP_MAX% %JAVA_OFFHEAP_MAX%"
+set java_arguments=%HEAP_SETTINGS% %HBASE_OPTS% -classpath "%CLASSPATH%" %CLASS% %hbase-command-arguments%
 
 if defined service_entry (
   call :makeServiceXml %java_arguments%
@@ -302,6 +317,7 @@ goto :eof
   ) else (
     set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources="%HBASE_HOME%\hbase-shell\src\main\ruby"
   )
+  set HBASE_OPTS=%HBASE_OPTS% %HBASE_SHELL_OPTS%
 
   set CLASS=org.jruby.Main -X+O %JRUBY_OPTS% "%HBASE_HOME%\bin\hirb.rb"
   goto :eof
@@ -359,8 +375,13 @@ goto :eof
   set CLASS=org.apache.hadoop.hbase.util.HBaseFsck
   goto :eof
 
+@rem TODO remove older 'hlog' command
 :hlog
-  set CLASS=org.apache.hadoop.hbase.regionserver.wal.HLogPrettyPrinter
+  set CLASS=org.apache.hadoop.hbase.wal.WALPrettyPrinter
+  goto :eof
+
+:wal
+  set CLASS=org.apache.hadoop.hbase.wal.WALPrettyPrinter
   goto :eof
 
 :hfile
@@ -400,7 +421,7 @@ goto :eof
   echo Some commands take arguments. Pass no args or -h for usage."
   echo   shell           Run the HBase shell
   echo   hbck            Run the hbase 'fsck' tool
-  echo   hlog            Write-ahead-log analyzer
+  echo   wal             Write-ahead-log analyzer
   echo   hfile           Store file analyzer
   echo   zkcli           Run the ZooKeeper shell
   echo   upgrade         Upgrade hbase

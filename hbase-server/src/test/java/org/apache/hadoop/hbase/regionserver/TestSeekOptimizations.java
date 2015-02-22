@@ -40,7 +40,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -59,7 +60,7 @@ import org.junit.runners.Parameterized.Parameters;
  * actually saving I/O operations.
  */
 @RunWith(Parameterized.class)
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestSeekOptimizations {
 
   private static final Log LOG =
@@ -438,7 +439,7 @@ public class TestSeekOptimizations {
   @After
   public void tearDown() throws IOException {
     if (region != null) {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
 
     // We have to re-set the lazy seek flag back to the default so that other

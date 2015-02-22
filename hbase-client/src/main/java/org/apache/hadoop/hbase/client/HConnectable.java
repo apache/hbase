@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * This class makes it convenient for one to execute a command in the context
@@ -40,7 +40,7 @@ import org.apache.hadoop.conf.Configuration;
  */
 @InterfaceAudience.Private
 public abstract class HConnectable<T> {
-  public Configuration conf;
+  protected Configuration conf;
 
   protected HConnectable(Configuration conf) {
     this.conf = conf;

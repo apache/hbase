@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -95,7 +95,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   }
 
   /**
-   * Returns an {@link MasterAdminService.BlockingInterface} to the active master
+   * Returns an {@link MasterService.BlockingInterface} to the active master
    */
   public abstract MasterService.BlockingInterface getMasterAdminService()
   throws IOException;
@@ -118,7 +118,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @param hostname the hostname to start the regionserver on
    * @throws IOException if something goes wrong
    */
-  public abstract void startRegionServer(String hostname) throws IOException;
+  public abstract void startRegionServer(String hostname, int port) throws IOException;
 
   /**
    * Kills the region server process if this is a distributed cluster, otherwise
@@ -139,18 +139,19 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
-  public void waitForRegionServerToStart(String hostname, long timeout)
+  public void waitForRegionServerToStart(String hostname, int port, long timeout)
       throws IOException {
     long start = System.currentTimeMillis();
     while ((System.currentTimeMillis() - start) < timeout) {
       for (ServerName server : getClusterStatus().getServers()) {
-        if (server.getHostname().equals(hostname)) {
+        if (server.getHostname().equals(hostname) && server.getPort() == port) {
           return;
         }
       }
       Threads.sleep(100);
     }
-    throw new IOException("did timeout waiting for region server to start:" + hostname);
+    throw new IOException("did timeout " + timeout + "ms waiting for region server to start: "
+        + hostname);
   }
 
   /**
@@ -168,7 +169,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return whether the operation finished with success
    * @throws IOException if something goes wrong
    */
-  public abstract void startMaster(String hostname) throws IOException;
+  public abstract void startMaster(String hostname, int port) throws IOException;
 
   /**
    * Kills the master process if this is a distributed cluster, otherwise,
@@ -249,15 +250,18 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * Get the ServerName of region server serving the first hbase:meta region
    */
   public ServerName getServerHoldingMeta() throws IOException {
-    return getServerHoldingRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+    return getServerHoldingRegion(TableName.META_TABLE_NAME,
+      HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
   }
 
   /**
    * Get the ServerName of region server serving the specified region
    * @param regionName Name of the region in bytes
+   * @param tn Table name that has the region.
    * @return ServerName that hosts the region or null
    */
-  public abstract ServerName getServerHoldingRegion(byte[] regionName) throws IOException;
+  public abstract ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
+  throws IOException;
 
   /**
    * @return whether we are interacting with a distributed cluster as opposed to an

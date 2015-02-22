@@ -37,7 +37,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -46,12 +47,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestChecksum {
-  // change this value to activate more logs
-  private static final boolean detailedLogging = true;
-  private static final boolean[] BOOLEAN_VALUES = new boolean[] { false, true };
-
   private static final Log LOG = LogFactory.getLog(TestHFileBlock.class);
 
   static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
@@ -93,7 +90,6 @@ public class TestChecksum {
                             .withCompression(algo)
                             .withIncludesMvcc(true)
                             .withIncludesTags(useTags)
-                            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                             .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                             .build();
         HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
@@ -118,14 +114,14 @@ public class TestChecksum {
               .withIncludesTags(useTags)
               .withHBaseCheckSum(true)
               .build();
-        HFileBlock.FSReader hbr = new FSReaderV2Test(is, totalSize, fs, path, meta);
+        HFileBlock.FSReader hbr = new FSReaderImplTest(is, totalSize, fs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         b.sanityCheck();
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
         assertEquals(algo == GZ ? 2173 : 4936, 
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         // read data back from the hfile, exclude header and checksum
-        ByteBuffer bb = b.getBufferWithoutHeader(); // read back data
+        ByteBuffer bb = b.unpack(meta, hbr).getBufferWithoutHeader(); // read back data
         DataInputStream in = new DataInputStream(
                                new ByteArrayInputStream(
                                  bb.array(), bb.arrayOffset(), bb.limit()));
@@ -160,10 +156,11 @@ public class TestChecksum {
         HFileSystem newfs = new HFileSystem(TEST_UTIL.getConfiguration(), false);
         assertEquals(false, newfs.useHBaseChecksum());
         is = new FSDataInputStreamWrapper(newfs, path);
-        hbr = new FSReaderV2Test(is, totalSize, newfs, path, meta);
+        hbr = new FSReaderImplTest(is, totalSize, newfs, path, meta);
         b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
         b.sanityCheck();
+        b = b.unpack(meta, hbr);
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
         assertEquals(algo == GZ ? 2173 : 4936, 
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
@@ -202,7 +199,6 @@ public class TestChecksum {
                             .withIncludesTags(useTags)
                             .withHBaseCheckSum(true)
                             .withBytesPerCheckSum(bytesPerChecksum)
-                            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                             .build();
         HFileBlock.Writer hbw = new HFileBlock.Writer(null,
            meta);
@@ -243,7 +239,7 @@ public class TestChecksum {
                .withHBaseCheckSum(true)
                .withBytesPerCheckSum(bytesPerChecksum)
                .build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(
+        HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(
             is, nochecksum), totalSize, hfs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
@@ -274,12 +270,7 @@ public class TestChecksum {
     // validate data
     for (int i = 0; i < 1234; i++) {
       int val = in.readInt();
-      if (val != i) {
-        String msg = "testChecksumCorruption: data mismatch at index " +
-                     i + " expected " + i + " found " + val;
-        LOG.warn(msg);
-        assertEquals(i, val);
-      }
+      assertEquals("testChecksumCorruption: data mismatch at index " + i, i, val);
     }
   }
 
@@ -288,8 +279,8 @@ public class TestChecksum {
    * reading  data from hfiles. This should trigger the hdfs level
    * checksum validations.
    */
-  static private class FSReaderV2Test extends HFileBlock.FSReaderV2 {
-    public FSReaderV2Test(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
+  static private class FSReaderImplTest extends HFileBlock.FSReaderImpl {
+    public FSReaderImplTest(FSDataInputStreamWrapper istream, long fileSize, FileSystem fs,
         Path path, HFileContext meta) throws IOException {
       super(istream, fileSize, (HFileSystem) fs, path, meta);
     }

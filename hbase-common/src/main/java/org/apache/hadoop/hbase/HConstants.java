@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,8 +27,8 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -62,7 +61,7 @@ public final class HConstants {
   /**
    * The first four bytes of Hadoop RPC connections
    */
-  public static final ByteBuffer RPC_HEADER = ByteBuffer.wrap("HBas".getBytes());
+  public static final byte[] RPC_HEADER = new byte[] { 'H', 'B', 'a', 's' };
   public static final byte RPC_CURRENT_VERSION = 0;
 
   // HFileBlock constants.
@@ -84,6 +83,7 @@ public final class HConstants {
   /**
    * Status codes used for return values of bulk operations.
    */
+  @InterfaceAudience.Private
   public enum OperationStatusCode {
     NOT_RUN,
     SUCCESS,
@@ -150,7 +150,9 @@ public final class HConstants {
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
 
-  /** by default every master is a possible primary master unless the conf explicitly overrides it */
+  /**
+   * by default every master is a possible primary master unless the conf explicitly overrides it
+   */
   public static final boolean DEFAULT_MASTER_TYPE_BACKUP = false;
 
   /** Name of ZooKeeper quorum configuration parameter. */
@@ -179,8 +181,11 @@ public final class HConstants {
   /** Default client port that the zookeeper listens on */
   public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
 
-  /** Parameter name for the wait time for the recoverable zookeeper */
-  public static final String ZOOKEEPER_RECOVERABLE_WAITTIME = "hbase.zookeeper.recoverable.waittime";
+  /**
+   * Parameter name for the wait time for the recoverable zookeeper
+   */
+  public static final String ZOOKEEPER_RECOVERABLE_WAITTIME =
+      "hbase.zookeeper.recoverable.waittime";
 
   /** Default wait time for the recoverable zookeeper */
   public static final long DEFAULT_ZOOKEPER_RECOVERABLE_WAITIME = 10000;
@@ -380,7 +385,10 @@ public final class HConstants {
   // should go down.
 
 
-  /** The hbase:meta table's name. */
+  /**
+   * The hbase:meta table's name.
+   * 
+   */
   @Deprecated  // for compat from 0.94 -> 0.96.
   public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
 
@@ -441,6 +449,16 @@ public final class HConstants {
 
   /** The upper-half merge region column qualifier */
   public static final byte[] MERGEB_QUALIFIER = Bytes.toBytes("mergeB");
+
+  /** The catalog family as a string*/
+  public static final String TABLE_FAMILY_STR = "table";
+
+  /** The catalog family */
+  public static final byte [] TABLE_FAMILY = Bytes.toBytes(TABLE_FAMILY_STR);
+
+  /** The serialized table state qualifier */
+  public static final byte[] TABLE_STATE_QUALIFIER = Bytes.toBytes("state");
+
 
   /**
    * The meta table version column qualifier.
@@ -557,11 +575,12 @@ public final class HConstants {
    * 1, 2, 3, 5, 10, 20, 40, 100, 100, 100.
    * With 100ms, a back-off of 200 means 20s
    */
-  public static int RETRY_BACKOFF[] = { 1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200 };
+  public static final int RETRY_BACKOFF[] = {1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200};
 
   public static final String REGION_IMPL = "hbase.hregion.impl";
 
   /** modifyTable op for replacing the table descriptor */
+  @InterfaceAudience.Private
   public static enum Modify {
     CLOSE_REGION,
     TABLE_COMPACT,
@@ -593,27 +612,28 @@ public final class HConstants {
      * Parameter name for maximum number of bytes returned when calling a
      * scanner's next method.
      */
-  public static String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
+  public static final String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY =
+      "hbase.client.scanner.max.result.size";
 
   /**
    * Maximum number of bytes returned when calling a scanner's next method.
    * Note that when a single row is larger than this limit the row is still
    * returned completely.
    *
-   * The default value is unlimited.
+   * The default value is 2MB.
    */
-  public static long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
+  public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = 2 * 1024 * 1024;
 
   /**
    * Parameter name for client pause value, used mostly as value to wait
    * before running a retry of a failed get, region lookup, etc.
    */
-  public static String HBASE_CLIENT_PAUSE = "hbase.client.pause";
+  public static final String HBASE_CLIENT_PAUSE = "hbase.client.pause";
 
   /**
    * Default value of {@link #HBASE_CLIENT_PAUSE}.
    */
-  public static long DEFAULT_HBASE_CLIENT_PAUSE = 100;
+  public static final long DEFAULT_HBASE_CLIENT_PAUSE = 100;
 
   /**
    * The maximum number of concurrent connections the client will maintain.
@@ -651,34 +671,34 @@ public final class HConstants {
    * Parameter name for server pause value, used mostly as value to wait before
    * running a retry of a failed operation.
    */
-  public static String HBASE_SERVER_PAUSE = "hbase.server.pause";
+  public static final String HBASE_SERVER_PAUSE = "hbase.server.pause";
 
   /**
    * Default value of {@link #HBASE_SERVER_PAUSE}.
    */
-  public static int DEFAULT_HBASE_SERVER_PAUSE = 1000;
+  public static final int DEFAULT_HBASE_SERVER_PAUSE = 1000;
 
   /**
    * Parameter name for maximum retries, used as maximum for all retryable
    * operations such as fetching of the root region from root region server,
    * getting a cell's value, starting a row update, etc.
    */
-  public static String HBASE_CLIENT_RETRIES_NUMBER = "hbase.client.retries.number";
+  public static final String HBASE_CLIENT_RETRIES_NUMBER = "hbase.client.retries.number";
 
   /**
    * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
    */
-  public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 31;
+  public static final int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 31;
 
   /**
    * Parameter name to set the default scanner caching for all clients.
    */
-  public static String HBASE_CLIENT_SCANNER_CACHING = "hbase.client.scanner.caching";
+  public static final String HBASE_CLIENT_SCANNER_CACHING = "hbase.client.scanner.caching";
 
   /**
    * Default value for {@link #HBASE_CLIENT_SCANNER_CACHING}
    */
-  public static int DEFAULT_HBASE_CLIENT_SCANNER_CACHING = 100;
+  public static final int DEFAULT_HBASE_CLIENT_SCANNER_CACHING = 100;
 
   /**
    * Parameter name for number of rows that will be fetched when calling next on
@@ -686,12 +706,32 @@ public final class HConstants {
    * enable faster scanners but will eat up more memory and some calls of next
    * may take longer and longer times when the cache is empty.
    */
-  public static String HBASE_META_SCANNER_CACHING = "hbase.meta.scanner.caching";
+  public static final String HBASE_META_SCANNER_CACHING = "hbase.meta.scanner.caching";
 
   /**
    * Default value of {@link #HBASE_META_SCANNER_CACHING}.
    */
-  public static int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
+  public static final int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
+
+  /**
+   * Parameter name for number of versions, kept by meta table.
+   */
+  public static final String HBASE_META_VERSIONS = "hbase.meta.versions";
+
+  /**
+   * Default value of {@link #HBASE_META_VERSIONS}.
+   */
+  public static final int DEFAULT_HBASE_META_VERSIONS = 3;
+
+  /**
+   * Parameter name for number of versions, kept by meta table.
+   */
+  public static final String HBASE_META_BLOCK_SIZE = "hbase.meta.blocksize";
+
+  /**
+   * Default value of {@link #HBASE_META_BLOCK_SIZE}.
+   */
+  public static final int DEFAULT_HBASE_META_BLOCK_SIZE = 8 * 1024;
 
   /**
    * Parameter name for unique identifier for this {@link org.apache.hadoop.conf.Configuration}
@@ -702,45 +742,46 @@ public final class HConstants {
    * org.apache.hadoop.hbase.client.HConnection instances if some of the other connection parameters
    * differ.
    */
-  public static String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
+  public static final String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
 
   /**
    * The client scanner timeout period in milliseconds.
    */
-  public static String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = "hbase.client.scanner.timeout.period";
+  public static final String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD =
+      "hbase.client.scanner.timeout.period";
 
   /**
    * Use {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD} instead.
    * @deprecated This config option is deprecated. Will be removed at later releases after 0.96.
    */
   @Deprecated
-  public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY =
+  public static final String HBASE_REGIONSERVER_LEASE_PERIOD_KEY =
       "hbase.regionserver.lease.period";
 
   /**
    * Default value of {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD}.
    */
-  public static int DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = 60000;
+  public static final int DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = 60000;
 
   /**
    * timeout for each RPC
    */
-  public static String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
+  public static final String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
    */
-  public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
+  public static final int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
 
   /**
    * timeout for short operation RPC
    */
-  public static String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY = "hbase.rpc.shortoperation.timeout";
+  public static final String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY = "hbase.rpc.shortoperation.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY}
    */
-  public static int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
+  public static final int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
 
   /**
    * Value indicating the server name was saved with no sequence number.
@@ -775,7 +816,7 @@ public final class HConstants {
     "hbase.regionserver.region.split.policy";
 
   /** Whether nonces are enabled; default is true. */
-  public static String HBASE_RS_NONCES_ENABLED = "hbase.regionserver.nonces.enabled";
+  public static final String HBASE_RS_NONCES_ENABLED = "hbase.regionserver.nonces.enabled";
 
   /**
    * Configuration key for the size of the block cache
@@ -836,9 +877,21 @@ public final class HConstants {
   public static final String REGION_SERVER_HANDLER_COUNT = "hbase.regionserver.handler.count";
   public static final int DEFAULT_REGION_SERVER_HANDLER_COUNT = 30;
 
-  public static final String REGION_SERVER_META_HANDLER_COUNT =
+  /*
+   * REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT:
+   * -1  => Disable aborting
+   * 0   => Abort if even a single handler has died
+   * 0.x => Abort only when this percent of handlers have died
+   * 1   => Abort only all of the handers have died
+   */
+  public static final String REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT =
+		  "hbase.regionserver.handler.abort.on.error.percent";
+  public static final double DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT = 0.5;
+
+  //High priority handlers to deal with admin requests and system table operation requests
+  public static final String REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT =
       "hbase.regionserver.metahandler.count";
-  public static final int DEFAULT_REGION_SERVER_META_HANDLER_COUNT = 10;
+  public static final int DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT = 10;
 
   public static final String REGION_SERVER_REPLICATION_HANDLER_COUNT =
       "hbase.regionserver.replication.handler.count";
@@ -850,6 +903,12 @@ public final class HConstants {
   /** Conf key that specifies timeout value to wait for a region ready */
   public static final String LOG_REPLAY_WAIT_REGION_TIMEOUT =
       "hbase.master.log.replay.wait.region.timeout";
+
+  /** Conf key for enabling meta replication */
+  public static final String USE_META_REPLICAS = "hbase.meta.replicas.use";
+  public static final boolean DEFAULT_USE_META_REPLICAS = false;
+  public static final String META_REPLICAS_NUM = "hbase.meta.replica.count";
+  public static final int DEFAULT_META_REPLICA_NUM = 1;
 
   /**
    * The name of the configuration parameter that specifies
@@ -871,9 +930,19 @@ public final class HConstants {
   /** File permission umask to use when creating hbase data files */
   public static final String DATA_FILE_UMASK_KEY = "hbase.data.umask";
 
-  /** Configuration name of HLog Compression */
+  /** Configuration name of WAL Compression */
   public static final String ENABLE_WAL_COMPRESSION =
     "hbase.regionserver.wal.enablecompression";
+
+  /** Configuration name of WAL storage policy
+   * Valid values are:
+   *  NONE: no preference in destination of replicas
+   *  ONE_SSD: place only one replica in SSD and the remaining in default storage
+   *  and ALL_SSD: place all replica on SSD
+   *  
+   * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html*/
+  public static final String WAL_STORAGE_POLICY = "hbase.wal.storage.policy";
+  public static final String DEFAULT_WAL_STORAGE_POLICY = "NONE";
 
   /** Region in Transition metrics threshold time */
   public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD="hbase.metrics.rit.stuck.warning.threshold";
@@ -899,9 +968,11 @@ public final class HConstants {
    */
   public static final int NORMAL_QOS = 0;
   public static final int QOS_THRESHOLD = 10;
-  public static final int HIGH_QOS = 100;
+  public static final int HIGH_QOS = 200;
   public static final int REPLICATION_QOS = 5; // normal_QOS < replication_QOS < high_QOS
   public static final int REPLAY_QOS = 6; // REPLICATION_QOS < REPLAY_QOS < high_QOS
+  public static final int ADMIN_QOS = 100; // QOS_THRESHOLD < ADMIN_QOS < high_QOS
+  public static final int SYSTEMTABLE_QOS = HIGH_QOS;
 
   /** Directory under /hbase where archived hfiles are stored */
   public static final String HFILE_ARCHIVE_DIRECTORY = "archive";
@@ -925,10 +996,9 @@ public final class HConstants {
   public static final long DEFAULT_REGIONSERVER_METRICS_PERIOD = 5000;
   /** Directories that are not HBase table directories */
   public static final List<String> HBASE_NON_TABLE_DIRS =
-    Collections.unmodifiableList(Arrays.asList(new String[] { HREGION_LOGDIR_NAME,
-      HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME, SPLIT_LOGDIR_NAME,
-      HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME, HBASE_TEMP_DIRECTORY,
-      OLD_SNAPSHOT_DIR_NAME, BASE_NAMESPACE_DIR, MIGRATION_NAME, LIB_DIR}));
+    Collections.unmodifiableList(Arrays.asList(new String[] {
+      HBCK_SIDELINEDIR_NAME, HBASE_TEMP_DIRECTORY, MIGRATION_NAME
+    }));
 
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =
@@ -1004,7 +1074,7 @@ public final class HConstants {
   /** Configuration key for the name of the master WAL encryption key for the cluster, a string */
   public static final String CRYPTO_WAL_KEY_NAME_CONF_KEY = "hbase.crypto.wal.key.name";
 
-  /** Configuration key for enabling HLog encryption, a boolean */
+  /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
 
   /** Configuration key for setting RPC codec class name */
@@ -1041,6 +1111,45 @@ public final class HConstants {
    * memory size to give to the cache (if < 1.0) OR, it is the capacity in megabytes of the cache.
    */
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
+
+  /**
+   * HConstants for fast fail on the client side follow
+   */
+  /**
+   * Config for enabling/disabling the fast fail mode.
+   */
+  public static final String HBASE_CLIENT_FAST_FAIL_MODE_ENABLED =
+      "hbase.client.fast.fail.mode.enabled";
+
+  public static final boolean HBASE_CLIENT_ENABLE_FAST_FAIL_MODE_DEFAULT =
+      false;
+
+  public static final String HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS =
+      "hbase.client.fastfail.threshold";
+  
+  public static final long HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT =
+      60000;
+
+  public static final String HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS =
+      "hbase.client.fast.fail.cleanup.duration";
+
+  public static final long HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT =
+      600000;
+
+  public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
+      "hbase.client.fast.fail.interceptor.impl"; 
+
+  /** Config key for if the server should send backpressure and if the client should listen to
+   * that backpressure from the server */
+  public static final String ENABLE_CLIENT_BACKPRESSURE = "hbase.client.backpressure.enabled";
+  public static final boolean DEFAULT_ENABLE_CLIENT_BACKPRESSURE = false;
+
+  public static final String HEAP_OCCUPANCY_LOW_WATERMARK_KEY =
+      "hbase.heap.occupancy.low_water_mark";
+  public static final float DEFAULT_HEAP_OCCUPANCY_LOW_WATERMARK = 0.95f;
+  public static final String HEAP_OCCUPANCY_HIGH_WATERMARK_KEY =
+      "hbase.heap.occupancy.high_water_mark";
+  public static final float DEFAULT_HEAP_OCCUPANCY_HIGH_WATERMARK = 0.98f;
 
   private HConstants() {
     // Can't be instantiated with this ctor.

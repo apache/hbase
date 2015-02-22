@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.google.protobuf.RpcCallback;
 

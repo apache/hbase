@@ -29,18 +29,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -51,7 +51,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestRegionObserverBypass {
   private static HBaseTestingUtility util;
   private static final TableName tableName = TableName.valueOf("test");
@@ -93,7 +93,7 @@ public class TestRegionObserverBypass {
    */
   @Test
   public void testSimple() throws Exception {
-    HTable t = new HTable(util.getConfiguration(), tableName);
+    Table t = util.getConnection().getTable(tableName);
     Put p = new Put(row1);
     p.add(test,dummy,dummy);
     // before HBASE-4331, this would throw an exception
@@ -112,7 +112,7 @@ public class TestRegionObserverBypass {
     //previous deletes will eclipse successive puts having the same timestamp
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
 
-    HTable t = new HTable(util.getConfiguration(), tableName);
+    Table t = util.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<Put>();
     Put p = new Put(row1);
     p.add(dummy,dummy,dummy);
@@ -197,7 +197,7 @@ public class TestRegionObserverBypass {
     EnvironmentEdgeManager.reset();
   }
 
-  private void checkRowAndDelete(HTable t, byte[] row, int count) throws IOException {
+  private void checkRowAndDelete(Table t, byte[] row, int count) throws IOException {
     Get g = new Get(row);
     Result r = t.get(g);
     assertEquals(count, r.size());

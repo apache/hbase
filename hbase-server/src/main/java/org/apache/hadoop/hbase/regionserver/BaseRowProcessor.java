@@ -22,6 +22,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -30,6 +33,8 @@ import com.google.protobuf.Message;
 /**
  * Base class for RowProcessor with some default implementations.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
 public abstract class BaseRowProcessor<S extends Message,T extends Message> 
 implements RowProcessor<S,T> {
 

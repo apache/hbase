@@ -44,7 +44,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -61,7 +62,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Tests optimized scanning of multiple columns.
  */
 @RunWith(Parameterized.class)
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestMultiColumnScanner {
 
   private static final Log LOG = LogFactory.getLog(TestMultiColumnScanner.class);
@@ -284,7 +285,7 @@ public class TestMultiColumnScanner {
         "pairs", lastDelTimeMap.size() > 0);
     LOG.info("Number of row/col pairs deleted at least once: " +
        lastDelTimeMap.size());
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   private static String getRowQualStr(Cell kv) {

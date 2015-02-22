@@ -30,15 +30,16 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.MediumTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mortbay.log.Log;
@@ -48,7 +49,7 @@ import org.mortbay.log.Log;
  * {@link TestHRegion} if you don't need a cluster, if you can test w/ a
  * standalone {@link HRegion}.
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestHRegionOnCluster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -56,6 +57,7 @@ public class TestHRegionOnCluster {
   public void testDataCorrectnessReplayingRecoveredEdits() throws Exception {
     final int NUM_MASTERS = 1;
     final int NUM_RS = 3;
+    Admin hbaseAdmin = null;
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
 
     try {
@@ -67,14 +69,14 @@ public class TestHRegionOnCluster {
       // Create table
       HTableDescriptor desc = new HTableDescriptor(TABLENAME);
       desc.addFamily(new HColumnDescriptor(FAMILY));
-      Admin hbaseAdmin = TEST_UTIL.getHBaseAdmin();
+      hbaseAdmin = master.getConnection().getAdmin();
       hbaseAdmin.createTable(desc);
 
       assertTrue(hbaseAdmin.isTableAvailable(TABLENAME));
 
       // Put data: r1->v1
       Log.info("Loading r1 to v1 into " + TABLENAME);
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
+      HTable table = (HTable) TEST_UTIL.getConnection().getTable(TABLENAME);
       putDataAndVerify(table, "r1", FAMILY, "v1", 1);
 
       TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
@@ -129,11 +131,12 @@ public class TestHRegionOnCluster {
       putDataAndVerify(table, "r4", FAMILY, "v4", 4);
 
     } finally {
+      if (hbaseAdmin != null) hbaseAdmin.close();
       TEST_UTIL.shutdownMiniCluster();
     }
   }
 
-  private void putDataAndVerify(HTable table, String row, byte[] family,
+  private void putDataAndVerify(Table table, String row, byte[] family,
       String value, int verifyNum) throws IOException {
     System.out.println("=========Putting data :" + row);
     Put put = new Put(Bytes.toBytes(row));

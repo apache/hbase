@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -219,7 +220,14 @@ public class TCellVisibility implements org.apache.thrift.TBase<TCellVisibility,
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_expression = true && (isSetExpression());
+    builder.append(present_expression);
+    if (present_expression)
+      builder.append(expression);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TCellVisibility other) {

@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 /**
  * Runs the TestReplicationKillRS test and selects the RS to kill in the slave cluster
  * Do not add other tests in this class.
  */
-@Category(LargeTests.class)
+@Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
 
   @Test(timeout=300000)

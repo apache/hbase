@@ -21,22 +21,25 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.SettableSequenceId;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -134,7 +137,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       }
     }
 
-    protected void createKeyOnlyKeyValue(byte[] keyBuffer, long memTS) {
+    protected void setKey(byte[] keyBuffer, long memTS) {
       currentKey.setKey(keyBuffer, 0, keyLength);
       memstoreTS = memTS;
     }
@@ -299,11 +302,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public String toString() {
-      KeyValue kv = KeyValueUtil.copyToNewKeyValue(this);
-      if (kv == null) {
-        return "null";
-      }
-      return kv.toString();
+      return KeyValue.keyToString(this.keyBuffer, 0, KeyValueUtil.keyLength(this)) + "/vlen="
+          + getValueLength() + "/seqid=" + memstoreTS;
     }
 
     public Cell shallowCopy() {
@@ -325,7 +325,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   // there. So this has to be an instance of SettableSequenceId. SeekerState need not be
   // SettableSequenceId as we never return that to top layers. When we have to, we make
   // ClonedSeekerState from it.
-  protected static class ClonedSeekerState implements Cell, SettableSequenceId {
+  protected static class ClonedSeekerState implements Cell, HeapSize, SettableSequenceId {
+    private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
+        + (4 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
+        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (2 * ClassSize.ARRAY));
     private byte[] keyOnlyBuffer;
     private ByteBuffer currentBuffer;
     private short rowLength;
@@ -475,39 +478,41 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     @Override
     @Deprecated
     public byte[] getValue() {
-      throw new UnsupportedOperationException("getValue() not supported");
+      return CellUtil.cloneValue(this);
     }
 
     @Override
     @Deprecated
     public byte[] getFamily() {
-      throw new UnsupportedOperationException("getFamily() not supported");
+      return CellUtil.cloneFamily(this);
     }
 
     @Override
     @Deprecated
     public byte[] getQualifier() {
-      throw new UnsupportedOperationException("getQualifier() not supported");
+      return CellUtil.cloneQualifier(this);
     }
 
     @Override
     @Deprecated
     public byte[] getRow() {
-      throw new UnsupportedOperationException("getRow() not supported");
+      return CellUtil.cloneRow(this);
     }
 
     @Override
     public String toString() {
-      KeyValue kv = KeyValueUtil.copyToNewKeyValue(this);
-      if (kv == null) {
-        return "null";
-      }
-      return kv.toString();
+      return KeyValue.keyToString(this.keyOnlyBuffer, 0, KeyValueUtil.keyLength(this)) + "/vlen="
+          + getValueLength() + "/seqid=" + seqId;
     }
 
     @Override
     public void setSequenceId(long seqId) {
       this.seqId = seqId;
+    }
+
+    @Override
+    public long heapSize() {
+      return FIXED_OVERHEAD + rowLength + familyLength + qualifierLength + valueLength + tagsLength;
     }
   }
 
@@ -567,7 +572,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         current.tagCompressionContext = tagCompressionContext;
       }
       decodeFirst();
-      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
+      current.setKey(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
@@ -580,9 +585,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public ByteBuffer getValueShallowCopy() {
-      return ByteBuffer.wrap(currentBuffer.array(),
-          currentBuffer.arrayOffset() + current.valueOffset,
-          current.valueLength);
+      ByteBuffer dup = currentBuffer.duplicate();
+      dup.position(current.valueOffset);
+      dup.limit(current.valueOffset + current.valueLength);
+      return dup.slice();
     }
 
     @Override
@@ -591,8 +597,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       kvBuffer.putInt(current.keyLength);
       kvBuffer.putInt(current.valueLength);
       kvBuffer.put(current.keyBuffer, 0, current.keyLength);
-      kvBuffer.put(currentBuffer.array(),
-          currentBuffer.arrayOffset() + current.valueOffset,
+      ByteBufferUtils.copyFromBufferToBuffer(kvBuffer, currentBuffer, current.valueOffset,
           current.valueLength);
       if (current.tagsLength > 0) {
         // Put short as unsigned
@@ -601,7 +606,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (current.tagsOffset != -1) {
           // the offset of the tags bytes in the underlying buffer is marked. So the temp
           // buffer,tagsBuffer was not been used.
-          kvBuffer.put(currentBuffer.array(), currentBuffer.arrayOffset() + current.tagsOffset,
+          ByteBufferUtils.copyFromBufferToBuffer(kvBuffer, currentBuffer, current.tagsOffset,
               current.tagsLength);
         } else {
           // When tagsOffset is marked as -1, tag compression was present and so the tags were
@@ -631,7 +636,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         tagCompressionContext.clear();
       }
       decodeFirst();
-      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
+      current.setKey(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
@@ -641,7 +646,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         return false;
       }
       decodeNext();
-      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
+      current.setKey(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
       return true;
     }
@@ -664,7 +669,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         }
         current.tagsOffset = -1;
       } else {
-        // When tag compress is not used, let us not do temp copying of tags bytes into tagsBuffer.
+        // When tag compress is not used, let us not do copying of tags bytes into tagsBuffer.
         // Just mark the tags Offset so as to create the KV buffer later in getKeyValueBuffer()
         current.tagsOffset = currentBuffer.position();
         ByteBufferUtils.skip(currentBuffer, current.tagsLength);
@@ -775,7 +780,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (currentBuffer.hasRemaining()) {
           previous.copyFromNext(current);
           decodeNext();
-          current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
+          current.setKey(current.keyBuffer, current.memstoreTS);
         } else {
           break;
         }
@@ -835,17 +840,17 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   }
 
   /**
-   * @param kv
+   * @param cell
    * @param out
    * @param encodingCtx
    * @return unencoded size added
    * @throws IOException
    */
-  protected final int afterEncodingKeyValue(KeyValue kv, DataOutputStream out,
+  protected final int afterEncodingKeyValue(Cell cell, DataOutputStream out,
       HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     int size = 0;
     if (encodingCtx.getHFileContext().isIncludesTags()) {
-      int tagsLength = kv.getTagsLength();
+      int tagsLength = cell.getTagsLength();
       ByteBufferUtils.putCompressedInt(out, tagsLength);
       // There are some tags to be written
       if (tagsLength > 0) {
@@ -854,16 +859,16 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         // the tags using Dictionary compression in such a case
         if (tagCompressionContext != null) {
           tagCompressionContext
-              .compressTags(out, kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
+              .compressTags(out, cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
         } else {
-          out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
+          out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
         }
       }
       size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
     }
     if (encodingCtx.getHFileContext().isIncludesMvcc()) {
       // Copy memstore timestamp from the byte buffer to the output stream.
-      long memstoreTS = kv.getMvccVersion();
+      long memstoreTS = cell.getSequenceId();
       WritableUtils.writeVLong(out, memstoreTS);
       // TODO use a writeVLong which returns the #bytes written so that 2 time parsing can be
       // avoided.
@@ -973,16 +978,16 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   }
 
   @Override
-  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
     BufferedDataBlockEncodingState state = (BufferedDataBlockEncodingState) encodingCtx
         .getEncodingState();
-    int encodedKvSize = internalEncode(kv, (HFileBlockDefaultEncodingContext) encodingCtx, out);
+    int encodedKvSize = internalEncode(cell, (HFileBlockDefaultEncodingContext) encodingCtx, out);
     state.unencodedDataSizeWritten += encodedKvSize;
     return encodedKvSize;
   }
 
-  public abstract int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingCtx,
+  public abstract int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingCtx,
       DataOutputStream out) throws IOException;
 
   @Override

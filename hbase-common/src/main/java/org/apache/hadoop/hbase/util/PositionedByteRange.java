@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * <p>
@@ -32,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * their own index into the array.
  * </p>
  * <p>
- * Designed to be a slimmed-down, mutable alternative to {@link ByteBuffer}.
+ * Designed to be a slimmed-down, mutable alternative to {@link java.nio.ByteBuffer}.
  * </p>
  */
 @InterfaceAudience.Public

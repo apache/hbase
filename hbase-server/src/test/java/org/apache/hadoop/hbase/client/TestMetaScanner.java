@@ -32,14 +32,14 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
@@ -49,13 +49,15 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestMetaScanner {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private Connection connection;
 
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
+    this.connection = TEST_UTIL.getConnection();
   }
 
   @After
@@ -66,18 +68,15 @@ public class TestMetaScanner {
   @Test
   public void testMetaScanner() throws Exception {
     LOG.info("Starting testMetaScanner");
+
     setUp();
-    final TableName TABLENAME =
-        TableName.valueOf("testMetaScanner");
+    final TableName TABLENAME = TableName.valueOf("testMetaScanner");
     final byte[] FAMILY = Bytes.toBytes("family");
-    TEST_UTIL.createTable(TABLENAME, FAMILY);
-    Configuration conf = TEST_UTIL.getConfiguration();
-    HTable table = new HTable(conf, TABLENAME);
-    TEST_UTIL.createMultiRegions(conf, table, FAMILY,
-        new byte[][]{
-          HConstants.EMPTY_START_ROW,
-          Bytes.toBytes("region_a"),
-          Bytes.toBytes("region_b")});
+    final byte[][] SPLIT_KEYS =
+        new byte[][] { Bytes.toBytes("region_a"), Bytes.toBytes("region_b") };
+
+    TEST_UTIL.createTable(TABLENAME, FAMILY, SPLIT_KEYS);
+    HTable table = (HTable) connection.getTable(TABLENAME);
     // Make sure all the regions are deployed
     TEST_UTIL.countRows(table);
 
@@ -86,28 +85,28 @@ public class TestMetaScanner {
     doReturn(true).when(visitor).processRow((Result)anyObject());
 
     // Scanning the entire table should give us three rows
-    MetaScanner.metaScan(conf, null, visitor, TABLENAME);
+    MetaScanner.metaScan(connection, visitor, TABLENAME);
     verify(visitor, times(3)).processRow((Result)anyObject());
 
     // Scanning the table with a specified empty start row should also
     // give us three hbase:meta rows
     reset(visitor);
     doReturn(true).when(visitor).processRow((Result)anyObject());
-    MetaScanner.metaScan(conf, visitor, TABLENAME, HConstants.EMPTY_BYTE_ARRAY, 1000);
+    MetaScanner.metaScan(connection, visitor, TABLENAME, HConstants.EMPTY_BYTE_ARRAY, 1000);
     verify(visitor, times(3)).processRow((Result)anyObject());
 
     // Scanning the table starting in the middle should give us two rows:
     // region_a and region_b
     reset(visitor);
     doReturn(true).when(visitor).processRow((Result)anyObject());
-    MetaScanner.metaScan(conf, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1000);
+    MetaScanner.metaScan(connection, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1000);
     verify(visitor, times(2)).processRow((Result)anyObject());
 
     // Scanning with a limit of 1 should only give us one row
     reset(visitor);
-    doReturn(true).when(visitor).processRow((Result)anyObject());
-    MetaScanner.metaScan(conf, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1);
-    verify(visitor, times(1)).processRow((Result)anyObject());
+    doReturn(true).when(visitor).processRow((Result) anyObject());
+    MetaScanner.metaScan(connection, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1);
+    verify(visitor, times(1)).processRow((Result) anyObject());
     table.close();
   }
 
@@ -134,8 +133,8 @@ public class TestMetaScanner {
       public void run() {
         while (!isStopped()) {
           try {
-            List<HRegionInfo> regions = MetaScanner.listAllRegions(
-              TEST_UTIL.getConfiguration(), false);
+            List<HRegionInfo> regions = MetaScanner.listAllRegions(TEST_UTIL.getConfiguration(),
+                connection, false);
 
             //select a random region
             HRegionInfo parent = regions.get(random.nextInt(regions.size()));
@@ -166,8 +165,8 @@ public class TestMetaScanner {
               Bytes.toBytes(midKey),
               end);
 
-            MetaTableAccessor.splitRegion(TEST_UTIL.getHBaseAdmin().getConnection(),
-              parent, splita, splitb, ServerName.valueOf("fooserver", 1, 0));
+            MetaTableAccessor.splitRegion(connection,
+              parent, splita, splitb, ServerName.valueOf("fooserver", 1, 0), 1);
 
             Threads.sleep(random.nextInt(200));
           } catch (Throwable e) {
@@ -189,7 +188,7 @@ public class TestMetaScanner {
          while(!isStopped()) {
            try {
             NavigableMap<HRegionInfo, ServerName> regions =
-                MetaScanner.allTableRegions(TEST_UTIL.getConfiguration(), null, TABLENAME, false);
+                MetaScanner.allTableRegions(connection, TABLENAME);
 
             LOG.info("-------");
             byte[] lastEndKey = HConstants.EMPTY_START_ROW;
@@ -242,4 +241,3 @@ public class TestMetaScanner {
   }
 
 }
-

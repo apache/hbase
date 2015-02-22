@@ -29,14 +29,15 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -56,7 +57,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * To get a mapping of qualifiers to latest values for an individual family use
  * {@link #getFamilyMap(byte[])}.<p>
  *
- * To get the latest value for a specific family and qualifier use {@link #getValue(byte[], byte[])}.
+ * To get the latest value for a specific family and qualifier use
+ * {@link #getValue(byte[], byte[])}.
  *
  * A Result is backed by an array of {@link Cell} objects, each representing
  * an HBase cell defined by the row, family, qualifier, timestamp, and value.<p>
@@ -82,10 +84,10 @@ public class Result implements CellScannable, CellScanner {
   // that this is where we cache row if we're ever asked for it.
   private transient byte [] row = null;
   // Ditto for familyMap.  It can be composed on fly from passed in kvs.
-  private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>> familyMap = null;
+  private transient NavigableMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>
+      familyMap = null;
 
-  // never use directly
-  private static byte [] buffer = null;
+  private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<byte[]>();
   private static final int PAD_WIDTH = 128;
   public static final Result EMPTY_RESULT = new Result();
 
@@ -95,32 +97,16 @@ public class Result implements CellScannable, CellScanner {
    * Index for where we are when Result is acting as a {@link CellScanner}.
    */
   private int cellScannerIndex = INITIAL_CELLSCANNER_INDEX;
+  private ClientProtos.RegionLoadStats stats;
 
   /**
    * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #rawCells()}.
-   * Use this to represent no results if <code>null</code> won't do or in old 'mapred' as oppposed to 'mapreduce' package
-   * MapReduce where you need to overwrite a Result
-   * instance with a {@link #copyFrom(Result)} call.
+   * Use this to represent no results if {@code null} won't do or in old 'mapred' as opposed
+   * to 'mapreduce' package MapReduce where you need to overwrite a Result instance with a
+   * {@link #copyFrom(Result)} call.
    */
   public Result() {
     super();
-  }
-
-  /**
-   * @deprecated Use {@link #create(List)} instead.
-   */
-  @Deprecated
-  public Result(KeyValue [] cells) {
-    this.cells = cells;
-  }
-
-  /**
-   * @deprecated Use {@link #create(List)} instead.
-   */
-  @Deprecated
-  public Result(List<KeyValue> kvs) {
-    // TODO: Here we presume the passed in Cells are KVs.  One day this won't always be so.
-    this(kvs.toArray(new Cell[kvs.size()]), null, false);
   }
 
   /**
@@ -173,7 +159,9 @@ public class Result implements CellScannable, CellScanner {
    */
   public byte [] getRow() {
     if (this.row == null) {
-      this.row = this.cells == null || this.cells.length == 0? null: CellUtil.cloneRow(this.cells[0]);
+      this.row = (this.cells == null || this.cells.length == 0) ?
+          null :
+          CellUtil.cloneRow(this.cells[0]);
     }
     return this.row;
   }
@@ -203,25 +191,6 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Return an cells of a Result as an array of KeyValues
-   *
-   * WARNING do not use, expensive.  This does an arraycopy of the cell[]'s value.
-   *
-   * Added to ease transition from  0.94 -> 0.96.
-   *
-   * @deprecated as of 0.96, use {@link #rawCells()}
-   * @return array of KeyValues, empty array if nothing in result.
-   */
-  @Deprecated
-  public KeyValue[] raw() {
-    KeyValue[] kvs = new KeyValue[cells.length];
-    for (int i = 0 ; i < kvs.length; i++) {
-      kvs[i] = KeyValueUtil.ensureKeyValue(cells[i]);
-    }
-    return kvs;
-  }
-
-  /**
    * Create a sorted list of the Cell's in this result.
    *
    * Since HBase 0.20.5 this is equivalent to raw().
@@ -230,29 +199,6 @@ public class Result implements CellScannable, CellScanner {
    */
   public List<Cell> listCells() {
     return isEmpty()? null: Arrays.asList(rawCells());
-  }
-
-  /**
-   * Return an cells of a Result as an array of KeyValues
-   *
-   * WARNING do not use, expensive.  This does  an arraycopy of the cell[]'s value.
-   *
-   * Added to ease transition from  0.94 -> 0.96.
-   *
-   * @deprecated as of 0.96, use {@link #listCells()}
-   * @return all sorted List of KeyValues; can be null if no cells in the result
-   */
-  @Deprecated
-  public List<KeyValue> list() {
-    return isEmpty() ? null : Arrays.asList(raw());
-  }
-
-  /**
-   * @deprecated Use {@link #getColumnCells(byte[], byte[])} instead.
-   */
-  @Deprecated
-  public List<KeyValue> getColumn(byte [] family, byte [] qualifier) {
-    return KeyValueUtil.ensureKeyValues(getColumnCells(family, qualifier));
   }
 
   /**
@@ -283,7 +229,7 @@ public class Result implements CellScannable, CellScanner {
       return result; // cant find it
     }
 
-    for (int i = pos ; i < kvs.length ; i++ ) {
+    for (int i = pos; i < kvs.length; i++) {
       if (CellUtil.matchingColumn(kvs[i], family,qualifier)) {
         result.add(kvs[i]);
       } else {
@@ -334,9 +280,11 @@ public class Result implements CellScannable, CellScanner {
     double keyValueSize = (double)
         KeyValue.getKeyValueDataStructureSize(kvs[0].getRowLength(), flength, qlength, 0);
 
+    byte[] buffer = localBuffer.get();
     if (buffer == null || keyValueSize > buffer.length) {
       // pad to the smallest multiple of the pad width
       buffer = new byte[(int) Math.ceil(keyValueSize / PAD_WIDTH) * PAD_WIDTH];
+      localBuffer.set(buffer);
     }
 
     Cell searchTerm = KeyValueUtil.createFirstOnRow(buffer, 0,
@@ -355,14 +303,6 @@ public class Result implements CellScannable, CellScanner {
       return -1; // doesn't exist
     }
     return pos;
-  }
-
-  /**
-   * @deprecated Use {@link #getColumnLatestCell(byte[], byte[])} instead.
-   */
-  @Deprecated
-  public KeyValue getColumnLatest(byte [] family, byte [] qualifier) {
-    return KeyValueUtil.ensureKeyValue(getColumnLatestCell(family, qualifier));
   }
 
   /**
@@ -387,16 +327,6 @@ public class Result implements CellScannable, CellScanner {
       return kvs[pos];
     }
     return null;
-  }
-
-  /**
-   * @deprecated Use {@link #getColumnLatestCell(byte[], int, int, byte[], int, int)} instead.
-   */
-  @Deprecated
-  public KeyValue getColumnLatest(byte [] family, int foffset, int flength,
-      byte [] qualifier, int qoffset, int qlength) {
-    return KeyValueUtil.ensureKeyValue(
-        getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength));
   }
 
   /**
@@ -643,20 +573,18 @@ public class Result implements CellScannable, CellScanner {
     if(isEmpty()) {
       return null;
     }
-    this.familyMap = new TreeMap<byte[], NavigableMap<byte[], NavigableMap<Long, byte[]>>>(Bytes.BYTES_COMPARATOR);
+    this.familyMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for(Cell kv : this.cells) {
       byte [] family = CellUtil.cloneFamily(kv);
-      NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap =
-        familyMap.get(family);
+      NavigableMap<byte[], NavigableMap<Long, byte[]>> columnMap = familyMap.get(family);
       if(columnMap == null) {
-        columnMap = new TreeMap<byte[], NavigableMap<Long, byte[]>>
-          (Bytes.BYTES_COMPARATOR);
+        columnMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
         familyMap.put(family, columnMap);
       }
       byte [] qualifier = CellUtil.cloneQualifier(kv);
       NavigableMap<Long, byte[]> versionMap = columnMap.get(qualifier);
       if(versionMap == null) {
-        versionMap = new TreeMap<Long, byte[]>(new Comparator<Long>() {
+        versionMap = new TreeMap<>(new Comparator<Long>() {
           @Override
           public int compare(Long l1, Long l2) {
             return l2.compareTo(l1);
@@ -820,7 +748,7 @@ public class Result implements CellScannable, CellScanner {
   public static long getTotalSizeOfCells(Result result) {
     long size = 0;
     for (Cell c : result.rawCells()) {
-      size += KeyValueUtil.ensureKeyValue(c).heapSize();
+      size += CellUtil.estimatedHeapSizeOf(c);
     }
     return size;
   }
@@ -869,5 +797,21 @@ public class Result implements CellScannable, CellScanner {
    */
   public boolean isStale() {
     return stale;
+  }
+
+  /**
+   * Add load information about the region to the information about the result
+   * @param loadStats statistics about the current region from which this was returned
+   */
+  public void addResults(ClientProtos.RegionLoadStats loadStats) {
+    this.stats = loadStats;
+  }
+
+  /**
+   * @return the associated statistics about the region from which this was returned. Can be
+   * <tt>null</tt> if stats are disabled.
+   */
+  public ClientProtos.RegionLoadStats getStats() {
+    return stats;
   }
 }

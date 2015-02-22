@@ -21,10 +21,12 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TableCfWALEntryFilter implements WALEntryFilter {
@@ -38,9 +40,9 @@ public class TableCfWALEntryFilter implements WALEntryFilter {
 
   @Override
   public Entry filter(Entry entry) {
-    String tabName = entry.getKey().getTablename().getNameAsString();
-    ArrayList<KeyValue> kvs = entry.getEdit().getKeyValues();
-    Map<String, List<String>> tableCFs = null;
+    TableName tabName = entry.getKey().getTablename();
+    ArrayList<Cell> cells = entry.getEdit().getCells();
+    Map<TableName, List<String>> tableCFs = null;
 
     try {
       tableCFs = this.peer.getTableCFs();
@@ -48,7 +50,7 @@ public class TableCfWALEntryFilter implements WALEntryFilter {
       LOG.error("should not happen: can't get tableCFs for peer " + peer.getId() +
           ", degenerate as if it's not configured by keeping tableCFs==null");
     }
-    int size = kvs.size();
+    int size = cells.size();
 
     // return null(prevent replicating) if logKey's table isn't in this peer's
     // replicable table list (empty tableCFs means all table are replicable)
@@ -57,16 +59,16 @@ public class TableCfWALEntryFilter implements WALEntryFilter {
     } else {
       List<String> cfs = (tableCFs == null) ? null : tableCFs.get(tabName);
       for (int i = size - 1; i >= 0; i--) {
-        KeyValue kv = kvs.get(i);
+        Cell cell = cells.get(i);
         // ignore(remove) kv if its cf isn't in the replicable cf list
         // (empty cfs means all cfs of this table are replicable)
-        if ((cfs != null && !cfs.contains(Bytes.toString(kv.getFamily())))) {
-          kvs.remove(i);
+        if ((cfs != null && !cfs.contains(Bytes.toString(cell.getFamily())))) {
+          cells.remove(i);
         }
       }
     }
-    if (kvs.size() < size/2) {
-      kvs.trimToSize();
+    if (cells.size() < size/2) {
+      cells.trimToSize();
     }
     return entry;
   }

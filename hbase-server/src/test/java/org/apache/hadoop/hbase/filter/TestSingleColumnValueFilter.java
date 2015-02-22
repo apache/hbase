@@ -21,11 +21,13 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +36,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests the value filter
  */
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestSingleColumnValueFilter {
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
@@ -92,6 +94,25 @@ public class TestSingleColumnValueFilter {
     return new SingleColumnValueFilter(COLUMN_FAMILY, COLUMN_QUALIFIER,
         CompareOp.EQUAL,
         new RegexStringComparator(pattern.pattern(), pattern.flags()));
+  }
+
+  @Test
+  public void testLongComparator() throws IOException {
+    Filter filter = new SingleColumnValueFilter(COLUMN_FAMILY,
+        COLUMN_QUALIFIER, CompareOp.GREATER, new LongComparator(100L));
+    KeyValue kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
+      Bytes.toBytes(1L));
+    assertTrue("less than", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
+    filter.reset();
+
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
+      Bytes.toBytes(100L));
+    assertTrue("Equals 100", filter.filterKeyValue(kv) == Filter.ReturnCode.NEXT_ROW);
+    filter.reset();
+
+    kv = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER,
+      Bytes.toBytes(120L));
+    assertTrue("include 120", filter.filterKeyValue(kv) == Filter.ReturnCode.INCLUDE);
   }
 
   private void basicFilterTests(SingleColumnValueFilter filter)

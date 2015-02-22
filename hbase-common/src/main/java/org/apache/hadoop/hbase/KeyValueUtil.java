@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
@@ -41,15 +44,35 @@ public class KeyValueUtil {
 
   /**************** length *********************/
 
+  /**
+   * Returns number of bytes this cell would have been used if serialized as in {@link KeyValue}
+   * @param cell
+   * @return the length
+   */
   public static int length(final Cell cell) {
-    return (int) (KeyValue.getKeyValueDataStructureSize(cell.getRowLength(),
-        cell.getFamilyLength(), cell.getQualifierLength(), cell.getValueLength(),
-        cell.getTagsLength()));
+    return length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
+        cell.getValueLength(), cell.getTagsLength(), true);
   }
 
-  protected static int keyLength(final Cell cell) {
-    return (int)KeyValue.getKeyDataStructureSize(cell.getRowLength(), cell.getFamilyLength(),
-      cell.getQualifierLength());
+  private static int length(short rlen, byte flen, int qlen, int vlen, int tlen, boolean withTags) {
+    if (withTags) {
+      return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen, tlen));
+    }
+    return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen));
+  }
+
+  /**
+   * Returns number of bytes this cell's key part would have been used if serialized as in
+   * {@link KeyValue}. Key includes rowkey, family, qualifier, timestamp and type.
+   * @param cell
+   * @return the key length
+   */
+  public static int keyLength(final Cell cell) {
+    return keyLength(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength());
+  }
+
+  private static int keyLength(short rlen, byte flen, int qlen) {
+    return (int) KeyValue.getKeyDataStructureSize(rlen, flen, qlen);
   }
 
   public static int lengthWithMvccVersion(final KeyValue kv, final boolean includeMvccVersion) {
@@ -81,7 +104,7 @@ public class KeyValueUtil {
 
   public static ByteBuffer copyKeyToNewByteBuffer(final Cell cell) {
     byte[] bytes = new byte[keyLength(cell)];
-    appendKeyToByteArrayWithoutValue(cell, bytes, 0);
+    appendKeyTo(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
     buffer.position(buffer.limit());//make it look as if each field were appended
     return buffer;
@@ -94,7 +117,7 @@ public class KeyValueUtil {
     return backingBytes;
   }
 
-  protected static int appendKeyToByteArrayWithoutValue(final Cell cell, final byte[] output,
+  public static int appendKeyTo(final Cell cell, final byte[] output,
       final int offset) {
     int nextOffset = offset;
     nextOffset = Bytes.putShort(output, nextOffset, cell.getRowLength());
@@ -111,10 +134,12 @@ public class KeyValueUtil {
   /**************** copy key and value *********************/
 
   public static int appendToByteArray(final Cell cell, final byte[] output, final int offset) {
+    // TODO when cell instance of KV we can bypass all steps and just do backing single array
+    // copy(?)
     int pos = offset;
     pos = Bytes.putInt(output, pos, keyLength(cell));
     pos = Bytes.putInt(output, pos, cell.getValueLength());
-    pos = appendKeyToByteArrayWithoutValue(cell, output, pos);
+    pos = appendKeyTo(cell, output, pos);
     pos = CellUtil.copyValueTo(cell, output, pos);
     if ((cell.getTagsLength() > 0)) {
       pos = Bytes.putAsShort(output, pos, cell.getTagsLength());
@@ -499,12 +524,15 @@ public class KeyValueUtil {
    * @param cell
    * @return <code>cell<code> if it is an instance of {@link KeyValue} else we will return a
    * new {@link KeyValue} instance made from <code>cell</code>
+   * @deprecated without any replacement.
    */
+  @Deprecated
   public static KeyValue ensureKeyValue(final Cell cell) {
     if (cell == null) return null;
     return cell instanceof KeyValue? (KeyValue)cell: copyToNewKeyValue(cell);
   }
 
+  @Deprecated
   public static List<KeyValue> ensureKeyValues(List<Cell> cells) {
     List<KeyValue> lazyList = Lists.transform(cells, new Function<Cell, KeyValue>() {
       public KeyValue apply(Cell arg0) {
@@ -514,4 +542,46 @@ public class KeyValueUtil {
     return new ArrayList<KeyValue>(lazyList);
   }
 
+  public static void oswrite(final Cell cell, final OutputStream out, final boolean withTags)
+      throws IOException {
+    if (cell instanceof KeyValue) {
+      KeyValue.oswrite((KeyValue) cell, out, withTags);
+    } else {
+      short rlen = cell.getRowLength();
+      byte flen = cell.getFamilyLength();
+      int qlen = cell.getQualifierLength();
+      int vlen = cell.getValueLength();
+      int tlen = cell.getTagsLength();
+
+      // write total length
+      StreamUtils.writeInt(out, length(rlen, flen, qlen, vlen, tlen, withTags));
+      // write key length
+      StreamUtils.writeInt(out, keyLength(rlen, flen, qlen));
+      // write value length
+      StreamUtils.writeInt(out, vlen);
+      // Write rowkey - 2 bytes rk length followed by rowkey bytes
+      StreamUtils.writeShort(out, rlen);
+      out.write(cell.getRowArray(), cell.getRowOffset(), rlen);
+      // Write cf - 1 byte of cf length followed by the family bytes
+      out.write(flen);
+      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), flen);
+      // write qualifier
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), qlen);
+      // write timestamp
+      StreamUtils.writeLong(out, cell.getTimestamp());
+      // write the type
+      out.write(cell.getTypeByte());
+      // write value
+      out.write(cell.getValueArray(), cell.getValueOffset(), vlen);
+      // write tags if we have to
+      if (withTags) {
+        // 2 bytes tags length followed by tags bytes
+        // tags length is serialized with 2 bytes only(short way) even if the type is int. As this
+        // is non -ve numbers, we save the sign bit. See HBASE-11437
+        out.write((byte) (0xff & (tlen >> 8)));
+        out.write((byte) (0xff & tlen));
+        out.write(cell.getTagsArray(), cell.getTagsOffset(), tlen);
+      }
+    }
+  }
 }

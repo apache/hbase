@@ -18,7 +18,8 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.ProgramDriver;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -27,11 +28,10 @@ import org.mockito.Mockito;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestDriver {
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testDriverMainMethod() throws Throwable {
     ProgramDriver programDriverMock = mock(ProgramDriver.class);
     Driver.setProgramDriver(programDriverMock);

@@ -18,8 +18,8 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import java.security.Key;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * KeyProvider is a interface to abstract the different methods of retrieving

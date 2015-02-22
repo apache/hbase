@@ -26,9 +26,11 @@ import java.util.Arrays;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -59,6 +61,12 @@ implements WALObserver {
   private boolean preWALRestoreCalled = false;
   private boolean postWALRestoreCalled = false;
 
+  // Deprecated versions
+  private boolean preWALWriteDeprecatedCalled = false;
+  private boolean postWALWriteDeprecatedCalled = false;
+  private boolean preWALRestoreDeprecatedCalled = false;
+  private boolean postWALRestoreDeprecatedCalled = false;
+
   /**
    * Set values: with a table name, a column name which will be ignored, and
    * a column name which will be added to WAL.
@@ -73,18 +81,32 @@ implements WALObserver {
     this.addedQualifier = addq;
     this.changedFamily = chf;
     this.changedQualifier = chq;
+    preWALWriteCalled = false;
+    postWALWriteCalled = false;
+    preWALRestoreCalled = false;
+    postWALRestoreCalled = false;
+    preWALWriteDeprecatedCalled = false;
+    postWALWriteDeprecatedCalled = false;
+    preWALRestoreDeprecatedCalled = false;
+    postWALRestoreDeprecatedCalled = false;
   }
 
-
   @Override
-  public void postWALWrite(ObserverContext<WALCoprocessorEnvironment> env,
-      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
+  public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     postWALWriteCalled = true;
   }
 
   @Override
-  public boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> env,
+  public void postWALWrite(ObserverContext<WALCoprocessorEnvironment> env,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
+    postWALWriteDeprecatedCalled = true;
+    postWALWrite(env, info, (WALKey)logKey, logEdit);
+  }
+
+  @Override
+  public boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     boolean bypass = false;
     // check table name matches or not.
     if (!Bytes.equals(info.getTableName(), this.tableName)) {
@@ -93,30 +115,39 @@ implements WALObserver {
     preWALWriteCalled = true;
     // here we're going to remove one keyvalue from the WALEdit, and add
     // another one to it.
-    List<KeyValue> kvs = logEdit.getKeyValues();
-    KeyValue deletedKV = null;
-    for (KeyValue kv : kvs) {
+    List<Cell> cells = logEdit.getCells();
+    Cell deletedCell = null;
+    for (Cell cell : cells) {
       // assume only one kv from the WALEdit matches.
-      byte[] family = kv.getFamily();
-      byte[] qulifier = kv.getQualifier();
+      byte[] family = cell.getFamily();
+      byte[] qulifier = cell.getQualifier();
 
       if (Arrays.equals(family, ignoredFamily) &&
           Arrays.equals(qulifier, ignoredQualifier)) {
         LOG.debug("Found the KeyValue from WALEdit which should be ignored.");
-        deletedKV = kv;
+        deletedCell = cell;
       }
       if (Arrays.equals(family, changedFamily) &&
           Arrays.equals(qulifier, changedQualifier)) {
         LOG.debug("Found the KeyValue from WALEdit which should be changed.");
-        kv.getValueArray()[kv.getValueOffset()] += 1;
+        cell.getValueArray()[cell.getValueOffset()] += 1;
       }
     }
-    kvs.add(new KeyValue(row, addedFamily, addedQualifier));
-    if (deletedKV != null) {
+    if (null != row) {
+      cells.add(new KeyValue(row, addedFamily, addedQualifier));
+    }
+    if (deletedCell != null) {
       LOG.debug("About to delete a KeyValue from WALEdit.");
-      kvs.remove(deletedKV);
+      cells.remove(deletedCell);
     }
     return bypass;
+  }
+
+  @Override
+  public boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> env,
+      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
+    preWALWriteDeprecatedCalled = true;
+    return preWALWrite(env, info, (WALKey)logKey, logEdit);
   }
 
   /**
@@ -124,9 +155,16 @@ implements WALObserver {
    * Restoreed.
    */
   @Override
+  public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    preWALRestoreCalled = true;
+  }
+
+  @Override
   public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
-    preWALRestoreCalled = true;
+    preWALRestoreDeprecatedCalled = true;
+    preWALRestore(env, info, (WALKey)logKey, logEdit);
   }
 
   /**
@@ -134,9 +172,16 @@ implements WALObserver {
    * Restoreed.
    */
   @Override
+  public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    postWALRestoreCalled = true;
+  }
+
+  @Override
   public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
-    postWALRestoreCalled = true;
+    postWALRestoreDeprecatedCalled = true;
+    postWALRestore(env, info, (WALKey)logKey, logEdit);
   }
 
   public boolean isPreWALWriteCalled() {
@@ -157,5 +202,28 @@ implements WALObserver {
     LOG.debug(SampleRegionWALObserver.class.getName() +
       ".isPostWALRestoreCalled is called.");
     return postWALRestoreCalled;
+  }
+
+  public boolean isPreWALWriteDeprecatedCalled() {
+    return preWALWriteDeprecatedCalled;
+  }
+
+  public boolean isPostWALWriteDeprecatedCalled() {
+    return postWALWriteDeprecatedCalled;
+  }
+
+  public boolean isPreWALRestoreDeprecatedCalled() {
+    return preWALRestoreDeprecatedCalled;
+  }
+
+  public boolean isPostWALRestoreDeprecatedCalled() {
+    return postWALRestoreDeprecatedCalled;
+  }
+
+  /**
+   * This class should trigger our legacy support since it does not directly implement the
+   * newer API methods.
+   */
+  static class Legacy extends SampleRegionWALObserver {
   }
 }

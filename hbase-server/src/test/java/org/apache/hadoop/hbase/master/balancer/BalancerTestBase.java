@@ -33,6 +33,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.Assert;
 
 /**
@@ -52,6 +54,28 @@ public class BalancerTestBase {
 
   protected static Random rand = new Random();
   static int regionId = 0;
+
+  // This class is introduced because IP to rack resolution can be lengthy.
+  public static class MockMapping implements DNSToSwitchMapping {
+    public MockMapping(Configuration conf) {
+    }
+
+    public List<String> resolve(List<String> names) {
+      List<String> ret = new ArrayList<String>(names.size());
+      for (String name : names) {
+        ret.add("rack");
+      }
+      return ret;
+    }
+
+    // do not add @Override annotations here. It mighty break compilation with earlier Hadoops
+    public void reloadCachedMappings() {
+    }
+
+    // do not add @Override annotations here. It mighty break compilation with earlier Hadoops
+    public void reloadCachedMappings(List<String> arg0) {
+    }
+  }
 
   /**
    * Invariant is that all servers have between floor(avg) and ceiling(avg)
@@ -180,20 +204,22 @@ public class BalancerTestBase {
                                           List<RegionPlan> plans,
                                           Map<ServerName, List<HRegionInfo>> servers) {
     List<ServerAndLoad> result = new ArrayList<ServerAndLoad>(list.size());
-    if (plans == null) return result;
+
     Map<ServerName, ServerAndLoad> map = new HashMap<ServerName, ServerAndLoad>(list.size());
     for (ServerAndLoad sl : list) {
       map.put(sl.getServerName(), sl);
     }
-    for (RegionPlan plan : plans) {
-      ServerName source = plan.getSource();
+    if (plans != null) {
+      for (RegionPlan plan : plans) {
+        ServerName source = plan.getSource();
 
-      updateLoad(map, source, -1);
-      ServerName destination = plan.getDestination();
-      updateLoad(map, destination, +1);
+        updateLoad(map, source, -1);
+        ServerName destination = plan.getDestination();
+        updateLoad(map, destination, +1);
 
-      servers.get(source).remove(plan.getRegionInfo());
-      servers.get(destination).add(plan.getRegionInfo());
+        servers.get(source).remove(plan.getRegionInfo());
+        servers.get(destination).add(plan.getRegionInfo());
+      }
     }
     result.clear();
     result.addAll(map.values());
@@ -214,8 +240,8 @@ public class BalancerTestBase {
   }
 
   protected BaseLoadBalancer.Cluster mockCluster(int[] mockCluster) {
-    return new BaseLoadBalancer.Cluster(null,
-      mockClusterServers(mockCluster, -1), null, null, null, null, null);
+    return new BaseLoadBalancer.Cluster(
+      mockClusterServers(mockCluster, -1), null, null, null);
   }
 
   protected TreeMap<ServerName, List<HRegionInfo>> mockClusterServers(int[] mockCluster, int numTables) {

@@ -19,9 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.master.MetricsMasterSource;
-import org.apache.hadoop.hbase.master.MetricsMasterSourceFactory;
-import org.apache.hadoop.hbase.master.MetricsMasterSourceImpl;
 import org.junit.Test;
 
 import static org.junit.Assert.assertSame;

@@ -26,8 +26,11 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -36,6 +39,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecureProtobufLogWriter extends ProtobufLogWriter {
 
   private static final Log LOG = LogFactory.getLog(SecureProtobufLogWriter.class);
@@ -48,11 +52,14 @@ public class SecureProtobufLogWriter extends ProtobufLogWriter {
       throws IOException {
     builder.setWriterClsName(SecureProtobufLogWriter.class.getSimpleName());
     if (conf.getBoolean(HConstants.ENABLE_WAL_ENCRYPTION, false)) {
+      EncryptionTest.testKeyProvider(conf);
+      EncryptionTest.testCipherProvider(conf);
+
       // Get an instance of our cipher
-      Cipher cipher = Encryption.getCipher(conf,
-        conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, DEFAULT_CIPHER));
+      final String cipherName = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, DEFAULT_CIPHER);
+      Cipher cipher = Encryption.getCipher(conf, cipherName);
       if (cipher == null) {
-        throw new RuntimeException("Cipher '" + cipher + "' is not available");
+        throw new RuntimeException("Cipher '" + cipherName + "' is not available");
       }
 
       // Generate an encryption key for this WAL

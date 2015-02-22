@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.HttpRequestLogAppender;
-import org.apache.hadoop.hbase.http.HttpServer;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
   /**
@@ -70,27 +69,6 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
     server.start();
     assertAlive(server);
     stop(server);
-  }
-
-  /**
-   * Test that the server with request logging enabled
-   *
-   * @throws Throwable on failure
-   */
-  @Test
-  public void testStartedServerWithRequestLog() throws Throwable {
-    HttpRequestLogAppender requestLogAppender = new HttpRequestLogAppender();
-    requestLogAppender.setName("httprequestlog");
-    requestLogAppender.setFilename(System.getProperty("test.build.data", "/tmp/")
-        + "jetty-name-yyyy_mm_dd.log");
-    Logger.getLogger(HttpServer.class.getName() + ".test").addAppender(requestLogAppender);
-    HttpServer server = null;
-    server = createTestServer();
-    assertNotLive(server);
-    server.start();
-    assertAlive(server);
-    stop(server);
-    Logger.getLogger(HttpServer.class.getName() + ".test").removeAppender(requestLogAppender);
   }
 
   /**

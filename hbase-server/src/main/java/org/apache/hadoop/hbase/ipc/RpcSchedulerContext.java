@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 class RpcSchedulerContext extends RpcScheduler.Context {

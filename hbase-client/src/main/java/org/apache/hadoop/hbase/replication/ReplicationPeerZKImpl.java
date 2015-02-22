@@ -20,16 +20,17 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -49,7 +50,7 @@ public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closea
   private final ReplicationPeerConfig peerConfig;
   private final String id;
   private volatile PeerState peerState;
-  private volatile Map<String, List<String>> tableCFs = new HashMap<String, List<String>>();
+  private volatile Map<TableName, List<String>> tableCFs = new HashMap<TableName, List<String>>();
   private final Configuration conf;
 
   private PeerStateTracker peerStateTracker;
@@ -110,59 +111,9 @@ public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closea
     this.readTableCFsZnode();
   }
 
-  static Map<String, List<String>> parseTableCFsFromConfig(String tableCFsConfig) {
-    if (tableCFsConfig == null || tableCFsConfig.trim().length() == 0) {
-      return null;
-    }
-
-    Map<String, List<String>> tableCFsMap = null;
-    // TODO: This should be a PB object rather than a String to be parsed!! See HBASE-11393
-    // parse out (table, cf-list) pairs from tableCFsConfig
-    // format: "table1:cf1,cf2;table2:cfA,cfB"
-    String[] tables = tableCFsConfig.split(";");
-    for (String tab : tables) {
-      // 1 ignore empty table config
-      tab = tab.trim();
-      if (tab.length() == 0) {
-        continue;
-      }
-      // 2 split to "table" and "cf1,cf2"
-      //   for each table: "table:cf1,cf2" or "table"
-      String[] pair = tab.split(":");
-      String tabName = pair[0].trim();
-      if (pair.length > 2 || tabName.length() == 0) {
-        LOG.error("ignore invalid tableCFs setting: " + tab);
-        continue;
-      }
-
-      // 3 parse "cf1,cf2" part to List<cf>
-      List<String> cfs = null;
-      if (pair.length == 2) {
-        String[] cfsList = pair[1].split(",");
-        for (String cf : cfsList) {
-          String cfName = cf.trim();
-          if (cfName.length() > 0) {
-            if (cfs == null) {
-              cfs = new ArrayList<String>();
-            }
-            cfs.add(cfName);
-          }
-        }
-      }
-
-      // 4 put <table, List<cf>> to map
-      if (tableCFsMap == null) {
-        tableCFsMap = new HashMap<String, List<String>>();
-      }
-      tableCFsMap.put(tabName, cfs);
-    }
-
-    return tableCFsMap;
-  }
-
   private void readTableCFsZnode() {
     String currentTableCFs = Bytes.toString(tableCFsTracker.getData(false));
-    this.tableCFs = parseTableCFsFromConfig(currentTableCFs);
+    this.tableCFs = ReplicationAdmin.parseTableCFsFromConfig(currentTableCFs);
   }
 
   @Override
@@ -202,7 +153,7 @@ public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closea
    * @return the replicable (table, cf-list) map
    */
   @Override
-  public Map<String, List<String>> getTableCFs() {
+  public Map<TableName, List<String>> getTableCFs() {
     return this.tableCFs;
   }
 
@@ -308,12 +259,19 @@ public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closea
         Abortable abortable) {
       super(watcher, tableCFsZNode, abortable);
     }
+    
+    @Override
+    public synchronized void nodeCreated(String path) {
+      if (path.equals(node)) {
+        super.nodeCreated(path);
+        readTableCFsZnode();
+      }
+    }
 
     @Override
     public synchronized void nodeDataChanged(String path) {
       if (path.equals(node)) {
         super.nodeDataChanged(path);
-        readTableCFsZnode();
       }
     }
   }

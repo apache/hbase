@@ -27,10 +27,12 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -44,7 +46,8 @@ class DefaultStoreFileManager implements StoreFileManager {
   static final Log LOG = LogFactory.getLog(DefaultStoreFileManager.class);
 
   private final KVComparator kvComparator;
-  private final Configuration conf;
+  private final CompactionConfiguration comConf;
+  private final int blockingFileCount;
 
   /**
    * List of store files inside this store. This is an immutable list that
@@ -52,9 +55,12 @@ class DefaultStoreFileManager implements StoreFileManager {
    */
   private volatile ImmutableList<StoreFile> storefiles = null;
 
-  public DefaultStoreFileManager(KVComparator kvComparator, Configuration conf) {
+  public DefaultStoreFileManager(KVComparator kvComparator, Configuration conf,
+      CompactionConfiguration comConf) {
     this.kvComparator = kvComparator;
-    this.conf = conf;
+    this.comConf = comConf;
+    this.blockingFileCount =
+        conf.getInt(HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
   }
 
   @Override
@@ -104,7 +110,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public Iterator<StoreFile> updateCandidateFilesForRowKeyBefore(
-      Iterator<StoreFile> candidateFiles, final KeyValue targetKey, final KeyValue candidate) {
+      Iterator<StoreFile> candidateFiles, final KeyValue targetKey, final Cell candidate) {
     // Default store has nothing useful to do here.
     // TODO: move this comment when implementing Level:
     // Level store can trim the list by range, removing all the files which cannot have
@@ -129,8 +135,6 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public int getStoreCompactionPriority() {
-    int blockingFileCount = conf.getInt(
-        HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
     int priority = blockingFileCount - storefiles.size();
     return (priority == HStore.PRIORITY_USER) ? priority + 1 : priority;
   }
@@ -161,5 +165,14 @@ class DefaultStoreFileManager implements StoreFileManager {
     storefiles = ImmutableList.copyOf(storeFiles);
   }
 
+  @Override
+  public double getCompactionPressure() {
+    int storefileCount = getStorefileCount();
+    int minFilesToCompact = comConf.getMinFilesToCompact();
+    if (storefileCount <= minFilesToCompact) {
+      return 0.0;
+    }
+    return (double) (storefileCount - minFilesToCompact) / (blockingFileCount - minFilesToCompact);
+  }
 }
 

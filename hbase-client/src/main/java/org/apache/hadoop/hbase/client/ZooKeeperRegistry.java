@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,10 +26,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
 
@@ -42,7 +40,7 @@ class ZooKeeperRegistry implements Registry {
   ConnectionManager.HConnectionImplementation hci;
 
   @Override
-  public void init(HConnection connection) {
+  public void init(Connection connection) {
     if (!(connection instanceof ConnectionManager.HConnectionImplementation)) {
       throw new RuntimeException("This registry depends on HConnectionImplementation");
     }
@@ -57,14 +55,32 @@ class ZooKeeperRegistry implements Registry {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Looking up meta region location in ZK," + " connection=" + this);
       }
-      ServerName servername = new MetaTableLocator().blockUntilAvailable(zkw, hci.rpcTimeout);
+      List<ServerName> servers = new MetaTableLocator().blockUntilAvailable(zkw, hci.rpcTimeout,
+          hci.getConfiguration());
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Looked up meta region location, connection=" + this +
-          "; serverName=" + ((servername == null) ? "null" : servername));
+        if (servers == null) {
+          LOG.trace("Looked up meta region location, connection=" + this +
+            "; servers = null");
+        } else {
+          StringBuilder str = new StringBuilder();
+          for (ServerName s : servers) {
+            str.append(s.toString());
+            str.append(" ");
+          }
+          LOG.trace("Looked up meta region location, connection=" + this +
+            "; servers = " + str.toString());
+        }
       }
-      if (servername == null) return null;
-      HRegionLocation loc = new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, servername, 0);
-      return new RegionLocations(new HRegionLocation[] {loc});
+      if (servers == null) return null;
+      HRegionLocation[] locs = new HRegionLocation[servers.size()];
+      int i = 0;
+      for (ServerName server : servers) {
+        HRegionInfo h = RegionReplicaUtil.getRegionInfoForReplica(
+                HRegionInfo.FIRST_META_REGIONINFO, i);
+        if (server == null) locs[i++] = null;
+        else locs[i++] = new HRegionLocation(h, server, 0);
+      }
+      return new RegionLocations(locs);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return null;
@@ -95,24 +111,6 @@ class ZooKeeperRegistry implements Registry {
       if (zkw != null) zkw.close();
     }
     return this.clusterId;
-  }
-
-  @Override
-  public boolean isTableOnlineState(TableName tableName, boolean enabled)
-  throws IOException {
-    ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
-    try {
-      if (enabled) {
-        return ZKTableStateClientSideReader.isEnabledTable(zkw, tableName);
-      }
-      return ZKTableStateClientSideReader.isDisabledTable(zkw, tableName);
-    } catch (KeeperException e) {
-      throw new IOException("Enable/Disable failed", e);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException();
-    } finally {
-       zkw.close();
-    }
   }
 
   @Override

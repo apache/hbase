@@ -23,13 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.UUID;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -92,19 +95,17 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @return this
    * @throws java.io.IOException e
    */
-  @SuppressWarnings("unchecked")
   public Increment add(Cell cell) throws IOException{
-    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-    byte [] family = kv.getFamily();
+    byte [] family = CellUtil.cloneFamily(cell);
     List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength());
+        cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
     if (res != 0) {
-      throw new WrongRowIOException("The row in " + kv.toString() +
+      throw new WrongRowIOException("The row in " + cell +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
-    list.add(kv);
+    list.add(cell);
     familyMap.put(family, list);
     return this;
   }
@@ -119,7 +120,6 @@ public class Increment extends Mutation implements Comparable<Row> {
    * @param amount amount to increment by
    * @return the Increment object
    */
-  @SuppressWarnings("unchecked")
   public Increment addColumn(byte [] family, byte [] qualifier, long amount) {
     if (family == null) {
       throw new IllegalArgumentException("family cannot be null");
@@ -130,7 +130,7 @@ public class Increment extends Mutation implements Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, Bytes.toBytes(amount));
     list.add(kv);
-    familyMap.put(kv.getFamily(), list);
+    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
 
@@ -166,6 +166,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * Method for retrieving the number of families to increment from
    * @return number of families
    */
+  @Override
   public int numFamilies() {
     return this.familyMap.size();
   }
@@ -193,9 +194,8 @@ public class Increment extends Mutation implements Comparable<Row> {
     for (Map.Entry<byte [], List<Cell>> entry: map.entrySet()) {
       NavigableMap<byte [], Long> longs = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        longs.put(kv.getQualifier(),
-            Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+        longs.put(CellUtil.cloneQualifier(cell),
+            Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
       }
       results.put(entry.getKey(), longs);
     }
@@ -237,9 +237,8 @@ public class Increment extends Mutation implements Comparable<Row> {
           } else {
             moreThanOneB = true;
           }
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          sb.append(Bytes.toStringBinary(kv.getKey()) + "+=" +
-              Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+          sb.append(CellUtil.getCellKeyAsString(cell) + "+=" +
+              Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         }
         sb.append("}");
       }
@@ -274,7 +273,53 @@ public class Increment extends Mutation implements Comparable<Row> {
     return compareTo(other) == 0;
   }
 
+  @Override
   protected long extraHeapSize(){
     return HEAP_OVERHEAD;
+  }
+
+  @Override
+  public Increment setAttribute(String name, byte[] value) {
+    return (Increment) super.setAttribute(name, value);
+  }
+
+  @Override
+  public Increment setId(String id) {
+    return (Increment) super.setId(id);
+  }
+
+  @Override
+  public Increment setDurability(Durability d) {
+    return (Increment) super.setDurability(d);
+  }
+
+  @Override
+  public Increment setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
+    return (Increment) super.setFamilyCellMap(map);
+  }
+
+  @Override
+  public Increment setClusterIds(List<UUID> clusterIds) {
+    return (Increment) super.setClusterIds(clusterIds);
+  }
+
+  @Override
+  public Increment setCellVisibility(CellVisibility expression) {
+    return (Increment) super.setCellVisibility(expression);
+  }
+
+  @Override
+  public Increment setACL(String user, Permission perms) {
+    return (Increment) super.setACL(user, perms);
+  }
+
+  @Override
+  public Increment setACL(Map<String, Permission> perms) {
+    return (Increment) super.setACL(perms);
+  }
+
+  @Override
+  public Increment setTTL(long ttl) {
+    return (Increment) super.setTTL(ttl);
   }
 }

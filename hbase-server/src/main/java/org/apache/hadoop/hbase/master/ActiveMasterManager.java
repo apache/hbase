@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZNodeClearer;
@@ -56,6 +56,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
   final AtomicBoolean clusterShutDown = new AtomicBoolean(false);
 
   private final ServerName sn;
+  private int infoPort;
   private final Server master;
 
   /**
@@ -68,6 +69,11 @@ public class ActiveMasterManager extends ZooKeeperListener {
     watcher.registerListener(this);
     this.sn = sn;
     this.master = master;
+  }
+
+  // will be set after jetty server is started
+  public void setInfoPort(int infoPort) {
+    this.infoPort = infoPort;
   }
 
   @Override
@@ -156,7 +162,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
       // Write out our ServerName as versioned bytes.
       try {
         if (MasterAddressTracker.setMasterAddress(this.watcher,
-            this.watcher.getMasterAddressZNode(), this.sn)) {
+            this.watcher.getMasterAddressZNode(), this.sn, infoPort)) {
 
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now)

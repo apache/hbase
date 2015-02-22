@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
@@ -61,6 +60,8 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.Rule;
 import org.junit.Test;
@@ -68,7 +69,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
-@Category(SmallTests.class)
+@Category({CoprocessorTests.class, SmallTests.class})
 public class TestCoprocessorInterface {
   @Rule public TestName name = new TestName();
   static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
@@ -349,6 +350,7 @@ public class TestCoprocessorInterface {
     // hence the old entry was indeed removed by the GC and new one has been created
     Object o3 = ((CoprocessorII)c2).getSharedData().get("test2");
     assertFalse(o3 == o2);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @Test
@@ -373,7 +375,7 @@ public class TestCoprocessorInterface {
     for (int i = 0; i < regions.length; i++) {
       regions[i] = reopenRegion(regions[i], CoprocessorImpl.class);
     }
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
     Coprocessor c = region.getCoprocessorHost().
       findCoprocessor(CoprocessorImpl.class.getName());
 
@@ -393,7 +395,7 @@ public class TestCoprocessorInterface {
     assertTrue(((CoprocessorImpl)c).wasSplit());
 
     for (int i = 0; i < regions.length; i++) {
-      HRegion.closeHRegion(regions[i]);
+      HBaseTestingUtility.closeRegionAndWAL(regions[i]);
       c = region.getCoprocessorHost()
             .findCoprocessor(CoprocessorImpl.class.getName());
       assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
@@ -440,7 +442,7 @@ public class TestCoprocessorInterface {
     }
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd);
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
 
     // this following piece is a hack.
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);

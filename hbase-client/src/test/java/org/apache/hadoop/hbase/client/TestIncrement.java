@@ -22,11 +22,12 @@ import static org.junit.Assert.assertEquals;
 import java.util.Map;
 import java.util.NavigableMap;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-@Category(SmallTests.class)
+@Category({ClientTests.class, SmallTests.class})
 public class TestIncrement {
   @Test
   public void test() {

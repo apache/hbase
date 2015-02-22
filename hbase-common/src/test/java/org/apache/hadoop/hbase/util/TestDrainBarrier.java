@@ -18,13 +18,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.SmallTests;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.*;
-
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestDrainBarrier {
 
   @Test

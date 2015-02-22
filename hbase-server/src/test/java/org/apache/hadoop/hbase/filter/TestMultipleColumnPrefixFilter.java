@@ -33,11 +33,13 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestMultipleColumnPrefixFilter {
 
   private final static HBaseTestingUtility TEST_UTIL = new
@@ -52,8 +54,8 @@ public class TestMultipleColumnPrefixFilter {
     htd.addFamily(hcd);
     // HRegionInfo info = new HRegionInfo(htd, null, null, false);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HRegion.createHRegion(info, TEST_UTIL.
-      getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
+        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -103,7 +105,7 @@ public class TestMultipleColumnPrefixFilter {
     while(scanner.next(results));
     assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @Test
@@ -118,8 +120,8 @@ public class TestMultipleColumnPrefixFilter {
     hcd2.setMaxVersions(3);
     htd.addFamily(hcd2);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HRegion.createHRegion(info, TEST_UTIL.
-      getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
+        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -175,7 +177,7 @@ public class TestMultipleColumnPrefixFilter {
     while(scanner.next(results));
     assertEquals(prefixMap.get("p").size() + prefixMap.get("q").size(), results.size());
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
   
   @Test
@@ -184,8 +186,8 @@ public class TestMultipleColumnPrefixFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestMultipleColumnPrefixFilter"));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion region = HRegion.createHRegion(info, TEST_UTIL.
-      getDataTestDir(), TEST_UTIL.getConfiguration(),htd);
+    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.
+        getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
 
     List<String> rows = generateRandomWords(100, "row");
     List<String> columns = generateRandomWords(10000, "column");
@@ -230,7 +232,7 @@ public class TestMultipleColumnPrefixFilter {
     
     assertEquals(results1.size(), results2.size());
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
   
   List<String> generateRandomWords(int numberOfWords, String suffix) {

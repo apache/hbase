@@ -41,11 +41,17 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputFilesFilter;
@@ -58,7 +64,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestImportTsv implements Configurable {
 
   protected static final Log LOG = LogFactory.getLog(TestImportTsv.class);
@@ -109,7 +115,7 @@ public class TestImportTsv implements Configurable {
         table
     };
 
-    util.createTable(table, FAMILY);
+    util.createTable(TableName.valueOf(table), FAMILY);
     doMROnTableTest(util, FAMILY, null, args, 1);
     util.deleteTable(table);
   }
@@ -127,7 +133,7 @@ public class TestImportTsv implements Configurable {
     };
     String data = "KEY,1234,VALUE1,VALUE2\n";
 
-    util.createTable(table, FAMILY);
+    util.createTable(TableName.valueOf(table), FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(table);
   }
@@ -144,7 +150,7 @@ public class TestImportTsv implements Configurable {
         table
     };
 
-    util.createTable(table, FAMILY);
+    util.createTable(TableName.valueOf(table), FAMILY);
     doMROnTableTest(util, FAMILY, null, args, 3);
     util.deleteTable(table);
   }
@@ -179,7 +185,24 @@ public class TestImportTsv implements Configurable {
         table
     };
 
-    util.createTable(table, FAMILY);
+    util.createTable(TableName.valueOf(table), FAMILY);
+    doMROnTableTest(util, FAMILY, null, args, 3);
+    util.deleteTable(table);
+  }
+  
+  @Test
+  public void testBulkOutputWithAnExistingTableNoStrictTrue() throws Exception {
+    String table = "test-" + UUID.randomUUID();
+    // Prepare the arguments required for the test.
+    Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
+    String[] args = new String[] {
+        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
+        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
+        "-D" + ImportTsv.NO_STRICT_COL_FAMILY + "=true",
+        table
+    };
+    util.createTable(TableName.valueOf(table), FAMILY);
     doMROnTableTest(util, FAMILY, null, args, 3);
     util.deleteTable(table);
   }
@@ -226,7 +249,30 @@ public class TestImportTsv implements Configurable {
     String data = "KEY\u001bVALUE4\u001bVALUE8\n";
     doMROnTableTest(util, FAMILY, data, args, 4);
   }
-  
+
+  @Test(expected = TableNotFoundException.class)
+  public void testWithoutAnExistingTableAndCreateTableSetToNo() throws Exception {
+    String table = "test-" + UUID.randomUUID();
+    String[] args =
+        new String[] { table, "/inputFile" };
+
+    Configuration conf = new Configuration(util.getConfiguration());
+    conf.set(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,FAM:A");
+    conf.set(ImportTsv.BULK_OUTPUT_CONF_KEY, "/output");
+    conf.set(ImportTsv.CREATE_TABLE_CONF_KEY, "no");
+    ImportTsv.createSubmittableJob(conf, args);
+  }
+
+  @Test(expected = TableNotFoundException.class)
+  public void testMRWithoutAnExistingTable() throws Exception {
+    String table = "test-" + UUID.randomUUID();
+    String[] args =
+        new String[] { table, "/inputFile" };
+
+    Configuration conf = new Configuration(util.getConfiguration());
+    ImportTsv.createSubmittableJob(conf, args);
+  }
+
   protected static Tool doMROnTableTest(HBaseTestingUtility util, String family,
       String data, String[] args) throws Exception {
     return doMROnTableTest(util, family, data, args, 1);
@@ -286,7 +332,7 @@ public class TestImportTsv implements Configurable {
     if (createdHFiles)
       validateHFiles(fs, outputPath, family);
     else
-      validateTable(conf, table, family, valueMultiplier);
+      validateTable(conf, TableName.valueOf(table), family, valueMultiplier);
 
     if (conf.getBoolean(DELETE_AFTER_LOAD_CONF, true)) {
       LOG.debug("Deleting test subdirectory");
@@ -298,11 +344,12 @@ public class TestImportTsv implements Configurable {
   /**
    * Confirm ImportTsv via data in online table.
    */
-  private static void validateTable(Configuration conf, String tableName,
+  private static void validateTable(Configuration conf, TableName tableName,
       String family, int valueMultiplier) throws IOException {
 
     LOG.debug("Validating table.");
-    HTable table = new HTable(conf, tableName);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
@@ -334,6 +381,7 @@ public class TestImportTsv implements Configurable {
       }
     }
     table.close();
+    connection.close();
     assertTrue(verified);
   }
 

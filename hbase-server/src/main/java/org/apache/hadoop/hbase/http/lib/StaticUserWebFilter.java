@@ -31,7 +31,9 @@ import javax.servlet.http.HttpServletRequestWrapper;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.FilterContainer;
 import org.apache.hadoop.hbase.http.FilterInitializer;
 
@@ -44,6 +46,7 @@ import static org.apache.hadoop.hbase.http.ServerConfigurationKeys.DEFAULT_HBASE
  * Provides a servlet filter that pretends to authenticate a fake user (Dr.Who)
  * so that the web UI is usable for a secure cluster without authentication.
  */
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class StaticUserWebFilter extends FilterInitializer {
   static final String DEPRECATED_UGI_KEY = "dfs.web.ugi";
 
@@ -77,6 +80,7 @@ public class StaticUserWebFilter extends FilterInitializer {
     }    
   }
 
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   public static class StaticUserFilter implements Filter {
     private User user;
     private String username;

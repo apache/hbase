@@ -27,13 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
@@ -42,9 +40,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.junit.After;
@@ -60,12 +61,12 @@ import static org.junit.Assert.*;
  * Tests class {@link org.apache.hadoop.hbase.client.HTableWrapper}
  * by invoking its methods and briefly asserting the result is reasonable.
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestHTableWrapper {
 
   private static final HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static final byte[] TEST_TABLE = Bytes.toBytes("test");
+  private static final TableName TEST_TABLE = TableName.valueOf("test");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static final byte[] ROW_A = Bytes.toBytes("aaa");
@@ -86,7 +87,7 @@ public class TestHTableWrapper {
   }
 
   private HTableInterface hTableInterface;
-  private HTable table;
+  private Table table;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -135,7 +136,7 @@ public class TestHTableWrapper {
     CoprocessorEnvironment env = cpHost.findCoprocessorEnvironment(implClazz.getName());
     assertEquals(Coprocessor.VERSION, env.getVersion());
     assertEquals(VersionInfo.getVersion(), env.getHBaseVersion());
-    hTableInterface = env.getTable(TableName.valueOf(TEST_TABLE));
+    hTableInterface = env.getTable(TEST_TABLE);
     checkHTableInterfaceMethods();
     cpHost.shutdown(env);
   }
@@ -169,17 +170,17 @@ public class TestHTableWrapper {
   }
 
   private void checkNameAndDescriptor() throws IOException {
-    assertArrayEquals(TEST_TABLE, hTableInterface.getTableName());
+    assertEquals(TEST_TABLE, hTableInterface.getName());
     assertEquals(table.getTableDescriptor(), hTableInterface.getTableDescriptor());
   }
 
   private void checkAutoFlush() {
     boolean initialAutoFlush = hTableInterface.isAutoFlush();
-    hTableInterface.setAutoFlushTo(false);
+    hTableInterface.setAutoFlush(false);
     assertFalse(hTableInterface.isAutoFlush());
-    hTableInterface.setAutoFlush(true, true);
+    hTableInterface.setAutoFlush(true);
     assertTrue(hTableInterface.isAutoFlush());
-    hTableInterface.setAutoFlushTo(initialAutoFlush);
+    hTableInterface.setAutoFlush(initialAutoFlush);
   }
 
   private void checkBufferSize() throws IOException {

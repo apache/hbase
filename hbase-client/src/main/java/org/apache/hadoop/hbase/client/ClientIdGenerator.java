@@ -20,15 +20,10 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.util.Enumeration;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -37,8 +32,10 @@ import org.apache.hadoop.hbase.util.Bytes;
  * such as an IP address, PID, and composite deterministic ID.
  */
 @InterfaceAudience.Private
-class ClientIdGenerator {
+final class ClientIdGenerator {
   static final Log LOG = LogFactory.getLog(ClientIdGenerator.class);
+
+  private ClientIdGenerator() {}
 
   /**
    * @return a unique ID incorporating IP address, PID, TID and timer. Might be an overkill...

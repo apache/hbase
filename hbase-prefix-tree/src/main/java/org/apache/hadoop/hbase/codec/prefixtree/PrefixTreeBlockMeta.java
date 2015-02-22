@@ -23,7 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.LongEncoder;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
@@ -45,7 +45,7 @@ public class PrefixTreeBlockMeta {
   public static final int MAX_FAMILY_LENGTH = Byte.MAX_VALUE;// hard-coded in KeyValue
 
   public static final int
-	  NUM_LONGS = 2,
+    NUM_LONGS = 2,
     NUM_INTS = 28,
     NUM_SHORTS = 0,//keyValueTypeWidth not persisted
     NUM_SINGLE_BYTES = 2,
@@ -135,7 +135,7 @@ public class PrefixTreeBlockMeta {
   }
 
 
-	/**************** operate on each field **********************/
+  /**************** operate on each field **********************/
 
   public int calculateNumMetaBytes(){
     int numBytes = 0;
@@ -339,7 +339,7 @@ public class PrefixTreeBlockMeta {
     position += UVIntTool.numBytes(numUniqueTags);
   }
 
-	//TODO method that can read directly from ByteBuffer instead of InputStream
+  //TODO method that can read directly from ByteBuffer instead of InputStream
 
 
   /*************** methods *************************/

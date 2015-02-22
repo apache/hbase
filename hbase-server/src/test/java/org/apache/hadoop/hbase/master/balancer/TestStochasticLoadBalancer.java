@@ -40,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -48,26 +47,45 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({FlakeyTests.class, MediumTests.class})
 public class TestStochasticLoadBalancer extends BalancerTestBase {
   public static final String REGION_KEY = "testRegion";
   private static StochasticLoadBalancer loadBalancer;
   private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer.class);
   private static Configuration conf;
-  private static final ServerName master = ServerName.valueOf("fake-master", 0, 1L);
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
+    conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
+    conf.setFloat("hbase.regions.slop", 0.0f);
     loadBalancer = new StochasticLoadBalancer();
     loadBalancer.setConf(conf);
   }
+
+  int[] largeCluster = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 56 };
 
   // int[testnum][servernumber] -> numregions
   int[][] clusterStateMocks = new int[][]{
@@ -86,7 +104,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       new int[]{0, 1},
       new int[]{10, 1},
       new int[]{514, 1432},
-      new int[]{47, 53},
+      new int[]{48, 53},
       // 3 node
       new int[]{0, 1, 2},
       new int[]{1, 2, 3},
@@ -123,7 +141,9 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       new int[]{10, 7, 12, 8, 11, 10, 9, 14},
       new int[]{13, 14, 6, 10, 10, 10, 8, 10},
       new int[]{130, 14, 60, 10, 100, 10, 80, 10},
-      new int[]{130, 140, 60, 100, 100, 100, 80, 100}
+      new int[]{130, 140, 60, 100, 100, 100, 80, 100},
+      largeCluster,
+
   };
 
   @Test
@@ -193,31 +213,26 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public void testSkewCost() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFunction
-        costFunction = new StochasticLoadBalancer.RegionCountSkewCostFunction(conf, 1, 1);
+        costFunction = new StochasticLoadBalancer.RegionCountSkewCostFunction(conf);
     for (int[] mockCluster : clusterStateMocks) {
       costFunction.init(mockCluster(mockCluster));
       double cost = costFunction.cost();
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
     }
+
     costFunction.init(mockCluster(new int[]{0, 0, 0, 0, 1}));
-    assertEquals(1,
-        costFunction.cost(), 0.01);
+    assertEquals(0,costFunction.cost(), 0.01);
     costFunction.init(mockCluster(new int[]{0, 0, 0, 1, 1}));
-    assertEquals(.75,
-        costFunction.cost(), 0.01);
+    assertEquals(0, costFunction.cost(), 0.01);
     costFunction.init(mockCluster(new int[]{0, 0, 1, 1, 1}));
-    assertEquals(.5,
-        costFunction.cost(), 0.01);
+    assertEquals(0, costFunction.cost(), 0.01);
     costFunction.init(mockCluster(new int[]{0, 1, 1, 1, 1}));
-    assertEquals(.25,
-        costFunction.cost(), 0.01);
+    assertEquals(0, costFunction.cost(), 0.01);
     costFunction.init(mockCluster(new int[]{1, 1, 1, 1, 1}));
-    assertEquals(0,
-        costFunction.cost(), 0.01);
-    costFunction.init(mockCluster(new int[]{10, 10, 10, 10, 10}));
-    assertEquals(0,
-        costFunction.cost(), 0.01);
+    assertEquals(0, costFunction.cost(), 0.01);
+    costFunction.init(mockCluster(new int[]{10000, 0, 0, 0, 0}));
+    assertEquals(1, costFunction.cost(), 0.01);
   }
 
   @Test
@@ -239,6 +254,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFromRegionLoadFunction
         costFunction = new StochasticLoadBalancer.MemstoreSizeCostFunction(conf);
+    costFunction.init(mockCluster(new int[]{0, 0, 0, 0, 1}));
 
     double[] statOne = new double[100];
     for (int i =0; i < 100; i++) {
@@ -317,7 +333,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
 
     BaseLoadBalancer.Cluster cluster;
 
-    cluster = new BaseLoadBalancer.Cluster(master, clusterState, null, null, null, null, null);
+    cluster = new BaseLoadBalancer.Cluster(clusterState, null, null, null);
     costFunction.init(cluster);
     double costWithoutReplicas = costFunction.cost();
     assertEquals(0, costWithoutReplicas, 0);
@@ -327,7 +343,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       clusterState.firstEntry().getValue().get(0),1);
     clusterState.lastEntry().getValue().add(replica1);
 
-    cluster = new BaseLoadBalancer.Cluster(master, clusterState, null, null, null, null, null);
+    cluster = new BaseLoadBalancer.Cluster(clusterState, null, null, null);
     costFunction.init(cluster);
     double costWith1ReplicaDifferentServer = costFunction.cost();
 
@@ -337,7 +353,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     HRegionInfo replica2 = RegionReplicaUtil.getRegionInfoForReplica(replica1, 2);
     clusterState.lastEntry().getValue().add(replica2);
 
-    cluster = new BaseLoadBalancer.Cluster(master, clusterState, null, null, null, null, null);
+    cluster = new BaseLoadBalancer.Cluster(clusterState, null, null, null);
     costFunction.init(cluster);
     double costWith1ReplicaSameServer = costFunction.cost();
 
@@ -360,7 +376,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     entry.getValue().add(replica2);
     it.next().getValue().add(replica3); //2nd server
 
-    cluster = new BaseLoadBalancer.Cluster(master, clusterState, null, null, null, null, null);
+    cluster = new BaseLoadBalancer.Cluster(clusterState, null, null, null);
     costFunction.init(cluster);
     double costWith3ReplicasSameServer = costFunction.cost();
 
@@ -374,7 +390,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     clusterState.lastEntry().getValue().add(replica2);
     clusterState.lastEntry().getValue().add(replica3);
 
-    cluster = new BaseLoadBalancer.Cluster(master, clusterState, null, null, null, null, null);
+    cluster = new BaseLoadBalancer.Cluster(clusterState, null, null, null);
     costFunction.init(cluster);
     double costWith2ReplicasOnTwoServers = costFunction.cost();
 
@@ -394,7 +410,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     // until the step above s1 holds two replicas of a region
     regions = randomRegions(1);
     map.put(s2, regions);
-    assertTrue(loadBalancer.needsBalance(new Cluster(master, map, null, null, null, null, null)));
+    assertTrue(loadBalancer.needsBalance(new Cluster(map, null, null, null)));
     // check for the case where there are two hosts on the same rack and there are two racks
     // and both the replicas are on the same rack
     map.clear();
@@ -405,7 +421,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     map.put(s2, regionsOnS2);
     // add another server so that the cluster has some host on another rack
     map.put(ServerName.valueOf("host2", 1000, 11111), randomRegions(1));
-    assertTrue(loadBalancer.needsBalance(new Cluster(master, map, null, null, null, null,
+    assertTrue(loadBalancer.needsBalance(new Cluster(map, null, null,
         new ForTestRackManagerOne())));
   }
 

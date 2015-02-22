@@ -27,6 +27,8 @@ import java.net.URL;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -37,7 +39,7 @@ import org.junit.experimental.categories.Category;
  * Testing, info servers are disabled.  This test enables then and checks that
  * they serve pages.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestInfoServers {
   static final Log LOG = LogFactory.getLog(TestInfoServers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -65,7 +67,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
+    UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port +
         "/index.html"), "master-status");
@@ -85,7 +87,7 @@ public class TestInfoServers {
   @Test
   public void testInfoServersStatusPages() throws Exception {
     // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
+    UTIL.getConnection().getTable(TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertContainsContent(new URL("http://localhost:" + port +
         "/master-status"), "meta");
@@ -97,17 +99,16 @@ public class TestInfoServers {
 
   @Test
   public void testMasterServerReadOnly() throws Exception {
-    String sTableName = "testMasterServerReadOnly";
-    byte[] tableName = Bytes.toBytes(sTableName);
+    TableName tableName = TableName.valueOf("testMasterServerReadOnly");
     byte[] cf = Bytes.toBytes("d");
     UTIL.createTable(tableName, cf);
-    new HTable(UTIL.getConfiguration(), tableName).close();
+    UTIL.getConnection().getTable(tableName).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertDoesNotContainContent(
-      new URL("http://localhost:" + port + "/table.jsp?name=" + sTableName + "&action=split&key="),
+      new URL("http://localhost:" + port + "/table.jsp?name=" + tableName + "&action=split&key="),
       "Table action request accepted");
     assertDoesNotContainContent(
-      new URL("http://localhost:" + port + "/table.jsp?name=" + sTableName),
+      new URL("http://localhost:" + port + "/table.jsp?name=" + tableName),
       "Actions:");
   }
 

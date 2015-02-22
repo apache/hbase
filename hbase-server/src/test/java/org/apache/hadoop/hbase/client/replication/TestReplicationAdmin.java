@@ -25,6 +25,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -39,7 +42,7 @@ import static org.junit.Assert.assertFalse;
 /**
  * Unit testing of ReplicationAdmin
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestReplicationAdmin {
 
   private static final Log LOG =
@@ -154,5 +157,58 @@ public class TestReplicationAdmin {
     assertEquals("tab1;tab2:cf1;tab3:cf1,cf3", ReplicationAdmin.getTableCfsStr(tabCFsMap));
   }
 
-}
+  @Test
+  public void testAppendPeerTableCFs() throws Exception {
+    // Add a valid peer
+    admin.addPeer(ID_ONE, KEY_ONE);
 
+    admin.appendPeerTableCFs(ID_ONE, "t1");
+    assertEquals("t1", admin.getPeerTableCFs(ID_ONE));
+
+    // append table t2 to replication
+    admin.appendPeerTableCFs(ID_ONE, "t2");
+    assertEquals("t2;t1", admin.getPeerTableCFs(ID_ONE));
+
+    // append table column family: f1 of t3 to replication
+    admin.appendPeerTableCFs(ID_ONE, "t3:f1");
+    assertEquals("t3:f1;t2;t1", admin.getPeerTableCFs(ID_ONE));
+    admin.removePeer(ID_ONE);
+  }
+
+  @Test
+  public void testRemovePeerTableCFs() throws Exception {
+    // Add a valid peer
+    admin.addPeer(ID_ONE, KEY_ONE);
+    try {
+      admin.removePeerTableCFs(ID_ONE, "t3");
+      assertTrue(false);
+    } catch (ReplicationException e) {
+    }
+    assertEquals("", admin.getPeerTableCFs(ID_ONE));
+
+    admin.setPeerTableCFs(ID_ONE, "t1;t2:cf1");
+    try {
+      admin.removePeerTableCFs(ID_ONE, "t3");
+      assertTrue(false);
+    } catch (ReplicationException e) {
+    }
+    assertEquals("t1;t2:cf1", admin.getPeerTableCFs(ID_ONE));
+
+    try {
+      admin.removePeerTableCFs(ID_ONE, "t1:f1");
+      assertTrue(false);
+    } catch (ReplicationException e) {
+    }
+    admin.removePeerTableCFs(ID_ONE, "t1");
+    assertEquals("t2:cf1", admin.getPeerTableCFs(ID_ONE));
+
+    try {
+      admin.removePeerTableCFs(ID_ONE, "t2");
+      assertTrue(false);
+    } catch (ReplicationException e) {
+    }
+    admin.removePeerTableCFs(ID_ONE, "t2:cf1");
+    assertEquals("", admin.getPeerTableCFs(ID_ONE));
+    admin.removePeer(ID_ONE);
+  }
+}

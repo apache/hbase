@@ -39,7 +39,7 @@ public interface MetricsEditsReplaySource extends BaseSource {
   /**
    * Description
    */
-  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer HLog Edits Replay";
+  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer WAL Edits Replay";
 
   /**
    * The name of the metrics context that metrics will be under in jmx

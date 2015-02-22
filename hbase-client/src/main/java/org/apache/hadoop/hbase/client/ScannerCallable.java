@@ -24,20 +24,20 @@ import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 
-import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
 
@@ -89,6 +88,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   protected boolean isRegionServerRemote = true;
   private long nextCallSeq = 0;
   protected RpcControllerFactory controllerFactory;
+  protected PayloadCarryingRpcController controller;
 
   /**
    * @param connection which connection
@@ -96,9 +96,10 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    * @param scan the scan to execute
    * @param scanMetrics the ScanMetrics to used, if it is null, ScannerCallable won't collect
    *          metrics
-   * @param rpcControllerFactory factory to use when creating {@link RpcController}
+   * @param rpcControllerFactory factory to use when creating 
+   *        {@link com.google.protobuf.RpcController}
    */
-  public ScannerCallable (ClusterConnection connection, TableName tableName, Scan scan,
+  public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory) {
     this(connection, tableName, scan, scanMetrics, rpcControllerFactory, 0);
   }
@@ -110,7 +111,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    * @param scanMetrics
    * @param id the replicaId
    */
-  public ScannerCallable (ClusterConnection connection, TableName tableName, Scan scan,
+  public ScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
     super(connection, tableName, scan.getStartRow());
     this.id = id;
@@ -121,6 +122,10 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     logScannerActivity = conf.getBoolean(LOG_SCANNER_ACTIVITY, false);
     logCutOffLatency = conf.getInt(LOG_SCANNER_LATENCY_CUTOFF, 1000);
     this.controllerFactory = rpcControllerFactory;
+  }
+
+  PayloadCarryingRpcController getController() {
+    return controller;
   }
 
   /**
@@ -191,7 +196,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           incRPCcallsMetrics();
           request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
-          PayloadCarryingRpcController controller = controllerFactory.newController();
+          controller = controllerFactory.newController();
           controller.setPriority(getTableName());
           controller.setCallTimeout(callTimeout);
           try {
@@ -292,9 +297,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
     long resultSize = 0;
     for (Result rr : rrs) {
-      for (Cell kv : rr.rawCells()) {
-        // TODO add getLength to Cell/use CellUtil#estimatedSizeOf
-        resultSize += KeyValueUtil.ensureKeyValue(kv).getLength();
+      for (Cell cell : rr.rawCells()) {
+        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
       }
     }
     this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);

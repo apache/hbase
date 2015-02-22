@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
@@ -161,6 +161,23 @@ public class RegionLoad {
   }
 
   /**
+   * @return the data locality of region in the regionserver.
+   */
+  public float getDataLocality() {
+    if (regionLoadPB.hasDataLocality()) {
+      return regionLoadPB.getDataLocality();
+    }
+    return 0.0f;
+  }
+
+  /**
+   * @return the timestamp of the oldest hfile for any store of this region.
+   */
+  public long getLastMajorCompactionTs() {
+    return regionLoadPB.getLastMajorCompactionTs();
+  }
+
+  /**
    * @see java.lang.Object#toString()
    */
   @Override
@@ -170,7 +187,9 @@ public class RegionLoad {
     sb = Strings.appendKeyValue(sb, "numberOfStorefiles",
         this.getStorefiles());
     sb = Strings.appendKeyValue(sb, "storefileUncompressedSizeMB",
-        this.getStoreUncompressedSizeMB());
+      this.getStoreUncompressedSizeMB());
+    sb = Strings.appendKeyValue(sb, "lastMajorCompactionTimestamp",
+      this.getLastMajorCompactionTs());
     sb = Strings.appendKeyValue(sb, "storefileSizeMB",
         this.getStorefileSizeMB());
     if (this.getStoreUncompressedSizeMB() != 0) {
@@ -205,6 +224,8 @@ public class RegionLoad {
         compactionProgressPct);
     sb = Strings.appendKeyValue(sb, "completeSequenceId",
         this.getCompleteSequenceId());
+    sb = Strings.appendKeyValue(sb, "dataLocality",
+        this.getDataLocality());
     return sb.toString();
   }
 }

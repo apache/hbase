@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.HashMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourceFactory {
@@ -46,7 +46,7 @@ public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourc
     if (source == null) {
       //Create the source.
       source = new MetricsHBaseServerSourceImpl(
-          METRICS_NAME,
+          context,
           METRICS_DESCRIPTION,
           context.toLowerCase(),
           context + METRICS_JMX_CONTEXT_SUFFIX, wrapper);

@@ -24,7 +24,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import org.apache.hadoop.hbase.tmpl.regionserver.RSStatusTmpl;
 
@@ -34,10 +34,8 @@ public class RSStatusServlet extends HttpServlet {
 
   @Override
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-      throws ServletException, IOException
-    {
-    HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(
-        HRegionServer.REGIONSERVER);
+  throws ServletException, IOException {
+    HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
 
     resp.setContentType("text/html");

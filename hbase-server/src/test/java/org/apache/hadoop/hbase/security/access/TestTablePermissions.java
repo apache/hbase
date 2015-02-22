@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
@@ -40,12 +39,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
@@ -61,7 +62,7 @@ import com.google.common.collect.ListMultimap;
 /**
  * Test the reading and writing of access permissions on {@code _acl_} table.
  */
-@Category(LargeTests.class)
+@Category({SecurityTests.class, LargeTests.class})
 public class TestTablePermissions {
   private static final Log LOG = LogFactory.getLog(TestTablePermissions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -97,7 +98,7 @@ public class TestTablePermissions {
     UTIL.startMiniCluster();
 
     // Wait for the ACL table to become available
-    UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
 
     ZKW = new ZooKeeperWatcher(UTIL.getConfiguration(),
       "TestTablePermissions", ABORTABLE);
@@ -287,7 +288,7 @@ public class TestTablePermissions {
     ListMultimap<String,TablePermission> preperms =
         AccessControlLists.getTablePermissions(conf, TEST_TABLE);
 
-    HTable table = new HTable(conf, TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
     table.put(new Put(Bytes.toBytes("row1"))
         .add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v1")));
     table.put(new Put(Bytes.toBytes("row2"))

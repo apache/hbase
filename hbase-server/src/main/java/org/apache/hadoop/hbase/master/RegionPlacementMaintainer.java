@@ -39,7 +39,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -47,9 +47,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -66,9 +67,9 @@ import org.apache.log4j.Logger;
 /**
  * A tool that is used for manipulating and viewing favored nodes information
  * for regions. Run with -h to get a list of the options
- *
  */
 @InterfaceAudience.Private
+// TODO: Remove? Unused. Partially implemented only.
 public class RegionPlacementMaintainer {
   private static final Log LOG = LogFactory.getLog(RegionPlacementMaintainer.class
       .getName());
@@ -92,9 +93,9 @@ public class RegionPlacementMaintainer {
   private Configuration conf;
   private final boolean enforceLocality;
   private final boolean enforceMinAssignmentMove;
-  private HBaseAdmin admin;
   private RackManager rackManager;
   private Set<TableName> targetTableSet;
+  private final Connection connection;
 
   public RegionPlacementMaintainer(Configuration conf) {
     this(conf, true, true);
@@ -107,7 +108,13 @@ public class RegionPlacementMaintainer {
     this.enforceMinAssignmentMove = enforceMinAssignmentMove;
     this.targetTableSet = new HashSet<TableName>();
     this.rackManager = new RackManager(conf);
+    try {
+      this.connection = ConnectionFactory.createConnection(this.conf);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
+
   private static void printHelp(Options opt) {
     new HelpFormatter().printHelp(
         "RegionPlacement < -w | -u | -n | -v | -t | -h | -overwrite -r regionName -f favoredNodes " +
@@ -124,24 +131,13 @@ public class RegionPlacementMaintainer {
   }
 
   /**
-   * @return the cached HBaseAdmin
-   * @throws IOException
-   */
-  private HBaseAdmin getHBaseAdmin() throws IOException {
-    if (this.admin == null) {
-      this.admin = new HBaseAdmin(this.conf);
-    }
-    return this.admin;
-  }
-
-  /**
    * @return the new RegionAssignmentSnapshot
    * @throws IOException
    */
   public SnapshotOfRegionAssignmentFromMeta getRegionAssignmentSnapshot()
   throws IOException {
     SnapshotOfRegionAssignmentFromMeta currentAssignmentShapshot =
-      new SnapshotOfRegionAssignmentFromMeta(HConnectionManager.getConnection(conf));
+      new SnapshotOfRegionAssignmentFromMeta(ConnectionFactory.createConnection(conf));
     currentAssignmentShapshot.initialize();
     return currentAssignmentShapshot;
   }
@@ -209,8 +205,10 @@ public class RegionPlacementMaintainer {
 
       // Get the all the region servers
       List<ServerName> servers = new ArrayList<ServerName>();
-      servers.addAll(getHBaseAdmin().getClusterStatus().getServers());
-      
+      try (Admin admin = this.connection.getAdmin()) {
+        servers.addAll(admin.getClusterStatus().getServers());
+      }
+
       LOG.info("Start to generate assignment plan for " + numRegions +
           " regions from table " + tableName + " with " +
           servers.size() + " region servers");
@@ -618,9 +616,9 @@ public class RegionPlacementMaintainer {
     // sort the map based on region info
     Map<HRegionInfo, List<ServerName>> assignmentMap =
       new TreeMap<HRegionInfo, List<ServerName>>(plan.getAssignmentMap());
-    
+
     for (Map.Entry<HRegionInfo, List<ServerName>> entry : assignmentMap.entrySet()) {
-      
+
       String serverList = FavoredNodeAssignmentHelper.getFavoredNodesAsString(entry.getValue());
       String regionName = entry.getKey().getRegionNameAsString();
       LOG.info("Region: " + regionName );
@@ -659,7 +657,6 @@ public class RegionPlacementMaintainer {
     // Get the region to region server map
     Map<ServerName, List<HRegionInfo>> currentAssignment =
       this.getRegionAssignmentSnapshot().getRegionServerToRegionMap();
-    HConnection connection = this.getHBaseAdmin().getConnection();
 
     // track of the failed and succeeded updates
     int succeededNum = 0;
@@ -690,10 +687,11 @@ public class RegionPlacementMaintainer {
         }
         if (singleServerPlan != null) {
           // Update the current region server with its updated favored nodes
-          BlockingInterface currentRegionServer = connection.getAdmin(entry.getKey());
+          BlockingInterface currentRegionServer =
+            ((ClusterConnection)this.connection).getAdmin(entry.getKey());
           UpdateFavoredNodesRequest request =
               RequestConverter.buildUpdateFavoredNodesRequest(regionUpdateInfos);
-          
+
           UpdateFavoredNodesResponse updateFavoredNodesResponse =
               currentRegionServer.updateFavoredNodes(null, request);
           LOG.info("Region server " +
@@ -978,7 +976,7 @@ public class RegionPlacementMaintainer {
     opt.addOption("munkres", false,
         "use munkres to place secondaries and tertiaries");
     opt.addOption("ld", "locality-dispersion", false, "print locality and dispersion " +
-    		"information for current plan");
+        "information for current plan");
     try {
       // Set the log4j
       Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);

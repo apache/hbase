@@ -22,7 +22,7 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
@@ -170,7 +170,7 @@ public class RegionStateStore {
         // persist meta state in MetaTableLocator (which in turn is zk storage currently)
         try {
           MetaTableLocator.setMetaLocation(server.getZooKeeper(),
-            newState.getServerName(), newState.getState());
+            newState.getServerName(), hri.getReplicaId(), newState.getState());
           return; // Done
         } catch (KeeperException e) {
           throw new IOException("Failed to update meta ZNode", e);
@@ -230,7 +230,8 @@ public class RegionStateStore {
         }
       }
       // Called when meta is not on master
-      multiHConnection.processBatchCallback(Arrays.asList(put), TableName.META_TABLE_NAME, null, null);
+      multiHConnection.processBatchCallback(Arrays.asList(put),
+          TableName.META_TABLE_NAME, null, null);
 
     } catch (IOException ioe) {
       LOG.error("Failed to persist region state " + newState, ioe);
@@ -239,12 +240,12 @@ public class RegionStateStore {
   }
 
   void splitRegion(HRegionInfo p,
-      HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
-    MetaTableAccessor.splitRegion(server.getShortCircuitConnection(), p, a, b, sn);
+      HRegionInfo a, HRegionInfo b, ServerName sn, int regionReplication) throws IOException {
+    MetaTableAccessor.splitRegion(server.getConnection(), p, a, b, sn, regionReplication);
   }
 
   void mergeRegions(HRegionInfo p,
-      HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
-    MetaTableAccessor.mergeRegions(server.getShortCircuitConnection(), p, a, b, sn);
+      HRegionInfo a, HRegionInfo b, ServerName sn, int regionReplication) throws IOException {
+    MetaTableAccessor.mergeRegions(server.getConnection(), p, a, b, sn, regionReplication);
   }
 }

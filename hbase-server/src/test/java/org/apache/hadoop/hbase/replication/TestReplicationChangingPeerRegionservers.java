@@ -26,17 +26,16 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -44,7 +43,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test handling of changes to the number of a peer's regionservers.
  */
-@Category(LargeTests.class)
+@Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationChangingPeerRegionservers extends TestReplicationBase {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationChangingPeerRegionservers.class);
@@ -54,12 +53,11 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
    */
   @Before
   public void setUp() throws Exception {
-    htable1.setAutoFlush(false, true);
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
     for (JVMClusterUtil.RegionServerThread r :
                           utility1.getHBaseCluster().getRegionServerThreads()) {
-      r.getRegionServer().getWAL().rollWriter();
+      utility1.getHBaseAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     utility1.deleteTableData(tableName);
     // truncating the table will send one Delete per row to the slave cluster
@@ -119,7 +117,10 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     Put put = new Put(row);
     put.add(famName, row, row);
 
-    htable1 = new HTable(conf1, tableName);
+    if (htable1 == null) {
+      htable1 = utility1.getConnection().getTable(tableName);
+    }
+
     htable1.put(put);
 
     Get get = new Get(row);
@@ -136,7 +137,5 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
         break;
       }
     }
-
   }
-
 }

@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.mockito.Mockito;
 
 /**
- * {@link HConnection} testing utility.
+ * {@link ClusterConnection} testing utility.
  */
 public class HConnectionTestingUtility {
   /*
@@ -44,7 +44,7 @@ public class HConnectionTestingUtility {
   /**
    * Get a Mocked {@link HConnection} that goes with the passed <code>conf</code>
    * configuration instance.  Minimally the mock will return
-   * <code>conf</conf> when {@link HConnection#getConfiguration()} is invoked.
+   * <code>conf</conf> when {@link ClusterConnection#getConfiguration()} is invoked.
    * Be sure to shutdown the connection when done by calling
    * {@link HConnectionManager#deleteConnection(Configuration)} else it
    * will stick around; this is probably not what you want.
@@ -69,7 +69,7 @@ public class HConnectionTestingUtility {
 
   /**
    * Calls {@link #getMockedConnection(Configuration)} and then mocks a few
-   * more of the popular {@link HConnection} methods so they do 'normal'
+   * more of the popular {@link ClusterConnection} methods so they do 'normal'
    * operation (see return doc below for list). Be sure to shutdown the
    * connection when done by calling
    * {@link HConnectionManager#deleteConnection(Configuration)} else it
@@ -85,12 +85,13 @@ public class HConnectionTestingUtility {
    * @param hri HRegionInfo to include in the location returned when
    * getRegionLocator is called on the mocked connection
    * @return Mock up a connection that returns a {@link Configuration} when
-   * {@link HConnection#getConfiguration()} is called, a 'location' when
-   * {@link HConnection#getRegionLocation(org.apache.hadoop.hbase.TableName, byte[], boolean)} is called,
+   * {@link ClusterConnection#getConfiguration()} is called, a 'location' when
+   * {@link ClusterConnection#getRegionLocation(org.apache.hadoop.hbase.TableName, byte[], boolean)}
+   * is called,
    * and that returns the passed {@link AdminProtos.AdminService.BlockingInterface} instance when
-   * {@link HConnection#getAdmin(ServerName)} is called, returns the passed
+   * {@link ClusterConnection#getAdmin(ServerName)} is called, returns the passed
    * {@link ClientProtos.ClientService.BlockingInterface} instance when
-   * {@link HConnection#getClient(ServerName)} is called (Be sure to call
+   * {@link ClusterConnection#getClient(ServerName)} is called (Be sure to call
    * {@link HConnectionManager#deleteConnection(Configuration)}
    * when done with this mocked Connection.
    * @throws IOException
@@ -131,11 +132,18 @@ public class HConnectionTestingUtility {
           RpcControllerFactory.instantiate(conf)));
     Mockito.doNothing().when(c).incCount();
     Mockito.doNothing().when(c).decCount();
+    Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(
+        RpcRetryingCallerFactory.instantiate(conf,
+            RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, null));
+    HTableInterface t = Mockito.mock(HTableInterface.class);
+    Mockito.when(c.getTable((TableName)Mockito.any())).thenReturn(t);
+    ResultScanner rs = Mockito.mock(ResultScanner.class);
+    Mockito.when(t.getScanner((Scan)Mockito.any())).thenReturn(rs);
     return c;
   }
 
   /**
-   * Get a Mockito spied-upon {@link HConnection} that goes with the passed
+   * Get a Mockito spied-upon {@link ClusterConnection} that goes with the passed
    * <code>conf</code> configuration instance.
    * Be sure to shutdown the connection when done by calling
    * {@link HConnectionManager#deleteConnection(Configuration)} else it
@@ -146,7 +154,7 @@ public class HConnectionTestingUtility {
    * @see @link
    * {http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html#spy(T)}
    */
-  public static HConnection getSpiedConnection(final Configuration conf)
+  public static ClusterConnection getSpiedConnection(final Configuration conf)
   throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (ConnectionManager.CONNECTION_INSTANCES) {

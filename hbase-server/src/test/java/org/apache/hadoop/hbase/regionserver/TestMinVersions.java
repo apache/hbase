@@ -29,7 +29,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.KeepDeletedCells;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -45,7 +47,7 @@ import org.junit.rules.TestName;
 /**
  * Test Minimum Versions feature (HBASE-4071).
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestMinVersions {
   HBaseTestingUtility hbu = HBaseTestingUtility.createLocalHTU();
   private final byte[] T0 = Bytes.toBytes("0");
@@ -64,7 +66,8 @@ public class TestMinVersions {
    */
   @Test
   public void testGetClosestBefore() throws Exception {
-    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 1, 1000, 1, false);
+    HTableDescriptor htd =
+        hbu.createTableDescriptor(name.getMethodName(), 1, 1000, 1, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
@@ -102,7 +105,7 @@ public class TestMinVersions {
       r = region.getClosestRowBefore(T2, c0);
       checkResult(r, c0, T4);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -113,7 +116,8 @@ public class TestMinVersions {
   @Test
   public void testStoreMemStore() throws Exception {
     // keep 3 versions minimum
-    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, false);
+    HTableDescriptor htd =
+        hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -158,7 +162,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3,T2,T1);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -167,7 +171,8 @@ public class TestMinVersions {
    */
   @Test
   public void testDelete() throws Exception {
-    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, false);
+    HTableDescriptor htd =
+        hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
@@ -216,7 +221,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T3);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -225,7 +230,8 @@ public class TestMinVersions {
    */
   @Test
   public void testMemStore() throws Exception {
-    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, false);
+    HTableDescriptor htd =
+        hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
@@ -290,7 +296,7 @@ public class TestMinVersions {
       r = region.get(g);  // this'll use ExplicitColumnTracker
       checkResult(r, c0, T5,T4);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -300,7 +306,8 @@ public class TestMinVersions {
   @Test
   public void testBaseCase() throws Exception {
     // 1 version minimum, 1000 versions maximum, ttl = 1s
-    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, false);
+    HTableDescriptor htd =
+        hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
     try {
 
@@ -381,7 +388,7 @@ public class TestMinVersions {
       r = region.get(g);
       assertTrue(r.isEmpty());
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 
@@ -391,7 +398,8 @@ public class TestMinVersions {
    */
   @Test
   public void testFilters() throws Exception {
-    HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, false);
+    HTableDescriptor htd =
+        hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
     final byte [] c1 = COLUMNS[1];
 
@@ -455,7 +463,7 @@ public class TestMinVersions {
       r = region.get(g);
       checkResult(r, c0, T2);
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
   }
 

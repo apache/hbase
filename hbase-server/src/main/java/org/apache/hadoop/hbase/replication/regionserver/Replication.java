@@ -33,21 +33,20 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
 import org.apache.hadoop.hbase.regionserver.ReplicationSourceService;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -66,7 +65,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * Gateway to Replication.  Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  */
 @InterfaceAudience.Private
-public class Replication implements WALActionsListener, 
+public class Replication extends WALActionsListener.Base implements 
   ReplicationSourceService, ReplicationSinkService {
   private static final Log LOG =
       LogFactory.getLog(Replication.class);
@@ -155,7 +154,7 @@ public class Replication implements WALActionsListener,
   }
 
    /*
-    * Returns an object to listen to new hlog changes
+    * Returns an object to listen to new wal changes
     **/
   public WALActionsListener getWALActionsListener() {
     return this;
@@ -222,13 +221,7 @@ public class Replication implements WALActionsListener,
   }
 
   @Override
-  public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
-      WALEdit logEdit) {
-    // Not interested
-  }
-
-  @Override
-  public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
+  public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey,
                                        WALEdit logEdit) {
     scopeWALEdits(htd, logKey, logEdit);
   }
@@ -240,15 +233,15 @@ public class Replication implements WALActionsListener,
    * @param logKey Key that may get scoped according to its edits
    * @param logEdit Edits used to lookup the scopes
    */
-  public static void scopeWALEdits(HTableDescriptor htd, HLogKey logKey,
+  public static void scopeWALEdits(HTableDescriptor htd, WALKey logKey,
                                    WALEdit logEdit) {
     NavigableMap<byte[], Integer> scopes =
         new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     byte[] family;
-    for (KeyValue kv : logEdit.getKeyValues()) {
-      family = kv.getFamily();
+    for (Cell cell : logEdit.getCells()) {
+      family = cell.getFamily();
       // This is expected and the KV should not be replicated
-      if (CellUtil.matchingFamily(kv, WALEdit.METAFAMILY)) continue;
+      if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) continue;
       // Unexpected, has a tendency to happen in unit tests
       assert htd.getFamily(family) != null;
 
@@ -273,16 +266,6 @@ public class Replication implements WALActionsListener,
     getReplicationManager().postLogRoll(newPath);
   }
 
-  @Override
-  public void preLogArchive(Path oldPath, Path newPath) throws IOException {
-    // Not interested
-  }
-
-  @Override
-  public void postLogArchive(Path oldPath, Path newPath) throws IOException {
-    // Not interested
-  }
-
   /**
    * This method modifies the master's configuration in order to inject
    * replication-related features
@@ -297,16 +280,6 @@ public class Replication implements WALActionsListener,
     if (!plugins.contains(cleanerClass)) {
       conf.set(HBASE_MASTER_LOGCLEANER_PLUGINS, plugins + "," + cleanerClass);
     }
-  }
-
-  @Override
-  public void logRollRequested() {
-    // Not interested
-  }
-
-  @Override
-  public void logCloseRequested() {
-    // not interested
   }
 
   /*

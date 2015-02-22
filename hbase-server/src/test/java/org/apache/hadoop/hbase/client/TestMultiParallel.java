@@ -24,27 +24,27 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,36 +52,37 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({MediumTests.class, FlakeyTests.class})
 public class TestMultiParallel {
   private static final Log LOG = LogFactory.getLog(TestMultiParallel.class);
-  {
-    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
-  }
+
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
   private static final String FAMILY = "family";
-  private static final String TEST_TABLE = "multi_test_table";
+  private static final TableName TEST_TABLE = TableName.valueOf("multi_test_table");
   private static final byte[] BYTES_FAMILY = Bytes.toBytes(FAMILY);
   private static final byte[] ONE_ROW = Bytes.toBytes("xxx");
   private static final byte [][] KEYS = makeKeys();
 
   private static final int slaves = 5; // also used for testing HTable pool size
+  private static Connection CONNECTION;
 
   @BeforeClass public static void beforeClass() throws Exception {
-    ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
+    // Uncomment the following lines if more verbosity is needed for
+    // debugging (see HBASE-12285 for details).
+    //((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
+    //((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
+    //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     UTIL.startMiniCluster(slaves);
-    HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));
-    UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
-    UTIL.waitTableEnabled(Bytes.toBytes(TEST_TABLE));
+    HTable t = UTIL.createMultiRegionTable(TEST_TABLE, Bytes.toBytes(FAMILY));
+    UTIL.waitTableEnabled(TEST_TABLE);
     t.close();
+    CONNECTION = ConnectionFactory.createConnection(UTIL.getConfiguration());
   }
 
   @AfterClass public static void afterClass() throws Exception {
+    CONNECTION.close();
     UTIL.shutdownMiniCluster();
   }
 
@@ -94,9 +95,6 @@ public class TestMultiParallel {
       // Wait until completing balance
       UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());
     }
-    HConnection conn = HConnectionManager.getConnection(UTIL.getConfiguration());
-    conn.clearRegionCache();
-    conn.close();
     LOG.info("before done");
   }
 
@@ -146,24 +144,35 @@ public class TestMultiParallel {
    * @throws SecurityException
    */
   @Test(timeout=300000)
-  public void testActiveThreadsCount() throws Exception{
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
-    List<Row> puts = constructPutRequests(); // creates a Put for every region
-    table.batch(puts);
-    Field poolField = table.getClass().getDeclaredField("pool");
-    poolField.setAccessible(true);
-    ThreadPoolExecutor tExecutor = (ThreadPoolExecutor) poolField.get(table);
-    assertEquals(slaves, tExecutor.getLargestPoolSize());
-    table.close();
+  public void testActiveThreadsCount() throws Exception {
+    try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration())) {
+      ThreadPoolExecutor executor = HTable.getDefaultExecutor(UTIL.getConfiguration());
+      try {
+        try (Table t = connection.getTable(TEST_TABLE, executor)) {
+          List<Put> puts = constructPutRequests(); // creates a Put for every region
+          t.batch(puts);
+          HashSet<ServerName> regionservers = new HashSet<ServerName>();
+          try (RegionLocator locator = connection.getRegionLocator(TEST_TABLE)) {
+            for (Row r : puts) {
+              HRegionLocation location = locator.getRegionLocation(r.getRow());
+              regionservers.add(location.getServerName());
+            }
+          }
+          assertEquals(regionservers.size(), executor.getLargestPoolSize());
+        }
+      } finally {
+        executor.shutdownNow();
+      }
+    }
   }
 
   @Test(timeout=300000)
   public void testBatchWithGet() throws Exception {
     LOG.info("test=testBatchWithGet");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
     // load test data
-    List<Row> puts = constructPutRequests();
+    List<Put> puts = constructPutRequests();
     table.batch(puts);
 
     // create a list of gets and run it
@@ -189,7 +198,7 @@ public class TestMultiParallel {
       Cell[] multiKvs = multiRes[i].rawCells();
       for (int j = 0; j < singleKvs.length; j++) {
         Assert.assertEquals(singleKvs[j], multiKvs[j]);
-        Assert.assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(singleKvs[j]), 
+        Assert.assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(singleKvs[j]),
             CellUtil.cloneValue(multiKvs[j])));
       }
     }
@@ -199,7 +208,7 @@ public class TestMultiParallel {
   @Test
   public void testBadFam() throws Exception {
     LOG.info("test=testBadFam");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
     List<Row> actions = new ArrayList<Row>();
     Put p = new Put(Bytes.toBytes("row1"));
@@ -252,17 +261,13 @@ public class TestMultiParallel {
   private void doTestFlushCommits(boolean doAbort) throws Exception {
     // Load the data
     LOG.info("get new table");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
-    table.setAutoFlush(false, true);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
     table.setWriteBufferSize(10 * 1024 * 1024);
 
     LOG.info("constructPutRequests");
-    List<Row> puts = constructPutRequests();
-    for (Row put : puts) {
-      table.put((Put) put);
-    }
+    List<Put> puts = constructPutRequests();
+    table.put(puts);
     LOG.info("puts");
-    table.flushCommits();
     final int liveRScount = UTIL.getMiniHBaseCluster().getLiveRegionServerThreads()
         .size();
     assert liveRScount > 0;
@@ -281,11 +286,7 @@ public class TestMultiParallel {
       // try putting more keys after the abort. same key/qual... just validating
       // no exceptions thrown
       puts = constructPutRequests();
-      for (Row put : puts) {
-        table.put((Put) put);
-      }
-
-      table.flushCommits();
+      table.put(puts);
     }
 
     LOG.info("validating loaded data");
@@ -321,10 +322,9 @@ public class TestMultiParallel {
   @Test (timeout=300000)
   public void testBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
-
+    Table table = CONNECTION.getTable(TEST_TABLE);
     // put multiple rows using a batch
-    List<Row> puts = constructPutRequests();
+    List<Put> puts = constructPutRequests();
 
     Object[] results = table.batch(puts);
     validateSizeAndEmpty(results, KEYS.length);
@@ -340,9 +340,8 @@ public class TestMultiParallel {
         results = table.batch(puts);
       } catch (RetriesExhaustedWithDetailsException ree) {
         LOG.info(ree.getExhaustiveDescription());
-        throw ree;
-      } finally {
         table.close();
+        throw ree;
       }
       validateSizeAndEmpty(results, KEYS.length);
     }
@@ -354,10 +353,10 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testBatchWithDelete() throws Exception {
     LOG.info("test=testBatchWithDelete");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
     // Load some data
-    List<Row> puts = constructPutRequests();
+    List<Put> puts = constructPutRequests();
     Object[] results = table.batch(puts);
     validateSizeAndEmpty(results, KEYS.length);
 
@@ -365,7 +364,7 @@ public class TestMultiParallel {
     List<Row> deletes = new ArrayList<Row>();
     for (int i = 0; i < KEYS.length; i++) {
       Delete delete = new Delete(KEYS[i]);
-      delete.deleteFamily(BYTES_FAMILY);
+      delete.addFamily(BYTES_FAMILY);
       deletes.add(delete);
     }
     results = table.batch(deletes);
@@ -383,10 +382,10 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testHTableDeleteWithList() throws Exception {
     LOG.info("test=testHTableDeleteWithList");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
     // Load some data
-    List<Row> puts = constructPutRequests();
+    List<Put> puts = constructPutRequests();
     Object[] results = table.batch(puts);
     validateSizeAndEmpty(results, KEYS.length);
 
@@ -412,7 +411,7 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
     LOG.info("test=testBatchWithManyColsInOneRowGetAndPut");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
     List<Row> puts = new ArrayList<Row>();
     for (int i = 0; i < 100; i++) {
@@ -453,7 +452,7 @@ public class TestMultiParallel {
     final byte[] QUAL2 = Bytes.toBytes("qual2");
     final byte[] QUAL3 = Bytes.toBytes("qual3");
     final byte[] QUAL4 = Bytes.toBytes("qual4");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
     Delete d = new Delete(ONE_ROW);
     table.delete(d);
     Put put = new Put(ONE_ROW);
@@ -483,7 +482,8 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testNonceCollision() throws Exception {
     LOG.info("test=testNonceCollision");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    final Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
+    Table table = connection.getTable(TEST_TABLE);
     Put put = new Put(ONE_ROW);
     put.add(BYTES_FAMILY, QUALIFIER, Bytes.toBytes(0L));
 
@@ -502,8 +502,9 @@ public class TestMultiParallel {
         return nonce;
       }
     };
+
     NonceGenerator oldCnm =
-        ConnectionUtils.injectNonceGeneratorForTesting(table.getConnection(), cnm);
+      ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection)connection, cnm);
 
     // First test sequential requests.
     try {
@@ -531,9 +532,9 @@ public class TestMultiParallel {
         Runnable r = new Runnable() {
           @Override
           public void run() {
-            HTable table = null;
+            Table table = null;
             try {
-              table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+              table = connection.getTable(TEST_TABLE);
             } catch (IOException e) {
               fail("Not expected");
             }
@@ -566,14 +567,14 @@ public class TestMultiParallel {
       validateResult(result, QUALIFIER, Bytes.toBytes((numRequests / 2) + 1L));
       table.close();
     } finally {
-      ConnectionManager.injectNonceGeneratorForTesting(table.getConnection(), oldCnm);
+      ConnectionManager.injectNonceGeneratorForTesting((ClusterConnection)connection, oldCnm);
     }
   }
 
   @Test(timeout=300000)
   public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
     // Load some data to start
     Object[] results = table.batch(constructPutRequests());
@@ -656,8 +657,8 @@ public class TestMultiParallel {
     }
   }
 
-  private List<Row> constructPutRequests() {
-    List<Row> puts = new ArrayList<Row>();
+  private List<Put> constructPutRequests() {
+    List<Put> puts = new ArrayList<>();
     for (byte[] k : KEYS) {
       Put put = new Put(k);
       put.add(BYTES_FAMILY, QUALIFIER, VALUE);
@@ -666,8 +667,9 @@ public class TestMultiParallel {
     return puts;
   }
 
-  private void validateLoadedData(HTable table) throws IOException {
+  private void validateLoadedData(Table table) throws IOException {
     // get the data back and validate that it is correct
+    LOG.info("Validating data on " + table);
     for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);

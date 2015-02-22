@@ -19,15 +19,17 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -36,7 +38,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * Implementation of a file cleaner that checks if a hfile is still used by snapshots of HBase
  * tables.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 @InterfaceStability.Evolving
 public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   private static final Log LOG = LogFactory.getLog(SnapshotHFileCleaner.class);
@@ -55,17 +57,20 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   private SnapshotFileCache cache;
 
   @Override
-  public synchronized boolean isFileDeletable(FileStatus fStat) {
+  public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
     try {
-      return !cache.contains(fStat.getPath().getName());
+      return cache.getUnreferencedFiles(files);
     } catch (IOException e) {
-      LOG.error("Exception while checking if:" + fStat.getPath()
-          + " was valid, keeping it just in case.", e);
-      return false;
+      LOG.error("Exception while checking if files were valid, keeping them just in case.", e);
+      return Collections.emptyList();
     }
   }
 
   @Override
+  protected boolean isFileDeletable(FileStatus fStat) {
+    return false;
+  }
+
   public void setConf(final Configuration conf) {
     super.setConf(conf);
     try {

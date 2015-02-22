@@ -25,7 +25,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
@@ -38,10 +38,10 @@ public abstract class StateDumpServlet extends HttpServlet {
 
   protected void dumpVersionInfo(PrintWriter out) {
     VersionInfo.writeTo(out);
-  
+
     out.println("Hadoop " + org.apache.hadoop.util.VersionInfo.getVersion());
-    out.println("Subversion " + org.apache.hadoop.util.VersionInfo.getUrl() + " -r " +
-        org.apache.hadoop.util.VersionInfo.getRevision());
+    out.println("Source code repository " + org.apache.hadoop.util.VersionInfo.getUrl()
+      + " revision=" + org.apache.hadoop.util.VersionInfo.getRevision());
     out.println("Compiled by " + org.apache.hadoop.util.VersionInfo.getUser() +
         " on " + org.apache.hadoop.util.VersionInfo.getDate());
   }

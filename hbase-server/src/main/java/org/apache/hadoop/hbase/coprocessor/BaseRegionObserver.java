@@ -16,20 +16,17 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -57,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -235,54 +233,13 @@ public abstract class BaseRegionObserver implements RegionObserver {
   @Override
   public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Get get, final List<Cell> results) throws IOException {
-    // By default we are executing the deprecated preGet to support legacy RegionObservers
-    // We may use the results coming in and we may return the results going out.
-    List<KeyValue> kvs = new ArrayList<KeyValue>(results.size());
-    for (Cell c : results) {
-      kvs.add(KeyValueUtil.ensureKeyValue(c));
-    }
-    preGet(e, get, kvs);
-    results.clear();
-    results.addAll(kvs);
-  }
-
-  /**
-   * WARNING: please override preGetOp instead of this method.  This is to maintain some
-   * compatibility and to ease the transition from 0.94 -> 0.96.  It is super inefficient!
-   */
-  @Deprecated
-  @Override
-  public void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<KeyValue> result)
-    throws IOException {
   }
 
   @Override
   public void postGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Get get, final List<Cell> results) throws IOException {
-    // By default we are executing the deprecated preGet to support legacy RegionObservers
-    // We may use the results coming in and we may return the results going out.
-    List<KeyValue> kvs = new ArrayList<KeyValue>(results.size());
-    for (Cell c : results) {
-      kvs.add(KeyValueUtil.ensureKeyValue(c));
-    }
-    postGet(e, get, kvs);
-    results.clear();
-    results.addAll(kvs);
   }
 
-  /**
-   * WARNING: please override postGetOp instead of this method.  This is to maintain some
-   * compatibility and to ease the transition from 0.94 -> 0.96.  It is super inefficient!
-   */
-  @Deprecated
-  @Override
-  public void postGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<KeyValue> result)
-    throws IOException {
-  }
-
-  
   @Override
   public boolean preExists(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Get get, final boolean exists) throws IOException {
@@ -488,14 +445,32 @@ public abstract class BaseRegionObserver implements RegionObserver {
       final InternalScanner s) throws IOException {
   }
 
+  /**
+   * Implementers should override this version of the method and leave the deprecated one as-is.
+   */
+  @Override
+  public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+  }
+
   @Override
   public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env, HRegionInfo info,
       HLogKey logKey, WALEdit logEdit) throws IOException {
+    preWALRestore(env, info, (WALKey)logKey, logEdit);
+  }
+
+  /**
+   * Implementers should override this version of the method and leave the deprecated one as-is.
+   */
+  @Override
+  public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
   }
 
   @Override
   public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
+    postWALRestore(env, info, (WALKey)logKey, logEdit);
   }
 
   @Override

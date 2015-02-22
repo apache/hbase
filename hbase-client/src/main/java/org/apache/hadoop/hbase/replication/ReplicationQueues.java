@@ -22,11 +22,11 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * This provides an interface for maintaining a region server's replication queues. These queues
- * keep track of the HLogs that still need to be replicated to remote clusters.
+ * keep track of the WALs that still need to be replicated to remote clusters.
  */
 @InterfaceAudience.Private
 public interface ReplicationQueues {
@@ -45,31 +45,31 @@ public interface ReplicationQueues {
   void removeQueue(String queueId);
 
   /**
-   * Add a new HLog file to the given queue. If the queue does not exist it is created.
+   * Add a new WAL file to the given queue. If the queue does not exist it is created.
    * @param queueId a String that identifies the queue.
-   * @param filename name of the HLog
+   * @param filename name of the WAL
    */
   void addLog(String queueId, String filename) throws ReplicationException;
 
   /**
-   * Remove an HLog file from the given queue.
+   * Remove an WAL file from the given queue.
    * @param queueId a String that identifies the queue.
-   * @param filename name of the HLog
+   * @param filename name of the WAL
    */
   void removeLog(String queueId, String filename);
 
   /**
-   * Set the current position for a specific HLog in a given queue.
+   * Set the current position for a specific WAL in a given queue.
    * @param queueId a String that identifies the queue
-   * @param filename name of the HLog
+   * @param filename name of the WAL
    * @param position the current position in the file
    */
   void setLogPosition(String queueId, String filename, long position);
 
   /**
-   * Get the current position for a specific HLog in a given queue.
+   * Get the current position for a specific WAL in a given queue.
    * @param queueId a String that identifies the queue
-   * @param filename name of the HLog
+   * @param filename name of the WAL
    * @return the current position in the file
    */
   long getLogPosition(String queueId, String filename) throws ReplicationException;
@@ -80,9 +80,9 @@ public interface ReplicationQueues {
   void removeAllQueues();
 
   /**
-   * Get a list of all HLogs in the given queue.
+   * Get a list of all WALs in the given queue.
    * @param queueId a String that identifies the queue
-   * @return a list of HLogs, null if this region server is dead and has no outstanding queues
+   * @return a list of WALs, null if this region server is dead and has no outstanding queues
    */
   List<String> getLogsInQueue(String queueId);
 
@@ -95,7 +95,7 @@ public interface ReplicationQueues {
   /**
    * Take ownership for the set of queues belonging to a dead region server.
    * @param regionserver the id of the dead region server
-   * @return A SortedMap of the queues that have been claimed, including a SortedSet of HLogs in
+   * @return A SortedMap of the queues that have been claimed, including a SortedSet of WALs in
    *         each queue. Returns an empty map if no queues were failed-over.
    */
   SortedMap<String, SortedSet<String>> claimQueues(String regionserver);

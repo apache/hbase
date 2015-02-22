@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.codec.prefixtree.decode.row;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
@@ -232,7 +232,7 @@ public class RowNodeReader {
     if (fanIndexInBlock >= 0) {// found it, but need to adjust for position of fan in overall block
       return fanIndexInBlock - fanOffset;
     }
-    return fanIndexInBlock + fanOffset + 1;// didn't find it, so compensate in reverse
+    return fanIndexInBlock + fanOffset;// didn't find it, so compensate in reverse
   }
 
   public void resetFanIndex() {

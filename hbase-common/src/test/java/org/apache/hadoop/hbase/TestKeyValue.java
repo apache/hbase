@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -228,9 +229,7 @@ public class TestKeyValue extends TestCase {
       new KeyValue(Bytes.toBytes("a,a,0"), fam, qf, 0, nb),
     };
     // Add to set with bad comparator
-    for (int i = 0; i < keys.length; i++) {
-      set.add(keys[i]);
-    }
+    Collections.addAll(set, keys);
     // This will output the keys incorrectly.
     boolean assertion = false;
     int count = 0;
@@ -245,9 +244,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(assertion);
     // Make set with good comparator
     set = new TreeSet<KeyValue>(new KeyValue.MetaComparator());
-    for (int i = 0; i < keys.length; i++) {
-      set.add(keys[i]);
-    }
+    Collections.addAll(set, keys);
     count = 0;
     for (KeyValue k: set) {
       assertTrue(count++ == k.getTimestamp());

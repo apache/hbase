@@ -19,7 +19,7 @@
 
 include Java
 
-# Wrapper for org.apache.hadoop.hbase.client.HTable
+# Wrapper for org.apache.hadoop.hbase.client.Table
 
 module Hbase
   class Table
@@ -111,16 +111,15 @@ EOF
     # let external objects read the table name
     attr_reader :name
 
-    def initialize(configuration, table_name, shell)
-      if @@thread_pool then
-        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name.to_java_bytes, @@thread_pool)
-      else
-        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
-        @@thread_pool = @table.getPool()
-      end
-      @name = table_name
+    def initialize(table, shell)
+      @table = table
+      @name = @table.getName().getNameAsString()
       @shell = shell
       @converters = Hash.new()
+    end
+
+    def close()
+      @table.close()
     end
 
     # Note the below methods are prefixed with '_' to hide them from the average user, as
@@ -136,17 +135,19 @@ EOF
          set_attributes(p, attributes) if attributes
          visibility = args[VISIBILITY]
          set_cell_visibility(p, visibility) if visibility
+         ttl = args[TTL]
+         set_op_ttl(p, ttl) if ttl
       end
       #Case where attributes are specified without timestamp
       if timestamp.kind_of?(Hash)
       	timestamp.each do |k, v|
-      	  if v.kind_of?(Hash)
-      	  	set_attributes(p, v) if v
-      	  end
-      	  if v.kind_of?(String)
-      	  	set_cell_visibility(p, v) if v
-      	  end
-      	  
+          if k == 'ATTRIBUTES'
+            set_attributes(p, v)
+          elsif k == 'VISIBILITY'
+            set_cell_visibility(p, v)
+          elsif k == "TTL"
+            set_op_ttl(p, v)
+          end
         end
         timestamp = nil
       end  
@@ -169,7 +170,11 @@ EOF
     # Delete a row
     def _deleteall_internal(row, column = nil, 
     		timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
-      raise ArgumentError, "Row Not Found" if _get_internal(row).nil?
+      # delete operation doesn't need read permission. Retaining the read check for
+      # meta table as a part of HBASE-5837.
+      if is_meta_table?
+        raise ArgumentError, "Row Not Found" if _get_internal(row).nil?
+      end
       temptimestamp = timestamp
       if temptimestamp.kind_of?(Hash)
       	  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP
@@ -210,6 +215,8 @@ EOF
       	visibility = args[VISIBILITY]
         set_attributes(incr, attributes) if attributes
         set_cell_visibility(incr, visibility) if visibility
+        ttl = args[TTL]
+        set_op_ttl(incr, ttl) if ttl
       end
       incr.addColumn(family, qualifier, value)
       @table.increment(incr)
@@ -228,6 +235,8 @@ EOF
       	visibility = args[VISIBILITY]
         set_attributes(append, attributes) if attributes
         set_cell_visibility(append, visibility) if visibility
+        ttl = args[TTL]
+        set_op_ttl(append, ttl) if ttl
       end
       append.add(family, qualifier, value.to_s.to_java_bytes)
       @table.append(append)
@@ -238,8 +247,8 @@ EOF
     def _count_internal(interval = 1000, caching_rows = 10)
       # We can safely set scanner caching with the first key only filter
       scan = org.apache.hadoop.hbase.client.Scan.new
-      scan.cache_blocks = false
-      scan.caching = caching_rows
+      scan.setCacheBlocks(false)
+      scan.setCaching(caching_rows)
       scan.setFilter(org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new)
 
       # Run the scanner
@@ -355,12 +364,12 @@ EOF
 
       # Print out results.  Result can be Cell or RowResult.
       res = {}
-      result.list.each do |kv|
-        family = String.from_java_bytes(kv.getFamily)
-        qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getQualifier)
+      result.listCells.each do |c|
+        family = String.from_java_bytes(c.getFamily)
+        qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifier)
 
         column = "#{family}:#{qualifier}"
-        value = to_string(column, kv, maxlength)
+        value = to_string(column, c, maxlength)
 
         if block_given?
           yield(column, value)
@@ -387,7 +396,7 @@ EOF
       return nil if result.isEmpty
 
       # Fetch cell value
-      cell = result.list[0]
+      cell = result.listCells[0]
       org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValue)
     end
 
@@ -396,6 +405,7 @@ EOF
         filter = args["FILTER"]
         startrow = args["STARTROW"] || ''
         stoprow = args["STOPROW"]
+        rowprefixfilter = args["ROWPREFIXFILTER"]
         timestamp = args["TIMESTAMP"]
         columns = args["COLUMNS"] || args["COLUMN"] || []
         # If CACHE_BLOCKS not set, then default 'true'.
@@ -419,6 +429,9 @@ EOF
         else
           org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes)
         end
+
+        # This will overwrite any startrow/stoprow settings
+        scan.setRowPrefixFilter(rowprefixfilter.to_java_bytes) if rowprefixfilter
 
         columns.each do |c| 
           family, qualifier = parse_column_name(c.to_s)
@@ -481,12 +494,12 @@ EOF
         row = iter.next
         key = org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow)
 
-        row.list.each do |kv|
-          family = String.from_java_bytes(kv.getFamily)
-          qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getQualifier)
+        row.listCells.each do |c|
+          family = String.from_java_bytes(c.getFamily)
+          qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifier)
 
           column = "#{family}:#{qualifier}"
-          cell = to_string(column, kv, maxlength)
+          cell = to_string(column, c, maxlength)
 
           if block_given?
             yield(key, "column=#{column}, #{cell}")
@@ -534,6 +547,10 @@ EOF
       oprattr.setAuthorizations(
         org.apache.hadoop.hbase.security.visibility.Authorizations.new(
           auths.to_java(:string)))
+    end
+
+    def set_op_ttl(op, ttl)
+      op.setTTL(ttl.to_java(:long))
     end
 
     #----------------------------
@@ -593,9 +610,7 @@ EOF
 
     # Checks if current table is one of the 'meta' tables
     def is_meta_table?
-      tn = @table.table_name
-      org.apache.hadoop.hbase.util.Bytes.equals(tn,
-          org.apache.hadoop.hbase.TableName::META_TABLE_NAME.getName)
+      org.apache.hadoop.hbase.TableName::META_TABLE_NAME.equals(@table.getName())
     end
 
     # Returns family and (when has it) qualifier for a column name

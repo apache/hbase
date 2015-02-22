@@ -25,8 +25,8 @@ import java.security.SecureRandom;
 
 import javax.crypto.spec.IvParameterSpec;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 
 import com.google.common.base.Preconditions;

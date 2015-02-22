@@ -22,18 +22,19 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -47,11 +48,8 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.Private
 public abstract class AbstractHFileWriter implements HFile.Writer {
 
-  /** Key previously appended. Becomes the last key in the file. */
-  protected byte[] lastKeyBuffer = null;
-
-  protected int lastKeyOffset = -1;
-  protected int lastKeyLength = -1;
+  /** The Cell previously appended. Becomes the last cell in the file.*/
+  protected Cell lastCell = null;
 
   /** FileSystem stream to write into. */
   protected FSDataOutputStream outputStream;
@@ -83,8 +81,11 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   /** {@link Writable}s representing meta block data. */
   protected List<Writable> metaData = new ArrayList<Writable>();
 
-  /** First key in a block. */
-  protected byte[] firstKeyInBlock = null;
+  /**
+   * First cell in a block.
+   * This reference should be short-lived since we write hfiles in a burst.
+   */
+  protected Cell firstCellInBlock = null;
 
   /** May be null if we were passed a stream. */
   protected final Path path;
@@ -131,11 +132,11 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
    * Add last bits of metadata to file info before it is written out.
    */
   protected void finishFileInfo() throws IOException {
-    if (lastKeyBuffer != null) {
+    if (lastCell != null) {
       // Make a copy. The copy is stuffed into our fileinfo map. Needs a clean
       // byte buffer. Won't take a tuple.
-      fileInfo.append(FileInfo.LASTKEY, Arrays.copyOfRange(lastKeyBuffer,
-          lastKeyOffset, lastKeyOffset + lastKeyLength), false);
+      byte [] lastKey = CellUtil.getCellKeySerializedAsKeyValueKey(this.lastCell);
+      fileInfo.append(FileInfo.LASTKEY, lastKey, false);
     }
 
     // Average key length.
@@ -147,6 +148,9 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
     int avgValueLen =
         entryCount == 0 ? 0 : (int) (totalValueLength / entryCount);
     fileInfo.append(FileInfo.AVG_VALUE_LEN, Bytes.toBytes(avgValueLen), false);
+
+    fileInfo.append(FileInfo.CREATE_TIME_TS, Bytes.toBytes(hFileContext.getFileCreateTime()),
+      false);
   }
 
   /**
@@ -181,30 +185,24 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   }
 
   /**
-   * Checks that the given key does not violate the key order.
+   * Checks that the given Cell's key does not violate the key order.
    *
-   * @param key Key to check.
+   * @param cell Cell whose key to check.
    * @return true if the key is duplicate
    * @throws IOException if the key or the key order is wrong
    */
-  protected boolean checkKey(final byte[] key, final int offset,
-      final int length) throws IOException {
+  protected boolean checkKey(final Cell cell) throws IOException {
     boolean isDuplicateKey = false;
 
-    if (key == null || length <= 0) {
+    if (cell == null) {
       throw new IOException("Key cannot be null or empty");
     }
-    if (lastKeyBuffer != null) {
-      int keyComp = comparator.compareFlatKey(lastKeyBuffer, lastKeyOffset,
-          lastKeyLength, key, offset, length);
+    if (lastCell != null) {
+      int keyComp = comparator.compareOnlyKeyPortion(lastCell, cell);
 
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
-            + " previous key="
-            + Bytes.toStringBinary(key, offset, length)
-            + ", lastkey="
-            + Bytes.toStringBinary(lastKeyBuffer, lastKeyOffset,
-                lastKeyLength));
+            + " previous. Current cell = " + cell + ", lastCell = " + lastCell);
       } else if (keyComp == 0) {
         isDuplicateKey = true;
       }

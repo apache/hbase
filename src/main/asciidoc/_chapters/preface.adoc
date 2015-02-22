@@ -1,0 +1,59 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[preface]
+= Preface
+:doctype: article
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+This is the official reference guide for the link:http://hbase.apache.org/[HBase] version it ships with.
+
+Herein you will find either the definitive documentation on an HBase topic as of its standing when the referenced HBase version shipped, or it will point to the location in link:http://hbase.apache.org/apidocs/index.html[Javadoc], link:https://issues.apache.org/jira/browse/HBASE[JIRA] or link:http://wiki.apache.org/hadoop/Hbase[wiki] where the pertinent information can be found.
+
+.About This Guide
+This reference guide is a work in progress. The source for this guide can be found in the _src/main/asciidoc directory of the HBase source. This reference guide is marked up using link:http://asciidoc.org/[AsciiDoc] from which the finished guide is generated as part of the 'site' build target. Run
+[source,bourne]
+----
+mvn site
+----
+to generate this documentation.
+Amendments and improvements to the documentation are welcomed.
+Click link:https://issues.apache.org/jira/secure/CreateIssueDetails!init.jspa?pid=12310753&issuetype=1&components=12312132&summary=SHORT+DESCRIPTION[this link] to file a new documentation bug against Apache HBase with some values pre-selected.
+
+.Contributing to the Documentation
+For an overview of AsciiDoc and suggestions to get started contributing to the documentation, see the <<appendix_contributing_to_documentation,relevant section later in this documentation>>.
+
+.Heads-up if this is your first foray into the world of distributed computing...
+If this is your first foray into the wonderful world of Distributed Computing, then you are in for some interesting times.
+First off, distributed systems are hard; making a distributed system hum requires a disparate skillset that spans systems (hardware and software) and networking.
+
+Your cluster's operation can hiccup because of any of a myriad set of reasons from bugs in HBase itself through misconfigurations -- misconfiguration of HBase but also operating system misconfigurations -- through to hardware problems whether it be a bug in your network card drivers or an underprovisioned RAM bus (to mention two recent examples of hardware issues that manifested as "HBase is slow"). You will also need to do a recalibration if up to this your computing has been bound to a single box.
+Here is one good starting point: link:http://en.wikipedia.org/wiki/Fallacies_of_Distributed_Computing[Fallacies of Distributed Computing].
+
+That said, you are welcome. +
+It's a fun place to be. +
+Yours, the HBase Community.
+
+
+:numbered:

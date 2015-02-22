@@ -21,11 +21,14 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.MutationSerialization;
@@ -34,6 +37,7 @@ import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSelector;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.token.TokenUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
@@ -49,7 +53,6 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Utility for {@link TableMap} and {@link TableReduce}
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -212,7 +215,8 @@ public class TableMapReduceUtil {
         MutationSerialization.class.getName(), ResultSerialization.class.getName());
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      int regions = MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table);
+      int regions =
+        MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(regions);
       }
@@ -235,36 +239,17 @@ public class TableMapReduceUtil {
     }
 
     if (userProvider.isHBaseSecurityEnabled()) {
+      Connection conn = ConnectionFactory.createConnection(job);
       try {
         // login the server principal (if using secure Hadoop)
         User user = userProvider.getCurrent();
-        Token<AuthenticationTokenIdentifier> authToken = getAuthToken(job, user);
-        if (authToken == null) {
-          user.obtainAuthTokenForJob(job);
-        } else {
-          job.getCredentials().addToken(authToken.getService(), authToken);
-        }
+        TokenUtil.addTokenForJob(conn, job, user);
       } catch (InterruptedException ie) {
         ie.printStackTrace();
         Thread.currentThread().interrupt();
+      } finally {
+        conn.close();
       }
-    }
-  }
-
-  /**
-   * Get the authentication token of the user for the cluster specified in the configuration
-   * @return null if the user does not have the token, otherwise the auth token for the cluster.
-   */
-  private static Token<AuthenticationTokenIdentifier> getAuthToken(Configuration conf, User user)
-      throws IOException, InterruptedException {
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "mr-init-credentials", null);
-    try {
-      String clusterId = ZKClusterId.readClusterIdZNode(zkw);
-      return new AuthenticationTokenSelector().selectToken(new Text(clusterId), user.getUGI().getTokens());
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    } finally {
-      zkw.close();
     }
   }
 
@@ -276,9 +261,11 @@ public class TableMapReduceUtil {
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
+  // Used by tests.
   public static void limitNumReduceTasks(String table, JobConf job)
   throws IOException {
-    int regions = MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table);
+    int regions =
+      MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
   }
@@ -291,9 +278,11 @@ public class TableMapReduceUtil {
    * @param job  The current job configuration to adjust.
    * @throws IOException When retrieving the table details fails.
    */
+  // Used by tests.
   public static void limitNumMapTasks(String table, JobConf job)
   throws IOException {
-    int regions = MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table);
+    int regions =
+      MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), TableName.valueOf(table));
     if (job.getNumMapTasks() > regions)
       job.setNumMapTasks(regions);
   }
@@ -308,7 +297,8 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, JobConf job)
   throws IOException {
-    job.setNumReduceTasks(MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table));
+    job.setNumReduceTasks(MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job),
+      TableName.valueOf(table)));
   }
 
   /**
@@ -321,7 +311,8 @@ public class TableMapReduceUtil {
    */
   public static void setNumMapTasks(String table, JobConf job)
   throws IOException {
-    job.setNumMapTasks(MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table));
+    job.setNumMapTasks(MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job),
+      TableName.valueOf(table)));
   }
 
   /**

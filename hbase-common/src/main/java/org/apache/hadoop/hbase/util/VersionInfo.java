@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.logging.LogFactory;
 import java.io.PrintWriter;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.VersionAnnotation;
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.VersionAnnotation;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This class finds the package info for hbase and the VersionAnnotation
@@ -93,9 +93,18 @@ public class VersionInfo {
   static String[] versionReport() {
     return new String[] {
       "HBase " + getVersion(),
-      "Subversion " + getUrl() + " -r " + getRevision(),
-      "Compiled by " + getUser() + " on " + getDate()
+      "Source code repository " + getUrl() + " revision=" + getRevision(),
+      "Compiled by " + getUser() + " on " + getDate(),
+      "From source with checksum " + getSrcChecksum()
       };
+  }
+
+  /**
+   * Get the checksum of the source files from which Hadoop was compiled.
+   * @return a string that uniquely identifies the source
+   **/
+  public static String getSrcChecksum() {
+    return version != null ? version.srcChecksum() : "Unknown";
   }
 
   public static void writeTo(PrintWriter out) {

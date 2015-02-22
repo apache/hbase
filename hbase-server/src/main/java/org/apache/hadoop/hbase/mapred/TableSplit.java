@@ -23,8 +23,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -33,7 +33,6 @@ import org.apache.hadoop.mapred.InputSplit;
 /**
  * A table split corresponds to a key range [low, high)
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableSplit implements InputSplit, Comparable<TableSplit> {
@@ -119,8 +118,14 @@ public class TableSplit implements InputSplit, Comparable<TableSplit> {
 
   @Override
   public String toString() {
-    return m_regionLocation + ":" +
-      Bytes.toStringBinary(m_startRow) + "," + Bytes.toStringBinary(m_endRow);
+      StringBuilder sb = new StringBuilder();
+      sb.append("HBase table split(");
+      sb.append("table name: ").append(m_tableName);
+      sb.append(", start row: ").append(Bytes.toStringBinary(m_startRow));
+      sb.append(", end row: ").append(Bytes.toStringBinary(m_endRow));
+      sb.append(", region location: ").append(m_regionLocation);
+      sb.append(")");
+      return sb.toString();
   }
 
   @Override

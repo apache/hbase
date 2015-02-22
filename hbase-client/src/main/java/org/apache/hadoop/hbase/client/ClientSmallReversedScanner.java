@@ -20,20 +20,19 @@
 package org.apache.hadoop.hbase.client;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Client scanner for small reversed scan. Generally, only one RPC is called to fetch the
@@ -63,7 +62,8 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
       final TableName tableName, ClusterConnection connection,
       RpcRetryingCallerFactory rpcFactory, RpcControllerFactory controllerFactory,
       ExecutorService pool, int primaryOperationTimeout) throws IOException {
-    super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool, primaryOperationTimeout);
+    super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool,
+        primaryOperationTimeout);
   }
 
   /**
@@ -160,8 +160,9 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
               continue;
             }
             cache.add(rs);
-            for (Cell kv : rs.rawCells()) {
-              remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
+            // We don't make Iterator here
+            for (Cell cell : rs.rawCells()) {
+              remainingResultSize -= CellUtil.estimatedHeapSizeOf(cell);
             }
             countdown--;
             this.lastResult = rs;

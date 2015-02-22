@@ -20,8 +20,9 @@
 package org.apache.hadoop.hbase.master;
 
 
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Pair;
@@ -33,7 +34,7 @@ import org.junit.experimental.categories.Category;
 import java.util.ArrayList;
 import java.util.List;
 
-@Category(MediumTests.class) // Plays with the ManualEnvironmentEdge
+@Category({MasterTests.class, MediumTests.class}) // Plays with the ManualEnvironmentEdge
 public class TestClusterStatusPublisher {
   private ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
 

@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.SmallTests;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.concurrent.locks.ReentrantLock;
-
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestKeyLocker {
   @Test
   public void testLocker(){

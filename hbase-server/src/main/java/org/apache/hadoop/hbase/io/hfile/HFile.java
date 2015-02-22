@@ -35,15 +35,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -51,6 +47,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -58,18 +55,19 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 
 /**
  * File format for hbase.
@@ -180,6 +178,7 @@ public class HFile {
    * The number of bytes per checksum.
    */
   public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
+  // TODO: This define is done in three places.  Fix.
   public static final ChecksumType DEFAULT_CHECKSUM_TYPE = ChecksumType.CRC32;
 
   // For measuring number of checksum failures
@@ -202,11 +201,7 @@ public class HFile {
     /** Add an element to the file info map. */
     void appendFileInfo(byte[] key, byte[] value) throws IOException;
 
-    void append(KeyValue kv) throws IOException;
-
-    void append(byte[] key, byte[] value) throws IOException;
-
-    void append (byte[] key, byte[] value, byte[] tag) throws IOException;
+    void append(Cell cell) throws IOException;
 
     /** @return the path to this {@link HFile} */
     Path getPath();
@@ -347,7 +342,11 @@ public class HFile {
     }
   }
 
-  /** An abstraction used by the block index */
+  /**
+   * An abstraction used by the block index.
+   * Implementations will check cache for any asked-for block and return cached block if found.
+   * Otherwise, after reading from fs, will try and put block into cache before returning.
+   */
   public interface CachingBlockReader {
     /**
      * Read in a file block.
@@ -356,15 +355,13 @@ public class HFile {
      * @param cacheBlock
      * @param pread
      * @param isCompaction is this block being read as part of a compaction
-     * @param expectedBlockType the block type we are expecting to read with this read operation, or
-     *          null to read whatever block type is available and avoid checking (that might reduce
-     *          caching efficiency of encoded data blocks)
-     * @param expectedDataBlockEncoding the data block encoding the caller is
-     *          expecting data blocks to be in, or null to not perform this
-     *          check and return the block irrespective of the encoding. This
-     *          check only applies to data blocks and can be set to null when
-     *          the caller is expecting to read a non-data block and has set
-     *          expectedBlockType accordingly.
+     * @param expectedBlockType the block type we are expecting to read with this read operation,
+     *  or null to read whatever block type is available and avoid checking (that might reduce
+     *  caching efficiency of encoded data blocks)
+     * @param expectedDataBlockEncoding the data block encoding the caller is expecting data blocks
+     *  to be in, or null to not perform this check and return the block irrespective of the
+     *  encoding. This check only applies to data blocks and can be set to null when the caller is
+     *  expecting to read a non-data block and has set expectedBlockType accordingly.
      * @return Block wrapped in a ByteBuffer.
      * @throws IOException
      */
@@ -386,11 +383,9 @@ public class HFile {
 
     KVComparator getComparator();
 
-    HFileScanner getScanner(boolean cacheBlocks,
-       final boolean pread, final boolean isCompaction);
+    HFileScanner getScanner(boolean cacheBlocks, final boolean pread, final boolean isCompaction);
 
-    ByteBuffer getMetaBlock(String metaBlockName,
-       boolean cacheBlock) throws IOException;
+    ByteBuffer getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException;
 
     Map<byte[], byte[]> loadFileInfo() throws IOException;
 
@@ -546,6 +541,7 @@ public class HFile {
     static final byte [] LASTKEY = Bytes.toBytes(RESERVED_PREFIX + "LASTKEY");
     static final byte [] AVG_KEY_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_KEY_LEN");
     static final byte [] AVG_VALUE_LEN = Bytes.toBytes(RESERVED_PREFIX + "AVG_VALUE_LEN");
+    static final byte [] CREATE_TIME_TS = Bytes.toBytes(RESERVED_PREFIX + "CREATE_TIME_TS");
     static final byte [] COMPARATOR = Bytes.toBytes(RESERVED_PREFIX + "COMPARATOR");
     static final byte [] TAGS_COMPRESSED = Bytes.toBytes(RESERVED_PREFIX + "TAGS_COMPRESSED");
     public static final byte [] MAX_TAGS_LEN = Bytes.toBytes(RESERVED_PREFIX + "MAX_TAGS_LEN");
@@ -674,7 +670,7 @@ public class HFile {
         bbpBuilder.setSecond(ByteStringer.wrap(e.getValue()));
         builder.addMapEntry(bbpBuilder.build());
       }
-      out.write(ProtobufUtil.PB_MAGIC);
+      out.write(ProtobufMagic.PB_MAGIC);
       builder.build().writeDelimitedTo(out);
     }
 
@@ -799,11 +795,6 @@ public class HFile {
     return res;
   }
 
-  public static void main(String[] args) throws IOException {
-    HFilePrettyPrinter prettyPrinter = new HFilePrettyPrinter();
-    System.exit(prettyPrinter.run(args));
-  }
-
   /**
    * Checks the given {@link HFile} format version, and throws an exception if
    * invalid. Note that if the version number comes from an input file and has
@@ -820,5 +811,10 @@ public class HFile {
           + " (expected to be " + "between " + MIN_FORMAT_VERSION + " and "
           + MAX_FORMAT_VERSION + ")");
     }
+  }
+
+  public static void main(String[] args) throws Exception {
+    // delegate to preserve old behavior
+    HFilePrettyPrinter.main(args);
   }
 }

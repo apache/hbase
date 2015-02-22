@@ -27,8 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.master.TableLockManager;
@@ -77,7 +77,7 @@ public class TestMobSweepMapper {
             Bytes.toBytes("column"), Bytes.toBytes(mobFilePath));
 
     Result columns = mock(Result.class);
-    when(columns.raw()).thenReturn(kvList);
+    when(columns.rawCells()).thenReturn(kvList);
 
     Configuration configuration = new Configuration(TEST_UTIL.getConfiguration());
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(configuration, "1", new DummyMobAbortable());

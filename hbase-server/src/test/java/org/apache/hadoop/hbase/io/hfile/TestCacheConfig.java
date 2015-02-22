@@ -35,7 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -50,7 +51,7 @@ import org.junit.experimental.categories.Category;
 // (seconds).  It is large because it depends on being able to reset the global
 // blockcache instance which is in a global variable.  Experience has it that
 // tests clash on the global variable if this test is run as small sized test.
-@Category(LargeTests.class)
+@Category({IOTests.class, LargeTests.class})
 public class TestCacheConfig {
   private static final Log LOG = LogFactory.getLog(TestCacheConfig.class);
   private Configuration conf;
@@ -182,10 +183,9 @@ public class TestCacheConfig {
     if (sizing) {
       long originalSize = bc.getCurrentSize();
       bc.cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
-      long size = bc.getCurrentSize();
       assertTrue(bc.getCurrentSize() > originalSize);
       bc.evictBlock(bck);
-      size = bc.getCurrentSize();
+      long size = bc.getCurrentSize();
       assertEquals(originalSize, size);
     }
   }

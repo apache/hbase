@@ -30,14 +30,16 @@ import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * A basic unit test that spins up a local HBase cluster.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestProcessBasedCluster {
 
   private static final Log LOG = LogFactory.getLog(TestProcessBasedCluster.class);
@@ -60,7 +62,7 @@ public class TestProcessBasedCluster {
           HTestConst.DEFAULT_CF_STR_SET,
           HColumnDescriptor.DEFAULT_VERSIONS, COLS_PER_ROW, FLUSHES, NUM_REGIONS,
           ROWS_PER_FLUSH);
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), HTestConst.DEFAULT_TABLE_BYTES);
+      Table table = TEST_UTIL.getConnection().getTable(HTestConst.DEFAULT_TABLE);
       ResultScanner scanner = table.getScanner(HTestConst.DEFAULT_CF_BYTES);
       Result result;
       int rows = 0;

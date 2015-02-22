@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 
 import com.google.common.util.concurrent.Service;
@@ -128,13 +128,13 @@ public interface ReplicationEndpoint extends Service {
    */
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
   class ReplicateContext {
-    List<HLog.Entry> entries;
+    List<Entry> entries;
     int size;
     @InterfaceAudience.Private
     public ReplicateContext() {
     }
 
-    public ReplicateContext setEntries(List<HLog.Entry> entries) {
+    public ReplicateContext setEntries(List<Entry> entries) {
       this.entries = entries;
       return this;
     }
@@ -142,7 +142,7 @@ public interface ReplicationEndpoint extends Service {
       this.size = size;
       return this;
     }
-    public List<HLog.Entry> getEntries() {
+    public List<Entry> getEntries() {
       return entries;
     }
     public int getSize() {

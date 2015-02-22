@@ -33,18 +33,19 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveTestingUtil;
@@ -61,7 +62,7 @@ import org.junit.experimental.categories.Category;
  * Test that the {@link HFileArchiver} correctly removes all the parts of a region when cleaning up
  * a region
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, MiscTests.class})
 public class TestHFileArchiving {
 
   private static final Log LOG = LogFactory.getLog(TestHFileArchiving.class);
@@ -77,7 +78,7 @@ public class TestHFileArchiving {
     UTIL.startMiniCluster();
 
     // We don't want the cleaner to remove files. The tests do that.
-    UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().interrupt();
+    UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().cancel(true);
   }
 
   private static void setupConf(Configuration conf) {
@@ -145,7 +146,16 @@ public class TestHFileArchiving {
     assertTrue(fs.exists(archiveDir));
 
     // check to make sure the store directory was copied
-    FileStatus[] stores = fs.listStatus(archiveDir);
+    // check to make sure the store directory was copied
+    FileStatus[] stores = fs.listStatus(archiveDir, new PathFilter() {
+      @Override
+      public boolean accept(Path p) {
+        if (p.getName().contains(HConstants.RECOVERED_EDITS_DIR)) {
+          return false;
+        }
+        return true;
+      }
+    });
     assertTrue(stores.length == 1);
 
     // make sure we archived the store files
@@ -342,6 +352,7 @@ public class TestHFileArchiving {
   @Test
   public void testCleaningRace() throws Exception {
     final long TEST_TIME = 20 * 1000;
+    final ChoreService choreService = new ChoreService("TEST_SERVER_NAME");
 
     Configuration conf = UTIL.getMiniHBaseCluster().getMaster().getConfiguration();
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
@@ -360,7 +371,7 @@ public class TestHFileArchiving {
     // The cleaner should be looping without long pauses to reproduce the race condition.
     HFileCleaner cleaner = new HFileCleaner(1, stoppable, conf, fs, archiveDir);
     try {
-      cleaner.start();
+      choreService.scheduleChore(cleaner);
 
       // Keep creating/archiving new files while the cleaner is running in the other thread
       long startTime = System.currentTimeMillis();
@@ -395,7 +406,8 @@ public class TestHFileArchiving {
       }
     } finally {
       stoppable.stop("test end");
-      cleaner.join();
+      cleaner.cancel(true);
+      choreService.shutdown();
       fs.delete(rootDir, true);
     }
   }
@@ -413,7 +425,15 @@ public class TestHFileArchiving {
    * @throws IOException
    */
   private List<String> getAllFileNames(final FileSystem fs, Path archiveDir) throws IOException {
-    FileStatus[] files = FSUtils.listStatus(fs, archiveDir, null);
+    FileStatus[] files = FSUtils.listStatus(fs, archiveDir, new PathFilter() {
+      @Override
+      public boolean accept(Path p) {
+        if (p.getName().contains(HConstants.RECOVERED_EDITS_DIR)) {
+          return false;
+        }
+        return true;
+      }
+    });
     return recurseOnFiles(fs, files, new ArrayList<String>());
   }
 
@@ -437,7 +457,7 @@ public class TestHFileArchiving {
     // remove all the non-storefile named files for the region
     for (int i = 0; i < storeFiles.size(); i++) {
       String file = storeFiles.get(i);
-      if (file.contains(HRegionFileSystem.REGION_INFO_FILE) || file.contains("hlog")) {
+      if (file.contains(HRegionFileSystem.REGION_INFO_FILE) || file.contains("wal")) {
         storeFiles.remove(i--);
       }
     }

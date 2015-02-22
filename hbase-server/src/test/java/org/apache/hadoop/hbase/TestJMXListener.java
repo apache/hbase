@@ -28,6 +28,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -38,7 +40,7 @@ import org.junit.rules.ExpectedException;
 
 
 
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestJMXListener {
   private static final Log LOG = LogFactory.getLog(TestJMXListener.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();

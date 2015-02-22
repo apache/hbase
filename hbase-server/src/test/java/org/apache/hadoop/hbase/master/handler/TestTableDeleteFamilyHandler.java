@@ -28,23 +28,27 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({MasterTests.class, LargeTests.class})
 public class TestTableDeleteFamilyHandler {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -66,7 +70,7 @@ public class TestTableDeleteFamilyHandler {
 
     // Create a table of three families. This will assign a region.
     TEST_UTIL.createTable(TABLENAME, FAMILIES);
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
+    Table t = TEST_UTIL.getConnection().getTable(TABLENAME);
     while(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
         .getRegionStates().getRegionsInTransition().size() > 0) {
       Thread.sleep(100);
@@ -122,7 +126,15 @@ public class TestTableDeleteFamilyHandler {
     FileStatus[] fileStatus = fs.listStatus(tableDir);
     for (int i = 0; i < fileStatus.length; i++) {
       if (fileStatus[i].isDirectory() == true) {
-        FileStatus[] cf = fs.listStatus(fileStatus[i].getPath());
+        FileStatus[] cf = fs.listStatus(fileStatus[i].getPath(), new PathFilter() {
+          @Override
+          public boolean accept(Path p) {
+            if (p.getName().contains(HConstants.RECOVERED_EDITS_DIR)) {
+              return false;
+            }
+            return true;
+          }
+        });
         int k = 1;
         for (int j = 0; j < cf.length; j++) {
           if (cf[j].isDirectory() == true
@@ -149,7 +161,15 @@ public class TestTableDeleteFamilyHandler {
     fileStatus = fs.listStatus(tableDir);
     for (int i = 0; i < fileStatus.length; i++) {
       if (fileStatus[i].isDirectory() == true) {
-        FileStatus[] cf = fs.listStatus(fileStatus[i].getPath());
+        FileStatus[] cf = fs.listStatus(fileStatus[i].getPath(), new PathFilter() {
+          @Override
+          public boolean accept(Path p) {
+            if (WALSplitter.isSequenceIdFile(p)) {
+              return false;
+            }
+            return true;
+          }
+        });
         for (int j = 0; j < cf.length; j++) {
           if (cf[j].isDirectory() == true) {
             assertFalse(cf[j].getPath().getName().equals("cf2"));

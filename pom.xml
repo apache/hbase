@@ -61,7 +61,18 @@
     <module>hbase-prefix-tree</module>
     <module>hbase-assembly</module>
     <module>hbase-testing-util</module>
+    <module>hbase-annotations</module>
+    <module>hbase-rest</module>
+    <module>hbase-checkstyle</module>
   </modules>
+  <!--Add apache snapshots in case we want to use unreleased versions of plugins:
+      e.g. surefire 2.18-SNAPSHOT-->
+  <pluginRepositories>
+    <pluginRepository>
+      <id>apache.snapshots</id>
+      <url>http://repository.apache.org/snapshots/</url>
+    </pluginRepository>
+  </pluginRepositories>
   <scm>
     <connection>scm:git:git://git.apache.org/hbase.git</connection>
     <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/hbase.git</developerConnection>
@@ -141,6 +152,14 @@
       <timezone>+5</timezone>
       <organization>Intel</organization>
       <organizationUrl>http://www.intel.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>busbey</id>
+      <name>Sean Busbey</name>
+      <email>busbey@apache.org</email>
+      <timezone>-6</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>ddas</id>
@@ -279,12 +298,28 @@
       <organizationUrl>http://www.xiaomi.com/</organizationUrl>
     </developer>
     <developer>
+      <id>liushaohui</id>
+      <name>Shaohui Liu</name>
+      <email>liushaohui@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Xiaomi</organization>
+      <organizationUrl>http://www.xiaomi.com/</organizationUrl>
+    </developer>
+    <developer>
       <id>mbautin</id>
       <name>Mikhail Bautin</name>
       <email>mbautin@apache.org</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>misty</id>
+      <name>Misty Stanley-Jones</name>
+      <email>misty@apache.org</email>
+      <timezone>+10</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>ndimiduk</id>
@@ -347,8 +382,8 @@
       <name>Rajeshbabu Chintaguntla</name>
       <email>rajeshbabu@apache.org</email>
       <timezone>+5</timezone>
-      <organization>Huawei</organization>
-      <organizationUrl>http://www.huawei.com</organizationUrl>
+      <organization>Hortonworks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
       <id>ramkrishna</id>
@@ -391,6 +426,14 @@
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
+      <id>virag</id>
+      <name>Virag Kothari</name>
+      <email>virag@yahoo-inc.com</email>
+      <timezone>-8</timezone>
+      <organization>Yahoo!</organization>
+      <organizationUrl>http://www.yahoo.com</organizationUrl>
+    </developer>
+    <developer>
       <id>zjushch</id>
       <name>Chunhui Shen</name>
       <email>zjushch@apache.org</email>
@@ -399,81 +442,12 @@
       <organizationUrl>http://www.taobao.com</organizationUrl>
     </developer>
   </developers>
-  <repositories>
-    <repository>
-      <id>apache release</id>
-      <url>https://repository.apache.org/content/repositories/releases/</url>
-    </repository>
-    <repository>
-      <id>java.net</id>
-      <name>Java.Net</name>
-      <url>http://download.java.net/maven/2/</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
-      <id>codehaus</id>
-      <name>Codehaus Public</name>
-      <url>http://repository.codehaus.org/</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
-      <id>repository.jboss.org</id>
-      <url>http://repository.jboss.org/nexus/content/groups/public-jboss/</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>ghelmling.testing</id>
-      <name>Gary Helmling test repo</name>
-      <url>http://people.apache.org/~garyh/mvn/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-  </repositories>
-  <pluginRepositories>
-    <pluginRepository>
-      <id>ghelmling.testing</id>
-      <name>Gary Helmling test repo</name>
-      <url>http://people.apache.org/~garyh/mvn/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </pluginRepository>
-  </pluginRepositories>
   <build>
     <pluginManagement>
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
-          <version>2.4.1</version>
-          <!--Making a release I've been using mvn 3.0 and specifying the apache-release
-              profile on the command line as follows:
-
-              $ ~/bin/mvn/bin/mvn  -Papache-release release:perform
-
-              I've also been kiling the release:prepare step mid-way to check the
-              release.properties it generates at the top-level.  Sometimes it refers
-              to HEAD rather than to the svn branch.
-           -->
           <configuration>
             <!--You need this profile. It'll sign your artifacts.
                 I'm not sure if this config. actually works though.
@@ -483,23 +457,44 @@
             <!--This stops our running tests for each stage of maven release.
                 But it builds the test jar.  From SUREFIRE-172.
               -->
-            <arguments>-Dmaven.test.skip.exec</arguments>
+            <arguments>-Dmaven.test.skip.exec ${arguments}</arguments>
+            <goals>${goals}</goals>
             <pomFileName>pom.xml</pomFileName>
           </configuration>
         </plugin>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>2.5.1</version>
+          <version>3.2</version>
           <configuration>
             <source>${compileSource}</source>
             <target>${compileSource}</target>
             <showWarnings>true</showWarnings>
             <showDeprecation>false</showDeprecation>
+            <useIncrementalCompilation>false</useIncrementalCompilation>
             <compilerArgument>-Xlint:-options</compilerArgument>
           </configuration>
+          <dependencies>
+           <dependency>
+             <groupId>com.google.errorprone</groupId>
+             <artifactId>error_prone_core</artifactId>
+             <version>1.1.1</version>
+           </dependency>
+           <dependency>
+             <groupId>org.codehaus.plexus</groupId>
+             <artifactId>plexus-compiler-javac</artifactId>
+             <version>2.3</version>
+           </dependency>
+           <dependency>
+             <groupId>org.codehaus.plexus</groupId>
+             <artifactId>plexus-compiler-javac-errorprone</artifactId>
+             <version>2.3</version>
+           </dependency>
+         </dependencies>
         </plugin>
         <!-- Test oriented plugins -->
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire.version}</version>
           <dependencies>
@@ -521,7 +516,7 @@
             <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
             <!--Allocate some direct memory for direct memory tests-->
-            <argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx1900m -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true -Djava.awt.headless=true</argLine>
+            <argLine>${hbase-surefire.argLine} ${argLine}</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
             <excludes>
 	      <!-- users can add -D option to skip particular test classes
@@ -548,10 +543,12 @@
           </executions>
         </plugin>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-report-plugin</artifactId>
           <version>${surefire.version}</version>
         </plugin>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-clean-plugin</artifactId>
           <configuration>
             <filesets>
@@ -566,7 +563,8 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>${findbugs-maven-plugin.version}</version>
+          <version>3.0.0</version>
+          <!--NOTE: Findbugs 3.0.0 requires jdk7-->
           <configuration>
             <excludeFilterFile>${project.basedir}/../dev-support/findbugs-exclude.xml</excludeFilterFile>
             <findbugsXmlOutput>true</findbugsXmlOutput>
@@ -577,7 +575,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.5</version>
+          <version>1.9.1</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
@@ -633,7 +631,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-eclipse-plugin</artifactId>
-          <version>2.8</version>
+          <version>2.9</version>
         </plugin>
         <!--This plugin's configuration is used to store Eclipse m2e settings only. It
           has no influence on the Maven build itself. m2e does not provide any safeguards against
@@ -650,7 +648,7 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.8</version>
+          <version>0.11</version>
           <configuration>
             <excludes>
               <exclude>**/*.versionsBackup</exclude>
@@ -660,6 +658,7 @@
               <exclude>**/*.orig</exclude>
               <exclude>**/8e8ab58dcf39412da19833fcd8f687ac</exclude>
               <exclude>**/a6a6562b777440fd9c34885428f5cb61.21e75333ada3d5bafb34bb918f29576c</exclude>
+              <exclude>**/0000000000000016310</exclude>
               <exclude>**/.git/**</exclude>
               <exclude>**/.idea/**</exclude>
               <exclude>**/*.iml</exclude>
@@ -673,6 +672,7 @@
               <exclude>**/*.svg</exclude>
               <exclude>**/META-INF/services/**</exclude>
               <!-- MIT: https://github.com/twbs/bootstrap/blob/master/LICENSE -->
+              <exclude>**/src/main/asciidoc/hbase.css</exclude>
               <exclude>**/bootstrap-theme.css</exclude>
               <exclude>**/bootstrap-theme.min.css</exclude>
               <!-- MIT http://jquery.org/license -->
@@ -687,6 +687,7 @@
               <!-- auto-gen docs -->
               <!--It don't like freebsd license-->
               <exclude>**/src/main/site/resources/css/freebsd_docbook.css</exclude>
+              <exclude>dev-support/hbase_docker/README.md</exclude>
               <!--  exclude source control files -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
@@ -715,9 +716,62 @@
             <protocCommand>${protoc.path}</protocCommand>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>2.13</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.hbase</groupId>
+              <artifactId>hbase-checkstyle</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+          </dependencies>
+          <configuration>
+            <configLocation>hbase/checkstyle.xml</configLocation>
+            <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <!-- version set by parent -->
+        <configuration>
+          <rules>
+            <!-- The earliest maven version we verify builds for via ASF Jenkins -->
+            <requireMavenVersion>
+              <version>[${maven.min.version},)</version>
+              <message>Maven is out of date.
+  HBase requires at least version ${maven.min.version} of Maven to properly build from source.
+  You appear to be using an older version. You can use either "mvn -version" or
+  "mvn enforcer:display-info" to verify what version is active.
+  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
+              </message>
+            </requireMavenVersion>
+            <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
+            <requireJavaVersion>
+              <version>[${java.min.version},)</version>
+              <message>Java is out of date.
+  HBase requirs at least version ${java.min.version} of the JDK to properly build from source.
+  You appear to be using an older version. You can use either "mvn -version" or
+  "mvn enforcer:display-info" to verify what version is active.
+  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
+              </message>
+            </requireJavaVersion>
+          </rules>
+        </configuration>
+        <executions>
+          <execution>
+            <id>enforce</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <!-- parent-module only plugins -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -735,15 +789,22 @@
         </executions>
         <configuration>
           <transformationSets>
+            <!-- For asciidoc -->
             <transformationSet>
               <!--Reaching up and over into common sub-module for hbase-default.xml-->
               <dir>${basedir}/hbase-common/src/main/resources/</dir>
               <includes>
                 <include>hbase-default.xml</include>
               </includes>
-              <stylesheet>${basedir}/src/main/xslt/configuration_to_docbook_section.xsl</stylesheet>
-              <outputDir>${basedir}/target/docbkx</outputDir>
-            </transformationSet>
+              <stylesheet>${basedir}/src/main/xslt/configuration_to_asciidoc_chapter.xsl</stylesheet>
+              <fileMappers>
+                <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.RegExpFileMapper">
+                  <pattern>^(.*)\.xml$</pattern>
+                  <replacement>$1.adoc</replacement>
+                </fileMapper>
+              </fileMappers>
+              <outputDir>${basedir}/target/asciidoc</outputDir>
+            </transformationSet> 
           </transformationSets>
         </configuration>
       </plugin>
@@ -764,87 +825,24 @@
           </execution>
         </executions>
       </plugin>
-      <!--Build the documentation.  We build it twice.  Once as a single page and then
-           again as multipage.-->
       <plugin>
-        <groupId>com.agilejava.docbkx</groupId>
-        <artifactId>docbkx-maven-plugin</artifactId>
-        <version>2.0.15</version>
-        <inherited>false</inherited>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
         <dependencies>
           <dependency>
-            <groupId>org.docbook</groupId>
-            <artifactId>docbook-xml</artifactId>
-            <version>4.4</version>
-            <scope>runtime</scope>
-          </dependency>
-          <dependency>
-            <groupId>net.sf.xslthl</groupId>
-            <artifactId>xslthl</artifactId>
-            <version>2.1.0</version>
-            <scope>runtime</scope>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-checkstyle</artifactId>
+            <version>${project.version}</version>
           </dependency>
         </dependencies>
         <configuration>
-          <highlightSource>1</highlightSource>
-          <imgSrcPath>images/</imgSrcPath>
-          <sourceDirectory>${basedir}/src/main/docbkx</sourceDirectory>
-          <xincludeSupported>true</xincludeSupported>
-          <useIdAsFilename>true</useIdAsFilename>
-          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
-          <sectionAutolabel>true</sectionAutolabel>
-          <htmlStylesheet>${baserdir}/src/main/site/resources/css/freebsd_docbook.css</htmlStylesheet>
-          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
-          <htmlCustomization>${basedir}/src/main/docbkx/customization.xsl</htmlCustomization>
-          <tocMaxDepth>2</tocMaxDepth>
-          <insertXrefPageNumber>yes</insertXrefPageNumber>
-          <chunkerOutputEncoding>UTF-8</chunkerOutputEncoding>
+          <configLocation>hbase/checkstyle.xml</configLocation>
+          <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
         </configuration>
-        <executions>
-          <execution>
-            <id>multipage</id>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <navigShowtitles>true</navigShowtitles>
-              <chunkedOutput>true</chunkedOutput>
-              <targetDirectory>${basedir}/target/docbkx/book</targetDirectory>
-              <preProcess>
-                <copy todir="target/docbkx/book/images">
-                  <fileset dir="src/main/site/resources/images/"/>
-                </copy>
-                <copy todir="target/docbkx/book/css">
-                  <fileset dir="src/main/site/resources/css/"/>
-                </copy>
-              </preProcess>
-            </configuration>
-          </execution>
-          <execution>
-            <id>onepage</id>
-            <goals>
-              <goal>generate-html</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <targetDirectory>${basedir}/target/docbkx/</targetDirectory>
-              <preProcess>
-                <copy todir="target/docbkx/images">
-                  <fileset dir="src/main/site/resources/images/"/>
-                </copy>
-                <copy todir="target/docbkx/css">
-                  <fileset dir="src/main/site/resources/css/"/>
-                </copy>
-              </preProcess>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>${maven.resources.plugin.version}</version>
         <!--$NO-MVN-MAN-VER$ -->
         <inherited>false</inherited>
         <executions>
@@ -867,18 +865,37 @@
             </configuration>
           </execution>
           <execution>
-            <id>copy-docbkx</id>
+            <id>copy-htaccess</id>
             <goals>
               <goal>copy-resources</goal>
             </goals>
-            <phase>site</phase>
+            <phase>post-site</phase>
             <configuration>
-              <outputDirectory>target/site</outputDirectory>
+              <outputDirectory>${basedir}/target/site</outputDirectory>
               <resources>
                 <resource>
-                  <directory>${basedir}/target/docbkx</directory>
+                  <directory>${basedir}/src/main/site/resources/</directory>
                   <includes>
-                    <include>**/**</include>
+                    <include>.htaccess</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <!-- needed to make the redirect above work -->
+          <execution>
+            <id>copy-empty-book-dir</id>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <phase>post-site</phase>
+            <configuration>
+              <outputDirectory>${basedir}/target/site</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/src/main/site/resources/</directory>
+                  <includes>
+                    <include>book/**</include>
                   </includes>
                 </resource>
               </resources>
@@ -892,7 +909,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
-        <version>${maven.site.version}</version>
+        <version>3.4</version>
         <inherited>false</inherited>
         <dependencies>
           <dependency>
@@ -901,12 +918,80 @@
             <artifactId>wagon-ssh</artifactId>
             <version>2.2</version>
           </dependency>
+          <dependency>
+            <!-- required for reflow skin (http://andriusvelykis.github.io/reflow-maven-skin/) -->
+            <groupId>lt.velykis.maven.skins</groupId>
+            <artifactId>reflow-velocity-tools</artifactId>
+            <version>1.1.1</version>
+          </dependency>
+          <dependency>
+            <!-- velocity explicitly required by reflow-maven-skin -->
+            <groupId>org.apache.velocity</groupId>
+            <artifactId>velocity</artifactId>
+            <version>1.7</version>
+          </dependency>
+          <!-- For building docs from asciidoctor -->
+          <!--<dependency>
+              <groupId>org.asciidoctor</groupId>
+              <artifactId>asciidoctor-maven-plugin</artifactId>
+              <version>1.5.2</version>
+          </dependency>-->
         </dependencies>
         <configuration>
           <siteDirectory>${basedir}/src/main/site</siteDirectory>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
-          <templateFile>${basedir}/src/main/site/site.vm</templateFile>
+        </configuration>
+      </plugin>
+      <!-- For AsciiDoc docs building -->
+      <plugin>
+        <groupId>org.asciidoctor</groupId>
+        <artifactId>asciidoctor-maven-plugin</artifactId>
+        <version>1.5.2</version> 
+        <executions>
+          <execution>
+            <id>output-html</id> 
+            <goals>
+              <goal>process-asciidoc</goal> 
+            </goals>
+            <phase>site</phase>
+            <configuration>
+              <imagesDir>./images</imagesDir>
+              <doctype>book</doctype>
+              <attributes>
+                <stylesheet>hbase.css</stylesheet>
+              </attributes>
+              <backend>html5</backend>
+              <sourceHighlighter>coderay</sourceHighlighter>
+              <outputDirectory>target/site</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <skip>${hbase.skip-jacoco}</skip>
+          <excludes>
+            <exclude>**/generated/**/*.class</exclude>
+          </excludes>
         </configuration>
       </plugin>
     </plugins>
@@ -918,49 +1003,58 @@
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
     <compileSource>1.7</compileSource>
+    <!-- Build dependencies -->
+    <maven.min.version>3.0.3</maven.min.version>
+    <java.min.version>${compileSource}</java.min.version>
+    <java.default.compiler>javac-with-errorprone</java.default.compiler>
     <!-- Dependencies -->
-    <hadoop-two.version>2.4.0</hadoop-two.version>
+    <hadoop-two.version>2.5.1</hadoop-two.version>
+    <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
     <commons-cli.version>1.2</commons-cli.version>
-    <commons-codec.version>1.7</commons-codec.version>
+    <commons-codec.version>1.9</commons-codec.version>
     <!-- pretty outdated -->
     <commons-io.version>2.4</commons-io.version>
     <commons-lang.version>2.6</commons-lang.version>
-    <commons-logging.version>1.1.3</commons-logging.version>
-    <commons-math.version>2.1</commons-math.version>
-    <disruptor.version>3.2.0</disruptor.version>
+    <commons-logging.version>1.2</commons-logging.version>
+    <commons-math.version>2.2</commons-math.version>
+    <commons-net.version>3.1</commons-net.version>
+    <disruptor.version>3.3.0</disruptor.version>
     <collections.version>3.2.1</collections.version>
     <httpclient.version>3.1</httpclient.version>
     <metrics-core.version>2.2.0</metrics-core.version>
     <guava.version>12.0.1</guava.version>
+    <jsr305.version>1.3.9</jsr305.version>
     <jackson.version>1.8.8</jackson.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.2.2</jaxb-api.version>
     <jetty.version>6.1.26</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jersey.version>1.9</jersey.version>
+    <jmock-junit4.version>2.6.0</jmock-junit4.version>
     <jruby.version>1.6.8</jruby.version>
     <junit.version>4.11</junit.version>
-    <htrace.version>3.0.4</htrace.version>
+    <hamcrest.version>1.3</hamcrest.version>
+    <htrace.version>3.1.0-incubating</htrace.version>
     <log4j.version>1.2.17</log4j.version>
-    <mockito-all.version>1.9.0</mockito-all.version>
+    <mockito-all.version>1.10.8</mockito-all.version>
     <protobuf.version>2.5.0</protobuf.version>
+    <thrift.path>thrift</thrift.path>
     <thrift.version>0.9.0</thrift.version>
     <zookeeper.version>3.4.6</zookeeper.version>
-    <slf4j.version>1.7.5</slf4j.version>
+    <slf4j.version>1.7.7</slf4j.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
     <clover.version>2.6.3</clover.version>
     <jamon-runtime.version>2.3.1</jamon-runtime.version>
-    <jettison.version>1.3.1</jettison.version>
-    <netty.version>4.0.19.Final</netty.version>
+    <jettison.version>1.3.3</jettison.version>
+    <netty.version>4.0.23.Final</netty.version>
+    <joni.version>2.1.2</joni.version>
+    <jcodings.version>1.0.8</jcodings.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
-    <findbugs-maven-plugin.version>2.5.2</findbugs-maven-plugin.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
-    <maven.site.version>3.3</maven.site.version>
     <javadoc.version>2.9</javadoc.version>
-    <maven.resources.plugin.version>2.6</maven.resources.plugin.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
@@ -974,19 +1068,33 @@
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
     <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
-    <surefire.version>2.17</surefire.version>
+    <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
+    <surefire.version>2.18</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
     <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
     <surefire.secondPartForkCount>2</surefire.secondPartForkCount>
-    <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
-    <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
+    <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
+    <surefire.secondPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.secondPartGroups>
     <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
     <test.exclude.pattern></test.exclude.pattern>
+    <!-- default Xmx value is 1900m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
+    <surefire.Xmx>1900m</surefire.Xmx>
+    <surefire.cygwinXmx>1900m</surefire.cygwinXmx>
+    <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx${surefire.Xmx}
+      -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      -Djava.awt.headless=true
+    </hbase-surefire.argLine>
+    <hbase-surefire.cygwin-argline>-enableassertions -Xmx${surefire.cygwinXmx} -XX:MaxPermSize=256m
+      -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
+      "-Djava.library.path=${hadoop.library.path};${java.library.path}"
+    </hbase-surefire.cygwin-argline>
+    <hbase.skip-jacoco>true</hbase.skip-jacoco>
+    <jacoco.version>0.6.2.201302030002</jacoco.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -999,6 +1107,18 @@
           javax.servlet:jsp-api in favour of org.mortbay.jetty:jsp-api-2.1
         -->
       <!-- Intra-module dependencies -->
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-annotations</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-annotations</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <!--Was test scope only but if we want to run hbase-it tests, need the annotations test jar-->
+      </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-common</artifactId>
@@ -1136,6 +1256,11 @@
         <version>${guava.version}</version>
       </dependency>
       <dependency>
+         <groupId>com.google.code.findbugs</groupId>
+         <artifactId>jsr305</artifactId>
+         <version>${jsr305.version}</version>
+      </dependency>
+      <dependency>
         <groupId>commons-collections</groupId>
         <artifactId>commons-collections</artifactId>
         <version>${collections.version}</version>
@@ -1169,6 +1294,11 @@
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
         <version>${commons-logging.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-net</groupId>
+        <artifactId>commons-net</artifactId>
+        <version>${commons-net.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -1233,6 +1363,16 @@
             <artifactId>servlet-api</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jruby.jcodings</groupId>
+        <artifactId>jcodings</artifactId>
+        <version>${jcodings.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jruby.joni</groupId>
+        <artifactId>joni</artifactId>
+        <version>${joni.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mortbay.jetty</groupId>
@@ -1379,13 +1519,19 @@
         <version>${junit.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.hamcrest</groupId>
+        <artifactId>hamcrest-core</artifactId>
+        <version>${hamcrest.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
         <version>${mockito-all.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.htrace</groupId>
+        <groupId>org.apache.htrace</groupId>
         <artifactId>htrace-core</artifactId>
         <version>${htrace.version}</version>
       </dependency>
@@ -1393,6 +1539,18 @@
         <groupId>com.lmax</groupId>
         <artifactId>disruptor</artifactId>
         <version>${disruptor.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jmock</groupId>
+        <artifactId>jmock-junit4</artifactId>
+        <version>${jmock-junit4.version}</version>
+        <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <artifactId>junit-dep</artifactId>
+            <groupId>junit</groupId>
+          </exclusion>
+        </exclusions>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -1416,6 +1574,10 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jmock</groupId>
+      <artifactId>jmock-junit4</artifactId>
     </dependency>
   </dependencies>
   <!--
@@ -1484,7 +1646,7 @@
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-surefire-plugin</artifactId>
               <configuration>
-                <argLine>-enableassertions -Xmx1900m -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true "-Djava.library.path=${hadoop.library.path};${java.library.path}"</argLine>
+                <argLine>${hbase-surefire.cygwin-argline} ${argLine}</argLine>
                 <systemProperties>
                   <property>
                     <name>java.net.preferIPv4Stack</name>
@@ -1529,8 +1691,8 @@
       <id>hadoop-2.0</id>
       <activation>
         <property>
-            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-            <!--h2--><name>!hadoop.profile</name>
+          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+          <!--h2--><name>!hadoop.profile</name>
         </property>
       </activation>
       <modules>
@@ -1651,11 +1813,6 @@
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop-two.version}</version>
           </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-annotations</artifactId>
-            <version>${hadoop-two.version}</version>
-          </dependency>
           <!-- This was marked as test dep in earlier pom, but was scoped compile.
             Where do we actually need it? -->
           <dependency>
@@ -1696,29 +1853,159 @@
           <value>3.0</value>
         </property>
       </activation>
+      <modules>
+        <!--For now, use hadoop2 compat module-->
+        <module>hbase-hadoop2-compat</module>
+      </modules>
       <properties>
-        <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
+        <hadoop.version>${hadoop-three.version}</hadoop.version>
+        <!--Use this compat module for now. TODO: Make h3 one if we need one-->
+        <compat.module>hbase-hadoop2-compat</compat.module>
+        <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <!-- test deps for hadoop-0.24 profile -->
-        <!-- Says test, but scoped for compile. Which is correct? -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-minicluster</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
+     <dependencyManagement>
+       <dependencies>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-core</artifactId>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+           <version>${hadoop-three.version}</version>
+           <type>test-jar</type>
+           <scope>test</scope>
+           <exclusions>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-hdfs</artifactId>
+           <exclusions>
+             <exclusion>
+               <groupId>javax.servlet.jsp</groupId>
+               <artifactId>jsp-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.servlet</groupId>
+               <artifactId>servlet-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>stax</groupId>
+               <artifactId>stax-api</artifactId>
+             </exclusion>
+           </exclusions>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-hdfs</artifactId>
+           <version>${hadoop-three.version}</version>
+           <type>test-jar</type>
+           <scope>test</scope>
+           <exclusions>
+             <exclusion>
+               <groupId>javax.servlet.jsp</groupId>
+               <artifactId>jsp-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.servlet</groupId>
+               <artifactId>servlet-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>stax</groupId>
+               <artifactId>stax-api</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-auth</artifactId>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-common</artifactId>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>javax.servlet.jsp</groupId>
+               <artifactId>jsp-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.servlet</groupId>
+               <artifactId>servlet-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>stax</groupId>
+               <artifactId>stax-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-client</artifactId>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-annotations</artifactId>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+         <!-- This was marked as test dep in earlier pom, but was scoped compile.
+           Where do we actually need it? -->
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-minicluster</artifactId>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>javax.servlet.jsp</groupId>
+               <artifactId>jsp-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.servlet</groupId>
+               <artifactId>servlet-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>stax</groupId>
+               <artifactId>stax-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+       </dependencies>
+     </dependencyManagement>
+
     </profile>
     <!-- profiles for the tests
          See as well the properties of the project for the values
@@ -1766,7 +2053,7 @@
         <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
     </profile>
@@ -1779,7 +2066,7 @@
       <properties>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.firstPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
     </profile>
@@ -1792,7 +2079,7 @@
       <properties>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.LargeTests</surefire.firstPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
     </profile>
@@ -1806,8 +2093,8 @@
         <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.secondPartGroups>
       </properties>
     </profile>
     <profile>
@@ -1821,10 +2108,258 @@
         <surefire.secondPartForkCount>5</surefire.secondPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests,org.apache.hadoop.hbase.LargeTests</surefire.secondPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests,org.apache.hadoop.hbase.testclassification.LargeTests</surefire.secondPartGroups>
       </properties>
     </profile>
+    <profile>
+      <id>runMiscTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MiscTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runCoprocessorTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.CoprocessorTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runClientTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.ClientTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runMasterTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MasterTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runMapredTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MapredTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runMapreduceTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MapReduceTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runRegionServerTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.RegionServerTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runVerySlowMapReduceTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>2</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>runVerySlowRegionServerTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>2</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>runFilterTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.FilterTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runIOTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.IOTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runRestTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.RestTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runRPCTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.RPCTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runReplicationTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.ReplicationTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runSecurityTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SecurityTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runFlakeyTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.FlakeyTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+
     <profile>
       <!-- Use it to launch tests locally-->
       <id>localTests</id>
@@ -1894,6 +2429,15 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>javac</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <java.default.compiler>javac</java.default.compiler>
+      </properties>
+    </profile>
   </profiles>
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
@@ -1918,7 +2462,7 @@
           <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
         </configuration>
       </plugin>
-    <!--
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
@@ -1940,6 +2484,8 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.9.1</version>
         <configuration>
+          <sourceFilesExclude>**/generated</sourceFilesExclude>
+          <excludePackageNames>org.apache.hadoop.hbase.generated.master</excludePackageNames>
           <maxmemory>2048m</maxmemory>
           <notimestamp>true</notimestamp>
         </configuration>
@@ -1961,25 +2507,39 @@
             </reports>
             <configuration>
               <doclet>
-                org.apache.hadoop.classification.tools.IncludePublicAnnotationsStandardDoclet
+                org.apache.hadoop.hbase.classification.tools.IncludePublicAnnotationsStandardDoclet
               </doclet>
               <docletArtifact>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-common</artifactId>
-                <version>${hadoop-two.version}</version>
+                <groupId>org.apache.hbase</groupId>
+                <artifactId>hbase-annotations</artifactId>
+                <version>${project.version}</version>
               </docletArtifact>
               <destDir>apidocs</destDir>
               <name>User API</name>
               <description>The HBase Application Programmer's API</description>
               <excludePackageNames>
-                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:org.apache.hadoop.hbase.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
+                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:*.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
               </excludePackageNames>
+              <!-- switch on dependency-driven aggregation -->
+              <includeDependencySources>false</includeDependencySources>
+
+              <dependencySourceIncludes>
+                <!-- include ONLY dependencies I control -->
+                <dependencySourceInclude>org.apache.hbase:hbase-annotations</dependencySourceInclude>
+             </dependencySourceIncludes>
             </configuration>
           </reportSet>
         </reportSets>
       </plugin>
-      --> 
-
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.13</version>
+        <configuration>
+          <configLocation>hbase/checkstyle.xml</configLocation>
+          <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
+        </configuration>
+      </plugin>
     </plugins>
   </reporting>
   <distributionManagement>

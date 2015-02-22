@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.replication;
 import java.util.ArrayList;
 import java.util.NavigableMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
  * Keeps KVs that are scoped other than local
@@ -38,19 +38,19 @@ public class ScopeWALEntryFilter implements WALEntryFilter {
     if (scopes == null || scopes.isEmpty()) {
       return null;
     }
-    ArrayList<KeyValue> kvs = entry.getEdit().getKeyValues();
-    int size = kvs.size();
+    ArrayList<Cell> cells = entry.getEdit().getCells();
+    int size = cells.size();
     for (int i = size - 1; i >= 0; i--) {
-      KeyValue kv = kvs.get(i);
+      Cell cell = cells.get(i);
       // The scope will be null or empty if
       // there's nothing to replicate in that WALEdit
-      if (!scopes.containsKey(kv.getFamily())
-          || scopes.get(kv.getFamily()) == HConstants.REPLICATION_SCOPE_LOCAL) {
-        kvs.remove(i);
+      if (!scopes.containsKey(cell.getFamily())
+          || scopes.get(cell.getFamily()) == HConstants.REPLICATION_SCOPE_LOCAL) {
+        cells.remove(i);
       }
     }
-    if (kvs.size() < size / 2) {
-      kvs.trimToSize();
+    if (cells.size() < size / 2) {
+      cells.trimToSize();
     }
     return entry;
   }

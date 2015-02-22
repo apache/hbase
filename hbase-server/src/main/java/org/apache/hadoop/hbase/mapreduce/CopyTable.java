@@ -21,13 +21,22 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
@@ -43,36 +52,43 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class CopyTable extends Configured implements Tool {
+  private static final Log LOG = LogFactory.getLog(CopyTable.class);
 
   final static String NAME = "copytable";
-  static long startTime = 0;
-  static long endTime = 0;
-  static int versions = -1;
-  static String tableName = null;
-  static String startRow = null;
-  static String stopRow = null;
-  static String newTableName = null;
-  static String peerAddress = null;
-  static String families = null;
-  static boolean allCells = false;
-  
+  long startTime = 0;
+  long endTime = 0;
+  int versions = -1;
+  String tableName = null;
+  String startRow = null;
+  String stopRow = null;
+  String dstTableName = null;
+  String peerAddress = null;
+  String families = null;
+  boolean allCells = false;
+  static boolean shuffle = false;
+
+  boolean bulkload = false;
+  Path bulkloadDir = null;
+
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   public CopyTable(Configuration conf) {
     super(conf);
   }
   /**
    * Sets up the actual job.
    *
-   * @param conf  The current configuration.
    * @param args  The command line parameters.
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
-  public static Job createSubmittableJob(Configuration conf, String[] args)
+  public Job createSubmittableJob(String[] args)
   throws IOException {
     if (!doCommandLine(args)) {
       return null;
     }
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
+
+    Job job = Job.getInstance(getConf(), getConf().get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);
@@ -83,24 +99,27 @@ public class CopyTable extends Configured implements Tool {
     if (allCells) {
       scan.setRaw(true);
     }
+    if (shuffle) {
+      job.getConfiguration().set(TableInputFormat.SHUFFLE_MAPS, "true");
+    }
     if (versions >= 0) {
       scan.setMaxVersions(versions);
     }
-    
+
     if (startRow != null) {
       scan.setStartRow(Bytes.toBytes(startRow));
     }
-    
+
     if (stopRow != null) {
       scan.setStopRow(Bytes.toBytes(stopRow));
     }
-    
+
     if(families != null) {
       String[] fams = families.split(",");
       Map<String,String> cfRenameMap = new HashMap<String,String>();
       for(String fam : fams) {
         String sourceCf;
-        if(fam.contains(":")) { 
+        if(fam.contains(":")) {
             // fam looks like "sourceCfName:destCfName"
             String[] srcAndDest = fam.split(":", 2);
             sourceCf = srcAndDest[0];
@@ -108,18 +127,47 @@ public class CopyTable extends Configured implements Tool {
             cfRenameMap.put(sourceCf, destCf);
         } else {
             // fam is just "sourceCf"
-            sourceCf = fam; 
+            sourceCf = fam;
         }
         scan.addFamily(Bytes.toBytes(sourceCf));
       }
       Import.configureCfRenaming(job.getConfiguration(), cfRenameMap);
     }
-    TableMapReduceUtil.initTableMapperJob(tableName, scan,
-        Import.Importer.class, null, null, job);
-    TableMapReduceUtil.initTableReducerJob(
-        newTableName == null ? tableName : newTableName, null, job,
-        null, peerAddress, null, null);
     job.setNumReduceTasks(0);
+
+    if (bulkload) {
+      TableMapReduceUtil.initTableMapperJob(tableName, scan, Import.KeyValueImporter.class, null,
+        null, job);
+
+      // We need to split the inputs by destination tables so that output of Map can be bulk-loaded.
+      TableInputFormat.configureSplitTable(job, TableName.valueOf(dstTableName));
+
+      FileSystem fs = FileSystem.get(getConf());
+      Random rand = new Random();
+      Path root = new Path(fs.getWorkingDirectory(), "copytable");
+      fs.mkdirs(root);
+      while (true) {
+        bulkloadDir = new Path(root, "" + rand.nextLong());
+        if (!fs.exists(bulkloadDir)) {
+          break;
+        }
+      }
+
+      System.out.println("HFiles will be stored at " + this.bulkloadDir);
+      HFileOutputFormat2.setOutputPath(job, bulkloadDir);
+      try (Connection conn = ConnectionFactory.createConnection(getConf());
+          Admin admin = conn.getAdmin()) {
+        HFileOutputFormat2.configureIncrementalLoadMap(job,
+            admin.getTableDescriptor((TableName.valueOf(dstTableName))));
+      }
+    } else {
+      TableMapReduceUtil.initTableMapperJob(tableName, scan,
+        Import.Importer.class, null, null, job);
+
+      TableMapReduceUtil.initTableReducerJob(dstTableName, null, job, null, peerAddress, null,
+        null);
+    }
+
     return job;
   }
 
@@ -145,11 +193,14 @@ public class CopyTable extends Configured implements Tool {
     System.err.println(" versions     number of cell versions to copy");
     System.err.println(" new.name     new table's name");
     System.err.println(" peer.adr     Address of the peer cluster given in the format");
-    System.err.println("              hbase.zookeeer.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent");
+    System.err.println("              hbase.zookeeper.quorum:hbase.zookeeper.client"
+        + ".port:zookeeper.znode.parent");
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println("              To copy from cf1 to cf2, give sourceCfName:destCfName. ");
     System.err.println("              To keep the same name, just give \"cfName\"");
     System.err.println(" all.cells    also copy delete markers and deleted cells");
+    System.err.println(" bulkload     Write input into HFiles and bulk load to the destination "
+        + "table");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" tablename    Name of the table to copy");
@@ -168,7 +219,7 @@ public class CopyTable extends Configured implements Tool {
         + "    -Dmapreduce.map.speculative=false");
   }
 
-  private static boolean doCommandLine(final String[] args) {
+  private boolean doCommandLine(final String[] args) {
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).
     if (args.length < 1) {
@@ -182,19 +233,19 @@ public class CopyTable extends Configured implements Tool {
           printUsage(null);
           return false;
         }
-        
+
         final String startRowArgKey = "--startrow=";
         if (cmd.startsWith(startRowArgKey)) {
           startRow = cmd.substring(startRowArgKey.length());
           continue;
         }
-        
+
         final String stopRowArgKey = "--stoprow=";
         if (cmd.startsWith(stopRowArgKey)) {
           stopRow = cmd.substring(stopRowArgKey.length());
           continue;
         }
-        
+
         final String startTimeArgKey = "--starttime=";
         if (cmd.startsWith(startTimeArgKey)) {
           startTime = Long.parseLong(cmd.substring(startTimeArgKey.length()));
@@ -215,7 +266,7 @@ public class CopyTable extends Configured implements Tool {
 
         final String newNameArgKey = "--new.name=";
         if (cmd.startsWith(newNameArgKey)) {
-          newTableName = cmd.substring(newNameArgKey.length());
+          dstTableName = cmd.substring(newNameArgKey.length());
           continue;
         }
 
@@ -236,14 +287,24 @@ public class CopyTable extends Configured implements Tool {
           continue;
         }
 
+        if (cmd.startsWith("--bulkload")) {
+          bulkload = true;
+          continue;
+        }
+
+        if (cmd.startsWith("--shuffle")) {
+          shuffle = true;
+          continue;
+        }
+
         if (i == args.length-1) {
           tableName = cmd;
         } else {
-          printUsage("Invalid argument '" + cmd + "'" );
+          printUsage("Invalid argument '" + cmd + "'");
           return false;
         }
       }
-      if (newTableName == null && peerAddress == null) {
+      if (dstTableName == null && peerAddress == null) {
         printUsage("At least a new table name or a " +
             "peer address must be specified");
         return false;
@@ -251,6 +312,16 @@ public class CopyTable extends Configured implements Tool {
       if ((endTime != 0) && (startTime > endTime)) {
         printUsage("Invalid time range filter: starttime=" + startTime + " >  endtime=" + endTime);
         return false;
+      }
+
+      if (bulkload && peerAddress != null) {
+        printUsage("Remote bulkload is not supported!");
+        return false;
+      }
+
+      // set dstTableName if necessary
+      if (dstTableName == null) {
+        dstTableName = tableName;
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -274,8 +345,29 @@ public class CopyTable extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    Job job = createSubmittableJob(getConf(), otherArgs);
+    Job job = createSubmittableJob(otherArgs);
     if (job == null) return 1;
-    return job.waitForCompletion(true) ? 0 : 1;
+    if (!job.waitForCompletion(true)) {
+      LOG.info("Map-reduce job failed!");
+      if (bulkload) {
+        LOG.info("Files are not bulkloaded!");
+      }
+      return 1;
+    }
+    int code = 0;
+    if (bulkload) {
+      code = new LoadIncrementalHFiles(this.getConf()).run(new String[]{this.bulkloadDir.toString(),
+          this.dstTableName});
+      if (code == 0) {
+        // bulkloadDir is deleted only LoadIncrementalHFiles was successful so that one can rerun
+        // LoadIncrementalHFiles.
+        FileSystem fs = FileSystem.get(this.getConf());
+        if (!fs.delete(this.bulkloadDir, true)) {
+          LOG.error("Deleting folder " + bulkloadDir + " failed!");
+          code = 1;
+        }
+      }
+    }
+    return code;
   }
 }

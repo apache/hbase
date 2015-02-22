@@ -1,13 +1,6 @@
 {
-  "project_id" : "hbase",
+  "project_id" : "HBaseOnGithub",
   "conduit_uri" : "https://reviews.facebook.net/",
   "copyright_holder" : "Apache Software Foundation",
-  "phutil_libraries" : {
-    "arclib" : ".arc_jira_lib"
-  },
-  "arcanist_configuration" : "ArcJIRAConfiguration",
-  "jira_project" : "HBASE",
-  "jira_api_url" : "https://issues.apache.org/jira/si/",
-  "lint_engine" : "JavaLintEngine",
   "max_line_length" : 100
 }

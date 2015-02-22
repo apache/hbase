@@ -23,11 +23,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Server;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 /**
  * Abstract base class for all HBase event handlers. Subclasses should
@@ -48,11 +48,6 @@ import org.htrace.TraceScope;
  * hbase executor, see ExecutorService, has a switch for passing
  * event type to executor.
  * <p>
- * Event listeners can be installed and will be called pre- and post- process if
- * this EventHandler is run in a Thread (its a Runnable so if its {@link #run()}
- * method gets called).  Implement
- * {@link EventHandlerListener}s, and registering using
- * {@link #setListener(EventHandlerListener)}.
  * @see ExecutorService
  */
 @InterfaceAudience.Private
@@ -70,29 +65,10 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   // sequence id for this event
   private final long seqid;
 
-  // Listener to call pre- and post- processing.  May be null.
-  private EventHandlerListener listener;
-
   // Time to wait for events to happen, should be kept short
   protected int waitingTimeForEvents;
 
   private final Span parent;
-
-  /**
-   * This interface provides pre- and post-process hooks for events.
-   */
-  public interface EventHandlerListener {
-    /**
-     * Called before any event is processed
-     * @param event The event handler whose process method is about to be called.
-     */
-    void beforeProcess(EventHandler event);
-    /**
-     * Called after any event is processed
-     * @param event The event handler whose process method is about to be called.
-     */
-    void afterProcess(EventHandler event);
-  }
 
   /**
    * Default base class constructor.
@@ -124,9 +100,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   public void run() {
     TraceScope chunk = Trace.startSpan(this.getClass().getSimpleName(), parent);
     try {
-      if (getListener() != null) getListener().beforeProcess(this);
       process();
-      if (getListener() != null) getListener().afterProcess(this);
     } catch(Throwable t) {
       handleException(t);
     } finally {
@@ -185,20 +159,6 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
       return (getPriority() < eh.getPriority()) ? -1 : 1;
     }
     return (this.seqid < eh.seqid) ? -1 : 1;
-  }
-
-  /**
-   * @return Current listener or null if none set.
-   */
-  public synchronized EventHandlerListener getListener() {
-    return listener;
-  }
-
-  /**
-   * @param listener Listener to call pre- and post- {@link #process()}.
-   */
-  public synchronized void setListener(EventHandlerListener listener) {
-    this.listener = listener;
   }
 
   @Override

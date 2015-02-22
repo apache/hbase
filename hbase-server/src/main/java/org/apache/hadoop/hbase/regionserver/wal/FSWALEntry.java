@@ -19,24 +19,35 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.classification.InterfaceAudience;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CollectionUtils;
+
+import com.google.common.collect.Sets;
+
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 /**
  * A WAL Entry for {@link FSHLog} implementation.  Immutable.
- * A subclass of {@link HLog.Entry} that carries extra info across the ring buffer such as
+ * A subclass of {@link Entry} that carries extra info across the ring buffer such as
  * region sequence id (we want to use this later, just before we write the WAL to ensure region
  * edits maintain order).  The extra info added here is not 'serialized' as part of the WALEdit
  * hence marked 'transient' to underline this fact.  It also adds mechanism so we can wait on
  * the assign of the region sequence id.  See {@link #stampRegionSequenceId()}.
  */
 @InterfaceAudience.Private
-class FSWALEntry extends HLog.Entry {
+class FSWALEntry extends Entry {
   // The below data members are denoted 'transient' just to highlight these are not persisted;
   // they are only in memory and held here while passing over the ring buffer.
   private final transient long sequence;
@@ -46,7 +57,7 @@ class FSWALEntry extends HLog.Entry {
   private final transient HRegionInfo hri;
   private final transient List<Cell> memstoreCells;
 
-  FSWALEntry(final long sequence, final HLogKey key, final WALEdit edit,
+  FSWALEntry(final long sequence, final WALKey key, final WALEdit edit,
       final AtomicLong referenceToRegionSequenceId, final boolean inMemstore,
       final HTableDescriptor htd, final HRegionInfo hri, List<Cell> memstoreCells) {
     super(key, edit);
@@ -93,13 +104,30 @@ class FSWALEntry extends HLog.Entry {
    */
   long stampRegionSequenceId() throws IOException {
     long regionSequenceId = this.regionSequenceIdReference.incrementAndGet();
-    if (!this.getEdit().isReplay() && memstoreCells != null && !memstoreCells.isEmpty()) {
+    if (!this.getEdit().isReplay() && !CollectionUtils.isEmpty(memstoreCells)) {
       for (Cell cell : this.memstoreCells) {
         CellUtil.setSequenceId(cell, regionSequenceId);
       }
     }
-    HLogKey key = getKey();
+    WALKey key = getKey();
     key.setLogSeqNum(regionSequenceId);
     return regionSequenceId;
+  }
+
+  /**
+   * @return the family names which are effected by this edit.
+   */
+  Set<byte[]> getFamilyNames() {
+    ArrayList<Cell> cells = this.getEdit().getCells();
+    if (CollectionUtils.isEmpty(cells)) {
+      return Collections.<byte[]>emptySet();
+    }
+    Set<byte[]> familySet = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
+    for (Cell cell : cells) {
+      if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+        familySet.add(CellUtil.cloneFamily(cell));
+      }
+    }
+    return familySet;
   }
 }

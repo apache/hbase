@@ -28,7 +28,7 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * The Class HealthCheckChore for running health checker regularly.
  */
- public class HealthCheckChore extends Chore {
+public class HealthCheckChore extends ScheduledChore {
   private static Log LOG = LogFactory.getLog(HealthCheckChore.class);
   private HealthChecker healthChecker;
   private Configuration config;
@@ -38,7 +38,7 @@ import org.apache.hadoop.util.StringUtils;
   private long startWindow;
 
   public HealthCheckChore(int sleepTime, Stoppable stopper, Configuration conf) {
-    super("HealthChecker", sleepTime, stopper);
+    super("HealthChecker", stopper, sleepTime);
     LOG.info("Health Check Chore runs every " + StringUtils.formatTime(sleepTime));
     this.config = conf;
     String healthCheckScript = this.config.get(HConstants.HEALTH_SCRIPT_LOC);
@@ -58,7 +58,7 @@ import org.apache.hadoop.util.StringUtils;
     if (!isHealthy) {
       boolean needToStop = decideToStop();
       if (needToStop) {
-        this.stopper.stop("The  node reported unhealthy " + threshold
+        this.getStopper().stop("The  node reported unhealthy " + threshold
             + " number of times consecutively.");
       }
       // Always log health report.

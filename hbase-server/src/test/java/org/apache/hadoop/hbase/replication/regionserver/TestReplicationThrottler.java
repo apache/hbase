@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({ReplicationTests.class, SmallTests.class})
 public class TestReplicationThrottler {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationThrottler.class);

@@ -24,14 +24,13 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
  * General snapshot verification on the master.
@@ -99,7 +99,8 @@ public final class MasterSnapshotVerifier {
   /**
    * Verify that the snapshot in the directory is a valid snapshot
    * @param snapshotDir snapshot directory to check
-   * @param snapshotServers {@link ServerName} of the servers that are involved in the snapshot
+   * @param snapshotServers {@link org.apache.hadoop.hbase.ServerName} of the servers 
+   *        that are involved in the snapshot
    * @throws CorruptedSnapshotException if the snapshot is invalid
    * @throws IOException if there is an unexpected connection issue to the filesystem
    */
@@ -151,8 +152,12 @@ public final class MasterSnapshotVerifier {
    * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
   private void verifyRegions(final SnapshotManifest manifest) throws IOException {
-    List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(
-      this.services.getZooKeeper(), this.services.getShortCircuitConnection(), tableName);
+    List<HRegionInfo> regions;
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      regions = new MetaTableLocator().getMetaRegions(services.getZooKeeper());
+    } else {
+      regions = MetaTableAccessor.getTableRegions(services.getConnection(), tableName);
+    }
     // Remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
 

@@ -25,20 +25,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestMasterMetrics {
 
   private static final Log LOG = LogFactory.getLog(TestMasterMetrics.class);
@@ -66,7 +67,7 @@ public class TestMasterMetrics {
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     TEST_UTIL = new HBaseTestingUtility();
-    TEST_UTIL.startMiniCluster(1, 0, 1, null, MyMaster.class, null);
+    TEST_UTIL.startMiniCluster(1, 1, 1, null, MyMaster.class, null);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
@@ -116,7 +117,7 @@ public class TestMasterMetrics {
   @Test
   public void testDefaultMasterMetrics() throws Exception {
     MetricsMasterSource masterSource = master.getMasterMetrics().getMetricsSource();
-    metricsHelper.assertGauge( "numRegionServers", 1, masterSource);
+    metricsHelper.assertGauge( "numRegionServers", 2, masterSource);
     metricsHelper.assertGauge( "averageLoad", 2, masterSource);
     metricsHelper.assertGauge( "numDeadRegionServers", 0, masterSource);
 

@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.codec;
 
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Thrown when problems in the codec whether setup or context.

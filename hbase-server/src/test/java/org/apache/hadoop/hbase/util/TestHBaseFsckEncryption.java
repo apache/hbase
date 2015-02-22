@@ -34,10 +34,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 
@@ -56,7 +58,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsckEncryption {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -101,7 +103,7 @@ public class TestHBaseFsckEncryption {
   @Test
   public void testFsckWithEncryption() throws Exception {
     // Populate the table with some data
-    HTable table = new HTable(conf, htd.getName());
+    Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     try {
       byte[] values = { 'A', 'B', 'C', 'D' };
       for (int i = 0; i < values.length; i++) {
@@ -119,7 +121,7 @@ public class TestHBaseFsckEncryption {
     TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
 
     // Verify we have encrypted store files on disk
-    final List<Path> paths = findStorefilePaths(htd.getName());
+    final List<Path> paths = findStorefilePaths(htd.getTableName());
     assertTrue(paths.size() > 0);
     for (Path path: paths) {
       assertTrue("Store file " + path + " has incorrect key",
@@ -136,7 +138,7 @@ public class TestHBaseFsckEncryption {
     assertEquals(hfcc.getMissing().size(), 0);
   }
 
-  private List<Path> findStorefilePaths(byte[] tableName) throws Exception {
+  private List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
     for (HRegion region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {

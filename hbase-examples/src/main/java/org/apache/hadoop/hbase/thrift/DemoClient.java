@@ -23,29 +23,34 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
+import java.security.PrivilegedExceptionAction;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.SortedMap;
+import java.util.TreeMap;
+
+import javax.security.auth.Subject;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
+import javax.security.auth.login.LoginContext;
+import javax.security.sasl.Sasl;
 
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
-import org.apache.hadoop.hbase.thrift.generated.IOError;
-import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
-
-import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSaslClientTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 
-/*
+/**
  * See the instructions under hbase-examples/README.txt
  */
 public class DemoClient {
@@ -54,23 +59,33 @@ public class DemoClient {
     static protected String host;
     CharsetDecoder decoder = null;
 
-    public static void main(String[] args)
-            throws IOError, TException, UnsupportedEncodingException, IllegalArgument, AlreadyExists {
+    private static boolean secure = false;
 
-        if (args.length != 2) {
+    public static void main(String[] args) throws Exception {
+
+        if (args.length < 2 || args.length > 3) {
 
             System.out.println("Invalid arguments!");
-            System.out.println("Usage: DemoClient host port");
+            System.out.println("Usage: DemoClient host port [secure=false]");
 
             System.exit(-1);
         }
 
         port = Integer.parseInt(args[1]);
         host = args[0];
+        if (args.length > 2) {
+          secure = Boolean.parseBoolean(args[2]);
+        }
 
-
-        DemoClient client = new DemoClient();
-        client.run();
+        final DemoClient client = new DemoClient();
+        Subject.doAs(getSubject(),
+          new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              client.run();
+              return null;
+            }
+          });
     }
 
     DemoClient() {
@@ -96,14 +111,27 @@ public class DemoClient {
         }
     }
 
-    private void run() throws IOError, TException, IllegalArgument,
-            AlreadyExists {
-
+    private void run() throws Exception {
         TTransport transport = new TSocket(host, port);
-        TProtocol protocol = new TBinaryProtocol(transport, true, true);
-        Hbase.Client client = new Hbase.Client(protocol);
+        if (secure) {
+          Map<String, String> saslProperties = new HashMap<String, String>();
+          saslProperties.put(Sasl.QOP, "auth-conf,auth-int,auth");
+          /**
+           * The Thrift server the DemoClient is trying to connect to
+           * must have a matching principal, and support authentication.
+           *
+           * The HBase cluster must be secure, allow proxy user.
+           */
+          transport = new TSaslClientTransport("GSSAPI", null,
+            "hbase", // Thrift server user name, should be an authorized proxy user.
+            host, // Thrift server domain
+            saslProperties, null, transport);
+        }
 
         transport.open();
+
+        TProtocol protocol = new TBinaryProtocol(transport, true, true);
+        Hbase.Client client = new Hbase.Client(protocol);
 
         byte[] t = bytes("demo_table");
 
@@ -130,10 +158,12 @@ public class DemoClient {
         ColumnDescriptor col;
         col = new ColumnDescriptor();
         col.name = ByteBuffer.wrap(bytes("entry:"));
+        col.timeToLive = Integer.MAX_VALUE;
         col.maxVersions = 10;
         columns.add(col);
         col = new ColumnDescriptor();
         col.name = ByteBuffer.wrap(bytes("unused:"));
+        col.timeToLive = Integer.MAX_VALUE;
         columns.add(col);
 
         System.out.println("creating table: " + utf8(t));
@@ -165,9 +195,9 @@ public class DemoClient {
         ArrayList<Mutation> mutations;
         // non-utf8 is fine for data
         mutations = new ArrayList<Mutation>();
-        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), 
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")),
             ByteBuffer.wrap(invalid), writeToWal));
-        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")), 
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")),
             mutations, dummyAttributes);
 
 
@@ -336,5 +366,40 @@ public class DemoClient {
         for (TRowResult rowResult : rows) {
             printRow(rowResult);
         }
+    }
+
+    static Subject getSubject() throws Exception {
+      if (!secure) return new Subject();
+
+      /*
+       * To authenticate the DemoClient, kinit should be invoked ahead.
+       * Here we try to get the Kerberos credential from the ticket cache.
+       */
+      LoginContext context = new LoginContext("", new Subject(), null,
+        new Configuration() {
+          @Override
+          public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+            Map<String, String> options = new HashMap<String, String>();
+            options.put("useKeyTab", "false");
+            options.put("storeKey", "false");
+            options.put("doNotPrompt", "true");
+            options.put("useTicketCache", "true");
+            options.put("renewTGT", "true");
+            options.put("refreshKrb5Config", "true");
+            options.put("isInitiator", "true");
+            String ticketCache = System.getenv("KRB5CCNAME");
+            if (ticketCache != null) {
+              options.put("ticketCache", ticketCache);
+            }
+            options.put("debug", "true");
+
+            return new AppConfigurationEntry[]{
+                new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
+                    AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+                    options)};
+          }
+        });
+      context.login();
+      return context.getSubject();
     }
 }

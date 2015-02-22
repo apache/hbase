@@ -35,7 +35,7 @@
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
 usage="Usage: hbase-daemon.sh [--config <conf-dir>]\
- (start|stop|restart|autorestart) <hbase-command> \
+ (start|stop|restart|autorestart|foreground_start) <hbase-command> \
  <args...>"
 
 # if no args specified, show usage
@@ -74,25 +74,31 @@ hbase_rotate_log ()
     fi
 }
 
-cleanZNode() {
-  if [ -f $HBASE_ZNODE_FILE ]; then
+cleanAfterRun() {
+  if [ -f ${HBASE_PID} ]; then
+    # If the process is still running time to tear it down.
+    kill -9 `cat ${HBASE_PID}` > /dev/null 2>&1
+    rm -f ${HBASE_PID} > /dev/null 2>&1
+  fi
+
+  if [ -f ${HBASE_ZNODE_FILE} ]; then
     if [ "$command" = "master" ]; then
       $bin/hbase master clear > /dev/null 2>&1
     else
       #call ZK to delete the node
-      ZNODE=`cat $HBASE_ZNODE_FILE`
-      $bin/hbase zkcli delete $ZNODE > /dev/null 2>&1
+      ZNODE=`cat ${HBASE_ZNODE_FILE}`
+      $bin/hbase zkcli delete ${ZNODE} > /dev/null 2>&1
     fi
-    rm $HBASE_ZNODE_FILE
+    rm ${HBASE_ZNODE_FILE}
   fi
 }
 
 check_before_start(){
     #ckeck if the process is not running
     mkdir -p "$HBASE_PID_DIR"
-    if [ -f $pid ]; then
-      if kill -0 `cat $pid` > /dev/null 2>&1; then
-        echo $command running as process `cat $pid`.  Stop it first.
+    if [ -f $HBASE_PID ]; then
+      if kill -0 `cat $HBASE_PID` > /dev/null 2>&1; then
+        echo $command running as process `cat $HBASE_PID`.  Stop it first.
         exit 1
       fi
     fi
@@ -144,20 +150,27 @@ fi
 JAVA=$JAVA_HOME/bin/java
 export HBASE_LOG_PREFIX=hbase-$HBASE_IDENT_STRING-$command-$HOSTNAME
 export HBASE_LOGFILE=$HBASE_LOG_PREFIX.log
+
+if [ -z "${HBASE_ROOT_LOGGER}" ]; then
 export HBASE_ROOT_LOGGER=${HBASE_ROOT_LOGGER:-"INFO,RFA"}
+fi
+
+if [ -z "${HBASE_SECURITY_LOGGER}" ]; then 
 export HBASE_SECURITY_LOGGER=${HBASE_SECURITY_LOGGER:-"INFO,RFAS"}
-logout=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out
-loggc=$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.gc
-loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
-pid=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
+fi
+
+HBASE_LOGOUT=${HBASE_LOGOUT:-"$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.out"}
+HBASE_LOGGC=${HBASE_LOGGC:-"$HBASE_LOG_DIR/$HBASE_LOG_PREFIX.gc"}
+HBASE_LOGLOG=${HBASE_LOGLOG:-"${HBASE_LOG_DIR}/${HBASE_LOGFILE}"}
+HBASE_PID=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
 export HBASE_ZNODE_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.znode
 export HBASE_START_FILE=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.autorestart
 
 if [ -n "$SERVER_GC_OPTS" ]; then
-  export SERVER_GC_OPTS=${SERVER_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${loggc}"}
+  export SERVER_GC_OPTS=${SERVER_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${HBASE_LOGGC}"}
 fi
 if [ -n "$CLIENT_GC_OPTS" ]; then
-  export CLIENT_GC_OPTS=${CLIENT_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${loggc}"}
+  export CLIENT_GC_OPTS=${CLIENT_GC_OPTS/"-Xloggc:<FILE-PATH>"/"-Xloggc:${HBASE_LOGGC}"}
 fi
 
 # Set default scheduling priority
@@ -165,37 +178,42 @@ if [ "$HBASE_NICENESS" = "" ]; then
     export HBASE_NICENESS=0
 fi
 
-thiscmd=$0
+thiscmd="$bin/$(basename ${BASH_SOURCE-$0})"
 args=$@
 
 case $startStop in
 
 (start)
     check_before_start
-    hbase_rotate_log $logout
-    hbase_rotate_log $loggc
-    echo starting $command, logging to $logout
-    nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args < /dev/null > ${logout} 2>&1  &
-    sleep 1; head "${logout}"
+    hbase_rotate_log $HBASE_LOGOUT
+    hbase_rotate_log $HBASE_LOGGC
+    echo starting $command, logging to $HBASE_LOGOUT
+    nohup $thiscmd --config "${HBASE_CONF_DIR}" \
+        foreground_start $command $args < /dev/null > ${HBASE_LOGOUT} 2>&1  &
+    sleep 1; head "${HBASE_LOGOUT}"
   ;;
 
 (autorestart)
     check_before_start
-    hbase_rotate_log $logout
-    hbase_rotate_log $loggc
-    nohup $thiscmd --config "${HBASE_CONF_DIR}" internal_autorestart $command $args < /dev/null > ${logout} 2>&1  &
+    hbase_rotate_log $HBASE_LOGOUT
+    hbase_rotate_log $HBASE_LOGGC
+    nohup $thiscmd --config "${HBASE_CONF_DIR}" \
+        internal_autorestart $command $args < /dev/null > ${HBASE_LOGOUT} 2>&1  &
   ;;
 
-(internal_start)
+(foreground_start)
     # Add to the command log file vital stats on our environment.
-    echo "`date` Starting $command on `hostname`" >> $loglog
-    echo "`ulimit -a`" >> $loglog 2>&1
+    echo "`date` Starting $command on `hostname`" >> ${HBASE_LOGLOG}
+    `ulimit -a` >> "$HBASE_LOGLOG" 2>&1
+    # in case the parent shell gets the kill make sure to trap signals.
+    # Only one will get called. Either the trap or the flow will go through.
+    trap cleanAfterRun SIGHUP SIGINT SIGTERM EXIT
     nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
         --config "${HBASE_CONF_DIR}" \
-        $command "$@" start >> "$logout" 2>&1 &
-    echo $! > $pid
-    wait
-    cleanZNode
+        $command "$@" start >> ${HBASE_LOGOUT} 2>&1 &
+    hbase_pid=$!
+    echo $hbase_pid > ${HBASE_PID}
+    wait $hbase_pid
   ;;
 
 (internal_autorestart)
@@ -204,7 +222,7 @@ case $startStop in
     while true
       do
         lastLaunchDate=`date +%s`
-        $thiscmd --config "${HBASE_CONF_DIR}" internal_start $command $args
+        $thiscmd --config "${HBASE_CONF_DIR}" foreground_start $command $args
 
         #if the file does not exist it means that it was not stopped properly by the stop command
         if [ ! -f "$HBASE_START_FILE" ]; then
@@ -240,22 +258,22 @@ case $startStop in
 
 (stop)
     rm -f "$HBASE_START_FILE"
-    if [ -f $pid ]; then
-      pidToKill=`cat $pid`
+    if [ -f $HBASE_PID ]; then
+      pidToKill=`cat $HBASE_PID`
       # kill -0 == see if the PID exists
       if kill -0 $pidToKill > /dev/null 2>&1; then
         echo -n stopping $command
-        echo "`date` Terminating $command" >> $loglog
+        echo "`date` Terminating $command" >> $HBASE_LOGLOG
         kill $pidToKill > /dev/null 2>&1
         waitForProcessEnd $pidToKill $command
-        rm $pid
       else
         retval=$?
         echo no $command to stop because kill -0 of pid $pidToKill failed with status $retval
       fi
     else
-      echo no $command to stop because no pid file $pid
+      echo no $command to stop because no pid file $HBASE_PID
     fi
+    rm -f $HBASE_PID
   ;;
 
 (restart)

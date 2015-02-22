@@ -43,8 +43,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
@@ -62,11 +62,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-
 /**
  * Test of a long-lived scanner validating as we go.
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestScanner {
   @Rule public TestName name = new TestName();
   private final Log LOG = LogFactory.getLog(this.getClass());
@@ -163,7 +162,7 @@ public class TestScanner {
       assertTrue(count > 10);
       s.close();
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -216,7 +215,7 @@ public class TestScanner {
       rowInclusiveStopFilter(scan, stopRow);
 
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -243,7 +242,7 @@ public class TestScanner {
         return;
       }
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -356,7 +355,7 @@ public class TestScanner {
 
     } finally {
       // clean up
-      HRegion.closeHRegion(r);
+      HBaseTestingUtility.closeRegionAndWAL(r);
     }
   }
 
@@ -476,7 +475,7 @@ public class TestScanner {
       LOG.error("Failed", e);
       throw e;
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -499,7 +498,7 @@ public class TestScanner {
       LOG.error("Failed", e);
       throw e;
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 
@@ -556,7 +555,7 @@ public class TestScanner {
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
     } finally {
-      HRegion.closeHRegion(this.r);
+      HBaseTestingUtility.closeRegionAndWAL(this.r);
     }
   }
 

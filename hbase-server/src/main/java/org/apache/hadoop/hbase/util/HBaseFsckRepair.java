@@ -18,33 +18,36 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.zookeeper.KeeperException;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * This class contains helper methods that repair parts of hbase's filesystem
@@ -59,22 +62,22 @@ public class HBaseFsckRepair {
    * and then force ZK unassigned node to OFFLINE to trigger assignment by
    * master.
    *
-   * @param admin HBase admin used to undeploy
+   * @param connection HBase connection to the cluster
    * @param region Region to undeploy
    * @param servers list of Servers to undeploy from
    */
-  public static void fixMultiAssignment(HBaseAdmin admin, HRegionInfo region,
+  public static void fixMultiAssignment(HConnection connection, HRegionInfo region,
       List<ServerName> servers)
   throws IOException, KeeperException, InterruptedException {
     HRegionInfo actualRegion = new HRegionInfo(region);
 
     // Close region on the servers silently
     for(ServerName server : servers) {
-      closeRegionSilentlyAndWait(admin, server, actualRegion);
+      closeRegionSilentlyAndWait(connection, server, actualRegion);
     }
 
     // Force ZK node to OFFLINE so master assigns
-    forceOfflineInZK(admin, actualRegion);
+    forceOfflineInZK(connection.getAdmin(), actualRegion);
   }
 
   /**
@@ -89,8 +92,8 @@ public class HBaseFsckRepair {
    * @throws IOException
    * @throws KeeperException
    */
-  public static void fixUnassigned(HBaseAdmin admin, HRegionInfo region)
-      throws IOException, KeeperException {
+  public static void fixUnassigned(Admin admin, HRegionInfo region)
+      throws IOException, KeeperException, InterruptedException {
     HRegionInfo actualRegion = new HRegionInfo(region);
 
     // Force ZK node to OFFLINE so master assigns
@@ -109,15 +112,15 @@ public class HBaseFsckRepair {
    * side-effect of requiring a HRegionInfo that considers regionId (timestamp)
    * in comparators that is addressed by HBASE-5563.
    */
-  private static void forceOfflineInZK(HBaseAdmin admin, final HRegionInfo region)
-  throws ZooKeeperConnectionException, KeeperException, IOException {
+  private static void forceOfflineInZK(Admin admin, final HRegionInfo region)
+  throws ZooKeeperConnectionException, KeeperException, IOException, InterruptedException {
     admin.assign(region.getRegionName());
   }
 
   /*
    * Should we check all assignments or just not in RIT?
    */
-  public static void waitUntilAssigned(HBaseAdmin admin,
+  public static void waitUntilAssigned(Admin admin,
       HRegionInfo region) throws IOException, InterruptedException {
     long timeout = admin.getConfiguration().getLong("hbase.hbck.assign.timeout", 120000);
     long expiration = timeout + System.currentTimeMillis();
@@ -148,30 +151,12 @@ public class HBaseFsckRepair {
    * (default 120s) to close the region.  This bypasses the active hmaster.
    */
   @SuppressWarnings("deprecation")
-  public static void closeRegionSilentlyAndWait(Admin admin,
+  public static void closeRegionSilentlyAndWait(HConnection connection, 
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
-    HConnection connection = admin.getConnection();
-    AdminService.BlockingInterface rs = connection.getAdmin(server);
-    try {
-      ProtobufUtil.closeRegion(rs, server, region.getRegionName());
-    } catch (IOException e) {
-      LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
-    }
-    long timeout = admin.getConfiguration()
+    long timeout = connection.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);
-    long expiration = timeout + System.currentTimeMillis();
-    while (System.currentTimeMillis() < expiration) {
-      try {
-        HRegionInfo rsRegion =
-          ProtobufUtil.getRegionInfo(rs, region.getRegionName());
-        if (rsRegion == null) return;
-      } catch (IOException ioe) {
-        return;
-      }
-      Thread.sleep(1000);
-    }
-    throw new IOException("Region " + region + " failed to close within"
-        + " timeout " + timeout);
+    ServerManager.closeRegionSilentlyAndWait((ClusterConnection)connection, server,
+         region, timeout);
   }
 
   /**
@@ -179,7 +164,8 @@ public class HBaseFsckRepair {
    */
   public static void fixMetaHoleOnlineAndAddReplicas(Configuration conf,
       HRegionInfo hri, Collection<ServerName> servers, int numReplicas) throws IOException {
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Connection conn = ConnectionFactory.createConnection(conf);
+    Table meta = conn.getTable(TableName.META_TABLE_NAME);
     Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
     if (numReplicas > 1) {
       Random r = new Random();
@@ -195,6 +181,7 @@ public class HBaseFsckRepair {
     }
     meta.put(put);
     meta.close();
+    conn.close();
   }
 
   /**

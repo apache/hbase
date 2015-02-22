@@ -22,16 +22,17 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 
 /**
  * Codec that just writes out Cell as a protobuf Cell Message.  Does not write the mvcc stamp.
  * Use a different codec if you want that in the stream.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class MessageCodec implements Codec {
   static class MessageEncoder extends BaseEncoder {
     MessageEncoder(final OutputStream out) {

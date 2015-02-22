@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.hbase.security.token;
 
-import com.google.protobuf.ByteString;
-import org.apache.hadoop.classification.InterfaceAudience;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import com.google.protobuf.ByteString;
 
 /**
  * Represents the identity information stored in an HBase authentication token.
@@ -41,7 +42,7 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
   protected long issueDate;
   protected long expirationDate;
   protected long sequenceNumber;
-  
+
   public AuthenticationTokenIdentifier() {
   }
 

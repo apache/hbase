@@ -27,18 +27,18 @@ import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.Text;
 
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX, HBaseInterfaceAudience.CONFIG})
 public class SequenceFileLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(SequenceFileLogReader.class);
 
@@ -222,10 +222,27 @@ public class SequenceFileLogReader extends ReaderBase {
   }
 
 
+  /**
+   * fill in the passed entry with teh next key/value.
+   * Note that because this format deals with our legacy storage, the provided
+   * Entery MUST use an {@link HLogKey} for the key.
+   * @return boolean indicating if the contents of Entry have been filled in.
+   */
   @Override
   protected boolean readNext(Entry e) throws IOException {
     try {
-      boolean hasNext = this.reader.next(e.getKey(), e.getEdit());
+      if (!(e.getKey() instanceof HLogKey)) {
+        final IllegalArgumentException exception = new IllegalArgumentException(
+            "SequenceFileLogReader only works when given entries that have HLogKey for keys. This" +
+            " one had '" + e.getKey().getClass() + "'");
+        LOG.error("We need to use the legacy SequenceFileLogReader to handle a " +
+            " pre-0.96 style WAL, but HBase internals failed to use the deprecated HLogKey class." +
+            " This is a bug; please file an issue or email the developer mailing list. You will " +
+            "need the following exception details when seeking help from the HBase community.",
+            exception);
+        throw exception;
+      }
+      boolean hasNext = this.reader.next((HLogKey)e.getKey(), e.getEdit());
       if (!hasNext) return false;
       // Scopes are probably in WAL edit, move to key
       NavigableMap<byte[], Integer> scopes = e.getEdit().getAndRemoveScopes();

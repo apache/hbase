@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.GZ;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -38,10 +36,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -49,6 +48,8 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.io.WritableUtils;
@@ -66,7 +67,7 @@ import com.google.common.base.Preconditions;
  * This class has unit tests to prove that older versions of
  * HFiles (without checksums) are compatible with current readers.
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestHFileBlockCompatibility {
 
@@ -196,8 +197,8 @@ public class TestHFileBlockCompatibility {
                            .withIncludesTags(includesTag)
                            .withCompression(algo)
                            .build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
-            totalSize, fs, path, meta);
+        HFileBlock.FSReader hbr =
+          new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is), totalSize, fs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
 
@@ -205,15 +206,15 @@ public class TestHFileBlockCompatibility {
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
         assertEquals(algo == GZ ? 2173 : 4936,
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
-        String blockStr = b.toString();
+        HFileBlock expected = b;
 
         if (algo == GZ) {
           is = fs.open(path);
-          hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is), totalSize, fs, path,
+          hbr = new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is), totalSize, fs, path,
               meta);
           b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM +
                                 b.totalChecksumBytes(), -1, pread);
-          assertEquals(blockStr, b.toString());
+          assertEquals(expected, b);
           int wrongCompressedSize = 2172;
           try {
             b = hbr.readBlockData(0, wrongCompressedSize
@@ -291,7 +292,7 @@ public class TestHFileBlockCompatibility {
                               .withIncludesTags(includesTag)
                               .withCompression(algo)
                               .build();
-          HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
+          HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is),
               totalSize, fs, path, meta);
           hbr.setDataBlockEncoder(dataBlockEncoder);
           hbr.setIncludesMemstoreTS(includesMemstoreTS);
@@ -301,6 +302,10 @@ public class TestHFileBlockCompatibility {
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             b = hbr.readBlockData(pos, -1, -1, pread);
             b.sanityCheck();
+            if (meta.isCompressedOrEncrypted()) {
+              assertFalse(b.isUnpacked());
+              b = b.unpack(meta, hbr);
+            }
             pos += b.getOnDiskSizeWithHeader();
 
             assertEquals((int) encodedSizes.get(blockId),
@@ -335,7 +340,7 @@ public class TestHFileBlockCompatibility {
    * in this class but the code in HFileBlock.Writer will continually
    * evolve.
    */
-  public static final class Writer extends HFileBlock.Writer{
+  public static final class Writer extends HFileBlock.Writer {
 
     // These constants are as they were in minorVersion 0.
     private static final int HEADER_SIZE = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
@@ -416,10 +421,6 @@ public class TestHFileBlockCompatibility {
 
     private int unencodedDataSizeWritten;
 
-    /**
-     * @param compressionAlgorithm compression algorithm to use
-     * @param dataBlockEncoderAlgo data block encoding algorithm to use
-     */
     public Writer(Compression.Algorithm compressionAlgorithm,
         HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS, boolean includesTag) {
       this(dataBlockEncoder, new HFileContextBuilder().withHBaseCheckSum(false)
@@ -472,7 +473,9 @@ public class TestHFileBlockCompatibility {
       return userDataStream;
     }
 
-    public void write(KeyValue kv) throws IOException{
+    @Override
+    public void write(Cell c) throws IOException {
+      KeyValue kv = KeyValueUtil.ensureKeyValue(c);
       expectState(State.WRITING);
       this.dataBlockEncoder.encode(kv, dataBlockEncodingCtx, this.userDataStream);
       this.unencodedDataSizeWritten += kv.getLength();
@@ -737,7 +740,7 @@ public class TestHFileBlockCompatibility {
              .build();
       return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
           getUncompressedSizeWithoutHeader(), prevOffset,
-          getUncompressedBufferWithHeader(), DONT_FILL_HEADER, startOffset, 
+          getUncompressedBufferWithHeader(), DONT_FILL_HEADER, startOffset,
           getOnDiskSizeWithoutHeader(), meta);
     }
   }

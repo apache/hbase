@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * Exception that a user defined constraint throws on failure of a {@link Put}.
- * <p>
- * Does <b>NOT</b> attempt the {@link Put} multiple times, since the constraint
- * <it>should</it> fail every time for the same {@link Put} (it should be
+ * Exception that a user defined constraint throws on failure of a
+ *  {@link org.apache.hadoop.hbase.client.Put}.
+ * <p>Does <b>NOT</b> attempt the
+ *  {@link org.apache.hadoop.hbase.client.Put} multiple times, 
+ *  since the constraint <it>should</it> fail every time for 
+ *  the same {@link org.apache.hadoop.hbase.client.Put} (it should be
  * idempotent).
  */
 @InterfaceAudience.Private

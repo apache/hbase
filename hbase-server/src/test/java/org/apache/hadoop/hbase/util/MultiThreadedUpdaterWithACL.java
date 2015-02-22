@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -54,7 +55,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
    * Maps user with Table instance. Because the table instance has to be created
    * per user inorder to work in that user's context
    */
-  private Map<String, HTableInterface> userVsTable = new HashMap<String, HTableInterface>();
+  private Map<String, Table> userVsTable = new HashMap<String, Table>();
   private Map<String, User> users = new HashMap<String, User>();
   private String[] userNames;
 
@@ -76,7 +77,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
 
   public class HBaseUpdaterThreadWithACL extends HBaseUpdaterThread {
 
-    private HTableInterface table;
+    private Table table;
     private MutateAccessAction mutateAction = new MutateAccessAction();
 
     public HBaseUpdaterThreadWithACL(int updaterId) throws IOException {
@@ -94,7 +95,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
         if (table != null) {
           table.close();
         }
-        for (HTableInterface table : userVsTable.values()) {
+        for (Table table : userVsTable.values()) {
           try {
             table.close();
           } catch (Exception e) {
@@ -113,11 +114,11 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
         @Override
         public Object run() throws Exception {
           Result res = null;
-          HTableInterface localTable = null;
+          Table localTable = null;
           try {
             int mod = ((int) rowKeyBase % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
-              localTable = new HTable(conf, tableName);
+              localTable = connection.getTable(tableName);
               userVsTable.put(userNames[mod], localTable);
               res = localTable.get(get);
             } else {
@@ -160,7 +161,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
     }
 
     @Override
-    public void mutate(final HTableInterface table, Mutation m, final long keyBase, final byte[] row,
+    public void mutate(final Table table, Mutation m, final long keyBase, final byte[] row,
         final byte[] cf, final byte[] q, final byte[] v) {
       final long start = System.currentTimeMillis();
       try {
@@ -181,7 +182,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
     }
 
     class MutateAccessAction implements PrivilegedExceptionAction<Object> {
-      private HTableInterface table;
+      private Table table;
       private long start;
       private Mutation m;
       private long keyBase;
@@ -226,7 +227,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
       public Object run() throws Exception {
         try {
           if (table == null) {
-            table = new HTable(conf, tableName);
+            table = connection.getTable(tableName);
           }
           if (m instanceof Increment) {
             table.increment((Increment) m);

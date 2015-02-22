@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.master.handler;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -50,8 +50,8 @@ public class TableAddFamilyHandler extends TableEventHandler {
   @Override
   protected void prepareWithTableLock() throws IOException {
     super.prepareWithTableLock();
-    HTableDescriptor htd = getTableDescriptor();
-    if (htd.hasFamily(familyDesc.getName())) {
+    TableDescriptor htd = getTableDescriptor();
+    if (htd.getHTableDescriptor().hasFamily(familyDesc.getName())) {
       throw new InvalidFamilyOperationException("Family '" +
         familyDesc.getNameAsString() + "' already exists so cannot be added");
     }

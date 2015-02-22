@@ -51,33 +51,33 @@ public class TestRowDataUrlsExample extends BaseTestRowData{
   static String FAMILY = "hits";
   static List<String> BROWSERS = Lists.newArrayList(
       "Chrome", "IE8", "IE9beta");//, "Opera", "Safari");
-	static long TIMESTAMP = 1234567890;
+  static long TIMESTAMP = 1234567890;
 
-	static int MAX_VALUE = 50;
+  static int MAX_VALUE = 50;
 
-	static List<KeyValue> kvs = Lists.newArrayList();
-	static{
-		for(String rowKey : URLS){
-			for(String qualifier : BROWSERS){
-			  KeyValue kv = new KeyValue(
-						Bytes.toBytes(rowKey), 
-						Bytes.toBytes(FAMILY), 
-						Bytes.toBytes(qualifier), 
-						TIMESTAMP, 
-						KeyValue.Type.Put, 
-						Bytes.toBytes("VvvV"));
-				kvs.add(kv);
-			}
-		}
-	}
+  static List<KeyValue> kvs = Lists.newArrayList();
+  static{
+    for(String rowKey : URLS){
+      for(String qualifier : BROWSERS){
+        KeyValue kv = new KeyValue(
+            Bytes.toBytes(rowKey), 
+            Bytes.toBytes(FAMILY), 
+            Bytes.toBytes(qualifier), 
+            TIMESTAMP, 
+            KeyValue.Type.Put, 
+            Bytes.toBytes("VvvV"));
+        kvs.add(kv);
+      }
+    }
+  }
 
-	/**
-	 * Used for generating docs.
-	 */
-	public static void main(String... args) throws IOException{
+  /**
+   * Used for generating docs.
+   */
+  public static void main(String... args) throws IOException{
     System.out.println("-- inputs --");
     System.out.println(KeyValueTestUtil.toStringWithPadding(kvs, true));
-		ByteArrayOutputStream os = new ByteArrayOutputStream(1<<20);
+    ByteArrayOutputStream os = new ByteArrayOutputStream(1<<20);
     PrefixTreeEncoder encoder = new PrefixTreeEncoder(os, false);
 
     for(KeyValue kv : kvs){
@@ -116,11 +116,11 @@ public class TestRowDataUrlsExample extends BaseTestRowData{
 
     System.out.println("-- concatenated values --");
     System.out.println(Bytes.toStringBinary(encoder.getValueByteRange().deepCopyToNewArray()));
-	}
+  }
 
-	@Override
-	public List<KeyValue> getInputs() {
-		return kvs;
-	}
+  @Override
+  public List<KeyValue> getInputs() {
+    return kvs;
+  }
 
 }

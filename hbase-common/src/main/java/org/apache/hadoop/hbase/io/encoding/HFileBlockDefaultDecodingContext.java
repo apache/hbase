@@ -16,21 +16,20 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.ByteBufferInputStream;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -52,9 +51,8 @@ public class HFileBlockDefaultDecodingContext implements
 
   @Override
   public void prepareDecoding(int onDiskSizeWithoutHeader, int uncompressedSizeWithoutHeader,
-      ByteBuffer blockBufferWithoutHeader, byte[] onDiskBlock, int offset) throws IOException {
-    InputStream in = new DataInputStream(new ByteArrayInputStream(onDiskBlock, offset,
-      onDiskSizeWithoutHeader));
+      ByteBuffer blockBufferWithoutHeader, ByteBuffer onDiskBlock) throws IOException {
+    InputStream in = new DataInputStream(new ByteBufferInputStream(onDiskBlock));
 
     Encryption.Context cryptoContext = fileContext.getEncryptionContext();
     if (cryptoContext != Encryption.Context.NONE) {
@@ -87,6 +85,7 @@ public class HFileBlockDefaultDecodingContext implements
     }
 
     Compression.Algorithm compression = fileContext.getCompression();
+    assert blockBufferWithoutHeader.hasArray();
     if (compression != Compression.Algorithm.NONE) {
       Compression.decompress(blockBufferWithoutHeader.array(),
         blockBufferWithoutHeader.arrayOffset(), in, onDiskSizeWithoutHeader,

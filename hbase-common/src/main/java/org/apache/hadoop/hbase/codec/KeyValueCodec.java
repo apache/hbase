@@ -21,15 +21,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Codec that does KeyValue version 1 serialization.
  * 
- * <p>Encodes by casting Cell to KeyValue and writing out the backing array with a length prefix.
+ * <p>Encodes Cell as serialized in KeyValue with total length prefix.
  * This is how KVs were serialized in Puts, Deletes and Results pre-0.96.  Its what would
  * happen if you called the Writable#write KeyValue implementation.  This encoder will fail
  * if the passed Cell is not an old-school pre-0.96 KeyValue.  Does not copy bytes writing.
@@ -43,7 +44,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
  * KeyValue2 backing array
  * </pre>
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class KeyValueCodec implements Codec {
   public static class KeyValueEncoder extends BaseEncoder {
     public KeyValueEncoder(final OutputStream out) {
@@ -53,10 +54,8 @@ public class KeyValueCodec implements Codec {
     @Override
     public void write(Cell cell) throws IOException {
       checkFlushed();
-      // This is crass and will not work when KV changes. Also if passed a non-kv Cell, it will
-      // make expensive copy.
       // Do not write tags over RPC
-      KeyValue.oswrite((KeyValue) KeyValueUtil.ensureKeyValue(cell), this.out, false);
+      KeyValueUtil.oswrite(cell, out, false);
     }
   }
 

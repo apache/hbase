@@ -18,6 +18,40 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,38 +60,12 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestTimeRangeMapRed {
   private final static Log log = LogFactory.getLog(TestTimeRangeMapRed.class);
   private static final HBaseTestingUtility UTIL =
     new HBaseTestingUtility();
-  private HBaseAdmin admin;
+  private Admin admin;
 
   private static final byte [] KEY = Bytes.toBytes("row1");
   private static final NavigableMap<Long, Boolean> TIMESTAMP =
@@ -74,7 +82,7 @@ public class TestTimeRangeMapRed {
   static final long MINSTAMP = 1245620005;
   static final long MAXSTAMP = 1245620100 + 1; // maxStamp itself is excluded. so increment it.
 
-  static final byte[] TABLE_NAME = Bytes.toBytes("table123");
+  static final TableName TABLE_NAME = TableName.valueOf("table123");
   static final byte[] FAMILY_NAME = Bytes.toBytes("text");
   static final byte[] COLUMN_NAME = Bytes.toBytes("input");
 
@@ -90,12 +98,7 @@ public class TestTimeRangeMapRed {
 
   @Before
   public void before() throws Exception {
-    this.admin = new HBaseAdmin(UTIL.getConfiguration());
-  }
-
-  @After
-  public void after() throws IOException {
-    this.admin.close();
+    this.admin = UTIL.getHBaseAdmin();
   }
 
   private static class ProcessTimeRangeMapper
@@ -103,7 +106,7 @@ public class TestTimeRangeMapRed {
   implements Configurable {
 
     private Configuration conf = null;
-    private HTable table = null;
+    private Table table = null;
 
     @Override
     public void map(ImmutableBytesWritable key, Result result,
@@ -114,13 +117,14 @@ public class TestTimeRangeMapRed {
         tsList.add(kv.getTimestamp());
       }
 
+      List<Put> puts = new ArrayList<>();
       for (Long ts : tsList) {
         Put put = new Put(key.get());
         put.setDurability(Durability.SKIP_WAL);
         put.add(FAMILY_NAME, COLUMN_NAME, ts, Bytes.toBytes(true));
-        table.put(put);
+        puts.add(put);
       }
-      table.flushCommits();
+      table.put(puts);
     }
 
     @Override
@@ -132,7 +136,8 @@ public class TestTimeRangeMapRed {
     public void setConf(Configuration configuration) {
       this.conf = configuration;
       try {
-        table = new HTable(HBaseConfiguration.create(conf), TABLE_NAME);
+        Connection connection = ConnectionFactory.createConnection(conf);
+        table = connection.getTable(TABLE_NAME);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -142,25 +147,23 @@ public class TestTimeRangeMapRed {
   @Test
   public void testTimeRangeMapRed()
   throws IOException, InterruptedException, ClassNotFoundException {
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+    final HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
     final HColumnDescriptor col = new HColumnDescriptor(FAMILY_NAME);
     col.setMaxVersions(Integer.MAX_VALUE);
     desc.addFamily(col);
     admin.createTable(desc);
-    HTable table = new HTable(UTIL.getConfiguration(), desc.getTableName());
-    prepareTest(table);
-    runTestOnTable();
-    verify(table);
-  }
-
-  private void prepareTest(final HTable table) throws IOException {
+    List<Put> puts = new ArrayList<Put>();
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
       put.setDurability(Durability.SKIP_WAL);
       put.add(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
-      table.put(put);
+      puts.add(put);
     }
-    table.flushCommits();
+    Table table = UTIL.getConnection().getTable(desc.getTableName());
+    table.put(puts);
+    runTestOnTable();
+    verify(table);
+    table.close();
   }
 
   private void runTestOnTable()
@@ -175,7 +178,7 @@ public class TestTimeRangeMapRed {
       scan.addColumn(FAMILY_NAME, COLUMN_NAME);
       scan.setTimeRange(MINSTAMP, MAXSTAMP);
       scan.setMaxVersions();
-      TableMapReduceUtil.initTableMapperJob(Bytes.toString(TABLE_NAME),
+      TableMapReduceUtil.initTableMapperJob(TABLE_NAME,
         scan, ProcessTimeRangeMapper.class, Text.class, Text.class, job);
       job.waitForCompletion(true);
     } catch (IOException e) {
@@ -190,7 +193,7 @@ public class TestTimeRangeMapRed {
     }
   }
 
-  private void verify(final HTable table) throws IOException {
+  private void verify(final Table table) throws IOException {
     Scan scan = new Scan();
     scan.addColumn(FAMILY_NAME, COLUMN_NAME);
     scan.setMaxVersions(1);
@@ -201,7 +204,7 @@ public class TestTimeRangeMapRed {
             + "\t" + Bytes.toString(CellUtil.cloneQualifier(kv))
             + "\t" + kv.getTimestamp() + "\t" + Bytes.toBoolean(CellUtil.cloneValue(kv)));
         org.junit.Assert.assertEquals(TIMESTAMP.get(kv.getTimestamp()),
-          (Boolean)Bytes.toBoolean(CellUtil.cloneValue(kv)));
+          Bytes.toBoolean(CellUtil.cloneValue(kv)));
       }
     }
     scanner.close();

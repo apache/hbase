@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
@@ -28,13 +28,13 @@ import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
  * Makes the decision regarding proper sizing of the heap memory. Decides what percentage of heap
  * memory should be allocated for global memstore and BlockCache.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface HeapMemoryTuner extends Configurable {
 
   /**
    * Perform the heap memory tuning operation.
-   * 
+   *
    * @param context
    * @return <code>TunerResult</code> including the heap percentage for memstore and block cache
    */

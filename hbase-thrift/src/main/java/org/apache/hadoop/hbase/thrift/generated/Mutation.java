@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -431,7 +432,29 @@ public class Mutation implements org.apache.thrift.TBase<Mutation, Mutation._Fie
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_isDelete = true;
+    builder.append(present_isDelete);
+    if (present_isDelete)
+      builder.append(isDelete);
+
+    boolean present_column = true && (isSetColumn());
+    builder.append(present_column);
+    if (present_column)
+      builder.append(column);
+
+    boolean present_value = true && (isSetValue());
+    builder.append(present_value);
+    if (present_value)
+      builder.append(value);
+
+    boolean present_writeToWAL = true;
+    builder.append(present_writeToWAL);
+    if (present_writeToWAL)
+      builder.append(writeToWAL);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(Mutation other) {

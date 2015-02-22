@@ -25,15 +25,21 @@ import java.net.InetAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestClockSkewDetection {
   private static final Log LOG =
     LogFactory.getLog(TestClockSkewDetection.class);
@@ -43,7 +49,7 @@ public class TestClockSkewDetection {
     final Configuration conf = HBaseConfiguration.create();
     ServerManager sm = new ServerManager(new Server() {
       @Override
-      public HConnection getShortCircuitConnection() {
+      public ClusterConnection getConnection() {
         return null;
       }
 
@@ -87,7 +93,13 @@ public class TestClockSkewDetection {
 
       @Override
       public void stop(String why) {
-      }}, null, false);
+      }
+
+      @Override
+      public ChoreService getChoreService() {
+        return null;
+      }
+    }, null, false);
 
     LOG.debug("regionServerStartup 1");
     InetAddress ia1 = InetAddress.getLocalHost();
@@ -98,7 +110,7 @@ public class TestClockSkewDetection {
     long warningSkew = c.getLong("hbase.master.warningclockskew", 1000);
 
     try {
-    	//Master Time > Region Server Time
+      //Master Time > Region Server Time
       LOG.debug("Test: Master Time > Region Server Time");
       LOG.debug("regionServerStartup 2");
       InetAddress ia2 = InetAddress.getLocalHost();

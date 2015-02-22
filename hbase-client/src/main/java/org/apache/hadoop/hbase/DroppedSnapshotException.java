@@ -14,15 +14,15 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.io.IOException;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 
 /**
  * Thrown during flush if the possibility snapshot content was not properly
- * persisted into store files.  Response should include replay of hlog content.
+ * persisted into store files.  Response should include replay of wal content.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

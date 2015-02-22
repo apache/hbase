@@ -27,13 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -200,7 +194,7 @@ public class MobSnapshotTestingUtils {
         this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc,
             rootDir);
         new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(
-            snapshotDir, htd, false);
+            snapshotDir, new TableDescriptor(htd), false);
       }
 
       public HTableDescriptor getTableDescriptor() {
@@ -306,7 +300,7 @@ public class MobSnapshotTestingUtils {
         final int nregions) throws IOException {
       Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
       new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(
-          tableDir, htd, false);
+          tableDir, new TableDescriptor(htd), false);
 
       assertTrue(nregions % 2 == 0);
       RegionData[] regions = new RegionData[nregions];

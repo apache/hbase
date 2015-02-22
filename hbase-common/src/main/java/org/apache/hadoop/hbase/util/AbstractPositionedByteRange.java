@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.nio.ByteBuffer;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -28,10 +30,12 @@ import com.google.common.annotations.VisibleForTesting;
  * {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
  * {@link #equals(Object)}. {@code Position} is retained by copy operations.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public abstract class AbstractPositionedByteRange extends AbstractByteRange implements
     PositionedByteRange {
   /**
-   * The current index into the range. Like {@link ByteBuffer} position, it
+   * The current index into the range. Like {@link java.nio.ByteBuffer} position, it
    * points to the next value that will be read/written in the array. It
    * provides the appearance of being 0-indexed, even though its value is
    * calculated according to offset.
@@ -74,7 +78,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
   /**
    * Update the beginning of this range. {@code offset + length} may not be
    * greater than {@code bytes.length}. Resets {@code position} to 0.
-   * 
+   *
    * @param offset
    *          the new start of this range.
    * @return this.
@@ -90,7 +94,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
    * Update the length of this range. {@code offset + length} should not be
    * greater than {@code bytes.length}. If {@code position} is greater than the
    * new {@code length}, sets {@code position} to {@code length}.
-   * 
+   *
    * @param length
    *          The new length of this range.
    * @return this.
@@ -153,32 +157,32 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
 
   @Override
   public abstract PositionedByteRange put(byte[] val, int offset, int length);
-  
+
   @Override
-  public abstract PositionedByteRange putInt(int index, int val); 
+  public abstract PositionedByteRange putInt(int index, int val);
 
   @Override
   public abstract PositionedByteRange putLong(int index, long val);
-  
+
   @Override
   public abstract PositionedByteRange putShort(int index, short val);
-  
+
   @Override
   public abstract PositionedByteRange putInt(int val);
-  
+
   @Override
   public abstract PositionedByteRange putLong(long val);
-  
+
   @Override
   public abstract PositionedByteRange putShort(short val);
-  
+
   @Override
   public abstract int putVLong(int index, long val);
-  
+
   @Override
   public abstract int putVLong(long val);
   /**
-   * Similar to {@link ByteBuffer#flip()}. Sets length to position, position to
+   * Similar to {@link java.nio.ByteBuffer#flip()}. Sets length to position, position to
    * offset.
    */
   @VisibleForTesting
@@ -190,7 +194,7 @@ public abstract class AbstractPositionedByteRange extends AbstractByteRange impl
   }
 
   /**
-   * Similar to {@link ByteBuffer#clear()}. Sets position to 0, length to
+   * Similar to {@link java.nio.ByteBuffer#clear()}. Sets position to 0, length to
    * capacity.
    */
   @VisibleForTesting

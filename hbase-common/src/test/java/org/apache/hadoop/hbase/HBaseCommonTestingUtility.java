@@ -25,10 +25,10 @@ import java.util.UUID;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Common helpers for testing HBase that do not depend on specific server/etc. things.
@@ -52,6 +52,7 @@ public class HBaseCommonTestingUtility {
 
   /**
    * Returns this classes's instance of {@link Configuration}.
+   *
    * @return Instance of Configuration.
    */
   public Configuration getConfiguration() {
@@ -62,24 +63,25 @@ public class HBaseCommonTestingUtility {
    * System property key to get base test directory value
    */
   public static final String BASE_TEST_DIRECTORY_KEY =
-    "test.build.data.basedirectory";
+      "test.build.data.basedirectory";
 
   /**
    * Default base directory for test output.
    */
   public static final String DEFAULT_BASE_TEST_DIRECTORY = "target/test-data";
 
-  /** Directory where we put the data for this instance of HBaseTestingUtility*/
+  /**
+   * Directory where we put the data for this instance of HBaseTestingUtility
+   */
   private File dataTestDir = null;
 
   /**
    * @return Where to write test data on local filesystem, specific to
-   *  the test.  Useful for tests that do not use a cluster.
+   * the test.  Useful for tests that do not use a cluster.
    * Creates it if it does not exist already.
-   * @see #getTestFileSystem()
    */
   public Path getDataTestDir() {
-    if (this.dataTestDir == null){
+    if (this.dataTestDir == null) {
       setupDataTestDir();
     }
     return new Path(this.dataTestDir.getAbsolutePath());
@@ -103,7 +105,7 @@ public class HBaseCommonTestingUtility {
   protected Path setupDataTestDir() {
     if (this.dataTestDir != null) {
       LOG.warn("Data test dir already setup in " +
-        dataTestDir.getAbsolutePath());
+          dataTestDir.getAbsolutePath());
       return null;
     }
 
@@ -120,8 +122,8 @@ public class HBaseCommonTestingUtility {
     return testPath;
   }
 
-  protected void createSubDir(String propertyName, Path parent, String subDirName){
-    Path newPath= new Path(parent, subDirName);
+  protected void createSubDir(String propertyName, Path parent, String subDirName) {
+    Path newPath = new Path(parent, subDirName);
     File newDir = new File(newPath.toString()).getAbsoluteFile();
     if (deleteOnExit()) newDir.deleteOnExit();
     conf.set(propertyName, newDir.getAbsolutePath());
@@ -133,7 +135,7 @@ public class HBaseCommonTestingUtility {
   boolean deleteOnExit() {
     String v = System.getProperty("hbase.testing.preserve.testdir");
     // Let default be true, to delete on exit.
-    return v == null? true: !Boolean.parseBoolean(v);
+    return v == null ? true : !Boolean.parseBoolean(v);
   }
 
   /**
@@ -154,7 +156,7 @@ public class HBaseCommonTestingUtility {
    * @throws IOException
    */
   boolean cleanupTestDir(final String subdir) throws IOException {
-    if (this.dataTestDir == null){
+    if (this.dataTestDir == null) {
       return false;
     }
     return deleteDir(new File(this.dataTestDir, subdir));
@@ -166,11 +168,10 @@ public class HBaseCommonTestingUtility {
    * Should not be used by the unit tests, hence its's private.
    * Unit test will use a subdirectory of this directory.
    * @see #setupDataTestDir()
-   * @see #getTestFileSystem()
    */
   private Path getBaseTestDir() {
     String PathName = System.getProperty(
-      BASE_TEST_DIRECTORY_KEY, DEFAULT_BASE_TEST_DIRECTORY);
+        BASE_TEST_DIRECTORY_KEY, DEFAULT_BASE_TEST_DIRECTORY);
 
     return new Path(PathName);
   }
@@ -184,12 +185,18 @@ public class HBaseCommonTestingUtility {
     if (dir == null || !dir.exists()) {
       return true;
     }
-    try {
-      if (deleteOnExit()) FileUtils.deleteDirectory(dir);
-      return true;
-    } catch (IOException ex) {
-      LOG.warn("Failed to delete " + dir.getAbsolutePath());
-      return false;
-    }
+    int ntries = 0;
+    do {
+      ntries += 1;
+      try {
+        if (deleteOnExit()) FileUtils.deleteDirectory(dir);
+        return true;
+      } catch (IOException ex) {
+        LOG.warn("Failed to delete " + dir.getAbsolutePath());
+      } catch (IllegalArgumentException ex) {
+        LOG.warn("Failed to delete " + dir.getAbsolutePath(), ex);
+      }
+    } while (ntries < 30);
+    return ntries < 30;
   }
 }

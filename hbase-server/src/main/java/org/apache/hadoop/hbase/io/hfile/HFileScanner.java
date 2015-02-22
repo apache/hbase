@@ -21,9 +21,8 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * A scanner allows you to position yourself within a HFile and
@@ -60,7 +59,7 @@ public interface HFileScanner {
   @Deprecated
   int seekTo(byte[] key, int offset, int length) throws IOException;
 
-  int seekTo(Cell kv) throws IOException;
+  int seekTo(Cell c) throws IOException;
   /**
    * Reseek to or just before the passed <code>key</code>. Similar to seekTo
    * except that this can be called even if the scanner is not at the beginning
@@ -86,7 +85,7 @@ public interface HFileScanner {
   @Deprecated
   int reseekTo(byte[] key, int offset, int length) throws IOException;
 
-  int reseekTo(Cell kv) throws IOException;
+  int reseekTo(Cell c) throws IOException;
   /**
    * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.
@@ -132,7 +131,7 @@ public interface HFileScanner {
    */
   ByteBuffer getValue();
   /**
-   * @return Instance of {@link KeyValue}.
+   * @return Instance of {@link org.apache.hadoop.hbase.KeyValue}.
    */
   Cell getKeyValue();
   /**

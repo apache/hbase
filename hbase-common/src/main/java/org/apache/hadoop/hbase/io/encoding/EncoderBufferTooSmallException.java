@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Internal error which indicates a bug in a data block encoding algorithm.

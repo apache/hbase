@@ -22,14 +22,17 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -43,8 +46,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * Convert Map/Reduce output and write it to an HBase table. The KEY is ignored
  * while the output value <u>must</u> be either a {@link Put} or a
  * {@link Delete} instance.
- *
- * @param <KEY>  The type of the key. Ignored in this class.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -77,39 +78,37 @@ implements Configurable {
   /** The configuration. */
   private Configuration conf = null;
 
-  private HTable table;
-
   /**
    * Writes the reducer output to an HBase table.
-   *
-   * @param <KEY>  The type of the key.
    */
-  protected static class TableRecordWriter<KEY>
+  protected class TableRecordWriter
   extends RecordWriter<KEY, Mutation> {
 
-    /** The table to write to. */
-    private HTable table;
+    private Connection connection;
+    private BufferedMutator mutator;
 
     /**
-     * Instantiate a TableRecordWriter with the HBase HClient for writing.
-     *
-     * @param table  The table to write to.
+     * @throws IOException 
+     * 
      */
-    public TableRecordWriter(HTable table) {
-      this.table = table;
+    public TableRecordWriter() throws IOException {
+      String tableName = conf.get(OUTPUT_TABLE);
+      this.connection = ConnectionFactory.createConnection(conf);
+      this.mutator = connection.getBufferedMutator(TableName.valueOf(tableName));
+      LOG.info("Created table instance for "  + tableName);
     }
-
     /**
      * Closes the writer, in this case flush table commits.
      *
      * @param context  The context.
      * @throws IOException When closing the writer fails.
-     * @see org.apache.hadoop.mapreduce.RecordWriter#close(org.apache.hadoop.mapreduce.TaskAttemptContext)
+     * @see RecordWriter#close(TaskAttemptContext)
      */
     @Override
     public void close(TaskAttemptContext context)
     throws IOException {
-      table.close();
+      mutator.close();
+      connection.close();
     }
 
     /**
@@ -118,14 +117,15 @@ implements Configurable {
      * @param key  The key.
      * @param value  The value.
      * @throws IOException When writing fails.
-     * @see org.apache.hadoop.mapreduce.RecordWriter#write(java.lang.Object, java.lang.Object)
+     * @see RecordWriter#write(Object, Object)
      */
     @Override
     public void write(KEY key, Mutation value)
     throws IOException {
-      if (value instanceof Put) this.table.put(new Put((Put)value));
-      else if (value instanceof Delete) this.table.delete(new Delete((Delete)value));
-      else throw new IOException("Pass a Delete or a Put");
+      if (!(value instanceof Put) && !(value instanceof Delete)) {
+        throw new IOException("Pass a Delete or a Put");
+      }
+      mutator.mutate(value);
     }
   }
 
@@ -136,13 +136,11 @@ implements Configurable {
    * @return The newly created writer instance.
    * @throws IOException When creating the writer fails.
    * @throws InterruptedException When the jobs is cancelled.
-   * @see org.apache.hadoop.mapreduce.lib.output.FileOutputFormat#getRecordWriter(org.apache.hadoop.mapreduce.TaskAttemptContext)
    */
   @Override
-  public RecordWriter<KEY, Mutation> getRecordWriter(
-    TaskAttemptContext context)
+  public RecordWriter<KEY, Mutation> getRecordWriter(TaskAttemptContext context)
   throws IOException, InterruptedException {
-    return new TableRecordWriter<KEY>(this.table);
+    return new TableRecordWriter();
   }
 
   /**
@@ -151,7 +149,7 @@ implements Configurable {
    * @param context  The current context.
    * @throws IOException When the check fails.
    * @throws InterruptedException When the job is aborted.
-   * @see org.apache.hadoop.mapreduce.OutputFormat#checkOutputSpecs(org.apache.hadoop.mapreduce.JobContext)
+   * @see OutputFormat#checkOutputSpecs(JobContext)
    */
   @Override
   public void checkOutputSpecs(JobContext context) throws IOException,
@@ -167,7 +165,7 @@ implements Configurable {
    * @return The committer.
    * @throws IOException When creating the committer fails.
    * @throws InterruptedException When the job is aborted.
-   * @see org.apache.hadoop.mapreduce.OutputFormat#getOutputCommitter(org.apache.hadoop.mapreduce.TaskAttemptContext)
+   * @see OutputFormat#getOutputCommitter(TaskAttemptContext)
    */
   @Override
   public OutputCommitter getOutputCommitter(TaskAttemptContext context)
@@ -175,6 +173,7 @@ implements Configurable {
     return new TableOutputCommitter();
   }
 
+  @Override
   public Configuration getConf() {
     return conf;
   }
@@ -203,9 +202,6 @@ implements Configurable {
       if (zkClientPort != 0) {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
-      this.table = new HTable(this.conf, tableName);
-      this.table.setAutoFlush(false, true);
-      LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {
       LOG.error(e);
       throw new RuntimeException(e);

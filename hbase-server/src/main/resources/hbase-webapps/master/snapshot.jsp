@@ -20,7 +20,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.Date"
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.client.HBaseAdmin"
+  import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.client.HConnectionManager"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
@@ -31,18 +31,19 @@
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
-  HBaseAdmin hbadmin = new HBaseAdmin(conf);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
   String snapshotName = request.getParameter("name");
   SnapshotDescription snapshot = null;
   SnapshotInfo.SnapshotStats stats = null;
   TableName snapshotTable = null;
-  for (SnapshotDescription snapshotDesc: hbadmin.listSnapshots()) {
-    if (snapshotName.equals(snapshotDesc.getName())) {
-      snapshot = snapshotDesc;
-      stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
-      snapshotTable = TableName.valueOf(snapshot.getTable());
-      break;
+  try (Admin admin = master.getConnection().getAdmin()) {
+    for (SnapshotDescription snapshotDesc: admin.listSnapshots()) {
+      if (snapshotName.equals(snapshotDesc.getName())) {
+        snapshot = snapshotDesc;
+        stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
+        snapshotTable = TableName.valueOf(snapshot.getTable());
+        break;
+      }
     }
   }
 
@@ -112,15 +113,17 @@
     </div>
     <p><hr><p>
 <%
-  if (action.equals("restore")) {
-    hbadmin.restoreSnapshot(snapshotName);
-    %> Restore Snapshot request accepted. <%
-  } else if (action.equals("clone")) {
-    if (cloneName != null && cloneName.length() > 0) {
-      hbadmin.cloneSnapshot(snapshotName, cloneName);
-      %> Clone from Snapshot request accepted. <%
-    } else {
-      %> Clone from Snapshot request failed, No table name specified. <%
+  try (Admin admin = master.getConnection().getAdmin()) {
+    if (action.equals("restore")) {
+      admin.restoreSnapshot(snapshotName);
+      %> Restore Snapshot request accepted. <%
+    } else if (action.equals("clone")) {
+      if (cloneName != null && cloneName.length() > 0) {
+        admin.cloneSnapshot(snapshotName, TableName.valueOf(cloneName));
+        %> Clone from Snapshot request accepted. <%
+      } else {
+        %> Clone from Snapshot request failed, No table name specified. <%
+      }
     }
   }
 %>
@@ -189,8 +192,6 @@
   <% } %>
 <%
   } // end else
-
-HConnectionManager.deleteConnection(hbadmin.getConfiguration());
 %>
 
 

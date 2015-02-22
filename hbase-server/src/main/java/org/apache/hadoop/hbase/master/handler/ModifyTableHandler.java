@@ -25,23 +25,24 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
@@ -64,8 +65,9 @@ public class ModifyTableHandler extends TableEventHandler {
     // Check operation is possible on the table in its current state
     // Also checks whether the table exists
     if (masterServices.getAssignmentManager().getTableStateManager()
-        .isTableState(this.htd.getTableName(), ZooKeeperProtos.Table.State.ENABLED)
-        && this.htd.getRegionReplication() != getTableDescriptor().getRegionReplication()) {
+        .isTableState(this.htd.getTableName(), TableState.State.ENABLED)
+        && this.htd.getRegionReplication() != getTableDescriptor()
+        .getHTableDescriptor().getRegionReplication()) {
       throw new IOException("REGION_REPLICATION change is not supported for enabled tables");
     }
   }
@@ -78,11 +80,14 @@ public class ModifyTableHandler extends TableEventHandler {
       cpHost.preModifyTableHandler(this.tableName, this.htd);
     }
     // Update descriptor
-    HTableDescriptor oldHtd = getTableDescriptor();
-    this.masterServices.getTableDescriptors().add(this.htd);
-    deleteFamilyFromFS(hris, oldHtd.getFamiliesKeys());
-    removeReplicaColumnsIfNeeded(this.htd.getRegionReplication(), oldHtd.getRegionReplication(),
-        htd.getTableName());
+    HTableDescriptor oldDescriptor =
+        this.masterServices.getTableDescriptors().get(this.tableName);
+    this.masterServices.getTableDescriptors().add(htd);
+    deleteFamilyFromFS(hris, oldDescriptor.getFamiliesKeys());
+    removeReplicaColumnsIfNeeded(
+        this.htd.getRegionReplication(),
+        oldDescriptor.getRegionReplication(),
+        this.htd.getTableName());
     if (cpHost != null) {
       cpHost.postModifyTableHandler(this.tableName, this.htd);
     }
@@ -94,19 +99,14 @@ public class ModifyTableHandler extends TableEventHandler {
     Set<byte[]> tableRows = new HashSet<byte[]>();
     Scan scan = MetaTableAccessor.getScanForTableName(table);
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    HTable htable = null;
-    try {
-      htable = new HTable(masterServices.getConfiguration(), TableName.META_TABLE_NAME);
-      ResultScanner resScanner = htable.getScanner(scan);
+    Connection connection = this.masterServices.getConnection();
+    try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
+      ResultScanner resScanner = metaTable.getScanner(scan);
       for (Result result : resScanner) {
         tableRows.add(result.getRow());
       }
       MetaTableAccessor.removeRegionReplicasFromMeta(tableRows, newReplicaCount,
-          oldReplicaCount - newReplicaCount, masterServices.getShortCircuitConnection());
-    } finally {
-      if (htable != null) {
-        htable.close();
-      }
+        oldReplicaCount - newReplicaCount, masterServices.getConnection());
     }
   }
 

@@ -19,11 +19,12 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
  * A {@link WALEntryFilter} which contains multiple filters and applies them
@@ -43,9 +44,7 @@ public class ChainWALEntryFilter implements WALEntryFilter {
     // flatten the chains
     for (WALEntryFilter filter : filters) {
       if (filter instanceof ChainWALEntryFilter) {
-        for (WALEntryFilter f : ((ChainWALEntryFilter) filter).filters) {
-          rawFilters.add(f);
-        }
+        Collections.addAll(rawFilters, ((ChainWALEntryFilter) filter).filters);
       } else {
         rawFilters.add(filter);
       }

@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.ScanInfo;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -53,7 +51,8 @@ import org.apache.zookeeper.ZooKeeper;
  * This is an example showing how a RegionObserver could configured
  * via ZooKeeper in order to control a Region compaction, flush, and scan policy.
  *
- * This also demonstrated the use of shared {@link RegionObserver} state.
+ * This also demonstrated the use of shared 
+ * {@link org.apache.hadoop.hbase.coprocessor.RegionObserver} state.
  * See {@link RegionCoprocessorEnvironment#getSharedData()}.
  *
  * This would be useful for an incremental backup tool, which would indicate the last
@@ -61,7 +60,8 @@ import org.apache.zookeeper.ZooKeeper;
  * inserted since (based on wall clock time). 
  *
  * This implements org.apache.zookeeper.Watcher directly instead of using
- * {@link ZooKeeperWatcher}, because RegionObservers come and go and currently
+ * {@link org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher}, 
+ * because RegionObservers come and go and currently
  * listeners registered with ZooKeeperWatcher cannot be removed.
  */
 public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {

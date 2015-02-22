@@ -18,8 +18,8 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Random;
 
-import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.hbase.io.hfile.RandomDistribution.DiscreteRNG;
+import org.apache.hadoop.io.BytesWritable;
 
 /*
 * <p>
@@ -37,8 +37,12 @@ class KeySampler {
   public KeySampler(Random random, byte [] first, byte [] last,
       DiscreteRNG keyLenRNG) {
     this.random = random;
-    min = keyPrefixToInt(first);
-    max = keyPrefixToInt(last);
+    int firstLen = keyPrefixToInt(first);
+    int lastLen = keyPrefixToInt(last);
+    min = Math.min(firstLen, lastLen);
+    max = Math.max(firstLen, lastLen);
+    System.out.println(min);
+    System.out.println(max);
     this.keyLenRNG = keyLenRNG;
   }
 
@@ -52,7 +56,11 @@ class KeySampler {
   public void next(BytesWritable key) {
     key.setSize(Math.max(MIN_KEY_LEN, keyLenRNG.nextInt()));
     random.nextBytes(key.get());
-    int n = random.nextInt(max - min) + min;
+    int rnd = 0;
+    if (max != min) {
+      rnd = random.nextInt(max - min);
+    }
+    int n = rnd + min;
     byte[] b = key.get();
     b[0] = (byte) (n >> 24);
     b[1] = (byte) (n >> 16);

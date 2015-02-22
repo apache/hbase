@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * 3^3 * 128M*2 =  6912M, and so on until we reach the configured
  * maximum filesize and then from there on out, we'll use that.
  */
+@InterfaceAudience.Private
 public class IncreasingToUpperBoundRegionSplitPolicy
 extends ConstantSizeRegionSplitPolicy {
   static final Log LOG =

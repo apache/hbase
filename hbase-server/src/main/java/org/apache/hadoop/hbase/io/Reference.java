@@ -23,9 +23,10 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -96,9 +97,11 @@ public class Reference {
 
   /**
    * Used by serializations.
+   * @deprecated need by pb serialization
    */
   @Deprecated
-  // Make this private when it comes time to let go of this constructor.  Needed by pb serialization.
+  // Make this private when it comes time to let go of this constructor.
+  // Needed by pb serialization.
   public Reference() {
     this(null, Range.bottom);
   }
@@ -212,5 +215,23 @@ public class Reference {
    */
   byte [] toByteArray() throws IOException {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
+  }
+
+  @Override
+  public int hashCode() {
+    return Arrays.hashCode(splitkey) + region.hashCode();
+  }
+
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null) return false;
+    if (!(o instanceof Reference)) return false;
+
+    Reference r = (Reference) o;
+    if (splitkey != null && r.splitkey == null) return false;
+    if (splitkey == null && r.splitkey != null) return false;
+    if (splitkey != null && !Arrays.equals(splitkey, r.splitkey)) return false;
+
+    return region.equals(r.region);
   }
 }

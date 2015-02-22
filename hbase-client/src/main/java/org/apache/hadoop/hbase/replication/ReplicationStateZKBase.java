@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -32,6 +33,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * This is a base class for maintaining replication state in zookeeper.
  */
+@InterfaceAudience.Private
 public abstract class ReplicationStateZKBase {
 
   /**

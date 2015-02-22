@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Comparator;
@@ -27,10 +28,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.primitives.Ints;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -38,24 +40,22 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableInfoMissingException;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.Ints;
-
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the
  * passed filesystem.  It expects descriptors to be in a file in the
  * {@link #TABLEINFO_DIR} subdir of the table's directory in FS.  Can be read-only
  *  -- i.e. does not modify the filesystem or can be read and write.
- * 
+ *
  * <p>Also has utility for keeping up the table descriptors tableinfo file.
  * The table schema file is kept in the {@link #TABLEINFO_DIR} subdir
  * of the table directory in the filesystem.
@@ -74,6 +74,9 @@ public class FSTableDescriptors implements TableDescriptors {
   private final FileSystem fs;
   private final Path rootdir;
   private final boolean fsreadonly;
+  private volatile boolean usecache;
+  private volatile boolean fsvisited;
+
   @VisibleForTesting long cachehits = 0;
   @VisibleForTesting long invocations = 0;
 
@@ -85,29 +88,13 @@ public class FSTableDescriptors implements TableDescriptors {
   // This cache does not age out the old stuff.  Thinking is that the amount
   // of data we keep up in here is so small, no need to do occasional purge.
   // TODO.
-  private final Map<TableName, TableDescriptorAndModtime> cache =
-    new ConcurrentHashMap<TableName, TableDescriptorAndModtime>();
+  private final Map<TableName, TableDescriptor> cache =
+    new ConcurrentHashMap<TableName, TableDescriptor>();
 
   /**
-   * Data structure to hold modification time and table descriptor.
+   * Table descriptor for <code>hbase:meta</code> catalog table
    */
-  private static class TableDescriptorAndModtime {
-    private final HTableDescriptor htd;
-    private final long modtime;
-
-    TableDescriptorAndModtime(final long modtime, final HTableDescriptor htd) {
-      this.htd = htd;
-      this.modtime = modtime;
-    }
-
-    long getModtime() {
-      return this.modtime;
-    }
-
-    HTableDescriptor getTableDescriptor() {
-      return this.htd;
-    }
-  }
+  private final HTableDescriptor metaTableDescritor;
 
   /**
    * Construct a FSTableDescriptors instance using the hbase root dir of the given
@@ -115,38 +102,58 @@ public class FSTableDescriptors implements TableDescriptors {
    * This instance can do write operations (is not read only).
    */
   public FSTableDescriptors(final Configuration conf) throws IOException {
-    this(FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
+    this(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
   }
-  
-  public FSTableDescriptors(final FileSystem fs, final Path rootdir) {
-    this(fs, rootdir, false);
+
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs, final Path rootdir)
+  throws IOException {
+    this(conf, fs, rootdir, false, true);
   }
 
   /**
    * @param fsreadonly True if we are read-only when it comes to filesystem
    * operations; i.e. on remove, we do not do delete in fs.
    */
-  public FSTableDescriptors(final FileSystem fs,
-      final Path rootdir, final boolean fsreadonly) {
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs,
+    final Path rootdir, final boolean fsreadonly, final boolean usecache) throws IOException {
     super();
     this.fs = fs;
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
+    this.usecache = usecache;
+
+    this.metaTableDescritor = TableDescriptor.metaTableDescriptor(conf);
+  }
+
+  public void setCacheOn() throws IOException {
+    this.cache.clear();
+    this.usecache = true;
+  }
+
+  public void setCacheOff() throws IOException {
+    this.usecache = false;
+    this.cache.clear();
+  }
+
+  @VisibleForTesting
+  public boolean isUsecache() {
+    return this.usecache;
   }
 
   /**
    * Get the current table descriptor for the given table, or null if none exists.
-   * 
+   *
    * Uses a local cache of the descriptor but still checks the filesystem on each call
    * to see if a newer file has been created since the cached one was read.
    */
   @Override
-  public HTableDescriptor get(final TableName tablename)
+  @Nullable
+  public TableDescriptor getDescriptor(final TableName tablename)
   throws IOException {
     invocations++;
-    if (HTableDescriptor.META_TABLEDESC.getTableName().equals(tablename)) {
+    if (TableName.META_TABLE_NAME.equals(tablename)) {
       cachehits++;
-      return HTableDescriptor.META_TABLEDESC;
+      return new TableDescriptor(metaTableDescritor);
     }
     // hbase:meta is already handled. If some one tries to get the descriptor for
     // .logs, .oldlogs or .corrupt throw an exception.
@@ -154,20 +161,17 @@ public class FSTableDescriptors implements TableDescriptors {
        throw new IOException("No descriptor found for non table = " + tablename);
     }
 
-    // Look in cache of descriptors.
-    TableDescriptorAndModtime cachedtdm = this.cache.get(tablename);
-
-    if (cachedtdm != null) {
-      // Check mod time has not changed (this is trip to NN).
-      if (getTableInfoModtime(tablename) <= cachedtdm.getModtime()) {
+    if (usecache) {
+      // Look in cache of descriptors.
+      TableDescriptor cachedtdm = this.cache.get(tablename);
+      if (cachedtdm != null) {
         cachehits++;
-        return cachedtdm.getTableDescriptor();
+        return cachedtdm;
       }
     }
-    
-    TableDescriptorAndModtime tdmt = null;
+    TableDescriptor tdmt = null;
     try {
-      tdmt = getTableDescriptorAndModtime(tablename);
+      tdmt = getTableDescriptorFromFs(fs, rootdir, tablename, !fsreadonly);
     } catch (NullPointerException e) {
       LOG.debug("Exception during readTableDecriptor. Current table name = "
           + tablename, e);
@@ -175,38 +179,86 @@ public class FSTableDescriptors implements TableDescriptors {
       LOG.debug("Exception during readTableDecriptor. Current table name = "
           + tablename, ioe);
     }
-    
-    if (tdmt != null) {
+    // last HTD written wins
+    if (usecache && tdmt != null) {
       this.cache.put(tablename, tdmt);
     }
-    return tdmt == null ? null : tdmt.getTableDescriptor();
+
+    return tdmt;
+  }
+
+  /**
+   * Get the current table descriptor for the given table, or null if none exists.
+   *
+   * Uses a local cache of the descriptor but still checks the filesystem on each call
+   * to see if a newer file has been created since the cached one was read.
+   */
+  @Override
+  public HTableDescriptor get(TableName tableName) throws IOException {
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      cachehits++;
+      return metaTableDescritor;
+    }
+    TableDescriptor descriptor = getDescriptor(tableName);
+    return descriptor == null ? null : descriptor.getHTableDescriptor();
   }
 
   /**
    * Returns a map from table name to table descriptor for all tables.
    */
   @Override
-  public Map<String, HTableDescriptor> getAll()
+  public Map<String, TableDescriptor> getAllDescriptors()
   throws IOException {
-    Map<String, HTableDescriptor> htds = new TreeMap<String, HTableDescriptor>();
-    List<Path> tableDirs = FSUtils.getTableDirs(fs, rootdir);
-    for (Path d: tableDirs) {
-      HTableDescriptor htd = null;
-      try {
-        htd = get(FSUtils.getTableName(d));
-      } catch (FileNotFoundException fnfe) {
-        // inability of retrieving one HTD shouldn't stop getting the remaining
-        LOG.warn("Trouble retrieving htd", fnfe);
+    Map<String, TableDescriptor> tds = new TreeMap<String, TableDescriptor>();
+
+    if (fsvisited && usecache) {
+      for (Map.Entry<TableName, TableDescriptor> entry: this.cache.entrySet()) {
+        tds.put(entry.getKey().toString(), entry.getValue());
       }
-      if (htd == null) continue;
-      htds.put(htd.getTableName().getNameAsString(), htd);
+      // add hbase:meta to the response
+      tds.put(this.metaTableDescritor.getNameAsString(),
+          new TableDescriptor(metaTableDescritor));
+    } else {
+      LOG.debug("Fetching table descriptors from the filesystem.");
+      boolean allvisited = true;
+      for (Path d : FSUtils.getTableDirs(fs, rootdir)) {
+        TableDescriptor htd = null;
+        try {
+          htd = getDescriptor(FSUtils.getTableName(d));
+        } catch (FileNotFoundException fnfe) {
+          // inability of retrieving one HTD shouldn't stop getting the remaining
+          LOG.warn("Trouble retrieving htd", fnfe);
+        }
+        if (htd == null) {
+          allvisited = false;
+          continue;
+        } else {
+          tds.put(htd.getHTableDescriptor().getTableName().getNameAsString(), htd);
+        }
+        fsvisited = allvisited;
+      }
+    }
+    return tds;
+  }
+
+  /**
+   * Returns a map from table name to table descriptor for all tables.
+   */
+  @Override
+  public Map<String, HTableDescriptor> getAll() throws IOException {
+    Map<String, HTableDescriptor> htds = new TreeMap<String, HTableDescriptor>();
+    Map<String, TableDescriptor> allDescriptors = getAllDescriptors();
+    for (Map.Entry<String, TableDescriptor> entry : allDescriptors
+        .entrySet()) {
+      htds.put(entry.getKey(), entry.getValue().getHTableDescriptor());
     }
     return htds;
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hbase.TableDescriptors#getTableDescriptors(org.apache.hadoop.fs.FileSystem, org.apache.hadoop.fs.Path)
-   */
+  /**
+    * Find descriptors by namespace.
+    * @see #get(org.apache.hadoop.hbase.TableName)
+    */
   @Override
   public Map<String, HTableDescriptor> getByNamespace(String name)
   throws IOException {
@@ -232,20 +284,46 @@ public class FSTableDescriptors implements TableDescriptors {
    * and updates the local cache with it.
    */
   @Override
+  public void add(TableDescriptor htd) throws IOException {
+    if (fsreadonly) {
+      throw new NotImplementedException("Cannot add a table descriptor - in read only mode");
+    }
+    TableName tableName = htd.getHTableDescriptor().getTableName();
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      throw new NotImplementedException();
+    }
+    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tableName.getNameAsString())) {
+      throw new NotImplementedException(
+        "Cannot add a table descriptor for a reserved subdirectory name: "
+            + htd.getHTableDescriptor().getNameAsString());
+    }
+    updateTableDescriptor(htd);
+  }
+
+  /**
+   * Adds (or updates) the table descriptor to the FileSystem
+   * and updates the local cache with it.
+   */
+  @Override
   public void add(HTableDescriptor htd) throws IOException {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot add a table descriptor - in read only mode");
     }
-    if (TableName.META_TABLE_NAME.equals(htd.getTableName())) {
+    TableName tableName = htd.getTableName();
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
       throw new NotImplementedException();
     }
-    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(htd.getTableName().getNameAsString())) {
+    if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(tableName.getNameAsString())) {
       throw new NotImplementedException(
-        "Cannot add a table descriptor for a reserved subdirectory name: " + htd.getNameAsString());
+          "Cannot add a table descriptor for a reserved subdirectory name: "
+              + htd.getNameAsString());
     }
-    updateTableDescriptor(htd);
-    long modtime = getTableInfoModtime(htd.getTableName());
-    this.cache.put(htd.getTableName(), new TableDescriptorAndModtime(modtime, htd));
+    TableDescriptor descriptor = getDescriptor(htd.getTableName());
+    if (descriptor == null)
+      descriptor = new TableDescriptor(htd);
+    else
+      descriptor.setHTableDescriptor(htd);
+    updateTableDescriptor(descriptor);
   }
 
   /**
@@ -265,13 +343,17 @@ public class FSTableDescriptors implements TableDescriptors {
         throw new IOException("Failed delete of " + tabledir.toString());
       }
     }
-    TableDescriptorAndModtime tdm = this.cache.remove(tablename);
-    return tdm == null ? null : tdm.getTableDescriptor();
+    TableDescriptor descriptor = this.cache.remove(tablename);
+    if (descriptor == null) {
+      return null;
+    } else {
+      return descriptor.getHTableDescriptor();
+    }
   }
 
   /**
    * Checks if a current table info file exists for the given table
-   * 
+   *
    * @param tableName name of table
    * @return true if exists
    * @throws IOException
@@ -279,7 +361,7 @@ public class FSTableDescriptors implements TableDescriptors {
   public boolean isTableInfoExists(TableName tableName) throws IOException {
     return getTableInfoPath(tableName) != null;
   }
-  
+
   /**
    * Find the most current table info file for the given table in the hbase root directory.
    * @return The file status of the current table info file or null if it does not exist
@@ -293,15 +375,15 @@ public class FSTableDescriptors implements TableDescriptors {
   throws IOException {
     return getTableInfoPath(fs, tableDir, !fsreadonly);
   }
-  
+
   /**
    * Find the most current table info file for the table located in the given table directory.
-   * 
+   *
    * Looks within the {@link #TABLEINFO_DIR} subdirectory of the given directory for any table info
    * files and takes the 'current' one - meaning the one with the highest sequence number if present
    * or no sequence number at all if none exist (for backward compatibility from before there
    * were sequence numbers).
-   * 
+   *
    * @return The file status of the current table info file or null if it does not exist
    * @throws IOException
    */
@@ -309,17 +391,17 @@ public class FSTableDescriptors implements TableDescriptors {
   throws IOException {
     return getTableInfoPath(fs, tableDir, false);
   }
-  
+
   /**
    * Find the most current table info file for the table in the given table directory.
-   * 
+   *
    * Looks within the {@link #TABLEINFO_DIR} subdirectory of the given directory for any table info
    * files and takes the 'current' one - meaning the one with the highest sequence number if
    * present or no sequence number at all if none exist (for backward compatibility from before
    * there were sequence numbers).
    * If there are multiple table info files found and removeOldFiles is true it also deletes the
    * older files.
-   * 
+   *
    * @return The file status of the current table info file or null if none exist
    * @throws IOException
    */
@@ -328,17 +410,17 @@ public class FSTableDescriptors implements TableDescriptors {
     Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
     return getCurrentTableInfoStatus(fs, tableInfoDir, removeOldFiles);
   }
-  
+
   /**
    * Find the most current table info file in the given directory
-   * 
+   *
    * Looks within the given directory for any table info files
    * and takes the 'current' one - meaning the one with the highest sequence number if present
    * or no sequence number at all if none exist (for backward compatibility from before there
    * were sequence numbers).
    * If there are multiple possible files found
    * and the we're not in read only mode it also deletes the older files.
-   * 
+   *
    * @return The file status of the current table info file or null if it does not exist
    * @throws IOException
    */
@@ -368,7 +450,7 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     return mostCurrent;
   }
-  
+
   /**
    * Compare {@link FileStatus} instances by {@link Path#getName()}. Returns in
    * reverse order.
@@ -393,7 +475,7 @@ public class FSTableDescriptors implements TableDescriptors {
     public boolean accept(Path p) {
       // Accept any file that starts with TABLEINFO_NAME
       return p.getName().startsWith(TABLEINFO_FILE_PREFIX);
-    }}; 
+    }};
 
   /**
    * Width of the sequenceid that is a suffix on a tableinfo file.
@@ -437,7 +519,6 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   /**
-   * @param tabledir
    * @param sequenceid
    * @return Name of tableinfo file.
    */
@@ -446,16 +527,14 @@ public class FSTableDescriptors implements TableDescriptors {
   }
 
   /**
-   * @param fs
-   * @param rootdir
-   * @param tableName
-   * @return Modification time for the table {@link #TABLEINFO_FILE_PREFIX} file
-   * or <code>0</code> if no tableinfo file found.
-   * @throws IOException
+   * Returns the latest table descriptor for the given table directly from the file system
+   * if it exists, bypassing the local cache.
+   * Returns null if it's not found.
    */
-  private long getTableInfoModtime(final TableName tableName) throws IOException {
-    FileStatus status = getTableInfoPath(tableName);
-    return status == null ? 0 : status.getModificationTime();
+  public static TableDescriptor getTableDescriptorFromFs(FileSystem fs,
+      Path hbaseRootDir, TableName tableName) throws IOException {
+    Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    return getTableDescriptorFromFs(fs, tableDir);
   }
 
   /**
@@ -463,10 +542,19 @@ public class FSTableDescriptors implements TableDescriptors {
    * if it exists, bypassing the local cache.
    * Returns null if it's not found.
    */
-  public static HTableDescriptor getTableDescriptorFromFs(FileSystem fs,
-      Path hbaseRootDir, TableName tableName) throws IOException {
+  public static TableDescriptor getTableDescriptorFromFs(FileSystem fs,
+   Path hbaseRootDir, TableName tableName, boolean rewritePb) throws IOException {
     Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
-    return getTableDescriptorFromFs(fs, tableDir);
+    return getTableDescriptorFromFs(fs, tableDir, rewritePb);
+  }
+  /**
+   * Returns the latest table descriptor for the table located at the given directory
+   * directly from the file system if it exists.
+   * @throws TableInfoMissingException if there is no descriptor
+   */
+  public static TableDescriptor getTableDescriptorFromFs(FileSystem fs, Path tableDir)
+    throws IOException {
+    return getTableDescriptorFromFs(fs, tableDir, false);
   }
 
   /**
@@ -474,46 +562,17 @@ public class FSTableDescriptors implements TableDescriptors {
    * directly from the file system if it exists.
    * @throws TableInfoMissingException if there is no descriptor
    */
-  public static HTableDescriptor getTableDescriptorFromFs(FileSystem fs, Path tableDir)
+  public static TableDescriptor getTableDescriptorFromFs(FileSystem fs, Path tableDir,
+    boolean rewritePb)
   throws IOException {
     FileStatus status = getTableInfoPath(fs, tableDir, false);
     if (status == null) {
       throw new TableInfoMissingException("No table descriptor file under " + tableDir);
     }
-    return readTableDescriptor(fs, status, false);
-  }
-  
-  /**
-   * @param tableName table name
-   * @return TableDescriptorAndModtime or null if no table descriptor was found
-   * @throws IOException
-   */
-  private TableDescriptorAndModtime getTableDescriptorAndModtime(TableName tableName)
-  throws IOException {
-    // ignore both -ROOT- and hbase:meta tables
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return null;
-    }
-    return getTableDescriptorAndModtime(getTableDir(tableName));
+    return readTableDescriptor(fs, status, rewritePb);
   }
 
-  /**
-   * @param tableDir path to table directory
-   * @return TableDescriptorAndModtime or null if no table descriptor was found
-   * at the specified path
-   * @throws IOException
-   */
-  private TableDescriptorAndModtime getTableDescriptorAndModtime(Path tableDir)
-  throws IOException {
-    FileStatus status = getTableInfoPath(tableDir);
-    if (status == null) {
-      return null;
-    }
-    HTableDescriptor htd = readTableDescriptor(fs, status, !fsreadonly);
-    return new TableDescriptorAndModtime(status.getModificationTime(), htd);
-  }
-
-  private static HTableDescriptor readTableDescriptor(FileSystem fs, FileStatus status,
+  private static TableDescriptor readTableDescriptor(FileSystem fs, FileStatus status,
       boolean rewritePb) throws IOException {
     int len = Ints.checkedCast(status.getLen());
     byte [] content = new byte[len];
@@ -523,35 +582,54 @@ public class FSTableDescriptors implements TableDescriptors {
     } finally {
       fsDataInputStream.close();
     }
-    HTableDescriptor htd = null;
+    TableDescriptor td = null;
     try {
-      htd = HTableDescriptor.parseFrom(content);
+      td = TableDescriptor.parseFrom(content);
     } catch (DeserializationException e) {
-      throw new IOException("content=" + Bytes.toShort(content), e);
+      // we have old HTableDescriptor here
+      try {
+        HTableDescriptor htd = HTableDescriptor.parseFrom(content);
+        LOG.warn("Found old table descriptor, converting to new format for table " +
+            htd.getTableName() + "; NOTE table will be in ENABLED state!");
+        td = new TableDescriptor(htd);
+        if (rewritePb) rewriteTableDescriptor(fs, status, td);
+      } catch (DeserializationException e1) {
+        throw new IOException("content=" + Bytes.toShort(content), e);
+      }
     }
     if (rewritePb && !ProtobufUtil.isPBMagicPrefix(content)) {
       // Convert the file over to be pb before leaving here.
-      Path tableInfoDir = status.getPath().getParent();
-      Path tableDir = tableInfoDir.getParent();
-      writeTableDescriptor(fs, htd, tableDir, status);
+      rewriteTableDescriptor(fs, status, td);
     }
-    return htd;
+    return td;
   }
- 
+
+  private static void rewriteTableDescriptor(final FileSystem fs, final FileStatus status,
+      final TableDescriptor td)
+  throws IOException {
+    Path tableInfoDir = status.getPath().getParent();
+    Path tableDir = tableInfoDir.getParent();
+    writeTableDescriptor(fs, td, tableDir, status);
+  }
+
   /**
    * Update table descriptor on the file system
    * @throws IOException Thrown if failed update.
    * @throws NotImplementedException if in read only mode
    */
-  @VisibleForTesting Path updateTableDescriptor(HTableDescriptor htd)
+  @VisibleForTesting Path updateTableDescriptor(TableDescriptor td)
   throws IOException {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot update a table descriptor - in read only mode");
     }
-    Path tableDir = getTableDir(htd.getTableName());
-    Path p = writeTableDescriptor(fs, htd, tableDir, getTableInfoPath(tableDir));
+    TableName tableName = td.getHTableDescriptor().getTableName();
+    Path tableDir = getTableDir(tableName);
+    Path p = writeTableDescriptor(fs, td, tableDir, getTableInfoPath(tableDir));
     if (p == null) throw new IOException("Failed update");
     LOG.info("Updated tableinfo=" + p);
+    if (usecache) {
+      this.cache.put(td.getHTableDescriptor().getTableName(), td);
+    }
     return p;
   }
 
@@ -564,14 +642,14 @@ public class FSTableDescriptors implements TableDescriptors {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot delete a table descriptor - in read only mode");
     }
-   
+
     Path tableDir = getTableDir(tableName);
     Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
     deleteTableDescriptorFiles(fs, tableInfoDir, Integer.MAX_VALUE);
   }
 
   /**
-   * Deletes files matching the table info file pattern within the given directory 
+   * Deletes files matching the table info file pattern within the given directory
    * whose sequenceId is at most the given max sequenceId.
    */
   private static void deleteTableDescriptorFiles(FileSystem fs, Path dir, int maxSequenceId)
@@ -590,25 +668,25 @@ public class FSTableDescriptors implements TableDescriptors {
       }
     }
   }
-  
+
   /**
    * Attempts to write a new table descriptor to the given table's directory.
    * It first writes it to the .tmp dir then uses an atomic rename to move it into place.
    * It begins at the currentSequenceId + 1 and tries 10 times to find a new sequence number
    * not already in use.
    * Removes the current descriptor file if passed in.
-   * 
+   *
    * @return Descriptor file or null if we failed write.
    */
-  private static Path writeTableDescriptor(final FileSystem fs, 
-    final HTableDescriptor htd, final Path tableDir,
+  private static Path writeTableDescriptor(final FileSystem fs,
+    final TableDescriptor htd, final Path tableDir,
     final FileStatus currentDescriptorFile)
-  throws IOException {  
+  throws IOException {
     // Get temporary dir into which we'll first write a file to avoid half-written file phenomenon.
     // This directory is never removed to avoid removing it out from under a concurrent writer.
     Path tmpTableDir = new Path(tableDir, TMP_DIR);
     Path tableInfoDir = new Path(tableDir, TABLEINFO_DIR);
-    
+
     // What is current sequenceid?  We read the current sequenceid from
     // the current file.  After we read it, another thread could come in and
     // compete with us writing out next version of file.  The below retries
@@ -617,7 +695,7 @@ public class FSTableDescriptors implements TableDescriptors {
     int currentSequenceId = currentDescriptorFile == null ? 0 :
       getTableInfoSequenceId(currentDescriptorFile.getPath());
     int newSequenceId = currentSequenceId;
-    
+
     // Put arbitrary upperbound on how often we retry
     int retries = 10;
     int retrymax = currentSequenceId + retries;
@@ -632,7 +710,7 @@ public class FSTableDescriptors implements TableDescriptors {
       }
       tableInfoDirPath = new Path(tableInfoDir, filename);
       try {
-        writeHTD(fs, tempPath, htd);
+        writeTD(fs, tempPath, htd);
         fs.mkdirs(tableInfoDirPath.getParent());
         if (!fs.rename(tempPath, tableInfoDirPath)) {
           throw new IOException("Failed rename of " + tempPath + " to " + tableInfoDirPath);
@@ -655,8 +733,8 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     return tableInfoDirPath;
   }
-  
-  private static void writeHTD(final FileSystem fs, final Path p, final HTableDescriptor htd)
+
+  private static void writeTD(final FileSystem fs, final Path p, final TableDescriptor htd)
   throws IOException {
     FSDataOutputStream out = fs.create(p, false);
     try {
@@ -673,23 +751,41 @@ public class FSTableDescriptors implements TableDescriptors {
    * Used by tests.
    * @return True if we successfully created file.
    */
-  public boolean createTableDescriptor(HTableDescriptor htd) throws IOException {
+  public boolean createTableDescriptor(TableDescriptor htd) throws IOException {
     return createTableDescriptor(htd, false);
+  }
+
+  /**
+   * Create new HTableDescriptor in HDFS. Happens when we are creating table.
+   * Used by tests.
+   * @return True if we successfully created file.
+   */
+  public boolean createTableDescriptor(HTableDescriptor htd) throws IOException {
+    return createTableDescriptor(new TableDescriptor(htd), false);
   }
 
   /**
    * Create new HTableDescriptor in HDFS. Happens when we are creating table. If
    * forceCreation is true then even if previous table descriptor is present it
    * will be overwritten
-   * 
+   *
    * @return True if we successfully created file.
    */
-  public boolean createTableDescriptor(HTableDescriptor htd, boolean forceCreation)
+  public boolean createTableDescriptor(TableDescriptor htd, boolean forceCreation)
   throws IOException {
-    Path tableDir = getTableDir(htd.getTableName());
+    Path tableDir = getTableDir(htd.getHTableDescriptor().getTableName());
     return createTableDescriptorForTableDirectory(tableDir, htd, forceCreation);
   }
-  
+
+  /**
+   * Create tables descriptor for given HTableDescriptor. Default TableDescriptor state
+   * will be used (typically ENABLED).
+   */
+  public boolean createTableDescriptor(HTableDescriptor htd, boolean forceCreation)
+      throws IOException {
+    return createTableDescriptor(new TableDescriptor(htd), forceCreation);
+  }
+
   /**
    * Create a new HTableDescriptor in HDFS in the specified table directory. Happens when we create
    * a new table or snapshot a table.
@@ -702,7 +798,7 @@ public class FSTableDescriptors implements TableDescriptors {
    * @throws IOException if a filesystem error occurs
    */
   public boolean createTableDescriptorForTableDirectory(Path tableDir,
-      HTableDescriptor htd, boolean forceCreation) throws IOException {
+      TableDescriptor htd, boolean forceCreation) throws IOException {
     if (fsreadonly) {
       throw new NotImplementedException("Cannot create a table descriptor - in read only mode");
     }
@@ -721,6 +817,6 @@ public class FSTableDescriptors implements TableDescriptors {
     Path p = writeTableDescriptor(fs, htd, tableDir, status);
     return p != null;
   }
-  
+
 }
 

@@ -23,13 +23,15 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.NavigableSet;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -41,10 +43,11 @@ import org.apache.hadoop.hbase.ZKNamespaceManager;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -67,12 +70,14 @@ public class TableNamespaceManager {
 
   private Configuration conf;
   private MasterServices masterServices;
-  private HTable nsTable;
+  private Table nsTable;
   private ZKNamespaceManager zkNamespaceManager;
   private boolean initialized;
 
+  public static final String KEY_MAX_REGIONS = "hbase.namespace.quota.maxregions";
+  public static final String KEY_MAX_TABLES = "hbase.namespace.quota.maxtables";
   static final String NS_INIT_TIMEOUT = "hbase.master.namespace.init.timeout";
-  static final int DEFAULT_NS_INIT_TIMEOUT = 60000;
+  static final int DEFAULT_NS_INIT_TIMEOUT = 300000;
 
   public TableNamespaceManager(MasterServices masterServices) {
     this.masterServices = masterServices;
@@ -80,8 +85,8 @@ public class TableNamespaceManager {
   }
 
   public void start() throws IOException {
-    if (!MetaTableAccessor.tableExists(masterServices.getShortCircuitConnection(),
-      TableName.NAMESPACE_TABLE_NAME)) {
+    if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
+        TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }
@@ -92,10 +97,11 @@ public class TableNamespaceManager {
       // So that it should be initialized later on lazily.
       long startTime = EnvironmentEdgeManager.currentTime();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
-      while (!isTableAssigned()) {
+      while (!(isTableAssigned() && isTableEnabled())) {
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
-          LOG.warn("Timedout waiting for namespace table to be assigned.");
-          return;
+          // We can't do anything if ns is not online.
+          throw new IOException("Timedout " + timeout + "ms waiting for namespace table to " +
+            "be assigned and enabled: " + getTableState());
         }
         Thread.sleep(100);
       }
@@ -107,7 +113,7 @@ public class TableNamespaceManager {
     isTableAvailableAndInitialized();
   }
 
-  private synchronized HTable getNamespaceTable() throws IOException {
+  private synchronized Table getNamespaceTable() throws IOException {
     if (!isTableAvailableAndInitialized()) {
       throw new IOException(this.getClass().getName() + " isn't ready to serve");
     }
@@ -125,14 +131,14 @@ public class TableNamespaceManager {
   }
 
   public synchronized void update(NamespaceDescriptor ns) throws IOException {
-    HTable table = getNamespaceTable();
+    Table table = getNamespaceTable();
     if (get(table, ns.getName()) == null) {
       throw new NamespaceNotFoundException(ns.getName());
     }
     upsert(table, ns);
   }
 
-  private NamespaceDescriptor get(HTable table, String name) throws IOException {
+  private NamespaceDescriptor get(Table table, String name) throws IOException {
     Result res = table.get(new Get(Bytes.toBytes(name)));
     if (res.isEmpty()) {
       return null;
@@ -144,17 +150,22 @@ public class TableNamespaceManager {
             HBaseProtos.NamespaceDescriptor.parseFrom(val));
   }
 
-  private void create(HTable table, NamespaceDescriptor ns) throws IOException {
+  private void create(Table table, NamespaceDescriptor ns) throws IOException {
     if (get(table, ns.getName()) != null) {
       throw new NamespaceExistException(ns.getName());
     }
+    validateTableAndRegionCount(ns);
     FileSystem fs = masterServices.getMasterFileSystem().getFileSystem();
     fs.mkdirs(FSUtils.getNamespaceDir(
         masterServices.getMasterFileSystem().getRootDir(), ns.getName()));
     upsert(table, ns);
+    if (this.masterServices.isInitialized()) {
+      this.masterServices.getMasterQuotaManager().setNamespaceQuota(ns);
+    }
   }
 
-  private void upsert(HTable table, NamespaceDescriptor ns) throws IOException {
+  private void upsert(Table table, NamespaceDescriptor ns) throws IOException {
+    validateTableAndRegionCount(ns);
     Put p = new Put(Bytes.toBytes(ns.getName()));
     p.addImmutable(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
         HTableDescriptor.NAMESPACE_COL_DESC_BYTES,
@@ -203,6 +214,7 @@ public class TableNamespaceManager {
         masterServices.getMasterFileSystem().getRootDir(), name), true)) {
       throw new IOException("Failed to remove namespace: "+name);
     }
+    this.masterServices.getMasterQuotaManager().removeNamespaceQuota(name);
   }
 
   public synchronized NavigableSet<NamespaceDescriptor> list() throws IOException {
@@ -250,16 +262,14 @@ public class TableNamespaceManager {
   public synchronized boolean isTableAvailableAndInitialized() throws IOException {
     // Did we already get a table? If so, still make sure it's available
     if (initialized) {
-      if (nsTable.getConnection().isClosed()) {
-        nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
-      }
+      this.nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
       return true;
     }
 
     // Now check if the table is assigned, if not then fail fast
-    if (isTableAssigned()) {
+    if (isTableAssigned() && isTableEnabled()) {
       try {
-        nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
+        nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
         zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
         zkNamespaceManager.start();
 
@@ -273,7 +283,7 @@ public class TableNamespaceManager {
         ResultScanner scanner = nsTable.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
         try {
           for (Result result : scanner) {
-            byte[] val =  CellUtil.cloneValue(result.getColumnLatest(
+            byte[] val =  CellUtil.cloneValue(result.getColumnLatestCell(
                 HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
                 HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
             NamespaceDescriptor ns =
@@ -297,8 +307,59 @@ public class TableNamespaceManager {
     return false;
   }
 
+  private TableState.State getTableState() throws IOException {
+    return masterServices.getTableStateManager().getTableState(TableName.NAMESPACE_TABLE_NAME);
+  }
+
+  private boolean isTableEnabled() throws IOException {
+    return getTableState().equals(TableState.State.ENABLED);
+  }
+
   private boolean isTableAssigned() {
     return !masterServices.getAssignmentManager()
         .getRegionStates().getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME).isEmpty();
+  }
+
+  void validateTableAndRegionCount(NamespaceDescriptor desc) throws IOException {
+    if (getMaxRegions(desc) <= 0) {
+      throw new ConstraintException("The max region quota for " + desc.getName()
+          + " is less than or equal to zero.");
+    }
+    if (getMaxTables(desc) <= 0) {
+      throw new ConstraintException("The max tables quota for " + desc.getName()
+          + " is less than or equal to zero.");
+    }
+  }
+
+  public static long getMaxTables(NamespaceDescriptor ns) throws IOException {
+    String value = ns.getConfigurationValue(KEY_MAX_TABLES);
+    long maxTables = 0;
+    if (StringUtils.isNotEmpty(value)) {
+      try {
+        maxTables = Long.parseLong(value);
+      } catch (NumberFormatException exp) {
+        throw new DoNotRetryIOException("NumberFormatException while getting max tables.", exp);
+      }
+    } else {
+      // The property is not set, so assume its the max long value.
+      maxTables = Long.MAX_VALUE;
+    }
+    return maxTables;
+  }
+
+  public static long getMaxRegions(NamespaceDescriptor ns) throws IOException {
+    String value = ns.getConfigurationValue(KEY_MAX_REGIONS);
+    long maxRegions = 0;
+    if (StringUtils.isNotEmpty(value)) {
+      try {
+        maxRegions = Long.parseLong(value);
+      } catch (NumberFormatException exp) {
+        throw new DoNotRetryIOException("NumberFormatException while getting max regions.", exp);
+      }
+    } else {
+      // The property is not set, so assume its the max long value.
+      maxRegions = Long.MAX_VALUE;
+    }
+    return maxRegions;
   }
 }

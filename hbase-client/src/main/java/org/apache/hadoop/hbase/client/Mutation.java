@@ -28,16 +28,15 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -50,7 +49,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
@@ -77,6 +75,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * The attribute for storing the list of clusters that have consumed the change.
    */
   private static final String CONSUMED_CLUSTER_IDS = "_cs.id";
+
+  /**
+   * The attribute for storing TTL for the result of the mutation.
+   */
+  private static final String OP_ATTRIBUTE_TTL = "_ttl";
 
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
@@ -189,16 +192,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       }
       // add details for each cell
       for (Cell cell: entry.getValue()) {
-        if (--maxCols <= 0 ) {
+        if (--maxCols <= 0) {
           continue;
         }
-        // KeyValue v1 expectation.  Cast for now until we go all Cell all the time.
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        Map<String, Object> kvMap = kv.toStringMap();
-        // row and family information are already available in the bigger map
-        kvMap.remove("row");
-        kvMap.remove("family");
-        qualifierDetails.add(kvMap);
+        Map<String, Object> cellMap = cellToStringMap(cell);
+        qualifierDetails.add(cellMap);
       }
     }
     map.put("totalColumns", colCount);
@@ -206,36 +204,39 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     if (getId() != null) {
       map.put("id", getId());
     }
+    // Add the TTL if set
+    // Long.MAX_VALUE is the default, and is interpreted to mean this attribute
+    // has not been set.
+    if (getTTL() != Long.MAX_VALUE) {
+      map.put("ttl", getTTL());
+    }
     return map;
   }
 
-  /**
-   * @deprecated Use {@link #getDurability()} instead.
-   * @return true if edits should be applied to WAL, false if not
-   */
-  @Deprecated
-  public boolean getWriteToWAL() {
-    return this.durability == Durability.SKIP_WAL;
-  }
-
-  /**
-   * Set whether this Delete should be written to the WAL or not.
-   * Not writing the WAL means you may lose edits on server crash.
-   * This method will reset any changes made via {@link #setDurability(Durability)}
-   * @param write true if edits should be written to WAL, false if not
-   * @deprecated Use {@link #setDurability(Durability)} instead.
-   */
-  @Deprecated
-  public void setWriteToWAL(boolean write) {
-    setDurability(write ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
+  private static Map<String, Object> cellToStringMap(Cell c) {
+    Map<String, Object> stringMap = new HashMap<String, Object>();
+    stringMap.put("qualifier", Bytes.toStringBinary(c.getQualifierArray(), c.getQualifierOffset(),
+                c.getQualifierLength()));
+    stringMap.put("timestamp", c.getTimestamp());
+    stringMap.put("vlen", c.getValueLength());
+    List<Tag> tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+    if (tags != null) {
+      List<String> tagsString = new ArrayList<String>();
+      for (Tag t : tags) {
+        tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(t.getValue()));
+      }
+      stringMap.put("tag", tagsString);
+    }
+    return stringMap;
   }
 
   /**
    * Set the durability for this mutation
    * @param d
    */
-  public void setDurability(Durability d) {
+  public Mutation setDurability(Durability d) {
     this.durability = d;
+    return this;
   }
 
   /** Get the current durability */
@@ -254,42 +255,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   /**
    * Method for setting the put's familyMap
    */
-  public void setFamilyCellMap(NavigableMap<byte [], List<Cell>> map) {
+  public Mutation setFamilyCellMap(NavigableMap<byte [], List<Cell>> map) {
     // TODO: Shut this down or move it up to be a Constructor.  Get new object rather than change
     // this internal data member.
     this.familyMap = map;
-  }
-
-  /**
-   * Method for retrieving the put's familyMap that is deprecated and inefficient.
-   * @return the map
-   * @deprecated use {@link #getFamilyCellMap()} instead.
-   */
-  @Deprecated
-  public NavigableMap<byte [], List<KeyValue>> getFamilyMap() {
-    TreeMap<byte[], List<KeyValue>> fm =
-        new TreeMap<byte[], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
-      List<KeyValue> kvl = new ArrayList<KeyValue>(e.getValue().size());
-      for (Cell c : e.getValue()) {
-        kvl.add(KeyValueUtil.ensureKeyValue(c));
-      }
-      fm.put(e.getKey(), kvl);
-    }
-    return fm;
-  }
-
-  /**
-   * Method for setting the put's familyMap that is deprecated and inefficient.
-   * @deprecated use {@link #setFamilyCellMap(NavigableMap)} instead.
-   */
-  @Deprecated
-  public void setFamilyMap(NavigableMap<byte [], List<KeyValue>> map) {
-    TreeMap<byte[], List<Cell>> fm = new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte[], List<KeyValue>> e : map.entrySet()) {
-      fm.put(e.getKey(), Lists.<Cell>newArrayList(e.getValue()));
-    }
-    this.familyMap = fm;
+    return this;
   }
 
   /**
@@ -326,7 +296,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * Marks that the clusters with the given clusterIds have consumed the mutation
    * @param clusterIds of the clusters that have consumed the mutation
    */
-  public void setClusterIds(List<UUID> clusterIds) {
+  public Mutation setClusterIds(List<UUID> clusterIds) {
     ByteArrayDataOutput out = ByteStreams.newDataOutput();
     out.writeInt(clusterIds.size());
     for (UUID clusterId : clusterIds) {
@@ -334,6 +304,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       out.writeLong(clusterId.getLeastSignificantBits());
     }
     setAttribute(CONSUMED_CLUSTER_IDS, out.toByteArray());
+    return this;
   }
 
   /**
@@ -357,9 +328,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * It is illegal to set <code>CellVisibility</code> on <code>Delete</code> mutation.
    * @param expression
    */
-  public void setCellVisibility(CellVisibility expression) {
+  public Mutation setCellVisibility(CellVisibility expression) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY, ProtobufUtil
         .toCellVisibility(expression).toByteArray());
+    return this;
   }
 
   /**
@@ -417,8 +389,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
           size * ClassSize.REFERENCE);
 
       for(Cell cell : entry.getValue()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        heapsize += kv.heapSize();
+        heapsize += CellUtil.estimatedHeapSizeOf(cell);
       }
     }
     heapsize += getAttributeSize();
@@ -437,21 +408,46 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @param user User short name
    * @param perms Permissions for the user
    */
-  public void setACL(String user, Permission perms) {
+  public Mutation setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
+    return this;
   }
 
   /**
    * @param perms A map of permissions for a user or users
    */
-  public void setACL(Map<String, Permission> perms) {
+  public Mutation setACL(Map<String, Permission> perms) {
     ListMultimap<String, Permission> permMap = ArrayListMultimap.create();
     for (Map.Entry<String, Permission> entry : perms.entrySet()) {
       permMap.put(entry.getKey(), entry.getValue());
     }
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+    return this;
+  }
+
+  /**
+   * Return the TTL requested for the result of the mutation, in milliseconds.
+   * @return the TTL requested for the result of the mutation, in milliseconds,
+   * or Long.MAX_VALUE if unset
+   */
+  public long getTTL() {
+    byte[] ttlBytes = getAttribute(OP_ATTRIBUTE_TTL);
+    if (ttlBytes != null) {
+      return Bytes.toLong(ttlBytes);
+    }
+    return Long.MAX_VALUE;
+  }
+
+  /**
+   * Set the TTL desired for the result of the mutation, in milliseconds.
+   * @param ttl the TTL desired for the result of the mutation, in milliseconds
+   * @return this
+   */
+  public Mutation setTTL(long ttl) {
+    setAttribute(OP_ATTRIBUTE_TTL, Bytes.toBytes(ttl));
+    return this;
   }
 
   /**

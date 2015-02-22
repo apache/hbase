@@ -32,13 +32,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,7 +48,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.ByteString;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestHRegionInfo {
   @Test
   public void testPb() throws DeserializationException {
@@ -62,13 +64,14 @@ public class TestHRegionInfo {
     HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
     Path basedir = htu.getDataTestDir();
     // Create a region.  That'll write the .regioninfo file.
-    HRegion r = HRegion.createHRegion(hri, basedir, htu.getConfiguration(),
-      HTableDescriptor.META_TABLEDESC);
+    FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(htu.getConfiguration());
+    HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, basedir, htu.getConfiguration(),
+        fsTableDescriptors.get(TableName.META_TABLE_NAME));
     // Get modtime on the file.
     long modtime = getModTime(r);
-    HRegion.closeHRegion(r);
+    HBaseTestingUtility.closeRegionAndWAL(r);
     Thread.sleep(1001);
-    r = HRegion.openHRegion(basedir, hri, HTableDescriptor.META_TABLEDESC,
+    r = HRegion.openHRegion(basedir, hri, fsTableDescriptors.get(TableName.META_TABLE_NAME),
         null, htu.getConfiguration());
     // Ensure the file is not written for a second time.
     long modtime2 = getModTime(r);
@@ -77,6 +80,7 @@ public class TestHRegionInfo {
     HRegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
         r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
     assertTrue(hri.equals(deserializedHri));
+    HBaseTestingUtility.closeRegionAndWAL(r);
   }
 
   long getModTime(final HRegion r) throws IOException {

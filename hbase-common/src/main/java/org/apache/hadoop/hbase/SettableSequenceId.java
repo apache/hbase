@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import java.io.IOException;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Using this Interface one can mark a Cell as Sequence stampable. <br>
@@ -30,5 +32,5 @@ public interface SettableSequenceId {
    * Sets with the given seqId.
    * @param seqId
    */
-  void setSequenceId(long seqId);
+  void setSequenceId(long seqId) throws IOException;
 }

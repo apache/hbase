@@ -18,7 +18,8 @@ package org.apache.hadoop.hbase.mapreduce;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -43,7 +44,7 @@ import java.io.PrintStream;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestMapReduceExamples {
   private static HBaseTestingUtility util = new HBaseTestingUtility();
 

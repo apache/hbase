@@ -35,12 +35,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.Writer.BufferGrabbingByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.Test;
@@ -53,7 +54,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Test all of the data block encoding algorithms for correctness. Most of the
  * class generate data which will test different branches in code.
  */
-@Category(LargeTests.class)
+@Category({IOTests.class, LargeTests.class})
 @RunWith(Parameterized.class)
 public class TestDataBlockEncoders {
 

@@ -28,7 +28,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.Tool;
@@ -94,7 +94,7 @@ public abstract class AbstractHBaseTool implements Tool {
       cmd = parseArgs(args);
       cmdLineArgs = args;
     } catch (ParseException e) {
-      LOG.error("Error when parsing command-line arguemnts", e);
+      LOG.error("Error when parsing command-line arguments", e);
       printUsage();
       return EXIT_FAILURE;
     }
@@ -136,14 +136,14 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   protected void printUsage() {
-    HelpFormatter helpFormatter = new HelpFormatter();
-    helpFormatter.setWidth(80);
-    String usageHeader = "Options:";
-    String usageFooter = "";
-    String usageStr = "bin/hbase " + getClass().getName() + " <options>";
+    printUsage("bin/hbase " + getClass().getName() + " <options>", "Options:", "");
+  }
 
-    helpFormatter.printHelp(usageStr, usageHeader, options,
-        usageFooter);
+  protected void printUsage(final String usageStr, final String usageHeader,
+      final String usageFooter) {
+    HelpFormatter helpFormatter = new HelpFormatter();
+    helpFormatter.setWidth(120);
+    helpFormatter.printHelp(usageStr, usageHeader, options, usageFooter);
   }
 
   protected void addRequiredOptWithArg(String opt, String description) {

@@ -26,13 +26,14 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestReplicationProtobuf {
   /**
    * Little test to check we can basically convert list of a list of KVs into a CellScanner

@@ -32,13 +32,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.executor.ExecutorService.Executor;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
-import org.apache.hadoop.hbase.executor.ExecutorType;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.mockito.Mockito.*;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestExecutorService {
   private static final Log LOG = LogFactory.getLog(TestExecutorService.class);
 

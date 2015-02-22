@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -28,12 +28,14 @@ import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
+
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class Query extends OperationWithAttributes {
+  private static final String ISOLATION_LEVEL = "_isolationlevel_";
   protected Filter filter = null;
   protected int targetReplicaId = -1;
   protected Consistency consistency = Consistency.STRONG;
@@ -61,9 +63,10 @@ public abstract class Query extends OperationWithAttributes {
    * Sets the authorizations to be used by this Query
    * @param authorizations
    */
-  public void setAuthorizations(Authorizations authorizations) {
+  public Query setAuthorizations(Authorizations authorizations) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY, ProtobufUtil
         .toAuthorizations(authorizations).toByteArray());
+    return this;
   }
 
   /**
@@ -87,21 +90,23 @@ public abstract class Query extends OperationWithAttributes {
    * @param user User short name
    * @param perms Permissions for the user
    */
-  public void setACL(String user, Permission perms) {
+  public Query setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
+    return this;
   }
 
   /**
    * @param perms A map of permissions for a user or users
    */
-  public void setACL(Map<String, Permission> perms) {
+  public Query setACL(Map<String, Permission> perms) {
     ListMultimap<String, Permission> permMap = ArrayListMultimap.create();
     for (Map.Entry<String, Permission> entry : perms.entrySet()) {
       permMap.put(entry.getKey(), entry.getValue());
     }
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+    return this;
   }
 
   /**
@@ -116,8 +121,9 @@ public abstract class Query extends OperationWithAttributes {
    * Sets the consistency level for this operation
    * @param consistency the consistency level
    */
-  public void setConsistency(Consistency consistency) {
+  public Query setConsistency(Consistency consistency) {
     this.consistency = consistency;
+    return this;
   }
 
   /**
@@ -127,8 +133,9 @@ public abstract class Query extends OperationWithAttributes {
    * <br><b> Expert: </b>This is an advanced API exposed. Only use it if you know what you are doing
    * @param Id
    */
-  public void setReplicaId(int Id) {
+  public Query setReplicaId(int Id) {
     this.targetReplicaId = Id;
+    return this;
   }
 
   /**
@@ -137,5 +144,33 @@ public abstract class Query extends OperationWithAttributes {
    */
   public int getReplicaId() {
     return this.targetReplicaId;
+  }
+
+  /**
+   * Set the isolation level for this query. If the
+   * isolation level is set to READ_UNCOMMITTED, then
+   * this query will return data from committed and
+   * uncommitted transactions. If the isolation level
+   * is set to READ_COMMITTED, then this query will return
+   * data from committed transactions only. If a isolation
+   * level is not explicitly set on a Query, then it
+   * is assumed to be READ_COMMITTED.
+   * @param level IsolationLevel for this query
+   */
+  public Query setIsolationLevel(IsolationLevel level) {
+    setAttribute(ISOLATION_LEVEL, level.toBytes());
+    return this;
+  }
+
+  /**
+   * @return The isolation level of this query.
+   * If no isolation level was set for this query object,
+   * then it returns READ_COMMITTED.
+   * @return The IsolationLevel for this query
+   */
+  public IsolationLevel getIsolationLevel() {
+    byte[] attr = getAttribute(ISOLATION_LEVEL);
+    return attr == null ? IsolationLevel.READ_COMMITTED :
+                          IsolationLevel.fromBytes(attr);
   }
 }

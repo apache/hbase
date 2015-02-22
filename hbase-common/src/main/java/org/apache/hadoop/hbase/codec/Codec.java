@@ -20,22 +20,22 @@ package org.apache.hadoop.hbase.codec;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.CellOutputStream;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 
 /**
  * Encoder/Decoder for Cell.
  *
- * <p>Like {@link DataBlockEncoder} only Cell-based rather than KeyValue version 1 based
+ * <p>Like {@link org.apache.hadoop.hbase.io.encoding.DataBlockEncoder} 
+ * only Cell-based rather than KeyValue version 1 based
  * and without presuming an hfile context.  Intent is an Interface that will work for hfile and
  * rpc.
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public interface Codec {
-  // TODO: interfacing with {@link DataBlockEncoder}
+  // TODO: interfacing with {@link org.apache.hadoop.hbase.io.encoding.DataBlockEncoder}
   /**
    * Call flush when done.  Some encoders may not put anything on the stream until flush is called.
    * On flush, let go of any resources used by the encoder.

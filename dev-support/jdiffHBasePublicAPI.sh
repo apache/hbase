@@ -150,7 +150,7 @@ scenario_template_name=hbase_jdiff_p-$PREVIOUS_BRANCH-c-$CURRENT_BRANCH.xml
 
 # Pull down JDiff tool and unpack it
 if [ ! -d jdiff-1.1.1-with-incompatible-option ]; then
-  curl -O http://cloud.github.com/downloads/tomwhite/jdiff/jdiff-1.1.1-with-incompatible-option.zip
+  curl -OL http://cloud.github.com/downloads/tomwhite/jdiff/jdiff-1.1.1-with-incompatible-option.zip
   unzip jdiff-1.1.1-with-incompatible-option.zip
 fi
 
@@ -164,7 +164,7 @@ if [[ "$FIRST_SOURCE_TYPE" = "git_repo" ]]; then
   rm -rf p-$PREVIOUS_BRANCH
   mkdir -p p-$PREVIOUS_BRANCH
   cd p-$PREVIOUS_BRANCH
-  git clone --depth 1 $PREVIOUS_REPO && cd hbase && git checkout origin/$PREVIOUS_BRANCH
+  git clone --depth 1 --branch $PREVIOUS_BRANCH $PREVIOUS_REPO
   cd $JDIFF_WORKING_DIRECTORY
   HBASE_1_HOME=`pwd`/p-$PREVIOUS_BRANCH/hbase
 else
@@ -180,7 +180,7 @@ if [[ "$SECOND_SOURCE_TYPE" = "git_repo" ]]; then
   rm -rf $JDIFF_WORKING_DIRECTORY/c-$CURRENT_BRANCH
   mkdir -p $JDIFF_WORKING_DIRECTORY/c-$CURRENT_BRANCH
   cd $JDIFF_WORKING_DIRECTORY/c-$CURRENT_BRANCH
-  git clone --depth 1 $CURRENT_REPO && cd hbase && git checkout origin/$CURRENT_BRANCH
+  git clone --depth 1 --branch $CURRENT_BRANCH $CURRENT_REPO
   cd $JDIFF_WORKING_DIRECTORY
   HBASE_2_HOME=`pwd`/c-$CURRENT_BRANCH/hbase
 else
@@ -226,15 +226,24 @@ cp $templateFile $JDIFF_WORKING_DIRECTORY/$scenario_template_name
 
 ### Note that PREVIOUS_BRANCH and CURRENT_BRANCH will be the absolute locations of the source.
 echo "Configuring the jdiff script"
-sed -i "s]hbase_jdiff_report]hbase_jdiff_report-p-$PREVIOUS_BRANCH-c-$CURRENT_BRANCH]g" $JDIFF_WORKING_DIRECTORY/$scenario_template_name
-sed -i "s]JDIFF_HOME_NAME]$JDIFF_HOME]g" $JDIFF_WORKING_DIRECTORY/$scenario_template_name
-sed -i "s]OLD_BRANCH_NAME]$HBASE_1_HOME]g" $JDIFF_WORKING_DIRECTORY/$scenario_template_name
-sed -i "s]NEW_BRANCH_NAME]$HBASE_2_HOME]g" $JDIFF_WORKING_DIRECTORY/$scenario_template_name
 
-sed -i "s]V1]$PREVIOUS_BRANCH]g" $JDIFF_WORKING_DIRECTORY/$scenario_template_name
-sed -i "s]V2]$CURRENT_BRANCH]g" $JDIFF_WORKING_DIRECTORY/$scenario_template_name
+# Extension to -i is done to support in-place editing on GNU sed and BSD sed.
+sed -i.tmp "s]hbase_jdiff_report]hbase_jdiff_report-p-$PREVIOUS_BRANCH-c-$CURRENT_BRANCH]g" \
+    $JDIFF_WORKING_DIRECTORY/$scenario_template_name
+sed -i.tmp "s]JDIFF_HOME_NAME]$JDIFF_HOME]g" \
+    $JDIFF_WORKING_DIRECTORY/$scenario_template_name
+sed -i.tmp "s]OLD_BRANCH_NAME]$HBASE_1_HOME]g" \
+    $JDIFF_WORKING_DIRECTORY/$scenario_template_name
+sed -i.tmp "s]NEW_BRANCH_NAME]$HBASE_2_HOME]g" \
+    $JDIFF_WORKING_DIRECTORY/$scenario_template_name
 
-sed -i "s]JDIFF_FOLDER]$JDIFF_WORKING_DIRECTORY]g" $JDIFF_WORKING_DIRECTORY/$scenario_template_name
+sed -i.tmp "s]V1]$PREVIOUS_BRANCH]g" \
+    $JDIFF_WORKING_DIRECTORY/$scenario_template_name
+sed -i.tmp "s]V2]$CURRENT_BRANCH]g" \
+    $JDIFF_WORKING_DIRECTORY/$scenario_template_name
+
+sed -i.tmp "s]JDIFF_FOLDER]$JDIFF_WORKING_DIRECTORY]g" \
+    $JDIFF_WORKING_DIRECTORY/$scenario_template_name
 
 echo "Running jdiff";
 ls -la $JDIFF_WORKING_DIRECTORY;

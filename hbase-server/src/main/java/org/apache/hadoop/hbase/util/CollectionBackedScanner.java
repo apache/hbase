@@ -24,7 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
@@ -35,27 +35,27 @@ import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
  */
 @InterfaceAudience.Private
 public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
-  final private Iterable<KeyValue> data;
+  final private Iterable<Cell> data;
   final KeyValue.KVComparator comparator;
-  private Iterator<KeyValue> iter;
-  private KeyValue current;
+  private Iterator<Cell> iter;
+  private Cell current;
 
-  public CollectionBackedScanner(SortedSet<KeyValue> set) {
+  public CollectionBackedScanner(SortedSet<Cell> set) {
     this(set, KeyValue.COMPARATOR);
   }
 
-  public CollectionBackedScanner(SortedSet<KeyValue> set,
+  public CollectionBackedScanner(SortedSet<Cell> set,
       KeyValue.KVComparator comparator) {
     this.comparator = comparator;
     data = set;
     init();
   }
 
-  public CollectionBackedScanner(List<KeyValue> list) {
+  public CollectionBackedScanner(List<Cell> list) {
     this(list, KeyValue.COMPARATOR);
   }
 
-  public CollectionBackedScanner(List<KeyValue> list,
+  public CollectionBackedScanner(List<Cell> list,
       KeyValue.KVComparator comparator) {
     Collections.sort(list, comparator);
     this.comparator = comparator;
@@ -64,13 +64,11 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   }
 
   public CollectionBackedScanner(KeyValue.KVComparator comparator,
-      KeyValue... array) {
+      Cell... array) {
     this.comparator = comparator;
 
-    List<KeyValue> tmp = new ArrayList<KeyValue>(array.length);
-    for( int i = 0; i < array.length ; ++i) {
-      tmp.add(array[i]);
-    }
+    List<Cell> tmp = new ArrayList<Cell>(array.length);
+    Collections.addAll(tmp, array);
     Collections.sort(tmp, comparator);
     data = tmp;
     init();
@@ -84,13 +82,13 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   }
 
   @Override
-  public KeyValue peek() {
+  public Cell peek() {
     return current;
   }
 
   @Override
-  public KeyValue next() {
-    KeyValue oldCurrent = current;
+  public Cell next() {
+    Cell oldCurrent = current;
     if(iter.hasNext()){
       current = iter.next();
     } else {
@@ -100,17 +98,17 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   }
 
   @Override
-  public boolean seek(Cell seekKv) {
+  public boolean seek(Cell seekCell) {
     // restart iterator
     iter = data.iterator();
-    return reseek(seekKv);
+    return reseek(seekCell);
   }
 
   @Override
-  public boolean reseek(Cell seekKv) {
+  public boolean reseek(Cell seekCell) {
     while(iter.hasNext()){
-      KeyValue next = iter.next();
-      int ret = comparator.compare(next, seekKv);
+      Cell next = iter.next();
+      int ret = comparator.compare(next, seekCell);
       if(ret >= 0){
         current = next;
         return true;

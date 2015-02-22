@@ -22,6 +22,9 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RowTooBigException;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -31,10 +34,10 @@ import org.junit.experimental.categories.Category;
 import java.io.IOException;
 
 /**
- * Test case to check HRS throws {@link RowTooBigException}
+ * Test case to check HRS throws {@link org.apache.hadoop.hbase.client.RowTooBigException}
  * when row size exceeds configured limits.
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestRowTooBig {
   private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
   private static final HTableDescriptor TEST_HTD =
@@ -70,7 +73,11 @@ public class TestRowTooBig {
 
     HTableDescriptor htd = TEST_HTD;
     HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    htd.addFamily(hcd);
+    if (htd.hasFamily(hcd.getName())) {
+      htd.modifyFamily(hcd);
+    } else {
+      htd.addFamily(hcd);
+    }
 
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
@@ -108,7 +115,11 @@ public class TestRowTooBig {
 
     HTableDescriptor htd = TEST_HTD;
     HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    htd.addFamily(hcd);
+    if (htd.hasFamily(hcd.getName())) {
+      htd.modifyFamily(hcd);
+    } else {
+      htd.addFamily(hcd);
+    }
 
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,

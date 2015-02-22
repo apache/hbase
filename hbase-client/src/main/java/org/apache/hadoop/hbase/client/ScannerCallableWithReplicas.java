@@ -34,13 +34,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.BoundedCompletionService;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+
+import com.google.common.annotations.VisibleForTesting;
+
+import static org.apache.hadoop.hbase.client.ReversedClientScanner.createClosestRowBefore;
+
 /**
  * This class has the logic for handling scanners for regions with and without replicas.
  * 1. A scan is attempted on the default (primary) region
@@ -53,7 +58,6 @@ import org.apache.hadoop.hbase.util.Pair;
  * in which case, the other replicas are queried (as in (3) above).
  *
  */
-
 @InterfaceAudience.Private
 class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   private final Log LOG = LogFactory.getLog(this.getClass());
@@ -70,8 +74,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   private Configuration conf;
   private int scannerTimeout;
   private Set<ScannerCallable> outstandingCallables = new HashSet<ScannerCallable>();
+  private boolean someRPCcancelled = false; //required for testing purposes only
 
-  public ScannerCallableWithReplicas (TableName tableName, ClusterConnection cConnection,
+  public ScannerCallableWithReplicas(TableName tableName, ClusterConnection cConnection,
       ScannerCallable baseCallable, ExecutorService pool, int timeBeforeReplicas, Scan scan,
       int retries, int scannerTimeout, int caching, Configuration conf,
       RpcRetryingCaller<Result []> caller) {
@@ -115,8 +120,8 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     if (currentScannerCallable != null && currentScannerCallable.closed) {
       // For closing we target that exact scanner (and not do replica fallback like in
       // the case of normal reads)
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Closing scanner " + currentScannerCallable.scannerId);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Closing scanner id=" + currentScannerCallable.scannerId);
       }
       Result[] r = currentScannerCallable.call(timeout);
       currentScannerCallable = null;
@@ -135,8 +140,10 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
     // allocate a boundedcompletion pool of some multiple of number of replicas.
     // We want to accomodate some RPCs for redundant replica scans (but are still in progress)
-    BoundedCompletionService<Pair<Result[], ScannerCallable>> cs =
-        new BoundedCompletionService<Pair<Result[], ScannerCallable>>(pool, rl.size() * 5);
+    ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs =
+        new ResultBoundedCompletionService<Pair<Result[], ScannerCallable>>(
+            new RpcRetryingCallerFactory(ScannerCallableWithReplicas.this.conf), pool,
+            rl.size() * 5);
 
     List<ExecutionException> exceptions = null;
     int submitted = 0, completed = 0;
@@ -193,7 +200,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     } finally {
       // We get there because we were interrupted or because one or more of the
       // calls succeeded or failed. In all case, we stop all our tasks.
-      cs.cancelAll(true);
+      cs.cancelAll();
     }
 
     if (exceptions != null && !exceptions.isEmpty()) {
@@ -211,22 +218,30 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       // store where to start the replica scanner from if we need to.
       if (result != null && result.length != 0) this.lastResult = result[result.length - 1];
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Setting current scanner as " + currentScannerCallable.scannerId +
-            " associated with " + currentScannerCallable.getHRegionInfo().getReplicaId());
+        LOG.trace("Setting current scanner as id=" + currentScannerCallable.scannerId +
+            " associated with replica=" + currentScannerCallable.getHRegionInfo().getReplicaId());
       }
       // close all outstanding replica scanners but the one we heard back from
       outstandingCallables.remove(scanner);
       for (ScannerCallable s : outstandingCallables) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Closing scanner " + s.scannerId +
-              " because this was slow and another replica succeeded");
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Closing scanner id=" + s.scannerId +
+            ", replica=" + s.getHRegionInfo().getRegionId() +
+            " because slow and replica=" +
+            this.currentScannerCallable.getHRegionInfo().getReplicaId() + " succeeded");
         }
         // Submit the "close" to the pool since this might take time, and we don't
         // want to wait for the "close" to happen yet. The "wait" will happen when
         // the table is closed (when the awaitTermination of the underlying pool is called)
         s.setClose();
-        RetryingRPC r = new RetryingRPC(s);
-        pool.submit(r);
+        final RetryingRPC r = new RetryingRPC(s);
+        pool.submit(new Callable<Void>(){
+          @Override
+          public Void call() throws Exception {
+            r.call(scannerTimeout);
+            return null;
+          }
+        });
       }
       // now clear outstandingCallables since we scheduled a close for all the contained scanners
       outstandingCallables.clear();
@@ -243,55 +258,113 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   }
 
   private int addCallsForCurrentReplica(
-      BoundedCompletionService<Pair<Result[], ScannerCallable>> cs, RegionLocations rl) {
+      ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs, RegionLocations rl) {
     RetryingRPC retryingOnReplica = new RetryingRPC(currentScannerCallable);
     outstandingCallables.add(currentScannerCallable);
-    cs.submit(retryingOnReplica);
+    cs.submit(retryingOnReplica, scannerTimeout, currentScannerCallable.id);
     return 1;
   }
 
   private int addCallsForOtherReplicas(
-      BoundedCompletionService<Pair<Result[], ScannerCallable>> cs, RegionLocations rl, int min,
-      int max) {
+      ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs, RegionLocations rl,
+      int min, int max) {
     if (scan.getConsistency() == Consistency.STRONG) {
       return 0; // not scheduling on other replicas for strong consistency
     }
     for (int id = min; id <= max; id++) {
-      if (currentScannerCallable.getHRegionInfo().getReplicaId() == id) {
+      if (currentScannerCallable.id == id) {
         continue; //this was already scheduled earlier
       }
       ScannerCallable s = currentScannerCallable.getScannerCallableForReplica(id);
+
       if (this.lastResult != null) {
-        s.getScan().setStartRow(this.lastResult.getRow());
+        if(s.getScan().isReversed()){
+          s.getScan().setStartRow(createClosestRowBefore(this.lastResult.getRow()));
+        }else {
+          s.getScan().setStartRow(Bytes.add(this.lastResult.getRow(), new byte[1]));
+        }
       }
       outstandingCallables.add(s);
       RetryingRPC retryingOnReplica = new RetryingRPC(s);
-      cs.submit(retryingOnReplica);
+      cs.submit(retryingOnReplica, scannerTimeout, id);
     }
     return max - min + 1;
   }
 
-  class RetryingRPC implements Callable<Pair<Result[], ScannerCallable>> {
+  @VisibleForTesting
+  boolean isAnyRPCcancelled() {
+    return someRPCcancelled;
+  }
+
+  class RetryingRPC implements RetryingCallable<Pair<Result[], ScannerCallable>>, Cancellable {
     final ScannerCallable callable;
+    RpcRetryingCaller<Result[]> caller;
+    private volatile boolean cancelled = false;
 
     RetryingRPC(ScannerCallable callable) {
       this.callable = callable;
-    }
-
-    @Override
-    public Pair<Result[], ScannerCallable> call() throws IOException {
       // For the Consistency.STRONG (default case), we reuse the caller
       // to keep compatibility with what is done in the past
       // For the Consistency.TIMELINE case, we can't reuse the caller
       // since we could be making parallel RPCs (caller.callWithRetries is synchronized
       // and we can't invoke it multiple times at the same time)
-      RpcRetryingCaller<Result[]> caller = ScannerCallableWithReplicas.this.caller;
+      this.caller = ScannerCallableWithReplicas.this.caller;
       if (scan.getConsistency() == Consistency.TIMELINE) {
-        caller = new RpcRetryingCallerFactory(ScannerCallableWithReplicas.this.conf).
+        this.caller = new RpcRetryingCallerFactory(ScannerCallableWithReplicas.this.conf).
             <Result[]>newCaller();
       }
-      Result[] res = caller.callWithRetries(callable, scannerTimeout);
-      return new Pair<Result[], ScannerCallable>(res, callable);
+    }
+
+    @Override
+    public Pair<Result[], ScannerCallable> call(int callTimeout) throws IOException {
+      // since the retries is done within the ResultBoundedCompletionService,
+      // we don't invoke callWithRetries here
+      if (cancelled) {
+        return null;
+      }
+      Result[] res = this.caller.callWithoutRetries(this.callable, callTimeout);
+      return new Pair<Result[], ScannerCallable>(res, this.callable);
+    }
+
+    @Override
+    public void prepare(boolean reload) throws IOException {
+      if (cancelled) return;
+
+      if (Thread.interrupted()) {
+        throw new InterruptedIOException();
+      }
+
+      callable.prepare(reload);
+    }
+
+    @Override
+    public void throwable(Throwable t, boolean retrying) {
+      callable.throwable(t, retrying);
+    }
+
+    @Override
+    public String getExceptionMessageAdditionalDetail() {
+      return callable.getExceptionMessageAdditionalDetail();
+    }
+
+    @Override
+    public long sleep(long pause, int tries) {
+      return callable.sleep(pause, tries);
+    }
+
+    @Override
+    public void cancel() {
+      cancelled = true;
+      caller.cancel();
+      if (callable.getController() != null) {
+        callable.getController().startCancel();
+      }
+      someRPCcancelled = true;
+    }
+
+    @Override
+    public boolean isCancelled() {
+      return cancelled;
     }
   }
 

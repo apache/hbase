@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
@@ -36,6 +37,7 @@ import org.apache.hadoop.io.WritableUtils;
  * qualifier. More may be added depending on use patterns.
  */
 @Deprecated
+@InterfaceAudience.Private
 class KeyValueCompression {
   /**
    * Uncompresses a KeyValue from a DataInput and returns it.

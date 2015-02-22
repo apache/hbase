@@ -28,7 +28,8 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.PrefixTreeEncoder;
@@ -43,7 +44,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.Lists;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestRowEncoder {
 
@@ -76,7 +77,7 @@ public class TestRowEncoder {
     this.rows = testRows;
   }
 
-	@Before
+  @Before
   public void compile() throws IOException {
     // Always run with tags. But should also ensure that KVs without tags work fine
     os = new ByteArrayOutputStream(1 << 20);
@@ -174,7 +175,7 @@ public class TestRowEncoder {
   }
 
 
-	/**************** helper **************************/
+  /**************** helper **************************/
 
   protected void assertKeyAndValueEqual(Cell expected, Cell actual) {
     // assert keys are equal (doesn't compare values)

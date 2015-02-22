@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
@@ -63,7 +64,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
 
   public class HBaseWriterThreadWithACL extends HBaseWriterThread {
 
-    private HTableInterface table;
+    private Table table;
     private WriteAccessAction writerAction = new WriteAccessAction();
 
     public HBaseWriterThreadWithACL(int writerId) throws IOException {
@@ -87,7 +88,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
     }
 
     @Override
-    public void insert(final HTableInterface table, Put put, final long keyBase) {
+    public void insert(final Table table, Put put, final long keyBase) {
       final long start = System.currentTimeMillis();
       try {
         put = (Put) dataGenerator.beforeMutate(keyBase, put);
@@ -126,7 +127,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
       public Object run() throws Exception {
         try {
           if (table == null) {
-            table = new HTable(conf, tableName);
+            table = connection.getTable(tableName);
           }
           table.put(put);
         } catch (IOException e) {
@@ -137,7 +138,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
     }
   }
 
-  private void recordFailure(final HTableInterface table, final Put put, final long keyBase,
+  private void recordFailure(final Table table, final Put put, final long keyBase,
       final long start, IOException e) {
     failedKeySet.add(keyBase);
     String exceptionInfo;

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Block cache interface. Anything that implements the {@link Cacheable}

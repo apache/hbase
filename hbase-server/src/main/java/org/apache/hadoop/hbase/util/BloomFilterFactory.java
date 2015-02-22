@@ -24,17 +24,16 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 
 /**
  * Handles Bloom filter initialization based on configuration and serialized
- * metadata in the reader and writer of {@link StoreFile}.
+ * metadata in the reader and writer of {@link org.apache.hadoop.hbase.regionserver.StoreFile}.
  */
 @InterfaceAudience.Private
 public final class BloomFilterFactory {

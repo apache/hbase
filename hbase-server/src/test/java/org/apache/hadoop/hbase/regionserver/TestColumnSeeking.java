@@ -35,13 +35,15 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestColumnSeeking {
   @Rule public TestName name = new TestName();
 
@@ -156,10 +158,10 @@ public class TestColumnSeeking {
         assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
       }
     } finally {
-      HRegion.closeHRegion(region);
+      HBaseTestingUtility.closeRegionAndWAL(region);
     }
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   @SuppressWarnings("unchecked")
@@ -268,7 +270,7 @@ public class TestColumnSeeking {
       assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
     }
 
-    HRegion.closeHRegion(region);
+    HBaseTestingUtility.closeRegionAndWAL(region);
   }
 
   List<String> generateRandomWords(int numberOfWords, String suffix) {

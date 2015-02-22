@@ -29,13 +29,14 @@ import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ProtobufCoprocessorService;
 import org.apache.hadoop.hbase.ipc.DelegatingPayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -44,7 +45,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestRpcControllerFactory {
 
   public static class StaticRpcControllerFactory extends RpcControllerFactory {
@@ -130,18 +131,18 @@ public class TestRpcControllerFactory {
     // change one of the connection properties so we get a new HConnection with our configuration
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT + 1);
 
-    HTable table = new HTable(conf, name);
-    table.setAutoFlushTo(false);
+    Connection connection = ConnectionFactory.createConnection(conf);
+    Table table = connection.getTable(name);
     byte[] row = Bytes.toBytes("row");
     Put p = new Put(row);
     p.add(fam1, fam1, Bytes.toBytes("val0"));
     table.put(p);
-    table.flushCommits();
+
     Integer counter = 1;
     counter = verifyCount(counter);
 
     Delete d = new Delete(row);
-    d.deleteColumn(fam1, fam1);
+    d.addColumn(fam1, fam1);
     table.delete(d);
     counter = verifyCount(counter);
 
@@ -186,9 +187,10 @@ public class TestRpcControllerFactory {
     counter = doScan(table, scanInfo, counter);
 
     table.close();
+    connection.close();
   }
 
-  int doScan(HTable table, Scan scan, int expectedCount) throws IOException {
+  int doScan(Table table, Scan scan, int expectedCount) throws IOException {
     ResultScanner results = table.getScanner(scan);
     results.next();
     results.close();

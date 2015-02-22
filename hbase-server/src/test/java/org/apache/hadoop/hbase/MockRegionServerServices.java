@@ -22,55 +22,71 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.protobuf.Service;
+
 /**
  * Basic mock region server services.  Should only be instantiated by HBaseTestingUtility.b
  */
-class MockRegionServerServices implements RegionServerServices {
+public class MockRegionServerServices implements RegionServerServices {
+  protected static final Log LOG = LogFactory.getLog(MockRegionServerServices.class);
   private final Map<String, HRegion> regions = new HashMap<String, HRegion>();
-  private boolean stopping = false;
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
+  private final Configuration conf;
   private ZooKeeperWatcher zkw = null;
   private ServerName serverName = null;
   private RpcServerInterface rpcServer = null;
   private volatile boolean abortRequested;
+  private volatile boolean stopping = false;
+  private final AtomicBoolean running = new AtomicBoolean(true);
 
   MockRegionServerServices(ZooKeeperWatcher zkw) {
-    this.zkw = zkw;
+    this(zkw, null);
   }
 
   MockRegionServerServices(ZooKeeperWatcher zkw, ServerName serverName) {
     this.zkw = zkw;
     this.serverName = serverName;
+    this.conf = (zkw == null ? new Configuration() : zkw.getConfiguration());
   }
 
   MockRegionServerServices(){
-    this(null);
+    this(null, null);
+  }
+
+  public MockRegionServerServices(Configuration conf) {
+    this.conf = conf;
   }
 
   @Override
@@ -83,7 +99,13 @@ class MockRegionServerServices implements RegionServerServices {
     return this.regions.get(encodedRegionName);
   }
 
+  @Override
   public List<HRegion> getOnlineRegions(TableName tableName) throws IOException {
+    return null;
+  }
+
+  @Override
+  public Set<TableName> getOnlineTables() {
     return null;
   }
 
@@ -128,7 +150,7 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public HConnection getShortCircuitConnection() {
+  public ClusterConnection getConnection() {
     return null;
   }
 
@@ -147,6 +169,7 @@ class MockRegionServerServices implements RegionServerServices {
     return null;
   }
 
+  @Override
   public RegionServerAccounting getRegionServerAccounting() {
     return null;
   }
@@ -157,13 +180,18 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public RegionServerQuotaManager getRegionServerQuotaManager() {
+    return null;
+  }
+
+  @Override
   public ServerName getServerName() {
     return this.serverName;
   }
 
   @Override
   public Configuration getConfiguration() {
-    return zkw == null ? null : zkw.getConfiguration();
+    return conf;
   }
 
   @Override
@@ -174,12 +202,15 @@ class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public void stop(String why) {
-    //no-op
+    this.stopping = true;
+    if (running.compareAndSet(true, false)) {
+      LOG.info("Shutting down due to request '" + why + "'");
+    }
   }
 
   @Override
   public boolean isStopped() {
-    return false;
+    return !(running.get());
   }
 
   @Override
@@ -202,12 +233,17 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
+  public WAL getWAL(HRegionInfo regionInfo) throws IOException {
     return null;
   }
 
   @Override
   public ExecutorService getExecutorService() {
+    return null;
+  }
+
+  @Override
+  public ChoreService getChoreService() {
     return null;
   }
 
@@ -243,5 +279,21 @@ class MockRegionServerServices implements RegionServerServices {
   public boolean reportRegionStateTransition(TransitionCode code,
       HRegionInfo... hris) {
     return false;
+  }
+
+  @Override
+  public boolean registerService(Service service) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public HeapMemoryManager getHeapMemoryManager() {
+    return null;
+  }
+
+  @Override
+  public double getCompactionPressure() {
+    return 0;
   }
 }

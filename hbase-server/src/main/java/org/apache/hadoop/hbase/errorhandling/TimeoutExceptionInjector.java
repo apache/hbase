@@ -22,8 +22,7 @@ import java.util.TimerTask;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -80,14 +79,15 @@ public class TimeoutExceptionInjector {
    * For all time forward, do not throw an error because the process has completed.
    */
   public void complete() {
-    // warn if the timer is already marked complete. This isn't going to be thread-safe, but should
-    // be good enough and its not worth locking just for a warning.
-    if (this.complete) {
-      LOG.warn("Timer already marked completed, ignoring!");
-      return;
-    }
-    LOG.debug("Marking timer as complete - no error notifications will be received for this timer.");
     synchronized (this.timerTask) {
+      if (this.complete) {
+        LOG.warn("Timer already marked completed, ignoring!");
+        return;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Marking timer as complete - no error notifications will be received for " +
+          "this timer.");
+      }
       this.complete = true;
     }
     this.timer.cancel();

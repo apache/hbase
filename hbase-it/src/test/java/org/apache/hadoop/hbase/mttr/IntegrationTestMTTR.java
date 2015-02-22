@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingTableAction;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.FatalConnectionException;
@@ -63,10 +65,10 @@ import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.htrace.Span;
-import org.htrace.Trace;
-import org.htrace.TraceScope;
-import org.htrace.impl.AlwaysSampler;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
+import org.apache.htrace.impl.AlwaysSampler;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -80,7 +82,7 @@ import com.google.common.base.Objects;
  * <ol>
  * <li>
  * Load Test Tool.<br/>
- * This runs so that all RegionServers will have some load and HLogs will be full.
+ * This runs so that all RegionServers will have some load and WALs will be full.
  * </li>
  * <li>
  * Scan thread.<br/>
@@ -149,7 +151,7 @@ public class IntegrationTestMTTR {
   private static Action restartMasterAction;
 
   /**
-   * The load test tool used to create load and make sure that HLogs aren't empty.
+   * The load test tool used to create load and make sure that WALs aren't empty.
    */
   private static LoadTestTool loadTool;
 
@@ -181,9 +183,14 @@ public class IntegrationTestMTTR {
   }
 
   private static void setupActions() throws IOException {
+    // allow a little more time for RS restart actions because RS start depends on having a master
+    // to report to and the master is also being monkeyed.
+    util.getConfiguration().setLong(Action.START_RS_TIMEOUT_KEY, 3 * 60 * 1000);
+
     // Set up the action that will restart a region server holding a region from our table
     // because this table should only have one region we should be good.
-    restartRSAction = new RestartRsHoldingTableAction(sleepTime, tableName.getNameAsString());
+    restartRSAction = new RestartRsHoldingTableAction(sleepTime,
+        util.getConnection().getRegionLocator(tableName));
 
     // Set up the action that will kill the region holding meta.
     restartMetaAction = new RestartRsHoldingMetaAction(sleepTime);
@@ -276,6 +283,7 @@ public class IntegrationTestMTTR {
 
   public void run(Callable<Boolean> monkeyCallable, String testName) throws Exception {
     int maxIters = util.getHBaseClusterInterface().isDistributedCluster() ? 10 : 3;
+    LOG.info("Starting " + testName + " with " + maxIters + " iterations.");
 
     // Array to keep track of times.
     ArrayList<TimingResult> resultPuts = new ArrayList<TimingResult>(maxIters);
@@ -283,33 +291,39 @@ public class IntegrationTestMTTR {
     ArrayList<TimingResult> resultAdmin = new ArrayList<TimingResult>(maxIters);
     long start = System.nanoTime();
 
-    // We're going to try this multiple times
-    for (int fullIterations = 0; fullIterations < maxIters; fullIterations++) {
-      // Create and start executing a callable that will kill the servers
-      Future<Boolean> monkeyFuture = executorService.submit(monkeyCallable);
+    try {
+      // We're going to try this multiple times
+      for (int fullIterations = 0; fullIterations < maxIters; fullIterations++) {
+        // Create and start executing a callable that will kill the servers
+        Future<Boolean> monkeyFuture = executorService.submit(monkeyCallable);
 
-      // Pass that future to the timing Callables.
-      Future<TimingResult> putFuture = executorService.submit(new PutCallable(monkeyFuture));
-      Future<TimingResult> scanFuture = executorService.submit(new ScanCallable(monkeyFuture));
-      Future<TimingResult> adminFuture = executorService.submit(new AdminCallable(monkeyFuture));
+        // Pass that future to the timing Callables.
+        Future<TimingResult> putFuture = executorService.submit(new PutCallable(monkeyFuture));
+        Future<TimingResult> scanFuture = executorService.submit(new ScanCallable(monkeyFuture));
+        Future<TimingResult> adminFuture = executorService.submit(new AdminCallable(monkeyFuture));
 
-      Future<Boolean> loadFuture = executorService.submit(new LoadCallable(monkeyFuture));
+        Future<Boolean> loadFuture = executorService.submit(new LoadCallable(monkeyFuture));
 
-      monkeyFuture.get();
-      loadFuture.get();
+        monkeyFuture.get();
+        loadFuture.get();
 
-      // Get the values from the futures.
-      TimingResult putTime = putFuture.get();
-      TimingResult scanTime = scanFuture.get();
-      TimingResult adminTime = adminFuture.get();
+        // Get the values from the futures.
+        TimingResult putTime = putFuture.get();
+        TimingResult scanTime = scanFuture.get();
+        TimingResult adminTime = adminFuture.get();
 
-      // Store the times to display later.
-      resultPuts.add(putTime);
-      resultScan.add(scanTime);
-      resultAdmin.add(adminTime);
+        // Store the times to display later.
+        resultPuts.add(putTime);
+        resultScan.add(scanTime);
+        resultAdmin.add(adminTime);
 
-      // Wait some time for everything to settle down.
-      Thread.sleep(5000l);
+        // Wait some time for everything to settle down.
+        Thread.sleep(5000l);
+      }
+    } catch (Exception e) {
+      long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+      LOG.info(testName + " failed after " + runtimeMs + "ms.", e);
+      throw e;
     }
 
     long runtimeMs = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
@@ -461,11 +475,11 @@ public class IntegrationTestMTTR {
    */
   static class PutCallable extends TimingCallable {
 
-    private final HTable table;
+    private final Table table;
 
     public PutCallable(Future<?> f) throws IOException {
       super(f);
-      this.table = new HTable(util.getConfiguration(), tableName);
+      this.table = util.getConnection().getTable(tableName);
     }
 
     @Override
@@ -473,7 +487,6 @@ public class IntegrationTestMTTR {
       Put p = new Put(Bytes.toBytes(RandomStringUtils.randomAlphanumeric(5)));
       p.add(FAMILY, Bytes.toBytes("\0"), Bytes.toBytes(RandomStringUtils.randomAscii(5)));
       table.put(p);
-      table.flushCommits();
       return true;
     }
 
@@ -488,11 +501,11 @@ public class IntegrationTestMTTR {
    * supplied future returns.  Returns the max time taken to scan.
    */
   static class ScanCallable extends TimingCallable {
-    private final HTable table;
+    private final Table table;
 
     public ScanCallable(Future<?> f) throws IOException {
       super(f);
-      this.table = new HTable(util.getConfiguration(), tableName);
+      this.table = util.getConnection().getTable(tableName);
     }
 
     @Override
@@ -531,9 +544,9 @@ public class IntegrationTestMTTR {
 
     @Override
     protected boolean doAction() throws Exception {
-      HBaseAdmin admin = null;
+      Admin admin = null;
       try {
-        admin = new HBaseAdmin(util.getConfiguration());
+        admin = util.getHBaseAdmin();
         ClusterStatus status = admin.getClusterStatus();
         return status != null;
       } finally {

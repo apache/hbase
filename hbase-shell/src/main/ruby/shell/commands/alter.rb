@@ -22,12 +22,17 @@ module Shell
     class Alter < Command
       def help
         return <<-EOF
-Alter a table. Depending on the HBase setting ("hbase.online.schema.update.enable"),
-the table must be disabled or not to be altered (see help 'disable').
-You can add/modify/delete column families, as well as change table 
-configuration. Column families work similarly to create; column family 
-spec can either be a name string, or a dictionary with NAME attribute.
-Dictionaries are described on the main help command output.
+Alter a table. If the "hbase.online.schema.update.enable" property is set to
+false, then the table must be disabled (see help 'disable'). If the 
+"hbase.online.schema.update.enable" property is set to true, tables can be 
+altered without disabling them first. Altering enabled tables has caused problems 
+in the past, so use caution and test it before using in production. 
+
+You can use the alter command to add, 
+modify or delete column families or change table configuration options.
+Column families work in a similar way as the 'create' command. The column family
+specification can either be a name string, or a dictionary with the NAME attribute.
+Dictionaries are described in the output of the 'help' command, with no arguments.
 
 For example, to change or add the 'f1' column family in table 't1' from 
 current value to keep a maximum of 5 cell VERSIONS, do:
@@ -44,7 +49,7 @@ To delete the 'f1' column family in table 'ns1:t1', use one of:
   hbase> alter 'ns1:t1', 'delete' => 'f1'
 
 You can also change table-scope attributes like MAX_FILESIZE, READONLY, 
-MEMSTORE_FLUSHSIZE, DEFERRED_LOG_FLUSH, etc. These can be put at the end;
+MEMSTORE_FLUSHSIZE, DURABILITY, etc. These can be put at the end;
 for example, to change the max size of a region to 128MB, do:
 
   hbase> alter 't1', MAX_FILESIZE => '134217728'

@@ -22,17 +22,20 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -46,11 +49,11 @@ import org.junit.experimental.categories.Category;
  * Test transitions of state across the master.  Sets up the cluster once and
  * then runs a couple of tests.
  */
-@Category(LargeTests.class)
+@Category({MasterTests.class, LargeTests.class})
 public class TestMasterTransitions {
   private static final Log LOG = LogFactory.getLog(TestMasterTransitions.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final String TABLENAME = "master_transitions";
+  private static final TableName TABLENAME = TableName.valueOf("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
     Bytes.toBytes("b"), Bytes.toBytes("c")};
 
@@ -62,11 +65,13 @@ public class TestMasterTransitions {
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniCluster(2);
     // Create a table of three families.  This will assign a region.
-    TableName tableName = TableName.valueOf(TABLENAME);
-    TEST_UTIL.createTable(tableName, FAMILIES);
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILIES);
+    HTable t = (HTable) TEST_UTIL.getConnection().getTable(TABLENAME);
+    int countOfRegions = -1;
+    try (RegionLocator r = t.getRegionLocator()) {
+      countOfRegions = r.getStartKeys().length;
+    }
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
     addToEachStartKey(countOfRegions);
     t.close();
   }
@@ -479,9 +484,8 @@ public class TestMasterTransitions {
    * @throws IOException
    */
   private static int addToEachStartKey(final int expected) throws IOException {
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    HTable meta = new HTable(TEST_UTIL.getConfiguration(),
-        TableName.META_TABLE_NAME);
+    Table t = TEST_UTIL.getConnection().getTable(TABLENAME);
+    Table meta = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME);
     int rows = 0;
     Scan scan = new Scan();
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
@@ -489,12 +493,12 @@ public class TestMasterTransitions {
     for (Result r = null; (r = s.next()) != null;) {
       HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
       if (hri == null) break;
-      if (!hri.getTable().getNameAsString().equals(TABLENAME)) {
+      if (!hri.getTable().equals(TABLENAME)) {
         continue;
       }
 
       // If start key, add 'aaa'.
-      if(!hri.getTable().getNameAsString().equals(TABLENAME)) {
+      if(!hri.getTable().equals(TABLENAME)) {
         continue;
       }
       byte [] row = getStartKey(hri);

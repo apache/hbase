@@ -27,16 +27,17 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
@@ -51,7 +52,7 @@ import com.google.protobuf.ServiceException;
  * Test the scenario where a HRegionServer#scan() call, while scanning, timeout at client side and
  * getting retried. This scenario should not result in some data being skipped at RS side.
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestClientScannerRPCTimeout {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -64,7 +65,7 @@ public class TestClientScannerRPCTimeout {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)AbstractRpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     Configuration conf = TEST_UTIL.getConfiguration();
     // Don't report so often so easier to see other rpcs
@@ -83,8 +84,8 @@ public class TestClientScannerRPCTimeout {
 
   @Test
   public void testScannerNextRPCTimesout() throws Exception {
-    final byte[] TABLE_NAME = Bytes.toBytes("testScannerNextRPCTimesout");
-    HTable ht = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
+    final TableName TABLE_NAME = TableName.valueOf("testScannerNextRPCTimesout");
+    Table ht = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     byte[] r1 = Bytes.toBytes("row-1");
     byte[] r2 = Bytes.toBytes("row-2");
     byte[] r3 = Bytes.toBytes("row-3");
@@ -123,7 +124,7 @@ public class TestClientScannerRPCTimeout {
         RSRpcServicesWithScanTimeout.tryNumber <= CLIENT_RETRIES_NUMBER);
   }
 
-  private void putToTable(HTable ht, byte[] rowkey) throws IOException {
+  private void putToTable(Table ht, byte[] rowkey) throws IOException {
     Put put = new Put(rowkey);
     put.add(FAMILY, QUALIFIER, VALUE);
     ht.put(put);

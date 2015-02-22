@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -43,11 +42,10 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -56,18 +54,17 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.ipc.FailedServerException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcClient.FailedServerException;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
@@ -76,19 +73,19 @@ import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
+import org.apache.hadoop.hbase.quotas.RegionStateListener;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -101,11 +98,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class AssignmentManager {
   private static final Log LOG = LogFactory.getLog(AssignmentManager.class);
 
-  static final String ALREADY_IN_TRANSITION_WAITTIME
-    = "hbase.assignment.already.intransition.waittime";
-  static final int DEFAULT_ALREADY_IN_TRANSITION_WAITTIME = 60000; // 1 minute
-
-  protected final Server server;
+  protected final MasterServices server;
 
   private ServerManager serverManager;
 
@@ -136,14 +129,8 @@ public class AssignmentManager {
   private final int maximumAttempts;
 
   /**
-   * Map of two merging regions from the region to be created.
-   */
-  private final Map<String, PairOfSameType<HRegionInfo>> mergingRegions
-    = new HashMap<String, PairOfSameType<HRegionInfo>>();
-
-  /**
-   * The sleep time for which the assignment will wait before retrying in case of hbase:meta assignment
-   * failure due to lack of availability of region plan
+   * The sleep time for which the assignment will wait before retrying in case of
+   * hbase:meta assignment failure due to lack of availability of region plan or bad region plan
    */
   private final long sleepTimeBeforeRetryingMetaAssignment;
 
@@ -207,6 +194,8 @@ public class AssignmentManager {
 
   /** Listeners that are called on assignment events. */
   private List<AssignmentListener> listeners = new CopyOnWriteArrayList<AssignmentListener>();
+  
+  private RegionStateListener regionStateListener;
 
   /**
    * Constructs a new assignment manager.
@@ -217,14 +206,14 @@ public class AssignmentManager {
    * @param service Executor service
    * @param metricsMaster metrics manager
    * @param tableLockManager TableLock manager
-   * @throws CoordinatedStateException
    * @throws IOException
    */
-  public AssignmentManager(Server server, ServerManager serverManager,
+  public AssignmentManager(MasterServices server, ServerManager serverManager,
       final LoadBalancer balancer,
       final ExecutorService service, MetricsMaster metricsMaster,
-      final TableLockManager tableLockManager)
-          throws IOException, CoordinatedStateException {
+      final TableLockManager tableLockManager,
+      final TableStateManager tableStateManager)
+          throws IOException {
     this.server = server;
     this.serverManager = serverManager;
     this.executorService = service;
@@ -236,15 +225,9 @@ public class AssignmentManager {
     this.shouldAssignRegionsWithFavoredNodes = conf.getClass(
            HConstants.HBASE_MASTER_LOADBALANCER_CLASS, Object.class).equals(
            FavoredNodeLoadBalancer.class);
-    try {
-      if (server.getCoordinatedStateManager() != null) {
-        this.tableStateManager = server.getCoordinatedStateManager().getTableStateManager();
-      } else {
-        this.tableStateManager = null;
-      }
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException();
-    }
+
+    this.tableStateManager = tableStateManager;
+
     // This is the max attempts, not retries, so it should be at least 1.
     this.maximumAttempts = Math.max(1,
       this.server.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10));
@@ -355,9 +338,13 @@ public class AssignmentManager {
    */
   public Pair<Integer, Integer> getReopenStatus(TableName tableName)
       throws IOException {
-    List <HRegionInfo> hris = MetaTableAccessor.getTableRegions(
-      this.server.getZooKeeper(), this.server.getShortCircuitConnection(),
-      tableName, true);
+    List<HRegionInfo> hris;
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      hris = new MetaTableLocator().getMetaRegions(server.getZooKeeper());
+    } else {
+      hris = MetaTableAccessor.getTableRegions(server.getConnection(), tableName, true);
+    }
+
     Integer pending = 0;
     for (HRegionInfo hri : hris) {
       String name = hri.getEncodedName();
@@ -402,10 +389,9 @@ public class AssignmentManager {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
-   * @throws CoordinatedStateException
    */
   void joinCluster() throws IOException,
-      KeeperException, InterruptedException, CoordinatedStateException {
+          KeeperException, InterruptedException {
     long startTime = System.currentTimeMillis();
     // Concurrency note: In the below the accesses on regionsInTransition are
     // outside of a synchronization block where usually all accesses to RIT are
@@ -440,10 +426,9 @@ public class AssignmentManager {
    *          Map of dead servers and their regions. Can be null.
    * @throws IOException
    * @throws InterruptedException
-   * @throws CoordinatedStateException
    */
   boolean processDeadServersAndRegionsInTransition(final Set<ServerName> deadServers)
-      throws IOException, InterruptedException, CoordinatedStateException {
+          throws IOException, InterruptedException {
     boolean failover = !serverManager.getDeadServers().isEmpty();
     if (failover) {
       // This may not be a failover actually, especially if meta is on this master.
@@ -468,8 +453,9 @@ public class AssignmentManager {
         Map<String, RegionState> regionsInTransition = regionStates.getRegionsInTransition();
         if (!regionsInTransition.isEmpty()) {
           for (RegionState regionState: regionsInTransition.values()) {
+            ServerName serverName = regionState.getServerName();
             if (!regionState.getRegion().isMetaRegion()
-                && onlineServers.contains(regionState.getServerName())) {
+                && serverName != null && onlineServers.contains(serverName)) {
               LOG.debug("Found " + regionState + " in RITs");
               failover = true;
               break;
@@ -480,17 +466,20 @@ public class AssignmentManager {
     }
     if (!failover) {
       // If we get here, we have a full cluster restart. It is a failover only
-      // if there are some HLogs are not split yet. For meta HLogs, they should have
+      // if there are some WALs are not split yet. For meta WALs, they should have
       // been split already, if any. We can walk through those queued dead servers,
-      // if they don't have any HLogs, this restart should be considered as a clean one
+      // if they don't have any WALs, this restart should be considered as a clean one
       Set<ServerName> queuedDeadServers = serverManager.getRequeuedDeadServers().keySet();
       if (!queuedDeadServers.isEmpty()) {
         Configuration conf = server.getConfiguration();
         Path rootdir = FSUtils.getRootDir(conf);
         FileSystem fs = rootdir.getFileSystem(conf);
         for (ServerName serverName: queuedDeadServers) {
-          Path logDir = new Path(rootdir, HLogUtil.getHLogDirectoryName(serverName.toString()));
-          Path splitDir = logDir.suffix(HLog.SPLITTING_EXT);
+          // In the case of a clean exit, the shutdown handler would have presplit any WALs and
+          // removed empty directories.
+          Path logDir = new Path(rootdir,
+              DefaultWALProvider.getWALDirectoryName(serverName.toString()));
+          Path splitDir = logDir.suffix(DefaultWALProvider.SPLITTING_EXT);
           if (fs.exists(logDir) || fs.exists(splitDir)) {
             LOG.debug("Found queued dead server " + serverName);
             failover = true;
@@ -512,8 +501,8 @@ public class AssignmentManager {
 
     if (!failover) {
       disabledOrDisablingOrEnabling = tableStateManager.getTablesInStates(
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING,
-        ZooKeeperProtos.Table.State.ENABLING);
+        TableState.State.DISABLED, TableState.State.DISABLING,
+        TableState.State.ENABLING);
 
       // Clean re/start, mark all user regions closed before reassignment
       allRegions = regionStates.closeAllUserRegions(
@@ -580,7 +569,7 @@ public class AssignmentManager {
           ((FavoredNodeLoadBalancer)this.balancer).getFavoredNodes(region));
     }
     FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
-      this.server.getShortCircuitConnection());
+      this.server.getConnection());
   }
 
   /**
@@ -751,22 +740,21 @@ public class AssignmentManager {
         try {
           // Send OPEN RPC. If it fails on a IOE or RemoteException,
           // regions will be assigned individually.
+          Configuration conf = server.getConfiguration();
           long maxWaitTime = System.currentTimeMillis() +
-            this.server.getConfiguration().
-              getLong("hbase.regionserver.rpc.startup.waittime", 60000);
+            conf.getLong("hbase.regionserver.rpc.startup.waittime", 60000);
           for (int i = 1; i <= maximumAttempts && !server.isStopped(); i++) {
             try {
               List<RegionOpeningState> regionOpeningStateList = serverManager
                 .sendRegionOpen(destination, regionOpenInfos);
-              if (regionOpeningStateList == null) {
-                // Failed getting RPC connection to this server
-                return false;
-              }
               for (int k = 0, n = regionOpeningStateList.size(); k < n; k++) {
                 RegionOpeningState openingState = regionOpeningStateList.get(k);
                 if (openingState != RegionOpeningState.OPENED) {
                   HRegionInfo region = regionOpenInfos.get(k).getFirst();
+                  LOG.info("Got opening state " + openingState
+                    + ", will reassign later: " + region);
                   // Failed opening this region, reassign it later
+                  forceRegionStateToOffline(region, true);
                   failedToOpenRegions.add(region);
                 }
               }
@@ -782,8 +770,10 @@ public class AssignmentManager {
               } else if (e instanceof ServerNotRunningYetException) {
                 long now = System.currentTimeMillis();
                 if (now < maxWaitTime) {
-                  LOG.debug("Server is not yet up; waiting up to " +
-                    (maxWaitTime - now) + "ms", e);
+                  if (LOG.isDebugEnabled()) {
+                    LOG.debug("Server is not yet up; waiting up to " +
+                      (maxWaitTime - now) + "ms", e);
+                  }
                   Thread.sleep(100);
                   i--; // reset the try count
                   continue;
@@ -803,6 +793,17 @@ public class AssignmentManager {
                 Thread.sleep(100);
                 i--;
                 continue;
+              } else if (e instanceof FailedServerException && i < maximumAttempts) {
+                // In case the server is in the failed server list, no point to
+                // retry too soon. Retry after the failed_server_expiry time
+                long sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+                  RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug(destination + " is on failed server list; waiting "
+                    + sleepTime + "ms", e);
+                }
+                Thread.sleep(sleepTime);
+                continue;
               }
               throw e;
             }
@@ -811,6 +812,10 @@ public class AssignmentManager {
           // Can be a socket timeout, EOF, NoRouteToHost, etc
           LOG.info("Unable to communicate with " + destination
             + " in order to assign regions, ", e);
+          for (RegionState state: states) {
+            HRegionInfo region = state.getRegion();
+            forceRegionStateToOffline(region, true);
+          }
           return false;
         }
       } finally {
@@ -844,9 +849,7 @@ public class AssignmentManager {
    * on an unexpected server scenario, for an example)
    */
   private void unassign(final HRegionInfo region,
-      final RegionState state, final ServerName dest) {
-    ServerName server = state.getServerName();
-    long maxWaitTime = -1;
+      final ServerName server, final ServerName dest) {
     for (int i = 1; i <= this.maximumAttempts; i++) {
       if (this.server.isStopped() || this.server.isAborted()) {
         LOG.debug("Server stopped/aborted; skipping unassign of " + region);
@@ -873,7 +876,6 @@ public class AssignmentManager {
         if (t instanceof RemoteException) {
           t = ((RemoteException)t).unwrapRemoteException();
         }
-        boolean logRetries = true;
         if (t instanceof NotServingRegionException
             || t instanceof RegionServerStoppedException
             || t instanceof ServerNotRunningYetException) {
@@ -881,56 +883,34 @@ public class AssignmentManager {
             + ", it's not any more on " + server, t);
           regionStates.updateRegionState(region, State.OFFLINE);
           return;
-        } else if (t instanceof FailedServerException
-            || t instanceof RegionAlreadyInTransitionException) {
-          long sleepTime = 0;
-          Configuration conf = this.server.getConfiguration();
-          if(t instanceof FailedServerException) {
-            sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
-                  RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
-          } else {
-            if (maxWaitTime < 0) {
-              maxWaitTime =
-                  EnvironmentEdgeManager.currentTime()
-                      + conf.getLong(ALREADY_IN_TRANSITION_WAITTIME,
-                        DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
-            }
-            long now = EnvironmentEdgeManager.currentTime();
-            if (now < maxWaitTime) {
-              LOG.debug("Region is already in transition; "
-                + "waiting up to " + (maxWaitTime - now) + "ms", t);
-              sleepTime = 100;
-              i--; // reset the try count
-              logRetries = false;
-            }
-          }
+        } else if (t instanceof FailedServerException && i < maximumAttempts) {
+          // In case the server is in the failed server list, no point to
+          // retry too soon. Retry after the failed_server_expiry time
           try {
-            if (sleepTime > 0) {
-              Thread.sleep(sleepTime);
+            Configuration conf = this.server.getConfiguration();
+            long sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+              RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(server + " is on failed server list; waiting "
+                + sleepTime + "ms", t);
             }
+            Thread.sleep(sleepTime);
           } catch (InterruptedException ie) {
             LOG.warn("Failed to unassign "
               + region.getRegionNameAsString() + " since interrupted", ie);
+            regionStates.updateRegionState(region, State.FAILED_CLOSE);
             Thread.currentThread().interrupt();
-            if (state != null) {
-              regionStates.updateRegionState(region, State.FAILED_CLOSE);
-            }
             return;
           }
         }
 
-        if (logRetries) {
-          LOG.info("Server " + server + " returned " + t + " for "
-            + region.getRegionNameAsString() + ", try=" + i
-            + " of " + this.maximumAttempts, t);
-          // Presume retry or server will expire.
-        }
+        LOG.info("Server " + server + " returned " + t + " for "
+          + region.getRegionNameAsString() + ", try=" + i
+          + " of " + this.maximumAttempts, t);
       }
     }
     // Run out of attempts
-    if (state != null) {
-      regionStates.updateRegionState(region, State.FAILED_CLOSE);
-    }
+    regionStates.updateRegionState(region, State.FAILED_CLOSE);
   }
 
   /**
@@ -961,13 +941,13 @@ public class AssignmentManager {
       }
     case FAILED_CLOSE:
     case FAILED_OPEN:
-      unassign(region, state, null);
+      regionStates.updateRegionState(region, State.PENDING_CLOSE);
+      unassign(region, state.getServerName(), null);
       state = regionStates.getRegionState(region);
-      if (state.isFailedClose()) {
-        // If we can't close the region, we can't re-assign
-        // it so as to avoid possible double assignment/data loss.
-        LOG.info("Skip assigning " +
-          region + ", we couldn't close it: " + state);
+      if (!state.isOffline() && !state.isClosed()) {
+        // If the region isn't offline, we can't re-assign
+        // it now. It will be assigned automatically after
+        // the regionserver reports it's closed.
         return null;
       }
     case OFFLINE:
@@ -993,7 +973,6 @@ public class AssignmentManager {
       RegionPlan plan = null;
       long maxWaitTime = -1;
       HRegionInfo region = state.getRegion();
-      RegionOpeningState regionOpenState;
       Throwable previousException = null;
       for (int i = 1; i <= maximumAttempts; i++) {
         if (server.isStopped() || server.isAborted()) {
@@ -1001,6 +980,7 @@ public class AssignmentManager {
             + ", the server is stopped/aborted");
           return;
         }
+
         if (plan == null) { // Get a server for the region at first
           try {
             plan = getRegionPlan(region, forceNewPlan);
@@ -1008,40 +988,45 @@ public class AssignmentManager {
             LOG.warn("Failed to get region plan", e);
           }
         }
+
         if (plan == null) {
           LOG.warn("Unable to determine a plan to assign " + region);
+
+          // For meta region, we have to keep retrying until succeeding
           if (region.isMetaRegion()) {
-            try {
-              Thread.sleep(this.sleepTimeBeforeRetryingMetaAssignment);
-              if (i == maximumAttempts) i = 1;
-              continue;
-            } catch (InterruptedException e) {
-              LOG.error("Got exception while waiting for hbase:meta assignment");
-              Thread.currentThread().interrupt();
+            if (i == maximumAttempts) {
+              i = 0; // re-set attempt count to 0 for at least 1 retry
+
+              LOG.warn("Unable to determine a plan to assign a hbase:meta region " + region +
+                " after maximumAttempts (" + this.maximumAttempts +
+                "). Reset attempts count and continue retrying.");
             }
+            waitForRetryingMetaAssignment();
+            continue;
           }
+
           regionStates.updateRegionState(region, State.FAILED_OPEN);
           return;
         }
-            // In case of assignment from EnableTableHandler table state is ENABLING. Any how
-            // EnableTableHandler will set ENABLED after assigning all the table regions. If we
-            // try to set to ENABLED directly then client API may think table is enabled.
-            // When we have a case such as all the regions are added directly into hbase:meta and we call
-            // assignRegion then we need to make the table ENABLED. Hence in such case the table
-            // will not be in ENABLING or ENABLED state.
-            TableName tableName = region.getTable();
-            if (!tableStateManager.isTableState(tableName,
-              ZooKeeperProtos.Table.State.ENABLED, ZooKeeperProtos.Table.State.ENABLING)) {
-              LOG.debug("Setting table " + tableName + " to ENABLED state.");
-              setEnabledTable(tableName);
-            }
+        // In case of assignment from EnableTableHandler table state is ENABLING. Any how
+        // EnableTableHandler will set ENABLED after assigning all the table regions. If we
+        // try to set to ENABLED directly then client API may think table is enabled.
+        // When we have a case such as all the regions are added directly into hbase:meta and we call
+        // assignRegion then we need to make the table ENABLED. Hence in such case the table
+        // will not be in ENABLING or ENABLED state.
+        TableName tableName = region.getTable();
+        if (!tableStateManager.isTableState(tableName,
+          TableState.State.ENABLED, TableState.State.ENABLING)) {
+          LOG.debug("Setting table " + tableName + " to ENABLED state.");
+          setEnabledTable(tableName);
+        }
         LOG.info("Assigning " + region.getRegionNameAsString() +
             " to " + plan.getDestination().toString());
         // Transition RegionState to PENDING_OPEN
        regionStates.updateRegionState(region,
           State.PENDING_OPEN, plan.getDestination());
 
-        boolean needNewPlan;
+        boolean needNewPlan = false;
         final String assignMsg = "Failed assignment of " + region.getRegionNameAsString() +
             " to " + plan.getDestination();
         try {
@@ -1049,20 +1034,8 @@ public class AssignmentManager {
           if (this.shouldAssignRegionsWithFavoredNodes) {
             favoredNodes = ((FavoredNodeLoadBalancer)this.balancer).getFavoredNodes(region);
           }
-          regionOpenState = serverManager.sendRegionOpen(
-              plan.getDestination(), region, favoredNodes);
-
-          if (regionOpenState == RegionOpeningState.FAILED_OPENING) {
-            // Failed opening this region, looping again on a new server.
-            needNewPlan = true;
-            LOG.warn(assignMsg + ", regionserver says 'FAILED_OPENING', " +
-                " trying to assign elsewhere instead; " +
-                "try=" + i + " of " + this.maximumAttempts);
-          } else {
-            // we're done
-            return;
-          }
-
+          serverManager.sendRegionOpen(plan.getDestination(), region, favoredNodes);
+          return; // we're done
         } catch (Throwable t) {
           if (t instanceof RemoteException) {
             t = ((RemoteException) t).unwrapRemoteException();
@@ -1070,44 +1043,34 @@ public class AssignmentManager {
           previousException = t;
 
           // Should we wait a little before retrying? If the server is starting it's yes.
-          // If the region is already in transition, it's yes as well: we want to be sure that
-          //  the region will get opened but we don't want a double assignment.
-          boolean hold = (t instanceof RegionAlreadyInTransitionException ||
-              t instanceof ServerNotRunningYetException);
+          boolean hold = (t instanceof ServerNotRunningYetException);
 
           // In case socket is timed out and the region server is still online,
           // the openRegion RPC could have been accepted by the server and
           // just the response didn't go through.  So we will retry to
-          // open the region on the same server to avoid possible
-          // double assignment.
+          // open the region on the same server.
           boolean retry = !hold && (t instanceof java.net.SocketTimeoutException
               && this.serverManager.isServerOnline(plan.getDestination()));
-
 
           if (hold) {
             LOG.warn(assignMsg + ", waiting a little before trying on the same region server " +
               "try=" + i + " of " + this.maximumAttempts, t);
 
             if (maxWaitTime < 0) {
-              if (t instanceof RegionAlreadyInTransitionException) {
-                maxWaitTime = EnvironmentEdgeManager.currentTime()
-                  + this.server.getConfiguration().getLong(ALREADY_IN_TRANSITION_WAITTIME,
-                    DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
-              } else {
-                maxWaitTime = EnvironmentEdgeManager.currentTime()
-                  + this.server.getConfiguration().getLong(
-                    "hbase.regionserver.rpc.startup.waittime", 60000);
-              }
+              maxWaitTime = EnvironmentEdgeManager.currentTime()
+                + this.server.getConfiguration().getLong(
+                  "hbase.regionserver.rpc.startup.waittime", 60000);
             }
             try {
-              needNewPlan = false;
               long now = EnvironmentEdgeManager.currentTime();
               if (now < maxWaitTime) {
-                LOG.debug("Server is not yet up or region is already in transition; "
-                  + "waiting up to " + (maxWaitTime - now) + "ms", t);
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Server is not yet up; waiting up to "
+                    + (maxWaitTime - now) + "ms", t);
+                }
                 Thread.sleep(100);
                 i--; // reset the try count
-              } else if (!(t instanceof RegionAlreadyInTransitionException)) {
+              } else {
                 LOG.debug("Server is not up for a while; try a new one", t);
                 needNewPlan = true;
               }
@@ -1119,9 +1082,10 @@ public class AssignmentManager {
               return;
             }
           } else if (retry) {
-            needNewPlan = false;
             i--; // we want to retry as many times as needed as long as the RS is not dead.
-            LOG.warn(assignMsg + ", trying to assign to the same region server due ", t);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(assignMsg + ", trying to assign to the same region server due ", t);
+            }
           } else {
             needNewPlan = true;
             LOG.warn(assignMsg + ", trying to assign elsewhere instead;" +
@@ -1130,9 +1094,19 @@ public class AssignmentManager {
         }
 
         if (i == this.maximumAttempts) {
-          // Don't reset the region state or get a new plan any more.
-          // This is the last try.
-          continue;
+          // For meta region, we have to keep retrying until succeeding
+          if (region.isMetaRegion()) {
+            i = 0; // re-set attempt count to 0 for at least 1 retry
+            LOG.warn(assignMsg +
+                ", trying to assign a hbase:meta region reached to maximumAttempts (" +
+                this.maximumAttempts + ").  Reset attempt counts and continue retrying.");
+            waitForRetryingMetaAssignment();
+          }
+          else {
+            // Don't reset the region state or get a new plan any more.
+            // This is the last try.
+            continue;
+          }
         }
 
         // If region opened on destination of present plan, reassigning to new
@@ -1188,8 +1162,8 @@ public class AssignmentManager {
 
   private boolean isDisabledorDisablingRegionInRIT(final HRegionInfo region) {
     if (this.tableStateManager.isTableState(region.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED,
-        ZooKeeperProtos.Table.State.DISABLING) || replicasToClose.contains(region)) {
+            TableState.State.DISABLED,
+            TableState.State.DISABLING) || replicasToClose.contains(region)) {
       LOG.info("Table " + region.getTable() + " is disabled or disabling;"
         + " skipping assign of " + region.getRegionNameAsString());
       offlineDisabledRegion(region);
@@ -1200,29 +1174,17 @@ public class AssignmentManager {
 
   /**
    * @param region the region to assign
-   * @return Plan for passed <code>region</code> (If none currently, it creates one or
-   * if no servers to assign, it returns null).
-   */
-  private RegionPlan getRegionPlan(final HRegionInfo region,
-      final boolean forceNewPlan)  throws HBaseIOException {
-    return getRegionPlan(region, null, forceNewPlan);
-  }
-
-  /**
-   * @param region the region to assign
-   * @param serverToExclude Server to exclude (we know its bad). Pass null if
-   * all servers are thought to be assignable.
    * @param forceNewPlan If true, then if an existing plan exists, a new plan
    * will be generated.
    * @return Plan for passed <code>region</code> (If none currently, it creates one or
    * if no servers to assign, it returns null).
    */
   private RegionPlan getRegionPlan(final HRegionInfo region,
-      final ServerName serverToExclude, final boolean forceNewPlan) throws HBaseIOException {
+      final boolean forceNewPlan) throws HBaseIOException {
     // Pickup existing plan or make a new one
     final String encodedName = region.getEncodedName();
     final List<ServerName> destServers =
-      serverManager.createDestinationServersList(serverToExclude);
+      serverManager.createDestinationServersList();
 
     if (destServers.isEmpty()){
       LOG.warn("Can't move " + encodedName +
@@ -1268,16 +1230,32 @@ public class AssignmentManager {
         LOG.warn("Can't find a destination for " + encodedName);
         return null;
       }
-      LOG.debug("No previous transition plan found (or ignoring " +
-        "an existing plan) for " + region.getRegionNameAsString() +
-        "; generated random plan=" + randomPlan + "; " + destServers.size() +
-        " (online=" + serverManager.getOnlineServers().size() +
-        ") available servers, forceNewPlan=" + forceNewPlan);
-        return randomPlan;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("No previous transition plan found (or ignoring " +
+          "an existing plan) for " + region.getRegionNameAsString() +
+          "; generated random plan=" + randomPlan + "; " + destServers.size() +
+          " (online=" + serverManager.getOnlineServers().size() +
+          ") available servers, forceNewPlan=" + forceNewPlan);
       }
-    LOG.debug("Using pre-existing plan for " +
-      region.getRegionNameAsString() + "; plan=" + existingPlan);
+      return randomPlan;
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Using pre-existing plan for " +
+        region.getRegionNameAsString() + "; plan=" + existingPlan);
+    }
     return existingPlan;
+  }
+
+  /**
+   * Wait for some time before retrying meta table region assignment
+   */
+  private void waitForRetryingMetaAssignment() {
+    try {
+      Thread.sleep(this.sleepTimeBeforeRetryingMetaAssignment);
+    } catch (InterruptedException e) {
+      LOG.error("Got exception while waiting for hbase:meta assignment");
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
@@ -1356,7 +1334,7 @@ public class AssignmentManager {
         return;
       }
 
-      unassign(region, state, dest);
+      unassign(region, state.getServerName(), dest);
     } finally {
       lock.unlock();
 
@@ -1402,14 +1380,15 @@ public class AssignmentManager {
   }
 
   /**
-   * Assigns the hbase:meta region.
+   * Assigns the hbase:meta region or a replica.
    * <p>
    * Assumes that hbase:meta is currently closed and is not being actively served by
    * any RegionServer.
+   * @param hri TODO
    */
-  public void assignMeta() throws KeeperException {
-    regionStates.updateRegionState(HRegionInfo.FIRST_META_REGIONINFO, State.OFFLINE);
-    assign(HRegionInfo.FIRST_META_REGIONINFO);
+  public void assignMeta(HRegionInfo hri) throws KeeperException {
+    regionStates.updateRegionState(hri, State.OFFLINE);
+    assign(hri);
   }
 
   /**
@@ -1433,6 +1412,9 @@ public class AssignmentManager {
     // Reuse existing assignment info
     Map<ServerName, List<HRegionInfo>> bulkPlan =
       balancer.retainAssignment(regions, servers);
+    if (bulkPlan == null) {
+      throw new IOException("Unable to determine a plan to assign region(s)");
+    }
 
     assign(regions.size(), servers.size(),
       "retainAssignment=true", bulkPlan);
@@ -1460,8 +1442,11 @@ public class AssignmentManager {
     // Generate a round-robin bulk assignment plan
     Map<ServerName, List<HRegionInfo>> bulkPlan
       = balancer.roundRobinAssignment(regions, servers);
-    processFavoredNodes(regions);
+    if (bulkPlan == null) {
+      throw new IOException("Unable to determine a plan to assign region(s)");
+    }
 
+    processFavoredNodes(regions);
     assign(regions.size(), servers.size(),
       "round-robin=true", bulkPlan);
   }
@@ -1481,7 +1466,7 @@ public class AssignmentManager {
           " region(s) to " + servers + " server(s)");
       }
       for (Map.Entry<ServerName, List<HRegionInfo>> plan: bulkPlan.entrySet()) {
-        if (!assign(plan.getKey(), plan.getValue())) {
+        if (!assign(plan.getKey(), plan.getValue()) && !server.isStopped()) {
           for (HRegionInfo region: plan.getValue()) {
             if (!regionStates.isRegionOnline(region)) {
               invokeAssign(region);
@@ -1529,7 +1514,7 @@ public class AssignmentManager {
     for (HRegionInfo hri : regionsFromMetaScan) {
       TableName tableName = hri.getTable();
       if (!tableStateManager.isTableState(tableName,
-          ZooKeeperProtos.Table.State.ENABLED)) {
+              TableState.State.ENABLED)) {
         setEnabledTable(tableName);
       }
     }
@@ -1574,17 +1559,17 @@ public class AssignmentManager {
    * @throws IOException
    */
   Set<ServerName> rebuildUserRegions() throws
-      IOException, KeeperException, CoordinatedStateException {
+          IOException, KeeperException {
     Set<TableName> disabledOrEnablingTables = tableStateManager.getTablesInStates(
-      ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.ENABLING);
+            TableState.State.DISABLED, TableState.State.ENABLING);
 
     Set<TableName> disabledOrDisablingOrEnabling = tableStateManager.getTablesInStates(
-      ZooKeeperProtos.Table.State.DISABLED,
-      ZooKeeperProtos.Table.State.DISABLING,
-      ZooKeeperProtos.Table.State.ENABLING);
+            TableState.State.DISABLED,
+            TableState.State.DISABLING,
+            TableState.State.ENABLING);
 
     // Region assignment from META
-    List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getShortCircuitConnection());
+    List<Result> results = MetaTableAccessor.fullScanRegions(server.getConnection());
     // Get any new but slow to checkin region server that joined the cluster
     Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
     // Set of offline servers to be returned
@@ -1646,7 +1631,7 @@ public class AssignmentManager {
         // this will be used in rolling restarts
         if (!disabledOrDisablingOrEnabling.contains(tableName)
           && !getTableStateManager().isTableState(tableName,
-            ZooKeeperProtos.Table.State.ENABLED)) {
+                TableState.State.ENABLED)) {
           setEnabledTable(tableName);
         }
       }
@@ -1663,9 +1648,9 @@ public class AssignmentManager {
    * @throws IOException
    */
   private void recoverTableInDisablingState()
-      throws KeeperException, IOException, CoordinatedStateException {
+          throws KeeperException, IOException {
     Set<TableName> disablingTables =
-      tableStateManager.getTablesInStates(ZooKeeperProtos.Table.State.DISABLING);
+            tableStateManager.getTablesInStates(TableState.State.DISABLING);
     if (disablingTables.size() != 0) {
       for (TableName tableName : disablingTables) {
         // Recover by calling DisableTableHandler
@@ -1687,9 +1672,9 @@ public class AssignmentManager {
    * @throws IOException
    */
   private void recoverTableInEnablingState()
-      throws KeeperException, IOException, CoordinatedStateException {
+          throws KeeperException, IOException {
     Set<TableName> enablingTables = tableStateManager.
-      getTablesInStates(ZooKeeperProtos.Table.State.ENABLING);
+            getTablesInStates(TableState.State.ENABLING);
     if (enablingTables.size() != 0) {
       for (TableName tableName : enablingTables) {
         // Recover by calling EnableTableHandler
@@ -1714,24 +1699,36 @@ public class AssignmentManager {
   /**
    * Processes list of regions in transition at startup
    */
-  void processRegionsInTransition(Collection<RegionState> regionStates) {
+  void processRegionsInTransition(Collection<RegionState> regionsInTransition) {
     // We need to send RPC call again for PENDING_OPEN/PENDING_CLOSE regions
     // in case the RPC call is not sent out yet before the master was shut down
     // since we update the state before we send the RPC call. We can't update
     // the state after the RPC call. Otherwise, we don't know what's happened
     // to the region if the master dies right after the RPC call is out.
-    for (RegionState regionState: regionStates) {
-      if (!serverManager.isServerOnline(regionState.getServerName())) {
+    for (RegionState regionState: regionsInTransition) {
+      LOG.info("Processing " + regionState);
+      ServerName serverName = regionState.getServerName();
+      // Server could be null in case of FAILED_OPEN when master cannot find a region plan. In that
+      // case, try assigning it here.
+      if (serverName != null && !serverManager.getOnlineServers().containsKey(serverName)) {
+        LOG.info("Server " + serverName + " isn't online. SSH will handle this");
         continue; // SSH will handle it
       }
-      State state = regionState.getState();
-      LOG.info("Processing " + regionState);
+      HRegionInfo regionInfo = regionState.getRegion();
+      RegionState.State state = regionState.getState();
       switch (state) {
+      case CLOSED:
+        invokeAssign(regionState.getRegion());
+        break;
       case PENDING_OPEN:
         retrySendRegionOpen(regionState);
         break;
       case PENDING_CLOSE:
         retrySendRegionClose(regionState);
+        break;
+      case FAILED_CLOSE:
+      case FAILED_OPEN:
+        invokeUnAssign(regionInfo);
         break;
       default:
         // No process for other states
@@ -1752,44 +1749,58 @@ public class AssignmentManager {
           ServerName serverName = regionState.getServerName();
           ReentrantLock lock = locker.acquireLock(hri.getEncodedName());
           try {
-            if (!regionState.equals(regionStates.getRegionState(hri))) {
-              return; // Region is not in the expected state any more
-            }
-            while (serverManager.isServerOnline(serverName)
-                && !server.isStopped() && !server.isAborted()) {
+            for (int i = 1; i <= maximumAttempts; i++) {
+              if (!serverManager.isServerOnline(serverName)
+                  || server.isStopped() || server.isAborted()) {
+                return; // No need any more
+              }
               try {
+                if (!regionState.equals(regionStates.getRegionState(hri))) {
+                  return; // Region is not in the expected state any more
+                }
                 List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
                 if (shouldAssignRegionsWithFavoredNodes) {
                   favoredNodes = ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(hri);
                 }
-                RegionOpeningState regionOpenState = serverManager.sendRegionOpen(
-                  serverName, hri, favoredNodes);
-
-                if (regionOpenState == RegionOpeningState.FAILED_OPENING) {
-                  // Failed opening this region, this means the target server didn't get
-                  // the original region open RPC, so re-assign it with a new plan
-                  LOG.debug("Got failed_opening in retry sendRegionOpen for "
-                    + regionState + ", re-assign it");
-                  invokeAssign(hri, true);
-                }
-                return; // Done.
+                serverManager.sendRegionOpen(serverName, hri, favoredNodes);
+                return; // we're done
               } catch (Throwable t) {
                 if (t instanceof RemoteException) {
                   t = ((RemoteException) t).unwrapRemoteException();
                 }
-                // In case SocketTimeoutException/FailedServerException, retry
-                if (t instanceof java.net.SocketTimeoutException
-                    || t instanceof FailedServerException) {
-                  Threads.sleep(100);
-                  continue;
+                if (t instanceof FailedServerException && i < maximumAttempts) {
+                  // In case the server is in the failed server list, no point to
+                  // retry too soon. Retry after the failed_server_expiry time
+                  try {
+                    Configuration conf = this.server.getConfiguration();
+                    long sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+                      RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
+                    if (LOG.isDebugEnabled()) {
+                      LOG.debug(serverName + " is on failed server list; waiting "
+                        + sleepTime + "ms", t);
+                    }
+                    Thread.sleep(sleepTime);
+                    continue;
+                  } catch (InterruptedException ie) {
+                    LOG.warn("Failed to assign "
+                      + hri.getRegionNameAsString() + " since interrupted", ie);
+                    regionStates.updateRegionState(hri, State.FAILED_OPEN);
+                    Thread.currentThread().interrupt();
+                    return;
+                  }
                 }
-                // For other exceptions, re-assign it
-                LOG.debug("Got exception in retry sendRegionOpen for "
-                  + regionState + ", re-assign it", t);
-                invokeAssign(hri);
-                return; // Done.
+                if (serverManager.isServerOnline(serverName)
+                    && t instanceof java.net.SocketTimeoutException) {
+                  i--; // reset the try count
+                } else {
+                  LOG.info("Got exception in retrying sendRegionOpen for "
+                    + regionState + "; try=" + i + " of " + maximumAttempts, t);
+                }
+                Threads.sleep(100);
               }
             }
+            // Run out of attempts
+            regionStates.updateRegionState(hri, State.FAILED_OPEN);
           } finally {
             lock.unlock();
           }
@@ -1810,41 +1821,54 @@ public class AssignmentManager {
           ServerName serverName = regionState.getServerName();
           ReentrantLock lock = locker.acquireLock(hri.getEncodedName());
           try {
-            if (!regionState.equals(regionStates.getRegionState(hri))) {
-              return; // Region is not in the expected state any more
-            }
-            while (serverManager.isServerOnline(serverName)
-                && !server.isStopped() && !server.isAborted()) {
+            for (int i = 1; i <= maximumAttempts; i++) {
+              if (!serverManager.isServerOnline(serverName)
+                  || server.isStopped() || server.isAborted()) {
+                return; // No need any more
+              }
               try {
-                if (!serverManager.sendRegionClose(serverName, hri, null)) {
-                  // This means the region is still on the target server
-                  LOG.debug("Got false in retry sendRegionClose for "
-                    + regionState + ", re-close it");
-                  invokeUnAssign(hri);
+                if (!regionState.equals(regionStates.getRegionState(hri))) {
+                  return; // Region is not in the expected state any more
                 }
+                serverManager.sendRegionClose(serverName, hri, null);
                 return; // Done.
               } catch (Throwable t) {
                 if (t instanceof RemoteException) {
                   t = ((RemoteException) t).unwrapRemoteException();
                 }
-                // In case SocketTimeoutException/FailedServerException, retry
-                if (t instanceof java.net.SocketTimeoutException
-                    || t instanceof FailedServerException) {
-                  Threads.sleep(100);
-                  continue;
+                if (t instanceof FailedServerException && i < maximumAttempts) {
+                  // In case the server is in the failed server list, no point to
+                  // retry too soon. Retry after the failed_server_expiry time
+                  try {
+                    Configuration conf = this.server.getConfiguration();
+                    long sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+                      RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
+                    if (LOG.isDebugEnabled()) {
+                      LOG.debug(serverName + " is on failed server list; waiting "
+                        + sleepTime + "ms", t);
+                    }
+                    Thread.sleep(sleepTime);
+                    continue;
+                  } catch (InterruptedException ie) {
+                    LOG.warn("Failed to unassign "
+                      + hri.getRegionNameAsString() + " since interrupted", ie);
+                    regionStates.updateRegionState(hri, RegionState.State.FAILED_CLOSE);
+                    Thread.currentThread().interrupt();
+                    return;
+                  }
                 }
-                if (!(t instanceof NotServingRegionException
-                    || t instanceof RegionAlreadyInTransitionException)) {
-                  // NotServingRegionException/RegionAlreadyInTransitionException
-                  // means the target server got the original region close request.
-                  // For other exceptions, re-close it
-                  LOG.debug("Got exception in retry sendRegionClose for "
-                    + regionState + ", re-close it", t);
-                  invokeUnAssign(hri);
+                if (serverManager.isServerOnline(serverName)
+                    && t instanceof java.net.SocketTimeoutException) {
+                  i--; // reset the try count
+                } else {
+                  LOG.info("Got exception in retrying sendRegionClose for "
+                    + regionState + "; try=" + i + " of " + maximumAttempts, t);
                 }
-                return; // Done.
+                Threads.sleep(100);
               }
             }
+            // Run out of attempts
+            regionStates.updateRegionState(hri, State.FAILED_CLOSE);
           } finally {
             lock.unlock();
           }
@@ -1886,7 +1910,7 @@ public class AssignmentManager {
   /**
    * @param region Region whose plan we are to clear.
    */
-  void clearRegionPlan(final HRegionInfo region) {
+  private void clearRegionPlan(final HRegionInfo region) {
     synchronized (this.regionPlans) {
       this.regionPlans.remove(region.getEncodedName());
     }
@@ -1933,11 +1957,7 @@ public class AssignmentManager {
   }
 
   void invokeAssign(HRegionInfo regionInfo) {
-    invokeAssign(regionInfo, true);
-  }
-
-  void invokeAssign(HRegionInfo regionInfo, boolean newPlan) {
-    threadPoolExecutorService.submit(new AssignCallable(this, regionInfo, newPlan));
+    threadPoolExecutorService.submit(new AssignCallable(this, regionInfo));
   }
 
   void invokeUnAssign(HRegionInfo regionInfo) {
@@ -1946,6 +1966,15 @@ public class AssignmentManager {
 
   public boolean isCarryingMeta(ServerName serverName) {
     return isCarryingRegion(serverName, HRegionInfo.FIRST_META_REGIONINFO);
+  }
+
+  public boolean isCarryingMetaReplica(ServerName serverName, int replicaId) {
+    return isCarryingRegion(serverName,
+        RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, replicaId));
+  }
+
+  public boolean isCarryingMetaReplica(ServerName serverName, HRegionInfo metaHri) {
+    return isCarryingRegion(serverName, metaHri);
   }
 
   /**
@@ -1991,8 +2020,8 @@ public class AssignmentManager {
         }
       }
     }
-    List<HRegionInfo> regions = regionStates.serverOffline(sn);
-    for (Iterator<HRegionInfo> it = regions.iterator(); it.hasNext(); ) {
+    List<HRegionInfo> rits = regionStates.serverOffline(sn);
+    for (Iterator<HRegionInfo> it = rits.iterator(); it.hasNext(); ) {
       HRegionInfo hri = it.next();
       String encodedName = hri.getEncodedName();
 
@@ -2003,14 +2032,14 @@ public class AssignmentManager {
           regionStates.getRegionTransitionState(encodedName);
         if (regionState == null
             || (regionState.getServerName() != null && !regionState.isOnServer(sn))
-            || !(regionState.isFailedClose() || regionState.isOffline()
-              || regionState.isPendingOpenOrOpening())) {
+            || !RegionStates.isOneOfStates(regionState, State.PENDING_OPEN,
+                State.OPENING, State.FAILED_OPEN, State.FAILED_CLOSE, State.OFFLINE)) {
           LOG.info("Skip " + regionState + " since it is not opening/failed_close"
             + " on the dead server any more: " + sn);
           it.remove();
         } else {
           if (tableStateManager.isTableState(hri.getTable(),
-              ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+                  TableState.State.DISABLED, TableState.State.DISABLING)) {
             regionStates.regionOffline(hri);
             it.remove();
             continue;
@@ -2022,7 +2051,7 @@ public class AssignmentManager {
         lock.unlock();
       }
     }
-    return regions;
+    return rits;
   }
 
   /**
@@ -2032,7 +2061,7 @@ public class AssignmentManager {
     HRegionInfo hri = plan.getRegionInfo();
     TableName tableName = hri.getTable();
     if (tableStateManager.isTableState(tableName,
-      ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+            TableState.State.DISABLED, TableState.State.DISABLING)) {
       LOG.info("Ignored moving region of disabling/disabled table "
         + tableName);
       return;
@@ -2066,8 +2095,8 @@ public class AssignmentManager {
   protected void setEnabledTable(TableName tableName) {
     try {
       this.tableStateManager.setTableState(tableName,
-        ZooKeeperProtos.Table.State.ENABLED);
-    } catch (CoordinatedStateException e) {
+              TableState.State.ENABLED);
+    } catch (IOException e) {
       // here we can abort as it is the start up flow
       String errorMsg = "Unable to ensure that the table " + tableName
           + " will be" + " enabled because of a ZooKeeper issue";
@@ -2076,8 +2105,20 @@ public class AssignmentManager {
     }
   }
 
-  private void onRegionFailedOpen(
-      final HRegionInfo hri, final ServerName sn) {
+  private String onRegionFailedOpen(final RegionState current,
+      final HRegionInfo hri, final ServerName serverName) {
+    // The region must be opening on this server.
+    // If current state is failed_open on the same server,
+    // it could be a reportRegionTransition RPC retry.
+    if (current == null || !current.isOpeningOrFailedOpenOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not opening on " + serverName;
+    }
+
+    // Just return in case of retrying
+    if (current.isFailedOpen()) {
+      return null;
+    }
+
     String encodedName = hri.getEncodedName();
     AtomicInteger failedOpenCount = failedOpenTracker.get(encodedName);
     if (failedOpenCount == null) {
@@ -2087,177 +2128,421 @@ public class AssignmentManager {
       // name, and failedOpenTracker is updated only in this block
       failedOpenTracker.put(encodedName, failedOpenCount);
     }
-    if (failedOpenCount.incrementAndGet() >= maximumAttempts) {
+    if (failedOpenCount.incrementAndGet() >= maximumAttempts && !hri.isMetaRegion()) {
       regionStates.updateRegionState(hri, State.FAILED_OPEN);
       // remove the tracking info to save memory, also reset
       // the count for next open initiative
       failedOpenTracker.remove(encodedName);
     } else {
+      if (hri.isMetaRegion() && failedOpenCount.get() >= maximumAttempts) {
+        // Log a warning message if a meta region failedOpenCount exceeds maximumAttempts
+        // so that we are aware of potential problem if it persists for a long time.
+        LOG.warn("Failed to open the hbase:meta region " +
+            hri.getRegionNameAsString() + " after" +
+            failedOpenCount.get() + " retries. Continue retrying.");
+      }
+
       // Handle this the same as if it were opened and then closed.
       RegionState regionState = regionStates.updateRegionState(hri, State.CLOSED);
       if (regionState != null) {
         // When there are more than one region server a new RS is selected as the
         // destination and the same is updated in the region plan. (HBASE-5546)
         if (getTableStateManager().isTableState(hri.getTable(),
-            ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
-            replicasToClose.contains(hri)) {
+                TableState.State.DISABLED, TableState.State.DISABLING) ||
+                replicasToClose.contains(hri)) {
           offlineDisabledRegion(hri);
-          return;
+          return null;
         }
-        // ZK Node is in CLOSED state, assign it.
-         regionStates.updateRegionState(hri, RegionState.State.CLOSED);
+        regionStates.updateRegionState(hri, RegionState.State.CLOSED);
         // This below has to do w/ online enable/disable of a table
         removeClosedRegion(hri);
         try {
-          getRegionPlan(hri, sn, true);
+          getRegionPlan(hri, true);
         } catch (HBaseIOException e) {
           LOG.warn("Failed to get region plan", e);
         }
-        invokeAssign(hri, false);
+        invokeAssign(hri);
       }
     }
+    // Null means no error
+    return null;
   }
 
-  private void onRegionOpen(
-      final HRegionInfo hri, final ServerName sn, long openSeqNum) {
-    regionOnline(hri, sn, openSeqNum);
+  private String onRegionOpen(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be opening on this server.
+    // If current state is already opened on the same server,
+    // it could be a reportRegionTransition RPC retry.
+    if (current == null || !current.isOpeningOrOpenedOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not opening on " + serverName;
+    }
+
+    // Just return in case of retrying
+    if (current.isOpened()) {
+      return null;
+    }
+
+    long openSeqNum = transition.hasOpenSeqNum()
+      ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM;
+    if (openSeqNum < 0) {
+      return "Newly opened region has invalid open seq num " + openSeqNum;
+    }
+    regionOnline(hri, serverName, openSeqNum);
 
     // reset the count, if any
     failedOpenTracker.remove(hri.getEncodedName());
     if (getTableStateManager().isTableState(hri.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+            TableState.State.DISABLED, TableState.State.DISABLING)) {
       invokeUnAssign(hri);
-    }
-  }
-
-  private void onRegionClosed(final HRegionInfo hri) {
-    if (getTableStateManager().isTableState(hri.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
-        replicasToClose.contains(hri)) {
-      offlineDisabledRegion(hri);
-      return;
-    }
-    regionStates.updateRegionState(hri, RegionState.State.CLOSED);
-    sendRegionClosedNotification(hri);
-    // This below has to do w/ online enable/disable of a table
-    removeClosedRegion(hri);
-    invokeAssign(hri, false);
-  }
-
-  private String onRegionSplit(ServerName sn, TransitionCode code,
-      final HRegionInfo p, final HRegionInfo a, final HRegionInfo b) {
-    final RegionState rs_p = regionStates.getRegionState(p);
-    RegionState rs_a = regionStates.getRegionState(a);
-    RegionState rs_b = regionStates.getRegionState(b);
-    if (!(rs_p.isOpenOrSplittingOnServer(sn)
-        && (rs_a == null || rs_a.isOpenOrSplittingNewOnServer(sn))
-        && (rs_b == null || rs_b.isOpenOrSplittingNewOnServer(sn)))) {
-      return "Not in state good for split";
-    }
-
-    regionStates.updateRegionState(a, State.SPLITTING_NEW, sn);
-    regionStates.updateRegionState(b, State.SPLITTING_NEW, sn);
-    regionStates.updateRegionState(p, State.SPLITTING);
-
-    if (code == TransitionCode.SPLIT) {
-      if (TEST_SKIP_SPLIT_HANDLING) {
-        return "Skipping split message, TEST_SKIP_SPLIT_HANDLING is set";
-      }
-      regionOffline(p, State.SPLIT);
-      regionOnline(a, sn, 1);
-      regionOnline(b, sn, 1);
-
-      // User could disable the table before master knows the new region.
-      if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
-        invokeUnAssign(a);
-        invokeUnAssign(b);
-      } else {
-        Callable<Object> splitReplicasCallable = new Callable<Object>() {
-          @Override
-          public Object call() {
-            doSplittingOfReplicas(p, a, b);
-            return null;
-          }
-        };
-        threadPoolExecutorService.submit(splitReplicasCallable);
-      }
-    } else if (code == TransitionCode.SPLIT_PONR) {
-      try {
-        regionStates.splitRegion(p, a, b, sn);
-      } catch (IOException ioe) {
-        LOG.info("Failed to record split region " + p.getShortNameToLog());
-        return "Failed to record the splitting in meta";
-      }
-    } else if (code == TransitionCode.SPLIT_REVERTED) {
-      regionOnline(p, sn);
-      regionOffline(a);
-      regionOffline(b);
-
-      if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
-        invokeUnAssign(p);
-      }
     }
     return null;
   }
 
-  private String onRegionMerge(ServerName sn, TransitionCode code,
-      final HRegionInfo p, final HRegionInfo a, final HRegionInfo b) {
-    RegionState rs_p = regionStates.getRegionState(p);
-    RegionState rs_a = regionStates.getRegionState(a);
-    RegionState rs_b = regionStates.getRegionState(b);
-    if (!(rs_a.isOpenOrMergingOnServer(sn) && rs_b.isOpenOrMergingOnServer(sn)
-        && (rs_p == null || rs_p.isOpenOrMergingNewOnServer(sn)))) {
-      return "Not in state good for merge";
+  private String onRegionClosed(final RegionState current,
+      final HRegionInfo hri, final ServerName serverName) {
+    // Region will be usually assigned right after closed. When a RPC retry comes
+    // in, the region may already have moved away from closed state. However, on the
+    // region server side, we don't care much about the response for this transition.
+    // We only make sure master has got and processed this report, either
+    // successfully or not. So this is fine, not a problem at all.
+    if (current == null || !current.isClosingOrClosedOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not closing on " + serverName;
     }
 
-    regionStates.updateRegionState(a, State.MERGING);
-    regionStates.updateRegionState(b, State.MERGING);
-    regionStates.updateRegionState(p, State.MERGING_NEW, sn);
+    // Just return in case of retrying
+    if (current.isClosed()) {
+      return null;
+    }
 
-    String encodedName = p.getEncodedName();
-    if (code == TransitionCode.READY_TO_MERGE) {
-      mergingRegions.put(encodedName,
-        new PairOfSameType<HRegionInfo>(a, b));
-    } else if (code == TransitionCode.MERGED) {
-      mergingRegions.remove(encodedName);
-      regionOffline(a, State.MERGED);
-      regionOffline(b, State.MERGED);
-      regionOnline(p, sn, 1);
+    if (getTableStateManager().isTableState(hri.getTable(), TableState.State.DISABLED,
+        TableState.State.DISABLING) || replicasToClose.contains(hri)) {
+      offlineDisabledRegion(hri);
+      return null;
+    }
 
-      // User could disable the table before master knows the new region.
-      if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
-        invokeUnAssign(p);
-      } else {
-        Callable<Object> mergeReplicasCallable = new Callable<Object>() {
-          @Override
-          public Object call() {
-            doMergingOfReplicas(p, a, b);
-            return null;
-          }
-        };
-        threadPoolExecutorService.submit(mergeReplicasCallable);
-      }
-    } else if (code == TransitionCode.MERGE_PONR) {
-      try {
-        regionStates.mergeRegions(p, a, b, sn);
-      } catch (IOException ioe) {
-        LOG.info("Failed to record merged region " + p.getShortNameToLog());
-        return "Failed to record the merging in meta";
-      }
+    regionStates.updateRegionState(hri, RegionState.State.CLOSED);
+    sendRegionClosedNotification(hri);
+    // This below has to do w/ online enable/disable of a table
+    removeClosedRegion(hri);
+    invokeAssign(hri);
+    return null;
+  }
+
+  private String onRegionReadyToSplit(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be opened on this server.
+    // If current state is already splitting on the same server,
+    // it could be a reportRegionTransition RPC retry.
+    if (current == null || !current.isSplittingOrOpenedOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not opening on " + serverName;
+    }
+
+    // Just return in case of retrying
+    if (current.isSplitting()) {
+      return null;
+    }
+
+    final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
+    final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
+    RegionState rs_a = regionStates.getRegionState(a);
+    RegionState rs_b = regionStates.getRegionState(b);
+    if (rs_a != null || rs_b != null) {
+      return "Some daughter is already existing. "
+        + "a=" + rs_a + ", b=" + rs_b;
+    }
+
+    // Server holding is not updated at this stage.
+    // It is done after PONR.
+    regionStates.updateRegionState(hri, State.SPLITTING);
+    regionStates.createRegionState(
+      a, State.SPLITTING_NEW, serverName, null);
+    regionStates.createRegionState(
+      b, State.SPLITTING_NEW, serverName, null);
+    return null;
+  }
+
+  private String onRegionSplitPONR(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be splitting on this server, and the daughters must be in
+    // splitting_new state. To check RPC retry, we use server holding info.
+    if (current == null || !current.isSplittingOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not splitting on " + serverName;
+    }
+
+    final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
+    final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
+    RegionState rs_a = regionStates.getRegionState(a);
+    RegionState rs_b = regionStates.getRegionState(b);
+
+    // Master could have restarted and lost the new region
+    // states, if so, they must be lost together
+    if (rs_a == null && rs_b == null) {
+      rs_a = regionStates.createRegionState(
+        a, State.SPLITTING_NEW, serverName, null);
+      rs_b = regionStates.createRegionState(
+        b, State.SPLITTING_NEW, serverName, null);
+    }
+
+    if (rs_a == null || !rs_a.isSplittingNewOnServer(serverName)
+        || rs_b == null || !rs_b.isSplittingNewOnServer(serverName)) {
+      return "Some daughter is not known to be splitting on " + serverName
+        + ", a=" + rs_a + ", b=" + rs_b;
+    }
+
+    // Just return in case of retrying
+    if (!regionStates.isRegionOnServer(hri, serverName)) {
+      return null;
+    }
+
+    try {
+      regionStates.splitRegion(hri, a, b, serverName);
+    } catch (IOException ioe) {
+      LOG.info("Failed to record split region " + hri.getShortNameToLog());
+      return "Failed to record the splitting in meta";
+    }
+    return null;
+  }
+
+  private String onRegionSplit(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be splitting on this server, and the daughters must be in
+    // splitting_new state.
+    // If current state is already split on the same server,
+    // it could be a reportRegionTransition RPC retry.
+    if (current == null || !current.isSplittingOrSplitOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not splitting on " + serverName;
+    }
+
+    // Just return in case of retrying
+    if (current.isSplit()) {
+      return null;
+    }
+
+    final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
+    final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
+    RegionState rs_a = regionStates.getRegionState(a);
+    RegionState rs_b = regionStates.getRegionState(b);
+    if (rs_a == null || !rs_a.isSplittingNewOnServer(serverName)
+        || rs_b == null || !rs_b.isSplittingNewOnServer(serverName)) {
+      return "Some daughter is not known to be splitting on " + serverName
+        + ", a=" + rs_a + ", b=" + rs_b;
+    }
+
+    if (TEST_SKIP_SPLIT_HANDLING) {
+      return "Skipping split message, TEST_SKIP_SPLIT_HANDLING is set";
+    }
+    regionOffline(hri, State.SPLIT);
+    regionOnline(a, serverName, 1);
+    regionOnline(b, serverName, 1);
+
+    // User could disable the table before master knows the new region.
+    if (getTableStateManager().isTableState(hri.getTable(),
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
+      invokeUnAssign(a);
+      invokeUnAssign(b);
     } else {
-      mergingRegions.remove(encodedName);
-      regionOnline(a, sn);
-      regionOnline(b, sn);
-      regionOffline(p);
+      Callable<Object> splitReplicasCallable = new Callable<Object>() {
+        @Override
+        public Object call() {
+          doSplittingOfReplicas(hri, a, b);
+          return null;
+        }
+      };
+      threadPoolExecutorService.submit(splitReplicasCallable);
+    }
+    return null;
+  }
 
-      if (getTableStateManager().isTableState(p.getTable(),
-          ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
-        invokeUnAssign(a);
-        invokeUnAssign(b);
+  private String onRegionSplitReverted(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be splitting on this server, and the daughters must be in
+    // splitting_new state.
+    // If the region is in open state, it could be an RPC retry.
+    if (current == null || !current.isSplittingOrOpenedOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not splitting on " + serverName;
+    }
+
+    // Just return in case of retrying
+    if (current.isOpened()) {
+      return null;
+    }
+
+    final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
+    final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
+    RegionState rs_a = regionStates.getRegionState(a);
+    RegionState rs_b = regionStates.getRegionState(b);
+    if (rs_a == null || !rs_a.isSplittingNewOnServer(serverName)
+        || rs_b == null || !rs_b.isSplittingNewOnServer(serverName)) {
+      return "Some daughter is not known to be splitting on " + serverName
+        + ", a=" + rs_a + ", b=" + rs_b;
+    }
+
+    regionOnline(hri, serverName);
+    regionOffline(a);
+    regionOffline(b);
+    if (getTableStateManager().isTableState(hri.getTable(),
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
+      invokeUnAssign(hri);
+    }
+    return null;
+  }
+
+  private String onRegionReadyToMerge(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be new, and the daughters must be open on this server.
+    // If the region is in merge_new state, it could be an RPC retry.
+    if (current != null && !current.isMergingNewOnServer(serverName)) {
+      return "Merging daughter region already exists, p=" + current;
+    }
+
+    // Just return in case of retrying
+    if (current != null) {
+      return null;
+    }
+
+    final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
+    final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
+    Set<String> encodedNames = new HashSet<String>(2);
+    encodedNames.add(a.getEncodedName());
+    encodedNames.add(b.getEncodedName());
+    Map<String, Lock> locks = locker.acquireLocks(encodedNames);
+    try {
+      RegionState rs_a = regionStates.getRegionState(a);
+      RegionState rs_b = regionStates.getRegionState(b);
+      if (rs_a == null || !rs_a.isOpenedOnServer(serverName)
+          || rs_b == null || !rs_b.isOpenedOnServer(serverName)) {
+        return "Some daughter is not in a state to merge on " + serverName
+          + ", a=" + rs_a + ", b=" + rs_b;
       }
+
+      regionStates.updateRegionState(a, State.MERGING);
+      regionStates.updateRegionState(b, State.MERGING);
+      regionStates.createRegionState(
+        hri, State.MERGING_NEW, serverName, null);
+      return null;
+    } finally {
+      for (Lock lock: locks.values()) {
+        lock.unlock();
+      }
+    }
+  }
+
+  private String onRegionMergePONR(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be in merging_new state, and the daughters must be
+    // merging. To check RPC retry, we use server holding info.
+    if (current != null && !current.isMergingNewOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not merging on " + serverName;
+    }
+
+    final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
+    final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
+    RegionState rs_a = regionStates.getRegionState(a);
+    RegionState rs_b = regionStates.getRegionState(b);
+    if (rs_a == null || !rs_a.isMergingOnServer(serverName)
+        || rs_b == null || !rs_b.isMergingOnServer(serverName)) {
+      return "Some daughter is not known to be merging on " + serverName
+        + ", a=" + rs_a + ", b=" + rs_b;
+    }
+
+    // Master could have restarted and lost the new region state
+    if (current == null) {
+      regionStates.createRegionState(
+        hri, State.MERGING_NEW, serverName, null);
+    }
+
+    // Just return in case of retrying
+    if (regionStates.isRegionOnServer(hri, serverName)) {
+      return null;
+    }
+
+    try {
+      regionStates.mergeRegions(hri, a, b, serverName);
+    } catch (IOException ioe) {
+      LOG.info("Failed to record merged region " + hri.getShortNameToLog());
+      return "Failed to record the merging in meta";
+    }
+    return null;
+  }
+
+  private String onRegionMerged(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be in merging_new state, and the daughters must be
+    // merging on this server.
+    // If current state is already opened on the same server,
+    // it could be a reportRegionTransition RPC retry.
+    if (current == null || !current.isMergingNewOrOpenedOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not merging on " + serverName;
+    }
+
+    // Just return in case of retrying
+    if (current.isOpened()) {
+      return null;
+    }
+
+    final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
+    final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
+    RegionState rs_a = regionStates.getRegionState(a);
+    RegionState rs_b = regionStates.getRegionState(b);
+    if (rs_a == null || !rs_a.isMergingOnServer(serverName)
+        || rs_b == null || !rs_b.isMergingOnServer(serverName)) {
+      return "Some daughter is not known to be merging on " + serverName
+        + ", a=" + rs_a + ", b=" + rs_b;
+    }
+
+    regionOffline(a, State.MERGED);
+    regionOffline(b, State.MERGED);
+    regionOnline(hri, serverName, 1);
+
+    // User could disable the table before master knows the new region.
+    if (getTableStateManager().isTableState(hri.getTable(),
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
+      invokeUnAssign(hri);
+    } else {
+      Callable<Object> mergeReplicasCallable = new Callable<Object>() {
+        @Override
+        public Object call() {
+          doMergingOfReplicas(hri, a, b);
+          return null;
+        }
+      };
+      threadPoolExecutorService.submit(mergeReplicasCallable);
+    }
+    return null;
+  }
+
+  private String onRegionMergeReverted(final RegionState current, final HRegionInfo hri,
+      final ServerName serverName, final RegionStateTransition transition) {
+    // The region must be in merging_new state, and the daughters must be
+    // merging on this server.
+    // If the region is in offline state, it could be an RPC retry.
+    if (current == null || !current.isMergingNewOrOfflineOnServer(serverName)) {
+      return hri.getShortNameToLog() + " is not merging on " + serverName;
+    }
+
+    // Just return in case of retrying
+    if (current.isOffline()) {
+      return null;
+    }
+
+    final HRegionInfo a = HRegionInfo.convert(transition.getRegionInfo(1));
+    final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
+    RegionState rs_a = regionStates.getRegionState(a);
+    RegionState rs_b = regionStates.getRegionState(b);
+    if (rs_a == null || !rs_a.isMergingOnServer(serverName)
+        || rs_b == null || !rs_b.isMergingOnServer(serverName)) {
+      return "Some daughter is not known to be merging on " + serverName
+        + ", a=" + rs_a + ", b=" + rs_b;
+    }
+
+    regionOnline(a, serverName);
+    regionOnline(b, serverName);
+    regionOffline(hri);
+
+    if (getTableStateManager().isTableState(hri.getTable(),
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
+      invokeUnAssign(a);
+      invokeUnAssign(b);
     }
     return null;
   }
@@ -2466,76 +2751,78 @@ public class AssignmentManager {
       final RegionStateTransition transition) {
     TransitionCode code = transition.getTransitionCode();
     HRegionInfo hri = HRegionInfo.convert(transition.getRegionInfo(0));
-    RegionState current = regionStates.getRegionState(hri);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Got transition " + code + " for "
-        + (current != null ? current.toString() : hri.getShortNameToLog())
-        + " from " + serverName);
-    }
-    String errorMsg = null;
-    switch (code) {
-    case OPENED:
-      if (current != null && current.isOpened() && current.isOnServer(serverName)) {
-        LOG.info("Region " + hri.getShortNameToLog() + " is already " + current.getState() + " on "
-            + serverName);
+    Lock lock = locker.acquireLock(hri.getEncodedName());
+    try {
+      RegionState current = regionStates.getRegionState(hri);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Got transition " + code + " for "
+          + (current != null ? current.toString() : hri.getShortNameToLog())
+          + " from " + serverName);
+      }
+      String errorMsg = null;
+      switch (code) {
+      case OPENED:
+        errorMsg = onRegionOpen(current, hri, serverName, transition);
         break;
-      }
-    case FAILED_OPEN:
-      if (current == null
-          || !current.isPendingOpenOrOpeningOnServer(serverName)) {
-        errorMsg = hri.getShortNameToLog()
-          + " is not pending open on " + serverName;
-      } else if (code == TransitionCode.FAILED_OPEN) {
-        onRegionFailedOpen(hri, serverName);
-      } else {
-        long openSeqNum = HConstants.NO_SEQNUM;
-        if (transition.hasOpenSeqNum()) {
-          openSeqNum = transition.getOpenSeqNum();
+      case FAILED_OPEN:
+        errorMsg = onRegionFailedOpen(current, hri, serverName);
+        break;
+      case CLOSED:
+        errorMsg = onRegionClosed(current, hri, serverName);
+        break;
+      case READY_TO_SPLIT:
+        try {
+          regionStateListener.onRegionSplit(hri);
+          errorMsg = onRegionReadyToSplit(current, hri, serverName, transition);
+        } catch (IOException exp) {
+          errorMsg = StringUtils.stringifyException(exp);
         }
-        if (openSeqNum < 0) {
-          errorMsg = "Newly opened region has invalid open seq num " + openSeqNum;
-        } else {
-          onRegionOpen(hri, serverName, openSeqNum);
+        break;
+      case SPLIT_PONR:
+        errorMsg = onRegionSplitPONR(current, hri, serverName, transition);
+        break;
+      case SPLIT:
+        errorMsg = onRegionSplit(current, hri, serverName, transition);
+        break;
+      case SPLIT_REVERTED:
+        errorMsg = onRegionSplitReverted(current, hri, serverName, transition);
+        if (org.apache.commons.lang.StringUtils.isEmpty(errorMsg)) {
+          try {
+            regionStateListener.onRegionSplitReverted(hri);
+          } catch (IOException exp) {
+            LOG.warn(StringUtils.stringifyException(exp));
+          }
         }
+        break;
+      case READY_TO_MERGE:
+        errorMsg = onRegionReadyToMerge(current, hri, serverName, transition);
+        break;
+      case MERGE_PONR:
+        errorMsg = onRegionMergePONR(current, hri, serverName, transition);
+        break;
+      case MERGED:
+        try {
+          errorMsg = onRegionMerged(current, hri, serverName, transition);
+          regionStateListener.onRegionMerged(hri);
+        } catch (IOException exp) {
+          errorMsg = StringUtils.stringifyException(exp);
+        }
+        break;
+      case MERGE_REVERTED:
+        errorMsg = onRegionMergeReverted(current, hri, serverName, transition);
+        break;
+
+      default:
+        errorMsg = "Unexpected transition code " + code;
       }
-      break;
-
-    case CLOSED:
-      if (current == null
-          || !current.isPendingCloseOrClosingOnServer(serverName)) {
-        errorMsg = hri.getShortNameToLog()
-          + " is not pending close on " + serverName;
-      } else {
-        onRegionClosed(hri);
+      if (errorMsg != null) {
+        LOG.info("Could not transition region from " + current + " on "
+          + code + " by " + serverName + ": " + errorMsg);
       }
-      break;
-
-    case READY_TO_SPLIT:
-    case SPLIT_PONR:
-    case SPLIT:
-    case SPLIT_REVERTED:
-      errorMsg = onRegionSplit(serverName, code, hri,
-        HRegionInfo.convert(transition.getRegionInfo(1)),
-        HRegionInfo.convert(transition.getRegionInfo(2)));
-      break;
-
-    case READY_TO_MERGE:
-    case MERGE_PONR:
-    case MERGED:
-    case MERGE_REVERTED:
-      errorMsg = onRegionMerge(serverName, code, hri,
-        HRegionInfo.convert(transition.getRegionInfo(1)),
-        HRegionInfo.convert(transition.getRegionInfo(2)));
-      break;
-
-    default:
-      errorMsg = "Unexpected transition code " + code;
+      return errorMsg;
+    } finally {
+      lock.unlock();
     }
-    if (errorMsg != null) {
-      LOG.error("Failed to transition region from " + current + " to "
-        + code + " by " + serverName + ": " + errorMsg);
-    }
-    return errorMsg;
   }
 
   /**
@@ -2548,5 +2835,9 @@ public class AssignmentManager {
   public Map<ServerName, List<HRegionInfo>>
     getSnapShotOfAssignment(Collection<HRegionInfo> infos) {
     return getRegionStates().getRegionAssignments(infos);
+  }
+
+  void setRegionStateListener(RegionStateListener listener) {
+    this.regionStateListener = listener;
   }
 }

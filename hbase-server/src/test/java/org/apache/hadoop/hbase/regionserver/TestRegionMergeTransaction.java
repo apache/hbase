@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -39,14 +40,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -60,7 +62,7 @@ import com.google.common.collect.ImmutableList;
  * Test the {@link RegionMergeTransaction} class against two HRegions (as
  * opposed to running cluster).
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestRegionMergeTransaction {
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final Path testdir = TEST_UTIL.getDataTestDir(this.getClass()
@@ -68,7 +70,7 @@ public class TestRegionMergeTransaction {
   private HRegion region_a;
   private HRegion region_b;
   private HRegion region_c;
-  private HLog wal;
+  private WALFactory wals;
   private FileSystem fs;
   // Start rows of region_a,region_b,region_c
   private static final byte[] STARTROW_A = new byte[] { 'a', 'a', 'a' };
@@ -81,11 +83,12 @@ public class TestRegionMergeTransaction {
   public void setup() throws IOException {
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
     this.fs.delete(this.testdir, true);
-    this.wal = HLogFactory.createHLog(fs, this.testdir, "logs",
-        TEST_UTIL.getConfiguration());
-    this.region_a = createRegion(this.testdir, this.wal, STARTROW_A, STARTROW_B);
-    this.region_b = createRegion(this.testdir, this.wal, STARTROW_B, STARTROW_C);
-    this.region_c = createRegion(this.testdir, this.wal, STARTROW_C, ENDROW);
+    final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
+    FSUtils.setRootDir(walConf, this.testdir);
+    this.wals = new WALFactory(walConf, null, TestRegionMergeTransaction.class.getName());
+    this.region_a = createRegion(this.testdir, this.wals, STARTROW_A, STARTROW_B);
+    this.region_b = createRegion(this.testdir, this.wals, STARTROW_B, STARTROW_C);
+    this.region_c = createRegion(this.testdir, this.wals, STARTROW_C, ENDROW);
     assert region_a != null && region_b != null && region_c != null;
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster", true);
   }
@@ -100,8 +103,9 @@ public class TestRegionMergeTransaction {
             + region.getRegionFileSystem().getRegionDir());
       }
     }
-    if (this.wal != null)
-      this.wal.closeAndDelete();
+    if (this.wals != null) {
+      this.wals.close();
+    }
     this.fs.delete(this.testdir, true);
   }
 
@@ -244,7 +248,7 @@ public class TestRegionMergeTransaction {
       assertEquals((rowCountOfRegionA + rowCountOfRegionB),
           mergedRegionRowCount);
     } finally {
-      HRegion.closeHRegion(mergedRegion);
+      HBaseTestingUtility.closeRegionAndWAL(mergedRegion);
     }
     // Assert the write lock is no longer held on region_a and region_b
     assertTrue(!this.region_a.lock.writeLock().isHeldByCurrentThread());
@@ -304,7 +308,7 @@ public class TestRegionMergeTransaction {
       assertEquals((rowCountOfRegionA + rowCountOfRegionB),
           mergedRegionRowCount);
     } finally {
-      HRegion.closeHRegion(mergedRegion);
+      HBaseTestingUtility.closeRegionAndWAL(mergedRegion);
     }
     // Assert the write lock is no longer held on region_a and region_b
     assertTrue(!this.region_a.lock.writeLock().isHeldByCurrentThread());
@@ -400,7 +404,7 @@ public class TestRegionMergeTransaction {
   private class MockedFailedMergedRegionOpen extends IOException {
   }
 
-  private HRegion createRegion(final Path testdir, final HLog wal,
+  private HRegion createRegion(final Path testdir, final WALFactory wals,
       final byte[] startrow, final byte[] endrow)
       throws IOException {
     // Make a region with start and end keys.
@@ -408,10 +412,10 @@ public class TestRegionMergeTransaction {
     HColumnDescriptor hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), startrow, endrow);
-    HRegion a = HRegion.createHRegion(hri, testdir,
+    HRegion a = HBaseTestingUtility.createRegionAndWAL(hri, testdir,
         TEST_UTIL.getConfiguration(), htd);
-    HRegion.closeHRegion(a);
-    return HRegion.openHRegion(testdir, hri, htd, wal,
+    HBaseTestingUtility.closeRegionAndWAL(a);
+    return HRegion.openHRegion(testdir, hri, htd, wals.getWAL(hri.getEncodedNameAsBytes()),
         TEST_UTIL.getConfiguration());
   }
 
@@ -456,7 +460,7 @@ public class TestRegionMergeTransaction {
           }
           Put put = new Put(k);
           put.add(f, null, k);
-          if (r.getLog() == null)
+          if (r.getWAL() == null)
             put.setDurability(Durability.SKIP_WAL);
           r.put(put);
           rowCount++;

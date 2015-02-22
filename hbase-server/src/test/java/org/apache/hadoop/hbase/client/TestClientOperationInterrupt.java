@@ -25,12 +25,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -46,7 +47,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestClientOperationInterrupt {
   private static final Log LOG = LogFactory.getLog(TestClientOperationInterrupt.class);
 
@@ -81,9 +82,8 @@ public class TestClientOperationInterrupt {
       }
       admin.deleteTable(tableName);
     }
-    util.createTable(tableName, new byte[][]{dummy, test});
+    Table ht = util.createTable(tableName, new byte[][]{dummy, test});
 
-    HTable ht = new HTable(conf, tableName);
     Put p = new Put(row1);
     p.add(dummy, dummy, dummy);
     ht.put(p);
@@ -105,7 +105,7 @@ public class TestClientOperationInterrupt {
         @Override
         public void run() {
           try {
-            HTable ht = new HTable(conf, tableName);
+            Table ht = util.getConnection().getTable(tableName);
             Result r = ht.get(new Get(row1));
             noEx.incrementAndGet();
           } catch (IOException e) {
@@ -154,7 +154,7 @@ public class TestClientOperationInterrupt {
       Thread.sleep(1);
     }
 
-    HTable ht = new HTable(conf, tableName);
+    Table ht = util.getConnection().getTable(tableName);
     Result r = ht.get(new Get(row1));
     Assert.assertFalse(r.isEmpty());
   }

@@ -22,8 +22,9 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -81,6 +82,8 @@ public class CellCounter extends Configured implements Tool {
    */
   static final String NAME = "CellCounter";
 
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   /**
    * Mapper that runs the count.
    */
@@ -125,9 +128,10 @@ public class CellCounter extends Configured implements Tool {
           if (!thisRowFamilyName.equals(currentFamilyName)) {
             currentFamilyName = thisRowFamilyName;
             context.getCounter("CF", thisRowFamilyName).increment(1);
-            context.write(new Text("Total Families Across all Rows"),
-              new IntWritable(1));
-            context.write(new Text(thisRowFamilyName), new IntWritable(1));
+            if (1 == context.getCounter("CF", thisRowFamilyName).getValue()) {
+              context.write(new Text("Total Families Across all Rows"), new IntWritable(1));
+              context.write(new Text(thisRowFamilyName), new IntWritable(1));
+            }
           }
           String thisRowQualifierName = thisRowFamilyName + separator
               + Bytes.toStringBinary(CellUtil.cloneQualifier(value));
@@ -188,7 +192,7 @@ public class CellCounter extends Configured implements Tool {
     Path outputDir = new Path(args[1]);
     String reportSeparatorString = (args.length > 2) ? args[2]: ":";
     conf.set("ReportSeparator", reportSeparatorString);
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(CellCounter.class);
     Scan scan = getConfiguredScanForJob(conf, args);
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
@@ -219,6 +223,12 @@ public class CellCounter extends Configured implements Tool {
       LOG.info("Setting Row Filter for counter.");
       s.setFilter(rowFilter);
     }
+    // Set TimeRange if defined
+    long timeRange[] = getTimeRange(args);
+    if (timeRange != null) {
+      LOG.info("Setting TimeRange for counter.");
+      s.setTimeRange(timeRange[0], timeRange[1]);
+    }
     return s;
   }
 
@@ -236,13 +246,37 @@ public class CellCounter extends Configured implements Tool {
     return rowFilter;
   }
 
+  private static long[] getTimeRange(String[] args) throws IOException {
+    final String startTimeArgKey = "--starttime=";
+    final String endTimeArgKey = "--endtime=";
+    long startTime = 0L;
+    long endTime = 0L;
+
+    for (int i = 1; i < args.length; i++) {
+      System.out.println("i:" + i + "arg[i]" + args[i]);
+      if (args[i].startsWith(startTimeArgKey)) {
+        startTime = Long.parseLong(args[i].substring(startTimeArgKey.length()));
+      }
+      if (args[i].startsWith(endTimeArgKey)) {
+        endTime = Long.parseLong(args[i].substring(endTimeArgKey.length()));
+      }
+    }
+
+    if (startTime == 0 && endTime == 0)
+      return null;
+
+    endTime = endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime;
+    return new long [] {startTime, endTime};
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    if (otherArgs.length < 1) {
+    if (otherArgs.length < 2) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
-      System.err.println("Usage: CellCounter <tablename> <outputDir> <reportSeparator> " +
-          "[^[regex pattern] or [Prefix] for row filter]] ");
+      System.err.println("Usage: CellCounter ");
+      System.err.println("       <tablename> <outputDir> <reportSeparator> [^[regex pattern] or " +
+        "[Prefix] for row filter]] --starttime=[starttime] --endtime=[endtime]");
       System.err.println("  Note: -D properties will be applied to the conf used. ");
       System.err.println("  Additionally, the following SCAN properties can be specified");
       System.err.println("  to get fine grained control on what is counted..");

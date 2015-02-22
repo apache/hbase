@@ -23,8 +23,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({ClientTests.class, SmallTests.class})
 public class TestRegionLocations {
 
   ServerName sn0 = ServerName.valueOf("host0", 10, 10);

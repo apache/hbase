@@ -25,22 +25,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Append;
-import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Row;
-import org.apache.hadoop.hbase.client.RowMutations;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost.Environment;
@@ -67,16 +56,17 @@ import com.google.protobuf.ServiceException;
  * which attempt to use objects and methods outside the Environment
  * sandbox.
  */
-public class HTableWrapper implements HTableInterface {
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Stable
+public final class HTableWrapper implements HTableInterface {
 
-  private TableName tableName;
-  private HTable table;
+  private final HTableInterface table;
   private ClusterConnection connection;
   private final List<HTableInterface> openTables;
 
   /**
    * @param openTables External list of tables used for tracking wrappers.
-   * @throws IOException 
+   * @throws IOException
    */
   public static HTableInterface createWrapper(List<HTableInterface> openTables,
       TableName tableName, Environment env, ExecutorService pool) throws IOException {
@@ -87,8 +77,7 @@ public class HTableWrapper implements HTableInterface {
   private HTableWrapper(List<HTableInterface> openTables, TableName tableName,
       ClusterConnection connection, ExecutorService pool)
       throws IOException {
-    this.tableName = tableName;
-    this.table = new HTable(tableName, connection, pool);
+    this.table = connection.getTable(tableName, pool);
     this.connection = connection;
     this.openTables = openTables;
     this.openTables.add(this);
@@ -97,7 +86,7 @@ public class HTableWrapper implements HTableInterface {
   public void internalClose() throws IOException {
     List<IOException> exceptions = new ArrayList<IOException>(2);
     try {
-    table.close();
+      table.close();
     } catch (IOException e) {
       exceptions.add(e);
     }
@@ -126,10 +115,19 @@ public class HTableWrapper implements HTableInterface {
     }
   }
 
+  /**
+   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Use
+   * {@link #setAutoFlushTo(boolean)}} instead.
+   */
   @Deprecated
   public Result getRowOrBefore(byte[] row, byte[] family)
       throws IOException {
-    return table.getRowOrBefore(row, family);
+    Scan scan = Scan.createGetClosestRowOrBeforeReverseScan(row);
+    Result startRowResult = null;
+    try (ResultScanner resultScanner = this.table.getScanner(scan)) {
+      startRowResult = resultScanner.next();
+    }
+    return startRowResult;
   }
 
   public Result get(Get get) throws IOException {
@@ -144,9 +142,19 @@ public class HTableWrapper implements HTableInterface {
     return table.existsAll(gets);
   }
 
+  /**
+   * @deprecated Use {@link #existsAll(java.util.List)}  instead.
+   */
   @Deprecated
-  public Boolean[] exists(List<Get> gets) throws IOException{
-    return table.exists(gets);
+  public Boolean[] exists(List<Get> gets) throws IOException {
+    // Do convertion.
+    boolean [] exists = table.existsAll(gets);
+    if (exists == null) return null;
+    Boolean [] results = new Boolean [exists.length];
+    for (int i = 0; i < exists.length; i++) {
+      results[i] = exists[i]? Boolean.TRUE: Boolean.FALSE;
+    }
+    return results;
   }
 
   public void put(Put put) throws IOException {
@@ -234,7 +242,7 @@ public class HTableWrapper implements HTableInterface {
 
   @Override
   public byte[] getTableName() {
-    return tableName.getName();
+    return table.getTableName();
   }
 
   @Override
@@ -253,6 +261,7 @@ public class HTableWrapper implements HTableInterface {
    * @deprecated If any exception is thrown by one of the actions, there is no way to
    * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
    */
+  @Deprecated
   @Override
   public Object[] batch(List<? extends Row> actions)
       throws IOException, InterruptedException {
@@ -268,10 +277,10 @@ public class HTableWrapper implements HTableInterface {
   /**
    * {@inheritDoc}
    * @deprecated If any exception is thrown by one of the actions, there is no way to
-   * retrieve the partially executed results. Use 
-   * {@link #batchCallback(List, Object[], org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)}
-   * instead.
+   * retrieve the partially executed results. Use
+   * {@link #batchCallback(List, Object[], Batch.Callback)} instead.
    */
+  @Deprecated
   @Override
   public <R> Object[] batchCallback(List<? extends Row> actions,
       Batch.Callback<R> callback) throws IOException, InterruptedException {
@@ -309,12 +318,21 @@ public class HTableWrapper implements HTableInterface {
 
   @Override
   public void setAutoFlush(boolean autoFlush) {
-    table.setAutoFlush(autoFlush, autoFlush);
+    table.setAutoFlush(autoFlush);
   }
 
   @Override
   public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
-    table.setAutoFlush(autoFlush, clearBufferOnFail);
+    setAutoFlush(autoFlush);
+    if (!autoFlush && !clearBufferOnFail) {
+      // We don't support his combination.  In HTable, the implementation is this:
+      //
+      // this.clearBufferOnFail = autoFlush || clearBufferOnFail
+      //
+      // So if autoFlush == false and clearBufferOnFail is false, that is not supported in
+      // the new Table Interface so just throwing UnsupportedOperationException here.
+      throw new UnsupportedOperationException("Can't do this via wrapper");
+    }
   }
 
   @Override
@@ -335,7 +353,8 @@ public class HTableWrapper implements HTableInterface {
   @Override
   public long incrementColumnValue(byte[] row, byte[] family,
       byte[] qualifier, long amount, boolean writeToWAL) throws IOException {
-    return table.incrementColumnValue(row, family, qualifier, amount, writeToWAL);
+    return table.incrementColumnValue(row, family, qualifier, amount,
+        writeToWAL? Durability.USE_DEFAULT: Durability.SKIP_WAL);
   }
 
   @Override
@@ -352,5 +371,11 @@ public class HTableWrapper implements HTableInterface {
       throws ServiceException, Throwable {
     table.batchCoprocessorService(methodDescriptor, request, startKey, endKey, responsePrototype,
       callback);
+  }
+
+  @Override
+  public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, byte[] value, RowMutations rm) throws IOException {
+    return table.checkAndMutate(row, family, qualifier, compareOp, value, rm);
   }
 }

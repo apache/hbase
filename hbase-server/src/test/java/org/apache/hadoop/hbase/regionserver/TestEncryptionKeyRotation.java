@@ -34,11 +34,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
@@ -53,7 +55,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestEncryptionKeyRotation {
   private static final Log LOG = LogFactory.getLog(TestEncryptionKeyRotation.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -206,7 +208,7 @@ public class TestEncryptionKeyRotation {
     TEST_UTIL.getHBaseAdmin().createTable(htd);
     TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
     // Create a store file
-    HTable table = new HTable(conf, htd.getName());
+    Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     try {
       table.put(new Put(Bytes.toBytes("testrow"))
         .add(hcd.getName(), Bytes.toBytes("q"), Bytes.toBytes("value")));

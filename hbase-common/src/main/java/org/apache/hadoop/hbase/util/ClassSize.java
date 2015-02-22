@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Class for determining the "size" of a class, an attempt to calculate the
@@ -107,8 +107,8 @@ public class ClassSize {
   /** Overhead for TimeRangeTracker */
   public static final int TIMERANGE_TRACKER;
 
-  /** Overhead for KeyValueSkipListSet */
-  public static final int KEYVALUE_SKIPLIST_SET;
+  /** Overhead for CellSkipListSet */
+  public static final int CELL_SKIPLIST_SET;
 
   /* Are we running on jdk7? */
   private static final boolean JDK7;
@@ -192,7 +192,7 @@ public class ClassSize {
 
     TIMERANGE_TRACKER = align(ClassSize.OBJECT + Bytes.SIZEOF_LONG * 2);
 
-    KEYVALUE_SKIPLIST_SET = align(OBJECT + REFERENCE);
+    CELL_SKIPLIST_SET = align(OBJECT + REFERENCE);
   }
 
   /**

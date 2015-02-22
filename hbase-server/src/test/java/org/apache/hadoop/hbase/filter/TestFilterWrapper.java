@@ -33,16 +33,20 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.AfterClass;
@@ -50,21 +54,21 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.hbase.MediumTests;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test if the FilterWrapper retains the same semantics defined in the
  * {@link org.apache.hadoop.hbase.filter.Filter}
  */
-@Category(MediumTests.class)
+@Category({FilterTests.class, MediumTests.class})
 public class TestFilterWrapper {
   private static final Log LOG = LogFactory.getLog(TestFilterWrapper.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = null;
   private static HBaseAdmin admin = null;
-  private static byte[] name = Bytes.toBytes("test");
+  private static TableName name = TableName.valueOf("test");
+  private static Connection connection;
 
   @Test
   public void testFilterWrapper() {
@@ -83,7 +87,7 @@ public class TestFilterWrapper {
       FilterList filter = new FilterList(fs);
 
       scan.setFilter(filter);
-      HTable table = new HTable(conf, name);
+      Table table = connection.getTable(name);
       ResultScanner scanner = table.getScanner(scan);
 
       // row2 (c1-c4) and row3(c1-c4) are returned
@@ -110,7 +114,7 @@ public class TestFilterWrapper {
 
   private static void prepareData() {
     try {
-      HTable table = new HTable(TestFilterWrapper.conf, name);
+      Table table = connection.getTable(name);
       assertTrue("Fail to create the table", admin.tableExists(name));
       List<Put> puts = new ArrayList<Put>();
 
@@ -143,7 +147,7 @@ public class TestFilterWrapper {
     assertNotNull("HBaseAdmin is not initialized successfully.", admin);
     if (admin != null) {
 
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name));
+      HTableDescriptor desc = new HTableDescriptor(name);
       HColumnDescriptor coldef = new HColumnDescriptor(Bytes.toBytes("f1"));
       desc.addFamily(coldef);
 
@@ -172,7 +176,8 @@ public class TestFilterWrapper {
     TestFilterWrapper.conf = HBaseConfiguration.create(conf);
     TestFilterWrapper.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     try {
-      admin = new HBaseAdmin(conf);
+      connection = ConnectionFactory.createConnection(TestFilterWrapper.conf);
+      admin = TEST_UTIL.getHBaseAdmin();
     } catch (MasterNotRunningException e) {
       assertNull("Master is not running", e);
     } catch (ZooKeeperConnectionException e) {
@@ -186,7 +191,6 @@ public class TestFilterWrapper {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    Configuration config = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(1);
     initialize(TEST_UTIL.getConfiguration());
   }
@@ -194,6 +198,7 @@ public class TestFilterWrapper {
   @AfterClass
   public static void tearDown() throws Exception {
     deleteTable();
+    connection.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
