@@ -193,7 +193,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       keepAliveTime,
       TimeUnit.SECONDS,
       workQueue,
-      Threads.newDaemonThreadFactory(this.getClass().toString() + "-rpc-shared-"));
+      Threads.newDaemonThreadFactory(this.getClass().getSimpleName() + "-rpc-shared-"));
     tpe.allowCoreThreadTimeOut(true);
     return tpe;
   }
@@ -343,6 +343,9 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         if (LOG.isTraceEnabled()) {
           LOG.trace("Skipping " + entries.size() + " entries because table " + tableName
             + " is cached as a disabled or dropped table");
+          for (Entry entry : entries) {
+            LOG.trace("Skipping : " + entry);
+          }
         }
         sink.getSkippedEditsCounter().addAndGet(entries.size());
         return;
@@ -366,6 +369,9 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Skipping " + entries.size() + " entries because table " + tableName
               + " is dropped. Adding table to cache.");
+            for (Entry entry : entries) {
+              LOG.trace("Skipping : " + entry);
+            }
           }
           disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache. Value ignored
           // skip this entry
@@ -384,9 +390,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
           }
           if (LOG.isTraceEnabled()) {
             LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-              + " because located region region " + primaryLocation.getRegionInfo().getEncodedName()
+              + " because located region " + primaryLocation.getRegionInfo().getEncodedName()
               + " is different than the original region " + Bytes.toStringBinary(encodedRegionName)
               + " from WALEdit");
+            for (Entry entry : entries) {
+              LOG.trace("Skipping : " + entry);
+            }
           }
           sink.getSkippedEditsCounter().addAndGet(entries.size());
           return;
@@ -439,6 +448,9 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
               if (LOG.isTraceEnabled()) {
                 LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
                   + " because received exception for dropped or disabled table", cause);
+                for (Entry entry : entries) {
+                  LOG.trace("Skipping : " + entry);
+                }
               }
               disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache for later.
               if (!tasksCancelled) {
@@ -519,9 +531,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         skip = true;
         if (LOG.isTraceEnabled()) {
           LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-            + " because located region region " + location.getRegionInfo().getEncodedName()
+            + " because located region " + location.getRegionInfo().getEncodedName()
             + " is different than the original region "
             + Bytes.toStringBinary(initialEncodedRegionName) + " from WALEdit");
+          for (Entry entry : entries) {
+            LOG.trace("Skipping : " + entry);
+          }
         }
         return null;
       }

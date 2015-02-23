@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -39,6 +40,9 @@ public class TestRegionLocations {
   HRegionInfo info1 = hri(1);
   HRegionInfo info2 = hri(2);
   HRegionInfo info9 = hri(9);
+
+  long regionId1 = 1000;
+  long regionId2 = 2000;
 
   @Test
   public void testSizeMethods() {
@@ -71,10 +75,13 @@ public class TestRegionLocations {
   }
 
   private HRegionInfo hri(int replicaId) {
+    return hri(regionId1, replicaId);
+  }
+
+  private HRegionInfo hri(long regionId, int replicaId) {
     TableName table = TableName.valueOf("table");
     byte[] startKey = HConstants.EMPTY_START_ROW;
     byte[] endKey = HConstants.EMPTY_END_ROW;
-    long regionId = System.currentTimeMillis();
     HRegionInfo info = new HRegionInfo(table, startKey, endKey, false, regionId, replicaId);
     return info;
   }
@@ -274,6 +281,54 @@ public class TestRegionLocations {
     assertEquals(sn2, list1.getRegionLocation(1).getServerName());
     assertEquals(sn3, list1.getRegionLocation(9).getServerName());
   }
+
+  @Test
+  public void testMergeLocationsWithDifferentRegionId() {
+    RegionLocations list1, list2;
+
+    // test merging two lists. But the list2 contains region replicas with a different region id
+    HRegionInfo info0 = hri(regionId1, 0);
+    HRegionInfo info1 = hri(regionId1, 1);
+    HRegionInfo info2 = hri(regionId2, 2);
+
+    list1 = hrll(hrl(info2, sn1));
+    list2 = hrll(hrl(info0, sn2), hrl(info1, sn2));
+    list1 = list2.mergeLocations(list1);
+    assertNull(list1.getRegionLocation(0));
+    assertNull(list1.getRegionLocation(1));
+    assertNotNull(list1.getRegionLocation(2));
+    assertEquals(sn1, list1.getRegionLocation(2).getServerName());
+    assertEquals(3, list1.size());
+
+    // try the other way merge
+    list1 = hrll(hrl(info2, sn1));
+    list2 = hrll(hrl(info0, sn2), hrl(info1, sn2));
+    list2 = list1.mergeLocations(list2);
+    assertNotNull(list2.getRegionLocation(0));
+    assertNotNull(list2.getRegionLocation(1));
+    assertNull(list2.getRegionLocation(2));
+  }
+
+  @Test
+  public void testUpdateLocationWithDifferentRegionId() {
+    RegionLocations list;
+
+    HRegionInfo info0 = hri(regionId1, 0);
+    HRegionInfo info1 = hri(regionId2, 1);
+    HRegionInfo info2 = hri(regionId1, 2);
+
+    list = new RegionLocations(hrl(info0, sn1), hrl(info2, sn1));
+
+    list = list.updateLocation(hrl(info1, sn2), false, true); // force update
+
+    // the other locations should be removed now
+    assertNull(list.getRegionLocation(0));
+    assertNotNull(list.getRegionLocation(1));
+    assertNull(list.getRegionLocation(2));
+    assertEquals(sn2, list.getRegionLocation(1).getServerName());
+    assertEquals(3, list.size());
+  }
+
 
   @Test
   public void testConstructWithNullElements() {

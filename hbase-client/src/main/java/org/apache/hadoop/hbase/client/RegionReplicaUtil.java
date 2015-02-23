@@ -23,6 +23,7 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Utility methods which contain the logic for regions and replicas.
@@ -91,5 +92,47 @@ public class RegionReplicaUtil {
         iterator.remove();
       }
     }
+  }
+
+  public static boolean isReplicasForSameRegion(HRegionInfo regionInfoA, HRegionInfo regionInfoB) {
+    return compareRegionInfosWithoutReplicaId(regionInfoA, regionInfoB) == 0;
+  }
+
+  private static int compareRegionInfosWithoutReplicaId(HRegionInfo regionInfoA,
+      HRegionInfo regionInfoB) {
+    int result = regionInfoA.getTable().compareTo(regionInfoB.getTable());
+    if (result != 0) {
+      return result;
+    }
+
+    // Compare start keys.
+    result = Bytes.compareTo(regionInfoA.getStartKey(), regionInfoB.getStartKey());
+    if (result != 0) {
+      return result;
+    }
+
+    // Compare end keys.
+    result = Bytes.compareTo(regionInfoA.getEndKey(), regionInfoB.getEndKey());
+
+    if (result != 0) {
+      if (regionInfoA.getStartKey().length != 0
+              && regionInfoA.getEndKey().length == 0) {
+          return 1; // this is last region
+      }
+      if (regionInfoB.getStartKey().length != 0
+              && regionInfoB.getEndKey().length == 0) {
+          return -1; // o is the last region
+      }
+      return result;
+    }
+
+    // regionId is usually milli timestamp -- this defines older stamps
+    // to be "smaller" than newer stamps in sort order.
+    if (regionInfoA.getRegionId() > regionInfoB.getRegionId()) {
+      return 1;
+    } else if (regionInfoA.getRegionId() < regionInfoB.getRegionId()) {
+      return -1;
+    }
+    return 0;
   }
 }
