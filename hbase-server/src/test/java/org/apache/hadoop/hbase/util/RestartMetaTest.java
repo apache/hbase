@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -81,7 +80,8 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     // start the writers
     LoadTestDataGenerator dataGen = new MultiThreadedAction.DefaultDataGenerator(
-      minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey, LoadTestTool.COLUMN_FAMILY);
+      minColDataSize, maxColDataSize, minColsPerKey, maxColsPerKey,
+      LoadTestTool.DEFAULT_COLUMN_FAMILY);
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
     writer.setMultiPut(true);
     writer.start(startKey, endKey, numThreads);
@@ -101,7 +101,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     // create tables if needed
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, TABLE_NAME,
-        LoadTestTool.COLUMN_FAMILY, Compression.Algorithm.NONE,
+        LoadTestTool.DEFAULT_COLUMN_FAMILY, Compression.Algorithm.NONE,
         DataBlockEncoding.NONE);
 
     LOG.debug("Loading data....\n\n");

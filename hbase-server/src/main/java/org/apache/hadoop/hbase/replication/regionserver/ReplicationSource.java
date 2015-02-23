@@ -691,8 +691,10 @@ public class ReplicationSource extends Thread
         }
         replicateContext.setEntries(entries).setSize(currentSize);
 
+        long startTimeNs = System.nanoTime();
         // send the edits to the endpoint. Will block until the edits are shipped and acknowledged
         boolean replicated = replicationEndpoint.replicate(replicateContext);
+        long endTimeNs = System.nanoTime();
 
         if (!replicated) {
           continue;
@@ -713,7 +715,8 @@ public class ReplicationSource extends Thread
         this.metrics.setAgeOfLastShippedOp(entries.get(entries.size()-1).getKey().getWriteTime());
         if (LOG.isTraceEnabled()) {
           LOG.trace("Replicated " + this.totalReplicatedEdits + " entries in total, or "
-              + this.totalReplicatedOperations + " operations");
+              + this.totalReplicatedOperations + " operations in " +
+              ((endTimeNs - startTimeNs)/1000000) + " ms");
         }
         break;
       } catch (Exception ex) {
