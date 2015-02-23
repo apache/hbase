@@ -3530,6 +3530,29 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
+      TableName tableName, byte[][] columnFamilies, Algorithm compression,
+      DataBlockEncoding dataBlockEncoding, int numRegionsPerServer, int regionReplication,
+      Durability durability)
+          throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.setDurability(durability);
+    desc.setRegionReplication(regionReplication);
+    HColumnDescriptor[] hcds = new HColumnDescriptor[columnFamilies.length];
+    for (int i = 0; i < columnFamilies.length; i++) {
+      HColumnDescriptor hcd = new HColumnDescriptor(columnFamilies[i]);
+      hcd.setDataBlockEncoding(dataBlockEncoding);
+      hcd.setCompressionType(compression);
+      hcds[i] = hcd;
+    }
+    return createPreSplitLoadTestTable(conf, desc, hcds, numRegionsPerServer);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor hcd) throws IOException {
     return createPreSplitLoadTestTable(conf, desc, hcd, DEFAULT_REGIONS_PER_SERVER);
   }
@@ -3541,8 +3564,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor hcd, int numRegionsPerServer) throws IOException {
-    if (!desc.hasFamily(hcd.getName())) {
-      desc.addFamily(hcd);
+    return createPreSplitLoadTestTable(conf, desc, new HColumnDescriptor[] {hcd},
+        numRegionsPerServer);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      HTableDescriptor desc, HColumnDescriptor[] hcds, int numRegionsPerServer) throws IOException {
+    for (HColumnDescriptor hcd : hcds) {
+      if (!desc.hasFamily(hcd.getName())) {
+        desc.addFamily(hcd);
+      }
     }
 
     int totalNumberOfRegions = 0;

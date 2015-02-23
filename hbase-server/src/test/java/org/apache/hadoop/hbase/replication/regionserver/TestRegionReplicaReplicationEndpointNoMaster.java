@@ -243,6 +243,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
 
     ReplicationEndpoint.Context context = mock(ReplicationEndpoint.Context.class);
     when(context.getConfiguration()).thenReturn(HTU.getConfiguration());
+    when(context.getMetrics()).thenReturn(mock(MetricsSource.class));
 
     replicator.init(context);
     replicator.start();

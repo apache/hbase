@@ -107,7 +107,7 @@ public class MetricsSource {
    *
    * @param delta the number filtered.
    */
-  private void incrLogEditsFiltered(long delta) {
+  public void incrLogEditsFiltered(long delta) {
     singleSourceSource.incrLogEditsFiltered(delta);
     globalSourceSource.incrLogEditsFiltered(delta);
   }

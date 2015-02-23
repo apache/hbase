@@ -74,14 +74,17 @@ public class LoadTestTool extends AbstractHBaseTool {
   /** Table name for the test */
   private TableName tableName;
 
+  /** Column families for the test */
+  private byte[][] families;
+
   /** Table name to use of not overridden on the command line */
   protected static final String DEFAULT_TABLE_NAME = "cluster_test";
 
   /** Column family used by the test */
-  public static byte[] COLUMN_FAMILY = Bytes.toBytes("test_cf");
+  public static byte[] DEFAULT_COLUMN_FAMILY = Bytes.toBytes("test_cf");
 
   /** Column families used by the test */
-  protected static final byte[][] COLUMN_FAMILIES = { COLUMN_FAMILY };
+  public static final byte[][] DEFAULT_COLUMN_FAMILIES = { DEFAULT_COLUMN_FAMILY };
 
   /** The default data size if not specified */
   protected static final int DEFAULT_DATA_SIZE = 64;
@@ -130,18 +133,25 @@ public class LoadTestTool extends AbstractHBaseTool {
   public static final String OPT_GENERATOR_USAGE = "The class which generates load for the tool."
       + " Any args for this class can be passed as colon separated after class name";
 
+  public static final String OPT_WRITER = "writer";
+  public static final String OPT_WRITER_USAGE = "The class for executing the write requests";
+
+  public static final String OPT_UPDATER = "updater";
+  public static final String OPT_UPDATER_USAGE = "The class for executing the update requests";
+
   public static final String OPT_READER = "reader";
   public static final String OPT_READER_USAGE = "The class for executing the read requests";
 
   protected static final String OPT_KEY_WINDOW = "key_window";
   protected static final String OPT_WRITE = "write";
   protected static final String OPT_MAX_READ_ERRORS = "max_read_errors";
-  protected static final String OPT_MULTIPUT = "multiput";
+  public static final String OPT_MULTIPUT = "multiput";
   public static final String OPT_MULTIGET = "multiget_batchsize";
   protected static final String OPT_NUM_KEYS = "num_keys";
   protected static final String OPT_READ = "read";
   protected static final String OPT_START_KEY = "start_key";
   public static final String OPT_TABLE_NAME = "tn";
+  public static final String OPT_COLUMN_FAMILIES = "families";
   protected static final String OPT_ZK_QUORUM = "zk";
   protected static final String OPT_ZK_PARENT_NODE = "zk_root";
   protected static final String OPT_SKIP_INIT = "skip_init";
@@ -245,6 +255,10 @@ public class LoadTestTool extends AbstractHBaseTool {
     return parseInt(numThreadsStr, 1, Short.MAX_VALUE);
   }
 
+  public byte[][] getColumnFamilies() {
+    return families;
+  }
+
   /**
    * Apply column family options such as Bloom filters, compression, and data
    * block encoding.
@@ -298,6 +312,7 @@ public class LoadTestTool extends AbstractHBaseTool {
         "without port numbers");
     addOptWithArg(OPT_ZK_PARENT_NODE, "name of parent znode in zookeeper");
     addOptWithArg(OPT_TABLE_NAME, "The name of the table to read or write");
+    addOptWithArg(OPT_COLUMN_FAMILIES, "The name of the column families to use separated by comma");
     addOptWithArg(OPT_WRITE, OPT_USAGE_LOAD);
     addOptWithArg(OPT_READ, OPT_USAGE_READ);
     addOptWithArg(OPT_UPDATE, OPT_USAGE_UPDATE);
@@ -320,6 +335,8 @@ public class LoadTestTool extends AbstractHBaseTool {
         "separate updates for every column in a row");
     addOptNoArg(OPT_INMEMORY, OPT_USAGE_IN_MEMORY);
     addOptWithArg(OPT_GENERATOR, OPT_GENERATOR_USAGE);
+    addOptWithArg(OPT_WRITER, OPT_WRITER_USAGE);
+    addOptWithArg(OPT_UPDATER, OPT_UPDATER_USAGE);
     addOptWithArg(OPT_READER, OPT_READER_USAGE);
 
     addOptWithArg(OPT_NUM_KEYS, "The number of keys to read/write");
@@ -351,6 +368,16 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     tableName = TableName.valueOf(cmd.getOptionValue(OPT_TABLE_NAME,
         DEFAULT_TABLE_NAME));
+
+    if (cmd.hasOption(OPT_COLUMN_FAMILIES)) {
+      String[] list = cmd.getOptionValue(OPT_COLUMN_FAMILIES).split(",");
+      families = new byte[list.length][];
+      for (int i = 0; i < list.length; i++) {
+        families[i] = Bytes.toBytes(list[i]);
+      }
+    } else {
+      families = DEFAULT_COLUMN_FAMILIES;
+    }
 
     isWrite = cmd.hasOption(OPT_WRITE);
     isRead = cmd.hasOption(OPT_READ);
@@ -503,9 +530,9 @@ public class LoadTestTool extends AbstractHBaseTool {
     }
 
     HBaseTestingUtility.createPreSplitLoadTestTable(conf, tableName,
-        COLUMN_FAMILY, compressAlgo, dataBlockEncodingAlgo, numRegionsPerServer,
+      getColumnFamilies(), compressAlgo, dataBlockEncodingAlgo, numRegionsPerServer,
         regionReplication, durability);
-    applyColumnFamilyOptions(tableName, COLUMN_FAMILIES);
+    applyColumnFamilyOptions(tableName, getColumnFamilies());
   }
 
   @Override
@@ -570,7 +597,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     } else {
       // Default DataGenerator is MultiThreadedAction.DefaultDataGenerator
       dataGen = new MultiThreadedAction.DefaultDataGenerator(minColDataSize, maxColDataSize,
-          minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
+          minColsPerKey, maxColsPerKey, families);
     }
 
     if (userOwner != null) {
@@ -603,7 +630,14 @@ public class LoadTestTool extends AbstractHBaseTool {
       if (userOwner != null) {
         writerThreads = new MultiThreadedWriterWithACL(dataGen, conf, tableName, userOwner);
       } else {
-        writerThreads = new MultiThreadedWriter(dataGen, conf, tableName);
+        String writerClass = null;
+        if (cmd.hasOption(OPT_WRITER)) {
+          writerClass = cmd.getOptionValue(OPT_WRITER);
+        } else {
+          writerClass = MultiThreadedWriter.class.getCanonicalName();
+        }
+
+        writerThreads = getMultiThreadedWriterInstance(writerClass, dataGen);
       }
       writerThreads.setMultiPut(isMultiPut);
     }
@@ -613,7 +647,13 @@ public class LoadTestTool extends AbstractHBaseTool {
         updaterThreads = new MultiThreadedUpdaterWithACL(dataGen, conf, tableName, updatePercent,
             userOwner, userNames);
       } else {
-        updaterThreads = new MultiThreadedUpdater(dataGen, conf, tableName, updatePercent);
+        String updaterClass = null;
+        if (cmd.hasOption(OPT_UPDATER)) {
+          updaterClass = cmd.getOptionValue(OPT_UPDATER);
+        } else {
+          updaterClass = MultiThreadedUpdater.class.getCanonicalName();
+        }
+        updaterThreads = getMultiThreadedUpdaterInstance(updaterClass, dataGen);
       }
       updaterThreads.setBatchUpdate(isBatchUpdate);
       updaterThreads.setIgnoreNonceConflicts(ignoreConflicts);
@@ -700,7 +740,32 @@ public class LoadTestTool extends AbstractHBaseTool {
       Constructor<?> constructor = clazz.getConstructor(int.class, int.class, int.class, int.class,
           byte[][].class);
       return (LoadTestDataGenerator) constructor.newInstance(minColDataSize, maxColDataSize,
-          minColsPerKey, maxColsPerKey, COLUMN_FAMILIES);
+          minColsPerKey, maxColsPerKey, families);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  private MultiThreadedWriter getMultiThreadedWriterInstance(String clazzName
+      , LoadTestDataGenerator dataGen) throws IOException {
+    try {
+      Class<?> clazz = Class.forName(clazzName);
+      Constructor<?> constructor = clazz.getConstructor(
+        LoadTestDataGenerator.class, Configuration.class, TableName.class);
+      return (MultiThreadedWriter) constructor.newInstance(dataGen, conf, tableName);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  private MultiThreadedUpdater getMultiThreadedUpdaterInstance(String clazzName
+      , LoadTestDataGenerator dataGen) throws IOException {
+    try {
+      Class<?> clazz = Class.forName(clazzName);
+      Constructor<?> constructor = clazz.getConstructor(
+        LoadTestDataGenerator.class, Configuration.class, TableName.class, double.class);
+      return (MultiThreadedUpdater) constructor.newInstance(
+        dataGen, conf, tableName, updatePercent);
     } catch (Exception e) {
       throw new IOException(e);
     }

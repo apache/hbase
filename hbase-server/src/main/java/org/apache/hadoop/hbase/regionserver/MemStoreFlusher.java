@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.util.StringUtils.humanReadableInt;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
@@ -178,7 +179,11 @@ class MemStoreFlusher implements FlushRequester {
 
       Preconditions.checkState(regionToFlush.memstoreSize.get() > 0);
 
-      LOG.info("Flush of region " + regionToFlush + " due to global heap pressure");
+      LOG.info("Flush of region " + regionToFlush + " due to global heap pressure. "
+          + "Total Memstore size="
+          + humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize())
+          + ", Region memstore size="
+          + humanReadableInt(regionToFlush.memstoreSize.get()));
       flushedOne = flushRegion(regionToFlush, true, true);
       if (!flushedOne) {
         LOG.info("Excluding unflushable region " + regionToFlush +
@@ -292,6 +297,7 @@ class MemStoreFlusher implements FlushRequester {
       getGlobalMemstoreSize() >= globalMemStoreLimitLowMark;
   }
 
+  @Override
   public void requestFlush(HRegion r, boolean forceFlushAllStores) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
@@ -304,6 +310,7 @@ class MemStoreFlusher implements FlushRequester {
     }
   }
 
+  @Override
   public void requestDelayedFlush(HRegion r, long delay, boolean forceFlushAllStores) {
     synchronized (regionsInQueue) {
       if (!regionsInQueue.containsKey(r)) {
@@ -587,6 +594,7 @@ class MemStoreFlusher implements FlushRequester {
    * Register a MemstoreFlushListener
    * @param listener
    */
+  @Override
   public void registerFlushRequestListener(final FlushRequestListener listener) {
     this.flushRequestListeners.add(listener);
   }
@@ -596,6 +604,7 @@ class MemStoreFlusher implements FlushRequester {
    * @param listener
    * @return true when passed listener is unregistered successfully.
    */
+  @Override
   public boolean unregisterFlushRequestListener(final FlushRequestListener listener) {
     return this.flushRequestListeners.remove(listener);
   }
@@ -604,6 +613,7 @@ class MemStoreFlusher implements FlushRequester {
    * Sets the global memstore limit to a new size.
    * @param globalMemStoreSize
    */
+  @Override
   public void setGlobalMemstoreLimit(long globalMemStoreSize) {
     this.globalMemStoreLimit = globalMemStoreSize;
     this.globalMemStoreLimitLowMark =

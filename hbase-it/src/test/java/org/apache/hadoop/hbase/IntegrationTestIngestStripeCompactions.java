@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.LoadTestTool;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -39,7 +41,14 @@ public class IntegrationTestIngestStripeCompactions extends IntegrationTestInges
     HTableDescriptor htd = new HTableDescriptor(getTablename());
     htd.setConfiguration(StoreEngine.STORE_ENGINE_CLASS_KEY, StripeStoreEngine.class.getName());
     htd.setConfiguration(HStore.BLOCKING_STOREFILES_KEY, "100");
-    HColumnDescriptor hcd = new HColumnDescriptor(LoadTestTool.COLUMN_FAMILY);
+    HColumnDescriptor hcd = new HColumnDescriptor(LoadTestTool.DEFAULT_COLUMN_FAMILY);
     HBaseTestingUtility.createPreSplitLoadTestTable(util.getConfiguration(), htd, hcd);
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    IntegrationTestingUtility.setUseDistributedCluster(conf);
+    int ret = ToolRunner.run(conf, new IntegrationTestIngestStripeCompactions(), args);
+    System.exit(ret);
   }
 }

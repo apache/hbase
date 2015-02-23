@@ -46,7 +46,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
    * {@link #wroteUpToKey}, the maximum key in the contiguous range of keys
    * being inserted/updated. This queue is supposed to stay small.
    */
-  protected BlockingQueue<Long> wroteKeys = new ArrayBlockingQueue<Long>(10000);
+  protected BlockingQueue<Long> wroteKeys;
 
   /**
    * This is the current key to be inserted/updated by any thread. Each thread does an
@@ -75,6 +75,11 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   public MultiThreadedWriterBase(LoadTestDataGenerator dataGen, Configuration conf,
       TableName tableName, String actionLetter) throws IOException {
     super(dataGen, conf, tableName, actionLetter);
+    this.wroteKeys = createWriteKeysQueue(conf);
+  }
+
+  protected BlockingQueue<Long> createWriteKeysQueue(Configuration conf) {
+    return new ArrayBlockingQueue<Long>(10000);
   }
 
   @Override

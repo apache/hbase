@@ -233,6 +233,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
           entryBuffers.appendEntry(entry);
         }
         outputSink.flush(); // make sure everything is flushed
+        ctx.getMetrics().incrLogEditsFiltered(
+          outputSink.getSkippedEditsCounter().getAndSet(0));
         return true;
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
@@ -342,24 +344,58 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
         List<Entry> entries) throws IOException {
 
       if (disabledAndDroppedTables.getIfPresent(tableName) != null) {
-        sink.getSkippedEditsCounter().incrementAndGet();
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Skipping " + entries.size() + " entries because table " + tableName
+            + " is cached as a disabled or dropped table");
+        }
+        sink.getSkippedEditsCounter().addAndGet(entries.size());
         return;
       }
 
-      // get the replicas of the primary region
+      // If the table is disabled or dropped, we should not replay the entries, and we can skip
+      // replaying them. However, we might not know whether the table is disabled until we
+      // invalidate the cache and check from meta
       RegionLocations locations = null;
-      try {
-        locations = getRegionLocations(connection, tableName, row, true, 0);
+      boolean useCache = true;
+      while (true) {
+        // get the replicas of the primary region
+        try {
+          locations = getRegionLocations(connection, tableName, row, useCache, 0);
 
-        if (locations == null) {
-          throw new HBaseIOException("Cannot locate locations for "
-              + tableName + ", row:" + Bytes.toStringBinary(row));
+          if (locations == null) {
+            throw new HBaseIOException("Cannot locate locations for "
+                + tableName + ", row:" + Bytes.toStringBinary(row));
+          }
+        } catch (TableNotFoundException e) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Skipping " + entries.size() + " entries because table " + tableName
+              + " is dropped. Adding table to cache.");
+          }
+          disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache. Value ignored
+          // skip this entry
+          sink.getSkippedEditsCounter().addAndGet(entries.size());
+          return;
         }
-      } catch (TableNotFoundException e) {
-        disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache. Value ignored
-        // skip this entry
-        sink.getSkippedEditsCounter().addAndGet(entries.size());
-        return;
+
+        // check whether we should still replay this entry. If the regions are changed, or the
+        // entry is not coming from the primary region, filter it out.
+        HRegionLocation primaryLocation = locations.getDefaultRegionLocation();
+        if (!Bytes.equals(primaryLocation.getRegionInfo().getEncodedNameAsBytes(),
+          encodedRegionName)) {
+          if (useCache) {
+            useCache = false;
+            continue; // this will retry location lookup
+          }
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
+              + " because located region region " + primaryLocation.getRegionInfo().getEncodedName()
+              + " is different than the original region " + Bytes.toStringBinary(encodedRegionName)
+              + " from WALEdit");
+          }
+          sink.getSkippedEditsCounter().addAndGet(entries.size());
+          return;
+        }
+        break;
       }
 
       if (locations.size() == 1) {
@@ -367,17 +403,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       }
 
       ArrayList<Future<ReplicateWALEntryResponse>> tasks
-        = new ArrayList<Future<ReplicateWALEntryResponse>>(2);
-
-      // check whether we should still replay this entry. If the regions are changed, or the
-      // entry is not coming form the primary region, filter it out.
-      HRegionLocation primaryLocation = locations.getDefaultRegionLocation();
-      if (!Bytes.equals(primaryLocation.getRegionInfo().getEncodedNameAsBytes(),
-        encodedRegionName)) {
-        sink.getSkippedEditsCounter().addAndGet(entries.size());
-        return;
-      }
-
+        = new ArrayList<Future<ReplicateWALEntryResponse>>(locations.size() - 1);
 
       // All passed entries should belong to one region because it is coming from the EntryBuffers
       // split per region. But the regions might split and merge (unlike log recovery case).
@@ -414,6 +440,10 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
             // check whether the table is dropped or disabled which might cause
             // SocketTimeoutException, or RetriesExhaustedException or similar if we get IOE.
             if (cause instanceof TableNotFoundException || connection.isTableDisabled(tableName)) {
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
+                  + " because received exception for dropped or disabled table", cause);
+              }
               disabledAndDroppedTables.put(tableName, Boolean.TRUE); // put to cache for later.
               if (!tasksCancelled) {
                 sink.getSkippedEditsCounter().addAndGet(entries.size());
@@ -491,6 +521,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       if (!Bytes.equals(location.getRegionInfo().getEncodedNameAsBytes(),
         initialEncodedRegionName)) {
         skip = true;
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
+            + " because located region region " + location.getRegionInfo().getEncodedName()
+            + " is different than the original region "
+            + Bytes.toStringBinary(initialEncodedRegionName) + " from WALEdit");
+        }
         return null;
       }
 
@@ -505,7 +541,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     private ReplicateWALEntryResponse replayToServer(List<Entry> entries, int timeout)
         throws IOException {
       if (entries.isEmpty() || skip) {
-        skippedEntries.incrementAndGet();
+        skippedEntries.addAndGet(entries.size());
         return ReplicateWALEntryResponse.newBuilder().build();
       }
 
