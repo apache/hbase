@@ -109,10 +109,6 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
     this.conf = HBaseConfiguration.create(context.getConfiguration());
 
-    String codecClassName = conf
-        .get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
-    conf.set(HConstants.RPC_CODEC_CONF_KEY, codecClassName);
-
     this.numWriterThreads = this.conf.getInt(
       "hbase.region.replica.replication.writer.threads", 3);
     controller = new PipelineController();
