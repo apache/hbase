@@ -95,8 +95,8 @@ module Shell
         # Get the special java exception which will be handled
         cause = e.cause
         if cause.kind_of?(org.apache.hadoop.hbase.TableNotFoundException) then
-          first_arg = args.first
-          raise "Unknown table #{first_arg}!"
+          str = java.lang.String.new("#{cause}")
+          raise "Unknown table #{str}!"
         end
         if cause.kind_of?(org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException) then
           exceptions = cause.getCauses
@@ -104,10 +104,6 @@ module Shell
             if exception.kind_of?(org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException) then
               valid_cols = table(args.first).get_all_columns.map { |c| c + '*' }
               raise "Unknown column family! Valid column names: #{valid_cols.join(", ")}"
-            end
-            if exception.kind_of?(org.apache.hadoop.hbase.TableNotFoundException) then
-              first_arg = args.first
-              raise "Unknown table #{first_arg}!"
             end
           end
         end
