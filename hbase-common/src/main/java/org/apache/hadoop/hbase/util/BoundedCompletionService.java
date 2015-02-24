@@ -31,6 +31,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.htrace.Trace;
 
 /**
  * A completion service, close to the one available in the JDK 1.7
@@ -65,7 +66,7 @@ public class BoundedCompletionService<V> {
 
   public Future<V> submit(Callable<V> task) {
     QueueingFuture newFuture = new QueueingFuture(task);
-    executor.execute(newFuture);
+    executor.execute(Trace.wrap(newFuture));
     tasks.add(newFuture);
     return newFuture;
   }
