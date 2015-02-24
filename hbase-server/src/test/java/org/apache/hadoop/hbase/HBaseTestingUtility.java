@@ -99,6 +99,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -3849,6 +3850,37 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void waitUntilNoRegionsInTransition(
       final long timeout) throws Exception {
     waitFor(timeout, predicateNoRegionsInTransition());
+  }
+
+  /**
+   * Wait until labels is ready in VisibilityLabelsCache.
+   * @param timeoutMillis
+   * @param labels
+   */
+  public void waitLabelAvailable(long timeoutMillis, final String... labels) {
+    final VisibilityLabelsCache labelsCache = VisibilityLabelsCache.get();
+    waitFor(timeoutMillis, new Waiter.ExplainingPredicate<RuntimeException>() {
+
+      @Override
+      public boolean evaluate() {
+        for (String label : labels) {
+          if (labelsCache.getLabelOrdinal(label) == 0) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      @Override
+      public String explainFailure() {
+        for (String label : labels) {
+          if (labelsCache.getLabelOrdinal(label) == 0) {
+            return label + " is not available yet";
+          }
+        }
+        return "";
+      }
+    });
   }
 
   /**
