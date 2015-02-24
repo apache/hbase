@@ -49,6 +49,7 @@ module Hbase
       label = 'TEST_AUTHS'
       user = org.apache.hadoop.hbase.security.User.getCurrent().getName();
       visibility_admin.add_labels(label)
+      $TEST_CLUSTER.waitLabelAvailable(10000, label)
       count = visibility_admin.get_auths(user).length
 
       # verifying the set functionality
@@ -69,6 +70,7 @@ module Hbase
       label = 'TEST_VISIBILITY'
       user = org.apache.hadoop.hbase.security.User.getCurrent().getName();
       visibility_admin.add_labels(label)
+      $TEST_CLUSTER.waitLabelAvailable(10000, label)
       visibility_admin.set_auths(user, label)
 
       # verifying put functionality

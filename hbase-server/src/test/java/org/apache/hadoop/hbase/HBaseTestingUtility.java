@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -3506,6 +3507,27 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Wait until labels is ready in VisibilityLabelsCache.
+   * @param timeoutMillis
+   * @param labels
+   */
+  public void waitLabelAvailable(long timeoutMillis, final String... labels) {
+    final VisibilityLabelsCache labelsCache = VisibilityLabelsCache.get();
+    waitFor(timeoutMillis, new Waiter.Predicate<RuntimeException>() {
+
+      @Override
+      public boolean evaluate() {
+        for (String label : labels) {
+          if (labelsCache.getLabelOrdinal(label) == 0) {
+            return false;
+          }
+        }
+        return true;
+      }
+    });
+  }
+
+  /**
    * Create a set of column descriptors with the combination of compression,
    * encoding, bloom codecs available.
    * @return the list of column descriptors
@@ -3557,5 +3579,4 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     return supportedAlgos.toArray(new Algorithm[supportedAlgos.size()]);
   }
-
 }
