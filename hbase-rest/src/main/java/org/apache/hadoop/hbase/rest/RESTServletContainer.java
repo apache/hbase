@@ -56,7 +56,8 @@ public class RESTServletContainer extends ServletContainer {
       if (!servlet.supportsProxyuser()) {
         throw new ServletException("Support for proxyuser is not configured");
       }
-      UserGroupInformation ugi = servlet.getRealUser();
+      // Authenticated remote user is attempting to do 'doAs' proxy user.
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser(request.getRemoteUser());
       // create and attempt to authorize a proxy user (the client is attempting
       // to do proxy user)
       ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, ugi);
