@@ -119,6 +119,11 @@ public class EncryptionUtil {
     if (cipher == null) {
       throw new RuntimeException("Cipher '" + algorithm + "' not available");
     }
+    return getUnwrapKey(conf, subject, wrappedKey, cipher);
+  }
+
+  private static Key getUnwrapKey(Configuration conf, String subject,
+      EncryptionProtos.WrappedKey wrappedKey, Cipher cipher) throws IOException, KeyException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] iv = wrappedKey.hasIv() ? wrappedKey.getIv().toByteArray() : null;
     Encryption.decryptWithSubjectKey(out, wrappedKey.getData().newInput(),
@@ -130,6 +135,28 @@ public class EncryptionUtil {
       }
     }
     return new SecretKeySpec(keyBytes, wrappedKey.getAlgorithm());
+  }
+
+  /**
+   * Unwrap a wal key by decrypting it with the secret key of the given subject. The configuration
+   * must be set up correctly for key alias resolution.
+   * @param conf configuration
+   * @param subject subject key alias
+   * @param value the encrypted key bytes
+   * @return the raw key bytes
+   * @throws IOException if key is not found for the subject, or if some I/O error occurs
+   * @throws KeyException if fail to unwrap the key
+   */
+  public static Key unwrapWALKey(Configuration conf, String subject, byte[] value)
+      throws IOException, KeyException {
+    EncryptionProtos.WrappedKey wrappedKey =
+        EncryptionProtos.WrappedKey.PARSER.parseDelimitedFrom(new ByteArrayInputStream(value));
+    String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Cipher cipher = Encryption.getCipher(conf, algorithm);
+    if (cipher == null) {
+      throw new RuntimeException("Cipher '" + algorithm + "' not available");
+    }
+    return getUnwrapKey(conf, subject, wrappedKey, cipher);
   }
 
 }

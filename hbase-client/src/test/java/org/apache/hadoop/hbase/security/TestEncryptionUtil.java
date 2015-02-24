@@ -75,4 +75,49 @@ public class TestEncryptionUtil {
     }
   }
 
+  @Test
+  public void testWALKeyWrapping() throws Exception {
+    // set up the key provider for testing to resolve a key for our test subject
+    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+
+    // generate a test key
+    byte[] keyBytes = new byte[AES.KEY_LENGTH];
+    new SecureRandom().nextBytes(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key key = new SecretKeySpec(keyBytes, algorithm);
+
+    // wrap the test key
+    byte[] wrappedKeyBytes = EncryptionUtil.wrapKey(conf, "hbase", key);
+    assertNotNull(wrappedKeyBytes);
+
+    // unwrap
+    Key unwrappedKey = EncryptionUtil.unwrapWALKey(conf, "hbase", wrappedKeyBytes);
+    assertNotNull(unwrappedKey);
+    // only secretkeyspec supported for now
+    assertTrue(unwrappedKey instanceof SecretKeySpec);
+    // did we get back what we wrapped?
+    assertTrue("Unwrapped key bytes do not match original",
+      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+  }
+
+  @Test(expected = KeyException.class)
+  public void testWALKeyWrappingWithIncorrectKey() throws Exception {
+    // set up the key provider for testing to resolve a key for our test subject
+    Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+
+    // generate a test key
+    byte[] keyBytes = new byte[AES.KEY_LENGTH];
+    new SecureRandom().nextBytes(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key key = new SecretKeySpec(keyBytes, algorithm);
+
+    // wrap the test key
+    byte[] wrappedKeyBytes = EncryptionUtil.wrapKey(conf, "hbase", key);
+    assertNotNull(wrappedKeyBytes);
+
+    // unwrap with an incorrect key
+    EncryptionUtil.unwrapWALKey(conf, "other", wrappedKeyBytes);
+  }
 }
