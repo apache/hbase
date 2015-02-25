@@ -302,6 +302,13 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   }
 
   /**
+   * @return the base znode of this zookeeper connection instance.
+   */
+  public String getBaseZNode() {
+    return baseZNode;
+  }
+
+  /**
    * Method called from ZooKeeper for events and connection status.
    * <p>
    * Valid events are passed along to listeners.  Connection status changes
