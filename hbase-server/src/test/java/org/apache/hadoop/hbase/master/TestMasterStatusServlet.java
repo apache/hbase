@@ -96,6 +96,7 @@ public class TestMasterStatusServlet {
     ZooKeeperWatcher zkw = Mockito.mock(ZooKeeperWatcher.class);
     Mockito.doReturn("fakequorum").when(zkw).getQuorum();
     Mockito.doReturn(zkw).when(master).getZooKeeperWatcher();
+    Mockito.doReturn(zkw).when(master).getZooKeeper();
 
     // Fake MasterAddressTracker
     MasterAddressTracker tracker = Mockito.mock(MasterAddressTracker.class);
