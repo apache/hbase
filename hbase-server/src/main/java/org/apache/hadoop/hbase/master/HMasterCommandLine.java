@@ -173,7 +173,9 @@ public class HMasterCommandLine extends ServerCommandLine {
         }
         conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
                  Integer.toString(clientPort));
-        conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 10 *1000);
+        int localZKClusterSessionTimeout =
+            conf.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", 10*1000);
+        conf.setInt(HConstants.ZK_SESSION_TIMEOUT, localZKClusterSessionTimeout);
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.
         LocalHBaseCluster cluster = new LocalHBaseCluster(conf, conf.getInt("hbase.masters", 1),
