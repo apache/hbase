@@ -249,6 +249,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     <td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td>
                 </tr>
                 <tr>
+                    <td>Zookeeper Base Path</td>
+                    <td> <% master.getZooKeeper().getBaseZNode() %></td>
+                    <td>Root node of this cluster in ZK.</td>
+                </tr>
+                <tr>
                     <td>HBase Root Directory</td>
                     <td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td>
                     <td>Location of HBase home directory</td>
