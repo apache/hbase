@@ -788,7 +788,7 @@ public class HRegionServer extends HasThread implements
     this.leases = new Leases(this.threadWakeFrequency);
 
     // Create the thread to clean the moved regions list
-    movedRegionsCleaner = MovedRegionsCleaner.createAndStart(this);
+    movedRegionsCleaner = MovedRegionsCleaner.create(this);
 
     if (this.nonceManager != null) {
       // Create the scheduled chore that cleans up nonces.
@@ -1648,6 +1648,7 @@ public class HRegionServer extends HasThread implements
     if (this.healthCheckChore != null) choreService.scheduleChore(healthCheckChore);
     if (this.nonceManagerChore != null) choreService.scheduleChore(nonceManagerChore);
     if (this.storefileRefresher != null) choreService.scheduleChore(storefileRefresher);
+    if (this.movedRegionsCleaner != null) choreService.scheduleChore(movedRegionsCleaner);
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
@@ -2012,6 +2013,7 @@ public class HRegionServer extends HasThread implements
     if (this.periodicFlusher != null) periodicFlusher.cancel(true);
     if (this.healthCheckChore != null) healthCheckChore.cancel(true);
     if (this.storefileRefresher != null) storefileRefresher.cancel(true);
+    if (this.movedRegionsCleaner != null) movedRegionsCleaner.cancel(true);
 
     if (this.cacheFlusher != null) {
       this.cacheFlusher.join();
@@ -2951,21 +2953,31 @@ public class HRegionServer extends HasThread implements
     }
   }
 
+  /*
+   * Use this to allow tests to override and schedule more frequently.
+   */
+
+  protected int movedRegionCleanerPeriod() {
+        return TIMEOUT_REGION_MOVED;
+  }
+
   /**
    * Creates a Chore thread to clean the moved region cache.
    */
-  protected static class MovedRegionsCleaner extends ScheduledChore implements Stoppable {
+
+  protected final static class MovedRegionsCleaner extends ScheduledChore implements Stoppable {
     private HRegionServer regionServer;
     Stoppable stoppable;
 
     private MovedRegionsCleaner(
       HRegionServer regionServer, Stoppable stoppable){
-      super("MovedRegionsCleaner for region " + regionServer, stoppable, TIMEOUT_REGION_MOVED);
+      super("MovedRegionsCleaner for region " + regionServer, stoppable,
+          regionServer.movedRegionCleanerPeriod());
       this.regionServer = regionServer;
       this.stoppable = stoppable;
     }
 
-    static MovedRegionsCleaner createAndStart(HRegionServer rs){
+    static MovedRegionsCleaner create(HRegionServer rs){
       Stoppable stoppable = new Stoppable() {
         private volatile boolean isStopped = false;
         @Override public void stop(String why) { isStopped = true;}
