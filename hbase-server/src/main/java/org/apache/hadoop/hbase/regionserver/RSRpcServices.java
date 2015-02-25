@@ -783,17 +783,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     // Server to handle client requests.
     String hostname = getHostname(rs.conf);
-
-    boolean mode =
-        rs.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, HConstants.DEFAULT_CLUSTER_DISTRIBUTED);
-    if (mode == HConstants.CLUSTER_IS_DISTRIBUTED && hostname.equals(HConstants.LOCALHOST)) {
-      String msg =
-          "The hostname of regionserver cannot be set to localhost "
-              + "in a fully-distributed setup because it won't be reachable. "
-              + "See \"Getting Started\" for more information.";
-      LOG.fatal(msg);
-      throw new IOException(msg);
-    }
     int port = rs.conf.getInt(HConstants.REGIONSERVER_PORT,
       HConstants.DEFAULT_REGIONSERVER_PORT);
     // Creation of a HSA will force a resolve.
