@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
@@ -27,10 +25,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ LargeTests.class })
-public class TestShell extends AbstractTestShell {
+public class TestReplicationShell extends AbstractTestShell {
+
   @Test
   public void testRunShellTests() throws IOException {
-    System.setProperty("shell.test.exclude", "replication_admin_test.rb");
+    System.setProperty("shell.test.include", "replication_admin_test.rb");
     // Start all ruby tests
     jruby.runScriptlet(PathType.ABSOLUTE, "src/test/ruby/tests_runner.rb");
   }
