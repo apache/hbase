@@ -50,6 +50,8 @@ public class Sweeper extends Configured implements Tool {
    * the small mob files into bigger ones.
    * @param tableName The current table name in string format.
    * @param familyName The column family name.
+   * @return 0 if success, 2 if job aborted with an exception, 3 if unable to start due to
+   *   other compaction,4 if mr job was unsuccessful
    * @throws IOException
    * @throws InterruptedException
    * @throws ClassNotFoundException
@@ -74,7 +76,7 @@ public class Sweeper extends Configured implements Tool {
       // Run the sweeping
       return job.sweep(tn, family);
     } catch (Exception e) {
-      System.err.println("Job failed. " + e);
+      System.err.println("Job aborted due to exception " + e);
       return 2; // job failed
     } finally {
       try {
@@ -98,6 +100,11 @@ public class Sweeper extends Configured implements Tool {
     System.err.println(" familyName       The column family name");
   }
 
+  /**
+   * Main method for the tool.
+   * @return 0 if success, 1 for bad args. 2 if job aborted with an exception,
+   *   3 if unable to start due to other compaction, 4 if mr job was unsuccessful
+   */
   public int run(String[] args) throws Exception {
     if (args.length != 2) {
       printUsage();

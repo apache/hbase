@@ -141,6 +141,9 @@ public class SweepJob {
    * compaction in progress.
    * @param tn The current table name.
    * @param family The descriptor of the current column family.
+   * @return 0 upon success, 3 if bailing out because another compaction is currently happening,
+   *   or 4 the mr job was unsuccessful
+   *
    * @throws IOException
    * @throws ClassNotFoundException
    * @throws InterruptedException
@@ -215,7 +218,7 @@ public class SweepJob {
           // Archive the unused mob files.
           removeUnusedFiles(job, tn, family);
         } else {
-          System.err.println("Job Failed");
+          System.err.println("Job was not successful");
           return 4;
         }
       } finally {
