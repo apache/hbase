@@ -23,9 +23,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -44,7 +43,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.ServiceException;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category(MediumTests.class)
 public class TestCoprocessorTableEndpoint {
 
   private static final byte[] TEST_FAMILY = Bytes.toBytes("TestFamily");
@@ -102,7 +101,7 @@ public class TestCoprocessorTableEndpoint {
     return ret;
   }
 
-  private static Map<byte [], Long> sum(final Table table, final byte [] family,
+  private static Map<byte [], Long> sum(final HTable table, final byte [] family,
     final byte [] qualifier, final byte [] start, final byte [] end)
       throws ServiceException, Throwable {
   return table.coprocessorService(ColumnAggregationProtos.ColumnAggregationService.class,
@@ -126,14 +125,14 @@ public class TestCoprocessorTableEndpoint {
   }
 
   private static final void createTable(HTableDescriptor desc) throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
     TEST_UTIL.waitUntilAllRegionsAssigned(desc.getTableName());
-    Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
     try {
       for (int i = 0; i < ROWSIZE; i++) {
         Put put = new Put(ROWS[i]);
-        put.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
+        put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
         table.put(put);
       }
     } finally {
@@ -142,14 +141,14 @@ public class TestCoprocessorTableEndpoint {
   }
 
   private static void updateTable(HTableDescriptor desc) throws Exception {
-    Admin admin = TEST_UTIL.getHBaseAdmin();
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     admin.disableTable(desc.getTableName());
     admin.modifyTable(desc.getTableName(), desc);
     admin.enableTable(desc.getTableName());
   }
 
   private static final void verifyTable(TableName tableName) throws Throwable {
-    Table table = TEST_UTIL.getConnection().getTable(tableName);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     try {
       Map<byte[], Long> results = sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[0],
         ROWS[ROWS.length-1]);
