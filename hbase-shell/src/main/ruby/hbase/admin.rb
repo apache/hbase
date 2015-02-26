@@ -34,7 +34,7 @@ module Hbase
 
     def initialize(admin, formatter)
       @admin = admin
-      connection = @admin.getConnection()
+      @connection = @admin.getConnection()
       @formatter = formatter
     end
 
@@ -399,14 +399,14 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
     def truncate_preserve(table_name, conf = @conf)
-      h_table = @conn.getTable(table_name)      
-      locator = @conn.getRegionLocator(table_name)
+      h_table = @connection.getTable(TableName.valueOf(table_name))
+      locator = @connection.getRegionLocator(TableName.valueOf(table_name))
       splits = locator.getAllRegionLocations().
           map{|i| Bytes.toString(i.getRegionInfo().getStartKey)}.
           delete_if{|k| k == ""}.to_java :String
       locator.close()
 
-      table_description = @admin.getTableDescriptor(table_name)
+      table_description = @admin.getTableDescriptor(TableName.valueOf(table_name))
       yield 'Disabling table...' if block_given?
       disable(table_name)
 
@@ -784,7 +784,7 @@ module Hbase
     # Enables/disables a region by name
     def online(region_name, on_off)
       # Open meta table
-      meta = connection.getTable(org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
+      meta = @connection.getTable(org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
 
       # Read region info
       # FIXME: fail gracefully if can't find the region
