@@ -19,6 +19,7 @@
 
 require 'rubygems'
 require 'rake'
+require 'set'
 
 unless defined?($TEST_CLUSTER)
   include Java
@@ -44,8 +45,25 @@ require 'test_helper'
 
 puts "Running tests..."
 
+if java.lang.System.get_property('shell.test.include')
+  includes = Set.new(java.lang.System.get_property('shell.test.include').split(','))
+end
+
+if java.lang.System.get_property('shell.test.exclude')
+  excludes = Set.new(java.lang.System.get_property('shell.test.exclude').split(','))
+end
+
 files = Dir[ File.dirname(__FILE__) + "/**/*_test.rb" ]
 files.each do |file|
+  filename = File.basename(file)
+  if includes != nil && !includes.include?(filename)
+    puts "Skip #{filename} because of not included"
+    next
+  end
+  if excludes != nil && excludes.include?(filename)
+    puts "Skip #{filename} because of excluded"
+    next
+  end
   begin
     load(file)
   rescue => e
