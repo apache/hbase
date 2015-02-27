@@ -24,13 +24,14 @@ java_import org.apache.hadoop.hbase.util.Bytes
 module Hbase
   class VisibilityLabelsAdmin
 
-    def initialize(configuration, formatter)
-      @config = configuration
+    def initialize(admin, formatter)
+      @admin = admin
+      @config = @admin.getConfiguration()
       @formatter = formatter
-      
-      # @connection = org.apache.hadoop.hbase.client.ConnectionFactory(configuration)
-      # @admin = @connection.getAdmin()
-      @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
+    end
+
+    def close
+      @admin.close
     end
 
     def add_labels(*args)
