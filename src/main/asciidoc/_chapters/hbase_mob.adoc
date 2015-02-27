@@ -1,0 +1,120 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[[hbase_mob]]
+== Storing Medium-sized Objects (MOB)
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+:toc: left
+:source-language: java
+
+Data comes in many sizes, and saving all of your data in HBase, including binary data such as images and documents, is ideal. HBase can technically handle binary objects with cells that are up to 10MB in size. However, HBase's normal read and write paths are optimized for values smaller than 100KB in size. When HBase deals with large numbers of values up to 10MB, referred to here as medium objects, or MOBs, performance is degraded due to write amplification caused by splits and compactions. HBase ***FIX_VERSION_NUMBER*** adds support for better managing large numbers of MOBs while maintaining performance, consistency, and low operational overhead. MOB support is provided by the work done in link:https://issues.apache.org/jira/browse/HBASE-11339[HBASE-11339].
+
+To take advantage of MOB, you need to use <<hfilev3,HFile version 3>>. Optionally, configure the MOB file reader's cache settings for each RegionServer (see <<mob.cache.configure>>), then configure specific columns to hold MOB data.
+
+Client code does not need to change to take advantage of HBase MOB support. The feature is transparent to the client.
+
+=== Configuring Columns for MOB
+
+You can configure columns to support MOB during table creation or alteration, either in HBase Shell or via the Java API. The two relevant properties are the boolean `IS_MOB` and the `MOB_THRESHOLD`, which is the number of bytes at which an object is considered to be a MOB. Only `IS_MOB` is required. If you do not specify the `MOB_THRESHOLD`, the default threshold value of 100 kb is used.
+
+.Configure a Column for MOB Using HBase Shell
+====
+----
+hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
+hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
+----
+====
+
+.Configure a Column for MOB Using the Java API
+====
+[source,java]
+----
+...
+HColumnDescriptor hcd = new HColumnDescriptor(“f”);
+hcd.setMobEnabled(true);
+...
+hcd.setMobThreshold(102400L);
+...        
+----
+====
+
+
+=== Testing MOB
+
+The utility `org.apache.hadoop.hbase.IntegrationTestIngestMOB` is provided to assist with testing the MOB feature. The utility is run as follows:
+[source,bash]
+----
+$ sudo -u hbase hbase org.apache.hadoop.hbase.IntegrationTestIngestMOB \
+            -threshold 102400 \
+            -minMobDataSize 512 \
+            -maxMobDataSize 5120
+----
+
+* `*threshold*` is the threshold at which cells are considered to be MOBs. The default is 1 kB, expressed in bytes.
+* `*minMobDataSize*` is the minimum value for the size of MOB data. The default is 512 B, expressed in bytes.
+* `*maxMobDataSize*` is the maximum value for the size of MOB data. The default is 5 kB, expressed in bytes.
+
+
+[[mob.cache.configure]]
+=== Configuring the MOB Cache
+
+
+Because there can be a large number of MOB files at any time, as compared to the number of HFiles, MOB files are not always kept open. The MOB file reader cache is a LRU cache which keeps the most recently used MOB files open. To configure the MOB file reader's cache on each RegionServer, add the following properties to the RegionServer's `hbase-site.xml`, customize the configuration to suit your environment, and restart or rolling restart the RegionServer.
+
+.Example MOB Cache Configuration
+====
+[source,xml]
+----
+<property>
+    <name>hbase.mob.file.cache.size</name>
+    <value>1000</value>
+    <description>
+      Number of opened file handlers to cache.
+      A larger value will benefit reads by provinding more file handlers per mob
+      file cache and would reduce frequent file opening and closing.
+      However, if this is set too high, this could lead to a "too many opened file handers"
+      The default value is 1000.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.cache.evict.period</name>
+    <value>3600</value>
+    <description>
+      The amount of time in seconds before the mob cache evicts cached mob files.
+      The default value is 3600 seconds.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.cache.evict.remain.ratio</name>
+    <value>0.5f</value>
+    <description>
+      The ratio (between 0.0 and 1.0) of files that remains cached after an eviction
+      is triggered when the number of cached mob files exceeds the hbase.mob.file.cache.size.
+      The default value is 0.5f.
+    </description>
+</property>
+----
+====
+
