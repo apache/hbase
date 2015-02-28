@@ -296,9 +296,6 @@ public class TestBulkLoad {
         assertTrue(Bytes.equals(store.getFamilyName().toByteArray(), familyName));
         assertTrue(Bytes.equals(Bytes.toBytes(store.getStoreHomeDir()), familyName));
         assertEquals(storeFileNames.size(), store.getStoreFileCount());
-        for (String storeFile : store.getStoreFileList()) {
-          assertTrue(storeFile.equals(storeFileNames.get(index++)));
-        }
       }
       
       return true;

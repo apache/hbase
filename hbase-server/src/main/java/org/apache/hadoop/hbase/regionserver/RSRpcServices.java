@@ -146,6 +146,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
@@ -728,6 +729,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             RegionEventDescriptor regionEvent = WALEdit.getRegionEventDescriptor(metaCell);
             if (regionEvent != null && !isDefaultReplica) {
               region.replayWALRegionEventMarker(regionEvent);
+              continue;
+            }
+            BulkLoadDescriptor bulkLoadEvent = WALEdit.getBulkLoadDescriptor(metaCell);
+            if (bulkLoadEvent != null) {
+              region.replayWALBulkLoadEventMarker(bulkLoadEvent);
               continue;
             }
           }
