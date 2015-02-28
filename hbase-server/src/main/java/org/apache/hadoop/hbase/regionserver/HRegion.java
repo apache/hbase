@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -4663,6 +4664,86 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     }
   }
 
+  void replayWALBulkLoadEventMarker(WALProtos.BulkLoadDescriptor bulkLoadEvent) throws IOException {
+    checkTargetRegion(bulkLoadEvent.getEncodedRegionName().toByteArray(),
+      "BulkLoad marker from WAL ", bulkLoadEvent);
+
+    if (ServerRegionReplicaUtil.isDefaultReplica(this.getRegionInfo())) {
+      return; // if primary nothing to do
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(getRegionInfo().getEncodedName() + " : "
+              +  "Replaying bulkload event marker " + TextFormat.shortDebugString(bulkLoadEvent));
+    }
+    // check if multiple families involved
+    boolean multipleFamilies = false;
+    byte[] family = null;
+    for (StoreDescriptor storeDescriptor : bulkLoadEvent.getStoresList()) {
+      byte[] fam = storeDescriptor.getFamilyName().toByteArray();
+      if (family == null) {
+        family = fam;
+      } else if (!Bytes.equals(family, fam)) {
+        multipleFamilies = true;
+        break;
+      }
+    }
+
+    startBulkRegionOperation(multipleFamilies);
+    try {
+      // we will use writestate as a coarse-grain lock for all the replay events
+      synchronized (writestate) {
+        // Replication can deliver events out of order when primary region moves or the region
+        // server crashes, since there is no coordination between replication of different wal files
+        // belonging to different region servers. We have to safe guard against this case by using
+        // region open event's seqid. Since this is the first event that the region puts (after
+        // possibly flushing recovered.edits), after seeing this event, we can ignore every edit
+        // smaller than this seqId
+        if (bulkLoadEvent.getBulkloadSeqNum() >= 0
+            && this.lastReplayedOpenRegionSeqId >= bulkLoadEvent.getBulkloadSeqNum()) {
+          LOG.warn(getRegionInfo().getEncodedName() + " : "
+              + "Skipping replaying bulkload event :"
+              + TextFormat.shortDebugString(bulkLoadEvent)
+              + " because its sequence id is smaller than this region's lastReplayedOpenRegionSeqId"
+              + " =" + lastReplayedOpenRegionSeqId);
+
+          return;
+        }
+
+        for (StoreDescriptor storeDescriptor : bulkLoadEvent.getStoresList()) {
+          // stores of primary may be different now
+          family = storeDescriptor.getFamilyName().toByteArray();
+          Store store = getStore(family);
+          if (store == null) {
+            LOG.warn(getRegionInfo().getEncodedName() + " : "
+                    + "Received a bulk load marker from primary, but the family is not found. "
+                    + "Ignoring. StoreDescriptor:" + storeDescriptor);
+            continue;
+          }
+
+          List<String> storeFiles = storeDescriptor.getStoreFileList();
+          for (String storeFile : storeFiles) {
+            StoreFileInfo storeFileInfo = null;
+            try {
+              storeFileInfo = fs.getStoreFileInfo(Bytes.toString(family), storeFile);
+              store.bulkLoadHFile(storeFileInfo);
+            } catch(FileNotFoundException ex) {
+              LOG.warn(getRegionInfo().getEncodedName() + " : "
+                      + ((storeFileInfo != null) ? storeFileInfo.toString() :
+                            (new Path(Bytes.toString(family), storeFile)).toString())
+                      + " doesn't exist any more. Skip loading the file");
+            }
+          }
+        }
+      }
+      if (bulkLoadEvent.getBulkloadSeqNum() > 0) {
+        getMVCC().advanceMemstoreReadPointIfNeeded(bulkLoadEvent.getBulkloadSeqNum());
+      }
+    } finally {
+      closeBulkRegionOperation();
+    }
+  }
+
   /** Checks whether the given regionName is either equal to our region, or that
    * the regionName is the primary region to our corresponding range for the secondary replica.
    */
@@ -5013,13 +5094,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           if (bulkLoadListener != null) {
             finalPath = bulkLoadListener.prepareBulkLoad(familyName, path);
           }
-          store.bulkLoadHFile(finalPath, seqId);
+          Path commitedStoreFile = store.bulkLoadHFile(finalPath, seqId);
 
           if(storeFiles.containsKey(familyName)) {
-            storeFiles.get(familyName).add(new Path(finalPath));
+            storeFiles.get(familyName).add(commitedStoreFile);
           } else {
             List<Path> storeFileNames = new ArrayList<Path>();
-            storeFileNames.add(new Path(finalPath));
+            storeFileNames.add(commitedStoreFile);
             storeFiles.put(familyName, storeFileNames);
           }
           if (bulkLoadListener != null) {

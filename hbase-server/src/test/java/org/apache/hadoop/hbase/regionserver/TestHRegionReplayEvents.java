@@ -28,33 +28,46 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.apache.hadoop.hbase.regionserver.TestHRegion.*;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.regionserver.HRegion.PrepareFlushResult;
 import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
@@ -63,6 +76,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -74,6 +88,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
 
 import com.google.common.collect.Lists;
@@ -1325,6 +1340,90 @@ public class TestHRegionReplayEvents {
     put.setDurability(Durability.SKIP_WAL);
     MutationReplay mutation = new MutationReplay(MutationType.PUT, put, 0, 0);
     region.batchReplay(new MutationReplay[] {mutation}, replaySeqId);
+  }
+
+  /**
+   * Tests replaying region open markers from primary region. Checks whether the files are picked up
+   */
+  @Test
+  public void testReplayBulkLoadEvent() throws IOException {
+    LOG.info("testReplayBulkLoadEvent starts");
+    putDataWithFlushes(primaryRegion, 100, 0, 100); // no flush
+
+    // close the region and open again.
+    primaryRegion.close();
+    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
+    
+    // bulk load a file into primary region
+    Random random = new Random();
+    byte[] randomValues = new byte[20];
+    random.nextBytes(randomValues);
+    Path testPath = TEST_UTIL.getDataTestDirOnTestFS();
+
+    List<Pair<byte[], String>> familyPaths = new ArrayList<Pair<byte[], String>>();
+    int expectedLoadFileCount = 0;
+    for (byte[] family : families) {
+      familyPaths.add(new Pair<byte[], String>(family, createHFileForFamilies(testPath, family,
+        randomValues)));
+      expectedLoadFileCount++;
+    }
+    primaryRegion.bulkLoadHFiles(familyPaths, false);
+
+    // now replay the edits and the bulk load marker
+    reader = createWALReaderForPrimary();
+
+    LOG.info("-- Replaying edits and region events in secondary");
+    BulkLoadDescriptor bulkloadEvent = null;
+    while (true) {
+      WAL.Entry entry = reader.next();
+      if (entry == null) {
+        break;
+      }
+      bulkloadEvent = WALEdit.getBulkLoadDescriptor(entry.getEdit().getCells().get(0));
+      if (bulkloadEvent != null) {
+        break;
+      }
+    }
+
+    // we should have 1 bulk load event
+    assertTrue(bulkloadEvent != null);
+    assertEquals(expectedLoadFileCount, bulkloadEvent.getStoresCount());
+
+    // replay the bulk load event
+    secondaryRegion.replayWALBulkLoadEventMarker(bulkloadEvent);
+
+
+    List<String> storeFileName = new ArrayList<String>();
+    for (StoreDescriptor storeDesc : bulkloadEvent.getStoresList()) {
+      storeFileName.addAll(storeDesc.getStoreFileList());
+    }
+    // assert that the bulk loaded files are picked
+    for (Store s : secondaryRegion.getStores().values()) {
+      for (StoreFile sf : s.getStorefiles()) {
+        storeFileName.remove(sf.getPath().getName());
+      }
+    }
+    assertTrue("Found some store file isn't loaded:" + storeFileName, storeFileName.isEmpty());
+
+    LOG.info("-- Verifying edits from secondary");
+    for (byte[] family : families) {
+      assertGet(secondaryRegion, family, randomValues);
+    }
+  }
+
+  private String createHFileForFamilies(Path testPath, byte[] family,
+      byte[] valueBytes) throws IOException {
+    HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(TEST_UTIL.getConfiguration());
+    // TODO We need a way to do this without creating files
+    Path testFile = new Path(testPath, UUID.randomUUID().toString());
+    hFileFactory.withOutputStream(TEST_UTIL.getTestFileSystem().create(testFile));
+    hFileFactory.withFileContext(new HFileContext());
+    HFile.Writer writer = hFileFactory.create();
+
+    writer.append(new KeyValue(CellUtil.createCell(valueBytes, family, valueBytes, 0l,
+      KeyValue.Type.Put.getCode(), valueBytes)));
+    writer.close();
+    return testFile.toString();
   }
 
   /** Puts a total of numRows + numRowsAfterFlush records indexed with numeric row keys. Does
