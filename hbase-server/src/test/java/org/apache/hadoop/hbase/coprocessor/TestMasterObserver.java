@@ -1117,7 +1117,7 @@ public class TestMasterObserver {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testStarted() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1137,7 +1137,7 @@ public class TestMasterObserver {
         cp.wasStartMasterCalled());
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testTableOperations() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1303,7 +1303,7 @@ public class TestMasterObserver {
         cp.wasDeleteTableHandlerCalled());
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testSnapshotOperations() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     HMaster master = cluster.getMaster();
@@ -1359,7 +1359,7 @@ public class TestMasterObserver {
     }
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testNamespaceOperations() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     String testNamespace = "observed_ns";
@@ -1446,7 +1446,7 @@ public class TestMasterObserver {
     }
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testRegionTransitionOperations() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1548,7 +1548,7 @@ public class TestMasterObserver {
     }
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testTableDescriptorsEnumeration() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
@@ -1566,7 +1566,7 @@ public class TestMasterObserver {
       cp.wasGetTableDescriptorsCalled());
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testTableNamesEnumeration() throws Exception {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
 
