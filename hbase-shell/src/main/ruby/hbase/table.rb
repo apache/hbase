@@ -678,5 +678,16 @@ EOF
         column[1] = parts[0]
       end
     end
+
+    #----------------------------------------------------------------------------------------------
+    # Get the split points for the table
+    def _get_splits_internal()
+      locator = @table.getRegionLocator()
+      splits = locator.getAllRegionLocations().
+          map{|i| Bytes.toStringBinary(i.getRegionInfo().getStartKey)}.delete_if{|k| k == ""}
+      locator.close()
+      puts("Total number of splits = %s" % [splits.size + 1])
+      return splits
+    end
   end
 end
