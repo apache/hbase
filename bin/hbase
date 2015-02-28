@@ -210,14 +210,17 @@ if [ "$HBASE_LIBRARY_PATH" != "" ]; then
 fi
 
 #If avail, add Hadoop to the CLASSPATH and to the JAVA_LIBRARY_PATH
-HADOOP_IN_PATH=$(PATH="${HADOOP_HOME:-${HADOOP_PREFIX}}/bin:$PATH" which hadoop 2>/dev/null)
-if [ -f ${HADOOP_IN_PATH} ]; then
-  HADOOP_JAVA_LIBRARY_PATH=$(HADOOP_CLASSPATH="$CLASSPATH" ${HADOOP_IN_PATH} \
-                             org.apache.hadoop.hbase.util.GetJavaProperty java.library.path 2>/dev/null)
-  if [ -n "$HADOOP_JAVA_LIBRARY_PATH" ]; then
-    JAVA_LIBRARY_PATH=$(append_path "${JAVA_LIBRARY_PATH}" "$HADOOP_JAVA_LIBRARY_PATH")
+# Allow this functionality to be disabled
+if [ "$HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP" != "true" ] ; then
+  HADOOP_IN_PATH=$(PATH="${HADOOP_HOME:-${HADOOP_PREFIX}}/bin:$PATH" which hadoop 2>/dev/null)
+  if [ -f ${HADOOP_IN_PATH} ]; then
+    HADOOP_JAVA_LIBRARY_PATH=$(HADOOP_CLASSPATH="$CLASSPATH" ${HADOOP_IN_PATH} \
+                               org.apache.hadoop.hbase.util.GetJavaProperty java.library.path 2>/dev/null)
+    if [ -n "$HADOOP_JAVA_LIBRARY_PATH" ]; then
+      JAVA_LIBRARY_PATH=$(append_path "${JAVA_LIBRARY_PATH}" "$HADOOP_JAVA_LIBRARY_PATH")
+    fi
+    CLASSPATH=$(append_path "${CLASSPATH}" `${HADOOP_IN_PATH} classpath 2>/dev/null`)
   fi
-  CLASSPATH=$(append_path "${CLASSPATH}" `${HADOOP_IN_PATH} classpath 2>/dev/null`)
 fi
 
 # Add user-specified CLASSPATH last
