@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -172,7 +171,6 @@ public class AsyncRpcClient extends AbstractRpcClient {
     this.bootstrap = new Bootstrap();
     bootstrap.group(eventLoopGroupAndChannelClass.getFirst())
         .channel(eventLoopGroupAndChannelClass.getSecond())
-        .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
         .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
         .option(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, operationTimeout);
