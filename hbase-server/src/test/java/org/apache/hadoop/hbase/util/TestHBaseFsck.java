@@ -555,8 +555,10 @@ public class TestHBaseFsck {
       boolean fail = true;
       @Override
       public HBaseFsck call(){
+        Configuration c = new Configuration(conf);
+        c.setInt("hbase.hbck.lockfile.attempts", 1);
         try{
-          return doFsck(conf, false);
+          return doFsck(c, false);
         } catch(Exception e){
           if (e.getMessage().contains("Duplicate hbck")) {
             fail = false;
@@ -583,6 +585,40 @@ public class TestHBaseFsck {
     if (h2 != null) {
       assert(h2.getRetCode() >= 0);
     }
+  }
+  
+  /**
+   * This test makes sure that with 5 retries both parallel instances 
+   * of hbck will be completed successfully.
+   *
+   * @throws Exception
+   */
+  @Test (timeout=180000)
+  public void testParallelWithRetriesHbck() throws Exception {
+    final ExecutorService service;
+    final Future<HBaseFsck> hbck1,hbck2;
+
+    class RunHbck implements Callable<HBaseFsck>{
+
+      @Override
+      public HBaseFsck call() throws Exception {
+        return doFsck(conf, false);        
+      }
+    }
+    service = Executors.newFixedThreadPool(2);
+    hbck1 = service.submit(new RunHbck());
+    hbck2 = service.submit(new RunHbck());
+    service.shutdown();
+    //wait for 15 seconds, for both hbck calls finish
+    service.awaitTermination(15, TimeUnit.SECONDS);
+    HBaseFsck h1 = hbck1.get();
+    HBaseFsck h2 = hbck2.get();
+    // Both should be successful
+    assertNotNull(h1);
+    assertNotNull(h2);
+    assert(h1.getRetCode() >= 0);
+    assert(h2.getRetCode() >= 0);
+  
   }
 
   /**
