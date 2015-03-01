@@ -99,8 +99,17 @@ public class ReplicationAdmin implements Closeable {
     ZooKeeperWatcher zkw = this.connection.getZooKeeperWatcher();
     try {
       this.replicationZk = new ReplicationZookeeper(this.connection, conf, zkw);
-    } catch (KeeperException e) {
-      throw new IOException("Unable setup the ZooKeeper connection", e);
+    } catch (Exception exception) {
+      if (connection != null) {
+        connection.close();
+      }
+      if (exception instanceof IOException) {
+        throw (IOException) exception;
+      } else if (exception instanceof RuntimeException) {
+        throw (RuntimeException) exception;
+      } else {
+        throw new IOException("Unable setup the ZooKeeper connection", exception);
+      }
     }
   }
 
