@@ -338,6 +338,14 @@
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
+      <id>octo47</id>
+      <name>Andrey Stepachev</name>
+      <email>octo47@gmail.com</email>
+      <timezone>0</timezone>
+      <organization>WANdisco</organization>
+      <organizationUrl>http://www.wandisco.com/</organizationUrl>
+    </developer>
+    <developer>
       <id>rawson</id>
       <name>Ryan Rawson</name>
       <email>rawson@apache.org</email>
