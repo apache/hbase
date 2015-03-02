@@ -1281,31 +1281,14 @@ image::hbase_replication_diagram.jpg[]
 HBase replication borrows many concepts from the [firstterm]_statement-based replication_ design used by MySQL.
 Instead of SQL statements, entire WALEdits (consisting of multiple cell inserts coming from Put and Delete operations on the clients) are replicated in order to maintain atomicity.
 
-=== Configuring Cluster Replication
-
-The following is a simplified procedure for configuring cluster replication.
-It may not cover every edge case.
-For more information, see the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/replication/package-summary.html#requirements[ API documentation for replication].
+=== Managing and Configuring Cluster Replication
+.Cluster Configuration Overview
 
 . Configure and start the source and destination clusters.
   Create tables with the same names and column families on both the source and destination clusters, so that the destination cluster knows where to store data it will receive.
-  All hosts in the source and destination clusters should be reachable to each other.
-. On the source cluster, enable replication by setting `hbase.replication`            to `true` in _hbase-site.xml_.
-. On the source cluster, in HBase Shell, add the destination cluster as a peer, using the `add_peer` command.
-  The syntax is as follows:
-+
-----
-hbase> add_peer 'ID' 'CLUSTER_KEY'
-----
-+
-The ID is a string (prior to link:https://issues.apache.org/jira/browse/HBASE-11367[HBASE-11367], it was a short integer), which _must not contain a hyphen_ (see link:https://issues.apache.org/jira/browse/HBASE-11394[HBASE-11394]). To compose the CLUSTER_KEY, use the following template:
-+
-----
-hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
-----
-+
-If both clusters use the same ZooKeeper cluster, you must use a different `zookeeper.znode.parent`, because they cannot write in the same folder.
-
+. All hosts in the source and destination clusters should be reachable to each other.
+. If both clusters use the same ZooKeeper cluster, you must use a different `zookeeper.znode.parent`, because they cannot write in the same folder.
+. Check to be sure that replication has not been disabled. `hbase.replication` defaults to `true`.
 . On the source cluster, configure each column family to be replicated by setting its REPLICATION_SCOPE to 1, using commands such as the following in HBase Shell.
 +
 ----
@@ -1313,26 +1296,35 @@ hbase> disable 'example_table'
 hbase> alter 'example_table', {NAME => 'example_family', REPLICATION_SCOPE => '1'}
 hbase> enable 'example_table'
 ----
-
-. You can verify that replication is taking place by examining the logs on the source cluster for messages such as the following.
-+
+. On the source cluster, in HBase Shell, add the destination cluster as a peer, using the `add_peer` command.
+. Check the logs to see if replication is taking place. If so, you will see messages like the following, coming from the ReplicationSource.
 ----
-Considering 1 rs, with ratio 0.1
-Getting 1 rs from peer cluster # 0
-Choosing peer 10.10.1.49:62020
+LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
 ----
 
-. To verify the validity of replicated data, you can use the included `VerifyReplication` MapReduce job on the source cluster, providing it with the ID of the replication peer and table name to verify.
-  Other options are possible, such as a time range or specific families to verify.
-+
-The command has the following form:
-+
-----
-hbase org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication [--starttime=timestamp1] [--stoptime=timestamp [--families=comma separated list of families] <peerId><tablename>
-----
-+
-The `VerifyReplication` command prints out `GOODROWS`            and `BADROWS` counters to indicate rows that did and did not replicate correctly.
+.Cluster Management Commands
+add_peer <ID> <CLUSTER_KEY>::
+  Adds a replication relationship between two clusters. +
+  * ID -- a unique string, which must not contain a hyphen.
+  * CLUSTER_KEY: composed using the following template, with appropriate place-holders: `hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent`
+list_peers:: list all replication relationships known by this cluster
+enable_peer <ID>::
+  Enable a previously-disabled replication relationship
+disable_peer <ID>::
+  Disable a replication relationship. HBase will no longer send edits to that peer cluster, but it still keeps track of all the new WALs that it will need to replicate if and when it is re-enabled. 
+remove_peer <ID>::
+  Disable and remove a replication relationship. HBase will no longer send edits to that peer cluster or keep track of WALs.
 
+=== Verifying Replicated Data
+
+The `VerifyReplication` MapReduce job, which is included in HBase, performs a systematic comparison of replicated data between two different clusters. Run the VerifyReplication job on the master cluster, supplying it with the peer ID and table name to use for validation. You can limit the verification further by specifying a time range or specific families. The job's short name is `verifyrep`. To run the job, use a command like the following:
++
+[source,bash]
+----
+$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` "${HADOOP_HOME}/bin/hadoop" jar "${HBASE_HOME}/hbase-server-VERSION.jar" verifyrep --starttime=<timestamp> --stoptime=<timestamp> --families=<myFam> <ID> <tableName>
+----
++
+The `VerifyReplication` command prints out `GOODROWS` and `BADROWS` counters to indicate rows that did and did not replicate correctly.
 
 === Detailed Information About Cluster Replication
 
