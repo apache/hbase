@@ -126,14 +126,12 @@ export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
 if [ -z "$JAVA_HOME" ]; then
     cat 1>&2 <<EOF
 +======================================================================+
-|      Error: JAVA_HOME is not set and Java could not be found         |
+|                    Error: JAVA_HOME is not set                       |
 +----------------------------------------------------------------------+
 | Please download the latest Sun JDK from the Sun Java web site        |
-|       > http://java.sun.com/javase/downloads/ <                      |
+|     > http://www.oracle.com/technetwork/java/javase/downloads        |
 |                                                                      |
 | HBase requires Java 1.6 or later.                                    |
-| NOTE: This script will find Sun Java whether you install using the   |
-|       binary or the RPM based installer.                             |
 +======================================================================+
 EOF
     exit 1
