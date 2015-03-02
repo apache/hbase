@@ -1240,6 +1240,8 @@ Some use cases for cluster replication include:
 NOTE: Replication is enabled at the granularity of the column family.
 Before enabling replication for a column family, create the table and all column families to be replicated, on the destination cluster.
 
+=== Replication Overview
+
 Cluster replication uses a source-push methodology.
 An HBase cluster can be a source (also called master or active, meaning that it is the originator of new data), a destination (also called slave or passive, meaning that it receives data via replication), or can fulfill both roles at once.
 Replication is asynchronous, and the goal of replication is eventual consistency.
@@ -1597,6 +1599,13 @@ The following metrics are exposed at the global region server level and (since H
                   failover simultaneously.
 | 1
 |===
+
+=== Monitoring Replication Status
+
+You can use the HBase Shell command `status 'replication'` to monitor the replication status on your cluster. The  command has three variations:
+* `status 'replication'` -- prints the status of each source and its sinks, sorted by hostname.
+* `status 'replication', 'source'` -- prints the status for each replication source, sorted by hostname.
+* `status 'replication', 'sink'` -- prints the status for each replication sink, sorted by hostname.
 
 [[ops.backup]]
 == HBase Backup
