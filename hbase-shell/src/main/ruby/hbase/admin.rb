@@ -19,6 +19,7 @@
 
 include Java
 java_import java.util.Arrays
+java_import org.apache.hadoop.hbase.TableName
 java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
@@ -32,7 +33,7 @@ module Hbase
 
     def initialize(configuration, formatter)
       @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
-      connection = @admin.getConnection()
+      @connection = org.apache.hadoop.hbase.client.HConnectionManager.createConnection(configuration)
       @conf = configuration
       @formatter = formatter
     end
@@ -352,7 +353,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name, conf = @conf)
-      h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
+      h_table = @connection.getTable(TableName.valueOf(table_name))
       table_description = h_table.getTableDescriptor()
       raise ArgumentError, "Table #{table_name} is not enabled. Enable it first." unless enabled?(table_name)
       yield 'Disabling table...' if block_given?
@@ -381,7 +382,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
     def truncate_preserve(table_name, conf = @conf)
-      h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
+      h_table = @connection.getTable(TableName.valueOf(table_name))
       splits = h_table.getRegionLocations().keys().map{|i| Bytes.toStringBinary(i.getStartKey)}.delete_if{|k| k == ""}.to_java :String
       splits = org.apache.hadoop.hbase.util.Bytes.toBinaryByteArrays(splits)
       table_description = h_table.getTableDescriptor()
@@ -761,8 +762,7 @@ module Hbase
     # Enables/disables a region by name
     def online(region_name, on_off)
       # Open meta table
-      meta = org.apache.hadoop.hbase.client.HTable.new(
-          org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
+      meta = @connection.getTable(org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
 
       # Read region info
       # FIXME: fail gracefully if can't find the region
