@@ -64,9 +64,10 @@ public class RemoveColumnAction extends Action {
           protectedColumns.contains(columnDescriptors[index].getNameAsString())) {
       index = random.nextInt(columnDescriptors.length);
     }
-    LOG.debug("Performing action: Removing " + columnDescriptors[index].getName() + " from "
-        + tableNameString);
-    tableDescriptor.removeFamily(columnDescriptors[index].getName());
+    byte[] colDescName = columnDescriptors[index].getName();
+    LOG.debug("Performing action: Removing " + Bytes.toString(colDescName)+ " from "
+        + Bytes.toString(tableName));
+    tableDescriptor.removeFamily(colDescName);
 
     admin.modifyTable(tableName, tableDescriptor);
   }
