@@ -27,6 +27,16 @@
 :icons: font
 :experimental:
 
+[IMPORTANT]
+.Reporting Security Bugs
+====
+NOTE: To protect existing HBase installations from exploitation, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
+
+HBase adheres to the Apache Software Foundation's policy on reported vulnerabilities, available at http://apache.org/security/.
+
+If you wish to send an encrypted report, you can use the GPG details provided for the general ASF security list. This will likely increase the response time to your report.
+====
+
 HBase provides mechanisms to secure various components and aspects of HBase and how it relates to the rest of the Hadoop infrastructure, as well as clients and resources outside Hadoop.
 
 == Using Secure HTTP (HTTPS) for the Web UI

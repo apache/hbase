@@ -55,5 +55,10 @@ That said, you are welcome. +
 It's a fun place to be. +
 Yours, the HBase Community.
 
+.Reporting Bugs
+
+Please use link:https://issues.apache.org/jira/browse/hbase[JIRA] to report non-security-related bugs. 
+
+To protect existing HBase installations from new vulnerabilities, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
 
 :numbered:
