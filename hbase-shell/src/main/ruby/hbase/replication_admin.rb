@@ -19,6 +19,7 @@
 
 include Java
 
+java_import org.apache.hadoop.hbase.TableName
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
 module Hbase
@@ -85,6 +86,20 @@ module Hbase
     # Set new tableCFs config for the specified peer
     def set_peer_tableCFs(id, tableCFs)
       @replication_admin.setPeerTableCFs(id, tableCFs)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Enables a table's replication switch
+    def enable_tablerep(table_name)
+      tableName = TableName.valueOf(table_name)
+      @replication_admin.enableTableRep(tableName)
+    end
+
+#----------------------------------------------------------------------------------------------
+    # Disables a table's replication switch
+    def disable_tablerep(table_name)
+      tableName = TableName.valueOf(table_name)
+      @replication_admin.disableTableRep(tableName)
     end
   end
 end
