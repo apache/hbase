@@ -65,7 +65,7 @@ public class FamilyFilter extends CompareFilter {
     if (familyLength > 0) {
       if (doCompare(this.compareOp, this.comparator, v.getFamilyArray(),
           v.getFamilyOffset(), familyLength)) {
-        return ReturnCode.SKIP;
+        return ReturnCode.NEXT_ROW;
       }
     }
     return ReturnCode.INCLUDE;
