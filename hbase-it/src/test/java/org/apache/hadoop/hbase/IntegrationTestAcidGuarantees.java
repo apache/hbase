@@ -21,6 +21,7 @@ import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -83,9 +84,9 @@ public class IntegrationTestAcidGuarantees extends IntegrationTestBase {
 
   @Override
   protected Set<String> getColumnFamilies() {
-    return Sets.newHashSet(String.valueOf(TestAcidGuarantees.FAMILY_A),
-            String.valueOf(TestAcidGuarantees.FAMILY_B),
-            String.valueOf(TestAcidGuarantees.FAMILY_C));
+    return Sets.newHashSet(Bytes.toString(TestAcidGuarantees.FAMILY_A),
+            Bytes.toString(TestAcidGuarantees.FAMILY_B),
+            Bytes.toString(TestAcidGuarantees.FAMILY_C));
   }
 
   // ***** Actual integration tests
