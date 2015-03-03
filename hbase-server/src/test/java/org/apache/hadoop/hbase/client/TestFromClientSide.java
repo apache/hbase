@@ -4515,6 +4515,17 @@ public class TestFromClientSide {
     r = t.get(g);
     assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
     assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
+
+    //Test that we get a region level exception
+    try {
+      arm = new RowMutations(ROW);
+      p = new Put(ROW);
+      p.add(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE);
+      arm.add(p);
+      t.mutateRow(arm);
+      fail("Expected NoSuchColumnFamilyException");
+    } catch(NoSuchColumnFamilyException e) {
+    }
   }
 
   @Test
