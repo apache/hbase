@@ -1,5 +1,81 @@
 HBase Change Log
 
+Release 0.98.11 - 3/9/2015
+
+** Sub-task
+    * [HBASE-12980] - Delete of a table may not clean all rows from hbase:meta
+    * [HBASE-13137] - [0.98] Backport HBASE-13057 - Provide client utility to easily enable and disable table replication
+
+** Bug
+    * [HBASE-7332] - [webui] HMaster webui should display the number of regions a table has.
+    * [HBASE-9910] - TestHFilePerformance and HFilePerformanceEvaluation should be merged in a single HFile performance test class.
+    * [HBASE-12070] - Add an option to hbck to fix ZK inconsistencies
+    * [HBASE-12102] - Duplicate keys in HBase.RegionServer metrics JSON
+    * [HBASE-12108] - HBaseConfiguration: set classloader before loading xml files
+    * [HBASE-12747] - IntegrationTestMTTR will OOME if launched with mvn verify
+    * [HBASE-12897] - Minimum memstore size is a percentage
+    * [HBASE-12914] - Mark public features that require HFilev3 Unstable in 0.98, warn in upgrade section
+    * [HBASE-12948] - Calling Increment#addColumn on the same column multiple times produces wrong result 
+    * [HBASE-12958] - SSH doing hbase:meta get but hbase:meta not assigned
+    * [HBASE-12961] - Negative values in read and write region server metrics 
+    * [HBASE-12964] - Add the ability for hbase-daemon.sh to start in the foreground
+    * [HBASE-12976] - Set default value for hbase.client.scanner.max.result.size
+    * [HBASE-12989] - region_mover.rb unloadRegions method uses ArrayList concurrently resulting in errors
+    * [HBASE-12996] - Reversed field on Filter should be transient
+    * [HBASE-12998] - Compilation with Hdfs-2.7.0-SNAPSHOT is broken after HDFS-7647
+    * [HBASE-12999] - Make foreground_start return the correct exit code
+    * [HBASE-13001] - NullPointer in master logs for table.jsp
+    * [HBASE-13005] - TestDeleteTableHandler failing in 0.98 hadoop 1 builds
+    * [HBASE-13009] - HBase REST UI inaccessible
+    * [HBASE-13010] - HFileOutputFormat2 partitioner's path is hard-coded as '/tmp'
+    * [HBASE-13026] - Wrong error message in case incorrect snapshot name OR Incorrect table name
+    * [HBASE-13037] - LoadIncrementalHFile should try to verify the content of unmatched families
+    * [HBASE-13039] - Add patchprocess/* to .gitignore to fix builds of branches
+    * [HBASE-13047] - Add "HBase Configuration" link missing on the table details pages
+    * [HBASE-13048] - Use hbase.crypto.wal.algorithm in SecureProtobufLogReader while decrypting the data
+    * [HBASE-13049] - wal_roll ruby command doesn't work. 
+    * [HBASE-13050] - Hbase shell create_namespace command throws ArrayIndexOutOfBoundException for (invalid) empty text input.
+    * [HBASE-13055] - HRegion FIXED_OVERHEAD missed one boolean
+    * [HBASE-13065] - Increasing -Xmx when running TestDistributedLogSplitting
+    * [HBASE-13070] - Fix TestCacheOnWrite
+    * [HBASE-13072] - BucketCache.evictBlock returns true if block does not exist
+    * [HBASE-13085] - Security issue in the implementation of Rest gataway 'doAs' proxy user support
+    * [HBASE-13104] - ZooKeeper session timeout cannot be changed for standalone HBase
+    * [HBASE-13111] - truncate_preserve command is failing with undefined method error
+    * [HBASE-13123] - Minor bug in ROW bloom filter
+    * [HBASE-13131] - ReplicationAdmin leaks connections if there's an error in the constructor
+    * [HBASE-13134] - mutateRow and checkAndMutate apis don't throw region level exceptions
+
+** Improvement
+    * [HBASE-8329] - Limit compaction speed
+    * [HBASE-12957] - region_mover#isSuccessfulScan may be extremely slow on region with lots of expired data
+    * [HBASE-12973] - RegionCoprocessorEnvironment should provide HRegionInfo directly
+    * [HBASE-12979] - Use setters instead of return values for handing back statistics from HRegion methods
+    * [HBASE-12997] - FSHLog should print pipeline on low replication
+    * [HBASE-13002] - Make encryption cipher configurable
+    * [HBASE-13008] - Better default for hbase.regionserver.regionSplitLimit parameter.
+    * [HBASE-13044] - Configuration option for disabling coprocessor loading
+    * [HBASE-13045] - Ensure MapReduce javadoc example works
+    * [HBASE-13054] - Provide more tracing information for locking/latching events.
+    * [HBASE-13056] - Refactor table.jsp code to remove repeated code and make it easier to add new checks
+    * [HBASE-13059] - Set executable bit for scripts in dev-support
+    * [HBASE-13080] - Hbase shell message containing extra quote at the end of error message.
+    * [HBASE-13086] - Show ZK root node on Master WebUI
+
+** New Feature
+    * [HBASE-9531] - a command line (hbase shell) interface to retreive the replication metrics and show replication lag
+    * [HBASE-12869] - Add a REST API implementation of the ClusterManager interface
+
+** Task
+    * [HBASE-12795] - Backport HBASE-12429 (Add port to ClusterManager's actions) to 0.98
+    * [HBASE-12995] - Document that HConnection#getTable methods do not check table existence since 0.98.1
+    * [HBASE-13000] - Backport HBASE-11240 (Print hdfs pipeline when hlog's sync is slow) to 0.98
+    * [HBASE-13020] - Add 'patchprocess/*' to RAT excludes on all branches
+
+** Test
+    * [HBASE-13106] - Ensure endpoint-only table coprocessors can be dynamically loaded
+
+
 Release 0.98.10 - 2/5/2015
 
 ** Sub-task
