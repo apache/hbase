@@ -529,6 +529,7 @@ checkBuildWithHadoopVersions() {
   # TODO: add Hadoop3 versions and compilation here when we get the hadoop.profile=3.0 working
 
   JIRA_COMMENT="$JIRA_COMMENT
+
     {color:green}+1 hadoop versions{color}. The patch compiles with all supported hadoop versions ($HADOOP2_VERSIONS)"
   return 0
 }
