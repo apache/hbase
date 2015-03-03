@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
+import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
@@ -96,6 +97,7 @@ import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -129,6 +131,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
+import org.apache.hadoop.hbase.regionserver.handler.RegionReplicaFlushHandler;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
@@ -145,6 +148,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.JSONBean;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -308,6 +312,9 @@ public class HRegionServer extends HasThread implements
   // RPC client. Used to make the stub above that does region server status checking.
   RpcClient rpcClient;
 
+  private RpcRetryingCallerFactory rpcRetryingCallerFactory;
+  private RpcControllerFactory rpcControllerFactory;
+
   private UncaughtExceptionHandler uncaughtExceptionHandler;
 
   // Info server. Default access so can be used by unit tests. REGIONSERVER
@@ -364,6 +371,7 @@ public class HRegionServer extends HasThread implements
   protected final Sleeper sleeper;
 
   private final int operationTimeout;
+  private final int shortOperationTimeout;
 
   private final RegionServerAccounting regionServerAccounting;
 
@@ -491,6 +499,10 @@ public class HRegionServer extends HasThread implements
       "hbase.regionserver.numregionstoreport", 10);
 
     this.operationTimeout = conf.getInt(
+      HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+      HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+
+    this.shortOperationTimeout = conf.getInt(
       HConstants.HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY,
       HConstants.DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT);
 
@@ -501,6 +513,9 @@ public class HRegionServer extends HasThread implements
     this.startcode = System.currentTimeMillis();
     String hostName = rpcServices.isa.getHostName();
     serverName = ServerName.valueOf(hostName, rpcServices.isa.getPort(), startcode);
+
+    rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);
+    rpcRetryingCallerFactory = RpcRetryingCallerFactory.instantiate(this.conf);
 
     // login the zookeeper client principal (if using security)
     ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
@@ -1627,6 +1642,12 @@ public class HRegionServer extends HasThread implements
     this.service.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS, conf.getInt(
        "hbase.regionserver.wal.max.splitters", SplitLogWorkerCoordination.DEFAULT_MAX_SPLITTERS));
 
+    if (ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(conf)) {
+      this.service.startExecutorService(ExecutorType.RS_REGION_REPLICA_FLUSH_OPS,
+        conf.getInt("hbase.regionserver.region.replica.flusher.threads",
+          conf.getInt("hbase.regionserver.executor.openregion.threads", 3)));
+    }
+
     Threads.setDaemonThreadRunning(this.walRoller.getThread(), getName() + ".logRoller",
         uncaughtExceptionHandler);
     this.cacheFlusher.start(uncaughtExceptionHandler);
@@ -1837,6 +1858,8 @@ public class HRegionServer extends HasThread implements
         + r.getRegionNameAsString());
     }
 
+    triggerFlushInPrimaryRegion(r);
+
     LOG.debug("Finished post open deploy task for " + r.getRegionNameAsString());
   }
 
@@ -1884,6 +1907,30 @@ public class HRegionServer extends HasThread implements
       }
     }
     return false;
+  }
+
+  /**
+   * Trigger a flush in the primary region replica if this region is a secondary replica. Does not
+   * block this thread. See RegionReplicaFlushHandler for details.
+   */
+  void triggerFlushInPrimaryRegion(final HRegion region) {
+    if (ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
+      return;
+    }
+    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(getConfiguration()) ||
+        !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(
+          getConfiguration())) {
+      region.setReadsEnabled(true);
+      return;
+    }
+
+    region.setReadsEnabled(false); // disable reads before marking the region as opened.
+    // RegionReplicaFlushHandler might reset this.
+
+    // submit it to be handled by one of the handlers so that we do not block OpenRegionHandler
+    this.service.submit(
+      new RegionReplicaFlushHandler(this, clusterConnection,
+        rpcRetryingCallerFactory, rpcControllerFactory, operationTimeout, region));
   }
 
   @Override
@@ -2075,7 +2122,8 @@ public class HRegionServer extends HasThread implements
         }
         try {
           BlockingRpcChannel channel =
-            this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(), operationTimeout);
+            this.rpcClient.createBlockingRpcChannel(sn, userProvider.getCurrent(),
+              shortOperationTimeout);
           intf = RegionServerStatusService.newBlockingStub(channel);
           break;
         } catch (IOException e) {

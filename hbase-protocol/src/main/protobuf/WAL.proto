@@ -109,6 +109,7 @@ message FlushDescriptor {
     START_FLUSH = 0;
     COMMIT_FLUSH = 1;
     ABORT_FLUSH = 2;
+    CANNOT_FLUSH = 3; // marker for indicating that a flush has been requested but cannot complete
   }
 
   message StoreFlushDescriptor {

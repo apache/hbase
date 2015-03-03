@@ -838,11 +838,12 @@ public class TestWALReplay {
               new HRegion(basedir, newWal, newFS, newConf, hri, htd, null) {
             @Override
             protected FlushResult internalFlushcache(final WAL wal, final long myseqid,
-                Collection<Store> storesToFlush, MonitoredTask status)
-            throws IOException {
+                final Collection<Store> storesToFlush, MonitoredTask status,
+                boolean writeFlushWalMarker)
+                    throws IOException {
               LOG.info("InternalFlushCache Invoked");
               FlushResult fs = super.internalFlushcache(wal, myseqid, storesToFlush,
-                  Mockito.mock(MonitoredTask.class));
+                  Mockito.mock(MonitoredTask.class), writeFlushWalMarker);
               flushcount.incrementAndGet();
               return fs;
             };

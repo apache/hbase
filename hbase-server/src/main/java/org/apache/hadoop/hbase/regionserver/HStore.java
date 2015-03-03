@@ -2240,6 +2240,8 @@ public class HStore implements Store {
         StoreFileInfo storeFileInfo = fs.getStoreFileInfo(getColumnFamilyName(), file);
         StoreFile storeFile = createStoreFileAndReader(storeFileInfo);
         storeFiles.add(storeFile);
+        HStore.this.storeSize += storeFile.getReader().length();
+        HStore.this.totalUncompressedBytes += storeFile.getReader().getTotalUncompressedBytes();
         if (LOG.isInfoEnabled()) {
           LOG.info("Region: " + HStore.this.getRegionInfo().getEncodedName() +
             " added " + storeFile + ", entries=" + storeFile.getReader().getEntries() +
@@ -2248,7 +2250,10 @@ public class HStore implements Store {
         }
       }
 
-      long snapshotId = dropMemstoreSnapshot ? snapshot.getId() : -1; // -1 means do not drop
+      long snapshotId = -1; // -1 means do not drop
+      if (dropMemstoreSnapshot && snapshot != null) {
+        snapshotId = snapshot.getId();
+      }
       HStore.this.updateStorefiles(storeFiles, snapshotId);
     }
 

@@ -112,11 +112,6 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
     runIngestTest(JUNIT_RUN_TIME, 25000, 10, 1024, 10, 20);
   }
 
-  @Override
-  protected void startMonkey() throws Exception {
-    // TODO: disabled for now
-  }
-
   /**
    * This extends MultiThreadedWriter to add a configurable delay to the keys written by the writer
    * threads to become available to the MultiThradedReader threads. We add this delay because of

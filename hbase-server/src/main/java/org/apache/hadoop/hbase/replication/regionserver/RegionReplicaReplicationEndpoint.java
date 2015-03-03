@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hbase.client.RegionAdminServiceCallable;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.RetryingCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -89,6 +87,10 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
   private static final Log LOG = LogFactory.getLog(RegionReplicaReplicationEndpoint.class);
 
+  // Can be configured differently than hbase.client.retries.number
+  private static String CLIENT_RETRIES_NUMBER
+    = "hbase.region.replica.replication.client.retries.number";
+
   private Configuration conf;
   private ClusterConnection connection;
 
@@ -109,6 +111,20 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     super.init(context);
 
     this.conf = HBaseConfiguration.create(context.getConfiguration());
+
+    // HRS multiplies client retries by 10 globally for meta operations, but we do not want this.
+    // We are resetting it here because we want default number of retries (35) rather than 10 times
+    // that which makes very long retries for disabled tables etc.
+    int defaultNumRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+      HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    if (defaultNumRetries > 10) {
+      int mult = conf.getInt("hbase.client.serverside.retries.multiplier", 10);
+      defaultNumRetries = defaultNumRetries / mult; // reset if HRS has multiplied this already
+    }
+
+    conf.setInt("hbase.client.serverside.retries.multiplier", 1);
+    int numRetries = conf.getInt(CLIENT_RETRIES_NUMBER, defaultNumRetries);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, numRetries);
 
     this.numWriterThreads = this.conf.getInt(
       "hbase.region.replica.replication.writer.threads", 3);
@@ -359,7 +375,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       while (true) {
         // get the replicas of the primary region
         try {
-          locations = getRegionLocations(connection, tableName, row, useCache, 0);
+          locations = RegionReplicaReplayCallable
+              .getRegionLocations(connection, tableName, row, useCache, 0);
 
           if (locations == null) {
             throw new HBaseIOException("Cannot locate locations for "
@@ -491,57 +508,19 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
    */
   static class RegionReplicaReplayCallable
     extends RegionAdminServiceCallable<ReplicateWALEntryResponse> {
-    // replicaId of the region replica that we want to replicate to
-    private final int replicaId;
 
     private final List<Entry> entries;
     private final byte[] initialEncodedRegionName;
     private final AtomicLong skippedEntries;
-    private final RpcControllerFactory rpcControllerFactory;
-    private boolean skip;
 
     public RegionReplicaReplayCallable(ClusterConnection connection,
         RpcControllerFactory rpcControllerFactory, TableName tableName,
         HRegionLocation location, HRegionInfo regionInfo, byte[] row,List<Entry> entries,
         AtomicLong skippedEntries) {
-      super(connection, location, tableName, row);
-      this.replicaId = regionInfo.getReplicaId();
+      super(connection, rpcControllerFactory, location, tableName, row, regionInfo.getReplicaId());
       this.entries = entries;
-      this.rpcControllerFactory = rpcControllerFactory;
       this.skippedEntries = skippedEntries;
       this.initialEncodedRegionName = regionInfo.getEncodedNameAsBytes();
-    }
-
-    @Override
-    public HRegionLocation getLocation(boolean useCache) throws IOException {
-      RegionLocations rl = getRegionLocations(connection, tableName, row, useCache, replicaId);
-      if (rl == null) {
-        throw new HBaseIOException(getExceptionMessage());
-      }
-      location = rl.getRegionLocation(replicaId);
-      if (location == null) {
-        throw new HBaseIOException(getExceptionMessage());
-      }
-
-      // check whether we should still replay this entry. If the regions are changed, or the
-      // entry is not coming form the primary region, filter it out because we do not need it.
-      // Regions can change because of (1) region split (2) region merge (3) table recreated
-      if (!Bytes.equals(location.getRegionInfo().getEncodedNameAsBytes(),
-        initialEncodedRegionName)) {
-        skip = true;
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
-            + " because located region " + location.getRegionInfo().getEncodedName()
-            + " is different than the original region "
-            + Bytes.toStringBinary(initialEncodedRegionName) + " from WALEdit");
-          for (Entry entry : entries) {
-            LOG.trace("Skipping : " + entry);
-          }
-        }
-        return null;
-      }
-
-      return location;
     }
 
     @Override
@@ -551,55 +530,46 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
     private ReplicateWALEntryResponse replayToServer(List<Entry> entries, int timeout)
         throws IOException {
-      if (entries.isEmpty() || skip) {
+      // check whether we should still replay this entry. If the regions are changed, or the
+      // entry is not coming form the primary region, filter it out because we do not need it.
+      // Regions can change because of (1) region split (2) region merge (3) table recreated
+      boolean skip = false;
+
+      if (!Bytes.equals(location.getRegionInfo().getEncodedNameAsBytes(),
+        initialEncodedRegionName)) {
+        skip = true;
+      }
+      if (!entries.isEmpty() && !skip) {
+        Entry[] entriesArray = new Entry[entries.size()];
+        entriesArray = entries.toArray(entriesArray);
+
+        // set the region name for the target region replica
+        Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
+            ReplicationProtbufUtil.buildReplicateWALEntryRequest(
+              entriesArray, location.getRegionInfo().getEncodedNameAsBytes());
+        try {
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController(p.getSecond());
+          controller.setCallTimeout(timeout);
+          controller.setPriority(tableName);
+          return stub.replay(controller, p.getFirst());
+        } catch (ServiceException se) {
+          throw ProtobufUtil.getRemoteException(se);
+        }
+      }
+
+      if (skip) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Skipping " + entries.size() + " entries in table " + tableName
+            + " because located region " + location.getRegionInfo().getEncodedName()
+            + " is different than the original region "
+            + Bytes.toStringBinary(initialEncodedRegionName) + " from WALEdit");
+          for (Entry entry : entries) {
+            LOG.trace("Skipping : " + entry);
+          }
+        }
         skippedEntries.addAndGet(entries.size());
-        return ReplicateWALEntryResponse.newBuilder().build();
       }
-
-      Entry[] entriesArray = new Entry[entries.size()];
-      entriesArray = entries.toArray(entriesArray);
-
-      // set the region name for the target region replica
-      Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
-          ReplicationProtbufUtil.buildReplicateWALEntryRequest(
-            entriesArray, location.getRegionInfo().getEncodedNameAsBytes());
-      try {
-        PayloadCarryingRpcController controller = rpcControllerFactory.newController(p.getSecond());
-        controller.setCallTimeout(timeout);
-        controller.setPriority(tableName);
-        return stub.replay(controller, p.getFirst());
-      } catch (ServiceException se) {
-        throw ProtobufUtil.getRemoteException(se);
-      }
+      return ReplicateWALEntryResponse.newBuilder().build();
     }
-
-    @Override
-    protected String getExceptionMessage() {
-      return super.getExceptionMessage() + " table=" + tableName
-          + " ,replica=" + replicaId + ", row=" + Bytes.toStringBinary(row);
-    }
-  }
-
-  private static RegionLocations getRegionLocations(
-      ClusterConnection connection, TableName tableName, byte[] row,
-      boolean useCache, int replicaId)
-      throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
-    RegionLocations rl;
-    try {
-      rl = connection.locateRegion(tableName, row, useCache, true, replicaId);
-    } catch (DoNotRetryIOException e) {
-      throw e;
-    } catch (RetriesExhaustedException e) {
-      throw e;
-    } catch (InterruptedIOException e) {
-      throw e;
-    } catch (IOException e) {
-      throw new RetriesExhaustedException("Can't get the location", e);
-    }
-    if (rl == null) {
-      throw new RetriesExhaustedException("Can't get the locations");
-    }
-
-    return rl;
   }
 }

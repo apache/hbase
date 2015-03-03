@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -2110,6 +2111,25 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       Put put = new Put(data);
       put.add(f, null, data);
       t.put(put);
+    }
+  }
+
+  public void verifyNumericRows(Table table, final byte[] f, int startRow, int endRow,
+      int replicaId)
+      throws IOException {
+    for (int i = startRow; i < endRow; i++) {
+      String failMsg = "Failed verification of row :" + i;
+      byte[] data = Bytes.toBytes(String.valueOf(i));
+      Get get = new Get(data);
+      get.setReplicaId(replicaId);
+      get.setConsistency(Consistency.TIMELINE);
+      Result result = table.get(get);
+      assertTrue(failMsg, result.containsColumn(f, null));
+      assertEquals(failMsg, result.getColumnCells(f, null).size(), 1);
+      Cell cell = result.getColumnLatestCell(f, null);
+      assertTrue(failMsg,
+        Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
     }
   }
 

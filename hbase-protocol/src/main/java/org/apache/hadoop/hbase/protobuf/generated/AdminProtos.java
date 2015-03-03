@@ -7996,6 +7996,24 @@ public final class AdminProtos {
      * <code>optional uint64 if_older_than_ts = 2;</code>
      */
     long getIfOlderThanTs();
+
+    // optional bool write_flush_wal_marker = 3;
+    /**
+     * <code>optional bool write_flush_wal_marker = 3;</code>
+     *
+     * <pre>
+     * whether to write a marker to WAL even if not flushed
+     * </pre>
+     */
+    boolean hasWriteFlushWalMarker();
+    /**
+     * <code>optional bool write_flush_wal_marker = 3;</code>
+     *
+     * <pre>
+     * whether to write a marker to WAL even if not flushed
+     * </pre>
+     */
+    boolean getWriteFlushWalMarker();
   }
   /**
    * Protobuf type {@code FlushRegionRequest}
@@ -8071,6 +8089,11 @@ public final class AdminProtos {
             case 16: {
               bitField0_ |= 0x00000002;
               ifOlderThanTs_ = input.readUInt64();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              writeFlushWalMarker_ = input.readBool();
               break;
             }
           }
@@ -8151,9 +8174,34 @@ public final class AdminProtos {
       return ifOlderThanTs_;
     }
 
+    // optional bool write_flush_wal_marker = 3;
+    public static final int WRITE_FLUSH_WAL_MARKER_FIELD_NUMBER = 3;
+    private boolean writeFlushWalMarker_;
+    /**
+     * <code>optional bool write_flush_wal_marker = 3;</code>
+     *
+     * <pre>
+     * whether to write a marker to WAL even if not flushed
+     * </pre>
+     */
+    public boolean hasWriteFlushWalMarker() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional bool write_flush_wal_marker = 3;</code>
+     *
+     * <pre>
+     * whether to write a marker to WAL even if not flushed
+     * </pre>
+     */
+    public boolean getWriteFlushWalMarker() {
+      return writeFlushWalMarker_;
+    }
+
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       ifOlderThanTs_ = 0L;
+      writeFlushWalMarker_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -8181,6 +8229,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt64(2, ifOlderThanTs_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBool(3, writeFlushWalMarker_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -8197,6 +8248,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(2, ifOlderThanTs_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(3, writeFlushWalMarker_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8231,6 +8286,11 @@ public final class AdminProtos {
         result = result && (getIfOlderThanTs()
             == other.getIfOlderThanTs());
       }
+      result = result && (hasWriteFlushWalMarker() == other.hasWriteFlushWalMarker());
+      if (hasWriteFlushWalMarker()) {
+        result = result && (getWriteFlushWalMarker()
+            == other.getWriteFlushWalMarker());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -8251,6 +8311,10 @@ public final class AdminProtos {
       if (hasIfOlderThanTs()) {
         hash = (37 * hash) + IF_OLDER_THAN_TS_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getIfOlderThanTs());
+      }
+      if (hasWriteFlushWalMarker()) {
+        hash = (37 * hash) + WRITE_FLUSH_WAL_MARKER_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getWriteFlushWalMarker());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -8377,6 +8441,8 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         ifOlderThanTs_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000002);
+        writeFlushWalMarker_ = false;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -8417,6 +8483,10 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.ifOlderThanTs_ = ifOlderThanTs_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.writeFlushWalMarker_ = writeFlushWalMarker_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -8438,6 +8508,9 @@ public final class AdminProtos {
         }
         if (other.hasIfOlderThanTs()) {
           setIfOlderThanTs(other.getIfOlderThanTs());
+        }
+        if (other.hasWriteFlushWalMarker()) {
+          setWriteFlushWalMarker(other.getWriteFlushWalMarker());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -8624,6 +8697,55 @@ public final class AdminProtos {
         return this;
       }
 
+      // optional bool write_flush_wal_marker = 3;
+      private boolean writeFlushWalMarker_ ;
+      /**
+       * <code>optional bool write_flush_wal_marker = 3;</code>
+       *
+       * <pre>
+       * whether to write a marker to WAL even if not flushed
+       * </pre>
+       */
+      public boolean hasWriteFlushWalMarker() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bool write_flush_wal_marker = 3;</code>
+       *
+       * <pre>
+       * whether to write a marker to WAL even if not flushed
+       * </pre>
+       */
+      public boolean getWriteFlushWalMarker() {
+        return writeFlushWalMarker_;
+      }
+      /**
+       * <code>optional bool write_flush_wal_marker = 3;</code>
+       *
+       * <pre>
+       * whether to write a marker to WAL even if not flushed
+       * </pre>
+       */
+      public Builder setWriteFlushWalMarker(boolean value) {
+        bitField0_ |= 0x00000004;
+        writeFlushWalMarker_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool write_flush_wal_marker = 3;</code>
+       *
+       * <pre>
+       * whether to write a marker to WAL even if not flushed
+       * </pre>
+       */
+      public Builder clearWriteFlushWalMarker() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        writeFlushWalMarker_ = false;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:FlushRegionRequest)
     }
 
@@ -8657,6 +8779,16 @@ public final class AdminProtos {
      * <code>optional bool flushed = 2;</code>
      */
     boolean getFlushed();
+
+    // optional bool wrote_flush_wal_marker = 3;
+    /**
+     * <code>optional bool wrote_flush_wal_marker = 3;</code>
+     */
+    boolean hasWroteFlushWalMarker();
+    /**
+     * <code>optional bool wrote_flush_wal_marker = 3;</code>
+     */
+    boolean getWroteFlushWalMarker();
   }
   /**
    * Protobuf type {@code FlushRegionResponse}
@@ -8717,6 +8849,11 @@ public final class AdminProtos {
             case 16: {
               bitField0_ |= 0x00000002;
               flushed_ = input.readBool();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              wroteFlushWalMarker_ = input.readBool();
               break;
             }
           }
@@ -8791,9 +8928,26 @@ public final class AdminProtos {
       return flushed_;
     }
 
+    // optional bool wrote_flush_wal_marker = 3;
+    public static final int WROTE_FLUSH_WAL_MARKER_FIELD_NUMBER = 3;
+    private boolean wroteFlushWalMarker_;
+    /**
+     * <code>optional bool wrote_flush_wal_marker = 3;</code>
+     */
+    public boolean hasWroteFlushWalMarker() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional bool wrote_flush_wal_marker = 3;</code>
+     */
+    public boolean getWroteFlushWalMarker() {
+      return wroteFlushWalMarker_;
+    }
+
     private void initFields() {
       lastFlushTime_ = 0L;
       flushed_ = false;
+      wroteFlushWalMarker_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -8817,6 +8971,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBool(2, flushed_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBool(3, wroteFlushWalMarker_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -8833,6 +8990,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(2, flushed_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(3, wroteFlushWalMarker_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -8867,6 +9028,11 @@ public final class AdminProtos {
         result = result && (getFlushed()
             == other.getFlushed());
       }
+      result = result && (hasWroteFlushWalMarker() == other.hasWroteFlushWalMarker());
+      if (hasWroteFlushWalMarker()) {
+        result = result && (getWroteFlushWalMarker()
+            == other.getWroteFlushWalMarker());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -8887,6 +9053,10 @@ public final class AdminProtos {
       if (hasFlushed()) {
         hash = (37 * hash) + FLUSHED_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getFlushed());
+      }
+      if (hasWroteFlushWalMarker()) {
+        hash = (37 * hash) + WROTE_FLUSH_WAL_MARKER_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getWroteFlushWalMarker());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -9001,6 +9171,8 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         flushed_ = false;
         bitField0_ = (bitField0_ & ~0x00000002);
+        wroteFlushWalMarker_ = false;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -9037,6 +9209,10 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.flushed_ = flushed_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.wroteFlushWalMarker_ = wroteFlushWalMarker_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -9058,6 +9234,9 @@ public final class AdminProtos {
         }
         if (other.hasFlushed()) {
           setFlushed(other.getFlushed());
+        }
+        if (other.hasWroteFlushWalMarker()) {
+          setWroteFlushWalMarker(other.getWroteFlushWalMarker());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -9152,6 +9331,39 @@ public final class AdminProtos {
       public Builder clearFlushed() {
         bitField0_ = (bitField0_ & ~0x00000002);
         flushed_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional bool wrote_flush_wal_marker = 3;
+      private boolean wroteFlushWalMarker_ ;
+      /**
+       * <code>optional bool wrote_flush_wal_marker = 3;</code>
+       */
+      public boolean hasWroteFlushWalMarker() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bool wrote_flush_wal_marker = 3;</code>
+       */
+      public boolean getWroteFlushWalMarker() {
+        return wroteFlushWalMarker_;
+      }
+      /**
+       * <code>optional bool wrote_flush_wal_marker = 3;</code>
+       */
+      public Builder setWroteFlushWalMarker(boolean value) {
+        bitField0_ |= 0x00000004;
+        wroteFlushWalMarker_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool wrote_flush_wal_marker = 3;</code>
+       */
+      public Builder clearWroteFlushWalMarker() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        wroteFlushWalMarker_ = false;
         onChanged();
         return this;
       }
@@ -22073,66 +22285,67 @@ public final class AdminProtos {
       "n_ZK\030\003 \001(\010:\004true\022\'\n\022destination_server\030\004" +
       " \001(\0132\013.ServerName\022\027\n\017serverStartCode\030\005 \001" +
       "(\004\"%\n\023CloseRegionResponse\022\016\n\006closed\030\001 \002(",
-      "\010\"P\n\022FlushRegionRequest\022 \n\006region\030\001 \002(\0132" +
+      "\010\"p\n\022FlushRegionRequest\022 \n\006region\030\001 \002(\0132" +
       "\020.RegionSpecifier\022\030\n\020if_older_than_ts\030\002 " +
-      "\001(\004\"?\n\023FlushRegionResponse\022\027\n\017last_flush" +
-      "_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\"K\n\022SplitReg" +
-      "ionRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
-      "fier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023SplitRegion" +
-      "Response\"W\n\024CompactRegionRequest\022 \n\006regi" +
-      "on\030\001 \002(\0132\020.RegionSpecifier\022\r\n\005major\030\002 \001(" +
-      "\010\022\016\n\006family\030\003 \001(\014\"\027\n\025CompactRegionRespon" +
-      "se\"\262\001\n\031UpdateFavoredNodesRequest\022@\n\013upda",
-      "te_info\030\001 \003(\0132+.UpdateFavoredNodesReques" +
-      "t.RegionUpdateInfo\032S\n\020RegionUpdateInfo\022\033" +
-      "\n\006region\030\001 \002(\0132\013.RegionInfo\022\"\n\rfavored_n" +
-      "odes\030\002 \003(\0132\013.ServerName\".\n\032UpdateFavored" +
-      "NodesResponse\022\020\n\010response\030\001 \001(\r\"v\n\023Merge" +
-      "RegionsRequest\022\"\n\010region_a\030\001 \002(\0132\020.Regio" +
-      "nSpecifier\022\"\n\010region_b\030\002 \002(\0132\020.RegionSpe" +
-      "cifier\022\027\n\010forcible\030\003 \001(\010:\005false\"\026\n\024Merge" +
-      "RegionsResponse\"X\n\010WALEntry\022\024\n\003key\030\001 \002(\013" +
-      "2\007.WALKey\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025as",
-      "sociated_cell_count\030\003 \001(\005\"4\n\030ReplicateWA" +
-      "LEntryRequest\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"" +
-      "\033\n\031ReplicateWALEntryResponse\"\026\n\024RollWALW" +
-      "riterRequest\"0\n\025RollWALWriterResponse\022\027\n" +
-      "\017region_to_flush\030\001 \003(\014\"#\n\021StopServerRequ" +
-      "est\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopServerRespons" +
-      "e\"\026\n\024GetServerInfoRequest\"B\n\nServerInfo\022" +
-      " \n\013server_name\030\001 \002(\0132\013.ServerName\022\022\n\nweb" +
-      "ui_port\030\002 \001(\r\"9\n\025GetServerInfoResponse\022 " +
-      "\n\013server_info\030\001 \002(\0132\013.ServerInfo\"\034\n\032Upda",
-      "teConfigurationRequest\"\035\n\033UpdateConfigur" +
-      "ationResponse2\230\010\n\014AdminService\022>\n\rGetReg" +
-      "ionInfo\022\025.GetRegionInfoRequest\032\026.GetRegi" +
-      "onInfoResponse\022;\n\014GetStoreFile\022\024.GetStor" +
-      "eFileRequest\032\025.GetStoreFileResponse\022D\n\017G" +
-      "etOnlineRegion\022\027.GetOnlineRegionRequest\032" +
-      "\030.GetOnlineRegionResponse\0225\n\nOpenRegion\022" +
-      "\022.OpenRegionRequest\032\023.OpenRegionResponse" +
-      "\0228\n\013CloseRegion\022\023.CloseRegionRequest\032\024.C" +
-      "loseRegionResponse\0228\n\013FlushRegion\022\023.Flus",
-      "hRegionRequest\032\024.FlushRegionResponse\0228\n\013" +
-      "SplitRegion\022\023.SplitRegionRequest\032\024.Split" +
-      "RegionResponse\022>\n\rCompactRegion\022\025.Compac" +
-      "tRegionRequest\032\026.CompactRegionResponse\022;" +
-      "\n\014MergeRegions\022\024.MergeRegionsRequest\032\025.M" +
-      "ergeRegionsResponse\022J\n\021ReplicateWALEntry" +
-      "\022\031.ReplicateWALEntryRequest\032\032.ReplicateW" +
-      "ALEntryResponse\022?\n\006Replay\022\031.ReplicateWAL" +
-      "EntryRequest\032\032.ReplicateWALEntryResponse" +
-      "\022>\n\rRollWALWriter\022\025.RollWALWriterRequest",
-      "\032\026.RollWALWriterResponse\022>\n\rGetServerInf" +
-      "o\022\025.GetServerInfoRequest\032\026.GetServerInfo" +
-      "Response\0225\n\nStopServer\022\022.StopServerReque" +
-      "st\032\023.StopServerResponse\022M\n\022UpdateFavored" +
-      "Nodes\022\032.UpdateFavoredNodesRequest\032\033.Upda" +
-      "teFavoredNodesResponse\022P\n\023UpdateConfigur" +
-      "ation\022\033.UpdateConfigurationRequest\032\034.Upd" +
-      "ateConfigurationResponseBA\n*org.apache.h" +
-      "adoop.hbase.protobuf.generatedB\013AdminPro" +
-      "tosH\001\210\001\001\240\001\001"
+      "\001(\004\022\036\n\026write_flush_wal_marker\030\003 \001(\010\"_\n\023F" +
+      "lushRegionResponse\022\027\n\017last_flush_time\030\001 " +
+      "\002(\004\022\017\n\007flushed\030\002 \001(\010\022\036\n\026wrote_flush_wal_" +
+      "marker\030\003 \001(\010\"K\n\022SplitRegionRequest\022 \n\006re" +
+      "gion\030\001 \002(\0132\020.RegionSpecifier\022\023\n\013split_po" +
+      "int\030\002 \001(\014\"\025\n\023SplitRegionResponse\"W\n\024Comp" +
+      "actRegionRequest\022 \n\006region\030\001 \002(\0132\020.Regio" +
+      "nSpecifier\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(",
+      "\014\"\027\n\025CompactRegionResponse\"\262\001\n\031UpdateFav" +
+      "oredNodesRequest\022@\n\013update_info\030\001 \003(\0132+." +
+      "UpdateFavoredNodesRequest.RegionUpdateIn" +
+      "fo\032S\n\020RegionUpdateInfo\022\033\n\006region\030\001 \002(\0132\013" +
+      ".RegionInfo\022\"\n\rfavored_nodes\030\002 \003(\0132\013.Ser" +
+      "verName\".\n\032UpdateFavoredNodesResponse\022\020\n" +
+      "\010response\030\001 \001(\r\"v\n\023MergeRegionsRequest\022\"" +
+      "\n\010region_a\030\001 \002(\0132\020.RegionSpecifier\022\"\n\010re" +
+      "gion_b\030\002 \002(\0132\020.RegionSpecifier\022\027\n\010forcib" +
+      "le\030\003 \001(\010:\005false\"\026\n\024MergeRegionsResponse\"",
+      "X\n\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.WALKey\022\027\n\017key" +
+      "_value_bytes\030\002 \003(\014\022\035\n\025associated_cell_co" +
+      "unt\030\003 \001(\005\"4\n\030ReplicateWALEntryRequest\022\030\n" +
+      "\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031ReplicateWALE" +
+      "ntryResponse\"\026\n\024RollWALWriterRequest\"0\n\025" +
+      "RollWALWriterResponse\022\027\n\017region_to_flush" +
+      "\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 " +
+      "\002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServerIn" +
+      "foRequest\"B\n\nServerInfo\022 \n\013server_name\030\001" +
+      " \002(\0132\013.ServerName\022\022\n\nwebui_port\030\002 \001(\r\"9\n",
+      "\025GetServerInfoResponse\022 \n\013server_info\030\001 " +
+      "\002(\0132\013.ServerInfo\"\034\n\032UpdateConfigurationR" +
+      "equest\"\035\n\033UpdateConfigurationResponse2\230\010" +
+      "\n\014AdminService\022>\n\rGetRegionInfo\022\025.GetReg" +
+      "ionInfoRequest\032\026.GetRegionInfoResponse\022;" +
+      "\n\014GetStoreFile\022\024.GetStoreFileRequest\032\025.G" +
+      "etStoreFileResponse\022D\n\017GetOnlineRegion\022\027" +
+      ".GetOnlineRegionRequest\032\030.GetOnlineRegio" +
+      "nResponse\0225\n\nOpenRegion\022\022.OpenRegionRequ" +
+      "est\032\023.OpenRegionResponse\0228\n\013CloseRegion\022",
+      "\023.CloseRegionRequest\032\024.CloseRegionRespon" +
+      "se\0228\n\013FlushRegion\022\023.FlushRegionRequest\032\024" +
+      ".FlushRegionResponse\0228\n\013SplitRegion\022\023.Sp" +
+      "litRegionRequest\032\024.SplitRegionResponse\022>" +
+      "\n\rCompactRegion\022\025.CompactRegionRequest\032\026" +
+      ".CompactRegionResponse\022;\n\014MergeRegions\022\024" +
+      ".MergeRegionsRequest\032\025.MergeRegionsRespo" +
+      "nse\022J\n\021ReplicateWALEntry\022\031.ReplicateWALE" +
+      "ntryRequest\032\032.ReplicateWALEntryResponse\022" +
+      "?\n\006Replay\022\031.ReplicateWALEntryRequest\032\032.R",
+      "eplicateWALEntryResponse\022>\n\rRollWALWrite" +
+      "r\022\025.RollWALWriterRequest\032\026.RollWALWriter" +
+      "Response\022>\n\rGetServerInfo\022\025.GetServerInf" +
+      "oRequest\032\026.GetServerInfoResponse\0225\n\nStop" +
+      "Server\022\022.StopServerRequest\032\023.StopServerR" +
+      "esponse\022M\n\022UpdateFavoredNodes\022\032.UpdateFa" +
+      "voredNodesRequest\032\033.UpdateFavoredNodesRe" +
+      "sponse\022P\n\023UpdateConfiguration\022\033.UpdateCo" +
+      "nfigurationRequest\032\034.UpdateConfiguration" +
+      "ResponseBA\n*org.apache.hadoop.hbase.prot",
+      "obuf.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -22210,13 +22423,13 @@ public final class AdminProtos {
           internal_static_FlushRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_FlushRegionRequest_descriptor,
-              new java.lang.String[] { "Region", "IfOlderThanTs", });
+              new java.lang.String[] { "Region", "IfOlderThanTs", "WriteFlushWalMarker", });
           internal_static_FlushRegionResponse_descriptor =
             getDescriptor().getMessageTypes().get(11);
           internal_static_FlushRegionResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_FlushRegionResponse_descriptor,
-              new java.lang.String[] { "LastFlushTime", "Flushed", });
+              new java.lang.String[] { "LastFlushTime", "Flushed", "WroteFlushWalMarker", });
           internal_static_SplitRegionRequest_descriptor =
             getDescriptor().getMessageTypes().get(12);
           internal_static_SplitRegionRequest_fieldAccessorTable = new
