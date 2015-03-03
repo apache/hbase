@@ -27,13 +27,14 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.S
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -43,17 +44,17 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination.TaskFinisher.Status;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -150,7 +151,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       if (tasks != null) {
         int listSize = tasks.size();
         for (int i = 0; i < listSize; i++) {
-          if (!ZKSplitLog.isRescanNode(watcher, tasks.get(i))) {
+          if (!ZKSplitLog.isRescanNode(tasks.get(i))) {
             count++;
           }
         }
@@ -302,7 +303,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       if (tasks != null) {
         int listSize = tasks.size();
         for (int i = 0; i < listSize; i++) {
-          if (!ZKSplitLog.isRescanNode(watcher, tasks.get(i))) {
+          if (!ZKSplitLog.isRescanNode(tasks.get(i))) {
             count++;
           }
         }
@@ -763,6 +764,21 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     return this.recoveryMode == RecoveryMode.LOG_SPLITTING;
   }
 
+  private List<String> listSplitLogTasks() throws KeeperException {
+    List<String> taskOrRescanList = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
+    if (taskOrRescanList == null || taskOrRescanList.isEmpty()) {
+      return Collections.<String> emptyList();
+    }
+    List<String> taskList = new ArrayList<String>();
+    for (String taskOrRescan : taskOrRescanList) {
+      // Remove rescan nodes
+      if (!ZKSplitLog.isRescanNode(taskOrRescan)) {
+        taskList.add(taskOrRescan);
+      }
+    }
+    return taskList;
+  }
+
   /**
    * This function is to set recovery mode from outstanding split log tasks from before or current
    * configuration setting
@@ -801,8 +817,8 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       }
       if (previousRecoveryMode == RecoveryMode.UNKNOWN) {
         // Secondly check if there are outstanding split log task
-        List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
-        if (tasks != null && !tasks.isEmpty()) {
+        List<String> tasks = listSplitLogTasks();
+        if (!tasks.isEmpty()) {
           hasSplitLogTask = true;
           if (isForInitialization) {
             // during initialization, try to get recovery mode from splitlogtask
