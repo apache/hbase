@@ -81,6 +81,10 @@ public interface HConnection extends Abortable, Closeable {
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
    * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * <p>
+   * Since 0.98.1 this method no longer checks table existence. An exception
+   * will be thrown if the table does not exist only when the first operation is
+   * attempted.
    * @param tableName
    * @return an HTable to use for interactions with this table
    */
@@ -94,6 +98,10 @@ public interface HConnection extends Abortable, Closeable {
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
    * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * <p>
+   * Since 0.98.1 this method no longer checks table existence. An exception
+   * will be thrown if the table does not exist only when the first operation is
+   * attempted.
    * @param tableName
    * @return an HTable to use for interactions with this table
    */
@@ -107,6 +115,10 @@ public interface HConnection extends Abortable, Closeable {
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
    * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * <p>
+   * Since 0.98.1 this method no longer checks table existence. An exception
+   * will be thrown if the table does not exist only when the first operation is
+   * attempted.
    * @param tableName
    * @return an HTable to use for interactions with this table
    */
@@ -120,6 +132,10 @@ public interface HConnection extends Abortable, Closeable {
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
    * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * <p>
+   * Since 0.98.1 this method no longer checks table existence. An exception
+   * will be thrown if the table does not exist only when the first operation is
+   * attempted.
    * @param tableName
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
@@ -134,6 +150,10 @@ public interface HConnection extends Abortable, Closeable {
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
    * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * <p>
+   * Since 0.98.1 this method no longer checks table existence. An exception
+   * will be thrown if the table does not exist only when the first operation is
+   * attempted.
    * @param tableName
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
@@ -148,6 +168,10 @@ public interface HConnection extends Abortable, Closeable {
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
    * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * <p>
+   * Since 0.98.1 this method no longer checks table existence. An exception
+   * will be thrown if the table does not exist only when the first operation is
+   * attempted.
    * @param tableName
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
