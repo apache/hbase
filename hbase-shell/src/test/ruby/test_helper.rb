@@ -77,6 +77,18 @@ module Hbase
       end
     end
 
+    def create_test_table_with_splits(name, splits)
+      # Create the table if needed
+      unless admin.exists?(name)
+        admin.create name, 'f1', splits
+      end
+
+      # Enable the table if needed
+      unless admin.enabled?(name)
+        admin.enable(name)
+      end
+    end
+
     def drop_test_table(name)
       return unless admin.exists?(name)
       begin

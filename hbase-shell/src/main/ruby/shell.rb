@@ -294,6 +294,7 @@ Shell.load_command_group(
     truncate
     truncate_preserve
     append
+    get_splits
   ]
 )
 
