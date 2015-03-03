@@ -74,10 +74,13 @@ public interface Connection extends Abortable, Closeable {
    * The returned Table is not thread safe, a new instance should be created for each using thread.
    * This is a lightweight operation, pooling or caching of the returned Table
    * is neither required nor desired.
-   * <br>
+   * <p>
    * The caller is responsible for calling {@link Table#close()} on the returned
    * table instance.
-   *
+   * <p>
+   * Since 0.98.1 this method no longer checks table existence. An exception
+   * will be thrown if the table does not exist only when the first operation is
+   * attempted.
    * @param tableName the name of the table
    * @return a Table to use for interactions with this table
    */
@@ -88,9 +91,13 @@ public interface Connection extends Abortable, Closeable {
    * The returned Table is not thread safe, a new instance should be created for each using thread.
    * This is a lightweight operation, pooling or caching of the returned Table
    * is neither required nor desired.
-   * <br>
+   * <p>
    * The caller is responsible for calling {@link Table#close()} on the returned
    * table instance.
+   * <p>
+   * Since 0.98.1 this method no longer checks table existence. An exception
+   * will be thrown if the table does not exist only when the first operation is
+   * attempted.
    *
    * @param tableName the name of the table
    * @param pool The thread pool to use for batch operations, null to use a default pool.
