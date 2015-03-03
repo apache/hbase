@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -29,11 +28,9 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -91,9 +88,8 @@ public class TestDrainingServer {
   public void testAssignmentManagerDoesntUseDrainingServer() throws Exception {
     AssignmentManager am;
     Configuration conf = TEST_UTIL.getConfiguration();
-    final MasterServices server = Mockito.mock(MasterServices.class);
-    final TableStateManager stateManager = new TableStateManager.InMemoryTableStateManager();
-    Mockito.when(server.getTableStateManager()).thenReturn(stateManager);
+    final HMaster master = Mockito.mock(HMaster.class);
+    final Server server = Mockito.mock(Server.class);
     final ServerManager serverManager = Mockito.mock(ServerManager.class);
     final ServerName SERVERNAME_A = ServerName.valueOf("mockserver_a.org", 1000, 8000);
     final ServerName SERVERNAME_B = ServerName.valueOf("mockserver_b.org", 1001, 8000);
@@ -139,13 +135,13 @@ public class TestDrainingServer {
       Mockito.when(serverManager.addServerToDrainList(sn)).thenReturn(true);
     }
 
-    Mockito.when(server.getServerManager()).thenReturn(serverManager);
+    Mockito.when(master.getServerManager()).thenReturn(serverManager);
 
     am = new AssignmentManager(server, serverManager,
-        balancer, startupMasterExecutor("mockExecutorService"), null, null, stateManager);
+        balancer, startupMasterExecutor("mockExecutorService"), null, null);
 
-    Mockito.when(server.getAssignmentManager()).thenReturn(am);
-    Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
+    Mockito.when(master.getAssignmentManager()).thenReturn(am);
+    Mockito.when(master.getZooKeeper()).thenReturn(zkWatcher);
 
     am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_A));
 
@@ -169,10 +165,9 @@ public class TestDrainingServer {
     Configuration conf = TEST_UTIL.getConfiguration();
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(conf);
     AssignmentManager am;
-    final MasterServices server = Mockito.mock(MasterServices.class);
+    final HMaster master = Mockito.mock(HMaster.class);
+    final Server server = Mockito.mock(Server.class);
     final ServerManager serverManager = Mockito.mock(ServerManager.class);
-    final TableStateManager stateManager = new TableStateManager.InMemoryTableStateManager();
-    Mockito.when(server.getTableStateManager()).thenReturn(stateManager);
     final ServerName SERVERNAME_A = ServerName.valueOf("mockserverbulk_a.org", 1000, 8000);
     final ServerName SERVERNAME_B = ServerName.valueOf("mockserverbulk_b.org", 1001, 8000);
     final ServerName SERVERNAME_C = ServerName.valueOf("mockserverbulk_c.org", 1002, 8000);
@@ -239,7 +234,7 @@ public class TestDrainingServer {
       Mockito.when(serverManager.addServerToDrainList(entry.getValue())).thenReturn(true);
     }
     
-    Mockito.when(server.getServerManager()).thenReturn(serverManager);
+    Mockito.when(master.getServerManager()).thenReturn(serverManager);
 
     drainedServers.add(SERVERNAME_A);
     drainedServers.add(SERVERNAME_B);
@@ -247,8 +242,10 @@ public class TestDrainingServer {
     drainedServers.add(SERVERNAME_D);
 
     am = new AssignmentManager(server, serverManager,
-      balancer, startupMasterExecutor("mockExecutorServiceBulk"), null, null, stateManager);
+      balancer, startupMasterExecutor("mockExecutorServiceBulk"), null, null);
     
+    Mockito.when(master.getAssignmentManager()).thenReturn(am);
+
     zkWatcher.registerListener(am);
     
     for (ServerName drained : drainedServers) {

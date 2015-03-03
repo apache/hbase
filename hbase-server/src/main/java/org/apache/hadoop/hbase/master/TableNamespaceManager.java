@@ -80,7 +80,8 @@ public class TableNamespaceManager {
   }
 
   public void start() throws IOException {
-    if (!masterServices.getTableStateManager().isTableExists(TableName.NAMESPACE_TABLE_NAME)) {
+    if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
+        TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }

@@ -18,32 +18,25 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Before;
@@ -52,6 +45,13 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 
 @Category({ MediumTests.class })
 public class TestEnableTableHandler {
@@ -84,6 +84,7 @@ public class TestEnableTableHandler {
 
     admin.enableTable(tableName);
     TEST_UTIL.waitTableEnabled(tableName);
+
     // disable once more
     admin.disableTable(tableName);
 
@@ -93,49 +94,30 @@ public class TestEnableTableHandler {
     rs.getRegionServer().stop("stop");
     cluster.waitForRegionServerToStop(rs.getRegionServer().getServerName(), 10000);
 
-    LOG.debug("Now enabling table " + tableName);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
 
     admin.enableTable(tableName);
     assertTrue(admin.isTableEnabled(tableName));
 
     JVMClusterUtil.RegionServerThread rs2 = cluster.startRegionServer();
-    cluster.waitForRegionServerToStart(rs2.getRegionServer().getServerName().getHostname(),
-        rs2.getRegionServer().getServerName().getPort(), 60000);
-
-    List<HRegionInfo> regions = TEST_UTIL.getHBaseAdmin().getTableRegions(tableName);
-    assertEquals(1, regions.size());
-    for (HRegionInfo region : regions) {
-      TEST_UTIL.getHBaseAdmin().assign(region.getEncodedNameAsBytes());
-    }
-    LOG.debug("Waiting for table assigned " + tableName);
+    m.getAssignmentManager().assign(admin.getTableRegions(tableName));
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     List<HRegionInfo> onlineRegions = admin.getOnlineRegions(
         rs2.getRegionServer().getServerName());
-    ArrayList<HRegionInfo> tableRegions = filterTableRegions(tableName, onlineRegions);
-    assertEquals(1, tableRegions.size());
-  }
-
-  private ArrayList<HRegionInfo> filterTableRegions(final TableName tableName,
-      List<HRegionInfo> onlineRegions) {
-    return Lists.newArrayList(Iterables.filter(onlineRegions, new Predicate<HRegionInfo>() {
-      @Override
-      public boolean apply(HRegionInfo input) {
-        return input.getTable().equals(tableName);
-      }
-    }));
+    assertEquals(2, onlineRegions.size());
+    assertEquals(tableName, onlineRegions.get(1).getTable());
   }
 
   /**
    * We were only clearing rows that had a hregioninfo column in hbase:meta.  Mangled rows that
    * were missing the hregioninfo because of error were being left behind messing up any
    * subsequent table made with the same name. HBASE-12980
-   *
    * @throws IOException
    * @throws InterruptedException
    */
-  @Test(timeout = 60000)
+  @Test(timeout=60000)
   public void testDeleteForSureClearsAllTableRowsFromMeta()
-      throws IOException, InterruptedException {
+  throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf("testDeleteForSureClearsAllTableRowsFromMeta");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();

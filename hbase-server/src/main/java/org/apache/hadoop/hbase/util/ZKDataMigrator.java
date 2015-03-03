@@ -18,11 +18,8 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -30,9 +27,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -138,79 +132,6 @@ public class ZKDataMigrator extends Configured implements Tool {
       }
     }
     return 0;
-  }
-
-  /**
-   * Method for table states migration.
-   * Used when upgrading from pre-2.0 to 2.0
-   * Reading state from zk, applying them to internal state
-   * and delete.
-   * Used by master to clean migration from zk based states to
-   * table descriptor based states.
-   */
-  @SuppressWarnings("deprecation")
-  @Deprecated
-  public static Map<TableName, TableState.State> queryForTableStates(ZooKeeperWatcher zkw)
-      throws KeeperException, InterruptedException {
-    Map<TableName, TableState.State> rv = new HashMap<>();
-    List<String> children = ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
-    if (children == null)
-      return rv;
-    for (String child: children) {
-      TableName tableName = TableName.valueOf(child);
-      ZooKeeperProtos.Table.State state = getTableState(zkw, tableName);
-      TableState.State newState = TableState.State.ENABLED;
-      if (state != null) {
-        switch (state) {
-        case ENABLED:
-          newState = TableState.State.ENABLED;
-          break;
-        case DISABLED:
-          newState = TableState.State.DISABLED;
-          break;
-        case DISABLING:
-          newState = TableState.State.DISABLING;
-          break;
-        case ENABLING:
-          newState = TableState.State.ENABLING;
-          break;
-        default:
-        }
-      }
-      rv.put(tableName, newState);
-    }
-    return rv;
-  }
-
-  /**
-   * Gets table state from ZK.
-   * @param zkw ZooKeeperWatcher instance to use
-   * @param tableName table we're checking
-   * @return Null or {@link ZooKeeperProtos.DeprecatedTableState.State} found in znode.
-   * @throws KeeperException
-   */
-  @Deprecated
-  private static  ZooKeeperProtos.Table.State getTableState(
-      final ZooKeeperWatcher zkw, final TableName tableName)
-      throws KeeperException, InterruptedException {
-    String znode = ZKUtil.joinZNode(zkw.tableZNode, tableName.getNameAsString());
-    byte [] data = ZKUtil.getData(zkw, znode);
-    if (data == null || data.length <= 0) return null;
-    try {
-      ProtobufUtil.expectPBMagicPrefix(data);
-      ZooKeeperProtos.Table.Builder builder =
-          ZooKeeperProtos.Table.newBuilder();
-      int magicLen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.Table t = builder.mergeFrom(data,
-          magicLen, data.length - magicLen).build();
-      return t.getState();
-    } catch (InvalidProtocolBufferException e) {
-      KeeperException ke = new KeeperException.DataInconsistencyException();
-      ke.initCause(e);
-      throw ke;
-    } catch (DeserializationException e) {
-      throw ZKUtil.convert(e);
-    }
   }
 
   private void checkAndMigrateTableStatesToPB(ZooKeeperWatcher zkw) throws KeeperException,

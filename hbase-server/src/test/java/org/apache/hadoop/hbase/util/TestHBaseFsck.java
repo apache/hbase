@@ -37,6 +37,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -67,6 +69,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -81,10 +84,12 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
@@ -159,7 +164,6 @@ public class TestHBaseFsck {
     conf.setInt("hbase.hconnection.threads.max", 2 * POOL_SIZE);
     conf.setInt("hbase.hconnection.threads.core", POOL_SIZE);
     conf.setInt("hbase.hbck.close.timeout", 2 * REGION_ONLINE_TIMEOUT);
-    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 2 * REGION_ONLINE_TIMEOUT);
     TEST_UTIL.startMiniCluster(3);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
@@ -1352,7 +1356,7 @@ public class TestHBaseFsck {
     HBaseFsck hbck = doFsck(conf, false);
     assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_HDFS,
         ERROR_CODE.NOT_IN_HDFS, ERROR_CODE.NOT_IN_HDFS,
-        ERROR_CODE.NOT_IN_HDFS, ERROR_CODE.ORPHAN_TABLE_STATE, });
+        ERROR_CODE.NOT_IN_HDFS,});
     // holes are separate from overlap groups
     assertEquals(0, hbck.getOverlapGroups(table).size());
 
@@ -1392,34 +1396,6 @@ public class TestHBaseFsck {
 
     // no version file fixed
     assertNoErrors(doFsck(conf, false));
-  }
-
-  /**
-   * when the hbase.version file missing, It is fix the fault.
-   */
-  @Test (timeout=180000)
-  public void testNoTableState() throws Exception {
-    // delete the hbase.version file
-    TableName table =
-        TableName.valueOf("testNoTableState");
-    try {
-      setupTable(table);
-      // make sure data in regions, if in wal only there is no data loss
-      admin.flush(table);
-
-      MetaTableAccessor.deleteTableState(TEST_UTIL.getConnection(), table);
-
-      // test
-      HBaseFsck hbck = doFsck(conf, false);
-      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NO_TABLE_STATE });
-      // fix table state missing
-      doFsck(conf, true);
-
-      assertNoErrors(doFsck(conf, false));
-      assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(table));
-    } finally {
-      cleanupTable(table);
-    }
   }
 
   /**
@@ -2427,6 +2403,55 @@ public class TestHBaseFsck {
         "should acquire without blocking");
     writeLock.acquire(); // this should not block.
     writeLock.release(); // release for clean state
+  }
+
+  /**
+   * Test orphaned table ZNode (for table states)
+   */
+  @Test
+  public void testOrphanedTableZNode() throws Exception {
+    TableName table = TableName.valueOf("testOrphanedZKTableEntry");
+
+    try {
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getTableStateManager()
+      .setTableState(table, ZooKeeperProtos.Table.State.ENABLING);
+
+      try {
+        setupTable(table);
+        Assert.fail(
+          "Create table should fail when its ZNode has already existed with ENABLING state.");
+      } catch(TableExistsException t) {
+        //Expected exception
+      }
+      // The setup table was interrupted in some state that needs to some cleanup.
+      try {
+        cleanupTable(table);
+      } catch (IOException e) {
+        // Because create table failed, it is expected that the cleanup table would
+        // throw some exception.  Ignore and continue.
+      }
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertTrue(hbck.getErrors().getErrorList().contains(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY));
+
+      // fix the orphaned ZK entry
+      hbck = doFsck(conf, true);
+
+      // check that orpahned ZK table entry is gone.
+      hbck = doFsck(conf, false);
+      assertFalse(hbck.getErrors().getErrorList().contains(ERROR_CODE.ORPHANED_ZK_TABLE_ENTRY));
+      // Now create table should succeed.
+      setupTable(table);
+    } finally {
+      // This code could be called that either a table was created successfully or set up
+      // table failed in some unknown state.  Therefore, clean up can either succeed or fail.
+      try {
+        cleanupTable(table);
+      } catch (IOException e) {
+        // The cleanup table would throw some exception if create table failed in some state.
+        // Ignore this exception
+      }
+    }
   }
 
   @Test (timeout=180000)

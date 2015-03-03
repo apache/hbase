@@ -226,12 +226,7 @@ public class TestMetaTableAccessor {
     admin.deleteTable(name);
     assertFalse(MetaTableAccessor.tableExists(connection, name));
     assertTrue(MetaTableAccessor.tableExists(connection,
-        TableName.META_TABLE_NAME));
-    UTIL.createTable(name, HConstants.CATALOG_FAMILY);
-    assertTrue(MetaTableAccessor.tableExists(connection, name));
-    admin.disableTable(name);
-    admin.deleteTable(name);
-    assertFalse(MetaTableAccessor.tableExists(connection, name));
+      TableName.META_TABLE_NAME));
   }
 
   @Test public void testGetRegion() throws IOException, InterruptedException {

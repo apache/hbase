@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.coordination;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableStateManager;
 
 /**
  * Base class for {@link org.apache.hadoop.hbase.CoordinatedStateManager} implementations.
@@ -47,6 +49,9 @@ public abstract class BaseCoordinatedStateManager implements CoordinatedStateMan
     return null;
   }
 
+  @Override
+  public abstract TableStateManager getTableStateManager() throws InterruptedException,
+    CoordinatedStateException;
   /**
    * Method to retrieve coordination for split log worker
    */

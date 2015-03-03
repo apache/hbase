@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -38,23 +43,24 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -64,15 +70,11 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.data.Stat;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 @Category(LargeTests.class)
 public class TestMasterFailover {
@@ -298,8 +300,8 @@ public class TestMasterFailover {
     log("Beginning to mock scenarios");
 
     // Disable the disabledTable in ZK
-    MetaTableAccessor.updateTableState(TEST_UTIL.getConnection(), disabledTable,
-        TableState.State.DISABLED);
+    TableStateManager zktable = new ZKTableStateManager(zkw);
+    zktable.setTableState(disabledTable, ZooKeeperProtos.Table.State.DISABLED);
 
     /*
      *  ZK = OFFLINE
@@ -615,7 +617,7 @@ public class TestMasterFailover {
 
     assertTrue(" Table must be enabled.", master.getAssignmentManager()
         .getTableStateManager().isTableState(TableName.valueOf("enabledTable"),
-            TableState.State.ENABLED));
+        ZooKeeperProtos.Table.State.ENABLED));
     // we also need regions assigned out on the dead server
     List<HRegionInfo> enabledAndOnDeadRegions = new ArrayList<HRegionInfo>();
     enabledAndOnDeadRegions.addAll(enabledRegions.subList(0, 6));
@@ -675,15 +677,12 @@ public class TestMasterFailover {
     log("Beginning to mock scenarios");
 
     // Disable the disabledTable in ZK
-    MetaTableAccessor
-        .updateTableState(TEST_UTIL.getConnection(), disabledTable, TableState.State.DISABLED);
+    TableStateManager zktable = new ZKTableStateManager(zkw);
+    zktable.setTableState(disabledTable, ZooKeeperProtos.Table.State.DISABLED);
 
-    TableState enabledTableState = MetaTableAccessor
-        .getTableState(TEST_UTIL.getConnection(), TableName.valueOf("enabledTable"));
-    assertNotNull(" State should be accessible in META", enabledTableState);
-    assertEquals(" The enabled table should be identified on master fail over.",
-        enabledTableState.getState(),
-        TableState.State.ENABLED);
+    assertTrue(" The enabled table should be identified on master fail over.",
+        zktable.isTableState(TableName.valueOf("enabledTable"),
+          ZooKeeperProtos.Table.State.ENABLED));
 
     /*
      * ZK = CLOSING

@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
@@ -33,9 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -150,6 +146,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.ServiceException;
 
 /**
  * HBaseAdmin is no longer a client API. It is marked InterfaceAudience.Private indicating that
@@ -282,12 +282,7 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public boolean tableExists(final TableName tableName) throws IOException {
-    return executeCallable(new ConnectionCallable<Boolean>(getConnection()) {
-      @Override
-      public Boolean call(int callTimeout) throws ServiceException, IOException {
-        return MetaTableAccessor.tableExists(connection, tableName);
-      }
-    });
+    return MetaTableAccessor.tableExists(connection, tableName);
   }
 
   public boolean tableExists(final byte[] tableName)
@@ -548,11 +543,11 @@ public class HBaseAdmin implements Admin {
     }
     int numRegs = (splitKeys == null ? 1 : splitKeys.length + 1) * desc.getRegionReplication();
     int prevRegCount = 0;
-    boolean tableWasEnabled = false;
+    boolean doneWithMetaScan = false;
     for (int tries = 0; tries < this.numRetries * this.retryLongerMultiplier;
       ++tries) {
-      if (tableWasEnabled) {
-        // Wait all table regions comes online
+      if (!doneWithMetaScan) {
+        // Wait for new table to come on-line
         final AtomicInteger actualRegCount = new AtomicInteger(0);
         MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
           @Override
@@ -600,26 +595,17 @@ public class HBaseAdmin implements Admin {
             tries = -1;
           }
         } else {
-          return;
-        }
-      } else {
-        try {
-          tableWasEnabled = isTableAvailable(desc.getTableName());
-        } catch (TableNotFoundException tnfe) {
-          LOG.debug(
-              "Table " + desc.getTableName() + " was not enabled, sleeping, still " + numRetries
-                  + " retries left");
-        }
-        if (tableWasEnabled) {
-          // no we will scan meta to ensure all regions are online
+          doneWithMetaScan = true;
           tries = -1;
-        } else {
-          try { // Sleep
-            Thread.sleep(getPauseTime(tries));
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException("Interrupted when waiting" +
-                " for table to be enabled; meta scan was done");
-          }
+        }
+      } else if (isTableEnabled(desc.getTableName())) {
+        return;
+      } else {
+        try { // Sleep
+          Thread.sleep(getPauseTime(tries));
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException("Interrupted when waiting" +
+            " for table to be enabled; meta scan was done");
         }
       }
     }
@@ -708,11 +694,24 @@ public class HBaseAdmin implements Admin {
     });
 
     int failures = 0;
+    // Wait until all regions deleted
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       try {
-        tableExists = tableExists(tableName);
-        if (!tableExists)
-          break;
+        // Find whether all regions are deleted.
+        List<RegionLocations> regionLations =
+            MetaScanner.listTableRegionLocations(conf, connection, tableName);
+
+        // let us wait until hbase:meta table is updated and
+        // HMaster removes the table from its HTableDescriptors
+        if (regionLations == null || regionLations.size() == 0) {
+          HTableDescriptor htd = getTableDescriptorByTableName(tableName);
+
+          if (htd == null) {
+            // table could not be found in master - we are done.
+            tableExists = false;
+            break;
+          }
+        }
       } catch (IOException ex) {
         failures++;
         if(failures >= numRetries - 1) {           // no more tries left
@@ -1106,17 +1105,9 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    */
   @Override
-  public boolean isTableEnabled(final TableName tableName) throws IOException {
+  public boolean isTableEnabled(TableName tableName) throws IOException {
     checkTableExistence(tableName);
-    return executeCallable(new ConnectionCallable<Boolean>(getConnection()) {
-      @Override
-      public Boolean call(int callTimeout) throws ServiceException, IOException {
-        TableState tableState = MetaTableAccessor.getTableState(connection, tableName);
-        if (tableState == null)
-          throw new TableNotFoundException(tableName);
-        return tableState.inStates(TableState.State.ENABLED);
-      }
-    });
+    return connection.isTableEnabled(tableName);
   }
 
   public boolean isTableEnabled(byte[] tableName) throws IOException {
@@ -2293,15 +2284,10 @@ public class HBaseAdmin implements Admin {
    */
   private TableName checkTableExists(final TableName tableName)
       throws IOException {
-    return executeCallable(new ConnectionCallable<TableName>(getConnection()) {
-      @Override
-      public TableName call(int callTimeout) throws ServiceException, IOException {
-        if (!MetaTableAccessor.tableExists(connection, tableName)) {
-          throw new TableNotFoundException(tableName);
-        }
-        return tableName;
-      }
-    });
+    if (!MetaTableAccessor.tableExists(connection, tableName)) {
+      throw new TableNotFoundException(tableName);
+    }
+    return tableName;
   }
 
   /**
@@ -3631,8 +3617,7 @@ public class HBaseAdmin implements Admin {
     });
   }
 
-  private <C extends RetryingCallable<V> & Closeable, V> V executeCallable(C callable)
-      throws IOException {
+  private <V> V executeCallable(MasterCallable<V> callable) throws IOException {
     RpcRetryingCaller<V> caller = rpcCallerFactory.newCaller();
     try {
       return caller.callWithRetries(callable, operationTimeout);

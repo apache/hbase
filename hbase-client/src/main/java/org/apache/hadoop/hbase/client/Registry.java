@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.RegionLocations;
+import org.apache.hadoop.hbase.TableName;
 
 /**
  * Cluster registry.
@@ -44,6 +45,12 @@ interface Registry {
    * @return Cluster id.
    */
   String getClusterId();
+
+  /**
+   * @param enabled Return true if table is enabled
+   * @throws IOException
+   */
+  boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException;
 
   /**
    * @return Count of 'running' regionservers

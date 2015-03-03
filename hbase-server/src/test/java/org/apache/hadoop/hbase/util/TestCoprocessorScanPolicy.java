@@ -211,7 +211,6 @@ public class TestCoprocessorScanPolicy {
     // should be gone now
     assertEquals(0, r.size());
     t.close();
-    EnvironmentEdgeManager.reset();
   }
 
   public static class ScanObserver extends BaseRegionObserver {

@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -40,12 +39,11 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.BulkAssigner;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
-import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
-import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.htrace.Trace;
 
 /**
@@ -57,18 +55,16 @@ public class DisableTableHandler extends EventHandler {
   private final TableName tableName;
   private final AssignmentManager assignmentManager;
   private final TableLockManager tableLockManager;
-  private final TableStateManager tableStateManager;
   private final boolean skipTableStateCheck;
   private TableLock tableLock;
 
-  public DisableTableHandler(MasterServices server, TableName tableName,
+  public DisableTableHandler(Server server, TableName tableName,
       AssignmentManager assignmentManager, TableLockManager tableLockManager,
       boolean skipTableStateCheck) {
     super(server, EventType.C_M_DISABLE_TABLE);
     this.tableName = tableName;
     this.assignmentManager = assignmentManager;
     this.tableLockManager = tableLockManager;
-    this.tableStateManager = server.getTableStateManager();
     this.skipTableStateCheck = skipTableStateCheck;
   }
 
@@ -85,7 +81,7 @@ public class DisableTableHandler extends EventHandler {
     boolean success = false;
     try {
       // Check if table exists
-      if (!tableStateManager.isTableExists(tableName)) {
+      if (!MetaTableAccessor.tableExists(this.server.getConnection(), tableName)) {
         throw new TableNotFoundException(tableName);
       }
 
@@ -95,11 +91,16 @@ public class DisableTableHandler extends EventHandler {
       // DISABLED or ENABLED.
       //TODO: reevaluate this since we have table locks now
       if (!skipTableStateCheck) {
-        if (!tableStateManager.setTableStateIfInStates(
-            this.tableName, TableState.State.DISABLING,
-            TableState.State.ENABLED)) {
-          LOG.info("Table " + tableName + " isn't enabled; skipping disable");
-          throw new TableNotEnabledException(this.tableName);
+        try {
+          if (!this.assignmentManager.getTableStateManager().setTableStateIfInStates(
+            this.tableName, ZooKeeperProtos.Table.State.DISABLING,
+            ZooKeeperProtos.Table.State.ENABLED)) {
+            LOG.info("Table " + tableName + " isn't enabled; skipping disable");
+            throw new TableNotEnabledException(this.tableName);
+          }
+        } catch (CoordinatedStateException e) {
+          throw new IOException("Unable to ensure that the table will be" +
+            " disabling because of a coordination engine issue", e);
         }
       }
       success = true;
@@ -156,8 +157,8 @@ public class DisableTableHandler extends EventHandler {
 
   private void handleDisableTable() throws IOException, CoordinatedStateException {
     // Set table disabling flag up in zk.
-    tableStateManager.setTableState(this.tableName,
-        TableState.State.DISABLING);
+    this.assignmentManager.getTableStateManager().setTableState(this.tableName,
+      ZooKeeperProtos.Table.State.DISABLING);
     boolean done = false;
     while (true) {
       // Get list of online regions that are of this table.  Regions that are
@@ -185,8 +186,8 @@ public class DisableTableHandler extends EventHandler {
       }
     }
     // Flip the table to disabled if success.
-    if (done) this.tableStateManager.setTableState(this.tableName,
-      TableState.State.DISABLED);
+    if (done) this.assignmentManager.getTableStateManager().setTableState(this.tableName,
+      ZooKeeperProtos.Table.State.DISABLED);
     LOG.info("Disabled table, " + this.tableName + ", is done=" + done);
   }
 

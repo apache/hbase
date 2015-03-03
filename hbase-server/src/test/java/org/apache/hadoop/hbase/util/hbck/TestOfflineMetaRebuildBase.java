@@ -20,13 +20,11 @@ package org.apache.hadoop.hbase.util.hbck;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
 import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -59,29 +57,24 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
 
     // shutdown the minicluster
     TEST_UTIL.shutdownMiniHBaseCluster();
+    TEST_UTIL.shutdownMiniZKCluster();
 
     // rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);
     assertTrue(fsck.rebuildMeta(false));
 
     // bring up the minicluster
+    TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.restartHBaseCluster(3);
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
       Admin admin = connection.getAdmin();
-      if (admin.isTableDisabled(table))
-        admin.enableTable(table);
+      admin.enableTable(table);
       LOG.info("Waiting for no more RIT");
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       LOG.info("No more RIT in ZK, now doing final test verification");
 
       // everything is good again.
-      assertEquals(5, scanMeta()); // including table state rows
-      TableName[] tableNames = TEST_UTIL.getHBaseAdmin().listTableNames();
-      for (TableName tableName : tableNames) {
-        HTableDescriptor tableDescriptor = TEST_UTIL.getHBaseAdmin().getTableDescriptor(tableName);
-        assertNotNull(tableDescriptor);
-        assertTrue(TEST_UTIL.getHBaseAdmin().isTableEnabled(tableName));
-      }
+      assertEquals(5, scanMeta());
       HTableDescriptor[] htbls = admin.listTables();
       LOG.info("Tables present after restart: " + Arrays.toString(htbls));
       assertEquals(1, htbls.length);

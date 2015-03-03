@@ -21,6 +21,10 @@ package org.apache.hadoop.hbase.client;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
+import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
+import static org.junit.Assert.*;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -45,22 +49,16 @@ import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HBaseFsck;
-import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsckRepair;
+import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.assertErrors;
-import static org.apache.hadoop.hbase.util.hbck.HbckTestingUtil.doFsck;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Tests the scenarios where replicas are enabled for the meta table
@@ -76,7 +74,7 @@ public class TestMetaWithReplicas {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.getConfiguration().setInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
-    TEST_UTIL.startMiniCluster(3);    
+    TEST_UTIL.startMiniCluster(3);
     // disable the balancer
     LoadBalancerTracker l = new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(),
         new Abortable() {
@@ -87,7 +85,7 @@ public class TestMetaWithReplicas {
       }
       @Override
       public void abort(String why, Throwable e) {
-        aborted = true;        
+        aborted = true;
       }
     });
     l.setBalancerOn(false);
@@ -109,7 +107,7 @@ public class TestMetaWithReplicas {
     assertTrue(TEST_UTIL.getHBaseAdmin().getTableDescriptor(TableName.META_TABLE_NAME)
         .getRegionReplication() == 3);
   }
-  
+
   @Test
   public void testZookeeperNodesForReplicas() throws Exception {
     // Checks all the znodes exist when meta's replicas are enabled
@@ -250,8 +248,7 @@ public class TestMetaWithReplicas {
     stopMasterAndValidateReplicaCount(2, 3);
   }
 
-  private void stopMasterAndValidateReplicaCount(final int originalReplicaCount,
-      final int newReplicaCount)
+  private void stopMasterAndValidateReplicaCount(int originalReplicaCount, int newReplicaCount)
       throws Exception {
     ServerName sn = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
     TEST_UTIL.getHBaseClusterInterface().stopMaster(sn);
@@ -262,52 +259,21 @@ public class TestMetaWithReplicas {
         newReplicaCount);
     TEST_UTIL.getHBaseClusterInterface().startMaster(sn.getHostname(), 0);
     TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster();
-    TEST_UTIL.waitFor(10000, predicateMetaHasReplicas(newReplicaCount));
+    int count = 0;
+    do {
+      metaZnodes = TEST_UTIL.getZooKeeperWatcher().getMetaReplicaNodes();
+      Thread.sleep(10);
+      count++;
+      // wait for the count to be different from the originalReplicaCount. When the
+      // replica count is reduced, that will happen when the master unassigns excess
+      // replica, and deletes the excess znodes
+    } while (metaZnodes.size() == originalReplicaCount && count < 1000);
+    assert(metaZnodes.size() == newReplicaCount);
     // also check if hbck returns without errors
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM,
         newReplicaCount);
     HBaseFsck hbck = HbckTestingUtil.doFsck(TEST_UTIL.getConfiguration(), false);
     HbckTestingUtil.assertNoErrors(hbck);
-  }
-
-  private Waiter.ExplainingPredicate<Exception> predicateMetaHasReplicas(
-      final int newReplicaCount) {
-    return new Waiter.ExplainingPredicate<Exception>() {
-      @Override
-      public String explainFailure() throws Exception {
-        return checkMetaLocationAndExplain(newReplicaCount);
-      }
-
-      @Override
-      public boolean evaluate() throws Exception {
-        return checkMetaLocationAndExplain(newReplicaCount) == null;
-      }
-    };
-  }
-
-  @Nullable
-  private String checkMetaLocationAndExplain(int originalReplicaCount)
-      throws KeeperException, IOException {
-    List<String> metaZnodes = TEST_UTIL.getZooKeeperWatcher().getMetaReplicaNodes();
-    if (metaZnodes.size() == originalReplicaCount) {
-      RegionLocations rl = ((ClusterConnection) TEST_UTIL.getConnection())
-          .locateRegion(TableName.META_TABLE_NAME,
-              HConstants.EMPTY_START_ROW, false, false);
-      for (HRegionLocation location : rl.getRegionLocations()) {
-        if (location == null) {
-          return "Null location found in " + rl.toString();
-        }
-        if (location.getRegionInfo() == null) {
-          return "Null regionInfo for location " + location;
-        }
-        if (location.getHostname() == null) {
-          return "Null hostName for location " + location;
-        }
-      }
-      return null; // OK
-    }
-    return "Replica count is not as expected " + originalReplicaCount + " <> " + metaZnodes.size()
-        + "(" + metaZnodes.toString() + ")";
   }
 
   @Test

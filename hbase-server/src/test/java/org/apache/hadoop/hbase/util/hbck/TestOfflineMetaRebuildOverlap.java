@@ -66,6 +66,7 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
 
     // shutdown the minicluster
     TEST_UTIL.shutdownMiniHBaseCluster();
+    TEST_UTIL.shutdownMiniZKCluster();
 
     // attempt to rebuild meta table from scratch
     HBaseFsck fsck = new HBaseFsck(conf);
@@ -76,6 +77,7 @@ public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
     assertEquals(3, problems.size());
 
     // bring up the minicluster
+    TEST_UTIL.startMiniZKCluster(); // tables seem enabled by default
     TEST_UTIL.restartHBaseCluster(3);
 
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);

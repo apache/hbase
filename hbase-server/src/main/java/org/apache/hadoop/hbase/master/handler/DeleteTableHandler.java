@@ -72,7 +72,7 @@ public class DeleteTableHandler extends TableEventHandler {
     AssignmentManager am = this.masterServices.getAssignmentManager();
     RegionStates states = am.getRegionStates();
     long waitTime = server.getConfiguration().
-        getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
+      getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
     for (HRegionInfo region : regions) {
       long done = System.currentTimeMillis() + waitTime;
       while (System.currentTimeMillis() < done) {
@@ -87,12 +87,12 @@ public class DeleteTableHandler extends TableEventHandler {
           throw (InterruptedIOException)new InterruptedIOException().initCause(e);
         }
         LOG.debug("Waiting on region to clear regions in transition; "
-            + am.getRegionStates().getRegionTransitionState(region));
+          + am.getRegionStates().getRegionTransitionState(region));
       }
       if (states.isRegionInTransition(region)) {
         throw new IOException("Waited hbase.master.wait.on.region (" +
-            waitTime + "ms) for region to leave region " +
-            region.getRegionNameAsString() + " in transitions");
+          waitTime + "ms) for region to leave region " +
+          region.getRegionNameAsString() + " in transitions");
       }
     }
   }
@@ -108,31 +108,31 @@ public class DeleteTableHandler extends TableEventHandler {
     // 1. Wait because of region in transition
     waitRegionInTransition(regions);
 
-    // 2. Remove table from hbase:meta and HDFS
-    removeTableData(regions);
+    try {
+      // 2. Remove table from hbase:meta and HDFS
+      removeTableData(regions);
+    } finally {
+      // 3. Update table descriptor cache
+      LOG.debug("Removing '" + tableName + "' descriptor.");
+      this.masterServices.getTableDescriptors().remove(tableName);
+
+      AssignmentManager am = this.masterServices.getAssignmentManager();
+
+      // 4. Clean up regions of the table in RegionStates.
+      LOG.debug("Removing '" + tableName + "' from region states.");
+      am.getRegionStates().tableDeleted(tableName);
+
+      // 5. If entry for this table in zk, and up in AssignmentManager, remove it.
+      LOG.debug("Marking '" + tableName + "' as deleted.");
+      am.getTableStateManager().setDeletedTable(tableName);
+
+      // 6.Clean any remaining rows for this table.
+      cleanAnyRemainingRows();
+    }
 
     if (cpHost != null) {
       cpHost.postDeleteTableHandler(this.tableName);
     }
-  }
-
-  private void cleanupTableState() throws IOException {
-    // 3. Update table descriptor cache
-    LOG.debug("Removing '" + tableName + "' descriptor.");
-    this.masterServices.getTableDescriptors().remove(tableName);
-
-    AssignmentManager am = this.masterServices.getAssignmentManager();
-
-    // 4. Clean up regions of the table in RegionStates.
-    LOG.debug("Removing '" + tableName + "' from region states.");
-    am.getRegionStates().tableDeleted(tableName);
-
-    // 5.Clean any remaining rows for this table.
-    cleanAnyRemainingRows();
-
-    // 6. If entry for this table states, remove it.
-    LOG.debug("Marking '" + tableName + "' as deleted.");
-    am.getTableStateManager().setDeletedTable(tableName);
   }
 
   /**
@@ -153,7 +153,7 @@ public class DeleteTableHandler extends TableEventHandler {
       }
       if (!deletes.isEmpty()) {
         LOG.warn("Deleting some vestigal " + deletes.size() + " rows of " + this.tableName +
-            " from " + TableName.META_TABLE_NAME);
+          " from " + TableName.META_TABLE_NAME);
         metaTable.delete(deletes);
       }
     }
@@ -163,38 +163,34 @@ public class DeleteTableHandler extends TableEventHandler {
    * Removes the table from hbase:meta and archives the HDFS files.
    */
   protected void removeTableData(final List<HRegionInfo> regions)
-      throws IOException, CoordinatedStateException {
-    try {
-      // 1. Remove regions from META
-      LOG.debug("Deleting regions from META");
-      MetaTableAccessor.deleteRegions(this.server.getConnection(), regions);
+  throws IOException, CoordinatedStateException {
+    // 1. Remove regions from META
+    LOG.debug("Deleting regions from META");
+    MetaTableAccessor.deleteRegions(this.server.getConnection(), regions);
 
-      // -----------------------------------------------------------------------
-      // NOTE: At this point we still have data on disk, but nothing in hbase:meta
-      //       if the rename below fails, hbck will report an inconsistency.
-      // -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // NOTE: At this point we still have data on disk, but nothing in hbase:meta
+    //       if the rename below fails, hbck will report an inconsistency.
+    // -----------------------------------------------------------------------
 
-      // 2. Move the table in /hbase/.tmp
-      MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
-      Path tempTableDir = mfs.moveTableToTemp(tableName);
+    // 2. Move the table in /hbase/.tmp
+    MasterFileSystem mfs = this.masterServices.getMasterFileSystem();
+    Path tempTableDir = mfs.moveTableToTemp(tableName);
 
-      // 3. Archive regions from FS (temp directory)
-      FileSystem fs = mfs.getFileSystem();
-      for (HRegionInfo hri : regions) {
-        LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
-        HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
-            tempTableDir, HRegion.getRegionDir(tempTableDir, hri.getEncodedName()));
-      }
-
-      // 4. Delete table directory from FS (temp directory)
-      if (!fs.delete(tempTableDir, true)) {
-        LOG.error("Couldn't delete " + tempTableDir);
-      }
-
-      LOG.debug("Table '" + tableName + "' archived!");
-    } finally {
-      cleanupTableState();
+    // 3. Archive regions from FS (temp directory)
+    FileSystem fs = mfs.getFileSystem();
+    for (HRegionInfo hri : regions) {
+      LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
+      HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
+          tempTableDir, HRegion.getRegionDir(tempTableDir, hri.getEncodedName()));
     }
+
+    // 4. Delete table directory from FS (temp directory)
+    if (!fs.delete(tempTableDir, true)) {
+      LOG.error("Couldn't delete " + tempTableDir);
+    }
+
+    LOG.debug("Table '" + tableName + "' archived!");
   }
 
   @Override

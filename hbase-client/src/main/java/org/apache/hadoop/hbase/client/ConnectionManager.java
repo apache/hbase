@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -69,6 +70,8 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -175,13 +178,17 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * An internal, non-instantiable class that manages creation of {@link HConnection}s.
@@ -665,7 +672,7 @@ class ConnectionManager {
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
           HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
       this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
-          HConstants.DEFAULT_USE_META_REPLICAS); 
+          HConstants.DEFAULT_USE_META_REPLICAS);
       this.numTries = tableConfig.getRetriesNumber();
       this.rpcTimeout = conf.getInt(
           HConstants.HBASE_RPC_TIMEOUT_KEY,
@@ -930,7 +937,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableEnabled(TableName tableName) throws IOException {
-      return getTableState(tableName).inStates(TableState.State.ENABLED);
+      return this.registry.isTableOnlineState(tableName, true);
     }
 
     @Override
@@ -940,7 +947,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableDisabled(TableName tableName) throws IOException {
-      return getTableState(tableName).inStates(TableState.State.DISABLED);
+      return this.registry.isTableOnlineState(tableName, false);
     }
 
     @Override
@@ -950,7 +957,30 @@ class ConnectionManager {
 
     @Override
     public boolean isTableAvailable(final TableName tableName) throws IOException {
-      return isTableAvailable(tableName, null);
+      final AtomicBoolean available = new AtomicBoolean(true);
+      final AtomicInteger regionCount = new AtomicInteger(0);
+      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+        @Override
+        public boolean processRow(Result row) throws IOException {
+          HRegionInfo info = MetaScanner.getHRegionInfo(row);
+          if (info != null && !info.isSplitParent()) {
+            if (tableName.equals(info.getTable())) {
+              ServerName server = HRegionInfo.getServerName(row);
+              if (server == null) {
+                available.set(false);
+                return false;
+              }
+              regionCount.incrementAndGet();
+            } else if (tableName.compareTo(info.getTable()) < 0) {
+              // Return if we are done with the current table
+              return false;
+            }
+          }
+          return true;
+        }
+      };
+      MetaScanner.metaScan(this, visitor, tableName);
+      return available.get() && (regionCount.get() > 0);
     }
 
     @Override
@@ -959,62 +989,44 @@ class ConnectionManager {
     }
 
     @Override
-    public boolean isTableAvailable(final TableName tableName, @Nullable final byte[][] splitKeys)
+    public boolean isTableAvailable(final TableName tableName, final byte[][] splitKeys)
         throws IOException {
-      try {
-        if (!isTableEnabled(tableName)) {
-          LOG.debug("Table " + tableName + " not enabled");
-          return false;
-        }
-        ClusterConnection connection = getConnectionInternal(getConfiguration());
-        List<Pair<HRegionInfo, ServerName>> locations = MetaTableAccessor
-            .getTableRegionsAndLocations(getKeepAliveZooKeeperWatcher(),
-                connection, tableName, true);
-        int notDeployed = 0;
-        int regionCount = 0;
-        for (Pair<HRegionInfo, ServerName> pair : locations) {
-          HRegionInfo info = pair.getFirst();
-          if (pair.getSecond() == null) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Table " + tableName + " has not deployed region " + pair.getFirst()
-                  .getEncodedName());
-            }
-            notDeployed++;
-          } else if (splitKeys != null
-              && !Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-            for (byte[] splitKey : splitKeys) {
-              // Just check if the splitkey is available
-              if (Bytes.equals(info.getStartKey(), splitKey)) {
-                regionCount++;
-                break;
+      final AtomicBoolean available = new AtomicBoolean(true);
+      final AtomicInteger regionCount = new AtomicInteger(0);
+      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+        @Override
+        public boolean processRow(Result row) throws IOException {
+          HRegionInfo info = MetaScanner.getHRegionInfo(row);
+          if (info != null && !info.isSplitParent()) {
+            if (tableName.equals(info.getTable())) {
+              ServerName server = HRegionInfo.getServerName(row);
+              if (server == null) {
+                available.set(false);
+                return false;
               }
+              if (!Bytes.equals(info.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
+                for (byte[] splitKey : splitKeys) {
+                  // Just check if the splitkey is available
+                  if (Bytes.equals(info.getStartKey(), splitKey)) {
+                    regionCount.incrementAndGet();
+                    break;
+                  }
+                }
+              } else {
+                // Always empty start row should be counted
+                regionCount.incrementAndGet();
+              }
+            } else if (tableName.compareTo(info.getTable()) < 0) {
+              // Return if we are done with the current table
+              return false;
             }
-          } else {
-            // Always empty start row should be counted
-            regionCount++;
-          }
-        }
-        if (notDeployed > 0) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Table " + tableName + " has " + notDeployed + " regions");
-          }
-          return false;
-        } else if (splitKeys != null && regionCount != splitKeys.length + 1) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Table " + tableName + " expected to have " + (splitKeys.length + 1)
-                + " regions, but only " + regionCount + " available");
-          }
-          return false;
-        } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Table " + tableName + " should be available");
           }
           return true;
         }
-      } catch (TableNotFoundException tnfe) {
-        LOG.warn("Table " + tableName + " not enabled, it is not exists");
-        return false;
-      }
+      };
+      MetaScanner.metaScan(this, visitor, tableName);
+      // +1 needs to be added so that the empty start row is also taken into account
+      return available.get() && (regionCount.get() == splitKeys.length + 1);
     }
 
     @Override
@@ -2456,15 +2468,6 @@ class ConnectionManager {
       return getHTableDescriptorsByTableName(tableNames);
     }
 
-    @Nonnull
-    public TableState getTableState(TableName tableName) throws IOException {
-      ClusterConnection conn = getConnectionInternal(getConfiguration());
-      TableState tableState = MetaTableAccessor.getTableState(conn, tableName);
-      if (tableState == null)
-        throw new TableNotFoundException(tableName);
-      return tableState;
-    }
-
     @Override
     public NonceGenerator getNonceGenerator() {
       return this.nonceGenerator;
@@ -2486,7 +2489,7 @@ class ConnectionManager {
       GetTableDescriptorsResponse htds;
       try {
         GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest(tableName);
+          RequestConverter.buildGetTableDescriptorsRequest(tableName);
         htds = master.getTableDescriptors(null, req);
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);

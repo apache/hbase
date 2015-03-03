@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -41,7 +43,7 @@ public class TestRegionStates {
 
   @Test
   public void testWeDontReturnDrainingServersForOurBalancePlans() throws Exception {
-    MasterServices server = mock(MasterServices.class);
+    Server server = mock(Server.class);
     when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Configuration configuration = mock(Configuration.class);
     when(server.getConfiguration()).thenReturn(configuration);

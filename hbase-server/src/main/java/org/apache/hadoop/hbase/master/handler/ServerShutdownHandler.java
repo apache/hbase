@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -285,7 +285,7 @@ public class ServerShutdownHandler extends EventHandler {
             } else if (rit != null) {
               if ((rit.isPendingCloseOrClosing() || rit.isOffline())
                   && am.getTableStateManager().isTableState(hri.getTable(),
-                  TableState.State.DISABLED, TableState.State.DISABLING) ||
+                  ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
                   am.getReplicasToClose().contains(hri)) {
                 // If the table was partially disabled and the RS went down, we should clear the RIT
                 // and remove the node for the region.
@@ -375,7 +375,7 @@ public class ServerShutdownHandler extends EventHandler {
     }
     // If table is not disabled but the region is offlined,
     boolean disabled = assignmentManager.getTableStateManager().isTableState(hri.getTable(),
-      TableState.State.DISABLED);
+      ZooKeeperProtos.Table.State.DISABLED);
     if (disabled){
       LOG.info("The table " + hri.getTable()
           + " was disabled.  Hence not proceeding.");
@@ -388,7 +388,7 @@ public class ServerShutdownHandler extends EventHandler {
       return false;
     }
     boolean disabling = assignmentManager.getTableStateManager().isTableState(hri.getTable(),
-      TableState.State.DISABLING);
+      ZooKeeperProtos.Table.State.DISABLING);
     if (disabling) {
       LOG.info("The table " + hri.getTable()
           + " is disabled.  Hence not assigning region" + hri.getEncodedName());

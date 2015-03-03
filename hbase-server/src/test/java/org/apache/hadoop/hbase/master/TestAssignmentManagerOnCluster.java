@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -724,7 +723,7 @@ public class TestAssignmentManagerOnCluster {
         }
       }
 
-      am.getTableStateManager().setTableState(table, TableState.State.DISABLING);
+      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLING);
       List<HRegionInfo> toAssignRegions = am.processServerShutdown(destServerName);
       assertTrue("Regions to be assigned should be empty.", toAssignRegions.isEmpty());
       assertTrue("Regions to be assigned should be empty.", am.getRegionStates()
@@ -733,7 +732,7 @@ public class TestAssignmentManagerOnCluster {
       if (hri != null && serverName != null) {
         am.regionOnline(hri, serverName);
       }
-      am.getTableStateManager().setTableState(table, TableState.State.DISABLED);
+      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLED);
       TEST_UTIL.deleteTable(table);
     }
   }
@@ -1268,7 +1267,7 @@ public class TestAssignmentManagerOnCluster {
         tableNameList.add(TableName.valueOf(name + "_" + i));
       }
     }
-    List<Result> metaRows = MetaTableAccessor.fullScanRegions(admin.getConnection());
+    List<Result> metaRows = MetaTableAccessor.fullScanOfMeta(admin.getConnection());
     int count = 0;
     // Check all 100 rows are in meta
     for (Result result : metaRows) {

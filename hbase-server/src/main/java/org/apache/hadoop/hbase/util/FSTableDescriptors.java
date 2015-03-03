@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -198,9 +198,8 @@ public class FSTableDescriptors implements TableDescriptors {
         htds.put(entry.getKey().toString(), entry.getValue());
       }
       // add hbase:meta to the response
-
-      htds.put(metaTableDescriptor.getTableName().getNameAsString(),
-        metaTableDescriptor);
+      htds.put(HTableDescriptor.META_TABLEDESC.getTableName().getNameAsString(),
+        HTableDescriptor.META_TABLEDESC);
     } else {
       LOG.debug("Fetching table descriptors from the filesystem.");
       boolean allvisited = true;

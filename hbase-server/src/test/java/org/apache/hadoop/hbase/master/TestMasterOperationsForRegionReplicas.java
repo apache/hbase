@@ -133,7 +133,7 @@ public class TestMasterOperationsForRegionReplicas {
         }
       }
 
-      List<Result> metaRows = MetaTableAccessor.fullScanRegions(ADMIN.getConnection());
+      List<Result> metaRows = MetaTableAccessor.fullScanOfMeta(ADMIN.getConnection());
       int numRows = 0;
       for (Result result : metaRows) {
         RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
@@ -298,7 +298,7 @@ public class TestMasterOperationsForRegionReplicas {
         return true;
       }
     };
-    MetaTableAccessor.fullScanRegions(connection, visitor);
+    MetaTableAccessor.fullScan(connection, visitor);
     assert(count.get() == numRegions);
   }
 

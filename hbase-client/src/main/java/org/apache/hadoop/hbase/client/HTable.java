@@ -128,7 +128,6 @@ public class HTable implements HTableInterface {
   protected AsyncProcess multiAp;
   private RpcRetryingCallerFactory rpcCallerFactory;
   private RpcControllerFactory rpcControllerFactory;
-  private final HTableDescriptor metaTableDescriptor;
 
   /**
    * Creates an object to access a HBase table.
@@ -173,14 +172,12 @@ public class HTable implements HTableInterface {
     this.cleanupPoolOnClose = this.cleanupConnectionOnClose = true;
     if (conf == null) {
       this.connection = null;
-      this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(new Configuration());
       return;
     }
     this.connection = ConnectionManager.getConnectionInternal(conf);
     this.configuration = conf;
 
     this.pool = getDefaultExecutor(conf);
-    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(conf);
     this.finishSetup();
   }
 
@@ -200,7 +197,6 @@ public class HTable implements HTableInterface {
     this.configuration = connection.getConfiguration();
 
     this.pool = getDefaultExecutor(this.configuration);
-    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(configuration);
     this.finishSetup();
   }
 
@@ -261,7 +257,6 @@ public class HTable implements HTableInterface {
     }
     this.tableName = tableName;
     this.cleanupConnectionOnClose = true;
-    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(conf);
     this.finishSetup();
   }
 
@@ -308,7 +303,6 @@ public class HTable implements HTableInterface {
     this.cleanupConnectionOnClose = false;
     this.connection = connection;
     this.configuration = connection.getConfiguration();
-    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(configuration);
     this.tableConfiguration = tableConfig;
     this.pool = pool;
     if (pool == null) {
@@ -335,7 +329,6 @@ public class HTable implements HTableInterface {
     tableConfiguration = new TableConfiguration(connection.getConfiguration());
     cleanupPoolOnClose = false;
     cleanupConnectionOnClose = false;
-    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(new Configuration());
     // used from tests, don't trust the connection is real
     this.mutator = new BufferedMutatorImpl(conn, null, null, params);
   }
@@ -572,7 +565,7 @@ public class HTable implements HTableInterface {
     // TODO: This is the same as HBaseAdmin.getTableDescriptor(). Only keep one.
     if (tableName == null) return null;
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return metaTableDescriptor;
+      return HTableDescriptor.META_TABLEDESC;
     }
     HTableDescriptor htd = executeMasterCallable(
       new MasterCallable<HTableDescriptor>(getConnection()) {

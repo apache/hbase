@@ -23,7 +23,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,12 +31,12 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -94,49 +93,54 @@ public class TruncateTableHandler extends DeleteTableHandler {
 
     AssignmentManager assignmentManager = this.masterServices.getAssignmentManager();
 
-    // 1. Create Table Descriptor
-    HTableDescriptor underConstruction = new HTableDescriptor(this.hTableDescriptor);
-    Path tempTableDir = FSUtils.getTableDir(tempdir, this.tableName);
+    // 1. Set table znode
+    CreateTableHandler.checkAndSetEnablingTable(assignmentManager, tableName);
+    try {
+      // 1. Create Table Descriptor
+      Path tempTableDir = FSUtils.getTableDir(tempdir, this.tableName);
+      new FSTableDescriptors(server.getConfiguration())
+        .createTableDescriptorForTableDirectory(tempTableDir, this.hTableDescriptor, false);
+      Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), this.tableName);
 
-    ((FSTableDescriptors)(masterServices.getTableDescriptors()))
-        .createTableDescriptorForTableDirectory(tempTableDir, underConstruction, false);
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), this.tableName);
+      HRegionInfo[] newRegions;
+      if (this.preserveSplits) {
+        newRegions = regions.toArray(new HRegionInfo[regions.size()]);
+        LOG.info("Truncate will preserve " + newRegions.length + " regions");
+      } else {
+        newRegions = new HRegionInfo[1];
+        newRegions[0] = new HRegionInfo(this.tableName, null, null);
+        LOG.info("Truncate will not preserve the regions");
+      }
 
-    HRegionInfo[] newRegions;
-    if (this.preserveSplits) {
-      newRegions = regions.toArray(new HRegionInfo[regions.size()]);
-      LOG.info("Truncate will preserve " + newRegions.length + " regions");
-    } else {
-      newRegions = new HRegionInfo[1];
-      newRegions[0] = new HRegionInfo(this.tableName, null, null);
-      LOG.info("Truncate will not preserve the regions");
-    }
-
-    // 2. Create Regions
-    List<HRegionInfo> regionInfos = ModifyRegionUtils.createRegions(
+      // 2. Create Regions
+      List<HRegionInfo> regionInfos = ModifyRegionUtils.createRegions(
         masterServices.getConfiguration(), tempdir,
         this.hTableDescriptor, newRegions, null);
 
-    // 3. Move Table temp directory to the hbase root location
-    if (!fs.rename(tempTableDir, tableDir)) {
-      throw new IOException("Unable to move table from temp=" + tempTableDir +
+      // 3. Move Table temp directory to the hbase root location
+      if (!fs.rename(tempTableDir, tableDir)) {
+        throw new IOException("Unable to move table from temp=" + tempTableDir +
           " to hbase root=" + tableDir);
-    }
+      }
 
-    // populate descriptors cache to be visible in getAll
-    masterServices.getTableDescriptors().get(tableName);
-
-    assignmentManager.getTableStateManager().setTableState(tableName,
-        TableState.State.ENABLING);
-    // 4. Add regions to META
-    MetaTableAccessor.addRegionsToMeta(masterServices.getConnection(),
+      // 4. Add regions to META
+      MetaTableAccessor.addRegionsToMeta(masterServices.getConnection(),
         regionInfos, hTableDescriptor.getRegionReplication());
 
-    // 5. Trigger immediate assignment of the regions in round-robin fashion
-    ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);
+      // 5. Trigger immediate assignment of the regions in round-robin fashion
+      ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);
 
-    // 6. Set table enabled flag up in zk.
-    assignmentManager.getTableStateManager().setTableState(tableName,
-        TableState.State.ENABLED);
+      // 6. Set table enabled flag up in zk.
+      try {
+        assignmentManager.getTableStateManager().setTableState(tableName,
+          ZooKeeperProtos.Table.State.ENABLED);
+      } catch (CoordinatedStateException e) {
+        throw new IOException("Unable to ensure that " + tableName + " will be" +
+          " enabled because of a ZooKeeper issue", e);
+      }
+    } catch (IOException e) {
+      CreateTableHandler.removeEnablingTable(assignmentManager, tableName);
+      throw e;
+    }
   }
 }

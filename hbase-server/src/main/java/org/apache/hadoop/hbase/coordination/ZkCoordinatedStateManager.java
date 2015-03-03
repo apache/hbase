@@ -19,10 +19,14 @@ package org.apache.hadoop.hbase.coordination;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableStateManager;
+import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * ZooKeeper-based implementation of {@link org.apache.hadoop.hbase.CoordinatedStateManager}.
@@ -54,6 +58,16 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
   @Override
   public Server getServer() {
     return server;
+  }
+
+  @Override
+  public TableStateManager getTableStateManager() throws InterruptedException,
+      CoordinatedStateException {
+    try {
+      return new ZKTableStateManager(server.getZooKeeper());
+    } catch (KeeperException e) {
+      throw new CoordinatedStateException(e);
+    }
   }
 
   @Override

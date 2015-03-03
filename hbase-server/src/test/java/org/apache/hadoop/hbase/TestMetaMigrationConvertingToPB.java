@@ -270,7 +270,7 @@ public class TestMetaMigrationConvertingToPB {
    */
   void verifyMetaRowsAreUpdated(HConnection hConnection)
       throws IOException {
-    List<Result> results = MetaTableAccessor.fullScanRegions(hConnection);
+    List<Result> results = MetaTableAccessor.fullScan(hConnection);
     assertTrue(results.size() >= REGION_COUNT);
 
     for (Result result : results) {

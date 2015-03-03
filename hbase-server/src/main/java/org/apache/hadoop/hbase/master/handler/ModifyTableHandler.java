@@ -37,12 +37,12 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
@@ -65,7 +65,7 @@ public class ModifyTableHandler extends TableEventHandler {
     // Check operation is possible on the table in its current state
     // Also checks whether the table exists
     if (masterServices.getAssignmentManager().getTableStateManager()
-        .isTableState(this.htd.getTableName(), TableState.State.ENABLED)
+        .isTableState(this.htd.getTableName(), ZooKeeperProtos.Table.State.ENABLED)
         && this.htd.getRegionReplication() != getTableDescriptor().getRegionReplication()) {
       throw new IOException("REGION_REPLICATION change is not supported for enabled tables");
     }

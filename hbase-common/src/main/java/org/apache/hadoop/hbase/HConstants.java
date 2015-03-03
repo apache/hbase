@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -442,16 +443,6 @@ public final class HConstants {
   /** The upper-half merge region column qualifier */
   public static final byte[] MERGEB_QUALIFIER = Bytes.toBytes("mergeB");
 
-  /** The catalog family as a string*/
-  public static final String TABLE_FAMILY_STR = "table";
-
-  /** The catalog family */
-  public static final byte [] TABLE_FAMILY = Bytes.toBytes(TABLE_FAMILY_STR);
-
-  /** The serialized table state qualifier */
-  public static final byte[] TABLE_STATE_QUALIFIER = Bytes.toBytes("state");
-
-
   /**
    * The meta table version column qualifier.
    * We keep current version of the meta table in this column in <code>-ROOT-</code>
@@ -739,8 +730,7 @@ public final class HConstants {
   /**
    * The client scanner timeout period in milliseconds.
    */
-  public static final String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD =
-      "hbase.client.scanner.timeout.period";
+  public static final String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = "hbase.client.scanner.timeout.period";
 
   /**
    * Use {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD} instead.

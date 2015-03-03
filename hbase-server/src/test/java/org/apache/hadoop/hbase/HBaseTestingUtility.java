@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -41,7 +40,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -70,7 +68,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -2143,8 +2140,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       assertEquals(failMsg, result.getColumnCells(f, null).size(), 1);
       Cell cell = result.getColumnLatestCell(f, null);
       assertTrue(failMsg,
-          Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
-              cell.getValueLength()));
+        Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
     }
   }
 
@@ -2256,16 +2253,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Table meta = new HTable(conf, TableName.META_TABLE_NAME);
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
     List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
-    TableName tableName = htd.getTableName();
     // add custom ones
     for (int i = 0; i < startKeys.length; i++) {
       int j = (i + 1) % startKeys.length;
-      HRegionInfo hri = new HRegionInfo(tableName, startKeys[i],
+      HRegionInfo hri = new HRegionInfo(htd.getTableName(), startKeys[i],
           startKeys[j]);
       MetaTableAccessor.addRegionToMeta(meta, hri);
       newRegions.add(hri);
     }
-    MetaTableAccessor.updateTableState(getConnection(), tableName, TableState.State.ENABLED);
+
     meta.close();
     return newRegions;
   }
@@ -2842,7 +2838,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   public String explainTableAvailability(TableName tableName) throws IOException {
-    String msg = explainTableState(tableName, TableState.State.ENABLED) + ", ";
+    String msg = explainTableState(tableName) + ",";
     if (getHBaseCluster().getMaster().isAlive()) {
       Map<HRegionInfo, ServerName> assignments =
           getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
@@ -2870,36 +2866,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return msg;
   }
 
-  public String explainTableState(final TableName table, TableState.State state)
-      throws IOException {
-    TableState tableState = MetaTableAccessor.getTableState(connection, table);
-    if (tableState == null) {
-      return "TableState in META: No table state in META for table " + table
-          + " last state in meta (including deleted is " + findLastTableState(table) + ")";
-    } else if (!tableState.inStates(state)) {
-      return "TableState in META: Not " + state + " state, but " + tableState;
-    } else {
-      return "TableState in META: OK";
+  public String explainTableState(TableName tableName) throws IOException {
+    try {
+      if (getHBaseAdmin().isTableEnabled(tableName))
+        return "table enabled in zk";
+      else if (getHBaseAdmin().isTableDisabled(tableName))
+        return "table disabled in zk";
+      else
+        return "table in uknown state";
+    } catch (TableNotFoundException e) {
+      return "table not exists";
     }
-  }
-
-  @Nullable
-  public TableState findLastTableState(final TableName table) throws IOException {
-    final AtomicReference<TableState> lastTableState = new AtomicReference<>(null);
-    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
-      @Override
-      public boolean visit(Result r) throws IOException {
-        if (!Arrays.equals(r.getRow(), table.getName()))
-          return false;
-        TableState state = MetaTableAccessor.getTableState(r);
-        if (state != null)
-          lastTableState.set(state);
-        return true;
-      }
-    };
-    MetaTableAccessor
-        .fullScan(connection, visitor, table.getName(), MetaTableAccessor.QueryType.TABLE, true);
-    return lastTableState.get();
   }
 
   /**
@@ -2919,8 +2896,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     long startWait = System.currentTimeMillis();
     while (!admin.isTableAvailable(TableName.valueOf(table))) {
       assertTrue("Timed out waiting for table to become available " +
-              Bytes.toStringBinary(table),
-          System.currentTimeMillis() - startWait < timeoutMillis);
+        Bytes.toStringBinary(table),
+        System.currentTimeMillis() - startWait < timeoutMillis);
       Thread.sleep(200);
     }
   }
@@ -3176,9 +3153,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
               HRegionInfo info = HRegionInfo.parseFromOrNull(b);
               if (info != null && info.getTable().equals(tableName)) {
                 b = r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-                if (b == null) {
-                  LOG.debug(info.getEncodedName() + " is not assigned yet");
-                }
                 allRegionsAssigned &= (b != null);
               }
             }
@@ -3207,7 +3181,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         @Override
         public boolean evaluate() throws IOException {
           List<HRegionInfo> hris = states.getRegionsOfTable(tableName);
-          LOG.debug("Regions are " + hris);
           return hris != null && !hris.isEmpty();
         }
       });
@@ -3686,7 +3659,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           Collection<HRegion> hrs = rs.getOnlineRegionsLocalContext();
           for (HRegion r: hrs) {
             assertTrue("Region should not be double assigned",
-                r.getRegionId() != hri.getRegionId());
+              r.getRegionId() != hri.getRegionId());
           }
         }
         return; // good, we are happy
@@ -3696,7 +3669,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       Thread.sleep(10);
     }
     fail("Could not find region " + hri.getRegionNameAsString()
-        + " on server " + server);
+      + " on server " + server);
   }
 
   public HRegion createTestRegion(String tableName, HColumnDescriptor hcd)
@@ -3766,7 +3739,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return new ExplainingPredicate<IOException>() {
       @Override
       public String explainFailure() throws IOException {
-        return explainTableState(tableName, TableState.State.ENABLED);
+        return explainTableState(tableName);
       }
 
       @Override
@@ -3783,7 +3756,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return new ExplainingPredicate<IOException>() {
       @Override
       public String explainFailure() throws IOException {
-        return explainTableState(tableName, TableState.State.DISABLED);
+        return explainTableState(tableName);
       }
 
       @Override
