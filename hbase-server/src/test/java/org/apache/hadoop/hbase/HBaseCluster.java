@@ -139,6 +139,26 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
+  @Deprecated
+  public void waitForRegionServerToStart(String hostname, long timeout) throws IOException {
+    long start = System.currentTimeMillis();
+    while ((System.currentTimeMillis() - start) < timeout) {
+      for (ServerName server : getClusterStatus().getServers()) {
+        if (server.getHostname().equals(hostname)) {
+          return;
+        }
+      }
+      Threads.sleep(100);
+    }
+    throw new IOException("did timeout " + timeout + "ms waiting for region server to start: "
+        + hostname);
+  }
+
+  /**
+   * Wait for the specified region server to join the cluster
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
   public void waitForRegionServerToStart(String hostname, int port, long timeout)
       throws IOException {
     long start = System.currentTimeMillis();

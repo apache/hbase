@@ -232,6 +232,11 @@ public class MiniHBaseCluster extends HBaseCluster {
     }
   }
 
+  @Deprecated
+  public void startRegionServer(String hostname) throws IOException {
+    this.startRegionServer();
+  }
+
   @Override
   public void startRegionServer(String hostname, int port) throws IOException {
     this.startRegionServer();
