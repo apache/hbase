@@ -131,10 +131,10 @@ public class ChoreService implements ChoreServicer {
     if (chore == null) return false;
 
     try {
+      chore.setChoreServicer(this);
       ScheduledFuture<?> future =
           scheduler.scheduleAtFixedRate(chore, chore.getInitialDelay(), chore.getPeriod(),
             chore.getTimeUnit());
-      chore.setChoreServicer(this);
       scheduledChores.put(chore, future);
       return true;
     } catch (Exception exception) {
