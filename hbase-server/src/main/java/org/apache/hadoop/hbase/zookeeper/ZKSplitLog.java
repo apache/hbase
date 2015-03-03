@@ -79,6 +79,19 @@ public class ZKSplitLog {
     return ZKUtil.joinZNode(zkw.splitLogZNode, "RESCAN");
   }
 
+  /**
+   * @param name the last part in path
+   * @return whether the node name represents a rescan node
+   */
+  public static boolean isRescanNode(String name) {
+    return name.startsWith("RESCAN");
+  }
+
+  /**
+   * @param zkw
+   * @param path the absolute path, starts with '/'
+   * @return whether the path represents a rescan node
+   */
   public static boolean isRescanNode(ZooKeeperWatcher zkw, String path) {
     String prefix = getRescanNode(zkw);
     if (path.length() <= prefix.length()) {
