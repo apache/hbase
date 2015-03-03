@@ -77,11 +77,20 @@ public class TestAcidGuarantees implements Tool {
   // when run as main
   private Configuration conf;
 
-  private void createTableIfMissing()
+  private void createTableIfMissing(boolean useMob)
     throws IOException {
     try {
       util.createTable(TABLE_NAME, FAMILIES);
     } catch (TableExistsException tee) {
+    }
+
+    if (useMob) {
+      HTableDescriptor htd = util.getHBaseAdmin().getTableDescriptor(TABLE_NAME);
+      HColumnDescriptor hcd =  htd.getColumnFamilies()[0];
+      // force mob enabled such that all data is mob data
+      hcd.setMobEnabled(true);
+      hcd.setMobThreshold(4);
+      util.getHBaseAdmin().modifyColumn(TABLE_NAME, hcd);
     }
   }
 
@@ -92,6 +101,7 @@ public class TestAcidGuarantees implements Tool {
     // prevent aggressive region split
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
             ConstantSizeRegionSplitPolicy.class.getName());
+    conf.setInt("hfile.format.version", 3); // for mob tests
     util = new HBaseTestingUtility(conf);
   }
 
@@ -267,7 +277,19 @@ public class TestAcidGuarantees implements Tool {
       int numScanners,
       int numUniqueRows,
       final boolean systemTest) throws Exception {
-    createTableIfMissing();
+    runTestAtomicity(millisToRun, numWriters, numGetters, numScanners, numUniqueRows, systemTest,
+            false);
+  }
+
+  public void runTestAtomicity(long millisToRun,
+    int numWriters,
+    int numGetters,
+    int numScanners,
+    int numUniqueRows,
+    final boolean systemTest,
+    final boolean useMob) throws Exception {
+
+    createTableIfMissing(useMob);
     TestContext ctx = new TestContext(util.getConfiguration());
 
     byte rows[][] = new byte[numUniqueRows][];
@@ -367,6 +389,42 @@ public class TestAcidGuarantees implements Tool {
     }
   }
 
+  @Test
+  public void testMobGetAtomicity() throws Exception {
+    util.startMiniCluster(1);
+    try {
+      boolean systemTest = false;
+      boolean useMob = true;
+      runTestAtomicity(20000, 5, 5, 0, 3, systemTest, useMob);
+    } finally {
+      util.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testMobScanAtomicity() throws Exception {
+    util.startMiniCluster(1);
+    try {
+      boolean systemTest = false;
+      boolean useMob = true;
+      runTestAtomicity(20000, 5, 0, 5, 3, systemTest, useMob);
+    } finally {
+      util.shutdownMiniCluster();
+    }
+  }
+
+  @Test
+  public void testMobMixedAtomicity() throws Exception {
+    util.startMiniCluster(1);
+    try {
+      boolean systemTest = false;
+      boolean useMob = true;
+      runTestAtomicity(20000, 5, 2, 2, 3, systemTest, useMob);
+    } finally {
+      util.shutdownMiniCluster();
+    }
+  }
+
   ////////////////////////////////////////////////////////////////////////////
   // Tool interface
   ////////////////////////////////////////////////////////////////////////////
@@ -389,7 +447,9 @@ public class TestAcidGuarantees implements Tool {
     int numGetters = c.getInt("numGetters", 2);
     int numScanners = c.getInt("numScanners", 2);
     int numUniqueRows = c.getInt("numUniqueRows", 3);
-    runTestAtomicity(millis, numWriters, numGetters, numScanners, numUniqueRows, true);
+    boolean useMob = c.getBoolean("useMob",false);
+    assert useMob && c.getInt("hfile.format.version", 2) == 3 : "Mob runs must use hfile v3";
+    runTestAtomicity(millis, numWriters, numGetters, numScanners, numUniqueRows, true, useMob);
     return 0;
   }
 
