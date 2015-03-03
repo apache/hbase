@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -312,6 +313,8 @@ public class TestHRegionReplayEvents {
         long storeMemstoreSize = store.getMemStoreSize();
         long regionMemstoreSize = secondaryRegion.getMemstoreSize().get();
         long storeFlushableSize = store.getFlushableSize();
+        long storeSize = store.getSize();
+        long storeSizeUncompressed = store.getStoreSizeUncompressed();
         if (flushDesc.getAction() == FlushAction.START_FLUSH) {
           LOG.info("-- Replaying flush start in secondary");
           PrepareFlushResult result = secondaryRegion.replayWALFlushStartMarker(flushDesc);
@@ -339,6 +342,11 @@ public class TestHRegionReplayEvents {
           // assert that the region memstore is smaller now
           long newRegionMemstoreSize = secondaryRegion.getMemstoreSize().get();
           assertTrue(regionMemstoreSize > newRegionMemstoreSize);
+
+          // assert that the store sizes are bigger
+          assertTrue(store.getSize() > storeSize);
+          assertTrue(store.getStoreSizeUncompressed() > storeSizeUncompressed);
+          assertEquals(store.getSize(), store.getStorefilesSize());
         }
         // after replay verify that everything is still visible
         verifyData(secondaryRegion, 0, lastReplayed+1, cq, families);
@@ -1110,6 +1118,207 @@ public class TestHRegionReplayEvents {
     secondaryRegion.close();
     verify(walSecondary, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(),
       (WALKey)any(), (WALEdit)any(), (AtomicLong)any(), anyBoolean(), (List<Cell>) any());
+  }
+
+  /**
+   * Tests the reads enabled flag for the region. When unset all reads should be rejected
+   */
+  @Test
+  public void testRegionReadsEnabledFlag() throws IOException {
+
+    putDataByReplay(secondaryRegion, 0, 100, cq, families);
+
+    verifyData(secondaryRegion, 0, 100, cq, families);
+
+    // now disable reads
+    secondaryRegion.setReadsEnabled(false);
+    try {
+      verifyData(secondaryRegion, 0, 100, cq, families);
+      fail("Should have failed with IOException");
+    } catch(IOException ex) {
+      // expected
+    }
+
+    // verify that we can still replay data
+    putDataByReplay(secondaryRegion, 100, 100, cq, families);
+
+    // now enable reads again
+    secondaryRegion.setReadsEnabled(true);
+    verifyData(secondaryRegion, 0, 200, cq, families);
+  }
+
+  /**
+   * Tests the case where a request for flush cache is sent to the region, but region cannot flush.
+   * It should write the flush request marker instead.
+   */
+  @Test
+  public void testWriteFlushRequestMarker() throws IOException {
+    // primary region is empty at this point. Request a flush with writeFlushRequestWalMarker=false
+    FlushResult result = primaryRegion.flushcache(true, false);
+    assertNotNull(result);
+    assertEquals(result.result, FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY);
+    assertFalse(result.wroteFlushWalMarker);
+
+    // request flush again, but this time with writeFlushRequestWalMarker = true
+    result = primaryRegion.flushcache(true, true);
+    assertNotNull(result);
+    assertEquals(result.result, FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY);
+    assertTrue(result.wroteFlushWalMarker);
+
+    List<FlushDescriptor> flushes = Lists.newArrayList();
+    reader = createWALReaderForPrimary();
+    while (true) {
+      WAL.Entry entry = reader.next();
+      if (entry == null) {
+        break;
+      }
+      FlushDescriptor flush = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      if (flush != null) {
+        flushes.add(flush);
+      }
+    }
+
+    assertEquals(1, flushes.size());
+    assertNotNull(flushes.get(0));
+    assertEquals(FlushDescriptor.FlushAction.CANNOT_FLUSH, flushes.get(0).getAction());
+  }
+
+  /**
+   * Test the case where the secondary region replica is not in reads enabled state because it is
+   * waiting for a flush or region open marker from primary region. Replaying CANNOT_FLUSH
+   * flush marker entry should restore the reads enabled status in the region and allow the reads
+   * to continue.
+   */
+  @Test
+  public void testReplayingFlushRequestRestoresReadsEnabledState() throws IOException {
+    disableReads(secondaryRegion);
+
+    // Test case 1: Test that replaying CANNOT_FLUSH request marker assuming this came from
+    // triggered flush restores readsEnabled
+    primaryRegion.flushcache(true, true);
+    reader = createWALReaderForPrimary();
+    while (true) {
+      WAL.Entry entry = reader.next();
+      if (entry == null) {
+        break;
+      }
+      FlushDescriptor flush = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      if (flush != null) {
+        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getLogSeqNum());
+      }
+    }
+
+    // now reads should be enabled
+    secondaryRegion.get(new Get(Bytes.toBytes(0)));
+  }
+
+  /**
+   * Test the case where the secondary region replica is not in reads enabled state because it is
+   * waiting for a flush or region open marker from primary region. Replaying flush start and commit
+   * entries should restore the reads enabled status in the region and allow the reads
+   * to continue.
+   */
+  @Test
+  public void testReplayingFlushRestoresReadsEnabledState() throws IOException {
+    // Test case 2: Test that replaying FLUSH_START and FLUSH_COMMIT markers assuming these came
+    // from triggered flush restores readsEnabled
+    disableReads(secondaryRegion);
+
+    // put some data in primary
+    putData(primaryRegion, Durability.SYNC_WAL, 0, 100, cq, families);
+    primaryRegion.flushcache();
+
+    reader = createWALReaderForPrimary();
+    while (true) {
+      WAL.Entry entry = reader.next();
+      if (entry == null) {
+        break;
+      }
+      FlushDescriptor flush = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      if (flush != null) {
+        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getLogSeqNum());
+      } else {
+        replayEdit(secondaryRegion, entry);
+      }
+    }
+
+    // now reads should be enabled
+    verifyData(secondaryRegion, 0, 100, cq, families);
+  }
+
+  /**
+   * Test the case where the secondary region replica is not in reads enabled state because it is
+   * waiting for a flush or region open marker from primary region. Replaying flush start and commit
+   * entries should restore the reads enabled status in the region and allow the reads
+   * to continue.
+   */
+  @Test
+  public void testReplayingFlushWithEmptyMemstoreRestoresReadsEnabledState() throws IOException {
+    // Test case 2: Test that replaying FLUSH_START and FLUSH_COMMIT markers assuming these came
+    // from triggered flush restores readsEnabled
+    disableReads(secondaryRegion);
+
+    // put some data in primary
+    putData(primaryRegion, Durability.SYNC_WAL, 0, 100, cq, families);
+    primaryRegion.flushcache();
+
+    reader = createWALReaderForPrimary();
+    while (true) {
+      WAL.Entry entry = reader.next();
+      if (entry == null) {
+        break;
+      }
+      FlushDescriptor flush = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      if (flush != null) {
+        secondaryRegion.replayWALFlushMarker(flush, entry.getKey().getLogSeqNum());
+      }
+    }
+
+    // now reads should be enabled
+    verifyData(secondaryRegion, 0, 100, cq, families);
+  }
+
+  /**
+   * Test the case where the secondary region replica is not in reads enabled state because it is
+   * waiting for a flush or region open marker from primary region. Replaying region open event
+   * entry from primary should restore the reads enabled status in the region and allow the reads
+   * to continue.
+   */
+  @Test
+  public void testReplayingRegionOpenEventRestoresReadsEnabledState() throws IOException {
+    // Test case 3: Test that replaying region open event markers restores readsEnabled
+    disableReads(secondaryRegion);
+
+    primaryRegion.close();
+    primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
+
+    reader = createWALReaderForPrimary();
+    while (true) {
+      WAL.Entry entry = reader.next();
+      if (entry == null) {
+        break;
+      }
+
+      RegionEventDescriptor regionEventDesc
+        = WALEdit.getRegionEventDescriptor(entry.getEdit().getCells().get(0));
+
+      if (regionEventDesc != null) {
+        secondaryRegion.replayWALRegionEventMarker(regionEventDesc);
+      }
+    }
+
+    // now reads should be enabled
+    secondaryRegion.get(new Get(Bytes.toBytes(0)));
+  }
+
+  private void disableReads(HRegion region) {
+    region.setReadsEnabled(false);
+    try {
+      verifyData(region, 0, 1, cq, families);
+      fail("Should have failed with IOException");
+    } catch(IOException ex) {
+      // expected
+    }
   }
 
   private void replay(HRegion region, Put put, long replaySeqId) throws IOException {

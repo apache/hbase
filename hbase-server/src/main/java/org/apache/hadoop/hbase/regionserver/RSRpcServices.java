@@ -724,7 +724,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             }
             FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(metaCell);
             if (flushDesc != null && !isDefaultReplica) {
-              region.replayWALFlushMarker(flushDesc);
+              region.replayWALFlushMarker(flushDesc, replaySeqId);
               continue;
             }
             RegionEventDescriptor regionEvent = WALEdit.getRegionEventDescriptor(metaCell);
@@ -1091,18 +1091,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       FlushRegionResponse.Builder builder = FlushRegionResponse.newBuilder();
       if (shouldFlush) {
+        boolean writeFlushWalMarker =  request.hasWriteFlushWalMarker() ?
+            request.getWriteFlushWalMarker() : false;
         long startTime = EnvironmentEdgeManager.currentTime();
-        HRegion.FlushResult flushResult = region.flushcache();
+        HRegion.FlushResult flushResult = region.flushcache(true, writeFlushWalMarker);
         if (flushResult.isFlushSucceeded()) {
           long endTime = EnvironmentEdgeManager.currentTime();
           regionServer.metricsRegionServer.updateFlushTime(endTime - startTime);
         }
-        boolean result = flushResult.isCompactionNeeded();
-        if (result) {
+        boolean compactionNeeded = flushResult.isCompactionNeeded();
+        if (compactionNeeded) {
           regionServer.compactSplitThread.requestSystemCompaction(region,
             "Compaction through user triggered flush");
         }
-        builder.setFlushed(result);
+        builder.setFlushed(flushResult.isFlushSucceeded());
+        builder.setWroteFlushWalMarker(flushResult.wroteFlushWalMarker);
       }
       builder.setLastFlushTime( region.getEarliestFlushTimeForAllStores());
       return builder.build();
@@ -1460,7 +1463,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               "regions. First region:" + regionName.toStringUtf8() + " , other region:"
               + entry.getKey().getEncodedRegionName());
         }
-        if (regionServer.nonceManager != null) {
+        if (regionServer.nonceManager != null && isPrimary) {
           long nonceGroup = entry.getKey().hasNonceGroup()
             ? entry.getKey().getNonceGroup() : HConstants.NO_NONCE;
           long nonce = entry.getKey().hasNonce() ? entry.getKey().getNonce() : HConstants.NO_NONCE;

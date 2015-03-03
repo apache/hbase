@@ -37,22 +37,22 @@ public enum EventType {
   // Messages originating from RS (NOTE: there is NO direct communication from
   // RS to Master). These are a result of RS updates into ZK.
   // RS_ZK_REGION_CLOSING    (1),   // It is replaced by M_ZK_REGION_CLOSING(HBASE-4739)
-  
+
   /**
    * RS_ZK_REGION_CLOSED<br>
-   * 
+   *
    * RS has finished closing a region.
    */
   RS_ZK_REGION_CLOSED       (2, ExecutorType.MASTER_CLOSE_REGION),
   /**
    * RS_ZK_REGION_OPENING<br>
-   * 
+   *
    * RS is in process of opening a region.
    */
   RS_ZK_REGION_OPENING      (3, null),
   /**
    * RS_ZK_REGION_OPENED<br>
-   * 
+   *
    * RS has finished opening a region.
    */
   RS_ZK_REGION_OPENED       (4, ExecutorType.MASTER_OPEN_REGION),
@@ -70,7 +70,7 @@ public enum EventType {
   RS_ZK_REGION_SPLIT        (6, ExecutorType.MASTER_SERVER_OPERATIONS),
   /**
    * RS_ZK_REGION_FAILED_OPEN<br>
-   * 
+   *
    * RS failed to open a region.
    */
   RS_ZK_REGION_FAILED_OPEN  (7, ExecutorType.MASTER_CLOSE_REGION),
@@ -217,7 +217,7 @@ public enum EventType {
    * Master adds this region as closing in ZK
    */
   M_ZK_REGION_CLOSING       (51, null),
-  
+
   /**
    * Master controlled events to be executed on the master
    * M_SERVER_SHUTDOWN
@@ -232,14 +232,14 @@ public enum EventType {
   M_META_SERVER_SHUTDOWN    (72, ExecutorType.MASTER_META_SERVER_OPERATIONS),
   /**
    * Master controlled events to be executed on the master.<br>
-   * 
+   *
    * M_MASTER_RECOVERY<br>
    * Master is processing recovery of regions found in ZK RIT
    */
   M_MASTER_RECOVERY         (73, ExecutorType.MASTER_SERVER_OPERATIONS),
   /**
    * Master controlled events to be executed on the master.<br>
-   * 
+   *
    * M_LOG_REPLAY<br>
    * Master is processing log replay of failed region server
    */
@@ -247,18 +247,25 @@ public enum EventType {
 
   /**
    * RS controlled events to be executed on the RS.<br>
-   * 
+   *
    * RS_PARALLEL_SEEK
    */
   RS_PARALLEL_SEEK          (80, ExecutorType.RS_PARALLEL_SEEK),
-  
+
   /**
    * RS wal recovery work items(either creating recover.edits or directly replay wals)
    * to be executed on the RS.<br>
-   * 
+   *
    * RS_LOG_REPLAY
    */
-  RS_LOG_REPLAY             (81, ExecutorType.RS_LOG_REPLAY_OPS);
+  RS_LOG_REPLAY             (81, ExecutorType.RS_LOG_REPLAY_OPS),
+
+  /**
+   * RS flush triggering from secondary region replicas to primary region replica. <br>
+   *
+   * RS_REGION_REPLICA_FLUSH
+   */
+  RS_REGION_REPLICA_FLUSH   (82, ExecutorType.RS_REGION_REPLICA_FLUSH_OPS);
 
   private final int code;
   private final ExecutorType executor;

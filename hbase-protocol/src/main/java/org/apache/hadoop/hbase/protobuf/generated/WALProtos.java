@@ -5695,6 +5695,14 @@ public final class WALProtos {
        * <code>ABORT_FLUSH = 2;</code>
        */
       ABORT_FLUSH(2, 2),
+      /**
+       * <code>CANNOT_FLUSH = 3;</code>
+       *
+       * <pre>
+       * marker for indicating that a flush has been requested but cannot complete
+       * </pre>
+       */
+      CANNOT_FLUSH(3, 3),
       ;
 
       /**
@@ -5709,6 +5717,14 @@ public final class WALProtos {
        * <code>ABORT_FLUSH = 2;</code>
        */
       public static final int ABORT_FLUSH_VALUE = 2;
+      /**
+       * <code>CANNOT_FLUSH = 3;</code>
+       *
+       * <pre>
+       * marker for indicating that a flush has been requested but cannot complete
+       * </pre>
+       */
+      public static final int CANNOT_FLUSH_VALUE = 3;
 
 
       public final int getNumber() { return value; }
@@ -5718,6 +5734,7 @@ public final class WALProtos {
           case 0: return START_FLUSH;
           case 1: return COMMIT_FLUSH;
           case 2: return ABORT_FLUSH;
+          case 3: return CANNOT_FLUSH;
           default: return null;
         }
       }
@@ -11848,7 +11865,7 @@ public final class WALProtos {
       "n_name\030\002 \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020com" +
       "paction_input\030\004 \003(\t\022\031\n\021compaction_output" +
       "\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(\t\022\023\n\013region" +
-      "_name\030\007 \001(\014\"\200\003\n\017FlushDescriptor\022,\n\006actio" +
+      "_name\030\007 \001(\014\"\222\003\n\017FlushDescriptor\022,\n\006actio" +
       "n\030\001 \002(\0162\034.FlushDescriptor.FlushAction\022\022\n",
       "\ntable_name\030\002 \002(\014\022\033\n\023encoded_region_name" +
       "\030\003 \002(\014\022\035\n\025flush_sequence_number\030\004 \001(\004\022<\n" +
@@ -11856,25 +11873,26 @@ public final class WALProtos {
       "toreFlushDescriptor\022\023\n\013region_name\030\006 \001(\014" +
       "\032Y\n\024StoreFlushDescriptor\022\023\n\013family_name\030" +
       "\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022\024\n\014flush_o" +
-      "utput\030\003 \003(\t\"A\n\013FlushAction\022\017\n\013START_FLUS" +
-      "H\020\000\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013ABORT_FLUSH\020\002\"R" +
-      "\n\017StoreDescriptor\022\023\n\013family_name\030\001 \002(\014\022\026" +
-      "\n\016store_home_dir\030\002 \002(\t\022\022\n\nstore_file\030\003 \003",
-      "(\t\"\215\001\n\022BulkLoadDescriptor\022\036\n\ntable_name\030" +
-      "\001 \002(\0132\n.TableName\022\033\n\023encoded_region_name" +
-      "\030\002 \002(\014\022 \n\006stores\030\003 \003(\0132\020.StoreDescriptor" +
-      "\022\030\n\020bulkload_seq_num\030\004 \002(\003\"\237\002\n\025RegionEve" +
-      "ntDescriptor\0224\n\nevent_type\030\001 \002(\0162 .Regio" +
-      "nEventDescriptor.EventType\022\022\n\ntable_name" +
-      "\030\002 \002(\014\022\033\n\023encoded_region_name\030\003 \002(\014\022\033\n\023l" +
-      "og_sequence_number\030\004 \001(\004\022 \n\006stores\030\005 \003(\013" +
-      "2\020.StoreDescriptor\022\033\n\006server\030\006 \001(\0132\013.Ser" +
-      "verName\022\023\n\013region_name\030\007 \001(\014\".\n\tEventTyp",
-      "e\022\017\n\013REGION_OPEN\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\n" +
-      "WALTrailer*F\n\tScopeType\022\033\n\027REPLICATION_S" +
-      "COPE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL" +
-      "\020\001B?\n*org.apache.hadoop.hbase.protobuf.g" +
-      "eneratedB\tWALProtosH\001\210\001\000\240\001\001"
+      "utput\030\003 \003(\t\"S\n\013FlushAction\022\017\n\013START_FLUS" +
+      "H\020\000\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013ABORT_FLUSH\020\002\022\020" +
+      "\n\014CANNOT_FLUSH\020\003\"R\n\017StoreDescriptor\022\023\n\013f" +
+      "amily_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t",
+      "\022\022\n\nstore_file\030\003 \003(\t\"\215\001\n\022BulkLoadDescrip" +
+      "tor\022\036\n\ntable_name\030\001 \002(\0132\n.TableName\022\033\n\023e" +
+      "ncoded_region_name\030\002 \002(\014\022 \n\006stores\030\003 \003(\013" +
+      "2\020.StoreDescriptor\022\030\n\020bulkload_seq_num\030\004" +
+      " \002(\003\"\237\002\n\025RegionEventDescriptor\0224\n\nevent_" +
+      "type\030\001 \002(\0162 .RegionEventDescriptor.Event" +
+      "Type\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_regi" +
+      "on_name\030\003 \002(\014\022\033\n\023log_sequence_number\030\004 \001" +
+      "(\004\022 \n\006stores\030\005 \003(\0132\020.StoreDescriptor\022\033\n\006" +
+      "server\030\006 \001(\0132\013.ServerName\022\023\n\013region_name",
+      "\030\007 \001(\014\".\n\tEventType\022\017\n\013REGION_OPEN\020\000\022\020\n\014" +
+      "REGION_CLOSE\020\001\"\014\n\nWALTrailer*F\n\tScopeTyp" +
+      "e\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLIC" +
+      "ATION_SCOPE_GLOBAL\020\001B?\n*org.apache.hadoo" +
+      "p.hbase.protobuf.generatedB\tWALProtosH\001\210" +
+      "\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

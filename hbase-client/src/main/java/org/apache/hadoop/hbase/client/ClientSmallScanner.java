@@ -104,14 +104,14 @@ public class ClientSmallScanner extends ClientScanner {
       if (endKey == null || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)
           || checkScanStopRow(endKey) || done) {
         close();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Finished with small scan at " + this.currentRegion);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Finished with small scan at " + this.currentRegion);
         }
         return false;
       }
       localStartKey = endKey;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Finished with region " + this.currentRegion);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Finished with region " + this.currentRegion);
       }
     } else if (this.lastResult != null) {
       localStartKey = this.lastResult.getRow();

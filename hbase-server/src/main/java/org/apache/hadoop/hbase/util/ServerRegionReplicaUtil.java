@@ -56,6 +56,19 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   private static final String REGION_REPLICA_REPLICATION_PEER = "region_replica_replication";
 
   /**
+   * Whether or not the secondary region will wait for observing a flush / region open event
+   * from the primary region via async wal replication before enabling read requests. Since replayed
+   * edits from async wal replication from primary is not persisted in WAL, the memstore of the
+   * secondary region might be non-empty at the time of close or crash. For ensuring seqId's not
+   * "going back in time" in the secondary region replica, this should be enabled. However, in some
+   * cases the above semantics might be ok for some application classes.
+   * See HBASE-11580 for more context.
+   */
+  public static final String REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY
+    = "hbase.region.replica.wait.for.primary.flush";
+  private static final boolean DEFAULT_REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH = true;
+
+  /**
    * Returns the regionInfo object to use for interacting with the file system.
    * @return An HRegionInfo object to interact with the filesystem
    */
@@ -122,7 +135,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @throws IOException
    */
   public static void setupRegionReplicaReplication(Configuration conf) throws IOException {
-    if (!conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION)) {
+    if (!isRegionReplicaReplicationEnabled(conf)) {
       return;
     }
     ReplicationAdmin repAdmin = new ReplicationAdmin(conf);
@@ -138,6 +151,16 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     } finally {
       repAdmin.close();
     }
+  }
+
+  public static boolean isRegionReplicaReplicationEnabled(Configuration conf) {
+    return conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY,
+      DEFAULT_REGION_REPLICA_REPLICATION);
+  }
+
+  public static boolean isRegionReplicaWaitForPrimaryFlushEnabled(Configuration conf) {
+    return conf.getBoolean(REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
+      DEFAULT_REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH);
   }
 
   /**
