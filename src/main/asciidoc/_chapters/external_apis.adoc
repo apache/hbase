@@ -28,39 +28,39 @@
 :experimental:
 
 This chapter will cover access to Apache HBase either through non-Java languages, or through custom protocols.
-For information on using the native HBase APIs, refer to link:http://hbase.apache.org/apidocs/index.html[User API Reference] and the new <<hbase_apis,hbase apis>> chapter. 
+For information on using the native HBase APIs, refer to link:http://hbase.apache.org/apidocs/index.html[User API Reference] and the new <<hbase_apis,HBase APIs>> chapter.
 
 [[nonjava.jvm]]
 == Non-Java Languages Talking to the JVM
 
-Currently the documentation on this topic in the link:http://wiki.apache.org/hadoop/Hbase[Apache HBase Wiki].
-See also the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/thrift/package-summary.html#package_description[Thrift API Javadoc]. 
+Currently the documentation on this topic is in the link:http://wiki.apache.org/hadoop/Hbase[Apache HBase Wiki].
+See also the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/thrift/package-summary.html#package_description[Thrift API Javadoc].
 
 == REST
 
-Currently most of the documentation on REST exists in the link:http://wiki.apache.org/hadoop/Hbase/Stargate[Apache HBase Wiki on REST] (The REST gateway used to be called 'Stargate').  There are also a nice set of blogs on link:http://blog.cloudera.com/blog/2013/03/how-to-use-the-apache-hbase-rest-interface-part-1/[How-to: Use the Apache HBase REST Interface]        by Jesse Anderson. 
+Currently most of the documentation on REST exists in the link:http://wiki.apache.org/hadoop/Hbase/Stargate[Apache HBase Wiki on REST] (The REST gateway used to be called 'Stargate').  There are also a nice set of blogs on link:http://blog.cloudera.com/blog/2013/03/how-to-use-the-apache-hbase-rest-interface-part-1/[How-to: Use the Apache HBase REST Interface] by Jesse Anderson.
 
-To run your REST server under SSL, set hbase.rest.ssl.enabled to true and also set the following configs when you launch the REST server:(See example commands in <<jmx_config,JMX config>>) 
+To run your REST server under SSL, set `hbase.rest.ssl.enabled` to `true` and also set the following configs when you launch the REST server: (See example commands in <<jmx_config,JMX config>>)
+
 [source]
 ----
-
 hbase.rest.ssl.keystore.store
 hbase.rest.ssl.keystore.password
 hbase.rest.ssl.keystore.keypassword
-----    
+----
 
 HBase ships a simple REST client, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/rest/client/package-summary.html[REST client] package for details.
-To enable SSL support for it, please also import your certificate into local java cacerts keystore: 
+To enable SSL support for it, please also import your certificate into local java cacerts keystore:
 ----
 keytool -import -trustcacerts -file /home/user/restserver.cert -keystore $JAVA_HOME/jre/lib/security/cacerts
-----    
+----
 
 == Thrift
 
-Documentation about Thrift has moved to <<thrift,thrift>>.
+Documentation about Thrift has moved to <<thrift>>.
 
 [[c]]
 == C/C++ Apache HBase Client
 
 FB's Chip Turner wrote a pure C/C++ client.
- link:https://github.com/facebook/native-cpp-hbase-client[Check it out]. 
+link:https://github.com/facebook/native-cpp-hbase-client[Check it out].

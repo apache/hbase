@@ -29,25 +29,20 @@
 
 This is the official reference guide for the link:http://hbase.apache.org/[HBase] version it ships with.
 
-Herein you will find either the definitive documentation on an HBase topic as of its standing when the referenced HBase version shipped, or it will point to the location in link:http://hbase.apache.org/apidocs/index.html[javadoc], link:https://issues.apache.org/jira/browse/HBASE[JIRA] or link:http://wiki.apache.org/hadoop/Hbase[wiki] where the pertinent information can be found.
+Herein you will find either the definitive documentation on an HBase topic as of its standing when the referenced HBase version shipped, or it will point to the location in link:http://hbase.apache.org/apidocs/index.html[Javadoc], link:https://issues.apache.org/jira/browse/HBASE[JIRA] or link:http://wiki.apache.org/hadoop/Hbase[wiki] where the pertinent information can be found.
 
 .About This Guide
-This reference guide is a work in progress. The source for this guide can be found in the _src/main/dasciidoc_ directory of the HBase source. This reference guide is marked up using Asciidoc, from which the the finished guide is generated as part of the 'site' build target. Run 
+This reference guide is a work in progress. The source for this guide can be found in the _src/main/asciidoc directory of the HBase source. This reference guide is marked up using link:http://asciidoc.org/[AsciiDoc] from which the finished guide is generated as part of the 'site' build target. Run
 [source,bourne]
 ----
 mvn site
----- 
+----
 to generate this documentation.
 Amendments and improvements to the documentation are welcomed.
 Click link:https://issues.apache.org/jira/secure/CreateIssueDetails!init.jspa?pid=12310753&issuetype=1&components=12312132&summary=SHORT+DESCRIPTION[this link] to file a new documentation bug against Apache HBase with some values pre-selected.
 
 .Contributing to the Documentation
-For an overview of Asciidoc and suggestions to get started contributing to the documentation, see <<appendix_contributing_to_documentation,appendix contributing to documentation>>.
-
-.Providing Feedback
-This guide allows you to leave comments or questions on any page, using Disqus.
-Look for the Comments area at the bottom of the page.
-Answering these questions is a volunteer effort, and may be delayed.
+For an overview of AsciiDoc and suggestions to get started contributing to the documentation, see the <<appendix_contributing_to_documentation,relevant section later in this documentation>>.
 
 .Heads-up if this is your first foray into the world of distributed computing...
 If this is your first foray into the wonderful world of Distributed Computing, then you are in for some interesting times.
@@ -57,8 +52,8 @@ Your cluster's operation can hiccup because of any of a myriad set of reasons fr
 Here is one good starting point: link:http://en.wikipedia.org/wiki/Fallacies_of_Distributed_Computing[Fallacies of Distributed Computing].
 
 That said, you are welcome. +
-Its a fun place to be. +
-Yours, the HBase Community. 
+It's a fun place to be. +
+Yours, the HBase Community.
 
 
 :numbered:

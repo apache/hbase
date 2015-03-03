@@ -27,30 +27,32 @@
 :icons: font
 :experimental:
 
-HBase coprocessors are modeled after the coprocessors which are part of Google's BigTable (link:http://www.scribd.com/doc/21631448/Dean-Keynote-Ladis2009, pages 66-67.). Coprocessors function in a similar way to Linux kernel modules.
+HBase coprocessors are modeled after the coprocessors which are part of Google's BigTable (http://www.scribd.com/doc/21631448/Dean-Keynote-Ladis2009, pages 66-67.). Coprocessors function in a similar way to Linux kernel modules.
 They provide a way to run server-level code against locally-stored data.
 The functionality they provide is very powerful, but also carries great risk and can have adverse effects on the system, at the level of the operating system.
-The information in this chapter is primarily sourced and heavily reused from Mingjie Lai's blog post at link:https://blogs.apache.org/hbase/entry/coprocessor_introduction. 
+The information in this chapter is primarily sourced and heavily reused from Mingjie Lai's blog post at https://blogs.apache.org/hbase/entry/coprocessor_introduction.
 
 Coprocessors are not designed to be used by end users of HBase, but by HBase developers who need to add specialized functionality to HBase.
-One example of the use of coprocessors is pluggable compaction and scan policies, which are provided as coprocessors in link:HBASE-6427. 
+One example of the use of coprocessors is pluggable compaction and scan policies, which are provided as coprocessors in link:https://issues.apache.org/jira/browse/HBASE-6427[HBASE-6427].
 
 == Coprocessor Framework
 
 The implementation of HBase coprocessors diverges from the BigTable implementation.
-The HBase framework provides a library and runtime environment for executing user code within the HBase region server and master processes. 
+The HBase framework provides a library and runtime environment for executing user code within the HBase region server and master processes.
 
-The framework API is provided in the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/coprocessor/package-summary.html[coprocessor]      package.
+The framework API is provided in the link:https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/coprocessor/package-summary.html[coprocessor] package.
 
 Two different types of coprocessors are provided by the framework, based on their scope.
 
-.Types of CoprocessorsSystem Coprocessors::
+.Types of Coprocessors
+
+System Coprocessors::
   System coprocessors are loaded globally on all tables and regions hosted by a region server.
 
 Table Coprocessors::
   You can specify which coprocessors should be loaded on all regions for a table on a per-table basis.
 
-The framework provides two different aspects of extensions as well: [firstterm]_observers_ and [firstterm]_endpoints_.
+The framework provides two different aspects of extensions as well: _observers_ and _endpoints_.
 
 Observers::
   Observers are analogous to triggers in conventional databases.
@@ -80,7 +82,7 @@ You can load the coprocessor from your HBase configuration, so that the coproces
 
 === Load from Configuration
 
-To configure a coprocessor to be loaded when HBase starts, modify the RegionServer's _hbase-site.xml_ and configure one of the following properties, based on the type of observer you are configuring: 
+To configure a coprocessor to be loaded when HBase starts, modify the RegionServer's _hbase-site.xml_ and configure one of the following properties, based on the type of observer you are configuring:
 
 * `hbase.coprocessor.region.classes`for RegionObservers and Endpoints
 * `hbase.coprocessor.wal.classes`for WALObservers
@@ -90,12 +92,12 @@ To configure a coprocessor to be loaded when HBase starts, modify the RegionServ
 ====
 In this example, one RegionObserver is configured for all the HBase tables.
 
+[source,xml]
 ----
-
 <property>
-    <name>hbase.coprocessor.region.classes</name>
-    <value>org.apache.hadoop.hbase.coprocessor.AggregateImplementation</value>
- </property>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.coprocessor.AggregateImplementation</value>
+</property>
 ----
 ====
 
@@ -106,7 +108,7 @@ Therefore, the jar file must reside on the server-side HBase classpath.
 Coprocessors which are loaded in this way will be active on all regions of all tables.
 These are the system coprocessor introduced earlier.
 The first listed coprocessors will be assigned the priority `Coprocessor.Priority.SYSTEM`.
-Each subsequent coprocessor in the list will have its priority value incremented by one (which reduces its priority, because priorities have the natural sort order of Integers). 
+Each subsequent coprocessor in the list will have its priority value incremented by one (which reduces its priority, because priorities have the natural sort order of Integers).
 
 When calling out to registered observers, the framework executes their callbacks methods in the sorted order of their priority.
 Ties are broken arbitrarily.
@@ -114,13 +116,12 @@ Ties are broken arbitrarily.
 === Load from the HBase Shell
 
 You can load a coprocessor on a specific table via a table attribute.
-The following example will load the [systemitem]+FooRegionObserver+ observer when table [systemitem]+t1+ is read or re-read. 
+The following example will load the `FooRegionObserver` observer when table `t1` is read or re-read.
 
 .Load a Coprocessor On a Table Using HBase Shell
 ====
 ----
-
-hbase(main):005:0>  alter 't1', METHOD => 'table_att', 
+hbase(main):005:0>  alter 't1', METHOD => 'table_att',
   'coprocessor'=>'hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2'
 Updating all regions with the new schema...
 1/1 regions updated.
@@ -128,18 +129,18 @@ Done.
 0 row(s) in 1.0730 seconds
 
 hbase(main):006:0> describe 't1'
-DESCRIPTION                                                        ENABLED                             
- {NAME => 't1', coprocessor$1 => 'hdfs:///foo.jar|com.foo.FooRegio false                               
- nObserver|1001|arg1=1,arg2=2', FAMILIES => [{NAME => 'c1', DATA_B                                     
- LOCK_ENCODING => 'NONE', BLOOMFILTER => 'NONE', REPLICATION_SCOPE                                     
-  => '0', VERSIONS => '3', COMPRESSION => 'NONE', MIN_VERSIONS =>                                      
- '0', TTL => '2147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZ                                     
- E => '65536', IN_MEMORY => 'false', ENCODE_ON_DISK => 'true', BLO                                     
- CKCACHE => 'true'}, {NAME => 'f1', DATA_BLOCK_ENCODING => 'NONE',                                     
-  BLOOMFILTER => 'NONE', REPLICATION_SCOPE => '0', VERSIONS => '3'                                     
- , COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2147483647'                                     
- , KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY                                      
- => 'false', ENCODE_ON_DISK => 'true', BLOCKCACHE => 'true'}]}                                         
+DESCRIPTION                                                        ENABLED
+ {NAME => 't1', coprocessor$1 => 'hdfs:///foo.jar|com.foo.FooRegio false
+ nObserver|1001|arg1=1,arg2=2', FAMILIES => [{NAME => 'c1', DATA_B
+ LOCK_ENCODING => 'NONE', BLOOMFILTER => 'NONE', REPLICATION_SCOPE
+  => '0', VERSIONS => '3', COMPRESSION => 'NONE', MIN_VERSIONS =>
+ '0', TTL => '2147483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZ
+ E => '65536', IN_MEMORY => 'false', ENCODE_ON_DISK => 'true', BLO
+ CKCACHE => 'true'}, {NAME => 'f1', DATA_BLOCK_ENCODING => 'NONE',
+  BLOOMFILTER => 'NONE', REPLICATION_SCOPE => '0', VERSIONS => '3'
+ , COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '2147483647'
+ , KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY
+ => 'false', ENCODE_ON_DISK => 'true', BLOCKCACHE => 'true'}]}
 1 row(s) in 0.0190 seconds
 ----
 ====
@@ -160,7 +161,7 @@ The value contains four pieces of information which are separated by the `|` cha
 ====
 ----
 
-hbase(main):007:0> alter 't1', METHOD => 'table_att_unset', 
+hbase(main):007:0> alter 't1', METHOD => 'table_att_unset',
 hbase(main):008:0*   NAME => 'coprocessor$1'
 Updating all regions with the new schema...
 1/1 regions updated.
@@ -168,27 +169,27 @@ Done.
 0 row(s) in 1.1130 seconds
 
 hbase(main):009:0> describe 't1'
-DESCRIPTION                                                        ENABLED                             
- {NAME => 't1', FAMILIES => [{NAME => 'c1', DATA_BLOCK_ENCODING => false                               
-  'NONE', BLOOMFILTER => 'NONE', REPLICATION_SCOPE => '0', VERSION                                     
- S => '3', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '214                                     
- 7483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN                                     
- _MEMORY => 'false', ENCODE_ON_DISK => 'true', BLOCKCACHE => 'true                                     
- '}, {NAME => 'f1', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER =>                                      
- 'NONE', REPLICATION_SCOPE => '0', VERSIONS => '3', COMPRESSION =>                                     
-  'NONE', MIN_VERSIONS => '0', TTL => '2147483647', KEEP_DELETED_C                                     
- ELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false', ENCO                                     
- DE_ON_DISK => 'true', BLOCKCACHE => 'true'}]}                                                         
+DESCRIPTION                                                        ENABLED
+ {NAME => 't1', FAMILIES => [{NAME => 'c1', DATA_BLOCK_ENCODING => false
+  'NONE', BLOOMFILTER => 'NONE', REPLICATION_SCOPE => '0', VERSION
+ S => '3', COMPRESSION => 'NONE', MIN_VERSIONS => '0', TTL => '214
+ 7483647', KEEP_DELETED_CELLS => 'false', BLOCKSIZE => '65536', IN
+ _MEMORY => 'false', ENCODE_ON_DISK => 'true', BLOCKCACHE => 'true
+ '}, {NAME => 'f1', DATA_BLOCK_ENCODING => 'NONE', BLOOMFILTER =>
+ 'NONE', REPLICATION_SCOPE => '0', VERSIONS => '3', COMPRESSION =>
+  'NONE', MIN_VERSIONS => '0', TTL => '2147483647', KEEP_DELETED_C
+ ELLS => 'false', BLOCKSIZE => '65536', IN_MEMORY => 'false', ENCO
+ DE_ON_DISK => 'true', BLOCKCACHE => 'true'}]}
 1 row(s) in 0.0180 seconds
 ----
 ====
 
 WARNING: There is no guarantee that the framework will load a given coprocessor successfully.
-For example, the shell command neither guarantees a jar file exists at a particular location nor verifies whether the given class is actually contained in the jar file. 
+For example, the shell command neither guarantees a jar file exists at a particular location nor verifies whether the given class is actually contained in the jar file.
 
 == Check the Status of a Coprocessor
 
-To check the status of a coprocessor after it has been configured, use the +status+ HBase Shell command.
+To check the status of a coprocessor after it has been configured, use the `status` HBase Shell command.
 
 ----
 
@@ -200,17 +201,17 @@ master coprocessors: []
     localhost:52761 1328082515520
         requestsPerSecond=3, numberOfOnlineRegions=3, usedHeapMB=32, maxHeapMB=995
         -ROOT-,,0
-            numberOfStores=1, numberOfStorefiles=1, storefileUncompressedSizeMB=0, storefileSizeMB=0, memstoreSizeMB=0, 
-storefileIndexSizeMB=0, readRequestsCount=54, writeRequestsCount=1, rootIndexSizeKB=0, totalStaticIndexSizeKB=0, 
+            numberOfStores=1, numberOfStorefiles=1, storefileUncompressedSizeMB=0, storefileSizeMB=0, memstoreSizeMB=0,
+storefileIndexSizeMB=0, readRequestsCount=54, writeRequestsCount=1, rootIndexSizeKB=0, totalStaticIndexSizeKB=0,
 totalStaticBloomSizeKB=0, totalCompactingKVs=0, currentCompactedKVs=0, compactionProgressPct=NaN, coprocessors=[]
         .META.,,1
-            numberOfStores=1, numberOfStorefiles=0, storefileUncompressedSizeMB=0, storefileSizeMB=0, memstoreSizeMB=0, 
-storefileIndexSizeMB=0, readRequestsCount=97, writeRequestsCount=4, rootIndexSizeKB=0, totalStaticIndexSizeKB=0, 
+            numberOfStores=1, numberOfStorefiles=0, storefileUncompressedSizeMB=0, storefileSizeMB=0, memstoreSizeMB=0,
+storefileIndexSizeMB=0, readRequestsCount=97, writeRequestsCount=4, rootIndexSizeKB=0, totalStaticIndexSizeKB=0,
 totalStaticBloomSizeKB=0, totalCompactingKVs=0, currentCompactedKVs=0, compactionProgressPct=NaN, coprocessors=[]
         t1,,1328082575190.c0491168a27620ffe653ec6c04c9b4d1.
-            numberOfStores=2, numberOfStorefiles=1, storefileUncompressedSizeMB=0, storefileSizeMB=0, memstoreSizeMB=0, 
-storefileIndexSizeMB=0, readRequestsCount=0, writeRequestsCount=0, rootIndexSizeKB=0, totalStaticIndexSizeKB=0, 
-totalStaticBloomSizeKB=0, totalCompactingKVs=0, currentCompactedKVs=0, compactionProgressPct=NaN, 
+            numberOfStores=2, numberOfStorefiles=1, storefileUncompressedSizeMB=0, storefileSizeMB=0, memstoreSizeMB=0,
+storefileIndexSizeMB=0, readRequestsCount=0, writeRequestsCount=0, rootIndexSizeKB=0, totalStaticIndexSizeKB=0,
+totalStaticBloomSizeKB=0, totalCompactingKVs=0, currentCompactedKVs=0, compactionProgressPct=NaN,
 coprocessors=[AggregateImplementation]
 0 dead servers
 ----
@@ -218,16 +219,12 @@ coprocessors=[AggregateImplementation]
 == Monitor Time Spent in Coprocessors
 
 HBase 0.98.5 introduced the ability to monitor some statistics relating to the amount of time spent executing a given coprocessor.
-You can see these statistics via the HBase Metrics framework (see <<hbase_metrics,hbase metrics>> or the Web UI for a given Region Server, via the [label]#Coprocessor Metrics# tab.
+You can see these statistics via the HBase Metrics framework (see <<hbase_metrics>> or the Web UI for a given Region Server, via the _Coprocessor Metrics_ tab.
 These statistics are valuable for debugging and benchmarking the performance impact of a given coprocessor on your cluster.
 Tracked statistics include min, max, average, and 90th, 95th, and 99th percentile.
 All times are shown in milliseconds.
 The statistics are calculated over coprocessor execution samples recorded during the reporting interval, which is 10 seconds by default.
-The metrics sampling rate as described in <<hbase_metrics,hbase metrics>>.
+The metrics sampling rate as described in <<hbase_metrics>>.
 
 .Coprocessor Metrics UI
 image::coprocessor_stats.png[]
-
-== Status of Coprocessors in HBase
-
-Coprocessors and the coprocessor framework are evolving rapidly and work is ongoing on several different JIRAs. 

@@ -31,9 +31,8 @@
 .Apache HBase Orca
 image::jumping-orca_rotated_25percent.png[]
 
-link:https://issues.apache.org/jira/browse/HBASE-4920[An Orca is the Apache
-            HBase mascot.]        See NOTICES.txt.
+link:https://issues.apache.org/jira/browse/HBASE-4920[An Orca is the Apache HBase mascot.] See NOTICES.txt.
 Our Orca logo we got here: http://www.vectorfree.com/jumping-orca It is licensed Creative Commons Attribution 3.0.
-See https://creativecommons.org/licenses/by/3.0/us/ We changed the logo by stripping the colored background, inverting it and then rotating it some. 
+See https://creativecommons.org/licenses/by/3.0/us/ We changed the logo by stripping the colored background, inverting it and then rotating it some.
 
 :numbered:
