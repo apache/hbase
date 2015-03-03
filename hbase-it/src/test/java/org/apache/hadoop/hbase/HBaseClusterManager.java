@@ -256,17 +256,17 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   }
 
   @Override
-  public void start(ServiceType service, String hostname) throws IOException {
+  public void start(ServiceType service, String hostname, int port) throws IOException {
     exec(hostname, service, Operation.START);
   }
 
   @Override
-  public void stop(ServiceType service, String hostname) throws IOException {
+  public void stop(ServiceType service, String hostname, int port) throws IOException {
     exec(hostname, service, Operation.STOP);
   }
 
   @Override
-  public void restart(ServiceType service, String hostname) throws IOException {
+  public void restart(ServiceType service, String hostname, int port) throws IOException {
     exec(hostname, service, Operation.RESTART);
   }
 
@@ -275,24 +275,24 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   }
 
   @Override
-  public boolean isRunning(ServiceType service, String hostname) throws IOException {
+  public boolean isRunning(ServiceType service, String hostname, int port) throws IOException {
     String ret = execWithRetries(hostname, getCommandProvider(service).isRunningCommand(service))
         .getSecond();
     return ret.length() > 0;
   }
 
   @Override
-  public void kill(ServiceType service, String hostname) throws IOException {
+  public void kill(ServiceType service, String hostname, int port) throws IOException {
     signal(service, SIGKILL, hostname);
   }
 
   @Override
-  public void suspend(ServiceType service, String hostname) throws IOException {
+  public void suspend(ServiceType service, String hostname, int port) throws IOException {
     signal(service, SIGSTOP, hostname);
   }
 
   @Override
-  public void resume(ServiceType service, String hostname) throws IOException {
+  public void resume(ServiceType service, String hostname, int port) throws IOException {
     signal(service, SIGCONT, hostname);
   }
 }

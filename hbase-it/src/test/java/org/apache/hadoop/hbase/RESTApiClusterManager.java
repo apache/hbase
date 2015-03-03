@@ -120,22 +120,22 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   }
 
   @Override
-  public void start(ServiceType service, String hostname) throws IOException {
+  public void start(ServiceType service, String hostname, int port) throws IOException {
     performClusterManagerCommand(service, hostname, RoleCommand.START);
   }
 
   @Override
-  public void stop(ServiceType service, String hostname) throws IOException {
+  public void stop(ServiceType service, String hostname, int port) throws IOException {
     performClusterManagerCommand(service, hostname, RoleCommand.STOP);
   }
 
   @Override
-  public void restart(ServiceType service, String hostname) throws IOException {
+  public void restart(ServiceType service, String hostname, int port) throws IOException {
     performClusterManagerCommand(service, hostname, RoleCommand.RESTART);
   }
 
   @Override
-  public boolean isRunning(ServiceType service, String hostname) throws IOException {
+  public boolean isRunning(ServiceType service, String hostname, int port) throws IOException {
     String serviceName = getServiceName(roleServiceType.get(service));
     String hostId = getHostId(hostname);
     String roleState = getRoleState(serviceName, service.toString(), hostId);
@@ -152,18 +152,18 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
   }
 
   @Override
-  public void kill(ServiceType service, String hostname) throws IOException {
-    hBaseClusterManager.kill(service, hostname);
+  public void kill(ServiceType service, String hostname, int port) throws IOException {
+    hBaseClusterManager.kill(service, hostname, port);
   }
 
   @Override
-  public void suspend(ServiceType service, String hostname) throws IOException {
-    hBaseClusterManager.kill(service, hostname);
+  public void suspend(ServiceType service, String hostname, int port) throws IOException {
+    hBaseClusterManager.kill(service, hostname, port);
   }
 
   @Override
-  public void resume(ServiceType service, String hostname) throws IOException {
-    hBaseClusterManager.kill(service, hostname);
+  public void resume(ServiceType service, String hostname, int port) throws IOException {
+    hBaseClusterManager.kill(service, hostname, port);
   }
 
 
