@@ -1574,7 +1574,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    */
   @VisibleForTesting
   public long getEarliestFlushTimeForAllStores() {
-    return Collections.min(lastStoreFlushTimeMap.values());
+    return lastStoreFlushTimeMap.isEmpty() ? Long.MAX_VALUE : Collections.min(lastStoreFlushTimeMap
+        .values());
   }
 
   /**
