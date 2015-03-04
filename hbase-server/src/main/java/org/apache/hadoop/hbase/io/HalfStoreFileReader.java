@@ -317,6 +317,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         }
         return ret;
       }
+
+      @Override
+      public Cell getNextIndexedKey() {
+        return null;
+      }
     };
   }
   

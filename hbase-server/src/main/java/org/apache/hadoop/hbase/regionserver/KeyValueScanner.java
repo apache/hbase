@@ -156,4 +156,10 @@ public interface KeyValueScanner {
    * @throws IOException
    */
   public boolean seekToLastRow() throws IOException;
+
+  /**
+   * @return the next key in the index (the key to seek to the next block)
+   * if known, or null otherwise
+   */
+  public Cell getNextIndexedKey();
 }
