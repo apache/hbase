@@ -93,23 +93,6 @@ public class Scan extends Query {
 
   private static final String RAW_ATTR = "_raw_";
 
-  /**
-   * EXPERT ONLY.
-   * An integer (not long) indicating to the scanner logic how many times we attempt to retrieve the
-   * next KV before we schedule a reseek.
-   * The right value depends on the size of the average KV. A reseek is more efficient when
-   * it can skip 5-10 KVs or 512B-1KB, or when the next KV is likely found in another HFile block.
-   * Setting this only has any effect when columns were added with
-   * {@link #addColumn(byte[], byte[])}
-   * <pre>{@code
-   * Scan s = new Scan(...);
-   * s.addColumn(...);
-   * s.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
-   * }</pre>
-   * Default is 0 (always reseek).
-   */
-  public static final String HINT_LOOKAHEAD = "_look_ahead_";
-
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
