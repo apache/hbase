@@ -294,6 +294,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       public boolean isSeeked() {
         return this.delegate.isSeeked();
       }
+
+      @Override
+      public byte[] getNextIndexedKey() {
+        return null;
+      }
     };
   }
   

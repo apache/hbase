@@ -396,4 +396,10 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   KeyValueScanner getCurrentForTesting() {
     return current;
   }
+
+  @Override
+  public byte[] getNextIndexedKey() {
+    // here we return the next index key from the top scanner
+    return current == null ? null : current.getNextIndexedKey();
+  }
 }

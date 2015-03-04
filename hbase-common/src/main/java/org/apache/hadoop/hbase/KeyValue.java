@@ -1993,6 +1993,63 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       return compareFlatKey(left, 0, left.length, right, 0, right.length);
     }
 
+    // compare a key against a given row/fam/qual/ts/type
+    public int compareKey(byte[] key, int koff, int klen, byte[] row, int roff, int rlen,
+        byte[] fam, int foff, int flen, byte[] col, int coff, int clen, long ts, byte type) {
+
+      short lrowlength = Bytes.toShort(key, koff);
+      int compare = compareRows(key, koff + Bytes.SIZEOF_SHORT, lrowlength, row, roff, rlen);
+      if (compare != 0) {
+        return compare;
+      }
+      // See compareWithoutRows...
+      // -------------------------
+      int commonLength = ROW_LENGTH_SIZE + FAMILY_LENGTH_SIZE + rlen;
+
+      // key's ColumnFamily + Qualifier length.
+      int lcolumnlength = klen - TIMESTAMP_TYPE_SIZE + commonLength;
+
+      byte ltype = key[koff + (klen - 1)];
+
+      // If the column is not specified, the "minimum" key type appears the
+      // latest in the sorted order, regardless of the timestamp. This is used
+      // for specifying the last key/value in a given row, because there is no
+      // "lexicographically last column" (it would be infinitely long). The
+      // "maximum" key type does not need this behavior.
+      if (lcolumnlength == 0 && ltype == Type.Minimum.getCode()) {
+        // left is "bigger", i.e. it appears later in the sorted order
+        return 1;
+      }
+      if (flen + clen == 0 && type == Type.Minimum.getCode()) {
+        return -1;
+      }
+
+      int lfamilyoffset = commonLength + koff;
+      int lfamilylength = key[lfamilyoffset - 1];
+      compare = Bytes.compareTo(key, lfamilyoffset, lfamilylength, fam, foff, flen);
+      if (compare != 0) {
+        return compare;
+      }
+      int lColOffset = lfamilyoffset + lfamilylength;
+      int lColLength = lcolumnlength - lfamilylength;
+      compare = Bytes.compareTo(key, lColOffset, lColLength, col, coff, clen);
+      if (compare != 0) {
+        return compare;
+      }
+      // Next compare timestamps.
+      long ltimestamp = Bytes.toLong(key, koff + (klen - TIMESTAMP_TYPE_SIZE));
+      compare = compareTimestamps(ltimestamp, ts);
+      if (compare != 0) {
+        return compare;
+      }
+
+      // Compare types. Let the delete types sort ahead of puts; i.e. types
+      // of higher numbers sort before those of lesser numbers. Maximum (255)
+      // appears ahead of everything, and minimum (0) appears after
+      // everything.
+      return (0xff & type) - (0xff & ltype);
+    }
+
     /**
      * Compares the Key of a cell -- with fields being more significant in this order:
      * rowkey, colfam/qual, timestamp, type, mvcc

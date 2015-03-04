@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -478,6 +479,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       prevKV = kv;
 
       ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
+      qcode = optimize(qcode, kv);
       switch(qcode) {
         case INCLUDE:
         case INCLUDE_AND_SEEK_NEXT_ROW:
@@ -573,6 +575,38 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     } finally {
       lock.unlock();
     }
+  }
+
+  /*
+   * See if we should actually SEEK or rather just SKIP to the next Cell.
+   * (See HBASE-13109)
+   */
+  private ScanQueryMatcher.MatchCode optimize(ScanQueryMatcher.MatchCode qcode, Cell cell) {
+    byte[] nextIndexedKey = getNextIndexedKey();
+    if (nextIndexedKey == null || nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY || store == null) {
+      return qcode;
+    }
+    switch(qcode) {
+    case INCLUDE_AND_SEEK_NEXT_COL:
+    case SEEK_NEXT_COL:
+    {
+      if (matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0) {
+        return qcode == MatchCode.SEEK_NEXT_COL ? MatchCode.SKIP : MatchCode.INCLUDE;
+      }
+      break;
+    }
+    case INCLUDE_AND_SEEK_NEXT_ROW:
+    case SEEK_NEXT_ROW:
+    {
+      if (matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0) {
+        return qcode == MatchCode.SEEK_NEXT_ROW ? MatchCode.SKIP : MatchCode.INCLUDE;
+      }
+      break;
+    }
+    default:
+      break;
+    }
+    return qcode;
   }
 
   @Override
@@ -777,6 +811,11 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    */
   public long getEstimatedNumberOfKvsScanned() {
     return this.kvsScanned;
+  }
+
+  @Override
+  public byte[] getNextIndexedKey() {
+    return this.heap.getNextIndexedKey();
   }
 }
 

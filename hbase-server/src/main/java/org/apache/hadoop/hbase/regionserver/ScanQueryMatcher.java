@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.NavigableSet;
 
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -203,9 +204,8 @@ public class ScanQueryMatcher {
 
       // We can share the ExplicitColumnTracker, diff is we reset
       // between rows, not between storefiles.
-      byte[] attr = scan.getAttribute(Scan.HINT_LOOKAHEAD);
       this.columns = new ExplicitColumnTracker(columns, scanInfo.getMinVersions(), maxVersions,
-          oldestUnexpiredTS, attr == null ? 0 : Bytes.toInt(attr));
+          oldestUnexpiredTS);
     }
     this.isReversed = scan.isReversed();
   }
@@ -504,7 +504,7 @@ public class ScanQueryMatcher {
 
   public boolean moreRowsMayExistAfter(KeyValue kv) {
     if (this.isReversed) {
-      if (rowComparator.compareRows(kv.getBuffer(), kv.getRowOffset(),
+      if (rowComparator.compareRows(kv.getRowArray(), kv.getRowOffset(),
           kv.getRowLength(), stopRow, 0, stopRow.length) <= 0) {
         return false;
       } else {
@@ -512,7 +512,7 @@ public class ScanQueryMatcher {
       }
     }
     if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
-        rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
+        rowComparator.compareRows(kv.getRowArray(),kv.getRowOffset(),
             kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {
       // KV >= STOPROW
       // then NO there is nothing left.
@@ -569,22 +569,60 @@ public class ScanQueryMatcher {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
       return KeyValue.createLastOnRow(
-          kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
-          kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
-          kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+          kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+          kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
+          kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
     } else {
       return KeyValue.createFirstOnRow(
-          kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
-          kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
+          kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+          kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
           nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength());
     }
   }
 
   public KeyValue getKeyForNextRow(KeyValue kv) {
     return KeyValue.createLastOnRow(
-        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
         null, 0, 0,
         null, 0, 0);
+  }
+
+  /**
+   * @param nextIndexed the key of the next entry in the block index (if any)
+   * @param off
+   * @param len
+   * @param kv The Cell we're using to calculate the seek key
+   * @return result of the compare between the indexed key and the key portion of the passed cell
+   */
+  public int compareKeyForNextRow(byte[] nextIndexed, Cell kv) {
+    return rowComparator.compareKey(nextIndexed, 0, nextIndexed.length,
+      kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+      null, 0, 0, null, 0, 0,
+      HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+  }
+
+  /**
+   * @param nextIndexed the key of the next entry in the block index (if any)
+   * @param off
+   * @param len
+   * @param kv The Cell we're using to calculate the seek key
+   * @return result of the compare between the indexed key and the key portion of the passed cell
+   */
+  public int compareKeyForNextColumn(byte[] nextIndexed, Cell kv) {
+    ColumnCount nextColumn = columns.getColumnHint();
+    if (nextColumn == null) {
+      return rowComparator.compareKey(nextIndexed, 0, nextIndexed.length,
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
+        kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength(),
+        HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+    } else {
+      return rowComparator.compareKey(nextIndexed, 0, nextIndexed.length,
+        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
+        nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength(),
+        HConstants.LATEST_TIMESTAMP, Type.Maximum.getCode());
+    }
   }
 
   //Used only for testing purposes

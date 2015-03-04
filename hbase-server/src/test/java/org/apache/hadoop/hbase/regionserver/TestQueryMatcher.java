@@ -142,26 +142,6 @@ public class TestQueryMatcher extends HBaseTestCase {
     _testMatch_ExplicitColumns(scan, expected);
   }
 
-  public void testMatch_ExplicitColumnsWithLookAhead()
-  throws IOException {
-    //Moving up from the Tracker by using Gets and List<KeyValue> instead
-    //of just byte []
-
-    //Expected result
-    List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW);
-    expected.add(ScanQueryMatcher.MatchCode.DONE);
-
-    Scan s = new Scan(scan);
-    s.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
-    _testMatch_ExplicitColumns(s, expected);
-  }
-
-
   public void testMatch_Wildcard()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
