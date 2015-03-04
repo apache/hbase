@@ -1981,7 +1981,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
   /**
    * Flushing all stores.
    *
-   * @see #internalFlushcache(Collection, MonitoredTask)
+   * @see #internalFlushcache(Collection, MonitoredTask, boolean)
    */
   private FlushResult internalFlushcache(MonitoredTask status)
       throws IOException {
@@ -1991,7 +1991,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
   /**
    * Flushing given stores.
    *
-   * @see #internalFlushcache(WAL, long, Collection, MonitoredTask)
+   * @see #internalFlushcache(WAL, long, Collection, MonitoredTask, boolean)
    */
   private FlushResult internalFlushcache(final Collection<Store> storesToFlush,
       MonitoredTask status, boolean writeFlushWalMarker) throws IOException {
@@ -2236,7 +2236,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * Writes a marker to WAL indicating a flush is requested but cannot be complete due to various
    * reasons. Ignores exceptions from WAL. Returns whether the write succeeded.
    * @param wal
-   * @return
+   * @return whether WAL write was successful
    */
   private boolean writeFlushRequestMarkerToWAL(WAL wal, boolean writeFlushWalMarker) {
     if (writeFlushWalMarker && wal != null && !writestate.readOnly) {
