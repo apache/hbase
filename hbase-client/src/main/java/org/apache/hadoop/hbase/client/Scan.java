@@ -107,7 +107,10 @@ public class Scan extends Query {
    * s.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
    * }</pre>
    * Default is 0 (always reseek).
+   * @deprecated without replacement
+   *             This is now a no-op, SEEKs and SKIPs are optimizated automatically.
    */
+  @Deprecated
   public static final String HINT_LOOKAHEAD = "_look_ahead_";
 
   private byte [] startRow = HConstants.EMPTY_START_ROW;

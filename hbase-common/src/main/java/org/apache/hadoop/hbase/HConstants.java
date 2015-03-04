@@ -919,7 +919,7 @@ public final class HConstants {
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
    */
-  public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
+  public static final Cell NO_NEXT_INDEXED_KEY = new KeyValue();
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
   public static final String HBASE_CONFIG_READ_ZOOKEEPER_CONFIG =

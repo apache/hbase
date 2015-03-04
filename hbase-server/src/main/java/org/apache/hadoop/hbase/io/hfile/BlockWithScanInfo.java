@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import org.apache.hadoop.hbase.Cell;
+
 /**
  * BlockWithScanInfo is wrapper class for HFileBlock with other attributes. These attributes are
  * supposed to be much cheaper to be maintained in each caller thread than in HFileBlock itself.
@@ -27,9 +29,9 @@ public class BlockWithScanInfo {
    * The first key in the next block following this one in the HFile.
    * If this key is unknown, this is reference-equal with HConstants.NO_NEXT_INDEXED_KEY
    */
-  private final byte[] nextIndexedKey;
+  private final Cell nextIndexedKey;
 
-  public BlockWithScanInfo(HFileBlock hFileBlock, byte[] nextIndexedKey) {
+  public BlockWithScanInfo(HFileBlock hFileBlock, Cell nextIndexedKey) {
     this.hFileBlock = hFileBlock;
     this.nextIndexedKey = nextIndexedKey;
   }
@@ -38,7 +40,7 @@ public class BlockWithScanInfo {
     return hFileBlock;
   }
 
-  public byte[] getNextIndexedKey() {
+  public  Cell getNextIndexedKey() {
     return nextIndexedKey;
   }
 }
