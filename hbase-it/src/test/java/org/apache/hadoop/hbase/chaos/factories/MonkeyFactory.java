@@ -69,6 +69,8 @@ public abstract class MonkeyFactory {
   public static final String SERVER_KILLING = "serverKilling";
   public static final String STRESS_AM = "stressAM";
   public static final String NO_KILL = "noKill";
+  public static final String MOB_NO_KILL = "mobNoKill";
+  public static final String MOB_SLOW_DETERMINISTIC = "mobSlowDeterministic";
 
   public static Map<String, MonkeyFactory> FACTORIES = ImmutableMap.<String,MonkeyFactory>builder()
     .put(CALM, new CalmMonkeyFactory())
@@ -77,6 +79,8 @@ public abstract class MonkeyFactory {
     .put(SERVER_KILLING, new ServerKillingMonkeyFactory())
     .put(STRESS_AM, new StressAssignmentManagerMonkeyFactory())
     .put(NO_KILL, new NoKillMonkeyFactory())
+    .put(MOB_NO_KILL, new MobNoKillMonkeyFactory())
+    .put(MOB_SLOW_DETERMINISTIC, new MobNoKillMonkeyFactory())
     .build();
 
   public static MonkeyFactory getFactory(String factoryName) {
