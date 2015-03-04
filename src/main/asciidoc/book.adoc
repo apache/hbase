@@ -19,26 +19,34 @@
  */
 ////
 
-= Apache HBase (TM) Reference Guide image:hbase_logo.png[] image:jumping-orca_rotated_25percent.png[]
+= Apache HBase (TM) Reference Guide 
 :Author: Apache HBase Team
 :Email: <hbase-dev@lists.apache.org>
 :doctype: book
+// Logo for PDF -- doesn't render in HTML
+:title-logo: hbase_logo_with_orca.png
 :numbered:
 :toc: left
 :toclevels: 1
 :toc-title: Contents
+:sectanchors:
 :icons: font
 :iconsdir: icons
 :linkcss:
 :experimental:
 :source-language: java
-
-
 :leveloffset: 0
+
+// Logo for HTML -- doesn't render in PDF
+++++
+<div>
+  <a href="http://hbase.apache.org"><img src="images/hbase_logo_with_orca.png" alt="Apache HBase Logo" /></a>
+</div>
+++++
 
 // The directory is called _chapters because asciidoctor skips direct
 // processing of files found in directories starting with an _. This
-// prevents each chapter being built as its own book.j
+// prevents each chapter being built as its own book.
 
 include::_chapters/preface.adoc[]
 
