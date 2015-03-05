@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -94,7 +95,7 @@ public class TestMobSweeper {
     admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc);
     table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    table.setAutoFlush(false);
+    table.setAutoFlush(false, false);
 
   }
 
@@ -112,7 +113,6 @@ public class TestMobSweeper {
     return p;
   }
 
-
   private String mergeString(Set<String> set) {
     StringBuilder sb = new StringBuilder();
     for (String s : set)
@@ -120,9 +120,8 @@ public class TestMobSweeper {
     return sb.toString();
   }
 
-
-  private void generateMobTable(int count, int flushStep)
-          throws IOException, InterruptedException {
+  private void generateMobTable(Admin admin, HTable table, String tableName, int count,
+    int flushStep) throws IOException, InterruptedException {
     if (count <= 0 || flushStep <= 0)
       return;
     int index = 0;
@@ -137,8 +136,6 @@ public class TestMobSweeper {
         table.flushCommits();
         admin.flush(TableName.valueOf(tableName));
       }
-
-
     }
     table.flushCommits();
     admin.flush(TableName.valueOf(tableName));
@@ -146,11 +143,9 @@ public class TestMobSweeper {
 
   @Test
   public void testSweeper() throws Exception {
-
     int count = 10;
     //create table and generate 10 mob files
-    generateMobTable(count, 1);
-
+    generateMobTable(admin, table, tableName, count, 1);
     //get mob files
     Path mobFamilyPath = getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
     FileStatus[] fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
@@ -172,12 +167,10 @@ public class TestMobSweeper {
       mobFilesScanned.add(Bytes.toString(valueBytes, Bytes.SIZEOF_INT,
           valueBytes.length - Bytes.SIZEOF_INT));
     }
-
     //there should be 10 mob files
     assertEquals(10, mobFilesScanned.size());
     //check if we store the correct reference of mob files
     assertEquals(mergeString(mobFilesSet), mergeString(mobFilesScanned));
-
 
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(SweepJob.MOB_SWEEP_JOB_DELAY, 24 * 60 * 60 * 1000);
@@ -185,8 +178,7 @@ public class TestMobSweeper {
     String[] args = new String[2];
     args[0] = tableName;
     args[1] = family;
-    ToolRunner.run(conf, new Sweeper(), args);
-
+    assertEquals(0, ToolRunner.run(conf, new Sweeper(), args));
 
     mobFamilyPath = getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
     fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
@@ -194,9 +186,7 @@ public class TestMobSweeper {
     for (FileStatus status : fileStatuses) {
       mobFilesSet.add(status.getPath().getName());
     }
-
     assertEquals(10, mobFilesSet.size());
-
 
     scan = new Scan();
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
@@ -209,7 +199,6 @@ public class TestMobSweeper {
       mobFilesScannedAfterJob.add(Bytes.toString(valueBytes, Bytes.SIZEOF_INT,
           valueBytes.length - Bytes.SIZEOF_INT));
     }
-
     assertEquals(10, mobFilesScannedAfterJob.size());
 
     fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
@@ -217,20 +206,16 @@ public class TestMobSweeper {
     for (FileStatus status : fileStatuses) {
       mobFilesSet.add(status.getPath().getName());
     }
-
     assertEquals(10, mobFilesSet.size());
     assertEquals(true, mobFilesScannedAfterJob.iterator().next()
             .equalsIgnoreCase(mobFilesSet.iterator().next()));
-
   }
 
-  @Test
-  public void testCompactionDelaySweeper() throws Exception {
-
+  private void testCompactionDelaySweeperInternal(HTable table, String tableName)
+    throws Exception {
     int count = 10;
     //create table and generate 10 mob files
-    generateMobTable(count, 1);
-
+    generateMobTable(admin, table, tableName, count, 1);
     //get mob files
     Path mobFamilyPath = getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
     FileStatus[] fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
@@ -252,21 +237,17 @@ public class TestMobSweeper {
       mobFilesScanned.add(Bytes.toString(valueBytes, Bytes.SIZEOF_INT,
           valueBytes.length - Bytes.SIZEOF_INT));
     }
-
     //there should be 10 mob files
     assertEquals(10, mobFilesScanned.size());
     //check if we store the correct reference of mob files
     assertEquals(mergeString(mobFilesSet), mergeString(mobFilesScanned));
 
-
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(SweepJob.MOB_SWEEP_JOB_DELAY, 0);
-
     String[] args = new String[2];
     args[0] = tableName;
     args[1] = family;
-    ToolRunner.run(conf, new Sweeper(), args);
-
+    assertEquals(0, ToolRunner.run(conf, new Sweeper(), args));
 
     mobFamilyPath = getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
     fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
@@ -274,9 +255,7 @@ public class TestMobSweeper {
     for (FileStatus status : fileStatuses) {
       mobFilesSet.add(status.getPath().getName());
     }
-
     assertEquals(1, mobFilesSet.size());
-
 
     scan = new Scan();
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
@@ -289,7 +268,6 @@ public class TestMobSweeper {
       mobFilesScannedAfterJob.add(Bytes.toString(valueBytes, Bytes.SIZEOF_INT,
           valueBytes.length - Bytes.SIZEOF_INT));
     }
-
     assertEquals(1, mobFilesScannedAfterJob.size());
 
     fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
@@ -297,11 +275,36 @@ public class TestMobSweeper {
     for (FileStatus status : fileStatuses) {
       mobFilesSet.add(status.getPath().getName());
     }
-
     assertEquals(1, mobFilesSet.size());
     assertEquals(true, mobFilesScannedAfterJob.iterator().next()
             .equalsIgnoreCase(mobFilesSet.iterator().next()));
-
   }
 
+  @Test
+  public void testCompactionDelaySweeper() throws Exception {
+    testCompactionDelaySweeperInternal(table, tableName);
+  }
+
+  @Test
+  public void testCompactionDelaySweeperWithNamespace() throws Exception {
+    // create a table with namespace
+    NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create("ns").build();
+    admin.createNamespace(namespaceDescriptor);
+    String tableNameAsString = "ns:testSweeperWithNamespace";
+    TableName tableName = TableName.valueOf(tableNameAsString);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(3L);
+    hcd.setMaxVersions(4);
+    desc.addFamily(hcd);
+    admin.createTable(desc);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    table.setAutoFlush(false, false);
+    testCompactionDelaySweeperInternal(table, tableNameAsString);
+    table.close();
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
+    admin.deleteNamespace("ns");
+  }
 }

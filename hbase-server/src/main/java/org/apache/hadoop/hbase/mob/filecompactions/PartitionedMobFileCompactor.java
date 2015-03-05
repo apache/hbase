@@ -99,8 +99,8 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
     compactionBatchSize = conf.getInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE,
       MobConstants.DEFAULT_MOB_FILE_COMPACTION_BATCH_SIZE);
     tempPath = new Path(MobUtils.getMobHome(conf), MobConstants.TEMP_DIR_NAME);
-    bulkloadPath = new Path(tempPath, new Path(MobConstants.BULKLOAD_DIR_NAME,
-      tableName.getNameAsString()));
+    bulkloadPath = new Path(tempPath, new Path(MobConstants.BULKLOAD_DIR_NAME, new Path(
+      tableName.getNamespaceAsString(), tableName.getQualifierAsString())));
     compactionKVMax = this.conf.getInt(HConstants.COMPACTION_KV_MAX,
       HConstants.COMPACTION_KV_MAX_DEFAULT);
     Configuration copyOfConf = new Configuration(conf);

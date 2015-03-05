@@ -259,8 +259,7 @@ public class SweepJob {
     job.setMapOutputValueClass(KeyValue.class);
     job.setReducerClass(SweepReducer.class);
     job.setOutputFormatClass(NullOutputFormat.class);
-    String jobName = getCustomJobName(this.getClass().getSimpleName(), tn.getNameAsString(),
-        familyName);
+    String jobName = getCustomJobName(this.getClass().getSimpleName(), tn, familyName);
     job.setJobName(jobName);
     if (StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
       String fileLoc = conf.get(CREDENTIALS_LOCATION);
@@ -278,12 +277,13 @@ public class SweepJob {
    * @param familyName The current family name.
    * @return The customized job name.
    */
-  private static String getCustomJobName(String className, String tableName, String familyName) {
+  private static String getCustomJobName(String className, TableName tableName, String familyName) {
     StringBuilder name = new StringBuilder();
     name.append(className);
     name.append('-').append(SweepMapper.class.getSimpleName());
     name.append('-').append(SweepReducer.class.getSimpleName());
-    name.append('-').append(tableName);
+    name.append('-').append(tableName.getNamespaceAsString());
+    name.append('-').append(tableName.getQualifierAsString());
     name.append('-').append(familyName);
     return name.toString();
   }
