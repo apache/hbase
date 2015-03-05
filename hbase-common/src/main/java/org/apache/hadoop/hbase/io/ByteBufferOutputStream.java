@@ -43,15 +43,30 @@ public class ByteBufferOutputStream extends OutputStream {
   }
 
   public ByteBufferOutputStream(int capacity, boolean useDirectByteBuffer) {
-    if (useDirectByteBuffer) {
-      buf = ByteBuffer.allocateDirect(capacity);
-    } else {
-      buf = ByteBuffer.allocate(capacity);
-    }
+    this(allocate(capacity, useDirectByteBuffer));
+  }
+
+  /**
+   * @param bb ByteBuffer to use. If too small, will be discarded and a new one allocated in its
+   * place; i.e. the passed in BB may be DESTROYED!!! Minimally it will be altered. If you want
+   * to obtain the newly allocated ByteBuffer, you'll need to pick it up when
+   * done with this instance by calling {@link #getByteBuffer()}. All this encapsulation violation
+   * is so we can recycle buffers rather than allocate each time; it can get expensive especially
+   * if the buffers are big doing allocations each time or having them undergo resizing because
+   * initial allocation was small.
+   * @see #getByteBuffer()
+   */
+  public ByteBufferOutputStream(final ByteBuffer bb) {
+    this.buf = bb;
+    this.buf.clear();
   }
 
   public int size() {
     return buf.position();
+  }
+
+  private static ByteBuffer allocate(final int capacity, final boolean useDirectByteBuffer) {
+    return useDirectByteBuffer? ByteBuffer.allocateDirect(capacity): ByteBuffer.allocate(capacity);
   }
 
   /**
@@ -70,12 +85,7 @@ public class ByteBufferOutputStream extends OutputStream {
       int newSize = (int)Math.min((((long)buf.capacity()) * 2),
           (long)(Integer.MAX_VALUE));
       newSize = Math.max(newSize, buf.position() + extra);
-      ByteBuffer newBuf = null;
-      if (buf.isDirect()) {
-        newBuf = ByteBuffer.allocateDirect(newSize);
-      } else {
-        newBuf = ByteBuffer.allocate(newSize);
-      }
+      ByteBuffer newBuf = allocate(newSize, buf.isDirect());
       buf.flip();
       newBuf.put(buf);
       buf = newBuf;

@@ -65,6 +65,7 @@ public class IPCUtil {
     this.conf = conf;
     this.cellBlockDecompressionMultiplier =
         conf.getInt("hbase.ipc.cellblock.decompression.buffersize.multiplier", 3);
+
     // Guess that 16k is a good size for rpc buffer.  Could go bigger.  See the TODO below in
     // #buildCellBlock.
     this.cellBlockBuildingInitialBufferSize =
@@ -91,23 +92,44 @@ public class IPCUtil {
   public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
     final CellScanner cellScanner)
   throws IOException {
+    return buildCellBlock(codec, compressor, cellScanner, null);
+  }
+
+  /**
+   * Puts CellScanner Cells into a cell block using passed in <code>codec</code> and/or
+   * <code>compressor</code>.
+   * @param codec
+   * @param compressor
+   * @param cellScanner
+   * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
+   * passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
+   * flipped and is ready for reading.  Use limit to find total size.
+   * @param bb Use this bb. Can be null if no reuse going on.
+   * @throws IOException
+   */
+  @SuppressWarnings("resource")
+  public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
+    final CellScanner cellScanner, final ByteBuffer bb)
+  throws IOException {
     if (cellScanner == null) return null;
     if (codec == null) throw new CellScannerButNoCodecException();
     int bufferSize = this.cellBlockBuildingInitialBufferSize;
-    if (cellScanner instanceof HeapSize) {
-      long longSize = ((HeapSize)cellScanner).heapSize();
-      // Just make sure we don't have a size bigger than an int.
-      if (longSize > Integer.MAX_VALUE) {
-        throw new IOException("Size " + longSize + " > " + Integer.MAX_VALUE);
+    ByteBufferOutputStream baos = null;
+    if (bb != null) {
+      bufferSize = bb.capacity();
+      baos = new ByteBufferOutputStream(bb);
+    } else {
+      // Then we need to make our own to return.
+      if (cellScanner instanceof HeapSize) {
+        long longSize = ((HeapSize)cellScanner).heapSize();
+        // Just make sure we don't have a size bigger than an int.
+        if (longSize > Integer.MAX_VALUE) {
+          throw new IOException("Size " + longSize + " > " + Integer.MAX_VALUE);
+        }
+        bufferSize = ClassSize.align((int)longSize);
       }
-      bufferSize = ClassSize.align((int)longSize);
-    } // TODO: Else, get estimate on size of buffer rather than have the buffer resize.
-    // See TestIPCUtil main for experiment where we spin through the Cells getting estimate of
-    // total size before creating the buffer.  It costs somw small percentage.  If we are usually
-    // within the estimated buffer size, then the cost is not worth it.  If we are often well
-    // outside the guesstimated buffer size, the processing can be done in half the time if we
-    // go w/ the estimated size rather than let the buffer resize.
-    ByteBufferOutputStream baos = new ByteBufferOutputStream(bufferSize);
+      baos = new ByteBufferOutputStream(bufferSize);
+    }
     OutputStream os = baos;
     Compressor poolCompressor = null;
     try {

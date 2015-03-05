@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
+import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -267,6 +268,9 @@ public class RpcServer implements RpcServerInterface {
 
   private UserProvider userProvider;
 
+  private final BoundedByteBufferPool reservoir;
+
+
   /**
    * Datastructure that holds all necessary to a method invocation and then afterward, carries
    * the result.
@@ -293,6 +297,7 @@ public class RpcServer implements RpcServerInterface {
     protected long size;                          // size of current call
     protected boolean isError;
     protected TraceInfo tinfo;
+    private ByteBuffer recycledByteBuffer = null;
 
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
@@ -311,6 +316,19 @@ public class RpcServer implements RpcServerInterface {
       this.isError = false;
       this.size = size;
       this.tinfo = tinfo;
+    }
+
+    /**
+     * Call is done. Execution happened and we returned results to client. It is now safe to
+     * cleanup.
+     */
+    void done() {
+      if (this.recycledByteBuffer != null) {
+        // Return buffer to reservoir now we are done with it.
+        reservoir.putBuffer(this.recycledByteBuffer);
+        this.recycledByteBuffer = null;
+      }
+      this.connection.decRpcCount();  // Say that we're done with this call.
     }
 
     @Override
@@ -375,8 +393,9 @@ public class RpcServer implements RpcServerInterface {
           // Set the exception as the result of the method invocation.
           headerBuilder.setException(exceptionBuilder.build());
         }
-        ByteBuffer cellBlock =
-          ipcUtil.buildCellBlock(this.connection.codec, this.connection.compressionCodec, cells);
+        this.recycledByteBuffer = reservoir.getBuffer();
+        ByteBuffer cellBlock = ipcUtil.buildCellBlock(this.connection.codec,
+          this.connection.compressionCodec, cells, recycledByteBuffer);
         if (cellBlock != null) {
           CellBlockMeta.Builder cellBlockBuilder = CellBlockMeta.newBuilder();
           // Presumes the cellBlock bytebuffer has been flipped so limit has total size in it.
@@ -1051,7 +1070,7 @@ public class RpcServer implements RpcServerInterface {
       }
 
       if (!call.response.hasRemaining()) {
-        call.connection.decRpcCount();  // Say that we're done with this call.
+        call.done();
         return true;
       } else {
         return false; // Socket can't take more, we will have to come back.
@@ -1885,7 +1904,13 @@ public class RpcServer implements RpcServerInterface {
       final InetSocketAddress bindAddress, Configuration conf,
       RpcScheduler scheduler)
       throws IOException {
-
+    this.reservoir = new BoundedByteBufferPool(
+      conf.getInt("hbase.ipc.server.reservoir.max.buffer.size",  1024 * 1024),
+      conf.getInt("hbase.ipc.server.reservoir.initial.buffer.size", 16 * 1024),
+      // Make the max twice the number of handlers to be safe.
+      conf.getInt("hbase.ipc.server.reservoir.initial.max",
+        conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
+          HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2));
     this.server = server;
     this.services = services;
     this.bindAddress = bindAddress;
