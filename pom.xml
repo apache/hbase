@@ -720,6 +720,7 @@
               <exclude>**/META-INF/services/**</exclude>
               <!-- MIT: https://github.com/twbs/bootstrap/blob/master/LICENSE -->
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
+              <exclude>**/src/main/asciidoc/asciidoctor.css</exclude>
               <exclude>**/bootstrap-theme.css</exclude>
               <exclude>**/bootstrap-theme.min.css</exclude>
               <!-- MIT http://jquery.org/license -->
