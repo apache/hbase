@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -164,8 +166,8 @@ public class TestHMobStore {
     KeyValue key3 = new KeyValue(row2, family, qf3, 1, value2);
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
-    StoreFile.Writer mobWriter = store.createWriterInTmp(currentDate,
-        maxKeyCount, hcd.getCompactionCompression(), region.getStartKey());
+    StoreFile.Writer mobWriter = store.createWriterInTmp(currentDate, maxKeyCount,
+        hcd.getCompactionCompression(), region.getStartKey());
     mobFilePath = mobWriter.getPath();
 
     mobWriter.append(key1);
@@ -173,20 +175,15 @@ public class TestHMobStore {
     mobWriter.append(key3);
     mobWriter.close();
 
-    int valueLength1 = key1.getValueLength();
-    int valueLength2 = key2.getValueLength();
-    int valueLength3 = key3.getValueLength();
-
     String targetPathName = MobUtils.formatDate(currentDate);
-    byte[] referenceValue =
-            Bytes.toBytes(targetPathName + Path.SEPARATOR
-                + mobFilePath.getName());
-    byte[] newReferenceValue1 = Bytes.add(Bytes.toBytes(valueLength1), referenceValue);
-    byte[] newReferenceValue2 = Bytes.add(Bytes.toBytes(valueLength2), referenceValue);
-    byte[] newReferenceValue3 = Bytes.add(Bytes.toBytes(valueLength3), referenceValue);
-    seekKey1 = new KeyValue(row, family, qf1, Long.MAX_VALUE, newReferenceValue1);
-    seekKey2 = new KeyValue(row, family, qf2, Long.MAX_VALUE, newReferenceValue2);
-    seekKey3 = new KeyValue(row2, family, qf3, Long.MAX_VALUE, newReferenceValue3);
+    byte[] referenceValue = Bytes.toBytes(targetPathName + Path.SEPARATOR + mobFilePath.getName());
+    Tag tableNameTag = new Tag(TagType.MOB_TABLE_NAME_TAG_TYPE, store.getTableName().getName());
+    KeyValue kv1 = new KeyValue(row, family, qf1, Long.MAX_VALUE, referenceValue);
+    KeyValue kv2 = new KeyValue(row, family, qf2, Long.MAX_VALUE, referenceValue);
+    KeyValue kv3 = new KeyValue(row2, family, qf3, Long.MAX_VALUE, referenceValue);
+    seekKey1 = MobUtils.createMobRefKeyValue(kv1, referenceValue, tableNameTag);
+    seekKey2 = MobUtils.createMobRefKeyValue(kv2, referenceValue, tableNameTag);
+    seekKey3 = MobUtils.createMobRefKeyValue(kv3, referenceValue, tableNameTag);
   }
 
   /**

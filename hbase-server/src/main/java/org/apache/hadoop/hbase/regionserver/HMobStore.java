@@ -23,8 +23,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -58,6 +60,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.util.IdLock;
 
 /**
  * The store implementation to save MOBs (medium objects), it extends the HStore.
@@ -90,10 +93,11 @@ public class HMobStore extends HStore {
   private volatile long mobFlushedCellsSize = 0;
   private volatile long mobScanCellsCount = 0;
   private volatile long mobScanCellsSize = 0;
-  private List<Path> mobDirLocations;
   private HColumnDescriptor family;
   private TableLockManager tableLockManager;
   private TableName tableLockName;
+  private Map<String, List<Path>> map = new ConcurrentHashMap<String, List<Path>>();
+  private final IdLock keyLock = new IdLock();
 
   public HMobStore(final HRegion region, final HColumnDescriptor family,
       final Configuration confParam) throws IOException {
@@ -103,11 +107,12 @@ public class HMobStore extends HStore {
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath = MobUtils.getMobFamilyPath(conf, this.getTableName(),
         family.getNameAsString());
-    mobDirLocations = new ArrayList<Path>();
-    mobDirLocations.add(mobFamilyPath);
+    List<Path> locations = new ArrayList<Path>(2);
+    locations.add(mobFamilyPath);
     TableName tn = region.getTableDesc().getTableName();
-    mobDirLocations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils
-        .getMobRegionInfo(tn).getEncodedName(), family.getNameAsString()));
+    locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
+        .getEncodedName(), family.getNameAsString()));
+    map.put(Bytes.toString(tn.getName()), locations);
     if (region.getRegionServerServices() != null) {
       tableLockManager = region.getRegionServerServices().getTableLockManager();
       tableLockName = MobUtils.getTableLockName(getTableName());
@@ -310,9 +315,28 @@ public class HMobStore extends HStore {
     Cell result = null;
     if (MobUtils.hasValidMobRefCellValue(reference)) {
       String fileName = MobUtils.getMobFileName(reference);
-      result = readCell(mobDirLocations, fileName, reference, cacheBlocks);
-      if (result == null) {
-        result = readClonedCell(fileName, reference, cacheBlocks);
+      Tag tableNameTag = MobUtils.getTableNameTag(reference);
+      if (tableNameTag != null) {
+        byte[] tableName = tableNameTag.getValue();
+        String tableNameString = Bytes.toString(tableName);
+        List<Path> locations = map.get(tableNameString);
+        if (locations == null) {
+          IdLock.Entry lockEntry = keyLock.getLockEntry(tableNameString.hashCode());
+          try {
+            locations = map.get(tableNameString);
+            if (locations == null) {
+              locations = new ArrayList<Path>(2);
+              TableName tn = TableName.valueOf(tableName);
+              locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
+              locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils
+                  .getMobRegionInfo(tn).getEncodedName(), family.getNameAsString()));
+              map.put(tableNameString, locations);
+            }
+          } finally {
+            keyLock.releaseLockEntry(lockEntry);
+          }
+        }
+        result = readCell(locations, fileName, reference, cacheBlocks);
       }
     }
     if (result == null) {
@@ -353,11 +377,18 @@ public class HMobStore extends HStore {
         return file.readCell(search, cacheMobBlocks);
       } catch (IOException e) {
         mobCacheConfig.getMobFileCache().evictFile(fileName);
-        if (e instanceof FileNotFoundException) {
+        if ((e instanceof FileNotFoundException) ||
+            (e.getCause() instanceof FileNotFoundException)) {
           LOG.warn("Fail to read the cell, the mob file " + path + " doesn't exist", e);
         } else {
           throw e;
         }
+      } catch (NullPointerException e) {
+        mobCacheConfig.getMobFileCache().evictFile(fileName);
+        LOG.warn("Fail to read the cell", e);
+      } catch (AssertionError e) {
+        mobCacheConfig.getMobFileCache().evictFile(fileName);
+        LOG.warn("Fail to read the cell", e);
       } finally {
         if (file != null) {
           mobCacheConfig.getMobFileCache().closeFile(file);
@@ -365,41 +396,8 @@ public class HMobStore extends HStore {
       }
     }
     LOG.error("The mob file " + fileName + " could not be found in the locations "
-        + mobDirLocations);
+        + locations);
     return null;
-  }
-
-  /**
-   * Reads the cell from a mob file of source table.
-   * The table might be cloned, in this case only hfile link is created in the new table,
-   * and the mob file is located in the source table directories.
-   * 1. The working directory of the source table.
-   * 2. The archive directory of the source table.
-   * Reads the cell from the files located in both of the above directories.
-   * @param fileName The file to be read.
-   * @param search The cell to be searched.
-   * @param cacheMobBlocks Whether the scanner should cache blocks.
-   * @return The found cell. Null if there's no such a cell.
-   * @throws IOException
-   */
-  private Cell readClonedCell(String fileName, Cell search, boolean cacheMobBlocks)
-      throws IOException {
-    Tag tableNameTag = MobUtils.getTableNameTag(search);
-    if (tableNameTag == null) {
-      return null;
-    }
-    byte[] tableName = tableNameTag.getValue();
-    if (Bytes.equals(this.getTableName().getName(), tableName)) {
-      return null;
-    }
-    // the possible locations in the source table.
-    List<Path> locations = new ArrayList<Path>();
-    TableName tn = TableName.valueOf(tableName);
-    locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
-    locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
-        .getEncodedName(), family.getNameAsString()));
-    // read the cell from the source table.
-    return readCell(locations, fileName, search, cacheMobBlocks);
   }
 
   /**
