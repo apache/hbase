@@ -338,7 +338,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           }
           scanner.seek(seekKey);
           Cell c = scanner.peek();
-          if (c != null ) {
+          if (c != null) {
             totalScannersSoughtBytes += CellUtil.estimatedSerializedSizeOf(c);
           }
         }
@@ -628,7 +628,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    */
   private ScanQueryMatcher.MatchCode optimize(ScanQueryMatcher.MatchCode qcode, Cell cell) {
     Cell nextIndexedKey = getNextIndexedKey();
-    if (nextIndexedKey == null || nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY || store == null) {
+    if (nextIndexedKey == null || nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY ||
+        store == null) {
       return qcode;
     }
     switch(qcode) {
