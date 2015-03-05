@@ -83,12 +83,12 @@ echo "Updating Git"
 git checkout master
 git pull
 
-# Generate the site to ~/git/hbase/target/stage
+# Generate the site to ~/git/hbase/target/site
 if [ $INTERACTIVE ]; then
     read -p "Build the site? (y/n)" yn
     case $yn in
         [Yy]* ) 
-    			mvn clean package javadoc:aggregate site site:stage -DskipTests
+    			mvn clean package javadoc:aggregate site post-site site:stage -DskipTests
           status=$?
           if [ $status -ne 0 ]; then
             echo "The website does not build. Aborting."
@@ -101,7 +101,7 @@ if [ $INTERACTIVE ]; then
     esac
 else
   echo "Building the site in auto mode."
-  mvn clean package javadoc:aggregate site site:stage -DskipTests
+  mvn clean package javadoc:aggregate site post-site site:stage -DskipTests
   status=$?
   if [ $status != 0 ]; then
     echo "The website does not build. Aborting."
@@ -161,7 +161,7 @@ elif [ `uname` == "Linux" ]; then
   COPYOPTS='-au'
 fi
 
-cp $COPYOPTS $GIT_DIR/target/site/* .
+cp $COPYOPTS $GIT_DIR/target/staging/* .
 
 # Look for things we need to fix up in svn
 
