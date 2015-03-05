@@ -39,10 +39,11 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -93,7 +94,7 @@ public class TestRegionReplicaReplicationEndpoint {
     conf.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf.setInt("replication.stats.thread.period.seconds", 5);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3); // less number of retries is needed
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5); // less number of retries is needed
     conf.setInt("hbase.client.serverside.retries.multiplier", 1);
 
     HTU.startMiniCluster(NB_SERVERS);
@@ -148,9 +149,9 @@ public class TestRegionReplicaReplicationEndpoint {
     HTU.deleteTableIfAny(tableNameNoReplicas);
     HTU.createTable(tableNameNoReplicas, HBaseTestingUtility.fam1);
 
-    HConnection connection = HConnectionManager.createConnection(HTU.getConfiguration());
-    HTableInterface table = connection.getTable(tableName);
-    HTableInterface tableNoReplicas = connection.getTable(tableNameNoReplicas);
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    Table table = connection.getTable(tableName);
+    Table tableNoReplicas = connection.getTable(tableNameNoReplicas);
 
     try {
       // load some data to the non-replicated table
@@ -189,7 +190,7 @@ public class TestRegionReplicaReplicationEndpoint {
     for (int i = 1; i < regionReplication; i++) {
       final HRegion region = regions[i];
       // wait until all the data is replicated to all secondary regions
-      Waiter.waitFor(HTU.getConfiguration(), 60000, new Waiter.Predicate<Exception>() {
+      Waiter.waitFor(HTU.getConfiguration(), 90000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
           LOG.info("verifying replication for region replica:" + region.getRegionInfo());
@@ -207,22 +208,22 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 240000)
   public void testRegionReplicaReplicationWith2Replicas() throws Exception {
     testRegionReplicaReplication(2);
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 240000)
   public void testRegionReplicaReplicationWith3Replicas() throws Exception {
     testRegionReplicaReplication(3);
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 240000)
   public void testRegionReplicaReplicationWith10Replicas() throws Exception {
     testRegionReplicaReplication(10);
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 240000)
   public void testRegionReplicaReplicationForFlushAndCompaction() throws Exception {
     // Tests a table with region replication 3. Writes some data, and causes flushes and
     // compactions. Verifies that the data is readable from the replicas. Note that this
@@ -234,9 +235,8 @@ public class TestRegionReplicaReplicationEndpoint {
     htd.setRegionReplication(regionReplication);
     HTU.getHBaseAdmin().createTable(htd);
 
-
-    HConnection connection = HConnectionManager.createConnection(HTU.getConfiguration());
-    HTableInterface table = connection.getTable(tableName);
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    Table table = connection.getTable(tableName);
 
     try {
       // load the data to the table
@@ -250,19 +250,19 @@ public class TestRegionReplicaReplicationEndpoint {
         HTU.compact(tableName, false);
       }
 
-      verifyReplication(tableName, regionReplication, 0, 6000);
+      verifyReplication(tableName, regionReplication, 0, 1000);
     } finally {
       table.close();
       connection.close();
     }
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 240000)
   public void testRegionReplicaReplicationIgnoresDisabledTables() throws Exception {
     testRegionReplicaReplicationIgnoresDisabledTables(false);
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 240000)
   public void testRegionReplicaReplicationIgnoresDroppedTables() throws Exception {
     testRegionReplicaReplicationIgnoresDisabledTables(true);
   }
@@ -291,9 +291,9 @@ public class TestRegionReplicaReplicationEndpoint {
 
     // now that the replication is disabled, write to the table to be dropped, then drop the table.
 
-    HConnection connection = HConnectionManager.createConnection(HTU.getConfiguration());
-    HTableInterface table = connection.getTable(tableName);
-    HTableInterface tableToBeDisabled = connection.getTable(toBeDisabledTable);
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    Table table = connection.getTable(tableName);
+    Table tableToBeDisabled = connection.getTable(toBeDisabledTable);
 
     HTU.loadNumericRows(tableToBeDisabled, HBaseTestingUtility.fam1, 6000, 7000);
 
@@ -304,9 +304,9 @@ public class TestRegionReplicaReplicationEndpoint {
     RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter sinkWriter =
         new RegionReplicaReplicationEndpoint.RegionReplicaSinkWriter(sink,
           (ClusterConnection) connection,
-          Executors.newSingleThreadExecutor(), 1000);
-
-    HRegionLocation hrl = connection.locateRegion(toBeDisabledTable, HConstants.EMPTY_BYTE_ARRAY);
+          Executors.newSingleThreadExecutor(), Integer.MAX_VALUE);
+    RegionLocator rl = connection.getRegionLocator(toBeDisabledTable);
+    HRegionLocation hrl = rl.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY);
     byte[] encodedRegionName = hrl.getRegionInfo().getEncodedNameAsBytes();
 
     Entry entry = new Entry(
@@ -337,6 +337,7 @@ public class TestRegionReplicaReplicationEndpoint {
     } finally {
       admin.close();
       table.close();
+      rl.close();
       tableToBeDisabled.close();
       HTU.deleteTableIfAny(toBeDisabledTable);
       connection.close();
