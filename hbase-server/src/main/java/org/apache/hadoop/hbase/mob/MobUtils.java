@@ -27,6 +27,12 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -51,11 +57,17 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.mob.filecompactions.MobFileCompactor;
+import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * The mob utilities
@@ -358,6 +370,16 @@ public class MobUtils {
   }
 
   /**
+   * Gets whether the current region name follows the pattern of a mob region name.
+   * @param tableName The current table name.
+   * @param regionName The current region name.
+   * @return True if the current region name follows the pattern of a mob region name.
+   */
+  public static boolean isMobRegionName(TableName tableName, byte[] regionName) {
+    return Bytes.equals(regionName, getMobRegionInfo(tableName).getRegionName());
+  }
+
+  /**
    * Gets the working directory of the mob compaction.
    * @param root The root directory of the mob compaction.
    * @param jobName The current job name.
@@ -644,5 +666,86 @@ public class MobUtils {
   public static TableName getTableLockName(TableName tn) {
     byte[] tableName = tn.getName();
     return TableName.valueOf(Bytes.add(tableName, MobConstants.MOB_TABLE_LOCK_SUFFIX));
+  }
+
+  /**
+   * Performs the mob file compaction.
+   * @param conf the Configuration
+   * @param fs the file system
+   * @param tableName the table the compact
+   * @param hcd the column descriptor
+   * @param pool the thread pool
+   * @param tableLockManager the tableLock manager
+   * @param isForceAllFiles Whether add all mob files into the compaction.
+   */
+  public static void doMobFileCompaction(Configuration conf, FileSystem fs, TableName tableName,
+    HColumnDescriptor hcd, ExecutorService pool, TableLockManager tableLockManager,
+    boolean isForceAllFiles) throws IOException {
+    String className = conf.get(MobConstants.MOB_FILE_COMPACTOR_CLASS_KEY,
+      PartitionedMobFileCompactor.class.getName());
+    // instantiate the mob file compactor.
+    MobFileCompactor compactor = null;
+    try {
+      compactor = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
+        Configuration.class, FileSystem.class, TableName.class, HColumnDescriptor.class,
+        ExecutorService.class }, new Object[] { conf, fs, tableName, hcd, pool });
+    } catch (Exception e) {
+      throw new IOException("Unable to load configured mob file compactor '" + className + "'", e);
+    }
+    // compact only for mob-enabled column.
+    // obtain a write table lock before performing compaction to avoid race condition
+    // with major compaction in mob-enabled column.
+    boolean tableLocked = false;
+    TableLock lock = null;
+    try {
+      // the tableLockManager might be null in testing. In that case, it is lock-free.
+      if (tableLockManager != null) {
+        lock = tableLockManager.writeLock(MobUtils.getTableLockName(tableName),
+          "Run MobFileCompaction");
+        lock.acquire();
+      }
+      tableLocked = true;
+      compactor.compact(isForceAllFiles);
+    } catch (Exception e) {
+      LOG.error("Fail to compact the mob files for the column " + hcd.getNameAsString()
+        + " in the table " + tableName.getNameAsString(), e);
+    } finally {
+      if (lock != null && tableLocked) {
+        try {
+          lock.release();
+        } catch (IOException e) {
+          LOG.error("Fail to release the write lock for the table " + tableName.getNameAsString(),
+            e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Creates a thread pool.
+   * @param conf the Configuration
+   * @return A thread pool.
+   */
+  public static ExecutorService createMobFileCompactorThreadPool(Configuration conf) {
+    int maxThreads = conf.getInt(MobConstants.MOB_FILE_COMPACTION_THREADS_MAX,
+      MobConstants.DEFAULT_MOB_FILE_COMPACTION_THREADS_MAX);
+    if (maxThreads == 0) {
+      maxThreads = 1;
+    }
+    final SynchronousQueue<Runnable> queue = new SynchronousQueue<Runnable>();
+    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, 60, TimeUnit.SECONDS, queue,
+      Threads.newDaemonThreadFactory("MobFileCompactor"), new RejectedExecutionHandler() {
+        @Override
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+          try {
+            // waiting for a thread to pick up instead of throwing exceptions.
+            queue.put(r);
+          } catch (InterruptedException e) {
+            throw new RejectedExecutionException(e);
+          }
+        }
+      });
+    ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
+    return pool;
   }
 }

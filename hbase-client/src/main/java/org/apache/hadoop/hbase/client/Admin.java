@@ -1362,4 +1362,56 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException
    */
   public int getMasterInfoPort() throws IOException;
+
+  /**
+   * Compact the mob files in all mob-enabled column families. Asynchronous operation.
+   *
+   * @param tableName table to compact
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  void compactMob(final TableName tableName) throws IOException,
+    InterruptedException;
+
+  /**
+   * Compact the mob files in a mob-enabled column family. Asynchronous operation.
+   *
+   * @param tableName table to compact
+   * @param columnFamily column family within a table
+   * @throws IOException if not a mob column family or if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  void compactMob(final TableName tableName, final byte[] columnFamily) throws IOException,
+    InterruptedException;
+
+  /**
+   * Major compact the mob files in all mob-enabled column family. Asynchronous operation.
+   *
+   * @param tableName table to compact
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  void majorCompactMob(final TableName tableName) throws IOException,
+    InterruptedException;
+
+  /**
+   * Major compact the mob files in a mob-enabled column family. Asynchronous operation.
+   *
+   * @param tableName table to compact
+   * @param columnFamily column family within a table
+   * @throws IOException if not a mob column family or if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  void majorCompactMob(final TableName tableName, final byte[] columnFamily) throws IOException,
+    InterruptedException;
+
+  /**
+   * Get the current compaction state of a table. It could be in a compaction, or none.
+   *
+   * @param tableName table to examine
+   * @return the current compaction state
+   * @throws IOException if a remote or network exception occurs
+   */
+  AdminProtos.GetRegionInfoResponse.CompactionState getMobCompactionState(final TableName tableName)
+    throws IOException;
 }

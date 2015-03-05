@@ -65,14 +65,26 @@ public abstract class MobFileCompactor {
    * @throws IOException
    */
   public List<Path> compact() throws IOException {
-    return compact(Arrays.asList(fs.listStatus(mobFamilyDir)));
+    return compact(false);
+  }
+
+  /**
+   * Compacts the mob files by compaction type for the current column family.
+   * @param isForceAllFiles Whether add all mob files into the compaction.
+   * @return The paths of new mob files generated in the compaction.
+   * @throws IOException
+   */
+  public List<Path> compact(boolean isForceAllFiles) throws IOException {
+    return compact(Arrays.asList(fs.listStatus(mobFamilyDir)), isForceAllFiles);
   }
 
   /**
    * Compacts the candidate mob files.
    * @param files The candidate mob files.
+   * @param isForceAllFiles Whether add all mob files into the compaction.
    * @return The paths of new mob files generated in the compaction.
    * @throws IOException
    */
-  public abstract List<Path> compact(List<FileStatus> files) throws IOException;
+  public abstract List<Path> compact(List<FileStatus> files, boolean isForceAllFiles)
+    throws IOException;
 }

@@ -131,7 +131,7 @@ public class TestPartitionedMobFileCompactor {
         expectedStartKeys.add(startKey);
       }
     }
-    testSelectFiles(tableName, CompactionType.ALL_FILES, expectedStartKeys);
+    testSelectFiles(tableName, CompactionType.ALL_FILES, false, expectedStartKeys);
   }
 
   @Test
@@ -156,7 +156,30 @@ public class TestPartitionedMobFileCompactor {
     }
     // set the mob file compaction mergeable threshold
     conf.setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
-    testSelectFiles(tableName, CompactionType.PART_FILES, expectedStartKeys);
+    testSelectFiles(tableName, CompactionType.PART_FILES, false, expectedStartKeys);
+  }
+
+  @Test
+  public void testCompactionSelectWithForceAllFiles() throws Exception {
+    resetConf();
+    String tableName = "testCompactionSelectWithForceAllFiles";
+    init(tableName);
+    int count = 10;
+    // create 10 mob files.
+    createStoreFiles(basePath, family, qf, count, Type.Put);
+    // create 10 del files
+    createStoreFiles(basePath, family, qf, count, Type.Delete);
+    listFiles();
+    long mergeSize = 4000;
+    List<String> expectedStartKeys = new ArrayList<>();
+    for(FileStatus file : mobFiles) {
+      String fileName = file.getPath().getName();
+      String startKey = fileName.substring(0, 32);
+      expectedStartKeys.add(startKey);
+    }
+    // set the mob file compaction mergeable threshold
+    conf.setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
+    testSelectFiles(tableName, CompactionType.ALL_FILES, true, expectedStartKeys);
   }
 
   @Test
@@ -169,7 +192,7 @@ public class TestPartitionedMobFileCompactor {
     // create 13 del files
     createStoreFiles(basePath, family, qf, 13, Type.Delete);
     listFiles();
-    testCompactDelFiles(tableName, 1, 13);
+    testCompactDelFiles(tableName, 1, 13, false);
   }
 
   @Test
@@ -185,7 +208,7 @@ public class TestPartitionedMobFileCompactor {
 
     // set the mob file compaction batch size
     conf.setInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE, 4);
-    testCompactDelFiles(tableName, 1, 13);
+    testCompactDelFiles(tableName, 1, 13, false);
   }
 
   @Test
@@ -203,7 +226,7 @@ public class TestPartitionedMobFileCompactor {
     conf.setInt(MobConstants.MOB_DELFILE_MAX_COUNT, 5);
     // set the mob file compaction batch size
     conf.setInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE, 2);
-    testCompactDelFiles(tableName, 4, 13);
+    testCompactDelFiles(tableName, 4, 13, false);
   }
 
   /**
@@ -213,16 +236,17 @@ public class TestPartitionedMobFileCompactor {
    * @param expected the expected start keys
    */
   private void testSelectFiles(String tableName, final CompactionType type,
-      final List<String> expected) throws IOException {
+    final boolean isForceAllFiles, final List<String> expected) throws IOException {
     PartitionedMobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs,
       TableName.valueOf(tableName), hcd, pool) {
       @Override
-      public List<Path> compact(List<FileStatus> files) throws IOException {
+      public List<Path> compact(List<FileStatus> files, boolean isForceAllFiles)
+        throws IOException {
         if (files == null || files.isEmpty()) {
           return null;
         }
-        PartitionedMobFileCompactionRequest request = select(files);
-        // assert the compaction type is ALL_FILES
+        PartitionedMobFileCompactionRequest request = select(files, isForceAllFiles);
+        // assert the compaction type
         Assert.assertEquals(type, request.type);
         // assert get the right partitions
         compareCompactedPartitions(expected, request.compactionPartitions);
@@ -231,7 +255,7 @@ public class TestPartitionedMobFileCompactor {
         return null;
       }
     };
-    compactor.compact(allFiles);
+    compactor.compact(allFiles, isForceAllFiles);
   }
 
   /**
@@ -241,7 +265,7 @@ public class TestPartitionedMobFileCompactor {
    * @param expectedCellCount the expected cell count
    */
   private void testCompactDelFiles(String tableName, final int expectedFileCount,
-      final int expectedCellCount) throws IOException {
+      final int expectedCellCount, boolean isForceAllFiles) throws IOException {
     PartitionedMobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs,
       TableName.valueOf(tableName), hcd, pool) {
       @Override
@@ -258,8 +282,7 @@ public class TestPartitionedMobFileCompactor {
         return null;
       }
     };
-
-    compactor.compact(allFiles);
+    compactor.compact(allFiles, isForceAllFiles);
   }
 
   /**

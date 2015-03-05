@@ -3819,4 +3819,103 @@ public class HBaseAdmin implements Admin {
       }
     });
   }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void compactMob(final TableName tableName, final byte[] columnFamily)
+    throws IOException, InterruptedException {
+    checkTableNameNotNull(tableName);
+    checkFamilyNameNotNull(columnFamily);
+    validateMobColumnFamily(tableName, columnFamily);
+    compactMob(tableName, columnFamily, false);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void compactMob(final TableName tableName) throws IOException, InterruptedException {
+    checkTableNameNotNull(tableName);
+    compactMob(tableName, null, false);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void majorCompactMob(final TableName tableName, final byte[] columnFamily)
+    throws IOException, InterruptedException {
+    checkTableNameNotNull(tableName);
+    checkFamilyNameNotNull(columnFamily);
+    validateMobColumnFamily(tableName, columnFamily);
+    compactMob(tableName, columnFamily, true);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void majorCompactMob(final TableName tableName) throws IOException, InterruptedException {
+    checkTableNameNotNull(tableName);
+    compactMob(tableName, null, true);
+  }
+
+  @Override
+  public CompactionState getMobCompactionState(TableName tableName) throws IOException {
+    checkTableNameNotNull(tableName);
+    try {
+      ServerName master = getClusterStatus().getMaster();
+      HRegionInfo info = new HRegionInfo(tableName, Bytes.toBytes(".mob"),
+        HConstants.EMPTY_END_ROW, false, 0);
+      GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
+        info.getRegionName(), true);
+      GetRegionInfoResponse response = this.connection.getAdmin(master)
+        .getRegionInfo(null, request);
+      return response.getCompactionState();
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+  /**
+   * Compacts the mob files in a mob-enabled column family. Asynchronous operation.
+   * @param tableName The table to compact.
+   * @param columnFamily The column family to compact. If it is null, all the mob-enabled
+   *        column families in this table will be compacted.
+   * @param major Whether to select all the mob files in the compaction.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  private void compactMob(final TableName tableName, final byte[] columnFamily, boolean major)
+    throws IOException, InterruptedException {
+    // get the mob region info, this is a dummy region.
+    HRegionInfo info = new HRegionInfo(tableName, Bytes.toBytes(".mob"), HConstants.EMPTY_END_ROW,
+      false, 0);
+    ServerName master = getClusterStatus().getMaster();
+    compact(master, info, major, columnFamily);
+  }
+
+  private void checkTableNameNotNull(TableName tableName) {
+    if (tableName == null) {
+      throw new IllegalArgumentException("TableName cannot be null");
+    }
+  }
+
+  private void checkFamilyNameNotNull(byte[] columnFamily) {
+    if (columnFamily == null) {
+      throw new IllegalArgumentException("The column family name cannot be null");
+    }
+  }
+
+  private void validateMobColumnFamily(TableName tableName, byte[] columnFamily)
+    throws IOException {
+    HTableDescriptor htd = getTableDescriptor(tableName);
+    HColumnDescriptor family = htd.getFamily(columnFamily);
+    if (family == null || !family.isMobEnabled()) {
+      throw new IllegalArgumentException("Column family " + columnFamily
+        + " is not a mob column family");
+    }
+  }
 }

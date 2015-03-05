@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,11 +44,16 @@ import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.*;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -1303,5 +1309,107 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(e);
     }
     return response.build();
+  }
+
+  /**
+   * Compact a region on the master.
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
+  public CompactRegionResponse compactRegion(final RpcController controller,
+    final CompactRegionRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      byte[] regionName = request.getRegion().getValue().toByteArray();
+      TableName tableName = HRegionInfo.getTable(regionName);
+      // if the region is a mob region, do the mob file compaction.
+      if (MobUtils.isMobRegionName(tableName, regionName)) {
+        return compactMob(request, tableName);
+      } else {
+        return super.compactRegion(controller, request);
+      }
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
+  public GetRegionInfoResponse getRegionInfo(final RpcController controller,
+    final GetRegionInfoRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      byte[] regionName = request.getRegion().getValue().toByteArray();
+      TableName tableName = HRegionInfo.getTable(regionName);
+      if (MobUtils.isMobRegionName(tableName, regionName)) {
+        // a dummy region info contains the compaction state.
+        HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(tableName);
+        GetRegionInfoResponse.Builder builder = GetRegionInfoResponse.newBuilder();
+        builder.setRegionInfo(HRegionInfo.convert(mobRegionInfo));
+        if (request.hasCompactionState() && request.getCompactionState()) {
+          builder.setCompactionState(master.getMobCompactionState(tableName));
+        }
+        return builder.build();
+      } else {
+        return super.getRegionInfo(controller, request);
+      }
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+
+  /**
+   * Compacts the mob files in the current table.
+   * @param request the request.
+   * @param tableName the current table name.
+   * @return The response of the mob file compaction.
+   * @throws IOException
+   */
+  private CompactRegionResponse compactMob(final CompactRegionRequest request,
+    TableName tableName) throws IOException {
+    boolean isForceAllFiles = false;
+    List<HColumnDescriptor> compactedColumns = new ArrayList<HColumnDescriptor>();
+    HColumnDescriptor[] hcds = master.getTableDescriptors().get(tableName).getColumnFamilies();
+    byte[] family = null;
+    if (request.hasFamily()) {
+      family = request.getFamily().toByteArray();
+      for (HColumnDescriptor hcd : hcds) {
+        if (Bytes.equals(family, hcd.getName())) {
+          if (!hcd.isMobEnabled()) {
+            LOG.error("Column family " + hcd.getName() + " is not a mob column family");
+            throw new DoNotRetryIOException("Column family " + hcd.getName()
+              + " is not a mob column family");
+          }
+          compactedColumns.add(hcd);
+        }
+      }
+    } else {
+      for (HColumnDescriptor hcd : hcds) {
+        if (hcd.isMobEnabled()) {
+          compactedColumns.add(hcd);
+        }
+      }
+    }
+    if (compactedColumns.isEmpty()) {
+      LOG.error("No mob column families are assigned in the mob file compaction");
+      throw new DoNotRetryIOException(
+        "No mob column families are assigned in the mob file compaction");
+    }
+    if (request.hasMajor() && request.getMajor()) {
+      isForceAllFiles = true;
+    }
+    String familyLogMsg = (family != null) ? Bytes.toString(family) : "";
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("User-triggered mob file compaction requested for table: "
+        + tableName.getNameAsString() + " for column family: " + familyLogMsg);
+    }
+    master.mobFileCompactThread.requestMobFileCompaction(master.getConfiguration(),
+      master.getFileSystem(), tableName, compactedColumns,
+      master.getTableLockManager(), isForceAllFiles);
+    return CompactRegionResponse.newBuilder().build();
   }
 }

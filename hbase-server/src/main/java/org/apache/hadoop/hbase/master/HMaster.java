@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -110,6 +111,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
@@ -128,6 +130,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HBaseFsckRepair;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -278,6 +281,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private HFileCleaner hfileCleaner;
   private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
   private MobFileCompactionChore mobFileCompactChore;
+  MasterMobFileCompactionThread mobFileCompactThread;
+  // used to synchronize the mobFileCompactionStates
+  private final IdLock mobFileCompactionLock = new IdLock();
+  // save the information of mob file compactions in tables.
+  // the key is table name, the value is the number of compactions in that table.
+  private Map<TableName, AtomicInteger> mobFileCompactionStates = Maps.newConcurrentMap();
 
   MasterCoprocessorHost cpHost;
 
@@ -774,6 +783,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     this.mobFileCompactChore = new MobFileCompactionChore(this);
     getChoreService().scheduleChore(mobFileCompactChore);
+    this.mobFileCompactThread = new MasterMobFileCompactionThread(this);
 
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
@@ -1086,6 +1096,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     if (this.clusterStatusPublisherChore != null){
       clusterStatusPublisherChore.cancel(true);
+    }
+    if (this.mobFileCompactThread != null) {
+      this.mobFileCompactThread.close();
     }
   }
 
@@ -2317,5 +2330,59 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
     return getClusterStatus().getLastMajorCompactionTsForRegion(regionName);
+  }
+
+  /**
+   * Gets the mob file compaction state for a specific table.
+   * Whether all the mob files are selected is known during the compaction execution, but
+   * the statistic is done just before compaction starts, it is hard to know the compaction
+   * type at that time, so the rough statistics are chosen for the mob file compaction. Only two
+   * compaction states are available, CompactionState.MAJOR_AND_MINOR and CompactionState.NONE.
+   * @param tableName The current table name.
+   * @return If a given table is in mob file compaction now.
+   */
+  public CompactionState getMobCompactionState(TableName tableName) {
+    AtomicInteger compactionsCount = mobFileCompactionStates.get(tableName);
+    if (compactionsCount != null && compactionsCount.get() != 0) {
+      return CompactionState.MAJOR_AND_MINOR;
+    }
+    return CompactionState.NONE;
+  }
+
+  public void reportMobFileCompactionStart(TableName tableName) throws IOException {
+    IdLock.Entry lockEntry = null;
+    try {
+      lockEntry = mobFileCompactionLock.getLockEntry(tableName.hashCode());
+      AtomicInteger compactionsCount = mobFileCompactionStates.get(tableName);
+      if (compactionsCount == null) {
+        compactionsCount = new AtomicInteger(0);
+        mobFileCompactionStates.put(tableName, compactionsCount);
+      }
+      compactionsCount.incrementAndGet();
+    } finally {
+      if (lockEntry != null) {
+        mobFileCompactionLock.releaseLockEntry(lockEntry);
+      }
+    }
+  }
+
+  public void reportMobFileCompactionEnd(TableName tableName) throws IOException {
+    IdLock.Entry lockEntry = null;
+    try {
+      lockEntry = mobFileCompactionLock.getLockEntry(tableName.hashCode());
+      AtomicInteger compactionsCount = mobFileCompactionStates.get(tableName);
+      if (compactionsCount != null) {
+        int count = compactionsCount.decrementAndGet();
+        // remove the entry if the count is 0.
+        if (count == 0) {
+          mobFileCompactionStates.remove(tableName);
+        }
+      }
+    } finally {
+      if (lockEntry != null) {
+        mobFileCompactionLock.releaseLockEntry(lockEntry);
+      }
+    }
+
   }
 }
