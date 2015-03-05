@@ -233,8 +233,9 @@ public class ScanQueryMatcher {
    * @throws IOException 
    */
   public ScanQueryMatcher(Scan scan, ScanInfo scanInfo, NavigableSet<byte[]> columns,
-      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now, byte[] dropDeletesFromRow,
-      byte[] dropDeletesToRow, RegionCoprocessorHost regionCoprocessorHost) throws IOException {
+      long readPointToUse, long earliestPutTs, long oldestUnexpiredTS, long now,
+      byte[] dropDeletesFromRow, byte[] dropDeletesToRow,
+      RegionCoprocessorHost regionCoprocessorHost) throws IOException {
     this(scan, scanInfo, columns, ScanType.COMPACT_RETAIN_DELETES, readPointToUse, earliestPutTs,
         oldestUnexpiredTS, now, regionCoprocessorHost);
     Preconditions.checkArgument((dropDeletesFromRow != null) && (dropDeletesToRow != null));
@@ -579,8 +580,6 @@ public class ScanQueryMatcher {
 
   /**
    * @param nextIndexed the key of the next entry in the block index (if any)
-   * @param off
-   * @param len
    * @param kv The Cell we're using to calculate the seek key
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
@@ -594,8 +593,6 @@ public class ScanQueryMatcher {
 
   /**
    * @param nextIndexed the key of the next entry in the block index (if any)
-   * @param off
-   * @param len
    * @param kv The Cell we're using to calculate the seek key
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
