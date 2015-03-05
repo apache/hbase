@@ -589,8 +589,6 @@ public class ScanQueryMatcher {
 
   /**
    * @param nextIndexed the key of the next entry in the block index (if any)
-   * @param off
-   * @param len
    * @param kv The Cell we're using to calculate the seek key
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
@@ -603,8 +601,6 @@ public class ScanQueryMatcher {
 
   /**
    * @param nextIndexed the key of the next entry in the block index (if any)
-   * @param off
-   * @param len
    * @param kv The Cell we're using to calculate the seek key
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */

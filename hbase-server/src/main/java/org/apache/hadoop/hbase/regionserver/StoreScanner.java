@@ -583,7 +583,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    */
   private ScanQueryMatcher.MatchCode optimize(ScanQueryMatcher.MatchCode qcode, Cell cell) {
     byte[] nextIndexedKey = getNextIndexedKey();
-    if (nextIndexedKey == null || nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY || store == null) {
+    if (nextIndexedKey == null || nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY ||
+        store == null) {
       return qcode;
     }
     switch(qcode) {
