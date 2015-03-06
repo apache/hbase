@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -102,16 +103,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   // A flag whether use pread for scan
   private boolean scanUsePread = false;
+  protected ReentrantLock lock = new ReentrantLock();
   
   private final long readPt;
-
-  // lock to use for updateReaders
-  // creator needs to ensure that:
-  // 1. *all* calls to public methods (except updateReaders and close) are locked with this lock
-  //    (this can be done by passing the RegionScannerImpl object down)
-  // OR
-  // 2. updateReader is *never* called (such as in flushes or compactions)
-  private Object readerLock;
 
   // used by the injection framework to test race between StoreScanner construction and compaction
   enum StoreScannerCompactionRace {
@@ -401,10 +395,15 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public Cell peek() {
+    lock.lock();
+    try {
     if (this.heap == null) {
       return this.lastTop;
     }
     return this.heap.peek();
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
@@ -415,6 +414,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public void close() {
+    lock.lock();
+    try {
     if (this.closing) return;
     this.closing = true;
     // under test, we dont have a this.store
@@ -424,13 +425,21 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.heap.close();
     this.heap = null; // CLOSED!
     this.lastTop = null; // If both are null, we are closed.
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
   public boolean seek(Cell key) throws IOException {
+    lock.lock();
+    try {
     // reset matcher state, in case that underlying store changed
     checkReseek();
     return this.heap.seek(key);
+    } finally {
+      lock.unlock();
+    }
   }
 
   /**
@@ -455,6 +464,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @Override
   public NextState next(List<Cell> outResult, int limit, long remainingResultSize)
       throws IOException {
+    lock.lock();
+    try {
     if (checkReseek()) {
       return NextState.makeState(NextState.State.MORE_VALUES, 0);
     }
@@ -606,6 +617,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // No more keys
     close();
     return NextState.makeState(NextState.State.NO_MORE_VALUES, totalHeapSize);
+    } finally {
+      lock.unlock();
+    }
   }
 
   /*
@@ -649,7 +663,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // Implementation of ChangedReadersObserver
   @Override
   public void updateReaders() throws IOException {
-    synchronized(readerLock) {
+    lock.lock();
+    try {
     if (this.closing) return;
 
     // All public synchronized API calls will call 'checkReseek' which will cause
@@ -669,6 +684,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     this.heap = null; // the re-seeks could be slow (access HDFS) free up memory ASAP
 
     // Let the next() call handle re-creating and seeking
+    } finally {
+      lock.unlock();
     }
   }
 
@@ -759,6 +776,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public boolean reseek(Cell kv) throws IOException {
+    lock.lock();
+    try {
     //Heap will not be null, if this is called from next() which.
     //If called from RegionScanner.reseek(...) make sure the scanner
     //stack is reset if needed.
@@ -767,6 +786,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       return heap.requestSeek(kv, true, useRowColBloom);
     }
     return heap.reseek(kv);
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
@@ -841,9 +863,5 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   public Cell getNextIndexedKey() {
     return this.heap.getNextIndexedKey();
   }
-
-  @Override
-  public void setReaderLock(Object obj) {
-    this.readerLock = obj;
-  }
 }
+
