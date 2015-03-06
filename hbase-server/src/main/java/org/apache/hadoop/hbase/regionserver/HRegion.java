@@ -5234,6 +5234,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
         KeyValueScanner scanner = store.getScanner(scan, entry.getValue(), this.readPt);
+        // pass the RegionScanner object to lock out concurrent changes to set of readers
+        scanner.setReaderLock(this);
         if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
           || this.filter.isFamilyEssential(entry.getKey())) {
           scanners.add(scanner);
