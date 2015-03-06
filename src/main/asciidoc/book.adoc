@@ -23,6 +23,8 @@
 :Author: Apache HBase Team
 :Email: <hbase-dev@lists.apache.org>
 :doctype: book
+:Version: {docVersion}
+:revnumber: {docVersion}
 // Logo for PDF -- doesn't render in HTML
 :title-logo: hbase_logo_with_orca.png
 :numbered:

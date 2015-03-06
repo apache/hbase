@@ -974,6 +974,9 @@
           <doctype>book</doctype>
           <imagesDir>images</imagesDir>
           <sourceHighlighter>coderay</sourceHighlighter>
+          <attributes>
+            <docVersion>${project.version}</docVersion>
+          </attributes>
         </configuration>
         <executions>
           <execution>
