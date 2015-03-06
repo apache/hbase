@@ -71,7 +71,4 @@ public abstract class NonLazyKeyValueScanner implements KeyValueScanner {
   public Cell getNextIndexedKey() {
     return null;
   }
-
-  @Override
-  public void setReaderLock(Object obj) {/* NO OP */}
 }

@@ -162,11 +162,4 @@ public interface KeyValueScanner {
    * if known, or null otherwise
    */
   public Cell getNextIndexedKey();
-
-  /**
-   * Set the object to lock when the scanner's readers (if any) are updated (this is here so that the
-   * coprocessors creating {@link StoreScanner}'s do not have to change)
-   * @param obj lock object to use
-   */
-  public void setReaderLock(Object obj);
 }
