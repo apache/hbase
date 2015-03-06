@@ -476,6 +476,9 @@ public class FileLink {
 
   @Override
   public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
     // Assumes that the ordering of locations between objects are the same. This is true for the
     // current subclasses already (HFileLink, WALLink). Otherwise, we may have to sort the locations
     // or keep them presorted

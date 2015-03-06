@@ -69,6 +69,25 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   private static final boolean DEFAULT_REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH = true;
 
   /**
+   * Enables or disables refreshing store files of secondary region replicas when the memory is
+   * above the global memstore lower limit. Refreshing the store files means that we will do a file
+   * list of the primary regions store files, and pick up new files. Also depending on the store
+   * files, we can drop some memstore contents which will free up memory.
+   */
+  public static final String REGION_REPLICA_STORE_FILE_REFRESH
+    = "hbase.region.replica.storefile.refresh";
+  private static final boolean DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH = true;
+
+  /**
+   * The multiplier to use when we want to refresh a secondary region instead of flushing a primary
+   * region. Default value assumes that for doing the file refresh, the biggest secondary should be
+   * 4 times bigger than the biggest primary.
+   */
+  public static final String REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER
+    = "hbase.region.replica.storefile.refresh.memstore.multiplier";
+  private static final double DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER = 4;
+
+  /**
    * Returns the regionInfo object to use for interacting with the file system.
    * @return An HRegionInfo object to interact with the filesystem
    */
@@ -161,6 +180,16 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
   public static boolean isRegionReplicaWaitForPrimaryFlushEnabled(Configuration conf) {
     return conf.getBoolean(REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
       DEFAULT_REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH);
+  }
+
+  public static boolean isRegionReplicaStoreFileRefreshEnabled(Configuration conf) {
+    return conf.getBoolean(REGION_REPLICA_STORE_FILE_REFRESH,
+      DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH);
+  }
+
+  public static double getRegionReplicaStoreFileRefreshMultiplier(Configuration conf) {
+    return conf.getDouble(REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER,
+      DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER);
   }
 
   /**

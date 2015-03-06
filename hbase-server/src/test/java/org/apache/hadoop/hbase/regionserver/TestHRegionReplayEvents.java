@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -1324,6 +1325,104 @@ public class TestHRegionReplayEvents {
 
     // now reads should be enabled
     secondaryRegion.get(new Get(Bytes.toBytes(0)));
+  }
+
+  @Test
+  public void testRefreshStoreFiles() throws IOException {
+    assertEquals(0, primaryRegion.getStoreFileList(families).size());
+    assertEquals(0, secondaryRegion.getStoreFileList(families).size());
+
+    // Test case 1: refresh with an empty region
+    secondaryRegion.refreshStoreFiles();
+    assertEquals(0, secondaryRegion.getStoreFileList(families).size());
+
+    // do one flush
+    putDataWithFlushes(primaryRegion, 100, 100, 0);
+    int numRows = 100;
+
+    // refresh the store file list, and ensure that the files are picked up.
+    secondaryRegion.refreshStoreFiles();
+    assertPathListsEqual(primaryRegion.getStoreFileList(families),
+      secondaryRegion.getStoreFileList(families));
+    assertEquals(families.length, secondaryRegion.getStoreFileList(families).size());
+
+    LOG.info("-- Verifying edits from secondary");
+    verifyData(secondaryRegion, 0, numRows, cq, families);
+
+    // Test case 2: 3 some more flushes
+    putDataWithFlushes(primaryRegion, 100, 300, 0);
+    numRows = 300;
+
+    // refresh the store file list, and ensure that the files are picked up.
+    secondaryRegion.refreshStoreFiles();
+    assertPathListsEqual(primaryRegion.getStoreFileList(families),
+      secondaryRegion.getStoreFileList(families));
+    assertEquals(families.length * 4, secondaryRegion.getStoreFileList(families).size());
+
+    LOG.info("-- Verifying edits from secondary");
+    verifyData(secondaryRegion, 0, numRows, cq, families);
+
+    if (FSUtils.WINDOWS) {
+      // compaction cannot move files while they are open in secondary on windows. Skip remaining.
+      return;
+    }
+
+    // Test case 3: compact primary files
+    primaryRegion.compactStores();
+    secondaryRegion.refreshStoreFiles();
+    assertPathListsEqual(primaryRegion.getStoreFileList(families),
+      secondaryRegion.getStoreFileList(families));
+    assertEquals(families.length, secondaryRegion.getStoreFileList(families).size());
+
+    LOG.info("-- Verifying edits from secondary");
+    verifyData(secondaryRegion, 0, numRows, cq, families);
+
+    LOG.info("-- Replaying edits in secondary");
+
+    // Test case 4: replay some edits, ensure that memstore is dropped.
+    assertTrue(secondaryRegion.getMemstoreSize().get() == 0);
+    putDataWithFlushes(primaryRegion, 400, 400, 0);
+    numRows = 400;
+
+    reader =  createWALReaderForPrimary();
+    while (true) {
+      WAL.Entry entry = reader.next();
+      if (entry == null) {
+        break;
+      }
+      FlushDescriptor flush = WALEdit.getFlushDescriptor(entry.getEdit().getCells().get(0));
+      if (flush != null) {
+        // do not replay flush
+      } else {
+        replayEdit(secondaryRegion, entry);
+      }
+    }
+
+    assertTrue(secondaryRegion.getMemstoreSize().get() > 0);
+
+    secondaryRegion.refreshStoreFiles();
+
+    assertTrue(secondaryRegion.getMemstoreSize().get() == 0);
+
+    LOG.info("-- Verifying edits from primary");
+    verifyData(primaryRegion, 0, numRows, cq, families);
+    LOG.info("-- Verifying edits from secondary");
+    verifyData(secondaryRegion, 0, numRows, cq, families);
+  }
+
+  /**
+   * Paths can be qualified or not. This does the assertion using String->Path conversion.
+   */
+  private void assertPathListsEqual(List<String> list1, List<String> list2) {
+    List<Path> l1 = new ArrayList<>(list1.size());
+    for (String path : list1) {
+      l1.add(Path.getPathWithoutSchemeAndAuthority(new Path(path)));
+    }
+    List<Path> l2 = new ArrayList<>(list2.size());
+    for (String path : list2) {
+      l2.add(Path.getPathWithoutSchemeAndAuthority(new Path(path)));
+    }
+    assertEquals(l1, l2);
   }
 
   private void disableReads(HRegion region) {

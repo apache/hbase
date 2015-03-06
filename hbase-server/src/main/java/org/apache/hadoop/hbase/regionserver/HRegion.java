@@ -4469,7 +4469,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * @param flush the flush descriptor
    * @throws IOException
    */
-  private void dropMemstoreContentsForSeqId(long seqId, Store store) throws IOException {
+  private long dropMemstoreContentsForSeqId(long seqId, Store store) throws IOException {
+    long totalFreedSize = 0;
     this.updatesLock.writeLock().lock();
     try {
       mvcc.waitForPreviousTransactionsComplete();
@@ -4483,10 +4484,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         // Prepare flush (take a snapshot) and then abort (drop the snapshot)
         if (store == null ) {
           for (Store s : stores.values()) {
-            dropStoreMemstoreContentsForSeqId(s, currentSeqId);
+            totalFreedSize += doDropStoreMemstoreContentsForSeqId(s, currentSeqId);
           }
         } else {
-          dropStoreMemstoreContentsForSeqId(store, currentSeqId);
+          totalFreedSize += doDropStoreMemstoreContentsForSeqId(store, currentSeqId);
         }
       } else {
         LOG.info(getRegionInfo().getEncodedName() + " : "
@@ -4496,13 +4497,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     } finally {
       this.updatesLock.writeLock().unlock();
     }
+    return totalFreedSize;
   }
 
-  private void dropStoreMemstoreContentsForSeqId(Store s, long currentSeqId) throws IOException {
-    this.addAndGetGlobalMemstoreSize(-s.getFlushableSize());
+  private long doDropStoreMemstoreContentsForSeqId(Store s, long currentSeqId) throws IOException {
+    long snapshotSize = s.getFlushableSize();
+    this.addAndGetGlobalMemstoreSize(-snapshotSize);
     StoreFlushContext ctx = s.createFlushContext(currentSeqId);
     ctx.prepare();
     ctx.abort();
+    return snapshotSize;
   }
 
   private void replayWALFlushAbortMarker(FlushDescriptor flush) {
@@ -4623,27 +4627,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
 
         // if all stores ended up dropping their snapshots, we can safely drop the
         // prepareFlushResult
-        if (writestate.flushing) {
-          boolean canDrop = true;
-          for (Entry<byte[], StoreFlushContext> entry
-              : prepareFlushResult.storeFlushCtxs.entrySet()) {
-            Store store = getStore(entry.getKey());
-            if (store == null) {
-              continue;
-            }
-            if (store.getSnapshotSize() > 0) {
-              canDrop = false;
-            }
-          }
-
-          // this means that all the stores in the region has finished flushing, but the WAL marker
-          // may not have been written or we did not receive it yet.
-          if (canDrop) {
-            writestate.flushing = false;
-            this.prepareFlushResult = null;
-          }
-        }
-
+        dropPrepareFlushIfPossible();
 
         // advance the mvcc read point so that the new flushed file is visible.
         // there may be some in-flight transactions, but they won't be made visible since they are
@@ -4742,6 +4726,126 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       }
     } finally {
       closeBulkRegionOperation();
+    }
+  }
+
+  /**
+   * If all stores ended up dropping their snapshots, we can safely drop the prepareFlushResult
+   */
+  private void dropPrepareFlushIfPossible() {
+    if (writestate.flushing) {
+      boolean canDrop = true;
+      if (prepareFlushResult.storeFlushCtxs != null) {
+        for (Entry<byte[], StoreFlushContext> entry
+            : prepareFlushResult.storeFlushCtxs.entrySet()) {
+          Store store = getStore(entry.getKey());
+          if (store == null) {
+            continue;
+          }
+          if (store.getSnapshotSize() > 0) {
+            canDrop = false;
+            break;
+          }
+        }
+      }
+
+      // this means that all the stores in the region has finished flushing, but the WAL marker
+      // may not have been written or we did not receive it yet.
+      if (canDrop) {
+        writestate.flushing = false;
+        this.prepareFlushResult = null;
+      }
+    }
+  }
+
+  /**
+   * Checks the underlying store files, and opens the files that  have not
+   * been opened, and removes the store file readers for store files no longer
+   * available. Mainly used by secondary region replicas to keep up to date with
+   * the primary region files or open new flushed files and drop their memstore snapshots in case
+   * of memory pressure.
+   * @throws IOException
+   */
+  boolean refreshStoreFiles() throws IOException {
+    if (ServerRegionReplicaUtil.isDefaultReplica(this.getRegionInfo())) {
+      return false; // if primary nothing to do
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(getRegionInfo().getEncodedName() + " : "
+          + "Refreshing store files to see whether we can free up memstore");
+    }
+
+    long totalFreedSize = 0;
+
+    long smallestSeqIdInStores = Long.MAX_VALUE;
+
+    startRegionOperation(); // obtain region close lock
+    try {
+      synchronized (writestate) {
+        for (Store store : getStores().values()) {
+          // TODO: some stores might see new data from flush, while others do not which
+          // MIGHT break atomic edits across column families.
+          long maxSeqIdBefore = store.getMaxSequenceId();
+
+          // refresh the store files. This is similar to observing a region open wal marker.
+          store.refreshStoreFiles();
+
+          long storeSeqId = store.getMaxSequenceId();
+          if (storeSeqId < smallestSeqIdInStores) {
+            smallestSeqIdInStores = storeSeqId;
+          }
+
+          // see whether we can drop the memstore or the snapshot
+          if (storeSeqId > maxSeqIdBefore) {
+
+            if (writestate.flushing) {
+              // only drop memstore snapshots if they are smaller than last flush for the store
+              if (this.prepareFlushResult.flushOpSeqId <= storeSeqId) {
+                StoreFlushContext ctx = this.prepareFlushResult.storeFlushCtxs == null ?
+                    null : this.prepareFlushResult.storeFlushCtxs.get(store.getFamily().getName());
+                if (ctx != null) {
+                  long snapshotSize = store.getFlushableSize();
+                  ctx.abort();
+                  this.addAndGetGlobalMemstoreSize(-snapshotSize);
+                  this.prepareFlushResult.storeFlushCtxs.remove(store.getFamily().getName());
+                  totalFreedSize += snapshotSize;
+                }
+              }
+            }
+
+            // Drop the memstore contents if they are now smaller than the latest seen flushed file
+            totalFreedSize += dropMemstoreContentsForSeqId(storeSeqId, store);
+          }
+        }
+
+        // if all stores ended up dropping their snapshots, we can safely drop the
+        // prepareFlushResult
+        dropPrepareFlushIfPossible();
+
+        // advance the mvcc read point so that the new flushed files are visible.
+        // there may be some in-flight transactions, but they won't be made visible since they are
+        // either greater than flush seq number or they were already picked up via flush.
+        for (Store s : getStores().values()) {
+          getMVCC().advanceMemstoreReadPointIfNeeded(s.getMaxMemstoreTS());
+        }
+
+        // smallestSeqIdInStores is the seqId that we have a corresponding hfile for. We can safely
+        // skip all edits that are to be replayed in the future with that has a smaller seqId
+        // than this. We are updating lastReplayedOpenRegionSeqId so that we can skip all edits
+        // that we have picked the flush files for
+        if (this.lastReplayedOpenRegionSeqId < smallestSeqIdInStores) {
+          this.lastReplayedOpenRegionSeqId = smallestSeqIdInStores;
+        }
+      }
+      // C. Finally notify anyone waiting on memstore to clear:
+      // e.g. checkResources().
+      synchronized (this) {
+        notifyAll(); // FindBugs NN_NAKED_NOTIFY
+      }
+      return totalFreedSize > 0;
+    } finally {
+      closeRegionOperation();
     }
   }
 

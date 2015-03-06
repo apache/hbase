@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.util.StringUtils.humanReadableInt;
+
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
@@ -44,13 +45,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
@@ -70,6 +74,7 @@ import com.google.common.base.Preconditions;
 class MemStoreFlusher implements FlushRequester {
   static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
 
+  private Configuration conf;
   // These two data members go together.  Any entry in the one must have
   // a corresponding entry in the other.
   private final BlockingQueue<FlushQueueEntry> flushQueue =
@@ -100,6 +105,7 @@ class MemStoreFlusher implements FlushRequester {
   public MemStoreFlusher(final Configuration conf,
       final HRegionServer server) {
     super();
+    this.conf = conf;
     this.server = server;
     this.threadWakeFrequency =
       conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
@@ -138,6 +144,9 @@ class MemStoreFlusher implements FlushRequester {
 
     Set<HRegion> excludedRegions = new HashSet<HRegion>();
 
+    double secondaryMultiplier
+      = ServerRegionReplicaUtil.getRegionReplicaStoreFileRefreshMultiplier(conf);
+
     boolean flushedOne = false;
     while (!flushedOne) {
       // Find the biggest region that doesn't have too many storefiles
@@ -147,8 +156,11 @@ class MemStoreFlusher implements FlushRequester {
       // Find the biggest region, total, even if it might have too many flushes.
       HRegion bestAnyRegion = getBiggestMemstoreRegion(
           regionsBySize, excludedRegions, false);
+      // Find the biggest region that is a secondary region
+      HRegion bestRegionReplica = getBiggestMemstoreOfRegionReplica(regionsBySize,
+        excludedRegions);
 
-      if (bestAnyRegion == null) {
+      if (bestAnyRegion == null && bestRegionReplica == null) {
         LOG.error("Above memory mark but there are no flushable regions!");
         return false;
       }
@@ -177,18 +189,37 @@ class MemStoreFlusher implements FlushRequester {
         }
       }
 
-      Preconditions.checkState(regionToFlush.memstoreSize.get() > 0);
+      Preconditions.checkState(
+        (regionToFlush != null && regionToFlush.memstoreSize.get() > 0) ||
+        (bestRegionReplica != null && bestRegionReplica.memstoreSize.get() > 0));
 
-      LOG.info("Flush of region " + regionToFlush + " due to global heap pressure. "
-          + "Total Memstore size="
-          + humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize())
-          + ", Region memstore size="
-          + humanReadableInt(regionToFlush.memstoreSize.get()));
-      flushedOne = flushRegion(regionToFlush, true, true);
-      if (!flushedOne) {
-        LOG.info("Excluding unflushable region " + regionToFlush +
-          " - trying to find a different region to flush.");
-        excludedRegions.add(regionToFlush);
+      if (regionToFlush == null ||
+          (bestRegionReplica != null &&
+           ServerRegionReplicaUtil.isRegionReplicaStoreFileRefreshEnabled(conf) &&
+           (bestRegionReplica.memstoreSize.get()
+               > secondaryMultiplier * regionToFlush.memstoreSize.get()))) {
+        LOG.info("Refreshing storefiles of region " + regionToFlush +
+          " due to global heap pressure. memstore size=" + StringUtils.humanReadableInt(
+            server.getRegionServerAccounting().getGlobalMemstoreSize()));
+        flushedOne = refreshStoreFilesAndReclaimMemory(bestRegionReplica);
+        if (!flushedOne) {
+          LOG.info("Excluding secondary region " + regionToFlush +
+              " - trying to find a different region to refresh files.");
+          excludedRegions.add(bestRegionReplica);
+        }
+      } else {
+        LOG.info("Flush of region " + regionToFlush + " due to global heap pressure. "
+            + "Total Memstore size="
+            + humanReadableInt(server.getRegionServerAccounting().getGlobalMemstoreSize())
+            + ", Region memstore size="
+            + humanReadableInt(regionToFlush.memstoreSize.get()));
+        flushedOne = flushRegion(regionToFlush, true, true);
+
+        if (!flushedOne) {
+          LOG.info("Excluding unflushable region " + regionToFlush +
+              " - trying to find a different region to flush.");
+          excludedRegions.add(regionToFlush);
+        }
       }
     }
     return true;
@@ -279,6 +310,33 @@ class MemStoreFlusher implements FlushRequester {
       }
     }
     return null;
+  }
+
+  private HRegion getBiggestMemstoreOfRegionReplica(SortedMap<Long, HRegion> regionsBySize,
+      Set<HRegion> excludedRegions) {
+    synchronized (regionsInQueue) {
+      for (HRegion region : regionsBySize.values()) {
+        if (excludedRegions.contains(region)) {
+          continue;
+        }
+
+        if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
+          continue;
+        }
+
+        return region;
+      }
+    }
+    return null;
+  }
+
+  private boolean refreshStoreFilesAndReclaimMemory(HRegion region) {
+    try {
+      return region.refreshStoreFiles();
+    } catch (IOException e) {
+      LOG.warn("Refreshing store files failed with exception", e);
+    }
+    return false;
   }
 
   /**
