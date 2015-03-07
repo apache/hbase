@@ -697,15 +697,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @see #shutdownMiniZKCluster()
    * @return zk cluster started.
    */
-  public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum)
+  public MiniZooKeeperCluster startMiniZKCluster(
+      final int zooKeeperServerNum,
+      final int ... clientPortList)
       throws Exception {
     setupClusterTestDir();
-    return startMiniZKCluster(clusterTestDir, zooKeeperServerNum);
+    return startMiniZKCluster(clusterTestDir, zooKeeperServerNum, clientPortList);
   }
 
   private MiniZooKeeperCluster startMiniZKCluster(final File dir)
     throws Exception {
-    return startMiniZKCluster(dir,1);
+    return startMiniZKCluster(dir, 1, null);
   }
 
   /**
@@ -713,7 +715,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    *  the port mentionned is used as the default port for ZooKeeper.
    */
   private MiniZooKeeperCluster startMiniZKCluster(final File dir,
-      int zooKeeperServerNum)
+      final int zooKeeperServerNum,
+      final int [] clientPortList)
   throws Exception {
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
@@ -724,6 +727,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     if (defPort > 0){
       // If there is a port in the config file, we use it.
       this.zkCluster.setDefaultClientPort(defPort);
+    }
+
+    if (clientPortList != null) {
+      // Ignore extra client ports
+      int clientPortListSize = (clientPortList.length <= zooKeeperServerNum) ?
+          clientPortList.length : zooKeeperServerNum;
+      for (int i=0; i < clientPortListSize; i++) {
+        this.zkCluster.addClientPort(clientPortList[i]);
+      }
     }
     int clientPort =   this.zkCluster.startup(dir,zooKeeperServerNum);
     this.conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,

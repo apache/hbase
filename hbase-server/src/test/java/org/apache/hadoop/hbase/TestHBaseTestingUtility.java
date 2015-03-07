@@ -39,7 +39,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 import java.io.File;
+import java.util.List;
 
 /**
  * Test our testing utility class
@@ -185,8 +187,8 @@ public class TestHBaseTestingUtility {
     htu1.shutdownMiniCluster();
   }
 
-
-  @Test public void testMiniZooKeeper() throws Exception {
+  @Test
+  public void testMiniZooKeeperWithOneServer() throws Exception {
     HBaseTestingUtility hbt = new HBaseTestingUtility();
     MiniZooKeeperCluster cluster1 = hbt.startMiniZKCluster();
     try {
@@ -195,7 +197,11 @@ public class TestHBaseTestingUtility {
     } finally {
       hbt.shutdownMiniZKCluster();
     }
+  }
 
+  @Test
+  public void testMiniZooKeeperWithMultipleServers() throws Exception {
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
     // set up zookeeper cluster with 5 zk servers
     MiniZooKeeperCluster cluster2 = hbt.startMiniZKCluster(5);
     int defaultClientPort = 21818;
@@ -230,6 +236,111 @@ public class TestHBaseTestingUtility {
       cluster2.killOneBackupZooKeeperServer();
       assertEquals(-1, cluster2.getBackupZooKeeperServerNum());
       assertEquals(0, cluster2.getZooKeeperServerNum());
+    } finally {
+      hbt.shutdownMiniZKCluster();
+    }
+  }
+
+  @Test
+  public void testMiniZooKeeperWithMultipleClientPorts() throws Exception {
+    int defaultClientPort = 8888;
+    int i, j;
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+
+    // Test 1 - set up zookeeper cluster with same number of ZK servers and specified client ports
+    int [] clientPortList1 = {1111, 1112, 1113};
+    MiniZooKeeperCluster cluster1 = hbt.startMiniZKCluster(clientPortList1.length, clientPortList1);
+    try {
+      List<Integer> clientPortListInCluster = cluster1.getClientPortList();
+
+      for (i = 0; i < clientPortListInCluster.size(); i++) {
+        assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList1[i]);
+      }
+    } finally {
+      hbt.shutdownMiniZKCluster();
+    }
+
+    // Test 2 - set up zookeeper cluster with more ZK servers than specified client ports
+    hbt.getConfiguration().setInt("test.hbase.zookeeper.property.clientPort", defaultClientPort);
+    int [] clientPortList2 = {2222, 2223};
+    MiniZooKeeperCluster cluster2 =
+        hbt.startMiniZKCluster(clientPortList2.length + 2, clientPortList2);
+
+    try {
+      List<Integer> clientPortListInCluster = cluster2.getClientPortList();
+
+      for (i = 0, j = 0; i < clientPortListInCluster.size(); i++) {
+        if (i < clientPortList2.length) {
+          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList2[i]);
+        } else {
+          // servers with no specified client port will use defaultClientPort or some other ports
+          // based on defaultClientPort
+          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          j++;
+        }
+      }
+    } finally {
+      hbt.shutdownMiniZKCluster();
+    }
+
+    // Test 3 - set up zookeeper cluster with invalid client ports
+    hbt.getConfiguration().setInt("test.hbase.zookeeper.property.clientPort", defaultClientPort);
+    int [] clientPortList3 = {3333, -3334, 3335, 0};
+    MiniZooKeeperCluster cluster3 =
+        hbt.startMiniZKCluster(clientPortList3.length + 1, clientPortList3);
+
+    try {
+      List<Integer> clientPortListInCluster = cluster3.getClientPortList();
+
+      for (i = 0, j = 0; i < clientPortListInCluster.size(); i++) {
+        // Servers will only use valid client ports; if ports are not specified or invalid,
+        // the default port or a port based on default port will be used.
+        if (i < clientPortList3.length && clientPortList3[i] > 0) {
+          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList3[i]);
+        } else {
+          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          j++;
+        }
+      }
+    } finally {
+      hbt.shutdownMiniZKCluster();
+    }
+
+    // Test 4 - set up zookeeper cluster with default port and some other ports used
+    // This test tests that the defaultClientPort and defaultClientPort+2 are used, so
+    // the algorithm should choice defaultClientPort+1 and defaultClientPort+3 to fill
+    // out the ports for servers without ports specified.
+    hbt.getConfiguration().setInt("test.hbase.zookeeper.property.clientPort", defaultClientPort);
+    int [] clientPortList4 = {-4444, defaultClientPort+2, 4446, defaultClientPort};
+    MiniZooKeeperCluster cluster4 =
+        hbt.startMiniZKCluster(clientPortList4.length + 1, clientPortList4);
+
+    try {
+      List<Integer> clientPortListInCluster = cluster4.getClientPortList();
+
+      for (i = 0, j = 1; i < clientPortListInCluster.size(); i++) {
+        // Servers will only use valid client ports; if ports are not specified or invalid,
+        // the default port or a port based on default port will be used.
+        if (i < clientPortList4.length && clientPortList4[i] > 0) {
+          assertEquals(clientPortListInCluster.get(i).intValue(), clientPortList4[i]);
+        } else {
+          assertEquals(clientPortListInCluster.get(i).intValue(), defaultClientPort + j);
+          j +=2;
+        }
+      }
+    } finally {
+      hbt.shutdownMiniZKCluster();
+    }
+
+    // Test 5 - set up zookeeper cluster with same ports specified - fail is expected.
+    int [] clientPortList5 = {5555, 5556, 5556};
+
+    try {
+      MiniZooKeeperCluster cluster5 =
+          hbt.startMiniZKCluster(clientPortList5.length, clientPortList5);
+      assertTrue(cluster5.getClientPort() == -1); // expected failure
+    } catch (Exception e) {
+      // exception is acceptable
     } finally {
       hbt.shutdownMiniZKCluster();
     }

@@ -103,5 +103,15 @@ public class TestZooKeeperMainServer {
     c.set("hbase.zookeeper.quorum", "example1.com,example2.com,example3.com");
     String ensemble = parser.parse(c);
     assertTrue(port, ensemble.matches("(example[1-3]\\.com:1234,){2}example[1-3]\\.com:" + port));
+
+    // multiple servers with its own port
+    c.set("hbase.zookeeper.quorum", "example1.com:5678,example2.com:9012,example3.com:3456");
+    ensemble = parser.parse(c);
+    assertEquals(ensemble, "example1.com:5678,example2.com:9012,example3.com:3456");
+
+    // some servers without its own port, which will be assigned the default client port
+    c.set("hbase.zookeeper.quorum", "example1.com:5678,example2.com:9012,example3.com");
+    ensemble = parser.parse(c);
+    assertEquals(ensemble, "example1.com:5678,example2.com:9012,example3.com:" + port);
   }
 }

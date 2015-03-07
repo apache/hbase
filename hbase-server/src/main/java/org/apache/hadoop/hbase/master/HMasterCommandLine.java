@@ -156,10 +156,39 @@ public class HMasterCommandLine extends ServerCommandLine {
         DefaultMetricsSystem.setMiniClusterMode(true);
         final MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster(conf);
         File zkDataPath = new File(conf.get(HConstants.ZOOKEEPER_DATA_DIR));
-        int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
+
+        // find out the default client port
+        int zkClientPort = 0;
+
+        // If the zookeeper client port is specified in server quorum, use it.
+        String zkserver = conf.get(HConstants.ZOOKEEPER_QUORUM);
+        if (zkserver != null) {
+          String[] zkservers = zkserver.split(",");
+
+          if (zkservers.length > 1) {
+            // In local mode deployment, we have the master + a region server and zookeeper server
+            // started in the same process. Therefore, we only support one zookeeper server.
+            String errorMsg = "Could not start ZK with " + zkservers.length +
+                " ZK servers in local mode deployment. Aborting as clients (e.g. shell) will not "
+                + "be able to find this ZK quorum.";
+              System.err.println(errorMsg);
+              throw new IOException(errorMsg);
+          }
+
+          String[] parts = zkservers[0].split(":");
+
+          if (parts.length == 2) {
+            // the second part is the client port
+            zkClientPort = Integer.parseInt(parts [1]);
+          }
+        }
+        // If the client port could not be find in server quorum conf, try another conf
         if (zkClientPort == 0) {
-          throw new IOException("No config value for "
-              + HConstants.ZOOKEEPER_CLIENT_PORT);
+          zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
+          // The client port has to be set by now; if not, throw exception.
+          if (zkClientPort == 0) {
+            throw new IOException("No config value for " + HConstants.ZOOKEEPER_CLIENT_PORT);
+          }
         }
         zooKeeperCluster.setDefaultClientPort(zkClientPort);
 
@@ -180,6 +209,7 @@ public class HMasterCommandLine extends ServerCommandLine {
           throw new IOException(errorMsg);
         }
         conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, Integer.toString(clientPort));
+
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.
         int mastersCount = conf.getInt("hbase.masters", 1);
@@ -254,7 +284,8 @@ public class HMasterCommandLine extends ServerCommandLine {
     }
   }
 
-  private static void closeAllRegionServerThreads(List<JVMClusterUtil.RegionServerThread> regionservers) {
+  private static void closeAllRegionServerThreads(
+      List<JVMClusterUtil.RegionServerThread> regionservers) {
     for(JVMClusterUtil.RegionServerThread t : regionservers){
       t.getRegionServer().stop("HMaster Aborted; Bringing down regions servers");
     }
