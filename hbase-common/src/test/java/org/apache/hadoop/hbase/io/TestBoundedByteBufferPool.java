@@ -21,14 +21,13 @@ import static org.junit.Assert.assertEquals;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ IOTests.class, SmallTests.class })
+@Category({ SmallTests.class })
 public class TestBoundedByteBufferPool {
   final int maxByteBufferSizeToCache = 10;
   final int initialByteBufferSize = 1;
