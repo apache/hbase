@@ -20,10 +20,6 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -41,31 +37,7 @@ public class ZooKeeperMainServer {
   private static final String SERVER_ARG = "-server";
 
   public String parse(final Configuration c) {
-    // Note that we do not simply grab the property
-    // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
-    // user may be using a zoo.cfg file.
-    Properties zkProps = ZKConfig.makeZKProps(c);
-    String clientPort = null;
-    List<String> hosts = new ArrayList<String>();
-    for (Entry<Object, Object> entry: zkProps.entrySet()) {
-      String key = entry.getKey().toString().trim();
-      String value = entry.getValue().toString().trim();
-      if (key.startsWith("server.")) {
-        String[] parts = value.split(":");
-        hosts.add(parts[0]);
-      } else if (key.endsWith("clientPort")) {
-        clientPort = value;
-      }
-    }
-    if (hosts.isEmpty() || clientPort == null) return null;
-    StringBuilder host = new StringBuilder();
-    for (int i = 0; i < hosts.size(); i++) {
-      if (i > 0)  host.append("," + hosts.get(i));
-      else host.append(hosts.get(i));
-      host.append(":");
-      host.append(clientPort);
-    }
-    return host.toString();
+    return ZKConfig.getZKQuorumServersString(c);
   }
 
   /**

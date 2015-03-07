@@ -347,8 +347,8 @@ public class TestZooKeeper {
 
   @Test
   public void testClusterKey() throws Exception {
-    testKey("server", "2181", "hbase");
-    testKey("server1,server2,server3", "2181", "hbase");
+    testKey("server", 2181, "hbase");
+    testKey("server1,server2,server3", 2181, "hbase");
     try {
       ZKUtil.transformClusterKey("2181:hbase");
     } catch (IOException ex) {
@@ -356,20 +356,58 @@ public class TestZooKeeper {
     }
   }
 
-  private void testKey(String ensemble, String port, String znode)
+  @Test
+  public void testClusterKeyWithMultiplePorts() throws Exception {
+    // server has different port than the default port
+    testKey("server1:2182", 2181, "hbase", true);
+    // multiple servers have their own port
+    testKey("server1:2182,server2:2183,server3:2184", 2181, "hbase", true);
+    // one server has no specified port, should use default port
+    testKey("server1:2182,server2,server3:2184", 2181, "hbase", true);
+    // the last server has no specified port, should use default port
+    testKey("server1:2182,server2:2183,server3", 2181, "hbase", true);
+    // multiple servers have no specified port, should use default port for those servers
+    testKey("server1:2182,server2,server3:2184,server4", 2181, "hbase", true);
+    // same server, different ports
+    testKey("server1:2182,server1:2183,server1", 2181, "hbase", true);
+    // mix of same server/different port and different server
+    testKey("server1:2182,server2:2183,server1", 2181, "hbase", true);
+  }
+
+  private void testKey(String ensemble, int port, String znode)
+      throws IOException {
+    testKey(ensemble, port, znode, false); // not support multiple client ports
+  }
+
+  private void testKey(String ensemble, int port, String znode, Boolean multiplePortSupport)
       throws IOException {
     Configuration conf = new Configuration();
     String key = ensemble+":"+port+":"+znode;
-    String[] parts = ZKUtil.transformClusterKey(key);
-    assertEquals(ensemble, parts[0]);
-    assertEquals(port, parts[1]);
-    assertEquals(znode, parts[2]);
+    String ensemble2 = null;
+    ZKUtil.ZKClusterKey zkClusterKey = ZKUtil.transformClusterKey(key);
+    if (multiplePortSupport) {
+      ensemble2 = ZKUtil.standardizeQuorumServerString(ensemble, Integer.toString(port));
+      assertEquals(ensemble2, zkClusterKey.quorumString);
+    }
+    else {
+      assertEquals(ensemble, zkClusterKey.quorumString);
+    }
+    assertEquals(port, zkClusterKey.clientPort);
+    assertEquals(znode, zkClusterKey.znodeParent);
+
     ZKUtil.applyClusterKeyToConf(conf, key);
-    assertEquals(parts[0], conf.get(HConstants.ZOOKEEPER_QUORUM));
-    assertEquals(parts[1], conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
-    assertEquals(parts[2], conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+    assertEquals(zkClusterKey.quorumString, conf.get(HConstants.ZOOKEEPER_QUORUM));
+    assertEquals(zkClusterKey.clientPort, conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, -1));
+    assertEquals(zkClusterKey.znodeParent, conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+
     String reconstructedKey = ZKUtil.getZooKeeperClusterKey(conf);
-    assertEquals(key, reconstructedKey);
+    if (multiplePortSupport) {
+      String key2 = ensemble2 + ":" + port + ":" + znode;
+      assertEquals(key2, reconstructedKey);
+    }
+    else {
+      assertEquals(key, reconstructedKey);
+    }
   }
 
   /**
