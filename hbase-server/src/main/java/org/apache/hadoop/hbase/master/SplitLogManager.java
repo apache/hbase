@@ -468,7 +468,7 @@ public class SplitLogManager extends ZooKeeperListener {
         ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
       if (tasks != null) {
         for (String t: tasks) {
-          if (!ZKSplitLog.isRescanNode(watcher, t)) {
+          if (!ZKSplitLog.isRescanNode(t)) {
             count++;
           }
         }
@@ -509,7 +509,7 @@ public class SplitLogManager extends ZooKeeperListener {
       List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
       if (tasks != null) {
         for (String t : tasks) {
-          if (!ZKSplitLog.isRescanNode(watcher, t)) {
+          if (!ZKSplitLog.isRescanNode(t)) {
             count++;
           }
         }
@@ -1246,6 +1246,21 @@ public class SplitLogManager extends ZooKeeperListener {
     return result;
   }
 
+  private List<String> listSplitLogTasks() throws KeeperException {
+    List<String> taskOrRescanList = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
+    if (taskOrRescanList == null || taskOrRescanList.isEmpty()) {
+      return Collections.<String> emptyList();
+    }
+    List<String> taskList = new ArrayList<String>();
+    for (String taskOrRescan : taskOrRescanList) {
+      // Remove rescan nodes
+      if (!ZKSplitLog.isRescanNode(taskOrRescan)) {
+        taskList.add(taskOrRescan);
+      }
+    }
+    return taskList;
+  }
+
   /**
    * This function is to set recovery mode from outstanding split log tasks from before or
    * current configuration setting
@@ -1279,8 +1294,8 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     if (previousRecoveryMode == RecoveryMode.UNKNOWN) {
       // Secondly check if there are outstanding split log task
-      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
-      if (tasks != null && !tasks.isEmpty()) {
+      List<String> tasks = listSplitLogTasks();
+      if (!tasks.isEmpty()) {
         hasSplitLogTask = true;
         if (isForInitialization) {
           // during initialization, try to get recovery mode from splitlogtask
