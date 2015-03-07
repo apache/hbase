@@ -841,12 +841,16 @@ public class TestDefaultMemStore extends TestCase {
     this.memstore.upsert(l, 2);// readpoint is 2
     long newSize = this.memstore.size.get();
     assert(newSize > oldSize);
-
+    //The kv1 should be removed.
+    assert(memstore.cellSet.size() == 2);
+    
     KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
     kv4.setSequenceId(1);
     l.clear(); l.add(kv4);
     this.memstore.upsert(l, 3);
     assertEquals(newSize, this.memstore.size.get());
+    //The kv2 should be removed.
+    assert(memstore.cellSet.size() == 2);
     //this.memstore = null;
   }
 
