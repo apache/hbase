@@ -145,8 +145,8 @@ public class SplitLogManager {
       Set<String> failedDeletions = Collections.synchronizedSet(new HashSet<String>());
       SplitLogManagerDetails details =
           new SplitLogManagerDetails(tasks, master, failedDeletions, serverName);
-      coordination.init();
       coordination.setDetails(details);
+      coordination.init();
       // Determine recovery mode
     }
     this.unassignedTimeout =
