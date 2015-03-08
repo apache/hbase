@@ -118,3 +118,67 @@ Because there can be a large number of MOB files at any time, as compared to the
 ----
 ====
 
+=== MOB Optimization Tasks
+
+HBase MOB currently relies on a MapReduce job called the Sweeper tool for optimization. The Sweeper tool oalesces small MOB files or MOB files with many deletions or updates. A native MOB compaction tool is still in testing. To configure the Sweeper tool, set the following options:
+
+[source,xml]
+----
+<property>
+    <name>hbase.mob.sweep.tool.compaction.ratio</name>
+    <value>0.5f</value>
+    <description>
+      If there are too many cells deleted in a mob file, it's regarded
+      as an invalid file and needs to be merged.
+      If existingCellsSize/mobFileSize is less than ratio, it's regarded
+      as an invalid file. The default value is 0.5f.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.sweep.tool.compaction.mergeable.size</name>
+    <value>134217728</value>
+    <description>
+      If the size of a mob file is less than this value, it's regarded as a small
+      file and needs to be merged. The default value is 128MB.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.sweep.tool.compaction.memstore.flush.size</name>
+    <value>134217728</value>
+    <description>
+      The flush size for the memstore used by sweep job. Each sweep reducer owns such a memstore.
+      The default value is 128MB.
+    </description>
+</property>
+<property>
+    <name>hbase.mob.cleaner.interval</name>
+    <value>86400000</value>
+    <description>
+      The period that ExpiredMobFileCleaner runs. The unit is millisecond.
+      The default value is one day.
+    </description>
+</property>
+----
+
+Next, add the HBase install directory, _`$HBASE_HOME`/*_, and HBase library directory to _yarn-site.xml_ Adjust this example to suit your environment.
+[source,xml]
+----
+<property>
+    <description>Classpath for typical applications.</description>
+    <name>yarn.application.classpath</name>
+    <value>
+        $HADOOP_CONF_DIR,
+        $HADOOP_COMMON_HOME/*,$HADOOP_COMMON_HOME/lib/*,
+        $HADOOP_HDFS_HOME/*,$HADOOP_HDFS_HOME/lib/*,
+        $HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*,
+        $HADOOP_YARN_HOME/*,$HADOOP_YARN_HOME/lib/*,
+        $HBASE_HOME/*, $HBASE_HOME/lib/*
+    </value>
+</property>
+----
+
+Finally, run the `sweeper` tool for each column which is configured for MOB.
+[source,bash]
+----
+$ org.apache.hadoop.hbase.mob.compactions.Sweeper _tableName_ _familyName_
+----
