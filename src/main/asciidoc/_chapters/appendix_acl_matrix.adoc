@@ -30,7 +30,7 @@
 :toc: left
 :source-language: java
 
-The following matrix shows the minimum permission set required to perform operations in HBase.
+The following matrix shows the permission set required to perform operations in HBase.
 Before using the table, read through the information about how to interpret it.
 
 .Interpreting the ACL Matrix Table
@@ -70,64 +70,92 @@ The [systemitem]+hbase:meta+ table is readable by every user, regardless of the 
   This is a requirement for HBase to function correctly.
 `CheckAndPut` and `CheckAndDelete` operations will fail if the user does not have both Write and Read permission.::
 `Increment` and `Append` operations do not require Read access.::
+The `superuser`, as the name suggests has permissions to perform all possible operations.::
+And for the operations marked with *, the checks are done in post hook and only subset of results satisfying access checks are returned back to the user.::
 
 The following table is sorted by the interface that provides each operation.
 In case the table goes out of date, the unit tests which check for accuracy of permissions can be found in _hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java_, and the access controls themselves can be examined in _hbase-server/src/main/java/org/apache/hadoop/hbase/security/access/AccessController.java_.
 
 .ACL Matrix
-[cols="1,1,1,1", frame="all", options="header"]
+[cols="1,1,1", frame="all", options="header"]
 |===
-| Interface | Operation | Minimum Scope | Minimum Permission
-| Master | createTable | Global | C
-|        | modifyTable | Table | A\|C                    
-|        | deleteTable | Table | A\|C                   
-| | truncateTable | Table | A\|C                   
-| | addColumn | Table | A\|C
-| | modifyColumn | Table | A\|C
-| | deleteColumn | Table | A\|C
-| | disableTable | Table | A\|C
-| | disableAclTable | None | Not allowed
-| | enableTable | Table | A\|C
-| | move | Global | A
-| | assign | Global | A
-| | unassign | Global | A
-| | regionOffline | Global | A
-| | balance | Global | A
-| | balanceSwitch | Global | A
-| | shutdown | Global | A
-| | stopMaster | Global | A
-| | snapshot | Global | A
-| | clone | Global | A
-| | restore | Global | A
-| | deleteSnapshot | Global | A
-| | createNamespace | Global | A
-| | deleteNamespace | Namespace | A
-| | modifyNamespace | Namespace | A
-| | flushTable | Table | A\|C
-| | getTableDescriptors | Global\|Table | A
-| | mergeRegions | Global | A
-| Region | openRegion | Global | A
-| | closeRegion | Global | A
-| | stopRegionServer | Global | A
-| | rollHLog | Global | A
-| | mergeRegions | Global | A
-| | flush | Global\|Table | A\|C 
-| | split | Global\|Table | A
-| | compact | Global\|Table | A\|C
-| | bulkLoadHFile    | Table | W
-| | prepareBulkLoad  | Table |C
-| | cleanupBulkLoad  | Table |W
-| | checkAndDelete   | Table\|CF\|CQ | RW
-| | checkAndPut | Table\|CF\|CQ | RW
-| | incrementColumnValue  | Table\|CF\|CQ | RW
-| | scannerClose |     Table | R
-| | scannerNext | Table |  R
-| | scannerOpen | Table\|CF\|CQ | R     
-| Endpoint | invoke | Endpoint | X
-| AccessController | grant | Global\|Table\|NS | A 
-| | revoke | Global\|Table\|NS | A                   
-| | getUserPermissions | Global\|Table\|NS | A
-| | checkPermissions | Global\|Table\|NS | A                 
+| Interface | Operation | Permissions
+| Master | createTable | superuser\|global\(C)\|NS\(C)
+|        | modifyTable | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)
+|        | deleteTable | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)
+|        | truncateTable | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)
+|        | addColumn | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)
+|        | modifyColumn | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)\|column(A)\|column\(C)
+|        | deleteColumn | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)\|column(A)\|column\(C)
+|        | enableTable | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)
+|        | disableTable | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)
+|        | disableAclTable | Not allowed
+|        | move | superuser\|global(A)\|NS(A)\|Table(A)
+|        | assign | superuser\|global(A)\|NS(A)\|Table(A)
+|        | unassign | superuser\|global(A)\|NS(A)\|Table(A)
+|        | regionOffline | superuser\|global(A)\|NS(A)\|Table(A)
+|        | balance | superuser\|global(A)
+|        | balanceSwitch | superuser\|global(A)
+|        | shutdown | superuser\|global(A)
+|        | stopMaster | superuser\|global(A)
+|        | snapshot | superuser\|global(A)\|NS(A)\|Table(A)
+|        | listSnapshot | superuser\|global(A)\|SnapshotOwner
+|        | cloneSnapshot | superuser\|global(A)
+|        | restoreSnapshot | superuser\|global(A)\|SnapshotOwner & (NS(A)\|Table(A))
+|        | deleteSnapshot | superuser\|global(A)\|SnapshotOwner
+|        | createNamespace | superuser\|global(A)
+|        | deleteNamespace | superuser\|global(A)
+|        | modifyNamespace | superuser\|global(A)
+|        | getNamespaceDescriptor | superuser\|global(A)\|NS(A)
+|        | listNamespaceDescriptors* | superuser\|global(A)\|NS(A)
+|        | flushTable | superuser\|global(A)\|global\(C)\|NS(A)\|NS(\C)\|table(A)\|table\(C)
+|        | getTableDescriptors* | superuser\|global(A)\|global\(C)\|NS(A)\|NS\(C)\|table(A)\|table\(C)
+|        | getTableNames* | Any global or table perm
+|        | setUserQuota(global level) | superuser\|global(A)
+|        | setUserQuota(namespace level) | superuser\|global(A)
+|        | setUserQuota(Table level) | superuser\|global(A)\|NS(A)\|Table(A)
+|        | setTableQuota | superuser\|global(A)\|NS(A)\|Table(A)
+|        | setNamespaceQuota | superuser\|global(A)
+| Region | openRegion | superuser\|global(A)
+|        | closeRegion | superuser\|global(A)
+|        | flush | superuser\|global(A)\|global\(C)\|table(A)\|table\(C)
+|        | split | superuser\|global(A)\|Table(A)
+|        | compact | superuser\|global(A)\|global\(C)\|table(A)\|table\(C)
+|        | getClosestRowBefore | superuser\|global\(R)\|NS\(R)\|Table\(R)\|CF\(R)\|CQ\(R)
+|        | getOp | superuser\|global\(R)\|NS\(R)\|Table\(R)\|CF\(R)\|CQ\(R)
+|        | exists | superuser\|global\(R)\|NS\(R)\|Table\(R)\|CF\(R)\|CQ\(R)
+|        | put | superuser\|global(W)\|NS(W)\|Table(W)\|CF(W)\|CQ(W)
+|        | delete | superuser\|global(W)\|NS(W)\|Table(W)\|CF(W)\|CQ(W)
+|        | batchMutate | superuser\|global(W)\|NS(W)\|Table(W)\|CF(W)\|CQ(W)
+|        | checkAndPut | superuser\|global(RW)\|NS(RW)\|Table(RW)\|CF(RW)\|CQ(RW)
+|        | checkAndPutAfterRowLock | superuser\|global\(R)\|NS\(R)\|Table\(R)\|CF\(R)\|CQ\(R)
+|        | checkAndDelete   | superuser\|global(RW)\|NS(RW)\|Table(RW)\|CF(RW)\|CQ(RW)
+|        | checkAndDeleteAfterRowLock | superuser\|global\(R)\|NS\(R)\|Table\(R)\|CF\(R)\|CQ\(R)
+|        | incrementColumnValue | superuser\|global(W)\|NS(W)\|Table(W)\|CF(W)\|CQ(W)
+|        | append | superuser\|global(W)\|NS(W)\|Table(W)\|CF(W)\|CQ(W)
+|        | appendAfterRowLock | superuser\|global(W)\|NS(W)\|Table(W)\|CF(W)\|CQ(W)
+|        | increment | superuser\|global(W)\|NS(W)\|Table(W)\|CF(W)\|CQ(W)
+|        | incrementAfterRowLock | superuser\|global(W)\|NS(W)\|Table(W)\|CF(W)\|CQ(W)
+|        | scannerOpen | superuser\|global\(R)\|NS\(R)\|Table\(R)\|CF\(R)\|CQ\(R)
+|        | scannerNext | superuser\|global\(R)\|NS\(R)\|Table\(R)\|CF\(R)\|CQ\(R)
+|        | scannerClose | superuser\|global\(R)\|NS\(R)\|Table\(R)\|CF\(R)\|CQ\(R)
+|        | bulkLoadHFile | superuser\|global\(C)\|table\(C)\|CF\(C)
+|        | prepareBulkLoad | superuser\|global\(C)\|table\(C)\|CF\(C)
+|        | cleanupBulkLoad | superuser\|global\(C)\|table\(C)\|CF\(C)
+| Endpoint | invoke | superuser\|global(X)\|NS(X)\|Table(X)
+| AccessController | grant(global level) | global(A)
+|                  | grant(namespace level) | global(A)\|NS(A)
+|                  | grant(table level) | global(A)\|NS(A)\|table(A)\|CF(A)\|CQ(A)
+|                  | revoke(global level) | global(A)
+|                  | revoke(namespace level) | global(A)\|NS(A)
+|                  | revoke(table level) | global(A)\|NS(A)\|table(A)\|CF(A)\|CQ(A)
+|                  | getUserPermissions(global level) | global(A)
+|                  | getUserPermissions(namespace level) | global(A)\|NS(A)
+|                  | getUserPermissions(table level) | global(A)\|NS(A)\|table(A)\|CF(A)\|CQ(A)
+| RegionServer | stopRegionServer | superuser\|global(A)
+|              | mergeRegions | superuser\|global(A)
+|              | rollWALWriterRequest | superuser\|global(A)
+|              | replicateLogEntries | superuser\|global(W)
 |===
 
 :numbered:
