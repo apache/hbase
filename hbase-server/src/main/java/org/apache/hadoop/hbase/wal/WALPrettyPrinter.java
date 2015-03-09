@@ -350,7 +350,7 @@ public class WALPrettyPrinter {
     options.addOption("j", "json", false, "Output JSON");
     options.addOption("p", "printvals", false, "Print values");
     options.addOption("r", "region", true,
-        "Region to filter by. Pass region name; e.g. 'hbase:meta,,1'");
+        "Region to filter by. Pass encoded region name; e.g. '9192caead6a5a20acb4454ffbc79fa14'");
     options.addOption("s", "sequence", true,
         "Sequence to filter by. Pass sequence number.");
     options.addOption("w", "row", true, "Row to filter by. Pass row name.");

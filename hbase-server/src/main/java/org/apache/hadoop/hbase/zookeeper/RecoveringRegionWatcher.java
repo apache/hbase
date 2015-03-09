@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.zookeeper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -33,7 +33,7 @@ public class RecoveringRegionWatcher extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(RecoveringRegionWatcher.class);
 
   private HRegionServer server;
-  
+
   /**
    * Construct a ZooKeeper event listener.
    */
@@ -47,6 +47,7 @@ public class RecoveringRegionWatcher extends ZooKeeperListener {
    * Called when a node has been deleted
    * @param path full path of the deleted node
    */
+  @Override
   public void nodeDeleted(String path) {
     if (this.server.isStopped() || this.server.isStopping()) {
       return;
@@ -58,12 +59,8 @@ public class RecoveringRegionWatcher extends ZooKeeperListener {
     }
 
     String regionName = path.substring(parentPath.length() + 1);
-    HRegion region = this.server.getRecoveringRegions().remove(regionName);
-    if (region != null) {
-      region.setRecovering(false);
-    }
 
-    LOG.info(path + " deleted; " + regionName + " recovered.");
+    server.getExecutorService().submit(new FinishRegionRecoveringHandler(server, regionName, path));
   }
 
   @Override

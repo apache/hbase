@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.openRegion;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,9 +55,12 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint.ReplicateContext;
+import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint.RegionReplicaReplayCallable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -158,7 +162,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
   }
 
-  @Test
+  @Test (timeout = 240000)
   public void testReplayCallable() throws Exception {
     // tests replaying the edits to a secondary region replica using the Callable directly
     openRegion(HTU, rs0, hriSecondary);
@@ -198,7 +202,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     }
   }
 
-  @Test
+  @Test (timeout = 240000)
   public void testReplayCallableWithRegionMove() throws Exception {
     // tests replaying the edits to a secondary region replica using the Callable directly while
     // the region is moved to another location.It tests handling of RME.
@@ -233,7 +237,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     connection.close();
   }
 
-  @Test
+  @Test (timeout = 240000)
   public void testRegionReplicaReplicationEndpointReplicate() throws Exception {
     // tests replaying the edits to a secondary region replica using the RRRE.replicate()
     openRegion(HTU, rs0, hriSecondary);
@@ -257,6 +261,54 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
 
     HRegion region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
+
+    HTU.deleteNumericRows(table, f, 0, 1000);
+    closeRegion(HTU, rs0, hriSecondary);
+    connection.close();
+  }
+
+  @Test (timeout = 240000)
+  public void testReplayedEditsAreSkipped() throws Exception {
+    openRegion(HTU, rs0, hriSecondary);
+    ClusterConnection connection =
+        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
+    RegionReplicaReplicationEndpoint replicator = new RegionReplicaReplicationEndpoint();
+
+    ReplicationEndpoint.Context context = mock(ReplicationEndpoint.Context.class);
+    when(context.getConfiguration()).thenReturn(HTU.getConfiguration());
+    when(context.getMetrics()).thenReturn(mock(MetricsSource.class));
+
+    ReplicationPeer mockPeer = mock(ReplicationPeer.class);
+    when(mockPeer.getTableCFs()).thenReturn(null);
+    when(context.getReplicationPeer()).thenReturn(mockPeer);
+
+    replicator.init(context);
+    replicator.start();
+
+    // test the filter for the RE, not actual replication
+    WALEntryFilter filter = replicator.getWALEntryfilter();
+
+    //load some data to primary
+    HTU.loadNumericRows(table, f, 0, 1000);
+
+    Assert.assertEquals(1000, entries.size());
+    for (Entry e: entries) {
+      if (Integer.parseInt(Bytes.toString(e.getEdit().getCells().get(0).getValue())) % 2 == 0) {
+        e.getKey().setOrigLogSeqNum(1); // simulate dist log replay by setting orig seq id
+      }
+    }
+
+    long skipped = 0, replayed = 0;
+    for (Entry e : entries) {
+      if (filter.filter(e) == null) {
+        skipped++;
+      } else {
+        replayed++;
+      }
+    }
+
+    assertEquals(500, skipped);
+    assertEquals(500, replayed);
 
     HTU.deleteNumericRows(table, f, 0, 1000);
     closeRegion(HTU, rs0, hriSecondary);
