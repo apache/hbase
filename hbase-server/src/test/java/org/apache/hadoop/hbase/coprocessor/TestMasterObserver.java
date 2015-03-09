@@ -77,6 +77,7 @@ public class TestMasterObserver {
   private static final Log LOG = LogFactory.getLog(TestMasterObserver.class);
 
   public static CountDownLatch tableCreationLatch = new CountDownLatch(1);
+  public static CountDownLatch tableDeletionLatch = new CountDownLatch(1);
 
   public static class CPMasterObserver implements MasterObserver {
 
@@ -876,6 +877,7 @@ public class TestMasterObserver {
         ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
       postDeleteTableHandlerCalled = true;
+      tableDeletionLatch.countDown();
     }
 
     public boolean wasDeleteTableHandlerCalled() {
@@ -1274,7 +1276,7 @@ public class TestMasterObserver {
     // delete table
     admin.disableTable(tableName);
     assertTrue(admin.isTableDisabled(tableName));
-    admin.deleteTable(tableName);
+    deleteTable(admin, tableName);
     assertFalse("Test table should have been deleted",
         admin.tableExists(tableName));
     // preDeleteTable can't bypass default action.
@@ -1357,7 +1359,7 @@ public class TestMasterObserver {
     assertFalse("No table deleted yet", cp.wasDeleteTableCalled());
     assertFalse("Delete table handler should not be called.",
         cp.wasDeleteTableHandlerCalled());
-    admin.deleteTable(tableName);
+    deleteTable(admin, tableName);
     assertFalse("Test table should have been deleted",
         admin.tableExists(tableName));
     assertTrue("Coprocessor should have been called on table delete",
@@ -1410,7 +1412,7 @@ public class TestMasterObserver {
         cp.wasRestoreSnapshotCalled());
       admin.disableTable(TEST_CLONE);
       assertTrue(admin.isTableDisabled(tableName));
-      admin.deleteTable(TEST_CLONE);
+      deleteTable(admin, TEST_CLONE);
 
       // Test restore operation
       cp.resetStates();
@@ -1424,7 +1426,7 @@ public class TestMasterObserver {
       assertTrue("Coprocessor should have been called on snapshot delete",
         cp.wasDeleteSnapshotCalled());
     } finally {
-      admin.deleteTable(tableName);
+      deleteTable(admin, tableName);
     }
   }
 
@@ -1604,7 +1606,9 @@ public class TestMasterObserver {
       assertTrue("Coprocessor should be called on region rebalancing",
           cp.wasBalanceCalled());
     } finally {
-      UTIL.deleteTable(tableName);
+      Admin admin = UTIL.getHBaseAdmin();
+      admin.disableTable(tableName);
+      deleteTable(admin, tableName);
     }
   }
 
@@ -1650,5 +1654,14 @@ public class TestMasterObserver {
         GetTableNamesRequest.newBuilder().build());
     assertTrue("Coprocessor should be called on table names request",
       cp.wasGetTableNamesCalled());
+  }
+
+  private void deleteTable(Admin admin, TableName tableName) throws Exception {
+    // NOTE: We need a latch because admin is not sync,
+    // so the postOp coprocessor method may be called after the admin operation returned.
+    tableDeletionLatch = new CountDownLatch(1);
+    admin.deleteTable(tableName);
+    tableDeletionLatch.await();
+    tableDeletionLatch = new CountDownLatch(1);
   }
 }
