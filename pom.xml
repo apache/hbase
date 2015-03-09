@@ -442,6 +442,14 @@
       <organizationUrl>http://www.yahoo.com</organizationUrl>
     </developer>
     <developer>
+      <id>zhangduo</id>
+      <name>Duo Zhang</name>
+      <email>zhangduo@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Wandoujia</organization>
+      <organizationUrl>http://www.wandoujia.com</organizationUrl>
+    </developer>
+    <developer>
       <id>zjushch</id>
       <name>Chunhui Shen</name>
       <email>zjushch@apache.org</email>
