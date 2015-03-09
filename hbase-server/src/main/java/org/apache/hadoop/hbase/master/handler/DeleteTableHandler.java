@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -144,9 +145,10 @@ public class DeleteTableHandler extends TableEventHandler {
    * @throws IOException
    */
   private void cleanAnyRemainingRows() throws IOException {
-    Scan tableScan = MetaTableAccessor.getScanForTableName(tableName);
+    ClusterConnection connection = this.masterServices.getConnection();
+    Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
     try (Table metaTable =
-        this.masterServices.getConnection().getTable(TableName.META_TABLE_NAME)) {
+        connection.getTable(TableName.META_TABLE_NAME)) {
       List<Delete> deletes = new ArrayList<Delete>();
       try (ResultScanner resScanner = metaTable.getScanner(tableScan)) {
         for (Result result : resScanner) {

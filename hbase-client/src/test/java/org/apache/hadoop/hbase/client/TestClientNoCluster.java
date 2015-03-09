@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
@@ -205,11 +206,11 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   @Test
-  public void testDoNotRetryMetaScanner() throws IOException {
+  public void testDoNotRetryMetaTableAccessor() throws IOException {
     this.conf.set("hbase.client.connection.impl",
       RegionServerStoppedOnScannerOpenConnection.class.getName());
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      MetaScanner.metaScan(connection, null);
+      MetaTableAccessor.fullScanRegions(connection);
     }
   }
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.io.IOException;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -27,15 +28,20 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -48,13 +54,6 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
 
 @Category({ MasterTests.class, MediumTests.class })
 public class TestEnableTableHandler {
@@ -146,7 +145,8 @@ public class TestEnableTableHandler {
     admin.createTable(desc, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     // Now I have a nice table, mangle it by removing the HConstants.REGIONINFO_QUALIFIER_STR
     // content from a few of the rows.
-    Scan metaScannerForMyTable = MetaTableAccessor.getScanForTableName(tableName);
+    Scan metaScannerForMyTable =
+        MetaTableAccessor.getScanForTableName(TEST_UTIL.getConnection(), tableName);
     try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
       try (ResultScanner scanner = metaTable.getScanner(metaScannerForMyTable)) {
         for (Result result : scanner) {

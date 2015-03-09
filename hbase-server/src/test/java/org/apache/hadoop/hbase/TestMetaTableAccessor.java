@@ -23,6 +23,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyObject;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.List;
@@ -395,7 +401,7 @@ public class TestMetaTableAccessor {
     Get get = new Get(row);
     Result result = meta.get(get);
     Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
-      MetaTableAccessor.getServerColumn(replicaId));
+        MetaTableAccessor.getServerColumn(replicaId));
     Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
       MetaTableAccessor.getStartCodeColumn(replicaId));
     assertNotNull(serverCell);
@@ -474,6 +480,50 @@ public class TestMetaTableAccessor {
     } finally {
       meta.close();
     }
+  }
+
+  @Test
+  public void testMetaScanner() throws Exception {
+    LOG.info("Starting testMetaScanner");
+
+    final TableName TABLENAME = TableName.valueOf("testMetaScanner");
+    final byte[] FAMILY = Bytes.toBytes("family");
+    final byte[][] SPLIT_KEYS =
+        new byte[][] { Bytes.toBytes("region_a"), Bytes.toBytes("region_b") };
+
+    UTIL.createTable(TABLENAME, FAMILY, SPLIT_KEYS);
+    HTable table = (HTable) connection.getTable(TABLENAME);
+    // Make sure all the regions are deployed
+    UTIL.countRows(table);
+
+    MetaTableAccessor.Visitor visitor =
+        mock(MetaTableAccessor.Visitor.class);
+    doReturn(true).when(visitor).visit((Result) anyObject());
+
+    // Scanning the entire table should give us three rows
+    MetaTableAccessor.scanMetaForTableRegions(connection, visitor, TABLENAME);
+    verify(visitor, times(3)).visit((Result) anyObject());
+
+    // Scanning the table with a specified empty start row should also
+    // give us three hbase:meta rows
+    reset(visitor);
+    doReturn(true).when(visitor).visit((Result) anyObject());
+    MetaTableAccessor.scanMeta(connection, visitor, TABLENAME, null, 1000);
+    verify(visitor, times(3)).visit((Result) anyObject());
+
+    // Scanning the table starting in the middle should give us two rows:
+    // region_a and region_b
+    reset(visitor);
+    doReturn(true).when(visitor).visit((Result) anyObject());
+    MetaTableAccessor.scanMeta(connection, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1000);
+    verify(visitor, times(2)).visit((Result) anyObject());
+
+    // Scanning with a limit of 1 should only give us one row
+    reset(visitor);
+    doReturn(true).when(visitor).visit((Result) anyObject());
+    MetaTableAccessor.scanMeta(connection, visitor, TABLENAME, Bytes.toBytes("region_ac"), 1);
+    verify(visitor, times(1)).visit((Result) anyObject());
+    table.close();
   }
 }
 

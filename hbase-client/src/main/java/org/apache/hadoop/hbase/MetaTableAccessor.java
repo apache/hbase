@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -60,6 +63,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
@@ -129,6 +133,37 @@ public class MetaTableAccessor {
       META_REGION_PREFIX, 0, len);
   }
 
+  /**
+   * Lists all of the table regions currently in META.
+   * Deprecated, keep there until some test use this.
+   * @param connection what we will use
+   * @param tableName table to list
+   * @return Map of all user-space regions to servers
+   * @throws java.io.IOException
+   * @deprecated use {@link #getTableRegionsAndLocations}, region can have multiple locations
+   */
+  @Deprecated
+  public static NavigableMap<HRegionInfo, ServerName> allTableRegions(
+      Connection connection, final TableName tableName) throws IOException {
+    final NavigableMap<HRegionInfo, ServerName> regions =
+      new TreeMap<HRegionInfo, ServerName>();
+    Visitor visitor = new TableVisitorBase(tableName) {
+      @Override
+      public boolean visitInternal(Result result) throws IOException {
+        RegionLocations locations = getRegionLocations(result);
+        if (locations == null) return true;
+        for (HRegionLocation loc : locations.getRegionLocations()) {
+          if (loc != null) {
+            HRegionInfo regionInfo = loc.getRegionInfo();
+            regions.put(regionInfo, loc.getServerName());
+          }
+        }
+        return true;
+      }
+    };
+    scanMetaForTableRegions(connection, visitor, tableName);
+    return regions;
+  }
 
   @InterfaceAudience.Private
   public enum QueryType {
@@ -167,7 +202,7 @@ public class MetaTableAccessor {
   public static void fullScanRegions(Connection connection,
       final Visitor visitor)
       throws IOException {
-    fullScan(connection, visitor, null, QueryType.REGION);
+    scanMeta(connection, null, null, QueryType.REGION, visitor);
   }
 
   /**
@@ -189,20 +224,7 @@ public class MetaTableAccessor {
   public static void fullScanTables(Connection connection,
       final Visitor visitor)
       throws IOException {
-    fullScan(connection, visitor, null, QueryType.TABLE);
-  }
-
-  /**
-   * Performs a full scan of <code>hbase:meta</code>.
-   * @param connection connection we're using
-   * @param visitor Visitor invoked against each row.
-   * @param type scanned part of meta
-   * @throws IOException
-   */
-  public static void fullScan(Connection connection,
-      final Visitor visitor, QueryType type)
-  throws IOException {
-    fullScan(connection, visitor, null, type);
+    scanMeta(connection, null, null, QueryType.TABLE, visitor);
   }
 
   /**
@@ -215,7 +237,7 @@ public class MetaTableAccessor {
   public static List<Result> fullScan(Connection connection, QueryType type)
     throws IOException {
     CollectAllVisitor v = new CollectAllVisitor();
-    fullScan(connection, v, null, type);
+    scanMeta(connection, null, null, type, v);
     return v.getResults();
   }
 
@@ -386,6 +408,28 @@ public class MetaTableAccessor {
   }
 
   /**
+   * Lists all of the regions currently in META.
+   *
+   * @param connection to connect with
+   * @param excludeOfflinedSplitParents False if we are to include offlined/splitparents regions,
+   *                                    true and we'll leave out offlined regions from returned list
+   * @return List of all user-space regions.
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public static List<HRegionInfo> getAllRegions(Connection connection,
+      boolean excludeOfflinedSplitParents)
+      throws IOException {
+    List<Pair<HRegionInfo, ServerName>> result;
+
+    result = getTableRegionsAndLocations(connection, null,
+        excludeOfflinedSplitParents);
+
+    return getListOfHRegionInfos(result);
+
+  }
+
+  /**
    * Gets all of the regions of the specified table. Do not use this method
    * to get meta table regions, use methods in MetaTableLocator instead.
    * @param connection connection we're using
@@ -441,15 +485,52 @@ public class MetaTableAccessor {
 
   /**
    * @param tableName table we're working with
-   * @return Place to start Scan in <code>hbase:meta</code> when passed a
-   * <code>tableName</code>; returns &lt;tableName&rt; &lt;,&rt; &lt;,&rt;
+   * @return start row for scanning META according to query type
    */
-  static byte [] getTableStartRowForMeta(TableName tableName) {
-    byte [] startRow = new byte[tableName.getName().length + 2];
-    System.arraycopy(tableName.getName(), 0, startRow, 0, tableName.getName().length);
-    startRow[startRow.length - 2] = HConstants.DELIMITER;
-    startRow[startRow.length - 1] = HConstants.DELIMITER;
-    return startRow;
+  public static byte[] getTableStartRowForMeta(TableName tableName, QueryType type) {
+    if (tableName == null) {
+      return null;
+    }
+    switch (type) {
+    case REGION:
+      byte[] startRow = new byte[tableName.getName().length + 2];
+      System.arraycopy(tableName.getName(), 0, startRow, 0, tableName.getName().length);
+      startRow[startRow.length - 2] = HConstants.DELIMITER;
+      startRow[startRow.length - 1] = HConstants.DELIMITER;
+      return startRow;
+    case ALL:
+    case TABLE:
+    default:
+      return tableName.getName();
+    }
+  }
+
+  /**
+   * @param tableName table we're working with
+   * @return stop row for scanning META according to query type
+   */
+  public static byte[] getTableStopRowForMeta(TableName tableName, QueryType type) {
+    if (tableName == null) {
+      return null;
+    }
+    final byte[] stopRow;
+    switch (type) {
+    case REGION:
+      stopRow = new byte[tableName.getName().length + 3];
+      System.arraycopy(tableName.getName(), 0, stopRow, 0, tableName.getName().length);
+      stopRow[stopRow.length - 3] = ' ';
+      stopRow[stopRow.length - 2] = HConstants.DELIMITER;
+      stopRow[stopRow.length - 1] = HConstants.DELIMITER;
+      break;
+    case ALL:
+    case TABLE:
+    default:
+      stopRow = new byte[tableName.getName().length + 1];
+      System.arraycopy(tableName.getName(), 0, stopRow, 0, tableName.getName().length);
+      stopRow[stopRow.length - 1] = ' ';
+      break;
+    }
+    return stopRow;
   }
 
   /**
@@ -461,18 +542,39 @@ public class MetaTableAccessor {
    * @param tableName bytes of table's name
    * @return configured Scan object
    */
-  public static Scan getScanForTableName(TableName tableName) {
-    String strName = tableName.getNameAsString();
+  @Deprecated
+  public static Scan getScanForTableName(Connection connection, TableName tableName) {
     // Start key is just the table name with delimiters
-    byte[] startKey = Bytes.toBytes(strName + ",,");
+    byte[] startKey = getTableStartRowForMeta(tableName, QueryType.REGION);
     // Stop key appends the smallest possible char to the table name
-    byte[] stopKey = Bytes.toBytes(strName + " ,,");
+    byte[] stopKey = getTableStopRowForMeta(tableName, QueryType.REGION);
 
-    Scan scan = new Scan(startKey);
+    Scan scan = getMetaScan(connection);
+    scan.setStartRow(startKey);
     scan.setStopRow(stopKey);
     return scan;
   }
 
+  private static Scan getMetaScan(Connection connection) {
+    return getMetaScan(connection, Integer.MAX_VALUE);
+  }
+
+  private static Scan getMetaScan(Connection connection, int rowUpperLimit) {
+    Scan scan = new Scan();
+    int scannerCaching = connection.getConfiguration()
+        .getInt(HConstants.HBASE_META_SCANNER_CACHING,
+            HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+    if (connection.getConfiguration().getBoolean(HConstants.USE_META_REPLICAS,
+        HConstants.DEFAULT_USE_META_REPLICAS)) {
+      scan.setConsistency(Consistency.TIMELINE);
+    }
+    if (rowUpperLimit <= scannerCaching) {
+      scan.setSmall(true);
+    }
+    int rows = Math.min(rowUpperLimit, scannerCaching);
+    scan.setCaching(rows);
+    return scan;
+  }
   /**
    * Do not use this method to get meta table regions, use methods in MetaTableLocator instead.
    * @param connection connection we're using
@@ -489,15 +591,15 @@ public class MetaTableAccessor {
   /**
    * Do not use this method to get meta table regions, use methods in MetaTableLocator instead.
    * @param connection connection we're using
-   * @param tableName table to work with
+   * @param tableName table to work with, can be null for getting all regions
    * @param excludeOfflinedSplitParents don't return split parents
    * @return Return list of regioninfos and server addresses.
    * @throws IOException
    */
   public static List<Pair<HRegionInfo, ServerName>> getTableRegionsAndLocations(
-        Connection connection, final TableName tableName,
+      Connection connection, @Nullable final TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException {
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
+    if (tableName != null && tableName.equals(TableName.META_TABLE_NAME)) {
       throw new IOException("This method can't be used to locate meta regions;"
         + " use MetaTableLocator instead");
     }
@@ -514,7 +616,6 @@ public class MetaTableAccessor {
             return true;
           }
           HRegionInfo hri = current.getRegionLocation().getRegionInfo();
-          if (!isInsideTable(hri, tableName)) return false;
           if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
           // Else call super and add this Result to the collection.
           return super.visit(r);
@@ -533,7 +634,10 @@ public class MetaTableAccessor {
           }
         }
       };
-    fullScan(connection, visitor, getTableStartRowForMeta(tableName), QueryType.REGION);
+    scanMeta(connection,
+        getTableStartRowForMeta(tableName, QueryType.REGION),
+        getTableStopRowForMeta(tableName, QueryType.REGION),
+        QueryType.REGION, visitor);
     return visitor.getResults();
   }
 
@@ -565,7 +669,7 @@ public class MetaTableAccessor {
         }
       }
     };
-    fullScan(connection, v, QueryType.REGION);
+    scanMeta(connection, null, null, QueryType.REGION, v);
     return hris;
   }
 
@@ -591,62 +695,140 @@ public class MetaTableAccessor {
         return true;
       }
     };
-    fullScan(connection, v, QueryType.ALL);
+    scanMeta(connection, null, null, QueryType.ALL, v);
+  }
+
+  public static void scanMetaForTableRegions(Connection connection,
+      Visitor visitor, TableName tableName) throws IOException {
+    scanMeta(connection, tableName, QueryType.REGION, Integer.MAX_VALUE, visitor);
+  }
+
+  public static void scanMeta(Connection connection, TableName table,
+      QueryType type, int maxRows, final Visitor visitor) throws IOException {
+    scanMeta(connection, getTableStartRowForMeta(table, type), getTableStopRowForMeta(table, type),
+        type, maxRows, visitor);
+  }
+
+  public static void scanMeta(Connection connection,
+      @Nullable final byte[] startRow, @Nullable final byte[] stopRow,
+      QueryType type, final Visitor visitor) throws IOException {
+    scanMeta(connection, startRow, stopRow, type, Integer.MAX_VALUE, visitor);
   }
 
   /**
-   * Performs a full scan of a catalog table.
+   * Performs a scan of META table for given table starting from
+   * given row.
+   *
    * @param connection connection we're using
-   * @param visitor Visitor invoked against each row.
-   * @param startrow Where to start the scan. Pass null if want to begin scan
-   * at first row.
-   * @param type scanned part of meta
-   * <code>hbase:meta</code>, the default (pass false to scan hbase:meta)
+   * @param visitor    visitor to call
+   * @param tableName  table withing we scan
+   * @param row        start scan from this row
+   * @param rowLimit   max number of rows to return
    * @throws IOException
    */
-  public static void fullScan(Connection connection,
-      final Visitor visitor, @Nullable final byte[] startrow, QueryType type) throws IOException {
-    fullScan(connection, visitor, startrow, type, false);
-  }
+  public static void scanMeta(Connection connection,
+      final Visitor visitor, final TableName tableName,
+      final byte[] row, final int rowLimit)
+      throws IOException {
 
-  /**
-   * Performs a full scan of a catalog table.
-   * @param connection connection we're using
-   * @param visitor Visitor invoked against each row.
-   * @param startrow Where to start the scan. Pass null if want to begin scan
-   * at first row.
-   * @param type scanned part of meta
-   * @param raw read raw data including Delete tumbstones
-   * <code>hbase:meta</code>, the default (pass false to scan hbase:meta)
-   * @throws IOException
-   */
-  public static void fullScan(Connection connection,
-      final Visitor visitor, @Nullable final byte[] startrow, QueryType type, boolean raw)
-  throws IOException {
-    Scan scan = new Scan();
-    scan.setRaw(raw);
-    if (startrow != null) scan.setStartRow(startrow);
-    if (startrow == null) {
-      int caching = connection.getConfiguration()
-          .getInt(HConstants.HBASE_META_SCANNER_CACHING, 100);
-      scan.setCaching(caching);
+    byte[] startRow = null;
+    byte[] stopRow = null;
+    if (tableName != null) {
+      startRow =
+          getTableStartRowForMeta(tableName, QueryType.REGION);
+      if (row != null) {
+        HRegionInfo closestRi =
+            getClosestRegionInfo(connection, tableName, row);
+        startRow = HRegionInfo
+            .createRegionName(tableName, closestRi.getStartKey(), HConstants.ZEROES, false);
+      }
+      stopRow =
+          getTableStopRowForMeta(tableName, QueryType.REGION);
     }
+    scanMeta(connection, startRow, stopRow, QueryType.REGION, rowLimit, visitor);
+  }
+
+
+  /**
+   * Performs a scan of META table.
+   * @param connection connection we're using
+   * @param startRow Where to start the scan. Pass null if want to begin scan
+   *                 at first row.
+   * @param stopRow Where to stop the scan. Pass null if want to scan all rows
+   *                from the start one
+   * @param type scanned part of meta
+   * @param maxRows maximum rows to return
+   * @param visitor Visitor invoked against each row.
+   * @throws IOException
+   */
+  public static void scanMeta(Connection connection,
+      @Nullable final byte[] startRow, @Nullable final byte[] stopRow,
+      QueryType type, int maxRows, final Visitor visitor)
+  throws IOException {
+    int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
+    Scan scan = getMetaScan(connection, rowUpperLimit);
+
     for (byte[] family : type.getFamilies()) {
       scan.addFamily(family);
     }
-    Table metaTable = getMetaHTable(connection);
-    ResultScanner scanner = null;
-    try {
-      scanner = metaTable.getScanner(scan);
-      Result data;
-      while((data = scanner.next()) != null) {
-        if (data.isEmpty()) continue;
-        // Break if visit returns false.
-        if (!visitor.visit(data)) break;
+    if (startRow != null) scan.setStartRow(startRow);
+    if (stopRow != null) scan.setStopRow(stopRow);
+
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Scanning META"
+          + " starting at row=" + Bytes.toStringBinary(startRow)
+          + " stopping at row=" + Bytes.toStringBinary(stopRow)
+          + " for max=" + rowUpperLimit
+          + " with caching=" + scan.getCaching());
+    }
+
+    int currentRow = 0;
+    try (Table metaTable = getMetaHTable(connection)) {
+      try (ResultScanner scanner = metaTable.getScanner(scan)) {
+        Result data;
+        while ((data = scanner.next()) != null) {
+          if (data.isEmpty()) continue;
+          // Break if visit returns false.
+          if (!visitor.visit(data)) break;
+          if (++currentRow >= rowUpperLimit) break;
+        }
       }
-    } finally {
-      if (scanner != null) scanner.close();
-      metaTable.close();
+    }
+    if (visitor != null && visitor instanceof Closeable) {
+      try {
+        ((Closeable) visitor).close();
+      } catch (Throwable t) {
+        ExceptionUtil.rethrowIfInterrupt(t);
+        LOG.debug("Got exception in closing the meta scanner visitor", t);
+      }
+    }
+  }
+
+  /**
+   * @return Get closest metatable region row to passed <code>row</code>
+   * @throws java.io.IOException
+   */
+  @Nonnull
+  public static HRegionInfo getClosestRegionInfo(Connection connection,
+      @Nonnull final TableName tableName,
+      @Nonnull final byte[] row)
+      throws IOException {
+    byte[] searchRow = HRegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
+    Scan scan = getMetaScan(connection, 1);
+    scan.setReversed(true);
+    scan.setStartRow(searchRow);
+    try (ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan)) {
+      Result result = resultScanner.next();
+      if (result == null) {
+        throw new TableNotFoundException("Cannot find row in META " +
+            " for table: " + tableName + ", row=" + Bytes.toStringBinary(row));
+      }
+      HRegionInfo regionInfo = getHRegionInfo(result);
+      if (regionInfo == null) {
+        throw new IOException("HRegionInfo was null or empty in Meta for " +
+            tableName + ", row=" + Bytes.toStringBinary(row));
+      }
+      return regionInfo;
     }
   }
 
@@ -977,6 +1159,12 @@ public class MetaTableAccessor {
   }
 
   /**
+   * Implementations 'visit' a catalog table row but with close() at the end.
+   */
+  public interface CloseableVisitor extends Visitor, Closeable {
+  }
+
+  /**
    * A {@link Visitor} that collects content out of passed {@link Result}.
    */
   static abstract class CollectingVisitor<T> implements Visitor {
@@ -1006,6 +1194,59 @@ public class MetaTableAccessor {
     @Override
     void add(Result r) {
       this.results.add(r);
+    }
+  }
+
+  /**
+   * A Visitor that skips offline regions and split parents
+   */
+  public static abstract class DefaultVisitorBase implements Visitor {
+
+    public DefaultVisitorBase() {
+      super();
+    }
+
+    public abstract boolean visitInternal(Result rowResult) throws IOException;
+
+    @Override
+    public boolean visit(Result rowResult) throws IOException {
+      HRegionInfo info = getHRegionInfo(rowResult);
+      if (info == null) {
+        return true;
+      }
+
+      //skip over offline and split regions
+      if (!(info.isOffline() || info.isSplit())) {
+        return visitInternal(rowResult);
+      }
+      return true;
+    }
+  }
+
+  /**
+   * A Visitor for a table. Provides a consistent view of the table's
+   * hbase:meta entries during concurrent splits (see HBASE-5986 for details). This class
+   * does not guarantee ordered traversal of meta entries, and can block until the
+   * hbase:meta entries for daughters are available during splits.
+   */
+  public static abstract class TableVisitorBase extends DefaultVisitorBase {
+    private TableName tableName;
+
+    public TableVisitorBase(TableName tableName) {
+      super();
+      this.tableName = tableName;
+    }
+
+    @Override
+    public final boolean visit(Result rowResult) throws IOException {
+      HRegionInfo info = getHRegionInfo(rowResult);
+      if (info == null) {
+        return true;
+      }
+      if (!(info.getTable().equals(tableName))) {
+        return false;
+      }
+      return super.visit(rowResult);
     }
   }
 

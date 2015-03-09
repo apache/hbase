@@ -18,11 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import javax.annotation.Nullable;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -128,6 +123,10 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -3015,7 +3014,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       }
     };
     MetaTableAccessor
-        .fullScan(connection, visitor, table.getName(), MetaTableAccessor.QueryType.TABLE, true);
+        .scanMeta(connection, null, null,
+            MetaTableAccessor.QueryType.TABLE,
+            Integer.MAX_VALUE, visitor);
     return lastTableState.get();
   }
 

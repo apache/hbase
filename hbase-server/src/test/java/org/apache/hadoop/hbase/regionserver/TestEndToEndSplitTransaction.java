@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.ServerName;
@@ -50,7 +51,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -209,11 +209,11 @@ public class TestEndToEndSplitTransaction {
     stopper.stop(null);
 
     if (regionChecker.ex != null) {
-      throw regionChecker.ex;
+      throw new AssertionError("regionChecker", regionChecker.ex);
     }
 
     if (regionSplitter.ex != null) {
-      throw regionSplitter.ex;
+      throw new AssertionError("regionSplitter", regionSplitter.ex);
     }
 
     //one final check
@@ -243,15 +243,15 @@ public class TestEndToEndSplitTransaction {
       try {
         Random random = new Random();
         for (int i= 0; i< 5; i++) {
-          NavigableMap<HRegionInfo, ServerName> regions =
-              MetaScanner.allTableRegions(connection, tableName);
+          List<HRegionInfo> regions =
+              MetaTableAccessor.getTableRegions(connection, tableName, true);
           if (regions.size() == 0) {
             continue;
           }
           int regionIndex = random.nextInt(regions.size());
 
           //pick a random region and split it into two
-          HRegionInfo region = Iterators.get(regions.keySet().iterator(), regionIndex);
+          HRegionInfo region = Iterators.get(regions.iterator(), regionIndex);
 
           //pick the mid split point
           int start = 0, end = Integer.MAX_VALUE;
@@ -298,7 +298,7 @@ public class TestEndToEndSplitTransaction {
   }
 
   /**
-   * Checks regions using MetaScanner, MetaTableAccessor and HTable methods
+   * Checks regions using MetaTableAccessor and HTable methods
    */
   static class RegionChecker extends ScheduledChore {
     Connection connection;
@@ -315,15 +315,13 @@ public class TestEndToEndSplitTransaction {
     }
 
     /** verify region boundaries obtained from MetaScanner */
-    void verifyRegionsUsingMetaScanner() throws Exception {
+    void verifyRegionsUsingMetaTableAccessor() throws Exception {
 
-      //MetaScanner.allTableRegions()
-      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(connection,
+      NavigableMap<HRegionInfo, ServerName> regions = MetaTableAccessor.allTableRegions(connection,
           tableName);
       verifyTableRegions(regions.keySet());
 
-      //MetaScanner.listAllRegions()
-      List<HRegionInfo> regionList = MetaScanner.listAllRegions(conf, connection, false);
+      List<HRegionInfo> regionList = MetaTableAccessor.getAllRegions(connection, true);
       verifyTableRegions(Sets.newTreeSet(regionList));
     }
 
@@ -345,7 +343,7 @@ public class TestEndToEndSplitTransaction {
     }
 
     void verify() throws Exception {
-      verifyRegionsUsingMetaScanner();
+      verifyRegionsUsingMetaTableAccessor();
       verifyRegionsUsingHTable();
     }
 

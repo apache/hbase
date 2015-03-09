@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -1350,8 +1349,8 @@ public class TestHBaseFsck {
       setupTableWithRegionReplica(table, 2);
       assertEquals(ROWKEYS.length, countRows());
       NavigableMap<HRegionInfo, ServerName> map =
-          MetaScanner.allTableRegions(TEST_UTIL.getConnection(),
-          tbl.getName());
+          MetaTableAccessor.allTableRegions(TEST_UTIL.getConnection(),
+              tbl.getName());
       int i = 0;
       // store the HRIs of the regions we will mess up
       for (Map.Entry<HRegionInfo, ServerName> m : map.entrySet()) {
@@ -1383,7 +1382,7 @@ public class TestHBaseFsck {
       i = 0;
       HRegionInfo[] newHris = new HRegionInfo[2];
       // get all table's regions from meta
-      map = MetaScanner.allTableRegions(TEST_UTIL.getConnection(), tbl.getName());
+      map = MetaTableAccessor.allTableRegions(TEST_UTIL.getConnection(), tbl.getName());
       // get the HRIs of the new regions (hbck created new regions for fixing the hdfs mess-up)
       for (Map.Entry<HRegionInfo, ServerName> m : map.entrySet()) {
         if (m.getKey().getStartKey().length > 0 &&
@@ -2306,10 +2305,10 @@ public class TestHBaseFsck {
       // Mess it up by removing the RegionInfo for one region.
       final List<Delete> deletes = new LinkedList<Delete>();
       Table meta = connection.getTable(TableName.META_TABLE_NAME, hbfsckExecutorService);
-      MetaScanner.metaScan(connection, new MetaScanner.MetaScannerVisitor() {
+      MetaTableAccessor.fullScanRegions(connection, new MetaTableAccessor.Visitor() {
 
         @Override
-        public boolean processRow(Result rowResult) throws IOException {
+        public boolean visit(Result rowResult) throws IOException {
           HRegionInfo hri = MetaTableAccessor.getHRegionInfo(rowResult);
           if (hri != null && !hri.getTable().isSystemTable()) {
             Delete delete = new Delete(rowResult.getRow());
@@ -2317,10 +2316,6 @@ public class TestHBaseFsck {
             deletes.add(delete);
           }
           return true;
-        }
-
-        @Override
-        public void close() throws IOException {
         }
       });
       meta.delete(deletes);
@@ -2652,11 +2647,14 @@ public class TestHBaseFsck {
     HBaseFsck hbck = doFsck(conf, false);
     assertNoErrors(hbck); // no errors
     try {
+      hbck.connect(); // need connection to have access to META
       hbck.checkRegionBoundaries();
     } catch (IllegalArgumentException e) {
       if (e.getMessage().endsWith("not a valid DFS filename.")) {
         fail("Table directory path is not valid." + e.getMessage());
       }
+    } finally {
+      hbck.close();
     }
   }
 

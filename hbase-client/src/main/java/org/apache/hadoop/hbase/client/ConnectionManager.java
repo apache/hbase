@@ -1069,9 +1069,10 @@ final class ConnectionManager {
     @Override
     public List<HRegionLocation> locateRegions(final TableName tableName,
         final boolean useCache, final boolean offlined) throws IOException {
-      NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(this, tableName);
+      List<HRegionInfo> regions = MetaTableAccessor
+          .getTableRegions(this, tableName, !offlined);
       final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
-      for (HRegionInfo regionInfo : regions.keySet()) {
+      for (HRegionInfo regionInfo : regions) {
         RegionLocations list = locateRegion(tableName, regionInfo.getStartKey(), useCache, true);
         if (list != null) {
           for (HRegionLocation loc : list.getRegionLocations()) {

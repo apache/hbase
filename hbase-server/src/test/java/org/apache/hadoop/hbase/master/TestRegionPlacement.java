@@ -42,17 +42,14 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
@@ -470,11 +467,11 @@ public class TestRegionPlacement {
     final AtomicInteger regionOnPrimaryNum = new AtomicInteger(0);
     final AtomicInteger totalRegionNum = new AtomicInteger(0);
     LOG.info("The start of region placement verification");
-    MetaScannerVisitor visitor = new MetaScannerVisitor() {
-      public boolean processRow(Result result) throws IOException {
+    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+      public boolean visit(Result result) throws IOException {
         try {
           @SuppressWarnings("deprecation")
-          HRegionInfo info = MetaScanner.getHRegionInfo(result);
+          HRegionInfo info = MetaTableAccessor.getHRegionInfo(result);
           if(info.getTable().getNamespaceAsString()
               .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
             return true;
@@ -522,11 +519,8 @@ public class TestRegionPlacement {
           throw e;
         }
       }
-
-      @Override
-      public void close() throws IOException {}
     };
-    MetaScanner.metaScan(CONNECTION, visitor);
+    MetaTableAccessor.fullScanRegions(CONNECTION, visitor);
     LOG.info("There are " + regionOnPrimaryNum.intValue() + " out of " +
         totalRegionNum.intValue() + " regions running on the primary" +
         " region servers" );

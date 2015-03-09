@@ -88,6 +88,11 @@ public class RegionSizeCalculator {
       return;
     }
 
+    if (regionLocator.getName().isSystemTable()) {
+      LOG.info("Region size calculation disabled for system tables.");
+      return;
+    }
+
     LOG.info("Calculating region sizes for table \"" + regionLocator.getName() + "\".");
 
     //get regions for table

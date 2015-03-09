@@ -42,8 +42,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -142,9 +140,9 @@ public class CatalogJanitor extends ScheduledChore {
     final Map<HRegionInfo, Result> mergedRegions = new TreeMap<HRegionInfo, Result>();
     // This visitor collects split parents and counts rows in the hbase:meta table
 
-    MetaScannerVisitor visitor = new MetaScanner.MetaScannerVisitorBase() {
+    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
       @Override
-      public boolean processRow(Result r) throws IOException {
+      public boolean visit(Result r) throws IOException {
         if (r == null || r.isEmpty()) return true;
         count.incrementAndGet();
         HRegionInfo info = HRegionInfo.getHRegionInfo(r);
@@ -165,7 +163,7 @@ public class CatalogJanitor extends ScheduledChore {
 
     // Run full scan of hbase:meta catalog table passing in our custom visitor with
     // the start row
-    MetaScanner.metaScan(this.connection, visitor, tableName);
+    MetaTableAccessor.scanMetaForTableRegions(this.connection, visitor, tableName);
 
     return new Triple<Integer, Map<HRegionInfo, Result>, Map<HRegionInfo, Result>>(
         count.get(), mergedRegions, splitParents);

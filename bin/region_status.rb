@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.HRegionInfo
-import org.apache.hadoop.hbase.client.MetaScanner
+import org.apache.hadoop.hbase.MetaTableAccessor
 import org.apache.hadoop.hbase.HTableDescriptor
 import org.apache.hadoop.hbase.client.HConnectionManager
 
@@ -139,7 +139,7 @@ while true
     server_count = admin.getClusterStatus().getRegionsCount()
   else
     connection = HConnectionManager::getConnection(config);
-    server_count = MetaScanner::allTableRegions(config, connection, $TableName ,false).size()
+    server_count = MetaTableAccessor::allTableRegions(connection, $TableName).size()
   end
   print "Region Status: #{server_count} / #{meta_count}\n"
   if SHOULD_WAIT and server_count < meta_count

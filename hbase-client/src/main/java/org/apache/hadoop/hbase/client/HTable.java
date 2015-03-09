@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -625,11 +626,12 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    * @deprecated This is no longer a public API.  Use {@link #getAllRegionLocations()} instead.
    */
+  @SuppressWarnings("deprecation")
   @Deprecated
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
     // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocator, singular,
     // returns an HRegionLocation.
-    return MetaScanner.allTableRegions(this.connection, getName());
+    return MetaTableAccessor.allTableRegions(this.connection, getName());
   }
 
   /**

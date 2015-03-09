@@ -97,9 +97,9 @@ public class ModifyTableHandler extends TableEventHandler {
       TableName table) throws IOException {
     if (newReplicaCount >= oldReplicaCount) return;
     Set<byte[]> tableRows = new HashSet<byte[]>();
-    Scan scan = MetaTableAccessor.getScanForTableName(table);
-    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     Connection connection = this.masterServices.getConnection();
+    Scan scan = MetaTableAccessor.getScanForTableName(connection, table);
+    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
       ResultScanner resScanner = metaTable.getScanner(scan);
       for (Result result : resScanner) {

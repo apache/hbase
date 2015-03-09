@@ -100,9 +100,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -702,6 +699,11 @@ public class HBaseFsck extends Configured implements Closeable {
 
   @Override
   public void close() throws IOException {
+    try {
+      unlockHbck();
+    } catch (Exception io) {
+      LOG.warn(io);
+    }
     IOUtils.cleanup(null, admin, meta, connection);
   }
 
@@ -724,7 +726,7 @@ public class HBaseFsck extends Configured implements Closeable {
   public void checkRegionBoundaries() {
     try {
       ByteArrayComparator comparator = new ByteArrayComparator();
-      List<HRegionInfo> regions = MetaScanner.listAllRegions(getConf(), connection, false);
+      List<HRegionInfo> regions = MetaTableAccessor.getAllRegions(connection, true);
       final RegionBoundariesInformation currentRegionBoundariesInformation =
           new RegionBoundariesInformation();
       Path hbaseRoot = FSUtils.getRootDir(getConf());
@@ -3226,7 +3228,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * @throws IOException if an error is encountered
    */
   boolean loadMetaEntries() throws IOException {
-    MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
       int countRecord = 1;
 
       // comparator to sort KeyValues with latest modtime
@@ -3238,7 +3240,7 @@ public class HBaseFsck extends Configured implements Closeable {
       };
 
       @Override
-      public boolean processRow(Result result) throws IOException {
+      public boolean visit(Result result) throws IOException {
         try {
 
           // record the latest modification of this META record
@@ -3310,7 +3312,7 @@ public class HBaseFsck extends Configured implements Closeable {
     };
     if (!checkMetaOnly) {
       // Scan hbase:meta to pick up user regions
-      MetaScanner.metaScan(connection, visitor);
+      MetaTableAccessor.fullScanRegions(connection, visitor);
     }
 
     errors.print("");

@@ -61,8 +61,6 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.MasterCoprocessorRpcChannel;
@@ -559,9 +557,9 @@ public class HBaseAdmin implements Admin {
       if (tableWasEnabled) {
         // Wait all table regions comes online
         final AtomicInteger actualRegCount = new AtomicInteger(0);
-        MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+        MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
           @Override
-          public boolean processRow(Result rowResult) throws IOException {
+          public boolean visit(Result rowResult) throws IOException {
             RegionLocations list = MetaTableAccessor.getRegionLocations(rowResult);
             if (list == null) {
               LOG.warn("No serialized HRegionInfo in " + rowResult);
@@ -587,7 +585,7 @@ public class HBaseAdmin implements Admin {
             return true;
           }
         };
-        MetaScanner.metaScan(connection, visitor, desc.getTableName());
+        MetaTableAccessor.scanMetaForTableRegions(connection, visitor, desc.getTableName());
         if (actualRegCount.get() < numRegs) {
           if (tries == this.numRetries * this.retryLongerMultiplier - 1) {
             throw new RegionOfflineException("Only " + actualRegCount.get() +
@@ -2243,9 +2241,9 @@ public class HBaseAdmin implements Admin {
       final AtomicReference<Pair<HRegionInfo, ServerName>> result =
         new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
       final String encodedName = Bytes.toString(regionName);
-      MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+      MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
         @Override
-        public boolean processRow(Result data) throws IOException {
+        public boolean visit(Result data) throws IOException {
           HRegionInfo info = HRegionInfo.getHRegionInfo(data);
           if (info == null) {
             LOG.warn("No serialized HRegionInfo in " + data);
@@ -2254,11 +2252,13 @@ public class HBaseAdmin implements Admin {
           RegionLocations rl = MetaTableAccessor.getRegionLocations(data);
           boolean matched = false;
           ServerName sn = null;
-          for (HRegionLocation h : rl.getRegionLocations()) {
-            if (h != null && encodedName.equals(h.getRegionInfo().getEncodedName())) {
-              sn = h.getServerName();
-              info = h.getRegionInfo();
-              matched = true;
+          if (rl != null) {
+            for (HRegionLocation h : rl.getRegionLocations()) {
+              if (h != null && encodedName.equals(h.getRegionInfo().getEncodedName())) {
+                sn = h.getServerName();
+                info = h.getRegionInfo();
+                matched = true;
+              }
             }
           }
           if (!matched) return true;
@@ -2267,7 +2267,7 @@ public class HBaseAdmin implements Admin {
         }
       };
 
-      MetaScanner.metaScan(connection, visitor, null);
+      MetaTableAccessor.fullScanRegions(connection, visitor);
       pair = result.get();
     }
     return pair;
