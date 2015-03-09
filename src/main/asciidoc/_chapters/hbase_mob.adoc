@@ -120,6 +120,21 @@ Because there can be a large number of MOB files at any time, as compared to the
 
 === MOB Optimization Tasks
 
+==== Manually Compacting MOB Files
+
+To manually compact MOB files, rather than waiting for the <<mob.cache.configure,configuration>> to trigger compaction, use the `compact_mob` or `major_compact_mob` HBase shell commands. These commands require the first argument to be the table name, and take an optional column family as the second argument. If the column family is omitted, all MOB-enabled column families are compacted.
+
+----
+hbase> compact_mob 't1', 'c1'
+hbase> compact_mob 't1'
+hbase> major_compact_mob 't1', 'c1'
+hbase> major_compact_mob 't1'
+----
+
+These commands are also available via `Admin.compactMob` and `Admin.majorCompactMob` methods.
+
+==== MOB Sweeper
+
 HBase MOB currently relies on a MapReduce job called the Sweeper tool for optimization. The Sweeper tool oalesces small MOB files or MOB files with many deletions or updates. A native MOB compaction tool is still in testing. To configure the Sweeper tool, set the following options:
 
 [source,xml]
