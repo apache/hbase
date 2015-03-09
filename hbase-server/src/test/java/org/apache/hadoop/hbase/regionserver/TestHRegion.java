@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -131,6 +132,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion.RowLock;
 import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.TestStore.FaultyFileSystem;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -166,6 +168,7 @@ import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 
 /**
@@ -5742,6 +5745,108 @@ public class TestHRegion {
       region = HRegion.openHRegion(hri, htd, rss.getWAL(hri),
         TEST_UTIL.getConfiguration(), rss, null);
 
+      verify(wal, times(1)).append((HTableDescriptor)any(), (HRegionInfo)any(), (WALKey)any()
+        , editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
+
+      WALEdit edit = editCaptor.getValue();
+      assertNotNull(edit);
+      assertNotNull(edit.getCells());
+      assertEquals(1, edit.getCells().size());
+      RegionEventDescriptor desc = WALEdit.getRegionEventDescriptor(edit.getCells().get(0));
+      assertNotNull(desc);
+
+      LOG.info("RegionEventDescriptor from WAL: " + desc);
+
+      assertEquals(RegionEventDescriptor.EventType.REGION_OPEN, desc.getEventType());
+      assertTrue(Bytes.equals(desc.getTableName().toByteArray(), htd.getName()));
+      assertTrue(Bytes.equals(desc.getEncodedRegionName().toByteArray(),
+        hri.getEncodedNameAsBytes()));
+      assertTrue(desc.getLogSequenceNumber() > 0);
+      assertEquals(serverName, ProtobufUtil.toServerName(desc.getServer()));
+      assertEquals(2, desc.getStoresCount());
+
+      StoreDescriptor store = desc.getStores(0);
+      assertTrue(Bytes.equals(store.getFamilyName().toByteArray(), fam1));
+      assertEquals(store.getStoreHomeDir(), Bytes.toString(fam1));
+      assertEquals(1, store.getStoreFileCount()); // 1store file
+      assertFalse(store.getStoreFile(0).contains("/")); // ensure path is relative
+
+      store = desc.getStores(1);
+      assertTrue(Bytes.equals(store.getFamilyName().toByteArray(), fam2));
+      assertEquals(store.getStoreHomeDir(), Bytes.toString(fam2));
+      assertEquals(0, store.getStoreFileCount()); // no store files
+
+    } finally {
+      HRegion.closeHRegion(region);
+    }
+  }
+
+  // Helper for test testOpenRegionWrittenToWALForLogReplay
+  static class HRegionWithSeqId extends HRegion {
+    public HRegionWithSeqId(final Path tableDir, final WAL wal, final FileSystem fs,
+        final Configuration confParam, final HRegionInfo regionInfo,
+        final HTableDescriptor htd, final RegionServerServices rsServices) {
+      super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
+    }
+    @Override
+    protected long getNextSequenceId(WAL wal) throws IOException {
+      return 42;
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testOpenRegionWrittenToWALForLogReplay() throws Exception {
+    // similar to the above test but with distributed log replay
+    final ServerName serverName = ServerName.valueOf("testOpenRegionWrittenToWALForLogReplay",
+      100, 42);
+    final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
+
+    HTableDescriptor htd
+        = new HTableDescriptor(TableName.valueOf("testOpenRegionWrittenToWALForLogReplay"));
+    htd.addFamily(new HColumnDescriptor(fam1));
+    htd.addFamily(new HColumnDescriptor(fam2));
+
+    HRegionInfo hri = new HRegionInfo(htd.getTableName(),
+      HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY);
+
+    // open the region w/o rss and wal and flush some files
+    HRegion region = HRegion.createHRegion(hri, TEST_UTIL.getDataTestDir(), TEST_UTIL
+             .getConfiguration(), htd);
+    assertNotNull(region);
+
+    // create a file in fam1 for the region before opening in OpenRegionHandler
+    region.put(new Put(Bytes.toBytes("a")).add(fam1, fam1, fam1));
+    region.flushcache();
+    HRegion.closeHRegion(region);
+
+    ArgumentCaptor<WALEdit> editCaptor = ArgumentCaptor.forClass(WALEdit.class);
+
+    // capture append() calls
+    WAL wal = mock(WAL.class);
+    when(rss.getWAL((HRegionInfo) any())).thenReturn(wal);
+
+    // add the region to recovering regions
+    HashMap<String, HRegion> recoveringRegions = Maps.newHashMap();
+    recoveringRegions.put(region.getRegionInfo().getEncodedName(), null);
+    when(rss.getRecoveringRegions()).thenReturn(recoveringRegions);
+
+    try {
+      Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+      conf.set(HConstants.REGION_IMPL, HRegionWithSeqId.class.getName());
+      region = HRegion.openHRegion(hri, htd, rss.getWAL(hri),
+        conf, rss, null);
+
+      // verify that we have not appended region open event to WAL because this region is still
+      // recovering
+      verify(wal, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(), (WALKey)any()
+        , editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
+
+      // not put the region out of recovering state
+      new FinishRegionRecoveringHandler(rss, region.getRegionInfo().getEncodedName(), "/foo")
+        .prepare().process();
+
+      // now we should have put the entry
       verify(wal, times(1)).append((HTableDescriptor)any(), (HRegionInfo)any(), (WALKey)any()
         , editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
 

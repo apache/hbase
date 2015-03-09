@@ -95,7 +95,7 @@ public class TestRegionReplicaFailover {
   @Parameters
   public static Collection<Object[]> getParameters() {
     Object[][] params =
-        new Boolean[][] { {false} }; // TODO: enable dist log replay testing after HBASE-13121
+        new Boolean[][] { {true}, {false} };
     return Arrays.asList(params);
   }
 

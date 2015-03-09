@@ -46,9 +46,9 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionAdminServiceCallable;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.RetryingCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALSplitter.EntryBuffers;
 import org.apache.hadoop.hbase.wal.WALSplitter.OutputSink;
+import org.apache.hadoop.hbase.replication.BaseWALEntryFilter;
+import org.apache.hadoop.hbase.replication.ChainWALEntryFilter;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
@@ -76,6 +78,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Lists;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -105,6 +108,44 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   private int operationTimeout;
 
   private ExecutorService pool;
+
+  /**
+   * Skips the entries which has original seqId. Only entries persisted via distributed log replay
+   * have their original seq Id fields set.
+   */
+  private class SkipReplayedEditsFilter extends BaseWALEntryFilter {
+    @Override
+    public Entry filter(Entry entry) {
+      // if orig seq id is set, skip replaying the entry
+      if (entry.getKey().getOrigLogSeqNum() > 0) {
+        return null;
+      }
+      return entry;
+    }
+  }
+
+  @Override
+  public WALEntryFilter getWALEntryfilter() {
+    WALEntryFilter superFilter = super.getWALEntryfilter();
+    WALEntryFilter skipReplayedEditsFilter = getSkipReplayedEditsFilter();
+
+    if (superFilter == null) {
+      return skipReplayedEditsFilter;
+    }
+
+    if (skipReplayedEditsFilter == null) {
+      return superFilter;
+    }
+
+    ArrayList<WALEntryFilter> filters = Lists.newArrayList();
+    filters.add(superFilter);
+    filters.add(skipReplayedEditsFilter);
+    return new ChainWALEntryFilter(filters);
+  }
+
+  protected WALEntryFilter getSkipReplayedEditsFilter() {
+    return new SkipReplayedEditsFilter();
+  }
 
   @Override
   public void init(Context context) throws IOException {
@@ -141,7 +182,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   @Override
   protected void doStart() {
     try {
-      connection = (ClusterConnection) HConnectionManager.createConnection(ctx.getConfiguration());
+      connection = (ClusterConnection) ConnectionFactory.createConnection(this.conf);
       this.pool = getDefaultThreadPool(conf);
       outputSink = new RegionReplicaOutputSink(controller, entryBuffers, connection, pool,
         numWriterThreads, operationTimeout);

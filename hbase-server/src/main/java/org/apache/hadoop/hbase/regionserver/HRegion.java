@@ -272,6 +272,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * replication.
    */
   protected volatile long lastReplayedOpenRegionSeqId = -1L;
+  protected volatile long lastReplayedCompactionSeqId = -1L;
 
   /**
    * Operation enum is used in {@link HRegion#startRegionOperation} to provide operation context for
@@ -1158,6 +1159,46 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    */
   public void setRecovering(boolean newState) {
     boolean wasRecovering = this.isRecovering;
+    // before we flip the recovering switch (enabling reads) we should write the region open
+    // event to WAL if needed
+    if (wal != null && getRegionServerServices() != null && !writestate.readOnly
+        && wasRecovering && !newState) {
+
+      // force a flush only if region replication is set up for this region. Otherwise no need.
+      boolean forceFlush = getTableDesc().getRegionReplication() > 1;
+
+      // force a flush first
+      MonitoredTask status = TaskMonitor.get().createStatus(
+        "Flushing region " + this + " because recovery is finished");
+      try {
+        if (forceFlush) {
+          internalFlushcache(status);
+        }
+
+        status.setStatus("Writing region open event marker to WAL because recovery is finished");
+        try {
+          long seqId = openSeqNum;
+          // obtain a new seqId because we possibly have writes and flushes on top of openSeqNum
+          if (wal != null) {
+            seqId = getNextSequenceId(wal);
+          }
+          writeRegionOpenMarker(wal, seqId);
+        } catch (IOException e) {
+          // We cannot rethrow this exception since we are being called from the zk thread. The
+          // region has already opened. In this case we log the error, but continue
+          LOG.warn(getRegionInfo().getEncodedName() + " : was not able to write region opening "
+              + "event to WAL, continueing", e);
+        }
+      } catch (IOException ioe) {
+        // Distributed log replay semantics does not necessarily require a flush, since the replayed
+        // data is already written again in the WAL. So failed flush should be fine.
+        LOG.warn(getRegionInfo().getEncodedName() + " : was not able to flush "
+            + "event to WAL, continueing", ioe);
+      } finally {
+        status.cleanup();
+      }
+    }
+
     this.isRecovering = newState;
     if (wasRecovering && !isRecovering) {
       // Call only when wal replay is over.
@@ -2378,7 +2419,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * @return Next sequence number unassociated with any actual edit.
    * @throws IOException
    */
-  private long getNextSequenceId(final WAL wal) throws IOException {
+  @VisibleForTesting
+  protected long getNextSequenceId(final WAL wal) throws IOException {
     WALKey key = this.appendEmptyEdit(wal, null);
     return key.getSequenceId();
   }
@@ -4122,31 +4164,45 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     checkTargetRegion(compaction.getEncodedRegionName().toByteArray(),
       "Compaction marker from WAL ", compaction);
 
-    if (replaySeqId < lastReplayedOpenRegionSeqId) {
-      LOG.warn(getRegionInfo().getEncodedName() + " : "
-          + "Skipping replaying compaction event :" + TextFormat.shortDebugString(compaction)
-          + " because its sequence id is smaller than this regions lastReplayedOpenRegionSeqId "
-          + " of " + lastReplayedOpenRegionSeqId);
-      return;
-    }
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(getRegionInfo().getEncodedName() + " : "
-          + "Replaying compaction marker " + TextFormat.shortDebugString(compaction));
-    }
-
-    startRegionOperation(Operation.REPLAY_EVENT);
-    try {
-      Store store = this.getStore(compaction.getFamilyName().toByteArray());
-      if (store == null) {
+    synchronized (writestate) {
+      if (replaySeqId < lastReplayedOpenRegionSeqId) {
         LOG.warn(getRegionInfo().getEncodedName() + " : "
-            + "Found Compaction WAL edit for deleted family:"
-            + Bytes.toString(compaction.getFamilyName().toByteArray()));
+            + "Skipping replaying compaction event :" + TextFormat.shortDebugString(compaction)
+            + " because its sequence id " + replaySeqId + " is smaller than this regions "
+            + "lastReplayedOpenRegionSeqId of " + lastReplayedOpenRegionSeqId);
         return;
       }
-      store.replayCompactionMarker(compaction, pickCompactionFiles, removeFiles);
-    } finally {
-      closeRegionOperation(Operation.REPLAY_EVENT);
+      if (replaySeqId < lastReplayedCompactionSeqId) {
+        LOG.warn(getRegionInfo().getEncodedName() + " : "
+            + "Skipping replaying compaction event :" + TextFormat.shortDebugString(compaction)
+            + " because its sequence id " + replaySeqId + " is smaller than this regions "
+            + "lastReplayedCompactionSeqId of " + lastReplayedCompactionSeqId);
+        return;
+      } else {
+        lastReplayedCompactionSeqId = replaySeqId;
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(getRegionInfo().getEncodedName() + " : "
+            + "Replaying compaction marker " + TextFormat.shortDebugString(compaction)
+            + " with seqId=" + replaySeqId + " and lastReplayedOpenRegionSeqId="
+            + lastReplayedOpenRegionSeqId);
+      }
+
+      startRegionOperation(Operation.REPLAY_EVENT);
+      try {
+        Store store = this.getStore(compaction.getFamilyName().toByteArray());
+        if (store == null) {
+          LOG.warn(getRegionInfo().getEncodedName() + " : "
+              + "Found Compaction WAL edit for deleted family:"
+              + Bytes.toString(compaction.getFamilyName().toByteArray()));
+          return;
+        }
+        store.replayCompactionMarker(compaction, pickCompactionFiles, removeFiles);
+        logRegionFiles();
+      } finally {
+        closeRegionOperation(Operation.REPLAY_EVENT);
+      }
     }
   }
 
@@ -4185,6 +4241,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           TextFormat.shortDebugString(flush));
         break;
       }
+
+      logRegionFiles();
     } finally {
       closeRegionOperation(Operation.REPLAY_EVENT);
     }
@@ -4645,6 +4703,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           notifyAll(); // FindBugs NN_NAKED_NOTIFY
         }
       }
+      logRegionFiles();
     } finally {
       closeRegionOperation(Operation.REPLAY_EVENT);
     }
@@ -4850,6 +4909,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     }
   }
 
+  private void logRegionFiles() {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(getRegionInfo().getEncodedName() + " : Store files for region: ");
+      for (Store s : stores.values()) {
+        for (StoreFile sf : s.getStorefiles()) {
+          LOG.trace(getRegionInfo().getEncodedName() + " : " + sf);
+        }
+      }
+    }
+  }
+
   /** Checks whether the given regionName is either equal to our region, or that
    * the regionName is the primary region to our corresponding range for the secondary replica.
    */
@@ -4954,6 +5024,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         for (StoreFile storeFile: store.getStorefiles()) {
           storeFileNames.add(storeFile.getPath().toString());
         }
+
+        logRegionFiles();
       }
     }
     return storeFileNames;
@@ -6220,7 +6292,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     checkClassLoading();
     this.openSeqNum = initialize(reporter);
     this.setSequenceId(openSeqNum);
-    if (wal != null && getRegionServerServices() != null && !writestate.readOnly) {
+    if (wal != null && getRegionServerServices() != null && !writestate.readOnly
+        && !isRecovering) {
+      // Only write the region open event marker to WAL if (1) we are not read-only
+      // (2) dist log replay is off or we are not recovering. In case region is
+      // recovering, the open event will be written at setRecovering(false)
       writeRegionOpenMarker(wal, openSeqNum);
     }
     return this;
@@ -7316,7 +7392,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       45 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (12 * Bytes.SIZEOF_LONG) +
+      (13 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:

@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
+import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
 import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -455,11 +456,8 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
                 String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
                 try {
                   if (ZKUtil.checkExists(watcher, nodePath) == -1) {
-                    HRegion r = recoveringRegions.remove(region);
-                    if (r != null) {
-                      r.setRecovering(false);
-                    }
-                    LOG.debug("Mark recovering region:" + region + " up.");
+                    server.getExecutorService().submit(
+                      new FinishRegionRecoveringHandler(server, region, nodePath));
                   } else {
                     // current check is a defensive(or redundant) mechanism to prevent us from
                     // having stale recovering regions in our internal RS memory state while
@@ -583,9 +581,8 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * Next part is related to WALSplitterHandler
    */
   /**
-   * endTask() can fail and the only way to recover out of it is for the 
-   * {@link org.apache.hadoop.hbase.master.SplitLogManager} to
-   * timeout the task node.
+   * endTask() can fail and the only way to recover out of it is for the
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} to timeout the task node.
    * @param slt
    * @param ctr
    */
