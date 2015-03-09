@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.util.Pair;
@@ -814,6 +816,11 @@ public class ServerManager {
 
     RetryCounter retryCounter = pingRetryCounterFactory.create();
     while (retryCounter.shouldRetry()) {
+      synchronized (this.onlineServers) {
+        if (this.deadservers.isDeadServer(server)) {
+          return false;
+        }
+      }
       try {
         AdminService.BlockingInterface admin = getRsAdmin(server);
         if (admin != null) {
@@ -821,13 +828,21 @@ public class ServerManager {
           return info != null && info.hasServerName()
             && server.getStartcode() == info.getServerName().getStartCode();
         }
+      } catch (RegionServerStoppedException | ServerNotRunningYetException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Couldn't reach " + server, e);
+        }
+        break;
       } catch (IOException ioe) {
-        LOG.debug("Couldn't reach " + server + ", try=" + retryCounter.getAttemptTimes()
-          + " of " + retryCounter.getMaxAttempts(), ioe);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Couldn't reach " + server + ", try=" + retryCounter.getAttemptTimes() + " of "
+              + retryCounter.getMaxAttempts(), ioe);
+        }
         try {
           retryCounter.sleepUntilNextRetry();
         } catch(InterruptedException ie) {
           Thread.currentThread().interrupt();
+          break;
         }
       }
     }
