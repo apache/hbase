@@ -144,6 +144,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     InternalScanner currentAsInternal = (InternalScanner)this.current;
     boolean moreCells = currentAsInternal.next(result, scannerContext);
     Cell pee = this.current.peek();
+
     /*
      * By definition, any InternalScanner must return false only when it has no
      * further rows to be fetched. So, we can close a scanner if it returns
@@ -151,6 +152,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
      * more efficient to close scanners which are not needed than keep them in
      * the heap. This is also required for certain optimizations.
      */
+
     if (pee == null || !moreCells) {
       this.current.close();
     } else {

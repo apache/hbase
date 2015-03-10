@@ -101,7 +101,7 @@ public class ScannerContext {
     if (limitsToCopy != null) this.limits.copy(limitsToCopy);
 
     // Progress fields are initialized to 0
-    progress = new LimitFields(0, LimitFields.DEFAULT_SCOPE, 0);
+    progress = new LimitFields(0, LimitFields.DEFAULT_SCOPE, 0, LimitFields.DEFAULT_SCOPE, 0);
 
     this.keepProgress = keepProgress;
     this.scannerState = DEFAULT_STATE;
@@ -137,6 +137,13 @@ public class ScannerContext {
     progress.setSize(currentSize + size);
   }
 
+  /**
+   * Update the time progress with {@link System#currentTimeMillis()}
+   */
+  void updateTimeProgress() {
+    progress.setTime(System.currentTimeMillis());
+  }
+
   int getBatchProgress() {
     return progress.getBatch();
   }
@@ -145,9 +152,14 @@ public class ScannerContext {
     return progress.getSize();
   }
 
-  void setProgress(int batchProgress, long sizeProgress) {
+  long getTimeProgress() {
+    return progress.getTime();
+  }
+
+  void setProgress(int batchProgress, long sizeProgress, long timeProgress) {
     setBatchProgress(batchProgress);
     setSizeProgress(sizeProgress);
+    setTimeProgress(timeProgress);
   }
 
   void setSizeProgress(long sizeProgress) {
@@ -158,12 +170,16 @@ public class ScannerContext {
     progress.setBatch(batchProgress);
   }
 
+  void setTimeProgress(long timeProgress) {
+    progress.setTime(timeProgress);
+  }
+
   /**
    * Clear away any progress that has been made so far. All progress fields are reset to initial
    * values
    */
   void clearProgress() {
-    progress.setFields(0, LimitFields.DEFAULT_SCOPE, 0);
+    progress.setFields(0, LimitFields.DEFAULT_SCOPE, 0, LimitFields.DEFAULT_SCOPE, 0);
   }
 
   /**
@@ -172,7 +188,7 @@ public class ScannerContext {
    * allows the {@link NoLimitScannerContext} to cleanly override this setter and simply return the
    * new state, thus preserving the immutability of {@link NoLimitScannerContext}
    * @param state
-   * @return The state that
+   * @return The state that was passed in.
    */
   NextState setScannerState(NextState state) {
     if (!NextState.isValidState(state)) {
@@ -188,7 +204,8 @@ public class ScannerContext {
    *         reached in the middle of a row.
    */
   boolean partialResultFormed() {
-    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW;
+    return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW
+        || scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW;
   }
 
   /**
@@ -209,10 +226,18 @@ public class ScannerContext {
 
   /**
    * @param checkerScope
+   * @return true if the time limit can be enforced in the checker's scope
+   */
+  boolean hasTimeLimit(LimitScope checkerScope) {
+    return limits.canEnforceTimeLimitFromScope(checkerScope) && limits.getTime() > 0;
+  }
+
+  /**
+   * @param checkerScope
    * @return true if any limit can be enforced within the checker's scope
    */
   boolean hasAnyLimit(LimitScope checkerScope) {
-    return hasBatchLimit(checkerScope) || hasSizeLimit(checkerScope);
+    return hasBatchLimit(checkerScope) || hasSizeLimit(checkerScope) || hasTimeLimit(checkerScope);
   }
 
   /**
@@ -222,12 +247,23 @@ public class ScannerContext {
     limits.setSizeScope(scope);
   }
 
+  /**
+   * @param scope The scope in which the time limit will be enforced
+   */
+  void setTimeLimitScope(LimitScope scope) {
+    limits.setTimeScope(scope);
+  }
+
   int getBatchLimit() {
     return limits.getBatch();
   }
 
   long getSizeLimit() {
     return limits.getSize();
+  }
+
+  long getTimeLimit() {
+    return limits.getTime();
   }
 
   /**
@@ -247,11 +283,21 @@ public class ScannerContext {
   }
 
   /**
+   * @param checkerScope The scope that the limit is being checked from. The time limit is always
+   *          checked against {@link System#currentTimeMillis()}
+   * @return true when the limit is enforceable from the checker's scope and it has been reached
+   */
+  boolean checkTimeLimit(LimitScope checkerScope) {
+    return hasTimeLimit(checkerScope) && progress.getTime() >= limits.getTime();
+  }
+
+  /**
    * @param checkerScope The scope that the limits are being checked from
    * @return true when some limit is enforceable from the checker's scope and it has been reached
    */
   boolean checkAnyLimitReached(LimitScope checkerScope) {
-    return checkSizeLimit(checkerScope) || checkBatchLimit(checkerScope);
+    return checkSizeLimit(checkerScope) || checkBatchLimit(checkerScope)
+        || checkTimeLimit(checkerScope);
   }
 
   @Override
@@ -305,6 +351,12 @@ public class ScannerContext {
       return this;
     }
 
+    public Builder setTimeLimit(LimitScope timeScope, long timeLimit) {
+      limits.setTime(timeLimit);
+      limits.setTimeScope(timeScope);
+      return this;
+    }
+
     public Builder setBatchLimit(int batchLimit) {
       limits.setBatch(batchLimit);
       return this;
@@ -328,6 +380,13 @@ public class ScannerContext {
      * of a row and thus a partial results was formed
      */
     SIZE_LIMIT_REACHED_MID_ROW(true, true),
+    TIME_LIMIT_REACHED(true, true),
+
+    /**
+     * Special case of time limit reached to indicate that the time limit was reached in the middle
+     * of a row and thus a partial results was formed
+     */
+    TIME_LIMIT_REACHED_MID_ROW(true, true),
     BATCH_LIMIT_REACHED(true, true);
 
     private boolean moreValues;
@@ -419,6 +478,7 @@ public class ScannerContext {
      */
     private static int DEFAULT_BATCH = -1;
     private static long DEFAULT_SIZE = -1L;
+    private static long DEFAULT_TIME = -1L;
 
     /**
      * Default scope that is assigned to a limit if a scope is not specified.
@@ -432,19 +492,23 @@ public class ScannerContext {
     LimitScope sizeScope = DEFAULT_SCOPE;
     long size = DEFAULT_SIZE;
 
+    LimitScope timeScope = DEFAULT_SCOPE;
+    long time = DEFAULT_TIME;
+
     /**
      * Fields keep their default values.
      */
     LimitFields() {
     }
 
-    LimitFields(int batch, LimitScope sizeScope, long size) {
-      setFields(batch, sizeScope, size);
+    LimitFields(int batch, LimitScope sizeScope, long size, LimitScope timeScope, long time) {
+      setFields(batch, sizeScope, size, timeScope, time);
     }
 
     void copy(LimitFields limitsToCopy) {
       if (limitsToCopy != null) {
-        setFields(limitsToCopy.getBatch(), limitsToCopy.getSizeScope(), limitsToCopy.getSize());
+        setFields(limitsToCopy.getBatch(), limitsToCopy.getSizeScope(), limitsToCopy.getSize(),
+          limitsToCopy.getTimeScope(), limitsToCopy.getTime());
       }
     }
 
@@ -454,10 +518,12 @@ public class ScannerContext {
      * @param sizeScope
      * @param size
      */
-    void setFields(int batch, LimitScope sizeScope, long size) {
+    void setFields(int batch, LimitScope sizeScope, long size, LimitScope timeScope, long time) {
       setBatch(batch);
       setSizeScope(sizeScope);
       setSize(size);
+      setTimeScope(timeScope);
+      setTime(time);
     }
 
     int getBatch() {
@@ -506,6 +572,36 @@ public class ScannerContext {
       return this.sizeScope.canEnforceLimitFromScope(checkerScope);
     }
 
+    long getTime() {
+      return this.time;
+    }
+
+    void setTime(long time) {
+      this.time = time;
+    }
+
+    /**
+     * @return {@link LimitScope} indicating scope in which the time limit is enforced
+     */
+    LimitScope getTimeScope() {
+      return this.timeScope;
+    }
+
+    /**
+     * Change the scope in which the time limit is enforced
+     */
+    void setTimeScope(LimitScope scope) {
+      this.timeScope = scope;
+    }
+
+    /**
+     * @param checkerScope
+     * @return true when the limit can be enforced from the scope of the checker
+     */
+    boolean canEnforceTimeLimitFromScope(LimitScope checkerScope) {
+      return this.sizeScope.canEnforceLimitFromScope(checkerScope);
+    }
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
@@ -519,6 +615,12 @@ public class ScannerContext {
 
       sb.append(", sizeScope:");
       sb.append(sizeScope);
+
+      sb.append(", time:");
+      sb.append(time);
+
+      sb.append(", timeScope:");
+      sb.append(timeScope);
 
       sb.append("}");
       return sb.toString();

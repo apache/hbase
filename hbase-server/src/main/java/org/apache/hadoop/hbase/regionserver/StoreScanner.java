@@ -83,6 +83,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final long now;
   protected final int minVersions;
   protected final long maxRowSize;
+  protected final long cellsPerHeartbeatCheck;
 
   /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
@@ -99,6 +100,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   /** Used during unit testing to ensure that lazy seek does save seek ops */
   protected static boolean lazySeekEnabledGlobally =
       LAZY_SEEK_ENABLED_BY_DEFAULT;
+
+  /**
+   * The number of cells scanned in between timeout checks. Specifying a larger value means that
+   * timeout checks will occur less frequently. Specifying a small value will lead to more frequent
+   * timeout checks.
+   */
+  public static final String HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK =
+      "hbase.cells.scanned.per.heartbeat.check";
+
+  /**
+   * Default value of {@link #HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK}.
+   */
+  public static final long DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK = 10000;
 
   // if heap == null and lastTop != null, you need to reseek given the key below
   protected Cell lastTop = null;
@@ -137,9 +151,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.maxRowSize =
           conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
       this.scanUsePread = conf.getBoolean("hbase.storescanner.use.pread", scan.isSmall());
+
+      long tmpCellsPerTimeoutCheck =
+          conf.getLong(HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK,
+            DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK);
+      this.cellsPerHeartbeatCheck =
+          tmpCellsPerTimeoutCheck > 0 ? tmpCellsPerTimeoutCheck
+              : DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
     } else {
       this.maxRowSize = HConstants.TABLE_MAX_ROWSIZE_DEFAULT;
       this.scanUsePread = scan.isSmall();
+      this.cellsPerHeartbeatCheck = DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
     }
 
     // We look up row-column Bloom filters for multi-column queries as part of
@@ -458,6 +480,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @Override
   public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
     lock.lock();
+
     try {
     if (scannerContext == null) {
       throw new IllegalArgumentException("Scanner context cannot be null");
@@ -507,6 +530,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     long totalBytesRead = 0;
 
     LOOP: while((cell = this.heap.peek()) != null) {
+      // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
+      if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
+        scannerContext.updateTimeProgress();
+        if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
+          return scannerContext.setScannerState(NextState.TIME_LIMIT_REACHED).hasMoreValues();
+        }
+      }
+
       if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
       checkScanOrder(prevCell, cell, comparator);
       prevCell = cell;

@@ -79,6 +79,12 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   protected final int id;
   protected boolean serverHasMoreResultsContext;
   protected boolean serverHasMoreResults;
+
+  /**
+   * Saves whether or not the most recent response from the server was a heartbeat message.
+   * Heartbeat messages are identified by the flag {@link ScanResponse#getHeartbeatMessage()}
+   */
+  protected boolean heartbeatMessage = false;
   static {
     try {
       myAddress = DNS.getDefaultHost("default", "default");
@@ -194,6 +200,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
       } else {
         Result [] rrs = null;
         ScanRequest request = null;
+        // Reset the heartbeat flag prior to each RPC in case an exception is thrown by the server
+        setHeartbeatMessage(false);
         try {
           incRPCcallsMetrics();
           request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
@@ -214,6 +222,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
             // See HBASE-5974
             nextCallSeq++;
             long timestamp = System.currentTimeMillis();
+            setHeartbeatMessage(response.hasHeartbeatMessage() && response.getHeartbeatMessage());
             // Results are returned via controller
             CellScanner cellScanner = controller.cellScanner();
             rrs = ResponseConverter.getResults(cellScanner, response);
@@ -292,6 +301,20 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
       }
     }
     return null;
+  }
+
+  /**
+   * @return true when the most recent RPC response indicated that the response was a heartbeat
+   *         message. Heartbeat messages are sent back from the server when the processing of the
+   *         scan request exceeds a certain time threshold. Heartbeats allow the server to avoid
+   *         timeouts during long running scan operations.
+   */
+  protected boolean isHeartbeatMessage() {
+    return heartbeatMessage;
+  }
+
+  protected void setHeartbeatMessage(boolean heartbeatMessage) {
+    this.heartbeatMessage = heartbeatMessage;
   }
 
   private void incRPCcallsMetrics() {

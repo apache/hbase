@@ -217,7 +217,8 @@ public class TestPartialResultsFromClientSide {
       count++;
     }
 
-    assertTrue(scanner2.next() == null);
+    r2 = scanner2.next();
+    assertTrue("r2: " + r2 + " Should be null", r2 == null);
 
     scanner1.close();
     scanner2.close();
