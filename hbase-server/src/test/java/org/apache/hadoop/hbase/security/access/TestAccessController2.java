@@ -91,13 +91,13 @@ public class TestAccessController2 extends SecureTestUtil {
         try (Connection connection =
             ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), testUser)) {
           try (Admin admin = connection.getAdmin()) {
-            admin.createTable(desc);
+            createTable(TEST_UTIL, admin, desc);
           }
         }
         return null;
       }
     }, testUser);
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
+    TEST_UTIL.waitTableAvailable(TEST_TABLE.getTableName());
     // Verify that owner permissions have been granted to the test user on the
     // table just created
     List<TablePermission> perms =

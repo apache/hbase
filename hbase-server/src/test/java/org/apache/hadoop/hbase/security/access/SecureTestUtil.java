@@ -28,6 +28,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,14 +36,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -61,14 +69,15 @@ import com.google.protobuf.ServiceException;
  * Utility methods for testing security
  */
 public class SecureTestUtil {
-  
+
   private static final Log LOG = LogFactory.getLog(SecureTestUtil.class);
   private static final int WAIT_TIME = 10000;
 
   public static void enableSecurity(Configuration conf) throws IOException {
     conf.set("hadoop.security.authorization", "false");
     conf.set("hadoop.security.authentication", "simple");
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
+      "," + MasterSyncObserver.class.getName());
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
       "," + SecureBulkLoadEndpoint.class.getName());
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
@@ -583,5 +592,70 @@ public class SecureTestUtil {
         return null;
       }
     });
+  }
+
+  public static class MasterSyncObserver extends BaseMasterObserver {
+    volatile CountDownLatch tableCreationLatch = null;
+    volatile CountDownLatch tableDeletionLatch = null;
+
+    @Override
+    public void postCreateTableHandler(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      // the AccessController test, some times calls only and directly the postCreateTableHandler()
+      if (tableCreationLatch != null) {
+        tableCreationLatch.countDown();
+      }
+    }
+
+    @Override
+    public void postDeleteTableHandler(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+        throws IOException {
+      // the AccessController test, some times calls only and directly the postDeleteTableHandler()
+      if (tableDeletionLatch != null) {
+        tableDeletionLatch.countDown();
+      }
+    }
+  }
+
+  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd)
+      throws Exception {
+    createTable(testUtil, testUtil.getHBaseAdmin(), htd);
+  }
+
+  public static void createTable(HBaseTestingUtility testUtil, Admin admin, HTableDescriptor htd)
+      throws Exception {
+    // NOTE: We need a latch because admin is not sync,
+    // so the postOp coprocessor method may be called after the admin operation returned.
+    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    observer.tableCreationLatch = new CountDownLatch(1);
+    admin.createTable(htd);
+    observer.tableCreationLatch.await();
+    observer.tableCreationLatch = null;
+    testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
+  }
+
+  public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
+      throws Exception {
+    deleteTable(testUtil, testUtil.getHBaseAdmin(), tableName);
+  }
+
+  public static void deleteTable(HBaseTestingUtility testUtil, Admin admin, TableName tableName)
+      throws Exception {
+    // NOTE: We need a latch because admin is not sync,
+    // so the postOp coprocessor method may be called after the admin operation returned.
+    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    observer.tableDeletionLatch = new CountDownLatch(1);
+    try {
+      admin.disableTable(tableName);
+    } catch (TableNotEnabledException e) {
+      LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+    }
+    admin.deleteTable(tableName);
+    observer.tableDeletionLatch.await();
+    observer.tableDeletionLatch = null;
   }
 }

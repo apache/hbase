@@ -173,11 +173,6 @@ public class TestAccessController extends SecureTestUtil {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.set("hbase.master.hfilecleaner.plugins",
-      "org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner," +
-      "org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner");
-    conf.set("hbase.master.logcleaner.plugins",
-      "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     // Enable security
     enableSecurity(conf);
     // In this particular test case, we can't use SecureBulkLoadEndpoint because its doAs will fail
@@ -277,7 +272,7 @@ public class TestAccessController extends SecureTestUtil {
   public void tearDown() throws Exception {
     // Clean the _acl_ table
     try {
-      TEST_UTIL.deleteTable(TEST_TABLE.getTableName());
+      deleteTable(TEST_UTIL, TEST_TABLE.getTableName());
     } catch (TableNotFoundException ex) {
       // Test deleted the table, no problem
       LOG.info("Test deleted table " + TEST_TABLE.getTableName());
@@ -1063,14 +1058,12 @@ public class TestAccessController extends SecureTestUtil {
     // create table
     Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
+      deleteTable(TEST_UTIL, tableName);
     }
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(family1));
     htd.addFamily(new HColumnDescriptor(family2));
-    admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    createTable(TEST_UTIL, htd);
 
     // create temp users
     User tblUser = User
@@ -1319,8 +1312,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(gblUser, deleteActionAll, deleteAction1, deleteAction2);
 
     // delete table
-    admin.disableTable(tableName);
-    admin.deleteTable(tableName);
+    deleteTable(TEST_UTIL, tableName);
   }
 
   private boolean hasFoundUserPermission(UserPermission userPermission, List<UserPermission> perms) {
@@ -1338,14 +1330,12 @@ public class TestAccessController extends SecureTestUtil {
     // create table
     Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
+      deleteTable(TEST_UTIL, tableName);
     }
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(family1));
     htd.addFamily(new HColumnDescriptor(family2));
-    admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    createTable(TEST_UTIL, htd);
 
     // create temp users
     User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "user", new String[0]);
@@ -1438,8 +1428,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(user, deleteQualifierAction);
 
     // delete table
-    admin.disableTable(tableName);
-    admin.deleteTable(tableName);
+    deleteTable(TEST_UTIL, tableName);
   }
 
   @Test
@@ -1453,15 +1442,13 @@ public class TestAccessController extends SecureTestUtil {
     // create table
     Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
-      admin.disableTable(tableName);
-      admin.deleteTable(tableName);
+      deleteTable(TEST_UTIL, tableName);
     }
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(family1));
     htd.addFamily(new HColumnDescriptor(family2));
     htd.setOwner(USER_OWNER);
-    admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    createTable(TEST_UTIL, htd);
 
     List<UserPermission> perms;
 
@@ -1572,7 +1559,7 @@ public class TestAccessController extends SecureTestUtil {
       hasFoundUserPermission(newOwnerperm, perms));
 
     // delete table
-    admin.deleteTable(tableName);
+    deleteTable(TEST_UTIL, tableName);
   }
 
   @Test
@@ -1934,8 +1921,7 @@ public class TestAccessController extends SecureTestUtil {
     final Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE2);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE2);
+    createTable(TEST_UTIL, htd);
 
     // Starting a new RegionServer.
     JVMClusterUtil.RegionServerThread newRsThread = hbaseCluster
@@ -2074,8 +2060,7 @@ public class TestAccessController extends SecureTestUtil {
         Connection unmanagedConnection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
         Admin admin = unmanagedConnection.getAdmin();
         try {
-          admin.disableTable(TEST_TABLE.getTableName());
-          admin.deleteTable(TEST_TABLE.getTableName());
+          deleteTable(TEST_UTIL, admin, TEST_TABLE.getTableName());
         } finally {
           admin.close();
           unmanagedConnection.close();
@@ -2439,8 +2424,7 @@ public class TestAccessController extends SecureTestUtil {
     Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(table1);
     htd.addFamily(new HColumnDescriptor(family));
-    admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(table1);
+    createTable(TEST_UTIL, htd);
 
     // creating the ns and table in it
     String ns = "testNamespace";
@@ -2449,8 +2433,7 @@ public class TestAccessController extends SecureTestUtil {
     TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
     htd = new HTableDescriptor(table2);
     htd.addFamily(new HColumnDescriptor(family));
-    admin.createTable(htd);
-    TEST_UTIL.waitUntilAllRegionsAssigned(table2);
+    createTable(TEST_UTIL, htd);
 
     // Verify that we can read sys-tables
     String aclTableName = AccessControlLists.ACL_TABLE_NAME.getNameAsString();
@@ -2473,8 +2456,8 @@ public class TestAccessController extends SecureTestUtil {
         ns + TableName.NAMESPACE_DELIM + tableName)).size());
     assertEquals(0, testRegexHandler.runAs(getPrivilegedAction("notMatchingAny")).size());
 
-    TEST_UTIL.deleteTable(table1);
-    TEST_UTIL.deleteTable(table2);
+    deleteTable(TEST_UTIL, table1);
+    deleteTable(TEST_UTIL, table2);
     TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(ns);
   }
 
