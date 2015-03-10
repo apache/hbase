@@ -119,21 +119,20 @@ public class TestEnableTableHandler {
   public void testDeleteForSureClearsAllTableRowsFromMeta()
   throws IOException, InterruptedException {
     final TableName tableName = TableName.valueOf("testDeleteForSureClearsAllTableRowsFromMeta");
-    final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    final HMaster m = cluster.getMaster();
     final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     admin.createTable(desc, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     // Now I have a nice table, mangle it by removing the HConstants.REGIONINFO_QUALIFIER_STR
     // content from a few of the rows.
-    Scan metaScannerForMyTable = MetaTableAccessor.getScanForTableName(tableName);
     try (Table metaTable = TEST_UTIL.getConnection().getTable(TableName.META_TABLE_NAME)) {
-      try (ResultScanner scanner = metaTable.getScanner(metaScannerForMyTable)) {
+      try (ResultScanner scanner =
+          metaTable.getScanner(MetaTableAccessor.getScanForTableName(tableName))) {
         for (Result result : scanner) {
           // Just delete one row.
           Delete d = new Delete(result.getRow());
           d.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+          LOG.info("Mangled: " + d);
           metaTable.delete(d);
           break;
         }
@@ -143,8 +142,10 @@ public class TestEnableTableHandler {
       // Presume this synchronous all is.
       admin.deleteTable(tableName);
       int rowCount = 0;
-      try (ResultScanner scanner = metaTable.getScanner(metaScannerForMyTable)) {
+      try (ResultScanner scanner =
+          metaTable.getScanner(MetaTableAccessor.getScanForTableName(tableName))) {
         for (Result result : scanner) {
+          LOG.info("Found when none expected: " + result);
           rowCount++;
         }
       }

@@ -154,6 +154,9 @@ public class DeleteTableHandler extends TableEventHandler {
       if (!deletes.isEmpty()) {
         LOG.warn("Deleting some vestigal " + deletes.size() + " rows of " + this.tableName +
           " from " + TableName.META_TABLE_NAME);
+        if (LOG.isDebugEnabled()) {
+          for (Delete d: deletes) LOG.debug("Purging " + d);
+        }
         metaTable.delete(deletes);
       }
     }
