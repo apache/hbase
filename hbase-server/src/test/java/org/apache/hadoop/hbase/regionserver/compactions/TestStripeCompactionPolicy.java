@@ -789,7 +789,6 @@ public class TestStripeCompactionPolicy {
     public boolean next(List<Cell> results) throws IOException {
       if (kvs.isEmpty()) return false;
       results.add(kvs.remove(0));
-
       return !kvs.isEmpty();
     }
 

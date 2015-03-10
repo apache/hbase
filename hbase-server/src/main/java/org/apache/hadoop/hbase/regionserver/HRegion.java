@@ -5288,8 +5288,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     @Override
-    public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext)
-        throws IOException {
+    public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext) throws IOException {
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -5327,7 +5326,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         moreValues = nextInternal(tmpList, scannerContext);
         outResults.addAll(tmpList);
       }
-
+      
       // If the size limit was reached it means a partial Result is being returned. Returning a
       // partial Result means that we should not reset the filters; filters should only be reset in
       // between rows
@@ -5395,6 +5394,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           ScannerContext.NextState state =
               moreCellsInRow ? NextState.SIZE_LIMIT_REACHED_MID_ROW : NextState.SIZE_LIMIT_REACHED;
           return scannerContext.setScannerState(state).hasMoreValues();
+        } else if (scannerContext.checkTimeLimit(limitScope)) {
+          ScannerContext.NextState state =
+              moreCellsInRow ? NextState.TIME_LIMIT_REACHED_MID_ROW : NextState.TIME_LIMIT_REACHED;
+          return scannerContext.setScannerState(state).hasMoreValues();
         }
       } while (moreCellsInRow);
 
@@ -5443,6 +5446,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // progress.
       int initialBatchProgress = scannerContext.getBatchProgress();
       long initialSizeProgress = scannerContext.getSizeProgress();
+      long initialTimeProgress = scannerContext.getTimeProgress();
 
       // The loop here is used only when at some point during the next we determine
       // that due to effects of filters or otherwise, we have an empty row in the result.
@@ -5454,7 +5458,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // progress should be kept.
         if (scannerContext.getKeepProgress()) {
           // Progress should be kept. Reset to initial values seen at start of method invocation.
-          scannerContext.setProgress(initialBatchProgress, initialSizeProgress);
+          scannerContext
+              .setProgress(initialBatchProgress, initialSizeProgress, initialTimeProgress);
         } else {
           scannerContext.clearProgress();
         }
@@ -5502,6 +5507,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 + " formed. Changing scope of limits that may create partials");
           }
           scannerContext.setSizeLimitScope(LimitScope.BETWEEN_ROWS);
+          scannerContext.setTimeLimitScope(LimitScope.BETWEEN_ROWS);
         }
 
         // Check if we were getting data from the joinedHeap and hit the limit.
@@ -5537,6 +5543,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             }
             return true;
           }
+
           Cell nextKv = this.storeHeap.peek();
           stopRow = nextKv == null ||
               isStopRow(nextKv.getRowArray(), nextKv.getRowOffset(), nextKv.getRowLength());
@@ -5550,12 +5557,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             ret = filter.filterRowCellsWithRet(results);
 
             // We don't know how the results have changed after being filtered. Must set progress
-            // according to contents of results now.
+            // according to contents of results now. However, a change in the results should not
+            // affect the time progress. Thus preserve whatever time progress has been made
+            long timeProgress = scannerContext.getTimeProgress();
             if (scannerContext.getKeepProgress()) {
-              scannerContext.setProgress(initialBatchProgress, initialSizeProgress);
+              scannerContext.setProgress(initialBatchProgress, initialSizeProgress,
+                initialTimeProgress);
             } else {
               scannerContext.clearProgress();
             }
+            scannerContext.setTimeProgress(timeProgress);
             scannerContext.incrementBatchProgress(results.size());
             for (Cell cell : results) {
               scannerContext.incrementSizeProgress(CellUtil.estimatedHeapSizeOfWithoutTags(cell));
@@ -5580,14 +5591,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // These values are not needed for filter to work, so we postpone their
           // fetch to (possibly) reduce amount of data loads from disk.
           if (this.joinedHeap != null) {
-            Cell nextJoinedKv = joinedHeap.peek();
-            // If joinedHeap is pointing to some other row, try to seek to a correct one.
-            boolean mayHaveData = (nextJoinedKv != null && CellUtil.matchingRow(nextJoinedKv,
-                currentRow, offset, length))
-                || (this.joinedHeap.requestSeek(
-                    KeyValueUtil.createFirstOnRow(currentRow, offset, length), true, true)
-                    && joinedHeap.peek() != null && CellUtil.matchingRow(joinedHeap.peek(),
-                    currentRow, offset, length));
+            boolean mayHaveData = joinedHeapMayHaveData(currentRow, offset, length);
             if (mayHaveData) {
               joinedContinuationRow = current;
               populateFromJoinedHeap(results, scannerContext);
@@ -5628,6 +5632,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
         }
       }
+    }
+
+    /**
+     * @param currentRow
+     * @param offset
+     * @param length
+     * @return true when the joined heap may have data for the current row
+     * @throws IOException
+     */
+    private boolean joinedHeapMayHaveData(byte[] currentRow, int offset, short length)
+        throws IOException {
+      Cell nextJoinedKv = joinedHeap.peek();
+      boolean matchCurrentRow =
+          nextJoinedKv != null && CellUtil.matchingRow(nextJoinedKv, currentRow, offset, length);
+      boolean matchAfterSeek = false;
+
+      // If the next value in the joined heap does not match the current row, try to seek to the
+      // correct row
+      if (!matchCurrentRow) {
+        Cell firstOnCurrentRow = KeyValueUtil.createFirstOnRow(currentRow, offset, length);
+        boolean seekSuccessful = this.joinedHeap.requestSeek(firstOnCurrentRow, true, true);
+        matchAfterSeek =
+            seekSuccessful && joinedHeap.peek() != null
+                && CellUtil.matchingRow(joinedHeap.peek(), currentRow, offset, length);
+      }
+
+      return matchCurrentRow || matchAfterSeek;
     }
 
     /**

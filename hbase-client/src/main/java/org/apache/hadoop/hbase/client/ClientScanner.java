@@ -393,7 +393,6 @@ public class ClientScanner extends AbstractClientScanner {
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
         values = call(callable, caller, scannerTimeout);
-
         // When the replica switch happens, we need to do certain operations
         // again. The callable will openScanner with the right startkey
         // but we need to pick up from there. Bypass the rest of the loop
@@ -482,7 +481,8 @@ public class ClientScanner extends AbstractClientScanner {
       // Groom the array of Results that we received back from the server before adding that
       // Results to the scanner's cache. If partial results are not allowed to be seen by the
       // caller, all book keeping will be performed within this method.
-      List<Result> resultsToAddToCache = getResultsToAddToCache(values);
+      List<Result> resultsToAddToCache =
+          getResultsToAddToCache(values, callable.isHeartbeatMessage());
       if (!resultsToAddToCache.isEmpty()) {
         for (Result rs : resultsToAddToCache) {
           cache.add(rs);
@@ -494,6 +494,19 @@ public class ClientScanner extends AbstractClientScanner {
           this.lastResult = rs;
         }
       }
+
+      // Caller of this method just wants a Result. If we see a heartbeat message, it means
+      // processing of the scan is taking a long time server side. Rather than continue to
+      // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
+      // unnecesary delays to the caller
+      if (callable.isHeartbeatMessage() && cache.size() > 0) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Heartbeat message received and cache contains Results."
+              + " Breaking out of scan loop");
+        }
+        break;
+      }
+
       // We expect that the server won't have more results for us when we exhaust
       // the size (bytes or count) of the results returned. If the server *does* inform us that
       // there are more results, we want to avoid possiblyNextScanner(...). Only when we actually
@@ -507,8 +520,20 @@ public class ClientScanner extends AbstractClientScanner {
       // !partialResults.isEmpty() means that we are still accumulating partial Results for a
       // row. We should not change scanners before we receive all the partial Results for that
       // row.
-    } while (remainingResultSize > 0 && countdown > 0 && !serverHasMoreResults
+    } while (doneWithRegion(remainingResultSize, countdown, serverHasMoreResults)
         && (!partialResults.isEmpty() || possiblyNextScanner(countdown, values == null)));
+  }
+
+  /**
+   * @param remainingResultSize
+   * @param remainingRows
+   * @param regionHasMoreResults
+   * @return true when the current region has been exhausted. When the current region has been
+   *         exhausted, the region must be changed before scanning can continue
+   */
+  private boolean doneWithRegion(long remainingResultSize, int remainingRows,
+      boolean regionHasMoreResults) {
+    return remainingResultSize > 0 && remainingRows > 0 && !regionHasMoreResults;
   }
 
   /**
@@ -517,10 +542,16 @@ public class ClientScanner extends AbstractClientScanner {
    * not contain errors. We return a list of results that should be added to the cache. In general,
    * this list will contain all NON-partial results from the input array (unless the client has
    * specified that they are okay with receiving partial results)
+   * @param resultsFromServer The array of {@link Result}s returned from the server
+   * @param heartbeatMessage Flag indicating whether or not the response received from the server
+   *          represented a complete response, or a heartbeat message that was sent to keep the
+   *          client-server connection alive
    * @return the list of results that should be added to the cache.
    * @throws IOException
    */
-  protected List<Result> getResultsToAddToCache(Result[] resultsFromServer) throws IOException {
+  protected List<Result>
+      getResultsToAddToCache(Result[] resultsFromServer, boolean heartbeatMessage)
+          throws IOException {
     int resultSize = resultsFromServer != null ? resultsFromServer.length : 0;
     List<Result> resultsToAddToCache = new ArrayList<Result>(resultSize);
 
@@ -538,10 +569,14 @@ public class ClientScanner extends AbstractClientScanner {
       return resultsToAddToCache;
     }
 
-    // If no results were returned it indicates that we have the all the partial results necessary
-    // to construct the complete result.
+    // If no results were returned it indicates that either we have the all the partial results
+    // necessary to construct the complete result or the server had to send a heartbeat message
+    // to the client to keep the client-server connection alive
     if (resultsFromServer == null || resultsFromServer.length == 0) {
-      if (!partialResults.isEmpty()) {
+      // If this response was an empty heartbeat message, then we have not exhausted the region
+      // and thus there may be more partials server side that still need to be added to the partial
+      // list before we form the complete Result
+      if (!partialResults.isEmpty() && !heartbeatMessage) {
         resultsToAddToCache.add(Result.createCompleteResult(partialResults));
         clearPartialResults();
       }

@@ -144,7 +144,6 @@ public class TestCoprocessorInterface {
     public int getBatch() {
       return delegate.getBatch();
     }
-
   }
 
   public static class CoprocessorImpl extends BaseRegionObserver {
