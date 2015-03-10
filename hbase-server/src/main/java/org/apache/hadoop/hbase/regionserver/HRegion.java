@@ -130,6 +130,8 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -182,6 +184,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
@@ -250,8 +253,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * The max sequence id of flushed data on this region.  Used doing some rough calculations on
    * whether time to flush or not.
    */
-  protected volatile long maxFlushedSeqId = -1L;
+  private volatile long maxFlushedSeqId = HConstants.NO_SEQNUM;
 
+  /**
+   * Record the sequence id of last flush operation.
+   */
+  private volatile long lastFlushOpSeqId = HConstants.NO_SEQNUM;
   /**
    * Region scoped edit sequence Id. Edits to this region are GUARANTEED to appear in the WAL
    * file in this sequence id's order; i.e. edit #2 will be in the WAL after edit #1.
@@ -1644,6 +1651,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     return result == Long.MAX_VALUE ? 0 : result;
   }
 
+  RegionLoad.Builder setCompleteSequenceId(RegionLoad.Builder regionLoadBldr) {
+    long lastFlushOpSeqIdLocal = this.lastFlushOpSeqId;
+    byte[] encodedRegionName = this.getRegionInfo().getEncodedNameAsBytes();
+    regionLoadBldr.clearStoreCompleteSequenceId();
+    for (byte[] familyName : this.stores.keySet()) {
+      long oldestUnflushedSeqId = this.wal.getEarliestMemstoreSeqNum(encodedRegionName, familyName);
+      // no oldestUnflushedSeqId means no data has written to the store after last flush, so we use
+      // lastFlushOpSeqId as complete sequence id for the store.
+      regionLoadBldr.addStoreCompleteSequenceId(StoreSequenceId
+          .newBuilder()
+          .setFamilyName(ByteString.copyFrom(familyName))
+          .setSequenceId(
+            oldestUnflushedSeqId < 0 ? lastFlushOpSeqIdLocal : oldestUnflushedSeqId - 1).build());
+    }
+    return regionLoadBldr.setCompleteSequenceId(this.maxFlushedSeqId);
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // HRegion maintenance.
   //
@@ -2107,11 +2131,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           // wal can be null replaying edits.
           if (wal != null) {
             w = mvcc.beginMemstoreInsert();
-            long flushSeqId = getNextSequenceId(wal);
+            long flushOpSeqId = getNextSequenceId(wal);
             FlushResult flushResult = new FlushResult(
-              FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushSeqId, "Nothing to flush",
+              FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushOpSeqId, "Nothing to flush",
               writeFlushRequestMarkerToWAL(wal, writeFlushWalMarker));
-            w.setWriteNumber(flushSeqId);
+            w.setWriteNumber(flushOpSeqId);
             mvcc.waitForPreviousTransactionsComplete(w);
             w = null;
             return new PrepareFlushResult(flushResult, myseqid);
@@ -2391,6 +2415,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
 
     // Update the oldest unflushed sequence id for region.
     this.maxFlushedSeqId = flushedSeqId;
+
+    // Record flush operation sequence id.
+    this.lastFlushOpSeqId = flushOpSeqId;
 
     // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().

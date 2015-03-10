@@ -71,9 +71,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableStateManager;
-import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagRewriteCell;
-import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
@@ -96,12 +93,12 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LastSequenceId;
 // imports for things that haven't moved from regionserver.wal yet.
@@ -122,10 +119,6 @@ import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.io.MultipleIOException;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.protobuf.ServiceException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -342,7 +335,14 @@ public class WALSplitter {
               lastFlushedSequenceId = ids.getLastFlushedSequenceId();
             }
           } else if (sequenceIdChecker != null) {
-            lastFlushedSequenceId = sequenceIdChecker.getLastSequenceId(region);
+            RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
+            Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+            for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
+              maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
+                storeSeqId.getSequenceId());
+            }
+            regionMaxSeqIdInStores.put(key, maxSeqIdInStores);
+            lastFlushedSequenceId = ids.getLastFlushedSequenceId();
           }
           if (lastFlushedSequenceId == null) {
             lastFlushedSequenceId = -1L;
@@ -1494,6 +1494,29 @@ public class WALSplitter {
       return (new WriterAndPath(regionedits, w));
     }
 
+    private void filterCellByStore(Entry logEntry) {
+      Map<byte[], Long> maxSeqIdInStores =
+          regionMaxSeqIdInStores.get(Bytes.toString(logEntry.getKey().getEncodedRegionName()));
+      if (maxSeqIdInStores == null || maxSeqIdInStores.isEmpty()) {
+        return;
+      }
+      List<Cell> skippedCells = new ArrayList<Cell>();
+      for (Cell cell : logEntry.getEdit().getCells()) {
+        if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+          byte[] family = CellUtil.cloneFamily(cell);
+          Long maxSeqId = maxSeqIdInStores.get(family);
+          // Do not skip cell even if maxSeqId is null. Maybe we are in a rolling upgrade,
+          // or the master was crashed before and we can not get the information.
+          if (maxSeqId != null && maxSeqId.longValue() >= logEntry.getKey().getLogSeqNum()) {
+            skippedCells.add(cell);
+          }
+        }
+      }
+      if (!skippedCells.isEmpty()) {
+        logEntry.getEdit().getCells().removeAll(skippedCells);
+      }
+    }
+
     @Override
     public void append(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.entryBuffer;
@@ -1518,7 +1541,10 @@ public class WALSplitter {
               return;
             }
           }
-          wap.w.append(logEntry);
+          filterCellByStore(logEntry);
+          if (!logEntry.getEdit().isEmpty()) {
+            wap.w.append(logEntry);
+          }
           this.updateRegionMaximumEditLogSeqNum(logEntry);
           editsCount++;
         }
@@ -1708,8 +1734,8 @@ public class WALSplitter {
         HConnection hconn = this.getConnectionByTableName(table);
 
         for (Cell cell : cells) {
-          byte[] row = cell.getRow();
-          byte[] family = cell.getFamily();
+          byte[] row = CellUtil.cloneRow(cell);
+          byte[] family = CellUtil.cloneFamily(cell);
           boolean isCompactionEntry = false;
           if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
             CompactionDescriptor compaction = WALEdit.getCompaction(cell);

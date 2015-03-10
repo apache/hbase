@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.*;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -266,8 +267,8 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(ioe);
     }
     byte[] encodedRegionName = request.getRegionName().toByteArray();
-    long seqId = master.serverManager.getLastFlushedSequenceId(encodedRegionName);
-    return ResponseConverter.buildGetLastFlushedSequenceIdResponse(seqId);
+    RegionStoreSequenceIds ids = master.serverManager.getLastFlushedSequenceId(encodedRegionName);
+    return ResponseConverter.buildGetLastFlushedSequenceIdResponse(ids);
   }
 
   @Override
@@ -957,8 +958,9 @@ public class MasterRpcServices extends RSRpcServices
       ListTableDescriptorsByNamespaceRequest request) throws ServiceException {
     try {
       ListTableDescriptorsByNamespaceResponse.Builder b =
-        ListTableDescriptorsByNamespaceResponse.newBuilder();
-      for(HTableDescriptor htd: master.listTableDescriptorsByNamespace(request.getNamespaceName())) {
+          ListTableDescriptorsByNamespaceResponse.newBuilder();
+      for (HTableDescriptor htd : master
+          .listTableDescriptorsByNamespace(request.getNamespaceName())) {
         b.addTableSchema(htd.convert());
       }
       return b.build();

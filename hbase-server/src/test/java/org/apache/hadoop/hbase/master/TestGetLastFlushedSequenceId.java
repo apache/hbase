@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -86,14 +87,20 @@ public class TestGetLastFlushedSequenceId {
     }
     assertNotNull(region);
     Thread.sleep(2000);
-    assertEquals(
-      HConstants.NO_SEQNUM,
-      testUtil.getHBaseCluster().getMaster()
-          .getLastSequenceId(region.getRegionInfo().getEncodedNameAsBytes()));
+    RegionStoreSequenceIds ids =
+        testUtil.getHBaseCluster().getMaster()
+            .getLastSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
+    assertEquals(HConstants.NO_SEQNUM, ids.getLastFlushedSequenceId());
+    long storeSequenceId = ids.getStoreSequenceId(0).getSequenceId();
+    assertTrue(storeSequenceId > 0);
     testUtil.getHBaseAdmin().flush(tableName);
     Thread.sleep(2000);
-    assertTrue(testUtil.getHBaseCluster().getMaster()
-        .getLastSequenceId(region.getRegionInfo().getEncodedNameAsBytes()) > 0);
+    ids =
+        testUtil.getHBaseCluster().getMaster()
+            .getLastSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
+    assertTrue(ids.getLastFlushedSequenceId() + " > " + storeSequenceId,
+      ids.getLastFlushedSequenceId() > storeSequenceId);
+    assertEquals(ids.getLastFlushedSequenceId(), ids.getStoreSequenceId(0).getSequenceId());
     table.close();
   }
 }

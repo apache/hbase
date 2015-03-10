@@ -4496,7 +4496,7 @@ public final class RegionServerStatusProtos {
      * <code>required uint64 last_flushed_sequence_id = 1;</code>
      *
      * <pre>
-     * the last WAL sequence id flushed from MemStore to HFile for the region 
+     ** the last WAL sequence id flushed from MemStore to HFile for the region 
      * </pre>
      */
     boolean hasLastFlushedSequenceId();
@@ -4504,10 +4504,55 @@ public final class RegionServerStatusProtos {
      * <code>required uint64 last_flushed_sequence_id = 1;</code>
      *
      * <pre>
-     * the last WAL sequence id flushed from MemStore to HFile for the region 
+     ** the last WAL sequence id flushed from MemStore to HFile for the region 
      * </pre>
      */
     long getLastFlushedSequenceId();
+
+    // repeated .StoreSequenceId store_last_flushed_sequence_id = 2;
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> 
+        getStoreLastFlushedSequenceIdList();
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId getStoreLastFlushedSequenceId(int index);
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    int getStoreLastFlushedSequenceIdCount();
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder> 
+        getStoreLastFlushedSequenceIdOrBuilderList();
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder getStoreLastFlushedSequenceIdOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code GetLastFlushedSequenceIdResponse}
@@ -4565,6 +4610,14 @@ public final class RegionServerStatusProtos {
               lastFlushedSequenceId_ = input.readUInt64();
               break;
             }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                storeLastFlushedSequenceId_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              storeLastFlushedSequenceId_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -4573,6 +4626,9 @@ public final class RegionServerStatusProtos {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e.getMessage()).setUnfinishedMessage(this);
       } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          storeLastFlushedSequenceId_ = java.util.Collections.unmodifiableList(storeLastFlushedSequenceId_);
+        }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
@@ -4612,7 +4668,7 @@ public final class RegionServerStatusProtos {
      * <code>required uint64 last_flushed_sequence_id = 1;</code>
      *
      * <pre>
-     * the last WAL sequence id flushed from MemStore to HFile for the region 
+     ** the last WAL sequence id flushed from MemStore to HFile for the region 
      * </pre>
      */
     public boolean hasLastFlushedSequenceId() {
@@ -4622,15 +4678,72 @@ public final class RegionServerStatusProtos {
      * <code>required uint64 last_flushed_sequence_id = 1;</code>
      *
      * <pre>
-     * the last WAL sequence id flushed from MemStore to HFile for the region 
+     ** the last WAL sequence id flushed from MemStore to HFile for the region 
      * </pre>
      */
     public long getLastFlushedSequenceId() {
       return lastFlushedSequenceId_;
     }
 
+    // repeated .StoreSequenceId store_last_flushed_sequence_id = 2;
+    public static final int STORE_LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER = 2;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> storeLastFlushedSequenceId_;
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> getStoreLastFlushedSequenceIdList() {
+      return storeLastFlushedSequenceId_;
+    }
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder> 
+        getStoreLastFlushedSequenceIdOrBuilderList() {
+      return storeLastFlushedSequenceId_;
+    }
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    public int getStoreLastFlushedSequenceIdCount() {
+      return storeLastFlushedSequenceId_.size();
+    }
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId getStoreLastFlushedSequenceId(int index) {
+      return storeLastFlushedSequenceId_.get(index);
+    }
+    /**
+     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     *
+     * <pre>
+     ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+     * </pre>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder getStoreLastFlushedSequenceIdOrBuilder(
+        int index) {
+      return storeLastFlushedSequenceId_.get(index);
+    }
+
     private void initFields() {
       lastFlushedSequenceId_ = 0L;
+      storeLastFlushedSequenceId_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4641,6 +4754,12 @@ public final class RegionServerStatusProtos {
         memoizedIsInitialized = 0;
         return false;
       }
+      for (int i = 0; i < getStoreLastFlushedSequenceIdCount(); i++) {
+        if (!getStoreLastFlushedSequenceId(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -4650,6 +4769,9 @@ public final class RegionServerStatusProtos {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeUInt64(1, lastFlushedSequenceId_);
+      }
+      for (int i = 0; i < storeLastFlushedSequenceId_.size(); i++) {
+        output.writeMessage(2, storeLastFlushedSequenceId_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -4663,6 +4785,10 @@ public final class RegionServerStatusProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(1, lastFlushedSequenceId_);
+      }
+      for (int i = 0; i < storeLastFlushedSequenceId_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, storeLastFlushedSequenceId_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4692,6 +4818,8 @@ public final class RegionServerStatusProtos {
         result = result && (getLastFlushedSequenceId()
             == other.getLastFlushedSequenceId());
       }
+      result = result && getStoreLastFlushedSequenceIdList()
+          .equals(other.getStoreLastFlushedSequenceIdList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4708,6 +4836,10 @@ public final class RegionServerStatusProtos {
       if (hasLastFlushedSequenceId()) {
         hash = (37 * hash) + LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getLastFlushedSequenceId());
+      }
+      if (getStoreLastFlushedSequenceIdCount() > 0) {
+        hash = (37 * hash) + STORE_LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER;
+        hash = (53 * hash) + getStoreLastFlushedSequenceIdList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4810,6 +4942,7 @@ public final class RegionServerStatusProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getStoreLastFlushedSequenceIdFieldBuilder();
         }
       }
       private static Builder create() {
@@ -4820,6 +4953,12 @@ public final class RegionServerStatusProtos {
         super.clear();
         lastFlushedSequenceId_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000001);
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          storeLastFlushedSequenceId_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+        } else {
+          storeLastFlushedSequenceIdBuilder_.clear();
+        }
         return this;
       }
 
@@ -4852,6 +4991,15 @@ public final class RegionServerStatusProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.lastFlushedSequenceId_ = lastFlushedSequenceId_;
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            storeLastFlushedSequenceId_ = java.util.Collections.unmodifiableList(storeLastFlushedSequenceId_);
+            bitField0_ = (bitField0_ & ~0x00000002);
+          }
+          result.storeLastFlushedSequenceId_ = storeLastFlushedSequenceId_;
+        } else {
+          result.storeLastFlushedSequenceId_ = storeLastFlushedSequenceIdBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4871,6 +5019,32 @@ public final class RegionServerStatusProtos {
         if (other.hasLastFlushedSequenceId()) {
           setLastFlushedSequenceId(other.getLastFlushedSequenceId());
         }
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          if (!other.storeLastFlushedSequenceId_.isEmpty()) {
+            if (storeLastFlushedSequenceId_.isEmpty()) {
+              storeLastFlushedSequenceId_ = other.storeLastFlushedSequenceId_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+            } else {
+              ensureStoreLastFlushedSequenceIdIsMutable();
+              storeLastFlushedSequenceId_.addAll(other.storeLastFlushedSequenceId_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.storeLastFlushedSequenceId_.isEmpty()) {
+            if (storeLastFlushedSequenceIdBuilder_.isEmpty()) {
+              storeLastFlushedSequenceIdBuilder_.dispose();
+              storeLastFlushedSequenceIdBuilder_ = null;
+              storeLastFlushedSequenceId_ = other.storeLastFlushedSequenceId_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+              storeLastFlushedSequenceIdBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getStoreLastFlushedSequenceIdFieldBuilder() : null;
+            } else {
+              storeLastFlushedSequenceIdBuilder_.addAllMessages(other.storeLastFlushedSequenceId_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -4879,6 +5053,12 @@ public final class RegionServerStatusProtos {
         if (!hasLastFlushedSequenceId()) {
           
           return false;
+        }
+        for (int i = 0; i < getStoreLastFlushedSequenceIdCount(); i++) {
+          if (!getStoreLastFlushedSequenceId(i).isInitialized()) {
+            
+            return false;
+          }
         }
         return true;
       }
@@ -4908,7 +5088,7 @@ public final class RegionServerStatusProtos {
        * <code>required uint64 last_flushed_sequence_id = 1;</code>
        *
        * <pre>
-       * the last WAL sequence id flushed from MemStore to HFile for the region 
+       ** the last WAL sequence id flushed from MemStore to HFile for the region 
        * </pre>
        */
       public boolean hasLastFlushedSequenceId() {
@@ -4918,7 +5098,7 @@ public final class RegionServerStatusProtos {
        * <code>required uint64 last_flushed_sequence_id = 1;</code>
        *
        * <pre>
-       * the last WAL sequence id flushed from MemStore to HFile for the region 
+       ** the last WAL sequence id flushed from MemStore to HFile for the region 
        * </pre>
        */
       public long getLastFlushedSequenceId() {
@@ -4928,7 +5108,7 @@ public final class RegionServerStatusProtos {
        * <code>required uint64 last_flushed_sequence_id = 1;</code>
        *
        * <pre>
-       * the last WAL sequence id flushed from MemStore to HFile for the region 
+       ** the last WAL sequence id flushed from MemStore to HFile for the region 
        * </pre>
        */
       public Builder setLastFlushedSequenceId(long value) {
@@ -4941,7 +5121,7 @@ public final class RegionServerStatusProtos {
        * <code>required uint64 last_flushed_sequence_id = 1;</code>
        *
        * <pre>
-       * the last WAL sequence id flushed from MemStore to HFile for the region 
+       ** the last WAL sequence id flushed from MemStore to HFile for the region 
        * </pre>
        */
       public Builder clearLastFlushedSequenceId() {
@@ -4949,6 +5129,318 @@ public final class RegionServerStatusProtos {
         lastFlushedSequenceId_ = 0L;
         onChanged();
         return this;
+      }
+
+      // repeated .StoreSequenceId store_last_flushed_sequence_id = 2;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> storeLastFlushedSequenceId_ =
+        java.util.Collections.emptyList();
+      private void ensureStoreLastFlushedSequenceIdIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          storeLastFlushedSequenceId_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId>(storeLastFlushedSequenceId_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder> storeLastFlushedSequenceIdBuilder_;
+
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> getStoreLastFlushedSequenceIdList() {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(storeLastFlushedSequenceId_);
+        } else {
+          return storeLastFlushedSequenceIdBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public int getStoreLastFlushedSequenceIdCount() {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          return storeLastFlushedSequenceId_.size();
+        } else {
+          return storeLastFlushedSequenceIdBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId getStoreLastFlushedSequenceId(int index) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          return storeLastFlushedSequenceId_.get(index);
+        } else {
+          return storeLastFlushedSequenceIdBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder setStoreLastFlushedSequenceId(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId value) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStoreLastFlushedSequenceIdIsMutable();
+          storeLastFlushedSequenceId_.set(index, value);
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder setStoreLastFlushedSequenceId(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder builderForValue) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          ensureStoreLastFlushedSequenceIdIsMutable();
+          storeLastFlushedSequenceId_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder addStoreLastFlushedSequenceId(org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId value) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStoreLastFlushedSequenceIdIsMutable();
+          storeLastFlushedSequenceId_.add(value);
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder addStoreLastFlushedSequenceId(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId value) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureStoreLastFlushedSequenceIdIsMutable();
+          storeLastFlushedSequenceId_.add(index, value);
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder addStoreLastFlushedSequenceId(
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder builderForValue) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          ensureStoreLastFlushedSequenceIdIsMutable();
+          storeLastFlushedSequenceId_.add(builderForValue.build());
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder addStoreLastFlushedSequenceId(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder builderForValue) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          ensureStoreLastFlushedSequenceIdIsMutable();
+          storeLastFlushedSequenceId_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder addAllStoreLastFlushedSequenceId(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> values) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          ensureStoreLastFlushedSequenceIdIsMutable();
+          super.addAll(values, storeLastFlushedSequenceId_);
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder clearStoreLastFlushedSequenceId() {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          storeLastFlushedSequenceId_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public Builder removeStoreLastFlushedSequenceId(int index) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          ensureStoreLastFlushedSequenceIdIsMutable();
+          storeLastFlushedSequenceId_.remove(index);
+          onChanged();
+        } else {
+          storeLastFlushedSequenceIdBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder getStoreLastFlushedSequenceIdBuilder(
+          int index) {
+        return getStoreLastFlushedSequenceIdFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder getStoreLastFlushedSequenceIdOrBuilder(
+          int index) {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          return storeLastFlushedSequenceId_.get(index);  } else {
+          return storeLastFlushedSequenceIdBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder> 
+           getStoreLastFlushedSequenceIdOrBuilderList() {
+        if (storeLastFlushedSequenceIdBuilder_ != null) {
+          return storeLastFlushedSequenceIdBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(storeLastFlushedSequenceId_);
+        }
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder addStoreLastFlushedSequenceIdBuilder() {
+        return getStoreLastFlushedSequenceIdFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder addStoreLastFlushedSequenceIdBuilder(
+          int index) {
+        return getStoreLastFlushedSequenceIdFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       *
+       * <pre>
+       ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
+       * </pre>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder> 
+           getStoreLastFlushedSequenceIdBuilderList() {
+        return getStoreLastFlushedSequenceIdFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder> 
+          getStoreLastFlushedSequenceIdFieldBuilder() {
+        if (storeLastFlushedSequenceIdBuilder_ == null) {
+          storeLastFlushedSequenceIdBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder>(
+                  storeLastFlushedSequenceId_,
+                  ((bitField0_ & 0x00000002) == 0x00000002),
+                  getParentForChildren(),
+                  isClean());
+          storeLastFlushedSequenceId_ = null;
+        }
+        return storeLastFlushedSequenceIdBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:GetLastFlushedSequenceIdResponse)
@@ -8410,36 +8902,37 @@ public final class RegionServerStatusProtos {
       "lErrorRequest\022\033\n\006server\030\001 \002(\0132\013.ServerNa",
       "me\022\025\n\rerror_message\030\002 \002(\t\"\034\n\032ReportRSFat" +
       "alErrorResponse\"6\n\037GetLastFlushedSequenc" +
-      "eIdRequest\022\023\n\013region_name\030\001 \002(\014\"D\n GetLa" +
+      "eIdRequest\022\023\n\013region_name\030\001 \002(\014\"~\n GetLa" +
       "stFlushedSequenceIdResponse\022 \n\030last_flus" +
-      "hed_sequence_id\030\001 \002(\004\"\322\002\n\025RegionStateTra" +
-      "nsition\022>\n\017transition_code\030\001 \002(\0162%.Regio" +
-      "nStateTransition.TransitionCode\022 \n\013regio" +
-      "n_info\030\002 \003(\0132\013.RegionInfo\022\024\n\014open_seq_nu" +
-      "m\030\003 \001(\004\"\300\001\n\016TransitionCode\022\n\n\006OPENED\020\000\022\017" +
-      "\n\013FAILED_OPEN\020\001\022\n\n\006CLOSED\020\002\022\022\n\016READY_TO_",
-      "SPLIT\020\003\022\022\n\016READY_TO_MERGE\020\004\022\016\n\nSPLIT_PON" +
-      "R\020\005\022\016\n\nMERGE_PONR\020\006\022\t\n\005SPLIT\020\007\022\n\n\006MERGED" +
-      "\020\010\022\022\n\016SPLIT_REVERTED\020\t\022\022\n\016MERGE_REVERTED" +
-      "\020\n\"m\n\"ReportRegionStateTransitionRequest" +
-      "\022\033\n\006server\030\001 \002(\0132\013.ServerName\022*\n\ntransit" +
-      "ion\030\002 \003(\0132\026.RegionStateTransition\"<\n#Rep" +
-      "ortRegionStateTransitionResponse\022\025\n\rerro" +
-      "r_message\030\001 \001(\t2\326\003\n\031RegionServerStatusSe" +
-      "rvice\022P\n\023RegionServerStartup\022\033.RegionSer" +
-      "verStartupRequest\032\034.RegionServerStartupR",
-      "esponse\022M\n\022RegionServerReport\022\032.RegionSe" +
-      "rverReportRequest\032\033.RegionServerReportRe" +
-      "sponse\022M\n\022ReportRSFatalError\022\032.ReportRSF" +
-      "atalErrorRequest\032\033.ReportRSFatalErrorRes" +
-      "ponse\022_\n\030GetLastFlushedSequenceId\022 .GetL" +
-      "astFlushedSequenceIdRequest\032!.GetLastFlu" +
-      "shedSequenceIdResponse\022h\n\033ReportRegionSt" +
-      "ateTransition\022#.ReportRegionStateTransit" +
-      "ionRequest\032$.ReportRegionStateTransition" +
-      "ResponseBN\n*org.apache.hadoop.hbase.prot",
-      "obuf.generatedB\030RegionServerStatusProtos" +
-      "H\001\210\001\001\240\001\001"
+      "hed_sequence_id\030\001 \002(\004\0228\n\036store_last_flus" +
+      "hed_sequence_id\030\002 \003(\0132\020.StoreSequenceId\"" +
+      "\322\002\n\025RegionStateTransition\022>\n\017transition_" +
+      "code\030\001 \002(\0162%.RegionStateTransition.Trans" +
+      "itionCode\022 \n\013region_info\030\002 \003(\0132\013.RegionI" +
+      "nfo\022\024\n\014open_seq_num\030\003 \001(\004\"\300\001\n\016Transition",
+      "Code\022\n\n\006OPENED\020\000\022\017\n\013FAILED_OPEN\020\001\022\n\n\006CLO" +
+      "SED\020\002\022\022\n\016READY_TO_SPLIT\020\003\022\022\n\016READY_TO_ME" +
+      "RGE\020\004\022\016\n\nSPLIT_PONR\020\005\022\016\n\nMERGE_PONR\020\006\022\t\n" +
+      "\005SPLIT\020\007\022\n\n\006MERGED\020\010\022\022\n\016SPLIT_REVERTED\020\t" +
+      "\022\022\n\016MERGE_REVERTED\020\n\"m\n\"ReportRegionStat" +
+      "eTransitionRequest\022\033\n\006server\030\001 \002(\0132\013.Ser" +
+      "verName\022*\n\ntransition\030\002 \003(\0132\026.RegionStat" +
+      "eTransition\"<\n#ReportRegionStateTransiti" +
+      "onResponse\022\025\n\rerror_message\030\001 \001(\t2\326\003\n\031Re" +
+      "gionServerStatusService\022P\n\023RegionServerS",
+      "tartup\022\033.RegionServerStartupRequest\032\034.Re" +
+      "gionServerStartupResponse\022M\n\022RegionServe" +
+      "rReport\022\032.RegionServerReportRequest\032\033.Re" +
+      "gionServerReportResponse\022M\n\022ReportRSFata" +
+      "lError\022\032.ReportRSFatalErrorRequest\032\033.Rep" +
+      "ortRSFatalErrorResponse\022_\n\030GetLastFlushe" +
+      "dSequenceId\022 .GetLastFlushedSequenceIdRe" +
+      "quest\032!.GetLastFlushedSequenceIdResponse" +
+      "\022h\n\033ReportRegionStateTransition\022#.Report" +
+      "RegionStateTransitionRequest\032$.ReportReg",
+      "ionStateTransitionResponseBN\n*org.apache" +
+      ".hadoop.hbase.protobuf.generatedB\030Region" +
+      "ServerStatusProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -8493,7 +8986,7 @@ public final class RegionServerStatusProtos {
           internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetLastFlushedSequenceIdResponse_descriptor,
-              new java.lang.String[] { "LastFlushedSequenceId", });
+              new java.lang.String[] { "LastFlushedSequenceId", "StoreLastFlushedSequenceId", });
           internal_static_RegionStateTransition_descriptor =
             getDescriptor().getMessageTypes().get(8);
           internal_static_RegionStateTransition_fieldAccessorTable = new
