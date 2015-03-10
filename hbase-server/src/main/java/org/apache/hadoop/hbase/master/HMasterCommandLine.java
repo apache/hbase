@@ -162,6 +162,11 @@ public class HMasterCommandLine extends ServerCommandLine {
               + HConstants.ZOOKEEPER_CLIENT_PORT);
         }
         zooKeeperCluster.setDefaultClientPort(zkClientPort);
+        // set the ZK tick time if specified
+        int zkTickTime = conf.getInt(HConstants.ZOOKEEPER_TICK_TIME, 0);
+        if (zkTickTime > 0) {
+          zooKeeperCluster.setTickTime(zkTickTime);
+        }
 
         // login the zookeeper server principal (if using security)
         ZKUtil.loginServer(conf, "hbase.zookeeper.server.keytab.file",
