@@ -2626,6 +2626,7 @@
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>2.13</version>
         <configuration>
+          <excludes>target/**</excludes>
           <configLocation>hbase/checkstyle.xml</configLocation>
           <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
         </configuration>
