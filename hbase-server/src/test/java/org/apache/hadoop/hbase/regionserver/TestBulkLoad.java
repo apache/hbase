@@ -90,7 +90,7 @@ public class TestBulkLoad {
   private final Expectations callOnce;
   @Rule
   public TestName name = new TestName();
-  
+
   public TestBulkLoad() throws IOException {
     callOnce = new Expectations() {
       {
@@ -233,17 +233,24 @@ public class TestBulkLoad {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(conf);
     // TODO We need a way to do this without creating files
     File hFileLocation = testFolder.newFile();
-    hFileFactory.withOutputStream(new FSDataOutputStream(new FileOutputStream(hFileLocation)));
-    hFileFactory.withFileContext(new HFileContext());
-    HFile.Writer writer = hFileFactory.create();
-
-    writer.append(new KeyValue(CellUtil.createCell(randomBytes,
-        family,
-        randomBytes,
-        0l,
-        KeyValue.Type.Put.getCode(),
-        randomBytes)));
-    writer.close();
+    FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation));
+    try {
+      hFileFactory.withOutputStream(out);
+      hFileFactory.withFileContext(new HFileContext());
+      HFile.Writer writer = hFileFactory.create();
+      try {
+        writer.append(new KeyValue(CellUtil.createCell(randomBytes,
+            family,
+            randomBytes,
+            0l,
+            KeyValue.Type.Put.getCode(),
+            randomBytes)));
+      } finally {
+        writer.close();
+      }
+    } finally {
+      out.close();
+    }
     return hFileLocation.getAbsoluteFile().getAbsolutePath();
   }
 
@@ -286,7 +293,7 @@ public class TestBulkLoad {
       assertNotNull(desc);
 
       if (tableName != null) {
-        assertTrue(Bytes.equals(ProtobufUtil.toTableName(desc.getTableName()).getName(), 
+        assertTrue(Bytes.equals(ProtobufUtil.toTableName(desc.getTableName()).getName(),
           tableName));
       }
 
@@ -297,7 +304,7 @@ public class TestBulkLoad {
         assertTrue(Bytes.equals(Bytes.toBytes(store.getStoreHomeDir()), familyName));
         assertEquals(storeFileNames.size(), store.getStoreFileCount());
       }
-      
+
       return true;
     }
 

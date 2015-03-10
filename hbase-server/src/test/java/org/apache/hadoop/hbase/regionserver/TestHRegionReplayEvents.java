@@ -1452,7 +1452,7 @@ public class TestHRegionReplayEvents {
     // close the region and open again.
     primaryRegion.close();
     primaryRegion = HRegion.openHRegion(rootDir, primaryHri, htd, walPrimary, CONF, rss, null);
-    
+
     // bulk load a file into primary region
     Random random = new Random();
     byte[] randomValues = new byte[20];
@@ -1515,13 +1515,20 @@ public class TestHRegionReplayEvents {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(TEST_UTIL.getConfiguration());
     // TODO We need a way to do this without creating files
     Path testFile = new Path(testPath, UUID.randomUUID().toString());
-    hFileFactory.withOutputStream(TEST_UTIL.getTestFileSystem().create(testFile));
-    hFileFactory.withFileContext(new HFileContext());
-    HFile.Writer writer = hFileFactory.create();
-
-    writer.append(new KeyValue(CellUtil.createCell(valueBytes, family, valueBytes, 0l,
-      KeyValue.Type.Put.getCode(), valueBytes)));
-    writer.close();
+    FSDataOutputStream out = TEST_UTIL.getTestFileSystem().create(testFile);
+    try {
+      hFileFactory.withOutputStream(out);
+      hFileFactory.withFileContext(new HFileContext());
+      HFile.Writer writer = hFileFactory.create();
+      try {
+        writer.append(new KeyValue(CellUtil.createCell(valueBytes, family, valueBytes, 0l,
+          KeyValue.Type.Put.getCode(), valueBytes)));
+      } finally {
+        writer.close();
+      }
+    } finally {
+      out.close();
+    }
     return testFile.toString();
   }
 
