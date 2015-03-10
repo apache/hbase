@@ -16433,6 +16433,16 @@ public final class ClientProtos {
      * <code>optional bool client_handles_partials = 7;</code>
      */
     boolean getClientHandlesPartials();
+
+    // optional bool client_handles_heartbeats = 8;
+    /**
+     * <code>optional bool client_handles_heartbeats = 8;</code>
+     */
+    boolean hasClientHandlesHeartbeats();
+    /**
+     * <code>optional bool client_handles_heartbeats = 8;</code>
+     */
+    boolean getClientHandlesHeartbeats();
   }
   /**
    * Protobuf type {@code ScanRequest}
@@ -16547,6 +16557,11 @@ public final class ClientProtos {
             case 56: {
               bitField0_ |= 0x00000040;
               clientHandlesPartials_ = input.readBool();
+              break;
+            }
+            case 64: {
+              bitField0_ |= 0x00000080;
+              clientHandlesHeartbeats_ = input.readBool();
               break;
             }
           }
@@ -16713,6 +16728,22 @@ public final class ClientProtos {
       return clientHandlesPartials_;
     }
 
+    // optional bool client_handles_heartbeats = 8;
+    public static final int CLIENT_HANDLES_HEARTBEATS_FIELD_NUMBER = 8;
+    private boolean clientHandlesHeartbeats_;
+    /**
+     * <code>optional bool client_handles_heartbeats = 8;</code>
+     */
+    public boolean hasClientHandlesHeartbeats() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    /**
+     * <code>optional bool client_handles_heartbeats = 8;</code>
+     */
+    public boolean getClientHandlesHeartbeats() {
+      return clientHandlesHeartbeats_;
+    }
+
     private void initFields() {
       region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       scan_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.getDefaultInstance();
@@ -16721,6 +16752,7 @@ public final class ClientProtos {
       closeScanner_ = false;
       nextCallSeq_ = 0L;
       clientHandlesPartials_ = false;
+      clientHandlesHeartbeats_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -16767,6 +16799,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         output.writeBool(7, clientHandlesPartials_);
       }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeBool(8, clientHandlesHeartbeats_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -16803,6 +16838,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000040) == 0x00000040)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(7, clientHandlesPartials_);
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(8, clientHandlesHeartbeats_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -16862,6 +16901,11 @@ public final class ClientProtos {
         result = result && (getClientHandlesPartials()
             == other.getClientHandlesPartials());
       }
+      result = result && (hasClientHandlesHeartbeats() == other.hasClientHandlesHeartbeats());
+      if (hasClientHandlesHeartbeats()) {
+        result = result && (getClientHandlesHeartbeats()
+            == other.getClientHandlesHeartbeats());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -16902,6 +16946,10 @@ public final class ClientProtos {
       if (hasClientHandlesPartials()) {
         hash = (37 * hash) + CLIENT_HANDLES_PARTIALS_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getClientHandlesPartials());
+      }
+      if (hasClientHandlesHeartbeats()) {
+        hash = (37 * hash) + CLIENT_HANDLES_HEARTBEATS_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getClientHandlesHeartbeats());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -17049,6 +17097,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000020);
         clientHandlesPartials_ = false;
         bitField0_ = (bitField0_ & ~0x00000040);
+        clientHandlesHeartbeats_ = false;
+        bitField0_ = (bitField0_ & ~0x00000080);
         return this;
       }
 
@@ -17113,6 +17163,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000040;
         }
         result.clientHandlesPartials_ = clientHandlesPartials_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.clientHandlesHeartbeats_ = clientHandlesHeartbeats_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -17149,6 +17203,9 @@ public final class ClientProtos {
         }
         if (other.hasClientHandlesPartials()) {
           setClientHandlesPartials(other.getClientHandlesPartials());
+        }
+        if (other.hasClientHandlesHeartbeats()) {
+          setClientHandlesHeartbeats(other.getClientHandlesHeartbeats());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -17588,6 +17645,39 @@ public final class ClientProtos {
         return this;
       }
 
+      // optional bool client_handles_heartbeats = 8;
+      private boolean clientHandlesHeartbeats_ ;
+      /**
+       * <code>optional bool client_handles_heartbeats = 8;</code>
+       */
+      public boolean hasClientHandlesHeartbeats() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      /**
+       * <code>optional bool client_handles_heartbeats = 8;</code>
+       */
+      public boolean getClientHandlesHeartbeats() {
+        return clientHandlesHeartbeats_;
+      }
+      /**
+       * <code>optional bool client_handles_heartbeats = 8;</code>
+       */
+      public Builder setClientHandlesHeartbeats(boolean value) {
+        bitField0_ |= 0x00000080;
+        clientHandlesHeartbeats_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool client_handles_heartbeats = 8;</code>
+       */
+      public Builder clearClientHandlesHeartbeats() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        clientHandlesHeartbeats_ = false;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:ScanRequest)
     }
 
@@ -17806,6 +17896,30 @@ public final class ClientProtos {
      * </pre>
      */
     boolean getMoreResultsInRegion();
+
+    // optional bool heartbeat_message = 9;
+    /**
+     * <code>optional bool heartbeat_message = 9;</code>
+     *
+     * <pre>
+     * This field is filled in if the server is sending back a heartbeat message.
+     * Heartbeat messages are sent back to the client to prevent the scanner from
+     * timing out. Seeing a heartbeat message communicates to the Client that the
+     * server would have continued to scan had the time limit not been reached.
+     * </pre>
+     */
+    boolean hasHeartbeatMessage();
+    /**
+     * <code>optional bool heartbeat_message = 9;</code>
+     *
+     * <pre>
+     * This field is filled in if the server is sending back a heartbeat message.
+     * Heartbeat messages are sent back to the client to prevent the scanner from
+     * timing out. Seeing a heartbeat message communicates to the Client that the
+     * server would have continued to scan had the time limit not been reached.
+     * </pre>
+     */
+    boolean getHeartbeatMessage();
   }
   /**
    * Protobuf type {@code ScanResponse}
@@ -17937,6 +18051,11 @@ public final class ClientProtos {
             case 64: {
               bitField0_ |= 0x00000010;
               moreResultsInRegion_ = input.readBool();
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000020;
+              heartbeatMessage_ = input.readBool();
               break;
             }
           }
@@ -18252,6 +18371,36 @@ public final class ClientProtos {
       return moreResultsInRegion_;
     }
 
+    // optional bool heartbeat_message = 9;
+    public static final int HEARTBEAT_MESSAGE_FIELD_NUMBER = 9;
+    private boolean heartbeatMessage_;
+    /**
+     * <code>optional bool heartbeat_message = 9;</code>
+     *
+     * <pre>
+     * This field is filled in if the server is sending back a heartbeat message.
+     * Heartbeat messages are sent back to the client to prevent the scanner from
+     * timing out. Seeing a heartbeat message communicates to the Client that the
+     * server would have continued to scan had the time limit not been reached.
+     * </pre>
+     */
+    public boolean hasHeartbeatMessage() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional bool heartbeat_message = 9;</code>
+     *
+     * <pre>
+     * This field is filled in if the server is sending back a heartbeat message.
+     * Heartbeat messages are sent back to the client to prevent the scanner from
+     * timing out. Seeing a heartbeat message communicates to the Client that the
+     * server would have continued to scan had the time limit not been reached.
+     * </pre>
+     */
+    public boolean getHeartbeatMessage() {
+      return heartbeatMessage_;
+    }
+
     private void initFields() {
       cellsPerResult_ = java.util.Collections.emptyList();
       scannerId_ = 0L;
@@ -18261,6 +18410,7 @@ public final class ClientProtos {
       stale_ = false;
       partialFlagPerResult_ = java.util.Collections.emptyList();
       moreResultsInRegion_ = false;
+      heartbeatMessage_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -18297,6 +18447,9 @@ public final class ClientProtos {
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeBool(8, moreResultsInRegion_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBool(9, heartbeatMessage_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -18345,6 +18498,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(8, moreResultsInRegion_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(9, heartbeatMessage_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -18400,6 +18557,11 @@ public final class ClientProtos {
         result = result && (getMoreResultsInRegion()
             == other.getMoreResultsInRegion());
       }
+      result = result && (hasHeartbeatMessage() == other.hasHeartbeatMessage());
+      if (hasHeartbeatMessage()) {
+        result = result && (getHeartbeatMessage()
+            == other.getHeartbeatMessage());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -18444,6 +18606,10 @@ public final class ClientProtos {
       if (hasMoreResultsInRegion()) {
         hash = (37 * hash) + MORE_RESULTS_IN_REGION_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getMoreResultsInRegion());
+      }
+      if (hasHeartbeatMessage()) {
+        hash = (37 * hash) + HEARTBEAT_MESSAGE_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getHeartbeatMessage());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -18581,6 +18747,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000040);
         moreResultsInRegion_ = false;
         bitField0_ = (bitField0_ & ~0x00000080);
+        heartbeatMessage_ = false;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
 
@@ -18648,6 +18816,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000010;
         }
         result.moreResultsInRegion_ = moreResultsInRegion_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.heartbeatMessage_ = heartbeatMessage_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -18724,6 +18896,9 @@ public final class ClientProtos {
         }
         if (other.hasMoreResultsInRegion()) {
           setMoreResultsInRegion(other.getMoreResultsInRegion());
+        }
+        if (other.hasHeartbeatMessage()) {
+          setHeartbeatMessage(other.getHeartbeatMessage());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -19557,6 +19732,67 @@ public final class ClientProtos {
       public Builder clearMoreResultsInRegion() {
         bitField0_ = (bitField0_ & ~0x00000080);
         moreResultsInRegion_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional bool heartbeat_message = 9;
+      private boolean heartbeatMessage_ ;
+      /**
+       * <code>optional bool heartbeat_message = 9;</code>
+       *
+       * <pre>
+       * This field is filled in if the server is sending back a heartbeat message.
+       * Heartbeat messages are sent back to the client to prevent the scanner from
+       * timing out. Seeing a heartbeat message communicates to the Client that the
+       * server would have continued to scan had the time limit not been reached.
+       * </pre>
+       */
+      public boolean hasHeartbeatMessage() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>optional bool heartbeat_message = 9;</code>
+       *
+       * <pre>
+       * This field is filled in if the server is sending back a heartbeat message.
+       * Heartbeat messages are sent back to the client to prevent the scanner from
+       * timing out. Seeing a heartbeat message communicates to the Client that the
+       * server would have continued to scan had the time limit not been reached.
+       * </pre>
+       */
+      public boolean getHeartbeatMessage() {
+        return heartbeatMessage_;
+      }
+      /**
+       * <code>optional bool heartbeat_message = 9;</code>
+       *
+       * <pre>
+       * This field is filled in if the server is sending back a heartbeat message.
+       * Heartbeat messages are sent back to the client to prevent the scanner from
+       * timing out. Seeing a heartbeat message communicates to the Client that the
+       * server would have continued to scan had the time limit not been reached.
+       * </pre>
+       */
+      public Builder setHeartbeatMessage(boolean value) {
+        bitField0_ |= 0x00000100;
+        heartbeatMessage_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool heartbeat_message = 9;</code>
+       *
+       * <pre>
+       * This field is filled in if the server is sending back a heartbeat message.
+       * Heartbeat messages are sent back to the client to prevent the scanner from
+       * timing out. Seeing a heartbeat message communicates to the Client that the
+       * server would have continued to scan had the time limit not been reached.
+       * </pre>
+       */
+      public Builder clearHeartbeatMessage() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        heartbeatMessage_ = false;
         onChanged();
         return this;
       }
@@ -32690,63 +32926,64 @@ public final class ClientProtos {
       "lies_on_demand\030\r \001(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010r" +
       "eversed\030\017 \001(\010:\005false\022)\n\013consistency\030\020 \001(" +
       "\0162\014.Consistency:\006STRONG\022\017\n\007caching\030\021 \001(\r" +
-      "\"\277\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Regio",
+      "\"\342\001\n\013ScanRequest\022 \n\006region\030\001 \001(\0132\020.Regio",
       "nSpecifier\022\023\n\004scan\030\002 \001(\0132\005.Scan\022\022\n\nscann" +
       "er_id\030\003 \001(\004\022\026\n\016number_of_rows\030\004 \001(\r\022\025\n\rc" +
       "lose_scanner\030\005 \001(\010\022\025\n\rnext_call_seq\030\006 \001(" +
-      "\004\022\037\n\027client_handles_partials\030\007 \001(\010\"\311\001\n\014S" +
-      "canResponse\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n" +
-      "\nscanner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022" +
-      "\013\n\003ttl\030\004 \001(\r\022\030\n\007results\030\005 \003(\0132\007.Result\022\r" +
-      "\n\005stale\030\006 \001(\010\022\037\n\027partial_flag_per_result" +
-      "\030\007 \003(\010\022\036\n\026more_results_in_region\030\010 \001(\010\"\263" +
-      "\001\n\024BulkLoadHFileRequest\022 \n\006region\030\001 \002(\0132",
-      "\020.RegionSpecifier\0225\n\013family_path\030\002 \003(\0132 " +
-      ".BulkLoadHFileRequest.FamilyPath\022\026\n\016assi" +
-      "gn_seq_num\030\003 \001(\010\032*\n\nFamilyPath\022\016\n\006family" +
-      "\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadHFileRes" +
-      "ponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026CoprocessorServ" +
-      "iceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014service_name\030\002 \002" +
-      "(\t\022\023\n\013method_name\030\003 \002(\t\022\017\n\007request\030\004 \002(\014" +
-      "\"9\n\030CoprocessorServiceResult\022\035\n\005value\030\001 " +
-      "\001(\0132\016.NameBytesPair\"d\n\031CoprocessorServic" +
-      "eRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifi",
-      "er\022%\n\004call\030\002 \002(\0132\027.CoprocessorServiceCal" +
-      "l\"]\n\032CoprocessorServiceResponse\022 \n\006regio" +
-      "n\030\001 \002(\0132\020.RegionSpecifier\022\035\n\005value\030\002 \002(\013" +
-      "2\016.NameBytesPair\"{\n\006Action\022\r\n\005index\030\001 \001(" +
-      "\r\022 \n\010mutation\030\002 \001(\0132\016.MutationProto\022\021\n\003g" +
-      "et\030\003 \001(\0132\004.Get\022-\n\014service_call\030\004 \001(\0132\027.C" +
-      "oprocessorServiceCall\"Y\n\014RegionAction\022 \n" +
-      "\006region\030\001 \002(\0132\020.RegionSpecifier\022\016\n\006atomi" +
-      "c\030\002 \001(\010\022\027\n\006action\030\003 \003(\0132\007.Action\"D\n\017Regi" +
-      "onLoadStats\022\027\n\014memstoreLoad\030\001 \001(\005:\0010\022\030\n\r",
-      "heapOccupancy\030\002 \001(\005:\0010\"\266\001\n\021ResultOrExcep" +
-      "tion\022\r\n\005index\030\001 \001(\r\022\027\n\006result\030\002 \001(\0132\007.Re" +
-      "sult\022!\n\texception\030\003 \001(\0132\016.NameBytesPair\022" +
-      "1\n\016service_result\030\004 \001(\0132\031.CoprocessorSer" +
-      "viceResult\022#\n\tloadStats\030\005 \001(\0132\020.RegionLo" +
-      "adStats\"f\n\022RegionActionResult\022-\n\021resultO" +
-      "rException\030\001 \003(\0132\022.ResultOrException\022!\n\t" +
-      "exception\030\002 \001(\0132\016.NameBytesPair\"f\n\014Multi" +
-      "Request\022#\n\014regionAction\030\001 \003(\0132\r.RegionAc" +
-      "tion\022\022\n\nnonceGroup\030\002 \001(\004\022\035\n\tcondition\030\003 ",
-      "\001(\0132\n.Condition\"S\n\rMultiResponse\022/\n\022regi" +
-      "onActionResult\030\001 \003(\0132\023.RegionActionResul" +
-      "t\022\021\n\tprocessed\030\002 \001(\010*\'\n\013Consistency\022\n\n\006S" +
-      "TRONG\020\000\022\014\n\010TIMELINE\020\0012\205\003\n\rClientService\022" +
-      " \n\003Get\022\013.GetRequest\032\014.GetResponse\022)\n\006Mut" +
-      "ate\022\016.MutateRequest\032\017.MutateResponse\022#\n\004" +
-      "Scan\022\014.ScanRequest\032\r.ScanResponse\022>\n\rBul" +
-      "kLoadHFile\022\025.BulkLoadHFileRequest\032\026.Bulk" +
-      "LoadHFileResponse\022F\n\013ExecService\022\032.Copro" +
-      "cessorServiceRequest\032\033.CoprocessorServic",
-      "eResponse\022R\n\027ExecRegionServerService\022\032.C" +
-      "oprocessorServiceRequest\032\033.CoprocessorSe" +
-      "rviceResponse\022&\n\005Multi\022\r.MultiRequest\032\016." +
-      "MultiResponseBB\n*org.apache.hadoop.hbase" +
-      ".protobuf.generatedB\014ClientProtosH\001\210\001\001\240\001" +
-      "\001"
+      "\004\022\037\n\027client_handles_partials\030\007 \001(\010\022!\n\031cl" +
+      "ient_handles_heartbeats\030\010 \001(\010\"\344\001\n\014ScanRe" +
+      "sponse\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nscan" +
+      "ner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003tt" +
+      "l\030\004 \001(\r\022\030\n\007results\030\005 \003(\0132\007.Result\022\r\n\005sta" +
+      "le\030\006 \001(\010\022\037\n\027partial_flag_per_result\030\007 \003(" +
+      "\010\022\036\n\026more_results_in_region\030\010 \001(\010\022\031\n\021hea",
+      "rtbeat_message\030\t \001(\010\"\263\001\n\024BulkLoadHFileRe" +
+      "quest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022" +
+      "5\n\013family_path\030\002 \003(\0132 .BulkLoadHFileRequ" +
+      "est.FamilyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*" +
+      "\n\nFamilyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002" +
+      "(\t\"\'\n\025BulkLoadHFileResponse\022\016\n\006loaded\030\001 " +
+      "\002(\010\"a\n\026CoprocessorServiceCall\022\013\n\003row\030\001 \002" +
+      "(\014\022\024\n\014service_name\030\002 \002(\t\022\023\n\013method_name\030" +
+      "\003 \002(\t\022\017\n\007request\030\004 \002(\014\"9\n\030CoprocessorSer" +
+      "viceResult\022\035\n\005value\030\001 \001(\0132\016.NameBytesPai",
+      "r\"d\n\031CoprocessorServiceRequest\022 \n\006region" +
+      "\030\001 \002(\0132\020.RegionSpecifier\022%\n\004call\030\002 \002(\0132\027" +
+      ".CoprocessorServiceCall\"]\n\032CoprocessorSe" +
+      "rviceResponse\022 \n\006region\030\001 \002(\0132\020.RegionSp" +
+      "ecifier\022\035\n\005value\030\002 \002(\0132\016.NameBytesPair\"{" +
+      "\n\006Action\022\r\n\005index\030\001 \001(\r\022 \n\010mutation\030\002 \001(" +
+      "\0132\016.MutationProto\022\021\n\003get\030\003 \001(\0132\004.Get\022-\n\014" +
+      "service_call\030\004 \001(\0132\027.CoprocessorServiceC" +
+      "all\"Y\n\014RegionAction\022 \n\006region\030\001 \002(\0132\020.Re" +
+      "gionSpecifier\022\016\n\006atomic\030\002 \001(\010\022\027\n\006action\030",
+      "\003 \003(\0132\007.Action\"D\n\017RegionLoadStats\022\027\n\014mem" +
+      "storeLoad\030\001 \001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(" +
+      "\005:\0010\"\266\001\n\021ResultOrException\022\r\n\005index\030\001 \001(" +
+      "\r\022\027\n\006result\030\002 \001(\0132\007.Result\022!\n\texception\030" +
+      "\003 \001(\0132\016.NameBytesPair\0221\n\016service_result\030" +
+      "\004 \001(\0132\031.CoprocessorServiceResult\022#\n\tload" +
+      "Stats\030\005 \001(\0132\020.RegionLoadStats\"f\n\022RegionA" +
+      "ctionResult\022-\n\021resultOrException\030\001 \003(\0132\022" +
+      ".ResultOrException\022!\n\texception\030\002 \001(\0132\016." +
+      "NameBytesPair\"f\n\014MultiRequest\022#\n\014regionA",
+      "ction\030\001 \003(\0132\r.RegionAction\022\022\n\nnonceGroup" +
+      "\030\002 \001(\004\022\035\n\tcondition\030\003 \001(\0132\n.Condition\"S\n" +
+      "\rMultiResponse\022/\n\022regionActionResult\030\001 \003" +
+      "(\0132\023.RegionActionResult\022\021\n\tprocessed\030\002 \001" +
+      "(\010*\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n\010TIMELIN" +
+      "E\020\0012\205\003\n\rClientService\022 \n\003Get\022\013.GetReques" +
+      "t\032\014.GetResponse\022)\n\006Mutate\022\016.MutateReques" +
+      "t\032\017.MutateResponse\022#\n\004Scan\022\014.ScanRequest" +
+      "\032\r.ScanResponse\022>\n\rBulkLoadHFile\022\025.BulkL" +
+      "oadHFileRequest\032\026.BulkLoadHFileResponse\022",
+      "F\n\013ExecService\022\032.CoprocessorServiceReque" +
+      "st\032\033.CoprocessorServiceResponse\022R\n\027ExecR" +
+      "egionServerService\022\032.CoprocessorServiceR" +
+      "equest\032\033.CoprocessorServiceResponse\022&\n\005M" +
+      "ulti\022\r.MultiRequest\032\016.MultiResponseBB\n*o" +
+      "rg.apache.hadoop.hbase.protobuf.generate" +
+      "dB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -32842,13 +33079,13 @@ public final class ClientProtos {
           internal_static_ScanRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ScanRequest_descriptor,
-              new java.lang.String[] { "Region", "Scan", "ScannerId", "NumberOfRows", "CloseScanner", "NextCallSeq", "ClientHandlesPartials", });
+              new java.lang.String[] { "Region", "Scan", "ScannerId", "NumberOfRows", "CloseScanner", "NextCallSeq", "ClientHandlesPartials", "ClientHandlesHeartbeats", });
           internal_static_ScanResponse_descriptor =
             getDescriptor().getMessageTypes().get(13);
           internal_static_ScanResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ScanResponse_descriptor,
-              new java.lang.String[] { "CellsPerResult", "ScannerId", "MoreResults", "Ttl", "Results", "Stale", "PartialFlagPerResult", "MoreResultsInRegion", });
+              new java.lang.String[] { "CellsPerResult", "ScannerId", "MoreResults", "Ttl", "Results", "Stale", "PartialFlagPerResult", "MoreResultsInRegion", "HeartbeatMessage", });
           internal_static_BulkLoadHFileRequest_descriptor =
             getDescriptor().getMessageTypes().get(14);
           internal_static_BulkLoadHFileRequest_fieldAccessorTable = new

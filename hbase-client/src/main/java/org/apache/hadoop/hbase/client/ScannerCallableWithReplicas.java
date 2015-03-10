@@ -273,6 +273,16 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     return replicaSwitched.get();
   }
 
+  /**
+   * @return true when the most recent RPC response indicated that the response was a heartbeat
+   *         message. Heartbeat messages are sent back from the server when the processing of the
+   *         scan request exceeds a certain time threshold. Heartbeats allow the server to avoid
+   *         timeouts during long running scan operations.
+   */
+  public boolean isHeartbeatMessage() {
+    return currentScannerCallable != null && currentScannerCallable.isHeartbeatMessage();
+  }
+
   private int addCallsForCurrentReplica(
       ResultBoundedCompletionService<Pair<Result[], ScannerCallable>> cs, RegionLocations rl) {
     RetryingRPC retryingOnReplica = new RetryingRPC(currentScannerCallable);
