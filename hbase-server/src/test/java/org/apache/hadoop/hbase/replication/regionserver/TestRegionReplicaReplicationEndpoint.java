@@ -172,6 +172,11 @@ public class TestRegionReplicaReplicationEndpoint {
 
   private void verifyReplication(TableName tableName, int regionReplication,
       final int startRow, final int endRow) throws Exception {
+    verifyReplication(tableName, regionReplication, startRow, endRow, true);
+  }
+
+  private void verifyReplication(TableName tableName, int regionReplication,
+      final int startRow, final int endRow, final boolean present) throws Exception {
     // find the regions
     final HRegion[] regions = new HRegion[regionReplication];
 
@@ -195,7 +200,7 @@ public class TestRegionReplicaReplicationEndpoint {
         public boolean evaluate() throws Exception {
           LOG.info("verifying replication for region replica:" + region.getRegionInfo());
           try {
-            HTU.verifyNumericRows(region, HBaseTestingUtility.fam1, startRow, endRow);
+            HTU.verifyNumericRows(region, HBaseTestingUtility.fam1, startRow, endRow, present);
           } catch(Throwable ex) {
             LOG.warn("Verification from secondary region is not complete yet. Got:" + ex
               + " " + ex.getMessage());
@@ -221,6 +226,38 @@ public class TestRegionReplicaReplicationEndpoint {
   @Test(timeout = 240000)
   public void testRegionReplicaReplicationWith10Replicas() throws Exception {
     testRegionReplicaReplication(10);
+  }
+
+  @Test (timeout = 240000)
+  public void testRegionReplicaWithoutMemstoreReplication() throws Exception {
+    int regionReplication = 3;
+    TableName tableName = TableName.valueOf("testRegionReplicaWithoutMemstoreReplication");
+    HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
+    htd.setRegionReplication(regionReplication);
+    htd.setRegionMemstoreReplication(false);
+    HTU.getHBaseAdmin().createTable(htd);
+
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
+    Table table = connection.getTable(tableName);
+    try {
+      // write data to the primary. The replicas should not receive the data
+      final int STEP = 100;
+      for (int i = 0; i < 3; ++i) {
+        final int startRow = i * STEP;
+        final int endRow = (i + 1) * STEP;
+        LOG.info("Writing data from " + startRow + " to " + endRow);
+        HTU.loadNumericRows(table, HBaseTestingUtility.fam1, startRow, endRow);
+        verifyReplication(tableName, regionReplication, startRow, endRow, false);
+
+        // Flush the table, now the data should show up in the replicas
+        LOG.info("flushing table");
+        HTU.flush(tableName);
+        verifyReplication(tableName, regionReplication, 0, endRow, true);
+      }
+    } finally {
+      table.close();
+      connection.close();
+    }
   }
 
   @Test (timeout = 240000)

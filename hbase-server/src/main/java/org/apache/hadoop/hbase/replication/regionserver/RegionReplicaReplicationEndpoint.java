@@ -43,9 +43,11 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionAdminServiceCallable;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -94,6 +96,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
   private Configuration conf;
   private ClusterConnection connection;
+  private TableDescriptors tableDescriptors;
 
   // Reuse WALSplitter constructs as a WAL pipe
   private PipelineController controller;
@@ -150,6 +153,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     super.init(context);
 
     this.conf = HBaseConfiguration.create(context.getConfiguration());
+    this.tableDescriptors = context.getTableDescriptors();
 
     // HRS multiplies client retries by 10 globally for meta operations, but we do not want this.
     // We are resetting it here because we want default number of retries (35) rather than 10 times
@@ -182,8 +186,8 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     try {
       connection = (ClusterConnection) ConnectionFactory.createConnection(this.conf);
       this.pool = getDefaultThreadPool(conf);
-      outputSink = new RegionReplicaOutputSink(controller, entryBuffers, connection, pool,
-        numWriterThreads, operationTimeout);
+      outputSink = new RegionReplicaOutputSink(controller, tableDescriptors, entryBuffers,
+        connection, pool, numWriterThreads, operationTimeout);
       outputSink.startWriterThreads();
       super.doStart();
     } catch (IOException ex) {
@@ -311,12 +315,28 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   }
 
   static class RegionReplicaOutputSink extends OutputSink {
-    private RegionReplicaSinkWriter sinkWriter;
+    private final RegionReplicaSinkWriter sinkWriter;
+    private final TableDescriptors tableDescriptors;
+    private final Cache<TableName, Boolean> memstoreReplicationEnabled;
 
-    public RegionReplicaOutputSink(PipelineController controller, EntryBuffers entryBuffers,
-        ClusterConnection connection, ExecutorService pool, int numWriters, int operationTimeout) {
+    public RegionReplicaOutputSink(PipelineController controller, TableDescriptors tableDescriptors,
+        EntryBuffers entryBuffers, ClusterConnection connection, ExecutorService pool,
+        int numWriters, int operationTimeout) {
       super(controller, entryBuffers, numWriters);
       this.sinkWriter = new RegionReplicaSinkWriter(this, connection, pool, operationTimeout);
+      this.tableDescriptors = tableDescriptors;
+
+      // A cache for the table "memstore replication enabled" flag.
+      // It has a default expiry of 5 sec. This means that if the table is altered
+      // with a different flag value, we might miss to replicate for that amount of
+      // time. But this cache avoid the slow lookup and parsing of the TableDescriptor.
+      int memstoreReplicationEnabledCacheExpiryMs = connection.getConfiguration()
+        .getInt("hbase.region.replica.replication.cache.memstoreReplicationEnabled.expiryMs", 5000);
+      this.memstoreReplicationEnabled = CacheBuilder.newBuilder()
+        .expireAfterWrite(memstoreReplicationEnabledCacheExpiryMs, TimeUnit.MILLISECONDS)
+        .initialCapacity(10)
+        .maximumSize(1000)
+        .build();
     }
 
     @Override
@@ -324,6 +344,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       List<Entry> entries = buffer.getEntryBuffer();
 
       if (entries.isEmpty() || entries.get(0).getEdit().getCells().isEmpty()) {
+        return;
+      }
+
+      // meta edits (e.g. flush) are always replicated.
+      // data edits (e.g. put) are replicated if the table requires them.
+      if (!requiresReplication(buffer.getTableName(), entries)) {
         return;
       }
 
@@ -357,6 +383,44 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
     AtomicLong getSkippedEditsCounter() {
       return skippedEdits;
+    }
+
+    /**
+     * returns true if the specified entry must be replicated.
+     * We should always replicate meta operations (e.g. flush)
+     * and use the user HTD flag to decide whether or not replicate the memstore.
+     */
+    private boolean requiresReplication(final TableName tableName, final List<Entry> entries)
+        throws IOException {
+      // unit-tests may not the TableDescriptors, bypass the check and always replicate
+      if (tableDescriptors == null) return true;
+
+      Boolean requiresReplication = memstoreReplicationEnabled.getIfPresent(tableName);
+      if (requiresReplication == null) {
+        // check if the table requires memstore replication
+        // some unit-test drop the table, so we should do a bypass check and always replicate.
+        HTableDescriptor htd = tableDescriptors.get(tableName);
+        requiresReplication = htd == null || htd.hasRegionMemstoreReplication();
+        memstoreReplicationEnabled.put(tableName, requiresReplication);
+      }
+
+      // if memstore replication is not required, check the entries.
+      // meta edits (e.g. flush) must be always replicated.
+      if (!requiresReplication) {
+        int skipEdits = 0;
+        java.util.Iterator<Entry> it = entries.iterator();
+        while (it.hasNext()) {
+          Entry entry = it.next();
+          if (entry.getEdit().isMetaEdit()) {
+            requiresReplication = true;
+          } else {
+            it.remove();
+            skipEdits++;
+          }
+        }
+        skippedEdits.addAndGet(skipEdits);
+      }
+      return requiresReplication;
     }
   }
 

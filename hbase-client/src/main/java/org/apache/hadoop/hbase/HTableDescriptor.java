@@ -176,6 +176,14 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   private static final Bytes REGION_REPLICATION_KEY =
       new Bytes(Bytes.toBytes(REGION_REPLICATION));
 
+  /**
+   * <em>INTERNAL</em> flag to indicate whether or not the memstore should be replicated
+   * for read-replicas (CONSISTENCY => TIMELINE).
+   */
+  public static final String REGION_MEMSTORE_REPLICATION = "REGION_MEMSTORE_REPLICATION";
+  private static final Bytes REGION_MEMSTORE_REPLICATION_KEY =
+      new Bytes(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
+
   /** Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
@@ -209,6 +217,8 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   public static final long DEFAULT_MEMSTORE_FLUSH_SIZE = 1024*1024*128L;
 
   public static final int DEFAULT_REGION_REPLICATION = 1;
+
+  public static final boolean DEFAULT_REGION_MEMSTORE_REPLICATION = true;
 
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();
@@ -1070,6 +1080,27 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   public HTableDescriptor setRegionReplication(int regionReplication) {
     setValue(REGION_REPLICATION_KEY,
         new Bytes(Bytes.toBytes(Integer.toString(regionReplication))));
+    return this;
+  }
+
+  /**
+   * @return true if the read-replicas memstore replication is enabled.
+   */
+  public boolean hasRegionMemstoreReplication() {
+    return isSomething(REGION_MEMSTORE_REPLICATION_KEY, DEFAULT_REGION_MEMSTORE_REPLICATION);
+  }
+
+  /**
+   * Enable or Disable the memstore replication from the primary region to the replicas.
+   * The replication will be used only for meta operations (e.g. flush, compaction, ...)
+   *
+   * @param memstoreReplication true if the new data written to the primary region
+   *                                 should be replicated.
+   *                            false if the secondaries can tollerate to have new
+   *                                  data only when the primary flushes the memstore.
+   */
+  public HTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
+    setValue(REGION_MEMSTORE_REPLICATION_KEY, memstoreReplication ? TRUE : FALSE);
     return this;
   }
 

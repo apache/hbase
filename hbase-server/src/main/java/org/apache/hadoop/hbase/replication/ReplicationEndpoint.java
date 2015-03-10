@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsSource;
 
@@ -51,6 +52,7 @@ public interface ReplicationEndpoint extends Service {
   class Context {
     private final Configuration conf;
     private final FileSystem fs;
+    private final TableDescriptors tableDescriptors;
     private final ReplicationPeerConfig peerConfig;
     private final ReplicationPeer replicationPeer;
     private final String peerId;
@@ -65,7 +67,8 @@ public interface ReplicationEndpoint extends Service {
         final String peerId,
         final UUID clusterId,
         final ReplicationPeer replicationPeer,
-        final MetricsSource metrics) {
+        final MetricsSource metrics,
+        final TableDescriptors tableDescriptors) {
       this.peerConfig = peerConfig;
       this.conf = conf;
       this.fs = fs;
@@ -73,6 +76,7 @@ public interface ReplicationEndpoint extends Service {
       this.peerId = peerId;
       this.replicationPeer = replicationPeer;
       this.metrics = metrics;
+      this.tableDescriptors = tableDescriptors;
     }
     public Configuration getConfiguration() {
       return conf;
@@ -94,6 +98,9 @@ public interface ReplicationEndpoint extends Service {
     }
     public MetricsSource getMetrics() {
       return metrics;
+    }
+    public TableDescriptors getTableDescriptors() {
+      return tableDescriptors;
     }
   }
 
