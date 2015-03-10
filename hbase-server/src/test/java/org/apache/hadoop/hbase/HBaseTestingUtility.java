@@ -2144,10 +2144,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow)
       throws IOException {
+    verifyNumericRows(region, f, startRow, endRow, true);
+  }
+
+  public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow,
+      final boolean present) throws IOException {
     for (int i = startRow; i < endRow; i++) {
       String failMsg = "Failed verification of row :" + i;
       byte[] data = Bytes.toBytes(String.valueOf(i));
       Result result = region.get(new Get(data));
+
+      boolean hasResult = result != null && !result.isEmpty();
+      assertEquals(failMsg + result, present, hasResult);
+      if (!present) continue;
+
       assertTrue(failMsg, result.containsColumn(f, null));
       assertEquals(failMsg, result.getColumnCells(f, null).size(), 1);
       Cell cell = result.getColumnLatestCell(f, null);

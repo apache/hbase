@@ -3173,6 +3173,13 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
+   * @return Return table descriptors implementation.
+   */
+  public TableDescriptors getTableDescriptors() {
+    return this.tableDescriptors;
+  }
+
+  /**
    * Reload the configuration from disk.
    */
   public void updateConfiguration() {
