@@ -7419,7 +7419,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       ClassSize.OBJECT +
       ClassSize.ARRAY +
       45 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
-      (13 * Bytes.SIZEOF_LONG) +
+      (14 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
   // woefully out of date - currently missing:
