@@ -201,6 +201,10 @@ public final class HConstants {
   public static final String ZOOKEEPER_DATA_DIR =
       ZK_CFG_PROPERTY_PREFIX + "dataDir";
 
+  /** Parameter name for the ZK tick time */
+  public static final String ZOOKEEPER_TICK_TIME =
+      ZK_CFG_PROPERTY_PREFIX + "tickTime";
+
   /** Default limit on concurrent client-side zookeeper connections */
   public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 300;
 
