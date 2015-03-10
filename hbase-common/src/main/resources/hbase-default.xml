@@ -1159,7 +1159,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
    <name>hbase.regionserver.thrift.framed.max_frame_size_in_mb</name>
     <value>2</value>
-    <description>Default frame size when using framed transport</description>
+    <description>Default frame size when using framed transport, in MB</description>
   </property>
   <property>
     <name>hbase.regionserver.thrift.compact</name>
