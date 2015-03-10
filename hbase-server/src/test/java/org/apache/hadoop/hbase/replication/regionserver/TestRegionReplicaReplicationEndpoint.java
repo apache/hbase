@@ -135,45 +135,6 @@ public class TestRegionReplicaReplicationEndpoint {
     admin.close();
   }
 
-  @Test
-  public void testRegionReplicaReplicationPeerIsCreatedForModifyTable() throws Exception {
-    // modify a table by adding region replicas. Check whether the replication peer is created
-    // and replication started.
-    ReplicationAdmin admin = new ReplicationAdmin(HTU.getConfiguration());
-    String peerId = "region_replica_replication";
-
-    if (admin.getPeerConfig(peerId) != null) {
-      admin.removePeer(peerId);
-    }
-
-    HTableDescriptor htd
-      = HTU.createTableDescriptor("testRegionReplicaReplicationPeerIsCreatedForModifyTable");
-    HTU.getHBaseAdmin().createTable(htd);
-
-    // assert that replication peer is not created yet
-    ReplicationPeerConfig peerConfig = admin.getPeerConfig(peerId);
-    assertNull(peerConfig);
-
-    HTU.getHBaseAdmin().disableTable(htd.getTableName());
-    htd.setRegionReplication(2);
-    HTU.getHBaseAdmin().modifyTable(htd.getTableName(), htd);
-    HTU.getHBaseAdmin().enableTable(htd.getTableName());
-
-    // assert peer configuration is correct
-    peerConfig = admin.getPeerConfig(peerId);
-    assertNotNull(peerConfig);
-    assertEquals(peerConfig.getClusterKey(), ZKUtil.getZooKeeperClusterKey(HTU.getConfiguration()));
-    assertEquals(peerConfig.getReplicationEndpointImpl(),
-      RegionReplicaReplicationEndpoint.class.getName());
-    admin.close();
-
-    // verify it is working
-    try(Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
-        Table table = connection.getTable(htd.getTableName());){
-      HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 1000);
-      verifyReplication(htd.getTableName(), 2, 0, 1000);
-    }
-  }
 
   public void testRegionReplicaReplication(int regionReplication) throws Exception {
     // test region replica replication. Create a table with single region, write some data
