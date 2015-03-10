@@ -101,7 +101,10 @@ public class BoundedByteBufferPool {
     } else {
       int size = this.buffers.size(); // This size may be inexact.
       this.totalReservoirCapacity += bb.capacity();
-      int average = this.totalReservoirCapacity / size;
+      int average = 0;
+      if (size != 0) {
+        average = this.totalReservoirCapacity / size;
+      }
       if (average > this.runningAverage && average < this.maxByteBufferSizeToCache) {
         this.runningAverage = average;
       }
