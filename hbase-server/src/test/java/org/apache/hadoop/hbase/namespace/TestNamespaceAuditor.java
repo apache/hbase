@@ -53,9 +53,11 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionServerObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
@@ -93,6 +95,8 @@ public class TestNamespaceAuditor {
   public static void before() throws Exception {
     UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       CustomObserver.class.getName());
+    UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      MasterSyncObserver.class.getName());
     Configuration conf = UTIL.getConfiguration();
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     conf.setClass("hbase.coprocessor.regionserver.classes", CPRegionServerObserver.class,
@@ -113,10 +117,10 @@ public class TestNamespaceAuditor {
   }
 
   @After
-  public void cleanup() throws IOException, KeeperException {
+  public void cleanup() throws Exception, KeeperException {
     for (HTableDescriptor table : ADMIN.listTables()) {
       ADMIN.disableTable(table.getTableName());
-      ADMIN.deleteTable(table.getTableName());
+      deleteTable(table.getTableName());
     }
     for (NamespaceDescriptor ns : ADMIN.listNamespaceDescriptors()) {
       if (ns.getName().startsWith(prefix)) {
@@ -252,13 +256,13 @@ public class TestNamespaceAuditor {
     assertEquals(5, stateInfo.getRegionCountOfTable(tableDescTwo.getTableName()));
     assertEquals(6, stateInfo.getRegionCount());
     ADMIN.disableTable(tableDescOne.getTableName());
-    ADMIN.deleteTable(tableDescOne.getTableName());
+    deleteTable(tableDescOne.getTableName());
     stateInfo = getNamespaceState(nspDesc.getName());
     assertNotNull("Namespace state found to be null.", stateInfo);
     assertEquals(5, stateInfo.getRegionCount());
     assertEquals(1, stateInfo.getTables().size());
     ADMIN.disableTable(tableDescTwo.getTableName());
-    ADMIN.deleteTable(tableDescTwo.getTableName());
+    deleteTable(tableDescTwo.getTableName());
     ADMIN.deleteNamespace(namespace);
     stateInfo = getNamespaceState(namespace);
     assertNull("Namespace state not found to be null.", stateInfo);
@@ -524,7 +528,7 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("1"), Bytes.toBytes("1000"), 3);
     ADMIN.createTable(tableDescThree, Bytes.toBytes("1"), Bytes.toBytes("1000"), 4);
     ADMIN.disableTable(tableThree);
-    ADMIN.deleteTable(tableThree);
+    deleteTable(tableThree);
     // wait for chore to complete
     UTIL.waitFor(1000, new Waiter.Predicate<Exception>() {
       @Override
@@ -561,4 +565,29 @@ public class TestNamespaceAuditor {
         .getMasterQuotaManager().getNamespaceQuotaManager();
   }
 
+  public static class MasterSyncObserver extends BaseMasterObserver {
+    volatile CountDownLatch tableDeletionLatch;
+
+    @Override
+    public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName) throws IOException {
+      tableDeletionLatch = new CountDownLatch(1);
+    }
+
+    @Override
+    public void postDeleteTableHandler(
+        final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+        throws IOException {
+      tableDeletionLatch.countDown();
+    }
+  }
+
+  private void deleteTable(final TableName tableName) throws Exception {
+    // NOTE: We need a latch because admin is not sync,
+    // so the postOp coprocessor method may be called after the admin operation returned.
+    MasterSyncObserver observer = (MasterSyncObserver)UTIL.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    ADMIN.deleteTable(tableName);
+    observer.tableDeletionLatch.await();
+  }
 }
