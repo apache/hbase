@@ -111,12 +111,14 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
@@ -1424,7 +1426,8 @@ public class HRegionServer extends HasThread implements
     }
     regionSpecifier.setType(RegionSpecifierType.REGION_NAME);
     regionSpecifier.setValue(ByteStringer.wrap(name));
-    regionLoadBldr.setRegionSpecifier(regionSpecifier.build())
+    r.setCompleteSequenceId(regionLoadBldr)
+      .setRegionSpecifier(regionSpecifier.build())
       .setStores(stores)
       .setStorefiles(storefiles)
       .setStoreUncompressedSizeMB(storeUncompressedSizeMB)
@@ -1438,9 +1441,9 @@ public class HRegionServer extends HasThread implements
       .setWriteRequestsCount(r.writeRequestsCount.get())
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
-      .setCompleteSequenceId(r.maxFlushedSeqId)
       .setDataLocality(dataLocality)
       .setLastMajorCompactionTs(r.getOldestHfileTs(true));
+
     return regionLoadBldr.build();
   }
 
@@ -2228,30 +2231,30 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public long getLastSequenceId(byte[] encodedRegionName) {
-    long lastFlushedSequenceId = -1L;
+  public RegionStoreSequenceIds getLastSequenceId(byte[] encodedRegionName) {
     try {
-      GetLastFlushedSequenceIdRequest req = RequestConverter
-          .buildGetLastFlushedSequenceIdRequest(encodedRegionName);
+      GetLastFlushedSequenceIdRequest req =
+          RequestConverter.buildGetLastFlushedSequenceIdRequest(encodedRegionName);
       RegionServerStatusService.BlockingInterface rss = rssStub;
       if (rss == null) { // Try to connect one more time
         createRegionServerStatusStub();
         rss = rssStub;
         if (rss == null) {
           // Still no luck, we tried
-          LOG.warn("Unable to connect to the master to check "
-            + "the last flushed sequence id");
-          return -1L;
+          LOG.warn("Unable to connect to the master to check " + "the last flushed sequence id");
+          return RegionStoreSequenceIds.newBuilder().setLastFlushedSequenceId(HConstants.NO_SEQNUM)
+              .build();
         }
       }
-      lastFlushedSequenceId = rss.getLastFlushedSequenceId(null, req)
-          .getLastFlushedSequenceId();
+      GetLastFlushedSequenceIdResponse resp = rss.getLastFlushedSequenceId(null, req);
+      return RegionStoreSequenceIds.newBuilder()
+          .setLastFlushedSequenceId(resp.getLastFlushedSequenceId())
+          .addAllStoreSequenceId(resp.getStoreLastFlushedSequenceIdList()).build();
     } catch (ServiceException e) {
-      lastFlushedSequenceId = -1l;
-      LOG.warn("Unable to connect to the master to check "
-        + "the last flushed sequence id", e);
+      LOG.warn("Unable to connect to the master to check the last flushed sequence id", e);
+      return RegionStoreSequenceIds.newBuilder().setLastFlushedSequenceId(HConstants.NO_SEQNUM)
+          .build();
     }
-    return lastFlushedSequenceId;
   }
 
   /**

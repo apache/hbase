@@ -59,6 +59,23 @@ message RegionInTransition {
   required RegionState region_state = 2;
 }
 
+/**
+ * sequence Id of a store
+ */
+message StoreSequenceId {
+  required bytes family_name = 1;
+  required uint64 sequence_id = 2;
+}
+
+/**
+ * contains a sequence id of a region which should be the minimum of its store sequence ids and
+ * list of sequence ids of the region's stores
+ */
+message RegionStoreSequenceIds {
+  required uint64 last_flushed_sequence_id = 1;
+  repeated StoreSequenceId store_sequence_id = 2;
+}
+
 message RegionLoad {
   /** the region specifier */
   required RegionSpecifier region_specifier = 1;
@@ -115,6 +132,9 @@ message RegionLoad {
   optional float data_locality = 16;
 
   optional uint64 last_major_compaction_ts = 17 [default = 0];
+
+  /** the most recent sequence Id of store from cache flush */
+  repeated StoreSequenceId store_complete_sequence_id = 18;
 }
 
 /* Server-level protobufs */

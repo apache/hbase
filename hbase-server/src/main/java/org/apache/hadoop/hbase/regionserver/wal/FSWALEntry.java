@@ -56,6 +56,7 @@ class FSWALEntry extends Entry {
   private final transient HTableDescriptor htd;
   private final transient HRegionInfo hri;
   private final transient List<Cell> memstoreCells;
+  private final Set<byte[]> familyNames;
 
   FSWALEntry(final long sequence, final WALKey key, final WALEdit edit,
       final AtomicLong referenceToRegionSequenceId, final boolean inMemstore,
@@ -67,6 +68,23 @@ class FSWALEntry extends Entry {
     this.hri = hri;
     this.sequence = sequence;
     this.memstoreCells = memstoreCells;
+    if (inMemstore) {
+      // construct familyNames here to reduce the work of log sinker.
+      ArrayList<Cell> cells = this.getEdit().getCells();
+      if (CollectionUtils.isEmpty(cells)) {
+        this.familyNames = Collections.<byte[]> emptySet();
+      } else {
+        Set<byte[]> familySet = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
+        for (Cell cell : cells) {
+          if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+            familySet.add(CellUtil.cloneFamily(cell));
+          }
+        }
+        this.familyNames = Collections.unmodifiableSet(familySet);
+      }
+    } else {
+      this.familyNames = Collections.<byte[]> emptySet();
+    }
   }
 
   public String toString() {
@@ -118,16 +136,6 @@ class FSWALEntry extends Entry {
    * @return the family names which are effected by this edit.
    */
   Set<byte[]> getFamilyNames() {
-    ArrayList<Cell> cells = this.getEdit().getCells();
-    if (CollectionUtils.isEmpty(cells)) {
-      return Collections.<byte[]>emptySet();
-    }
-    Set<byte[]> familySet = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
-    for (Cell cell : cells) {
-      if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
-        familySet.add(CellUtil.cloneFamily(cell));
-      }
-    }
-    return familySet;
+    return familyNames;
   }
 }

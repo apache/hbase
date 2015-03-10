@@ -620,7 +620,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         try {
           long lastSequenceId =
               this.details.getMaster().getServerManager()
-                  .getLastFlushedSequenceId(regionEncodeName.getBytes());
+                  .getLastFlushedSequenceId(regionEncodeName.getBytes()).getLastFlushedSequenceId();
 
           /*
            * znode layout: .../region_id[last known flushed sequence id]/failed server[last known

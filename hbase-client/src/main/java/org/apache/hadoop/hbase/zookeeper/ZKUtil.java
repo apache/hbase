@@ -45,8 +45,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -2102,10 +2103,10 @@ public class ZKUtil {
    */
   public static byte[] regionSequenceIdsToByteArray(final Long regionLastFlushedSequenceId,
       final Map<byte[], Long> storeSequenceIds) {
-    ZooKeeperProtos.RegionStoreSequenceIds.Builder regionSequenceIdsBuilder =
-        ZooKeeperProtos.RegionStoreSequenceIds.newBuilder();
-    ZooKeeperProtos.StoreSequenceId.Builder storeSequenceIdBuilder =
-        ZooKeeperProtos.StoreSequenceId.newBuilder();
+    ClusterStatusProtos.RegionStoreSequenceIds.Builder regionSequenceIdsBuilder =
+        ClusterStatusProtos.RegionStoreSequenceIds.newBuilder();
+    ClusterStatusProtos.StoreSequenceId.Builder storeSequenceIdBuilder =
+        ClusterStatusProtos.StoreSequenceId.newBuilder();
     if (storeSequenceIds != null) {
       for (Map.Entry<byte[], Long> e : storeSequenceIds.entrySet()){
         byte[] columnFamilyName = e.getKey();
@@ -2132,7 +2133,7 @@ public class ZKUtil {
       throw new DeserializationException("Unable to parse RegionStoreSequenceIds.");
     }
     RegionStoreSequenceIds.Builder regionSequenceIdsBuilder =
-        ZooKeeperProtos.RegionStoreSequenceIds.newBuilder();
+        ClusterStatusProtos.RegionStoreSequenceIds.newBuilder();
     int pblen = ProtobufUtil.lengthOfPBMagic();
     RegionStoreSequenceIds storeIds = null;
     try {

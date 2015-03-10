@@ -19,15 +19,19 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 
 /**
- * Last flushed sequence Ids for the regions on region server
+ * Last flushed sequence Ids for the regions and their stores on region server
  */
 @InterfaceAudience.Private
 public interface LastSequenceId {
+
   /**
    * @param encodedRegionName Encoded region name
-   * @return Last flushed sequence Id for region or -1 if it can't be determined
+   * @return Last flushed sequence Id for region and its stores. Id will be -1 if it can't be
+   *         determined
    */
-  long getLastSequenceId(byte[] encodedRegionName);
+  RegionStoreSequenceIds getLastSequenceId(byte[] encodedRegionName);
+
 }

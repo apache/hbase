@@ -71,18 +71,18 @@ public class TestPerColumnFamilyFlush {
 
   public static final TableName TABLENAME = TableName.valueOf("TestPerColumnFamilyFlush", "t1");
 
-  public static final byte[][] families = { Bytes.toBytes("f1"), Bytes.toBytes("f2"),
+  public static final byte[][] FAMILIES = { Bytes.toBytes("f1"), Bytes.toBytes("f2"),
       Bytes.toBytes("f3"), Bytes.toBytes("f4"), Bytes.toBytes("f5") };
 
-  public static final byte[] FAMILY1 = families[0];
+  public static final byte[] FAMILY1 = FAMILIES[0];
 
-  public static final byte[] FAMILY2 = families[1];
+  public static final byte[] FAMILY2 = FAMILIES[1];
 
-  public static final byte[] FAMILY3 = families[2];
+  public static final byte[] FAMILY3 = FAMILIES[2];
 
   private HRegion initHRegion(String callingMethod, Configuration conf) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TABLENAME);
-    for (byte[] family : families) {
+    for (byte[] family : FAMILIES) {
       htd.addFamily(new HColumnDescriptor(family));
     }
     HRegionInfo info = new HRegionInfo(TABLENAME, null, null, false);
@@ -96,7 +96,7 @@ public class TestPerColumnFamilyFlush {
     byte[] row = Bytes.toBytes("row" + familyNum + "-" + putNum);
     byte[] val = Bytes.toBytes("val" + familyNum + "-" + putNum);
     Put p = new Put(row);
-    p.add(families[familyNum - 1], qf, val);
+    p.addColumn(FAMILIES[familyNum - 1], qf, val);
     return p;
   }
 
@@ -109,7 +109,7 @@ public class TestPerColumnFamilyFlush {
   // A helper function to verify edits.
   void verifyEdit(int familyNum, int putNum, HTable table) throws IOException {
     Result r = table.get(createGet(familyNum, putNum));
-    byte[] family = families[familyNum - 1];
+    byte[] family = FAMILIES[familyNum - 1];
     byte[] qf = Bytes.toBytes("q" + familyNum);
     byte[] val = Bytes.toBytes("val" + familyNum + "-" + putNum);
     assertNotNull(("Missing Put#" + putNum + " for CF# " + familyNum), r.getFamilyMap(family));
@@ -327,7 +327,7 @@ public class TestPerColumnFamilyFlush {
     return null;
   }
 
-  public void doTestLogReplay() throws Exception {
+  private void doTestLogReplay() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 20000);
     // Carefully chosen limits so that the memstore just flushes when we're done
@@ -338,10 +338,10 @@ public class TestPerColumnFamilyFlush {
       TEST_UTIL.startMiniCluster(numRegionServers);
       TEST_UTIL.getHBaseAdmin().createNamespace(
           NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
-      HTable table = TEST_UTIL.createTable(TABLENAME, families);
+      HTable table = TEST_UTIL.createTable(TABLENAME, FAMILIES);
       HTableDescriptor htd = table.getTableDescriptor();
 
-      for (byte[] family : families) {
+      for (byte[] family : FAMILIES) {
         if (!htd.hasFamily(family)) {
           htd.addFamily(new HColumnDescriptor(family));
         }
@@ -455,7 +455,7 @@ public class TestPerColumnFamilyFlush {
     try {
       TEST_UTIL.startMiniCluster(numRegionServers);
       HTable table = null;
-      table = TEST_UTIL.createTable(tableName, families);
+      table = TEST_UTIL.createTable(tableName, FAMILIES);
       // Force flush the namespace table so edits to it are not hanging around as oldest
       // edits. Otherwise, below, when we make maximum number of WAL files, then it will be
       // the namespace region that is flushed and not the below 'desiredRegion'.
@@ -521,9 +521,9 @@ public class TestPerColumnFamilyFlush {
       rand.nextBytes(value1);
       rand.nextBytes(value2);
       rand.nextBytes(value3);
-      put.add(FAMILY1, qf, value1);
-      put.add(FAMILY2, qf, value2);
-      put.add(FAMILY3, qf, value3);
+      put.addColumn(FAMILY1, qf, value1);
+      put.addColumn(FAMILY2, qf, value2);
+      put.addColumn(FAMILY3, qf, value3);
       table.put(put);
       // slow down to let regionserver flush region.
       while (region.getMemstoreSize().get() > memstoreFlushSize) {
@@ -650,9 +650,9 @@ public class TestPerColumnFamilyFlush {
       rand.nextBytes(value1);
       rand.nextBytes(value2);
       rand.nextBytes(value3);
-      put.add(FAMILY1, qf, value1);
-      put.add(FAMILY2, qf, value2);
-      put.add(FAMILY3, qf, value3);
+      put.addColumn(FAMILY1, qf, value1);
+      put.addColumn(FAMILY2, qf, value2);
+      put.addColumn(FAMILY3, qf, value3);
       table.put(put);
       if (i % 10000 == 0) {
         LOG.info(i + " rows put");

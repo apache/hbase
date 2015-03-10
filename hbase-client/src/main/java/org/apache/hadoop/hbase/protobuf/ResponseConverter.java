@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
@@ -300,8 +301,10 @@ public final class ResponseConverter {
    * @return A GetLastFlushedSequenceIdResponse
    */
   public static GetLastFlushedSequenceIdResponse buildGetLastFlushedSequenceIdResponse(
-      long seqId) {
-    return GetLastFlushedSequenceIdResponse.newBuilder().setLastFlushedSequenceId(seqId).build();
+      RegionStoreSequenceIds ids) {
+    return GetLastFlushedSequenceIdResponse.newBuilder()
+        .setLastFlushedSequenceId(ids.getLastFlushedSequenceId())
+        .addAllStoreLastFlushedSequenceId(ids.getStoreSequenceIdList()).build();
   }
 
   /**
