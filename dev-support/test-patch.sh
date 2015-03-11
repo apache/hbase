@@ -210,7 +210,7 @@ checkout () {
 findBranchNameFromPatchName() {
   local patchName=$1
   for LOCAL_BRANCH_NAME in $BRANCH_NAMES; do
-    if [[ $patchName =~ .*$LOCAL_BRANCH_NAME.* ]]; then
+    if [[ $patchName =~ /jira/secure/attachment/[0-9]*/.*$LOCAL_BRANCH_NAME ]]; then
       BRANCH_NAME=$LOCAL_BRANCH_NAME
       break
     fi
