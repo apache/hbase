@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
@@ -1101,6 +1102,10 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    */
   public HTableDescriptor setRegionMemstoreReplication(boolean memstoreReplication) {
     setValue(REGION_MEMSTORE_REPLICATION_KEY, memstoreReplication ? TRUE : FALSE);
+    // If the memstore replication is setup, we do not have to wait for observing a flush event
+    // from primary before starting to serve reads, because gaps from replication is not applicable
+    setConfiguration(RegionReplicaUtil.REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
+      Boolean.toString(memstoreReplication));
     return this;
   }
 
