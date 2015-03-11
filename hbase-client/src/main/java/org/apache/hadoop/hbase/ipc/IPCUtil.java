@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -101,23 +102,25 @@ public class IPCUtil {
    * @param codec
    * @param compressor
    * @param cellScanner
-   * @param bb ByteBuffer to use. Can be null. You'd pass in a ByteBuffer if you want to practice
-   * recycling. If the passed in ByteBuffer is too small, it is discarded and a new one allotted
-   * so you will get back the passed-in ByteBuffer or a new, right-sized one. SIDE EFFECT!!!!!
+   * @param pool Pool of ByteBuffers to make use of. Can be null and then we'll allocate
+   * our own ByteBuffer.
    * @return Null or byte buffer filled with a cellblock filled with passed-in Cells encoded using
    * passed in <code>codec</code> and/or <code>compressor</code>; the returned buffer has been
-   * flipped and is ready for reading.  Use limit to find total size.
+   * flipped and is ready for reading.  Use limit to find total size. If <code>pool</code> was not
+   * null, then this returned ByteBuffer came from there and should be returned to the pool when
+   * done.
    * @throws IOException
    */
   @SuppressWarnings("resource")
   public ByteBuffer buildCellBlock(final Codec codec, final CompressionCodec compressor,
-    final CellScanner cellScanner, final ByteBuffer bb)
+    final CellScanner cellScanner, final BoundedByteBufferPool pool)
   throws IOException {
     if (cellScanner == null) return null;
     if (codec == null) throw new CellScannerButNoCodecException();
     int bufferSize = this.cellBlockBuildingInitialBufferSize;
     ByteBufferOutputStream baos = null;
-    if (bb != null) {
+    if (pool != null) {
+      ByteBuffer bb = pool.getBuffer();
       bufferSize = bb.capacity();
       baos = new ByteBufferOutputStream(bb);
     } else {

@@ -393,13 +393,11 @@ public class RpcServer implements RpcServerInterface {
           // Set the exception as the result of the method invocation.
           headerBuilder.setException(exceptionBuilder.build());
         }
-        // Get a bb from the reservoir and pass it to buildCellBlock. What comes back will be the
-        // passed in reservoir bb or a resized one that we should instead add back to the reservoir
-        // when done. Keep reference so can add it back to the reservoir when finished. This is
-        // hacky and the hack is not contained but benefits are high when we can avoid a big buffer
-        // allocation on each rpc.
+        // Pass reservoir to buildCellBlock. Keep reference to returne so can add it back to the 
+        // reservoir when finished. This is hacky and the hack is not contained but benefits are
+        // high when we can avoid a big buffer allocation on each rpc.
         this.cellBlock = ipcUtil.buildCellBlock(this.connection.codec,
-          this.connection.compressionCodec, cells, reservoir.getBuffer());
+          this.connection.compressionCodec, cells, reservoir);
         if (this.cellBlock != null) {
           CellBlockMeta.Builder cellBlockBuilder = CellBlockMeta.newBuilder();
           // Presumes the cellBlock bytebuffer has been flipped so limit has total size in it.
