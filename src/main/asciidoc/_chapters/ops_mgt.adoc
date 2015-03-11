@@ -412,6 +412,8 @@ Invoke via:
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
 ----
 
+By default, the `Export` tool only exports the newest version of a given cell, regardless of the number of versions stored. To export more than one version, replace *_<versions>_* with the desired number of versions.
+
 Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
 
 === Import
@@ -579,6 +581,8 @@ It will run the mapreduce all in a single process but it will run faster if you 
 ----
 $ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter <tablename> [<column1> <column2>...]
 ----
+
+RowCounter only counts one version per cell.
 
 Note: caching for the input Scan is configured via `hbase.client.scanner.caching` in the job configuration.
 
