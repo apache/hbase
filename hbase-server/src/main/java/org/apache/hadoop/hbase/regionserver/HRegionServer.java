@@ -1915,9 +1915,9 @@ public class HRegionServer extends HasThread implements
     if (ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
       return;
     }
-    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(getConfiguration()) ||
+    if (!ServerRegionReplicaUtil.isRegionReplicaReplicationEnabled(region.conf) ||
         !ServerRegionReplicaUtil.isRegionReplicaWaitForPrimaryFlushEnabled(
-          getConfiguration())) {
+          region.conf)) {
       region.setReadsEnabled(true);
       return;
     }
