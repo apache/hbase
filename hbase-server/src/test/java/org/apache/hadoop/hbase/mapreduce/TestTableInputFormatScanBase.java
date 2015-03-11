@@ -22,6 +22,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
@@ -30,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -37,11 +40,14 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
+
 
 /**
  * <p>
@@ -239,5 +245,42 @@ public abstract class TestTableInputFormatScanBase {
     LOG.info("After map/reduce completion - job " + jobName);
   }
 
+
+  /**
+   * Tests a MR scan using data skew auto-balance
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testNumOfSplits(String ratio, int expectedNumOfSplits) throws IOException,
+          InterruptedException,
+          ClassNotFoundException {
+    String jobName = "TestJobForNumOfSplits";
+    LOG.info("Before map/reduce startup - job " + jobName);
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    Scan scan = new Scan();
+    scan.addFamily(INPUT_FAMILY);
+    c.set("hbase.mapreduce.input.autobalance", "true");
+    c.set("hbase.mapreduce.input.autobalance.maxskewratio", ratio);
+    c.set(KEY_STARTROW, "");
+    c.set(KEY_LASTROW, "");
+    Job job = new Job(c, jobName);
+    TableMapReduceUtil.initTableMapperJob(Bytes.toString(TABLE_NAME), scan, ScanMapper.class,
+            ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
+    TableInputFormat tif = new TableInputFormat();
+    tif.setConf(job.getConfiguration());
+    Assert.assertEquals(new String(TABLE_NAME), new String(table.getTableName()));
+    List<InputSplit> splits = tif.getSplits(job);
+    Assert.assertEquals(expectedNumOfSplits, splits.size());
+  }
+
+  /**
+   * Tests for the getSplitKey() method in TableInputFormatBase.java
+   */
+  public void testGetSplitKey(byte[] startKey, byte[] endKey, byte[] splitKey, boolean isText) {
+    byte[] result = TableInputFormatBase.getSplitKey(startKey, endKey, isText);
+      Assert.assertArrayEquals(splitKey, result);
+  }
 }
 
