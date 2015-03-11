@@ -1606,7 +1606,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       setFirst(0);
       setSecond(0);
     }};
-    for (int i = 0; status.getFirst() != 0 && i < 500; i++) { // wait up to 500 seconds
+    int i = 0;
+    do {
       status = admin.getAlterStatus(desc.getTableName());
       if (status.getSecond() != 0) {
         LOG.debug(status.getSecond() - status.getFirst() + "/" + status.getSecond()
@@ -1616,9 +1617,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         LOG.debug("All regions updated.");
         break;
       }
-    }
-    if (status.getSecond() != 0) {
-      throw new IOException("Failed to update replica count after 500 seconds.");
+    } while (status.getFirst() != 0 && i++ < 500);
+    if (status.getFirst() != 0) {
+      throw new IOException("Failed to update all regions even after 500 seconds.");
     }
   }
 
@@ -1630,7 +1631,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     admin.disableTable(table);
     HTableDescriptor desc = admin.getTableDescriptor(table);
     desc.setRegionReplication(replicaCount);
-    modifyTableSync(admin, desc);
+    admin.modifyTable(desc.getTableName(), desc);
     admin.enableTable(table);
   }
 
