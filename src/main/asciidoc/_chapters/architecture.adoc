@@ -682,7 +682,7 @@ The last value (99%) is the default acceptable loading factor in the LRU cache a
 The reason it is included in this equation is that it would be unrealistic to say that it is possible to use 100% of the available memory since this would make the process blocking from the point where it loads new blocks.
 Here are some examples:
 
-* One region server with the default heap size (1 GB) and the default block cache size will have 253 MB of block cache available.
+* One region server with the heap size set to 1 GB and the default block cache size will have 253 MB of block cache available.
 * 20 region servers with the heap size set to 8 GB and a default block cache size will have 39.6 of block cache.
 * 100 region servers with the heap size set to 24 GB and a block cache size of 0.5 will have about 1.16 TB of block cache.
 
