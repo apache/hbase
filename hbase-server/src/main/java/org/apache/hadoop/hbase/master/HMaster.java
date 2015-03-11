@@ -1093,15 +1093,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return Maximum time we should run balancer for
    */
   private int getBalancerCutoffTime() {
-    int balancerCutoffTime =
-      getConfiguration().getInt("hbase.balancer.max.balancing", -1);
+    int balancerCutoffTime = getConfiguration().getInt("hbase.balancer.max.balancing", -1);
     if (balancerCutoffTime == -1) {
-      // No time period set so create one
-      int balancerPeriod =
-        getConfiguration().getInt("hbase.balancer.period", 300000);
+      // if cutoff time isn't set, defaulting it to period time
+      int balancerPeriod = getConfiguration().getInt("hbase.balancer.period", 300000);
       balancerCutoffTime = balancerPeriod;
-      // If nonsense period, set it to balancerPeriod
-      if (balancerCutoffTime <= 0) balancerCutoffTime = balancerPeriod;
     }
     return balancerCutoffTime;
   }
