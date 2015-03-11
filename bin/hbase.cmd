@@ -87,7 +87,7 @@ if "%hbase-command%"=="" (
   goto :eof
 )
 
-set JAVA_HEAP_MAX=-Xmx1000m
+set JAVA_HEAP_MAX=""
 set JAVA_OFFHEAP_MAX=""
 
 rem check envvars which might override default args
