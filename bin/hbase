@@ -34,8 +34,9 @@
 #   HBASE_CLASSPATH_PREFIX Extra Java CLASSPATH entries that should be
 #                    prefixed to the system classpath.
 #
-#   HBASE_HEAPSIZE   The maximum amount of heap to use, in MB. 
-#                    Default is 1000.
+#   HBASE_HEAPSIZE   The maximum amount of heap to use.
+#                    Default is unset and uses the JVMs default setting
+#                    (usually 1/4th of the available memory).
 #
 #   HBASE_LIBRARY_PATH  HBase additions to JAVA_LIBRARY_PATH for adding
 #                    native libraries.
