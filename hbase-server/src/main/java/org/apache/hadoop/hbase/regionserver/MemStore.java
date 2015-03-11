@@ -588,7 +588,7 @@ public class MemStore implements HeapSize {
         // only remove Puts that concurrent scanners cannot possibly see
         if (cur.getTypeByte() == KeyValue.Type.Put.getCode() &&
             cur.getMvccVersion() <= readpoint) {
-          if (versionsVisible > 1) {
+          if (versionsVisible >= 1) {
             // if we get here we have seen at least one version visible to the oldest scanner,
             // which means we can prove that no scanner will see this version
 
