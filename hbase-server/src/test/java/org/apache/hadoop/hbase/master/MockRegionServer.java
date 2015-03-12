@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsReques
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
@@ -459,6 +461,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
     return null;
   }
 
+  @Override
+  public WarmupRegionResponse warmupRegion(RpcController controller,
+      WarmupRegionRequest request) throws ServiceException {
+    //TODO Auto-generated method stub
+    return null;
+  }
   @Override
   public CloseRegionResponse closeRegion(RpcController controller,
       CloseRegionRequest request) throws ServiceException {

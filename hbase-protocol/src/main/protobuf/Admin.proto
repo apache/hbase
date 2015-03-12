@@ -90,6 +90,14 @@ message OpenRegionResponse {
   }
 }
 
+message WarmupRegionRequest {
+
+    required RegionInfo regionInfo = 1;
+}
+
+message WarmupRegionResponse {
+}
+
 /**
  * Closes the specified region and will use or not use ZK during the close
  * according to the specified flag.
@@ -252,6 +260,9 @@ service AdminService {
 
   rpc OpenRegion(OpenRegionRequest)
     returns(OpenRegionResponse);
+
+  rpc WarmupRegion(WarmupRegionRequest)
+    returns(WarmupRegionResponse);
 
   rpc CloseRegion(CloseRegionRequest)
     returns(CloseRegionResponse);

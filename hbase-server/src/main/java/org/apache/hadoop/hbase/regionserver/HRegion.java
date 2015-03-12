@@ -844,11 +844,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     status.setStatus("Writing region info on filesystem");
     fs.checkRegionInfoOnFilesystem();
 
-
-
     // Initialize all the HStores
     status.setStatus("Initializing all the Stores");
-    long maxSeqId = initializeRegionStores(reporter, status);
+    long maxSeqId = initializeRegionStores(reporter, status, false);
     this.lastReplayedOpenRegionSeqId = maxSeqId;
 
     this.writestate.setReadOnly(ServerRegionReplicaUtil.isReadOnly(this));
@@ -911,8 +909,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     return nextSeqid;
   }
 
-  private long initializeRegionStores(final CancelableProgressable reporter, MonitoredTask status)
+  private long initializeRegionStores(final CancelableProgressable reporter, MonitoredTask status,
+      boolean warmupOnly)
       throws IOException {
+
     // Load in all the HStores.
 
     long maxSeqId = -1;
@@ -974,7 +974,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         }
       }
     }
-    if (ServerRegionReplicaUtil.shouldReplayRecoveredEdits(this)) {
+    if (ServerRegionReplicaUtil.shouldReplayRecoveredEdits(this) && !warmupOnly) {
       // Recover any edits if available.
       maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
           this.fs.getRegionDir(), maxSeqIdInStores, reporter, status));
@@ -982,6 +982,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     maxSeqId = Math.max(maxSeqId, maxMemstoreTS + 1);
     mvcc.initialize(maxSeqId);
     return maxSeqId;
+  }
+
+  private void initializeWarmup(final CancelableProgressable reporter) throws IOException {
+    MonitoredTask status = TaskMonitor.get().createStatus("Initializing region " + this);
+
+    // Initialize all the HStores
+    status.setStatus("Warming up all the Stores");
+    initializeRegionStores(reporter, status, true);
   }
 
   private void writeRegionOpenMarker(WAL wal, long openSeqId) throws IOException {
@@ -6228,6 +6236,35 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     }
     return this;
   }
+
+  public static void warmupHRegion(final HRegionInfo info,
+      final HTableDescriptor htd, final WAL wal, final Configuration conf,
+      final RegionServerServices rsServices,
+      final CancelableProgressable reporter)
+      throws IOException {
+
+    if (info == null) throw new NullPointerException("Passed region info is null");
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("HRegion.Warming up region: " + info);
+    }
+
+    Path rootDir = FSUtils.getRootDir(conf);
+    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+
+    FileSystem fs = null;
+    if (rsServices != null) {
+      fs = rsServices.getFileSystem();
+    }
+    if (fs == null) {
+      fs = FileSystem.get(conf);
+    }
+
+    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices);
+    r.initializeWarmup(reporter);
+    r.close();
+  }
+
 
   private void checkCompressionCodecs() throws IOException {
     for (HColumnDescriptor fam: this.htableDescriptor.getColumnFamilies()) {

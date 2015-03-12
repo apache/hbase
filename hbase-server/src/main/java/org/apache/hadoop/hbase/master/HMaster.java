@@ -1264,6 +1264,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           return;
         }
       }
+      // warmup the region on the destination before initiating the move. this call
+      // is synchronous and takes some time. doing it before the source region gets
+      // closed
+      serverManager.sendRegionWarmup(rp.getDestination(), hri);
+
       LOG.info(getClientIdAuditPrefix() + " move " + rp + ", running balancer");
       this.assignmentManager.balance(rp);
       if (this.cpHost != null) {
