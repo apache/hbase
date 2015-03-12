@@ -60,7 +60,7 @@ public class AccessControlClient {
 
   /**
    * Grants permission on the specified table for the specified user
-   * @param conf
+   * @param connection The Connection instance to use
    * @param tableName
    * @param userName
    * @param family
@@ -68,66 +68,51 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
-  public static void grant(Configuration conf, final TableName tableName,
+  public static void grant(final Connection connection, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual,
       final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, tableName, family, qual,
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, tableName, family, qual,
           actions);
-      }
     }
   }
 
   /**
    * Grants permission on the specified namespace for the specified user.
-   * @param conf
+   * @param connection The Connection instance to use
    * @param namespace
    * @param userName
    * @param actions
    * @throws Throwable
    */
-  public static void grant(Configuration conf, final String namespace,
+  public static void grant(final Connection connection, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, namespace, actions);
-      }
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, namespace, actions);
     }
   }
 
   /**
+   * @param connection The Connection instance to use
    * Grant global permissions for the specified user.
    */
-  public static void grant(Configuration conf, final String userName,
+  public static void grant(final Connection connection, final String userName,
        final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, actions);
-      }
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, actions);
     }
   }
 
-  public static boolean isAccessControllerRunning(Configuration conf)
+  public static boolean isAccessControllerRunning(final Connection connection)
       throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Admin admin = connection.getAdmin()) {
-        return admin.isTableAvailable(ACL_TABLE_NAME);
-      }
+    try (Admin admin = connection.getAdmin()) {
+      return admin.isTableAvailable(ACL_TABLE_NAME);
     }
   }
 
   /**
    * Revokes the permission on the table
-   * @param conf
+   * @param connection The Connection instance to use
    * @param tableName
    * @param username
    * @param family
@@ -135,78 +120,52 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
-  public static void revoke(Configuration conf, final TableName tableName,
+  public static void revoke(final Connection connection, final TableName tableName,
       final String username, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.revoke(getAccessControlServiceStub(table), username, tableName, family,
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.revoke(getAccessControlServiceStub(table), username, tableName, family,
           qualifier, actions);
-      }
     }
   }
 
   /**
    * Revokes the permission on the table for the specified user.
-   * @param conf
+   * @param connection The Connection instance to use
    * @param namespace
    * @param userName
    * @param actions
    * @throws Throwable
    */
-  public static void revoke(Configuration conf, final String namespace,
-    final String userName, final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, namespace, actions);
-      }
+  public static void revoke(final Connection connection, final String namespace,
+      final String userName, final Permission.Action... actions) throws Throwable {
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, namespace, actions);
     }
   }
 
   /**
    * Revoke global permissions for the specified user.
+   * @param connection The Connection instance to use
    */
-  public static void revoke(Configuration conf, final String userName,
+  public static void revoke(final Connection connection, final String userName,
       final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, actions);
-      }
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, actions);
     }
+
   }
 
   /**
    * List all the userPermissions matching the given pattern.
-   * @param conf
-   * @param tableRegex The regular expression string to match against
-   * @return - returns an array of UserPermissions
-   * @throws Throwable
-   */
-  public static List<UserPermission> getUserPermissions(Configuration conf, String tableRegex)
-  throws Throwable {
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      return getUserPermissions(connection, tableRegex);
-    }
-  }
-
-  /**
-   * List all the userPermissions matching the given pattern.
-   * @param connection
+   * @param connection The Connection instance to use
    * @param tableRegex The regular expression string to match against
    * @return - returns an array of UserPermissions
    * @throws Throwable
    */
   public static List<UserPermission> getUserPermissions(Connection connection, String tableRegex)
-  throws Throwable {
+      throws Throwable {
     List<UserPermission> permList = new ArrayList<UserPermission>();
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
     try (Table table = connection.getTable(ACL_TABLE_NAME)) {
       try (Admin admin = connection.getAdmin()) {
         CoprocessorRpcChannel service = table.coprocessorService(HConstants.EMPTY_START_ROW);
@@ -227,5 +186,133 @@ public class AccessControlClient {
       }
     }
     return permList;
+  }
+
+  /**
+   * Grants permission on the specified table for the specified user
+   * @param conf
+   * @param tableName
+   * @param userName
+   * @param family
+   * @param qual
+   * @param actions
+   * @throws Throwable
+   * @deprecated Use {@link #grant(Connection, TableName, String, byte[], byte[],
+   * Permission.Action...)} instead.
+   */
+  @Deprecated
+  public static void grant(Configuration conf, final TableName tableName,
+      final String userName, final byte[] family, final byte[] qual,
+      final Permission.Action... actions) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      grant(connection, tableName, userName, family, qual, actions);
+    }
+  }
+
+  /**
+   * Grants permission on the specified namespace for the specified user.
+   * @param conf
+   * @param namespace
+   * @param userName
+   * @param actions
+   * @throws Throwable
+   * @deprecated Use {@link #grant(Connection, String, String, Permission.Action...)}
+   * instead.
+   */
+  @Deprecated
+  public static void grant(Configuration conf, final String namespace,
+      final String userName, final Permission.Action... actions) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      grant(connection, namespace, userName, actions);
+    }
+  }
+
+  /**
+   * Grant global permissions for the specified user.
+   * @deprecated Use {@link #grant(Connection, String, Permission.Action...)} instead.
+   */
+  @Deprecated
+  public static void grant(Configuration conf, final String userName,
+      final Permission.Action... actions) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      grant(connection, userName, actions);
+    }
+  }
+
+  /**
+   * @deprecated Use {@link #isAccessControllerRunning(Connection)} instead.
+   */
+  @Deprecated
+  public static boolean isAccessControllerRunning(Configuration conf)
+      throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return isAccessControllerRunning(connection);
+    }
+  }
+
+  /**
+   * Revokes the permission on the table
+   * @param conf
+   * @param tableName
+   * @param username
+   * @param family
+   * @param qualifier
+   * @param actions
+   * @throws Throwable
+   * @deprecated Use {@link #revoke(Connection, TableName, String, byte[], byte[],
+   * Permission.Action...)} instead.
+   */
+  @Deprecated
+  public static void revoke(Configuration conf, final TableName tableName,
+      final String username, final byte[] family, final byte[] qualifier,
+      final Permission.Action... actions) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      revoke(connection, tableName, username, family, qualifier, actions);
+    }
+  }
+
+  /**
+   * Revokes the permission on the table for the specified user.
+   * @param conf
+   * @param namespace
+   * @param userName
+   * @param actions
+   * @throws Throwable
+   * @deprecated Use {@link #revoke(Connection, String, String, Permission.Action...)} instead.
+   */
+  @Deprecated
+  public static void revoke(Configuration conf, final String namespace,
+      final String userName, final Permission.Action... actions) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      revoke(connection, namespace, userName, actions);
+    }
+  }
+
+  /**
+   * Revoke global permissions for the specified user.
+   * @deprecated Use {@link #revoke(Connection, String, Permission.Action...)} instead.
+   */
+  @Deprecated
+  public static void revoke(Configuration conf, final String userName,
+      final Permission.Action... actions) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      revoke(connection, userName, actions);
+    }
+  }
+
+  /**
+   * List all the userPermissions matching the given pattern.
+   * @param conf
+   * @param tableRegex The regular expression string to match against
+   * @return - returns an array of UserPermissions
+   * @throws Throwable
+   * @deprecated Use {@link #getUserPermissions(Connection, String)} instead.
+   */
+  @Deprecated
+  public static List<UserPermission> getUserPermissions(Configuration conf, String tableRegex)
+  throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return getUserPermissions(connection, tableRegex);
+    }
   }
 }

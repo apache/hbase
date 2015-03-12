@@ -403,13 +403,13 @@ public class SecureTestUtil {
    * or will throw an exception upon timeout (10 seconds).
    */
   public static void grantOnNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final String namespace,
+      final Connection connection, final String user, final String namespace,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.grant(conf, namespace, user, actions);
+          AccessControlClient.grant(connection, namespace, user, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -424,13 +424,13 @@ public class SecureTestUtil {
    * or will throw an exception upon timeout (10 seconds).
    */
   public static void revokeFromNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final String namespace,
+      final Connection connection, final String user, final String namespace,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.revoke(conf, namespace, user, actions);
+          AccessControlClient.revoke(connection, namespace, user, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -492,13 +492,13 @@ public class SecureTestUtil {
    * throw an exception upon timeout (10 seconds).
    */
   public static void grantOnTableUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final TableName table, final byte[] family,
+      final Connection connection, final String user, final TableName table, final byte[] family,
       final byte[] qualifier, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.grant(conf, table, user, family, qualifier, actions);
+          AccessControlClient.grant(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -513,13 +513,13 @@ public class SecureTestUtil {
    * throw an exception upon timeout (10 seconds).
    */
   public static void grantGlobalUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final Permission.Action... actions)
+      final Connection connection, final String user, final Permission.Action... actions)
       throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.grant(conf, user, actions);
+          AccessControlClient.grant(connection, user, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -558,13 +558,13 @@ public class SecureTestUtil {
    * throw an exception upon timeout (10 seconds).
    */
   public static void revokeFromTableUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final TableName table, final byte[] family,
+      final Connection connection, final String user, final TableName table, final byte[] family,
       final byte[] qualifier, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.revoke(conf, table, user, family, qualifier, actions);
+          AccessControlClient.revoke(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -579,13 +579,13 @@ public class SecureTestUtil {
    * throw an exception upon timeout (10 seconds).
    */
   public static void revokeGlobalUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user,final Permission.Action... actions)
+      final Connection connection, final String user,final Permission.Action... actions)
       throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.revoke(conf, user, actions);
+          AccessControlClient.revoke(connection, user, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }

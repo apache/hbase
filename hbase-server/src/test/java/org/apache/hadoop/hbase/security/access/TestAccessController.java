@@ -137,6 +137,8 @@ public class TestAccessController extends SecureTestUtil {
   @Rule public TestTableName TEST_TABLE = new TestTableName();
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
+  private static Connection connection;
+
 
   // user with all permissions
   private static User SUPERUSER;
@@ -208,10 +210,13 @@ public class TestAccessController extends SecureTestUtil {
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
     USER_ADMIN_CF = User.createUserForTesting(conf, "col_family_admin", new String[0]);
+
+    connection = ConnectionFactory.createConnection(conf);
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    connection.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -262,7 +267,8 @@ public class TestAccessController extends SecureTestUtil {
 
     assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
     try {
-      assertEquals(5, AccessControlClient.getUserPermissions(conf, TEST_TABLE.toString()).size());
+      assertEquals(5, AccessControlClient.getUserPermissions(connection,
+          TEST_TABLE.toString()).size());
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.getUserPermissions. ", e);
     }
@@ -2118,7 +2124,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // Grant table READ permissions to testGrantRevoke.
     try {
-      grantOnTableUsingAccessControlClient(TEST_UTIL, conf, testGrantRevoke.getShortName(),
+      grantOnTableUsingAccessControlClient(TEST_UTIL, connection, testGrantRevoke.getShortName(),
           TEST_TABLE.getTableName(), null, null, Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.grant. ", e);
@@ -2129,7 +2135,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // Revoke table READ permission to testGrantRevoke.
     try {
-      revokeFromTableUsingAccessControlClient(TEST_UTIL, conf, testGrantRevoke.getShortName(),
+      revokeFromTableUsingAccessControlClient(TEST_UTIL, connection, testGrantRevoke.getShortName(),
           TEST_TABLE.getTableName(), null, null, Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.revoke ", e);
@@ -2160,8 +2166,8 @@ public class TestAccessController extends SecureTestUtil {
 
     // Grant table READ permissions to testGlobalGrantRevoke.
     try {
-      grantGlobalUsingAccessControlClient(TEST_UTIL, conf, testGlobalGrantRevoke.getShortName(),
-        Permission.Action.READ);
+      grantGlobalUsingAccessControlClient(TEST_UTIL, connection,
+          testGlobalGrantRevoke.getShortName(), Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.grant. ", e);
     }
@@ -2171,8 +2177,8 @@ public class TestAccessController extends SecureTestUtil {
 
     // Revoke table READ permission to testGlobalGrantRevoke.
     try {
-      revokeGlobalUsingAccessControlClient(TEST_UTIL, conf, testGlobalGrantRevoke.getShortName(),
-        Permission.Action.READ);
+      revokeGlobalUsingAccessControlClient(TEST_UTIL, connection,
+          testGlobalGrantRevoke.getShortName(), Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.revoke ", e);
     }
@@ -2201,7 +2207,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // Grant namespace READ to testNS, this should supersede any table permissions
     try {
-      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, conf, testNS.getShortName(),
+      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, connection, testNS.getShortName(),
           TEST_TABLE.getTableName().getNamespaceAsString(), Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.grant. ", e);
@@ -2212,7 +2218,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // Revoke namespace READ to testNS, this should supersede any table permissions
     try {
-      revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, conf, testNS.getShortName(),
+      revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, connection, testNS.getShortName(),
           TEST_TABLE.getTableName().getNamespaceAsString(), Permission.Action.READ);
     } catch (Throwable e) {
       LOG.error("error during call of AccessControlClient.revoke ", e);
@@ -2345,13 +2351,13 @@ public class TestAccessController extends SecureTestUtil {
 
    @Test
    public void testGetNamespacePermission() throws Exception {
-     String namespace = "testNamespace";
+     String namespace = "testGetNamespacePermission";
      NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
      TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
      grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
      try {
-       List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(conf,
-       AccessControlLists.toNamespaceEntry(namespace));
+       List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(
+           connection, AccessControlLists.toNamespaceEntry(namespace));
        assertTrue(namespacePermissions != null);
        assertTrue(namespacePermissions.size() == 1);
      } catch (Throwable thw) {
@@ -2362,32 +2368,38 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testTruncatePerms() throws Throwable {
-    try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-      List<UserPermission> existingPerms =
-          AccessControlClient.getUserPermissions(connection,
-              TEST_TABLE.getTableName().getNameAsString());
-      assertTrue(existingPerms != null);
-      assertTrue(existingPerms.size() > 1);
-      try (Admin admin = connection.getAdmin()) {
-        admin.disableTable(TEST_TABLE.getTableName());
-        admin.truncateTable(TEST_TABLE.getTableName(), true);
-      }
-      List<UserPermission> perms = AccessControlClient.getUserPermissions(connection,
-        TEST_TABLE.getTableName().getNameAsString());
-      assertTrue(perms != null);
-      assertEquals(existingPerms.size(), perms.size());
+    List<UserPermission> existingPerms =
+        AccessControlClient.getUserPermissions(connection,
+            TEST_TABLE.getTableName().getNameAsString());
+    assertTrue(existingPerms != null);
+    assertTrue(existingPerms.size() > 1);
+    try (Admin admin = connection.getAdmin()) {
+      admin.disableTable(TEST_TABLE.getTableName());
+      admin.truncateTable(TEST_TABLE.getTableName(), true);
     }
+    List<UserPermission> perms = AccessControlClient.getUserPermissions(connection,
+        TEST_TABLE.getTableName().getNameAsString());
+    assertTrue(perms != null);
+    assertEquals(existingPerms.size(), perms.size());
   }
 
   private PrivilegedAction<List<UserPermission>> getPrivilegedAction(final String regex) {
     return new PrivilegedAction<List<UserPermission>>() {
       @Override
       public List<UserPermission> run() {
+        Connection connection = null;
         try {
-          return AccessControlClient.getUserPermissions(conf, regex);
+          connection = ConnectionFactory.createConnection(conf);
+          return AccessControlClient.getUserPermissions(connection, regex);
         } catch (Throwable e) {
           LOG.error("error during call of AccessControlClient.getUserPermissions.", e);
           return null;
+        } finally {
+          try {
+            connection.close();
+          } catch (IOException e) {
+            LOG.error("Error during close of connection.", e);
+          }
         }
       }
     };
