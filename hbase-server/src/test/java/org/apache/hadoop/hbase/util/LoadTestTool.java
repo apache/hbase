@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -606,7 +607,8 @@ public class LoadTestTool extends AbstractHBaseTool {
         Permission.Action.ADMIN, Permission.Action.CREATE,
         Permission.Action.READ, Permission.Action.WRITE };
       try {
-        AccessControlClient.grant(conf, tableName, userOwner.getShortName(), null, null, actions);
+        AccessControlClient.grant(ConnectionFactory.createConnection(conf),
+            tableName, userOwner.getShortName(), null, null, actions);
       } catch (Throwable e) {
         LOG.fatal("Error in granting permission for the user " + userOwner.getShortName(), e);
         return EXIT_FAILURE;

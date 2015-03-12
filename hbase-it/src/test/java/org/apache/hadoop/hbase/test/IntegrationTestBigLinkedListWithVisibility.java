@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -128,7 +129,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     protected void createSchema() throws IOException {
       LOG.info("Creating tables");
       // Create three tables
-      boolean acl = AccessControlClient.isAccessControllerRunning(getConf());
+      boolean acl = AccessControlClient.isAccessControllerRunning(ConnectionFactory
+          .createConnection(getConf()));
       if(!acl) {
         LOG.info("No ACL available.");
       }
@@ -156,8 +158,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
           LOG.info("Granting permissions for user " + USER.getShortName());
           Permission.Action[] actions = { Permission.Action.READ };
           try {
-            AccessControlClient.grant(getConf(), tableName, USER.getShortName(), null, null,
-                actions);
+            AccessControlClient.grant(ConnectionFactory.createConnection(getConf()), tableName,
+                USER.getShortName(), null, null, actions);
           } catch (Throwable e) {
             LOG.fatal("Error in granting permission for the user " + USER.getShortName(), e);
             throw new IOException(e);
