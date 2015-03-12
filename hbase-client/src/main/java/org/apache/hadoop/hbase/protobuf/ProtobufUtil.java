@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsReques
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -1730,6 +1731,26 @@ public final class ProtobufUtil {
     }
   }
 
+  /**
+   * A helper to warmup a region given a region name
+   * using admin protocol
+   *
+   * @param admin
+   * @param regionInfo
+   *
+   */
+  public static void warmupRegion(final AdminService.BlockingInterface admin,
+      final HRegionInfo regionInfo) throws IOException  {
+
+    try {
+      WarmupRegionRequest warmupRegionRequest =
+           RequestConverter.buildWarmupRegionRequest(regionInfo);
+
+      admin.warmupRegion(null, warmupRegionRequest);
+    } catch (ServiceException e) {
+      throw getRemoteException(e);
+    }
+  }
 
   /**
    * A helper to open a region using admin protocol.
@@ -1747,6 +1768,7 @@ public final class ProtobufUtil {
       throw ProtobufUtil.getRemoteException(se);
     }
   }
+
 
   /**
    * A helper to get the all the online regions on a region

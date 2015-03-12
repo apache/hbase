@@ -816,6 +816,27 @@ public class ServerManager {
   }
 
   /**
+   * Sends a WARMUP RPC to the specified server to warmup the specified region.
+   * <p>
+   * A region server could reject the close request because it either does not
+   * have the specified region or the region is being split.
+   * @param server server to warmup a region
+   * @param region region to  warmup
+   */
+  public void sendRegionWarmup(ServerName server,
+      HRegionInfo region) {
+    if (server == null) return;
+    try {
+      AdminService.BlockingInterface admin = getRsAdmin(server);
+      ProtobufUtil.warmupRegion(admin, region);
+    } catch (IOException e) {
+      LOG.error("Received exception in RPC for warmup server:" +
+        server + "region: " + region +
+        "exception: " + e);
+    }
+  }
+
+  /**
    * Contacts a region server and waits up to timeout ms
    * to close the region.  This bypasses the active hmaster.
    */

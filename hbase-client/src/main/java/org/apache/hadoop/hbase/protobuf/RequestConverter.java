@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -866,6 +867,16 @@ public final class RequestConverter {
     return builder.build();
   }
 
+  /**
+   *  Create a WarmupRegionRequest for a given region name
+   *
+   *  @param regionInfo Region we are warming up
+   */
+  public static WarmupRegionRequest buildWarmupRegionRequest(final HRegionInfo regionInfo) {
+    WarmupRegionRequest.Builder builder = WarmupRegionRequest.newBuilder();
+    builder.setRegionInfo(HRegionInfo.convert(regionInfo));
+    return builder.build();
+  }
  /**
   * Create a CloseRegionRequest for a given encoded region name
   *

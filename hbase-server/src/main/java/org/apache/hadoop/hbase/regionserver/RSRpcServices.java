@@ -108,6 +108,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest.RegionOpenInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse.RegionOpeningState;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
@@ -1450,6 +1452,57 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
     return builder.build();
+  }
+
+  /**
+   *  Wamrmup a region on this server.
+   *
+   * This method should only be called by Master. It synchrnously opens the region and
+   * closes the region bringing the most important pages in cache.
+   * <p>
+   *
+   * @param controller the RPC controller
+   * @param request the request
+   * @throws ServiceException
+   */
+  public WarmupRegionResponse warmupRegion(final RpcController controller,
+      final WarmupRegionRequest request) throws ServiceException {
+
+    RegionInfo regionInfo = request.getRegionInfo();
+    final HRegionInfo region = HRegionInfo.convert(regionInfo);
+    HTableDescriptor htd;
+    WarmupRegionResponse response = WarmupRegionResponse.getDefaultInstance();
+
+    try {
+      String encodedName = region.getEncodedName();
+      byte[] encodedNameBytes = region.getEncodedNameAsBytes();
+      final HRegion onlineRegion = regionServer.getFromOnlineRegions(encodedName);
+
+      if (onlineRegion != null) {
+        LOG.info("Region already online. Skipping warming up " + region);
+        return response;
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Warming up Region " + region.getRegionNameAsString());
+      }
+
+      htd = regionServer.tableDescriptors.get(region.getTable());
+
+      if (regionServer.getRegionsInTransitionInRS().containsKey(encodedNameBytes)) {
+        LOG.info("Region is in transition. Skipping warmup " + region);
+        return response;
+      }
+
+      HRegion.warmupHRegion(region, htd, regionServer.getWAL(region),
+          regionServer.getConfiguration(), regionServer, null);
+
+    } catch (IOException ie) {
+      LOG.error("Failed warming up region " + region.getRegionNameAsString(), ie);
+      throw new ServiceException(ie);
+    }
+
+    return response;
   }
 
   /**

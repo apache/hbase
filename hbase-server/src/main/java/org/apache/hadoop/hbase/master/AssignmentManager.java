@@ -3394,6 +3394,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param plan Plan to execute.
    */
   public void balance(final RegionPlan plan) {
+
     HRegionInfo hri = plan.getRegionInfo();
     TableName tableName = hri.getTable();
     if (tableStateManager.isTableState(tableName,
