@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 @InterfaceAudience.Private
 public class ModifyTableHandler extends TableEventHandler {
@@ -84,6 +85,10 @@ public class ModifyTableHandler extends TableEventHandler {
     deleteFamilyFromFS(hris, oldHtd.getFamiliesKeys());
     removeReplicaColumnsIfNeeded(this.htd.getRegionReplication(), oldHtd.getRegionReplication(),
         htd.getTableName());
+    // Setup replication for region replicas if needed
+    if (htd.getRegionReplication() > 1 && oldHtd.getRegionReplication() <= 1) {
+      ServerRegionReplicaUtil.setupRegionReplicaReplication(server.getConfiguration());
+    }
     if (cpHost != null) {
       cpHost.postModifyTableHandler(this.tableName, this.htd);
     }
