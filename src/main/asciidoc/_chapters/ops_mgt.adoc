@@ -1787,7 +1787,7 @@ To copy a snapshot called MySnapshot to an HBase cluster srv2 (hdfs:///srv2:8082
 
 [source,bourne]
 ----
-$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16
+$ bin/hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16
 ----
 
 .Limiting Bandwidth Consumption
@@ -1796,7 +1796,7 @@ The following example limits the above example to 200 MB/sec.
 
 [source,bourne]
 ----
-$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200
+$ bin/hbase org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200
 ----
 
 [[ops.capacity]]
