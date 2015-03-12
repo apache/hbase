@@ -86,31 +86,26 @@ public class TableNamespaceManager {
 
   public void start() throws IOException {
     if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
-        TableName.NAMESPACE_TABLE_NAME)) {
+      TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }
 
     try {
-      // Wait for the namespace table to be assigned.
-      // If timed out, we will move ahead without initializing it.
-      // So that it should be initialized later on lazily.
+      // Wait for the namespace table to be initialized.
       long startTime = EnvironmentEdgeManager.currentTime();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
-      while (!(isTableAssigned() && isTableEnabled())) {
+      while (!isTableAvailableAndInitialized()) {
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
           // We can't do anything if ns is not online.
-          throw new IOException("Timedout " + timeout + "ms waiting for namespace table to " +
-            "be assigned and enabled: " + getTableState());
+          throw new IOException("Timedout " + timeout + "ms waiting for namespace table to "
+              + "be assigned and enabled: " + getTableState());
         }
         Thread.sleep(100);
       }
     } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
-
-    // initialize namespace table
-    isTableAvailableAndInitialized();
   }
 
   private synchronized Table getNamespaceTable() throws IOException {

@@ -102,12 +102,7 @@ public class TestNamespaceAuditor {
     conf.setClass("hbase.coprocessor.regionserver.classes", CPRegionServerObserver.class,
       RegionServerObserver.class);
     UTIL.startMiniCluster(1, 1);
-    UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
-        return UTIL.getHBaseCluster().getMaster().getMasterQuotaManager().isQuotaEnabled();
-      }
-    });
+    waitForQuotaEnabled();
     ADMIN = UTIL.getHBaseAdmin();
   }
 
@@ -543,10 +538,7 @@ public class TestNamespaceAuditor {
         .getTables().size(), after.getTables().size());
   }
 
-  private void restartMaster() throws Exception {
-    UTIL.getHBaseCluster().getMaster(0).stop("Stopping to start again");
-    UTIL.getHBaseCluster().waitOnMaster(0);
-    UTIL.getHBaseCluster().startMaster();
+  private static void waitForQuotaEnabled() throws Exception {
     UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -558,6 +550,13 @@ public class TestNamespaceAuditor {
         return quotaManager != null && quotaManager.isQuotaEnabled();
       }
     });
+  }
+
+  private void restartMaster() throws Exception {
+    UTIL.getHBaseCluster().getMaster(0).stop("Stopping to start again");
+    UTIL.getHBaseCluster().waitOnMaster(0);
+    UTIL.getHBaseCluster().startMaster();
+    waitForQuotaEnabled();
   }
 
   private NamespaceAuditor getQuotaManager() {

@@ -288,7 +288,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // monitor for distributed procedures
   MasterProcedureManagerHost mpmHost;
 
-  private MasterQuotaManager quotaManager;
+  // it is assigned after 'initialized' guard set to true, so should be volatile
+  private volatile MasterQuotaManager quotaManager;
 
   // handle table states
   private TableStateManager tableStateManager;
@@ -897,9 +898,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   void initQuotaManager() throws IOException {
-    quotaManager = new MasterQuotaManager(this);
+    MasterQuotaManager quotaManager = new MasterQuotaManager(this);
     this.assignmentManager.setRegionStateListener((RegionStateListener)quotaManager);
     quotaManager.start();
+    this.quotaManager = quotaManager;
   }
 
   boolean isCatalogJanitorEnabled() {

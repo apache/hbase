@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.namespace;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,7 +30,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -55,19 +53,6 @@ public class NamespaceAuditor {
 
   public void start() throws IOException {
     stateManager.start();
-    long startTime = EnvironmentEdgeManager.currentTime();
-    int timeout = masterServices.getConfiguration().getInt(NS_AUDITOR_INIT_TIMEOUT,
-      DEFAULT_NS_AUDITOR_INIT_TIMEOUT);
-    try {
-      while (!stateManager.isInitialized()) {
-        if (EnvironmentEdgeManager.currentTime() - startTime + 1000 > timeout) {
-          throw new HBaseIOException("Timed out waiting for namespace auditor to be initialized.");
-        }
-        Thread.sleep(1000);
-      }
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
-    }
     LOG.info("NamespaceAuditor started.");
   }
 

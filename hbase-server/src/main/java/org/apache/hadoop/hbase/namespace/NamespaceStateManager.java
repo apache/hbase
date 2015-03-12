@@ -183,27 +183,22 @@ class NamespaceStateManager {
   /**
    * Initialize namespace state cache by scanning meta table.
    */
-  void initialize() {
-    try {
-      List<NamespaceDescriptor> namespaces = this.master.listNamespaceDescriptors();
-      for (NamespaceDescriptor namespace : namespaces) {
-        addNamespace(namespace.getName());
-        List<TableName> tables = this.master.listTableNamesByNamespace(namespace.getName());
-        for (TableName table : tables) {
-          if (table.isSystemTable()) {
-            continue;
-          }
-          List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(
-              this.master.getConnection(), table, true);
-          addTable(table, regions.size());
+  private void initialize() throws IOException {
+    List<NamespaceDescriptor> namespaces = this.master.listNamespaceDescriptors();
+    for (NamespaceDescriptor namespace : namespaces) {
+      addNamespace(namespace.getName());
+      List<TableName> tables = this.master.listTableNamesByNamespace(namespace.getName());
+      for (TableName table : tables) {
+        if (table.isSystemTable()) {
+          continue;
         }
+        List<HRegionInfo> regions =
+            MetaTableAccessor.getTableRegions(this.master.getConnection(), table, true);
+        addTable(table, regions.size());
       }
-      LOG.info("Finished updating state of " + nsStateCache.size() + " namespaces. ");
-      initialized = true;
-    } catch (IOException e) {
-      LOG.error("Error while update namespace state.", e);
-      initialized = false;
     }
+    LOG.info("Finished updating state of " + nsStateCache.size() + " namespaces. ");
+    initialized = true;
   }
 
   boolean isInitialized() {
