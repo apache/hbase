@@ -31,13 +31,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -70,6 +66,7 @@ public class TestMobStoreScanner {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
     TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
+    TEST_UTIL.getConfiguration().setInt("hbase.client.keyvalue.maxsize", 100*1024*1024);
 
     TEST_UTIL.startMiniCluster(1);
   }
@@ -134,6 +131,26 @@ public class TestMobStoreScanner {
     testGetReferences(true);
     testMobThreshold(true);
     testGetFromArchive(true);
+  }
+
+  @Test(timeout=60000)
+  public void testGetMassive() throws Exception {
+    String TN = "testGetMassive";
+    setUp(defaultThreshold, TN);
+
+    // Put some data 5 10, 15, 20  mb ok  (this would be right below protobuf default max size of 64MB.
+    // 25, 30, 40 fail.  these is above protobuf max size of 64MB
+    byte[] bigValue = new byte[25*1024*1024];
+
+    Put put = new Put(row1);
+    put.add(family, qf1, bigValue);
+    put.add(family, qf2, bigValue);
+    put.add(family, qf3, bigValue);
+    table.put(put);
+
+    Get g = new Get(row1);
+    Result r = table.get(g);
+    // should not have blown up.
   }
 
   public void testGetFromFiles(boolean reversed) throws Exception {

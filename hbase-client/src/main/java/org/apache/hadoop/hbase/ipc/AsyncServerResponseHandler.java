@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.ipc.RemoteException;
 
@@ -92,7 +93,7 @@ public class AsyncServerResponseHandler extends ChannelInboundHandlerAdapter {
         // Call may be null because it may have timedout and been cleaned up on this side already
         if (call.responseDefaultType != null) {
           Message.Builder builder = call.responseDefaultType.newBuilderForType();
-          builder.mergeDelimitedFrom(in);
+          ProtobufUtil.mergeDelimitedFrom(builder, in);
           value = builder.build();
         }
         CellScanner cellBlockScanner = null;
