@@ -214,9 +214,9 @@
     <!-- General Resources -->
     <pluginManagement>
        <plugins>
-          <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no
-          influence on the Maven build itself and needs to be kept in plugin management, not in
-          the actual plugins. -->
+         <!--This plugin's configuration is used to store Eclipse m2e settings
+             only. It has no influence on the Maven build itself and needs to
+             be kept in plugin management, not in the actual plugins. -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
@@ -254,6 +254,32 @@
                       <runOnIncremental>false</runOnIncremental>
                       <runOnConfiguration>true</runOnConfiguration>
                     </execute>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <versionRange>[2.8,)</versionRange>
+                    <goals>
+                      <goal>build-classpath</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <versionRange>[3.2,)</versionRange>
+                    <goals>
+                      <goal>compile</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
                   </action>
                 </pluginExecution>
               </pluginExecutions>
