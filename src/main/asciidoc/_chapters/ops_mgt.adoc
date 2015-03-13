@@ -1295,14 +1295,8 @@ Instead of SQL statements, entire WALEdits (consisting of multiple cell inserts 
 . All hosts in the source and destination clusters should be reachable to each other.
 . If both clusters use the same ZooKeeper cluster, you must use a different `zookeeper.znode.parent`, because they cannot write in the same folder.
 . Check to be sure that replication has not been disabled. `hbase.replication` defaults to `true`.
-. On the source cluster, configure each column family to be replicated by setting its REPLICATION_SCOPE to 1, using commands such as the following in HBase Shell.
-+
-----
-hbase> disable 'example_table'
-hbase> alter 'example_table', {NAME => 'example_family', REPLICATION_SCOPE => '1'}
-hbase> enable 'example_table'
-----
 . On the source cluster, in HBase Shell, add the destination cluster as a peer, using the `add_peer` command.
+. On the source cluster, in HBase Shell, enable the table replication, using the `enable_table_replication` command.
 . Check the logs to see if replication is taking place. If so, you will see messages like the following, coming from the ReplicationSource.
 ----
 LOG.info("Replicating "+clusterId + " -> " + peerClusterId);
@@ -1320,6 +1314,10 @@ disable_peer <ID>::
   Disable a replication relationship. HBase will no longer send edits to that peer cluster, but it still keeps track of all the new WALs that it will need to replicate if and when it is re-enabled. 
 remove_peer <ID>::
   Disable and remove a replication relationship. HBase will no longer send edits to that peer cluster or keep track of WALs.
+enable_table_replication <TABLE_NAME>::
+  Enable the table replication switch for all it's column families. If the table is not found in the destination cluster then it will create one with the same name and column families. 
+disable_table_replication <TABLE_NAME>::
+  Disable the table replication switch for all it's column families. 
 
 === Verifying Replicated Data
 
