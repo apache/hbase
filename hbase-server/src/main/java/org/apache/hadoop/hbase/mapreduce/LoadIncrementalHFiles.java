@@ -207,7 +207,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       byte[] family = familyDir.getName().getBytes();
       FileStatus[] hfileStatuses = fs.listStatus(familyDir);
       for (FileStatus hfileStatus : hfileStatuses) {
-        if (!hfileStatus.isFile()) {
+        if (!fs.isFile(hfileStatus.getPath())) {
           LOG.warn("Skipping non-file " + hfileStatus);
           continue;
         }
