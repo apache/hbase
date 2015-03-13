@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.ZooDefs;
@@ -41,6 +42,7 @@ import org.apache.zookeeper.WatchedEvent;
  *    "hbase.zookeeper.quorum"    (it should be in hbase-site.xml)
  *    "zookeeper.znode.parent"    (it should be in hbase-site.xml)
  */
+@InterfaceAudience.Private
 public class ZkAclReset extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(ZkAclReset.class);
 
