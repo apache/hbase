@@ -31,7 +31,7 @@
 #   HBASE_SSH_OPTS Options passed to ssh when running remote commands.
 #
 
-usage="Usage: hbase-cleanup.sh (--cleanZk|--cleanHdfs|--cleanAll)"
+usage="Usage: hbase-cleanup.sh (--cleanZk|--cleanHdfs|--cleanAll|--cleanAcls)"
 
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
@@ -40,7 +40,7 @@ bin=`cd "$bin">/dev/null; pwd`
 . "$bin"/hbase-config.sh
 
 case $1 in
-  --cleanZk|--cleanHdfs|--cleanAll) 
+  --cleanZk|--cleanHdfs|--cleanAll|--cleanAcls)
     matches="yes" ;;
   *) ;;
 esac
@@ -90,6 +90,11 @@ execute_hdfs_command() {
   "$bin"/hbase org.apache.hadoop.fs.FsShell $command 2>&1
 }
 
+execute_clean_acls() {
+  command=$1;
+  "$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZkAclReset $command 2>&1
+}
+
 clean_up() {
   case $1 in
   --cleanZk) 
@@ -101,6 +106,9 @@ clean_up() {
   --cleanAll)
     execute_zk_command "rmr ${zparent}";
     execute_hdfs_command "-rmr ${hrootdir}"
+    ;;
+  --cleanAcls)
+    execute_clean_acls;
     ;;
   *)
     ;;
