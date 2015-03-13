@@ -308,8 +308,9 @@ public class TestLoadIncrementalHFiles {
   }
 
   /**
-   * Write a random data file in a dir with a valid family name but not part of the table families
-   * we should we able to bulkload without getting the unmatched family exception. HBASE-13037
+   * Write a random data file and a non-file in a dir with a valid family name
+   * but not part of the table families. we should we able to bulkload without
+   * getting the unmatched family exception. HBASE-13037/HBASE-13227
    */
   @Test(timeout = 60000)
   public void testNonHfileFolderWithUnmatchedFamilyName() throws Exception {
@@ -324,6 +325,7 @@ public class TestLoadIncrementalHFiles {
     final String NON_FAMILY_FOLDER = "_logs";
     Path nonFamilyDir = new Path(dir, NON_FAMILY_FOLDER);
     fs.mkdirs(nonFamilyDir);
+    fs.mkdirs(new Path(nonFamilyDir, "non-file"));
     createRandomDataFile(fs, new Path(nonFamilyDir, "012356789"), 16 * 1024);
 
     Table table = null;

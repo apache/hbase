@@ -209,6 +209,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       byte[] family = familyDir.getName().getBytes();
       FileStatus[] hfileStatuses = fs.listStatus(familyDir);
       for (FileStatus hfileStatus : hfileStatuses) {
+        if (!hfileStatus.isFile()) {
+          LOG.warn("Skipping non-file " + hfileStatus);
+          continue;
+        }
         long length = hfileStatus.getLen();
         Path hfile = hfileStatus.getPath();
         // Skip "_", reference, HFileLink
@@ -293,10 +297,18 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         LoadQueueItem lqi = queueIter.next();
         String familyNameInHFile = Bytes.toString(lqi.family);
         if (!familyNames.contains(familyNameInHFile)) {
-          if (HFile.isHFileFormat(lqi.hfilePath.getFileSystem(getConf()), lqi.hfilePath)) {
+          boolean isValid = false;
+          try {
+            isValid = HFile.isHFileFormat(lqi.hfilePath.getFileSystem(getConf()), lqi.hfilePath);
+            if (!isValid) {
+              LOG.warn("the file " + lqi + " doesn't seems to be an hfile. skipping");
+            }
+          } catch (FileNotFoundException e) {
+            LOG.warn("the file " + lqi + " was removed");
+          }
+          if (isValid) {
             unmatchedFamilies.add(familyNameInHFile);
           } else {
-            LOG.warn("the file " + lqi + " doesn't seems to be an hfile. skipping");
             queueIter.remove();
           }
         }
