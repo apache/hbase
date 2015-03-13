@@ -802,7 +802,7 @@ final class ConnectionManager {
           keepAliveTime,
           TimeUnit.SECONDS,
           workQueue,
-          Threads.newDaemonThreadFactory(toString() + "-shared-"));
+          Threads.newDaemonThreadFactory(toString() + nameHint));
       tpe.allowCoreThreadTimeOut(true);
       return tpe;
     }
