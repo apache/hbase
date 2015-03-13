@@ -25,6 +25,10 @@
     <section name="Welcome to Apache HBase&#153;">
         <p><a href="http://www.apache.org/">Apache</a> HBase&#153; is the <a href="http://hadoop.apache.org">Hadoop</a> database, a distributed, scalable, big data store.
     </p>
+    <h4>Download Apache HBase</h4>
+    <p>
+    Click <b><a href="http://www.apache.org/dyn/closer.cgi/hbase/">here</a></b> to download Apache HBase.
+    </p>
     <h4>When Would I Use Apache HBase?</h4>
     <p>
     Use Apache HBase when you need random, realtime read/write access to your Big Data.
