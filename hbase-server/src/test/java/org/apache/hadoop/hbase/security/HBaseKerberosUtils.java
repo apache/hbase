@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.google.common.base.Strings;
 
+@InterfaceAudience.Private
 public class HBaseKerberosUtils {
   public static final String KRB_PRINCIPAL = "hbase.regionserver.kerberos.principal";
   public static final String MASTER_KRB_PRINCIPAL = "hbase.master.kerberos.principal";
