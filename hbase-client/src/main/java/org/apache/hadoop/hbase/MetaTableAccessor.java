@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -263,7 +263,7 @@ public class MetaTableAccessor {
     // There should still be a way to use this method with an unmanaged connection.
     if (connection instanceof ClusterConnection) {
       if (((ClusterConnection) connection).isManaged()) {
-        return new HTable(TableName.META_TABLE_NAME, connection);
+        throw new NeedUnmanagedConnectionException();
       }
     }
     return connection.getTable(TableName.META_TABLE_NAME);

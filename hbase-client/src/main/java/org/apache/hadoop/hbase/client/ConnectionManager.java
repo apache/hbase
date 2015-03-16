@@ -286,11 +286,11 @@ final class ConnectionManager {
     synchronized (CONNECTION_INSTANCES) {
       HConnectionImplementation connection = CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = (HConnectionImplementation)createConnection(conf, true);
+        connection = (HConnectionImplementation) ConnectionFactory.createConnection(conf);
         CONNECTION_INSTANCES.put(connectionKey, connection);
       } else if (connection.isClosed()) {
         ConnectionManager.deleteConnection(connectionKey, true);
-        connection = (HConnectionImplementation)createConnection(conf, true);
+        connection = (HConnectionImplementation) ConnectionFactory.createConnection(conf);
         CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       connection.incCount();

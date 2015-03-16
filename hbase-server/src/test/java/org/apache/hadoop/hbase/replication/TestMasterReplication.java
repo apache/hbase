@@ -37,11 +37,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -350,7 +350,7 @@ public class TestMasterReplication {
     int numClusters = utilities.length;
     Table[] htables = new Table[numClusters];
     for (int i = 0; i < numClusters; i++) {
-      Table htable = new HTable(configurations[i], tableName);
+      Table htable = ConnectionFactory.createConnection(configurations[i]).getTable(tableName);
       htable.setWriteBufferSize(1024);
       htables[i] = htable;
     }

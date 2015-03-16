@@ -128,78 +128,6 @@ public class HTable implements HTableInterface {
   private RpcRetryingCallerFactory rpcCallerFactory;
   private RpcControllerFactory rpcControllerFactory;
 
-  /**
-   * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final String tableName)
-  throws IOException {
-    this(conf, TableName.valueOf(tableName));
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final byte[] tableName)
-  throws IOException {
-    this(conf, TableName.valueOf(tableName));
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName table name pojo
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final TableName tableName)
-  throws IOException {
-    this.tableName = tableName;
-    this.cleanupPoolOnClose = true;
-    this.cleanupConnectionOnClose = true;
-    if (conf == null) {
-      this.connection = null;
-      return;
-    }
-    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
-    this.configuration = conf;
-
-    this.pool = getDefaultExecutor(conf);
-    this.finishSetup();
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param tableName Name of the table.
-   * @param connection HConnection to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Do not use.
-   */
-  @Deprecated
-  public HTable(TableName tableName, Connection connection) throws IOException {
-    this.tableName = tableName;
-    this.cleanupPoolOnClose = true;
-    this.cleanupConnectionOnClose = false;
-    this.connection = (ClusterConnection)connection;
-    this.configuration = connection.getConfiguration();
-
-    this.pool = getDefaultExecutor(this.configuration);
-    this.finishSetup();
-  }
-
   // Marked Private @since 1.0
   @InterfaceAudience.Private
   public static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
@@ -221,68 +149,6 @@ public class HTable implements HTableInterface {
 
   /**
    * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final byte[] tableName, final ExecutorService pool)
-      throws IOException {
-    this(conf, TableName.valueOf(tableName), pool);
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
-      throws IOException {
-    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
-    this.configuration = conf;
-    this.pool = pool;
-    if (pool == null) {
-      this.pool = getDefaultExecutor(conf);
-      this.cleanupPoolOnClose = true;
-    } else {
-      this.cleanupPoolOnClose = false;
-    }
-    this.tableName = tableName;
-    this.cleanupConnectionOnClose = true;
-    this.finishSetup();
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param tableName Name of the table.
-   * @param connection HConnection to be used.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs.
-   * @deprecated Do not use, internal ctor.
-   */
-  @Deprecated
-  public HTable(final byte[] tableName, final Connection connection,
-      final ExecutorService pool) throws IOException {
-    this(TableName.valueOf(tableName), connection, pool);
-  }
-
-  /** @deprecated Do not use, internal ctor. */
-  @Deprecated
-  public HTable(TableName tableName, final Connection connection,
-      final ExecutorService pool) throws IOException {
-    this(tableName, (ClusterConnection)connection, null, null, null, pool);
-  }
-
-  /**
-   * Creates an object to access a HBase table.
    * Used by HBase internally.  DO NOT USE. See {@link ConnectionFactory} class comment for how to
    * get a {@link Table} instance (use {@link Table} instead of {@link HTable}).
    * @param tableName Name of the table.
@@ -291,7 +157,7 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    */
   @InterfaceAudience.Private
-  public HTable(TableName tableName, final ClusterConnection connection,
+  protected HTable(TableName tableName, final ClusterConnection connection,
       final TableConfiguration tableConfig,
       final RpcRetryingCallerFactory rpcCallerFactory,
       final RpcControllerFactory rpcControllerFactory,

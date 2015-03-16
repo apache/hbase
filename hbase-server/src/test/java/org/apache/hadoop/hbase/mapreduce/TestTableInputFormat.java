@@ -412,10 +412,10 @@ public class TestTableInputFormat {
     @Override
     public void configure(JobConf job) {
       try {
-        HTable exampleTable = new HTable(HBaseConfiguration.create(job),
-          Bytes.toBytes("exampleDeprecatedTable"));
+        Connection connection = ConnectionFactory.createConnection(job);
+        Table exampleTable = connection.getTable(TableName.valueOf(("exampleDeprecatedTable")));
         // mandatory
-        setHTable(exampleTable);
+        initializeTable(connection, exampleTable.getName());
         byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
           Bytes.toBytes("columnB") };
         // optional

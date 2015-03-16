@@ -1034,7 +1034,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
     // Don't leave here till we've done a successful scan of the hbase:meta
-    Table t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
+    Connection conn = ConnectionFactory.createConnection(this.conf);
+    Table t = conn.getTable(TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
       // do nothing
@@ -1042,6 +1043,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     LOG.info("HBase has been restarted");
     s.close();
     t.close();
+    conn.close();
   }
 
   /**

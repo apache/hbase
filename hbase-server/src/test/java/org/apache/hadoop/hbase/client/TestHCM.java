@@ -952,10 +952,8 @@ public class TestHCM {
 
     c3.close();
     // still a reference left
-    assertFalse(c3.isClosed());
-    c3.close();
     assertTrue(c3.isClosed());
-    // c3 was removed from the cache
+    
     Connection c5 = HConnectionManager.getConnection(configuration);
     assertTrue(c5 != c3);
 

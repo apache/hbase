@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 
 /**
  * Coprocessor environment state.
@@ -50,14 +50,14 @@ public interface CoprocessorEnvironment {
    * @return an interface for accessing the given table
    * @throws IOException
    */
-  HTableInterface getTable(TableName tableName) throws IOException;
+  Table getTable(TableName tableName) throws IOException;
 
   /**
    * @return an interface for accessing the given table using the passed executor to run batch
    *         operations
    * @throws IOException
    */
-  HTableInterface getTable(TableName tableName, ExecutorService service) throws IOException;
+  Table getTable(TableName tableName, ExecutorService service) throws IOException;
 
   /**
    * @return the classloader for the loaded coprocessor instance

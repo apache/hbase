@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTableWrapper;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -377,8 +377,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     /** Current coprocessor state */
     Coprocessor.State state = Coprocessor.State.UNINSTALLED;
     /** Accounting for tables opened by the coprocessor */
-    protected List<HTableInterface> openTables =
-      Collections.synchronizedList(new ArrayList<HTableInterface>());
+    protected List<Table> openTables =
+      Collections.synchronizedList(new ArrayList<Table>());
     private int seq;
     private Configuration conf;
     private ClassLoader classLoader;
@@ -438,7 +438,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
             " because not active (state="+state.toString()+")");
       }
       // clean up any table references
-      for (HTableInterface table: openTables) {
+      for (Table table: openTables) {
         try {
           ((HTableWrapper)table).internalClose();
         } catch (IOException e) {
@@ -493,7 +493,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      * @exception java.io.IOException Exception
      */
     @Override
-    public HTableInterface getTable(TableName tableName) throws IOException {
+    public Table getTable(TableName tableName) throws IOException {
       return this.getTable(tableName, HTable.getDefaultExecutor(getConfiguration()));
     }
 
@@ -504,7 +504,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      * @exception java.io.IOException Exception
      */
     @Override
-    public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
+    public Table getTable(TableName tableName, ExecutorService pool) throws IOException {
       return HTableWrapper.createWrapper(openTables, tableName, this, pool);
     }
   }

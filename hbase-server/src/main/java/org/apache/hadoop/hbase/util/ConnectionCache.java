@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -146,7 +146,7 @@ public class ConnectionCache {
   /**
    * Caller closes the table afterwards.
    */
-  public HTableInterface getTable(String tableName) throws IOException {
+  public Table getTable(String tableName) throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
     return connInfo.connection.getTable(tableName);
   }

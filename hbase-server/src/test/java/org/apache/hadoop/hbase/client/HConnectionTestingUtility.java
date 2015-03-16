@@ -161,7 +161,7 @@ public class HConnectionTestingUtility {
       HConnectionImplementation connection =
           ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = Mockito.spy(new HConnectionImplementation(conf, true));
+        connection = Mockito.spy(new HConnectionImplementation(conf, false));
         ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;
@@ -175,7 +175,7 @@ public class HConnectionTestingUtility {
       HConnectionImplementation connection =
           ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = Mockito.spy(new HConnectionImplementation(conf, true));
+        connection = Mockito.spy(new HConnectionImplementation(conf, false));
         ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;

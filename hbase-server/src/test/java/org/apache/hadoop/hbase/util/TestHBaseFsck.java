@@ -1219,7 +1219,7 @@ public class TestHBaseFsck {
       HTableDescriptor desc = new HTableDescriptor(table);
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes("f")));
       admin.createTable(desc);
-      tbl = new HTable(cluster.getConfiguration(), desc.getTableName());
+      tbl = (HTable) connection.getTable(desc.getTableName());
       for (int i = 0; i < 5; i++) {
         Put p1 = new Put(("r" + i).getBytes());
         p1.add(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());

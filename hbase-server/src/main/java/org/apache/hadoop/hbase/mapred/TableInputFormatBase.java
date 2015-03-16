@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -83,7 +84,8 @@ public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, Result> {
   private static final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
   private byte [][] inputColumns;
-  private HTable table;
+  private Table table;
+  private RegionLocator regionLocator;
   private Connection connection;
   private TableRecordReader tableRecordReader;
   private Filter rowFilter;
@@ -197,7 +199,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       throw new IOException(INITIALIZATION_ERROR, exception);
     }
 
-    byte [][] startKeys = this.table.getStartKeys();
+    byte [][] startKeys = this.regionLocator.getStartKeys();
     if (startKeys == null || startKeys.length == 0) {
       throw new IOException("Expecting at least one region");
     }
@@ -212,7 +214,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     for (int i = 0; i < realNumSplits; i++) {
       int lastPos = startPos + middle;
       lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
-      String regionLocation = table.getRegionLocation(startKeys[startPos]).
+      String regionLocation = regionLocator.getRegionLocation(startKeys[startPos]).
         getHostname();
       splits[i] = new TableSplit(this.table.getName(),
         startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]:
@@ -235,7 +237,8 @@ implements InputFormat<ImmutableBytesWritable, Result> {
       LOG.warn("initializeTable called multiple times. Overwriting connection and table " +
           "reference; TableInputFormatBase will not close these old references when done.");
     }
-    this.table = (HTable) connection.getTable(tableName);
+    this.table = connection.getTable(tableName);
+    this.regionLocator = connection.getRegionLocator(tableName);
     this.connection = connection;
   }
 
