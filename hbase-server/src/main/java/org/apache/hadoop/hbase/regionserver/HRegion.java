@@ -5538,13 +5538,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         state = nextInternal(tmpList, batchLimit, remainingResultSize);
         outResults.addAll(tmpList);
       }
-      // State should never be null, this is a precautionary measure
-      if (state == null) {
-        if (LOG.isTraceEnabled()) LOG.trace("State was null. Defaulting to no more values state");
-        state = NextState.makeState(NextState.State.NO_MORE_VALUES);
+      // Invalid states should never be returned. Receiving an invalid state means that we have
+      // no clue how to proceed. Throw an exception.
+      if (!NextState.isValidState(state)) {
+        throw new IOException("Invalid state returned from nextInternal. state:" + state);
       }
 
-      resetFilters();
+      // If the size limit was reached it means a partial Result is being returned. Returning a
+      // partial Result means that we should not reset the filters; filters should only be reset in
+      // between rows
+      if (!state.sizeLimitReached()) resetFilters();
+
       if (isFilterDoneInternal()) {
         state = NextState.makeState(NextState.State.NO_MORE_VALUES, state.getResultSize());
       }

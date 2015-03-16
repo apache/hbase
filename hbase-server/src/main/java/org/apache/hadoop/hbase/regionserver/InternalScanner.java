@@ -201,6 +201,11 @@ public interface InternalScanner extends Closeable {
       return resultSize >= 0;
     }
 
+    @Override
+    public String toString() {
+      return "State: " + state + " resultSize: " + resultSize;
+    }
+
     /**
      * Helper method to centralize all checks as to whether or not the state is valid.
      * @param state
