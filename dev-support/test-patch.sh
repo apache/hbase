@@ -361,6 +361,16 @@ checkTests () {
         return 0
       fi
     fi
+    srcReferences=`${GREP} "diff --git" "${PATCH_DIR}/patch" | ${GREP} "src/main" | \
+        ${GREP} -v "src/main/asciidoc" | ${GREP} -v "src/main/site" -c`
+    if [[ $srcReferences == 0 ]] ; then
+      echo "The patch doesn't appear to alter any code that requires tests."
+      JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+0 tests included{color}.  The patch appears to be a documentation, build,
+                        or dev-support patch that doesn't require tests."
+      return 0
+    fi
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 tests included{color}.  The patch doesn't appear to include any new or modified tests.
