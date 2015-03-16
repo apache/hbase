@@ -285,7 +285,10 @@ public class TestAccessController extends SecureTestUtil {
     }
     // Verify all table/namespace permissions are erased
     assertEquals(0, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
-    assertEquals(0, AccessControlLists.getNamespacePermissions(conf, TEST_TABLE.getTableName().getNameAsString()).size());
+    assertEquals(
+      0,
+      AccessControlLists.getNamespacePermissions(conf,
+        TEST_TABLE.getTableName().getNamespaceAsString()).size());
   }
 
   @Test
@@ -2084,7 +2087,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction getAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
         try {
           return t.get(new Get(TEST_ROW));
         } finally {
@@ -2095,13 +2098,17 @@ public class TestAccessController extends SecureTestUtil {
 
     verifyDenied(getAction, USER_NONE);
 
+    String namespace = "testNamespaceUserGrant";
+    NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
+    TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
+    
     // Grant namespace READ to USER_NONE, this should supersede any table permissions
-    grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(),
-      TEST_TABLE.getTableName().getNamespaceAsString(),
-      Permission.Action.READ);
+    grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
 
     // Now USER_NONE should be able to read also
     verifyAllowed(getAction, USER_NONE);
+    
+    TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(namespace);
   }
 
   @Test
@@ -2299,7 +2306,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction execEndpointAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
         try {
           BlockingRpcChannel service = t.coprocessorService(HConstants.EMPTY_BYTE_ARRAY);
           PingCoprocessor.newBlockingStub(service).noop(null, NoopRequest.newBuilder().build());
@@ -2313,14 +2320,18 @@ public class TestAccessController extends SecureTestUtil {
     // Verify that EXEC permission is checked correctly
     verifyDenied(execEndpointAction, userB);
     verifyAllowed(execEndpointAction, userA);
+    
+    String namespace = "testCoprocessorExec";
+    NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
+    TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
 
     // Now grant EXEC to the entire namespace to user B
-    grantOnNamespace(TEST_UTIL, userB.getShortName(),
-      TEST_TABLE.getTableName().getNamespaceAsString(),
-      Permission.Action.EXEC);
+    grantOnNamespace(TEST_UTIL, userB.getShortName(), namespace, Permission.Action.EXEC);
 
     // User B should now be allowed also
     verifyAllowed(execEndpointAction, userA, userB);
+    
+    TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(namespace);
   }
 
   @Test
