@@ -367,7 +367,7 @@ class MemStoreFlusher implements FlushRequester {
    * on delay queue to retry later.
    * @param fqe
    * @return true if the region was successfully flushed, false otherwise. If
-   * false, there will be accompanying log messages explaining why the log was
+   * false, there will be accompanying log messages explaining why the region was
    * not flushed.
    */
   private boolean flushRegion(final FlushRegionEntry fqe) {
@@ -416,7 +416,7 @@ class MemStoreFlusher implements FlushRequester {
    * poll on the flush queue (which removed it).
    *
    * @return true if the region was successfully flushed, false otherwise. If
-   * false, there will be accompanying log messages explaining why the log was
+   * false, there will be accompanying log messages explaining why the region was
    * not flushed.
    */
   private boolean flushRegion(final HRegion region, final boolean emergencyFlush) {
