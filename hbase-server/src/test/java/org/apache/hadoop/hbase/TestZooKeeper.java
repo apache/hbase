@@ -38,13 +38,13 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coordination.ZkSplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
@@ -238,7 +238,7 @@ public class TestZooKeeper {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     m.abort("Test recovery from zk session expired",
-      new KeeperException.SessionExpiredException());
+        new KeeperException.SessionExpiredException());
     assertTrue(m.isStopped()); // Master doesn't recover any more
     testSanity("testMasterZKSessionRecoveryFailure");
   }
@@ -529,14 +529,12 @@ public class TestZooKeeper {
     cluster.startRegionServer();
     cluster.waitForActiveAndReadyMaster(10000);
     HMaster m = cluster.getMaster();
-    ZooKeeperWatcher zkw = m.getZooKeeper();
-    int expectedNumOfListeners = zkw.getNumberOfListeners();
+    final ZooKeeperWatcher zkw = m.getZooKeeper();
     // now the cluster is up. So assign some regions.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
-    try {
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
-        Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
-        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
+          Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
+          Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
       String tableName = "testRegionAssignmentAfterMasterRecoveryDueToZKExpiry";
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
@@ -544,8 +542,9 @@ public class TestZooKeeper {
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       m.getZooKeeper().close();
       MockLoadBalancer.retainAssignCalled = false;
+      final int expectedNumOfListeners = countPermanentListeners(zkw);
       m.abort("Test recovery from zk session expired",
-        new KeeperException.SessionExpiredException());
+          new KeeperException.SessionExpiredException());
       assertTrue(m.isStopped()); // Master doesn't recover any more
       // The recovered master should not call retainAssignment, as it is not a
       // clean startup.
@@ -553,10 +552,37 @@ public class TestZooKeeper {
       // number of listeners should be same as the value before master aborted
       // wait for new master is initialized
       cluster.waitForActiveAndReadyMaster(120000);
-      assertEquals(expectedNumOfListeners, zkw.getNumberOfListeners());
-    } finally {
-      admin.close();
+      final HMaster newMaster = cluster.getMasterThread().getMaster();
+      assertEquals(expectedNumOfListeners, countPermanentListeners(newMaster.getZooKeeper()));
     }
+  }
+
+  /**
+   * Count listeners in zkw excluding listeners, that belongs to workers or other
+   * temporary processes.
+   */
+  private int countPermanentListeners(ZooKeeperWatcher watcher) {
+    return countListeners(watcher, ZkSplitLogWorkerCoordination.class);
+  }
+
+  /**
+   * Count listeners in zkw excluding provided classes
+   */
+  private int countListeners(ZooKeeperWatcher watcher, Class<?>... exclude) {
+    int cnt = 0;
+    for (Object o : watcher.getListeners()) {
+      boolean skip = false;
+      for (Class<?> aClass : exclude) {
+        if (aClass.isAssignableFrom(o.getClass())) {
+          skip = true;
+          break;
+        }
+      }
+      if (!skip) {
+        cnt += 1;
+      }
+    }
+    return cnt;
   }
 
   /**
