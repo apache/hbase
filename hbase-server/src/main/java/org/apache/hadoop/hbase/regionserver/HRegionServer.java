@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.Math;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -3237,7 +3238,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           // Remove lease while its being processed in server; protects against case
           // where processing of request takes > lease expiration time.
           lease = leases.removeLease(scannerName);
-          List<Result> results = new ArrayList<Result>(rows);
+          // Limit the initial allocation of the result array to the minimum
+          // of 'rows' or 100
+          List<Result> results = new ArrayList<Result>(Math.min(rows, 100));
           long currentScanResultSize = 0;
           long totalKvSize = 0;
 
