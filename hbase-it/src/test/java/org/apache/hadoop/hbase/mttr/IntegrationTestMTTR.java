@@ -36,13 +36,13 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
-import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.chaos.actions.Action;
 import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
@@ -107,6 +107,7 @@ import com.google.common.base.Objects;
  * The ChaosMonkey actions currently run are:
  * <ul>
  * <li>Restart the RegionServer holding meta.</li>
+ * <li>Move the Regions of meta.</li>
  * <li>Restart the RegionServer holding the table the scan and put threads are targeting.</li>
  * <li>Move the Regions of the table used by the scan and put threads.</li>
  * <li>Restart the master.</li>
@@ -147,6 +148,7 @@ public class IntegrationTestMTTR {
    */
   private static Action restartRSAction;
   private static Action restartMetaAction;
+  private static Action moveMetaRegionsAction;
   private static Action moveRegionAction;
   private static Action restartMasterAction;
 
@@ -194,6 +196,10 @@ public class IntegrationTestMTTR {
     // Set up the action that will kill the region holding meta.
     restartMetaAction = new RestartRsHoldingMetaAction(sleepTime);
 
+    // Set up the action that will move the regions of meta.
+    moveMetaRegionsAction = new MoveRegionsOfTableAction(sleepTime,
+        MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, TableName.META_TABLE_NAME);
+
     // Set up the action that will move the regions of our table.
     moveRegionAction = new MoveRegionsOfTableAction(sleepTime,
         MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName);
@@ -205,6 +211,7 @@ public class IntegrationTestMTTR {
     Action.ActionContext actionContext = new Action.ActionContext(util);
     restartRSAction.init(actionContext);
     restartMetaAction.init(actionContext);
+    moveMetaRegionsAction.init(actionContext);
     moveRegionAction.init(actionContext);
     restartMasterAction.init(actionContext);
   }
@@ -254,6 +261,7 @@ public class IntegrationTestMTTR {
     // Clean up the actions.
     moveRegionAction = null;
     restartMetaAction = null;
+    moveMetaRegionsAction = null;
     restartRSAction = null;
     restartMasterAction = null;
 
@@ -268,6 +276,11 @@ public class IntegrationTestMTTR {
   @Test
   public void testKillRsHoldingMeta() throws Exception {
     run(new ActionCallable(restartMetaAction), "KillRsHoldingMeta");
+  }
+
+  @Test
+  public void testMoveMeta() throws Exception {
+    run(new ActionCallable(moveMetaRegionsAction), "MoveMeta");
   }
 
   @Test
