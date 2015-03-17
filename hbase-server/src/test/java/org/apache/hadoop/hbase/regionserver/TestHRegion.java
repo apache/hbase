@@ -140,7 +140,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -178,7 +178,7 @@ import com.google.protobuf.ByteString;
  * A lot of the meta information for an HRegion now lives inside other HRegions
  * or in the HBaseMaster, so only basic testing is possible.
  */
-@Category({VerySlowRegionServerTests.class, MediumTests.class})
+@Category({VerySlowRegionServerTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
 public class TestHRegion {
   // Do not spin up clusters in here. If you need to spin up a cluster, do it
