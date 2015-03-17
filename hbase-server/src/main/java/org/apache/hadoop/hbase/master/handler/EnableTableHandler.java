@@ -92,11 +92,7 @@ public class EnableTableHandler extends EventHandler {
     try {
       // Check if table exists
       if (!MetaTableAccessor.tableExists(this.server.getConnection(), tableName)) {
-        // retainAssignment is true only during recovery.  In normal case it is false
-        if (!this.skipTableStateCheck) {
-          throw new TableNotFoundException(tableName);
-        }
-        this.assignmentManager.getTableStateManager().setDeletedTable(tableName);
+        throw new TableNotFoundException(tableName);
       }
 
       // There could be multiple client requests trying to disable or enable
