@@ -69,7 +69,7 @@ public class HBaseConfiguration extends Configuration {
     String thisVersion = VersionInfo.getVersion();
     if (!thisVersion.equals(defaultsVersion)) {
       throw new RuntimeException(
-        "hbase-default.xml file seems to be for and old version of HBase (" +
+        "hbase-default.xml file seems to be for an older version of HBase (" +
         defaultsVersion + "), this version is " + thisVersion);
     }
   }
