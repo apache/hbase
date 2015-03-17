@@ -262,7 +262,7 @@ public class AsyncRpcChannel {
               handleSaslConnectionFailure(retryCount, cause, realTicket);
 
               // Try to reconnect
-              AsyncRpcClient.WHEEL_TIMER.newTimeout(new TimerTask() {
+              client.newTimeout(new TimerTask() {
                 @Override
                 public void run(Timeout timeout) throws Exception {
                   connect(bootstrap);
@@ -289,7 +289,7 @@ public class AsyncRpcChannel {
    */
   private void retryOrClose(final Bootstrap bootstrap, int connectCounter, Throwable e) {
     if (connectCounter < client.maxRetries) {
-      AsyncRpcClient.WHEEL_TIMER.newTimeout(new TimerTask() {
+      client.newTimeout(new TimerTask() {
         @Override public void run(Timeout timeout) throws Exception {
           connect(bootstrap);
         }
@@ -339,7 +339,7 @@ public class AsyncRpcChannel {
       // Add timeout for cleanup if none is present
       if (cleanupTimer == null && call.getRpcTimeout() > 0) {
         cleanupTimer =
-            AsyncRpcClient.WHEEL_TIMER.newTimeout(timeoutTask, call.getRpcTimeout(),
+            client.newTimeout(timeoutTask, call.getRpcTimeout(),
               TimeUnit.MILLISECONDS);
       }
       if (!connected) {
@@ -601,7 +601,7 @@ public class AsyncRpcChannel {
       }
       if (nextCleanupTaskDelay > 0) {
         cleanupTimer =
-            AsyncRpcClient.WHEEL_TIMER.newTimeout(timeoutTask, nextCleanupTaskDelay,
+            client.newTimeout(timeoutTask, nextCleanupTaskDelay,
               TimeUnit.MILLISECONDS);
       } else {
         cleanupTimer = null;

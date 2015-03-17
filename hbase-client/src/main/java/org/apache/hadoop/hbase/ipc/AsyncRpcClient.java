@@ -28,6 +28,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timeout;
+import io.netty.util.TimerTask;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -70,8 +72,9 @@ public class AsyncRpcClient extends AbstractRpcClient {
   public static final String USE_NATIVE_TRANSPORT = "hbase.rpc.client.nativetransport";
   public static final String USE_GLOBAL_EVENT_LOOP_GROUP = "hbase.rpc.client.globaleventloopgroup";
 
-  public static final HashedWheelTimer WHEEL_TIMER =
-      new HashedWheelTimer(100, TimeUnit.MILLISECONDS);
+  private static final HashedWheelTimer WHEEL_TIMER =
+      new HashedWheelTimer(Threads.newDaemonThreadFactory("AsyncRpcChannel-timer"),
+          100, TimeUnit.MILLISECONDS);
 
   private static final ChannelInitializer<SocketChannel> DEFAULT_CHANNEL_INITIALIZER =
       new ChannelInitializer<SocketChannel>() {
@@ -457,5 +460,9 @@ public class AsyncRpcClient extends AbstractRpcClient {
 
       this.rpcClient.callMethod(md, pcrc, param, returnType, this.ticket, this.isa, done);
     }
+  }
+
+  Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
+    return WHEEL_TIMER.newTimeout(task, delay, unit);
   }
 }
