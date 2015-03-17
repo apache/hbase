@@ -172,9 +172,6 @@ session required  pam_limits.so
 ----
 ====
 
-Linux Shell::
-  All of the shell scripts that come with HBase rely on the link:http://www.gnu.org/software/bash[GNU Bash] shell.
-
 Windows::
   Prior to HBase 0.96, testing for running HBase on Microsoft Windows was limited.
   Running a on Windows nodes is not recommended for production systems.
