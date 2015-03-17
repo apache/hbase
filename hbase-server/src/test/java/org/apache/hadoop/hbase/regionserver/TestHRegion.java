@@ -3837,7 +3837,7 @@ public class TestHRegion {
    */
   @Test
   public void testWritesWhileGetting() throws Exception {
-    int testCount = 100;
+    int testCount = 50;
     int numRows = 1;
     int numFamilies = 10;
     int numQualifiers = 100;
@@ -3896,7 +3896,7 @@ public class TestHRegion {
 
       long prevTimestamp = 0L;
       for (int i = 0; i < testCount; i++) {
-
+        LOG.info("testWritesWhileGetting verify turn " + i);
         boolean previousEmpty = result == null || result.isEmpty();
         result = region.get(get);
         if (!result.isEmpty() || !previousEmpty || i > compactInterval) {
