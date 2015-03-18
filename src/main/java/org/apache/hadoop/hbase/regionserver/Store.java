@@ -2487,7 +2487,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   public static final long FIXED_OVERHEAD =
       ClassSize.align(SchemaConfigured.SCHEMA_CONFIGURED_UNALIGNED_HEAP_SIZE +
           + (17 * ClassSize.REFERENCE) + (7 * Bytes.SIZEOF_LONG)
-          + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
+          + (5 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN + Bytes.SIZEOF_FLOAT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
       + ClassSize.OBJECT + ClassSize.REENTRANT_LOCK
