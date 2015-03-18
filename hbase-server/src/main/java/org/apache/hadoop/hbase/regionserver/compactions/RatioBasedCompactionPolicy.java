@@ -300,7 +300,7 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
             (cfTtl == HConstants.FOREVER || oldest < cfTtl)) {
           float blockLocalityIndex = sf.getHDFSBlockDistribution()
               .getBlockLocalityIndex(HRegionServer.getHostname(comConf.conf));
-          if (blockLocalityIndex > comConf.getMinLocalityToForceCompact()) {
+          if (blockLocalityIndex < comConf.getMinLocalityToForceCompact()) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Major compaction triggered on only store " + this +
                   "; to make hdfs blocks local, current blockLocalityIndex is " +
