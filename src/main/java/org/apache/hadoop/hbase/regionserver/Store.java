@@ -106,7 +106,7 @@ import com.google.common.collect.Lists;
  */
 public class Store extends SchemaConfigured implements HeapSize {
   static final Log LOG = LogFactory.getLog(Store.class);
-  
+
   public static final String BLOCKING_STOREFILES_KEY = "hbase.hstore.blockingStoreFiles";
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
 
@@ -124,6 +124,7 @@ public class Store extends SchemaConfigured implements HeapSize {
   private final int maxFilesToCompact;
   private final long minCompactSize;
   private final long maxCompactSize;
+  private final float minStoreFileLocalitySkipCompact;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
@@ -241,6 +242,8 @@ public class Store extends SchemaConfigured implements HeapSize {
       this.region.memstoreFlushSize);
     this.maxCompactSize
       = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
+    this.minStoreFileLocalitySkipCompact
+      = conf.getFloat("hbase.hstore.min.locality.to.skip.major.compact", 0f);
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
     
@@ -1326,17 +1329,31 @@ public class Store extends SchemaConfigured implements HeapSize {
             (sf.getReader().timeRangeTracker == null) ?
                 Long.MIN_VALUE :
                 now - sf.getReader().timeRangeTracker.minimumTimestamp;
-        if (sf.isMajorCompaction() &&
-            (this.ttl == HConstants.FOREVER || oldest < this.ttl)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Skipping major compaction of " + this +
-                " because one (major) compacted file only and oldestTime " +
-                oldest + "ms is < ttl=" + this.ttl);
+        if (sf.isMajorCompaction() && (this.ttl == HConstants.FOREVER || oldest < this.ttl)) {
+          // if there is only one old store file, only compact if dfs blocks are not local.
+          float blockLocalityIndex = sf.getHDFSBlockDistribution().getBlockLocalityIndex(
+              region.getRegionServerServices().getServerName().getHostname()
+          );
+          if (blockLocalityIndex < minStoreFileLocalitySkipCompact) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Major compaction triggered on only store " + this +
+                      "; to make hdfs blocks local, current locality: " + blockLocalityIndex
+              );
+            }
+            result = true;
+          } else {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Skipping major compaction of " + this +
+                  " because one (major) compacted file only and oldestTime " +
+                  oldest + "ms is < ttl=" + this.ttl);
+            }
           }
         } else if (this.ttl != HConstants.FOREVER && oldest > this.ttl) {
-          LOG.debug("Major compaction triggered on store " + this +
-            ", because keyvalues outdated; time since last major compaction " +
-            (now - lowTimestamp) + "ms");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Major compaction triggered on store " + this +
+                    ", because keyvalues outdated; time since last major compaction " +
+                    (now - lowTimestamp) + "ms");
+          }
           result = true;
         }
       } else {
