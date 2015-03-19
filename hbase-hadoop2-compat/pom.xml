@@ -21,7 +21,7 @@ limitations under the License.
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>0.98.12-SNAPSHOT</version>
+    <version>0.98.12</version>
     <relativePath>..</relativePath>
   </parent>
 
