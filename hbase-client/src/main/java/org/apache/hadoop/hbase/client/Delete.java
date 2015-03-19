@@ -108,12 +108,12 @@ public class Delete extends Mutation implements Comparable<Row> {
    *
    * This timestamp is ONLY used for a delete row operation.  If specifying
    * families or columns, you must specify each timestamp individually.
-   * @param rowArray We make a local copy of this passed in row.
+   * @param row We make a local copy of this passed in row.
    * @param rowOffset
    * @param rowLength
    */
-  public Delete(final byte [] rowArray, final int rowOffset, final int rowLength) {
-    this(rowArray, rowOffset, rowLength, HConstants.LATEST_TIMESTAMP);
+  public Delete(final byte[] row, final int rowOffset, final int rowLength) {
+    this(row, rowOffset, rowLength, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
@@ -125,15 +125,15 @@ public class Delete extends Mutation implements Comparable<Row> {
    *
    * This timestamp is ONLY used for a delete row operation.  If specifying
    * families or columns, you must specify each timestamp individually.
-   * @param rowArray We make a local copy of this passed in row.
+   * @param row We make a local copy of this passed in row.
    * @param rowOffset
    * @param rowLength
-   * @param ts maximum version timestamp (only for delete row)
+   * @param timestamp maximum version timestamp (only for delete row)
    */
-  public Delete(final byte [] rowArray, final int rowOffset, final int rowLength, long ts) {
-    checkRow(rowArray, rowOffset, rowLength);
-    this.row = Bytes.copy(rowArray, rowOffset, rowLength);
-    setTimestamp(ts);
+  public Delete(final byte[] row, final int rowOffset, final int rowLength, long timestamp) {
+    checkRow(row, rowOffset, rowLength);
+    this.row = Bytes.copy(row, rowOffset, rowLength);
+    setTimestamp(timestamp);
   }
 
   /**
