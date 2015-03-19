@@ -20,12 +20,13 @@ module Shell
     class GetAuths < Command
       def help
         return <<-EOF
-Get the visibility labels set for a particular user
-Syntax : get_auths 'user1'
+Get the visibility labels set for a particular user or group
+Syntax : get_auths 'user'
 
 For example:
 
     hbase> get_auths 'user1'
+    hbase> get_auths '@group1'
 EOF
       end
 
