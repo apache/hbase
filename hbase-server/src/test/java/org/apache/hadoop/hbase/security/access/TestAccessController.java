@@ -232,7 +232,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(hcd);
     htd.setOwner(USER_OWNER);
     admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE.getTableName());
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE.getTableName()).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -930,7 +930,7 @@ public class TestAccessController extends SecureTestUtil {
       setPermission(loadPath, FsPermission.valueOf("-rwxrwxrwx"));
 
       try (HTable table = (HTable)TEST_UTIL.getConnection().getTable(tableName)) {
-        TEST_UTIL.waitTableEnabled(tableName);
+        TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
         LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
         loader.doBulkLoad(loadPath, table);
       }
@@ -2173,13 +2173,13 @@ public class TestAccessController extends SecureTestUtil {
     String namespace = "testNamespaceUserGrant";
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
     TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
-    
+
     // Grant namespace READ to USER_NONE, this should supersede any table permissions
     grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
 
     // Now USER_NONE should be able to read also
     verifyAllowed(getAction, USER_NONE);
-    
+
     TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(namespace);
   }
 
@@ -2392,7 +2392,7 @@ public class TestAccessController extends SecureTestUtil {
     // Verify that EXEC permission is checked correctly
     verifyDenied(execEndpointAction, userB);
     verifyAllowed(execEndpointAction, userA);
-    
+
     String namespace = "testCoprocessorExec";
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
     TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
@@ -2402,7 +2402,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // User B should now be allowed also
     verifyAllowed(execEndpointAction, userA, userB);
-    
+
     TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(namespace);
   }
 
