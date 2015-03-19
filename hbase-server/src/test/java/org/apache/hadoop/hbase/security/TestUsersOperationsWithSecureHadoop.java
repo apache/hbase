@@ -28,7 +28,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +50,7 @@ public class TestUsersOperationsWithSecureHadoop {
 
   private static MiniKdc KDC;
 
-  private static String HOST;
+  private static String HOST = "localhost";
 
   private static String PRINCIPAL;
 
@@ -61,7 +60,6 @@ public class TestUsersOperationsWithSecureHadoop {
     conf.put(MiniKdc.DEBUG, true);
     KDC = new MiniKdc(conf, new File(TEST_UTIL.getDataTestDir("kdc").toUri().getPath()));
     KDC.start();
-    HOST = InetAddress.getLocalHost().getHostName();
     PRINCIPAL = "hbase/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
     HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());

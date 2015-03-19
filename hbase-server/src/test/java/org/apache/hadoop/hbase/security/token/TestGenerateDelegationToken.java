@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Properties;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -70,7 +69,7 @@ public class TestGenerateDelegationToken {
       .getPath());
   private static MiniKdc KDC;
 
-  private static String HOST;
+  private static String HOST = "localhost";
 
   private static String USERNAME = System.getProperty("user.name");
 
@@ -82,7 +81,6 @@ public class TestGenerateDelegationToken {
     conf.put(MiniKdc.DEBUG, true);
     KDC = new MiniKdc(conf, new File(TEST_UTIL.getDataTestDir("kdc").toUri().getPath()));
     KDC.start();
-    HOST = InetAddress.getLocalHost().getHostName();
     PRINCIPAL = USERNAME + "/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
     TEST_UTIL.getConfiguration().setBoolean("ipc.client.fallback-to-simple-auth-allowed", true);

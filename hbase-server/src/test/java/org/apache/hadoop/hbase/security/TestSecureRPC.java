@@ -26,7 +26,6 @@ import static org.junit.Assert.assertSame;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,7 +71,7 @@ public class TestSecureRPC {
 
   private static MiniKdc KDC;
 
-  private static String HOST;
+  private static String HOST = "localhost";
 
   private static String PRINCIPAL;
 
@@ -82,7 +81,6 @@ public class TestSecureRPC {
     conf.put(MiniKdc.DEBUG, true);
     KDC = new MiniKdc(conf, new File(TEST_UTIL.getDataTestDir("kdc").toUri().getPath()));
     KDC.start();
-    HOST = InetAddress.getLocalHost().getHostName();
     PRINCIPAL = "hbase/" + HOST;
     KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
     HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
