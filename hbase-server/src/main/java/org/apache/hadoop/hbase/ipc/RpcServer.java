@@ -1641,6 +1641,14 @@ public class RpcServer implements RpcServerInterface {
           }
         }
       }
+      if (connectionHeader.hasVersionInfo()) {
+        AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
+            + " with version info: "
+            + TextFormat.shortDebugString(connectionHeader.getVersionInfo()));
+      } else {
+        AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
+            + " with unknown version info");
+      }
     }
 
     /**

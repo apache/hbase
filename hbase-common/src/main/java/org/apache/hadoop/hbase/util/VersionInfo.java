@@ -93,9 +93,18 @@ public class VersionInfo {
   static String[] versionReport() {
     return new String[] {
       "HBase " + getVersion(),
-      "Subversion " + getUrl() + " -r " + getRevision(),
-      "Compiled by " + getUser() + " on " + getDate()
+      "Source code repository " + getUrl() + " revision=" + getRevision(),
+      "Compiled by " + getUser() + " on " + getDate(),
+      "From source with checksum " + getSrcChecksum()
       };
+  }
+
+  /**
+   * Get the checksum of the source files from which Hadoop was compiled.
+   * @return a string that uniquely identifies the source
+   **/
+  public static String getSrcChecksum() {
+    return version != null ? version.srcChecksum() : "Unknown";
   }
 
   public static void writeTo(PrintWriter out) {

@@ -57,4 +57,10 @@ public @interface VersionAnnotation {
    * @return the revision number as a string (eg. "451451")
    */
   String revision();
+
+  /**
+   * Get a checksum of the source files from which HBase was compiled.
+   * @return a string that uniquely identifies the source
+   **/
+  String srcChecksum();
 }

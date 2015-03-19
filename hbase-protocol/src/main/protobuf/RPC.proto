@@ -76,6 +76,16 @@ message UserInformation {
   optional string real_user = 2;
 }
 
+// Rpc client version info proto. Included in ConnectionHeader on connection setup
+message VersionInfo {
+  required string version = 1;
+  required string url = 2;
+  required string revision = 3;
+  required string user = 4;
+  required string date = 5;
+  required string src_checksum = 6;
+}
+
 // This is sent on connection setup after the connection preamble is sent.
 message ConnectionHeader {
   optional UserInformation user_info = 1;
@@ -86,6 +96,7 @@ message ConnectionHeader {
   // Compressor we will use if cell block is compressed.  Server will throw exception if not supported.
   // Class must implement hadoop's CompressionCodec Interface.  Can't compress if no codec.
   optional string cell_block_compressor_class = 4;
+  optional VersionInfo version_info = 5;
 }
 
 // Optional Cell block Message.  Included in client RequestHeader

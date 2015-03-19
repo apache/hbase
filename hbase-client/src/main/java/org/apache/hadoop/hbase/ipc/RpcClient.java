@@ -443,6 +443,7 @@ public class RpcClient {
       if (this.compressor != null) {
         builder.setCellBlockCompressorClass(this.compressor.getClass().getCanonicalName());
       }
+      builder.setVersionInfo(ProtobufUtil.getVersionInfo());
       this.header = builder.build();
 
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
