@@ -17,17 +17,21 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>Apache HBase&#153; Home</title>
+    <title>Apache HBase&#8482; Home</title>
     <link rel="shortcut icon" href="/images/favicon.ico" />
   </properties>
 
   <body>
-    <section name="Welcome to Apache HBase&#153;">
-        <p><a href="http://www.apache.org/">Apache</a> HBase&#153; is the <a href="http://hadoop.apache.org">Hadoop</a> database, a distributed, scalable, big data store.
+    <section name="Welcome to Apache HBase&#8482;">
+        <p><a href="http://www.apache.org/">Apache</a> HBase&#8482; is the <a href="http://hadoop.apache.org">Hadoop</a> database, a distributed, scalable, big data store.
+    </p>
+    <h4>Download Apache HBase&#8482;</h4>
+    <p>
+    Click <b><a href="http://www.apache.org/dyn/closer.cgi/hbase/">here</a></b> to download Apache HBase&#8482;.
     </p>
     <h4>When Would I Use Apache HBase?</h4>
     <p>
-    Use Apache HBase when you need random, realtime read/write access to your Big Data.
+    Use Apache HBase&#8482; when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
 Apache HBase is an open-source, distributed, versioned, non-relational database modeled after Google's <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured Data</a> by Chang et al.
  Just as Bigtable leverages the distributed data storage provided by the Google File System, Apache HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.

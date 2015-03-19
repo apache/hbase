@@ -64,29 +64,30 @@
     </menu>
     <menu name="Documentation">
       <item name="Reference Guide" href="book.html" target="_blank" />
-      <item name="Getting Started" href="book.html#quickstart" />
-      <item name="User API" href="apidocs/index.html" />
-      <item name="Developer API" href="devapidocs/index.html" />
+      <item name="Reference Guide (PDF)" href="apache_hbase_reference_guide.pdf" target="_blank" />
+      <item name="Getting Started" href="book.html#quickstart" target="_blank" />
+      <item name="User API" href="apidocs/index.html" target="_blank" />
+      <item name="Developer API" href="devapidocs/index.html" target="_blank" />
       <item name="X-Ref" href="xref/index.html" />
-      <item name="中文参考指南(单页)" href="http://abloz.com/hbase/book.html" />
-      <item name="FAQ" href="book.html#faq" />
-      <item name="Videos/Presentations" href="book.html#other.info" />
-      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
-      <item name="ACID Semantics" href="acid-semantics.html" />
-      <item name="Bulk Loads" href="book.html#arch.bulk.load" />
-      <item name="Metrics" href="metrics.html" />
-      <item name="HBase on Windows" href="cygwin.html" />
-      <item name="Cluster replication" href="replication.html" />
+      <item name="中文参考指南(单页)" href="http://abloz.com/hbase/book.html" target="_blank" />
+      <item name="FAQ" href="book.html#faq" target="_blank" />
+      <item name="Videos/Presentations" href="book.html#other.info" target="_blank" />
+      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" target="_blank" />
+      <item name="ACID Semantics" href="acid-semantics.html" target="_blank" />
+      <item name="Bulk Loads" href="book.html#arch.bulk.load" target="_blank" />
+      <item name="Metrics" href="metrics.html" target="_blank" />
+      <item name="HBase on Windows" href="cygwin.html" target="_blank" />
+      <item name="Cluster replication" href="replication.html" target="_blank" />
     </menu>
     <menu name="0.94 Documentation">
-      <item name="API" href="0.94/apidocs/index.html" />
-      <item name="X-Ref" href="0.94/xref/index.html" />
-      <item name="Ref Guide (single-page)" href="0.94/book.html" />
+      <item name="API" href="0.94/apidocs/index.html" target="_blank" />
+      <item name="X-Ref" href="0.94/xref/index.html" target="_blank" />
+      <item name="Ref Guide (single-page)" href="0.94/book.html" target="_blank" />
     </menu>
     <menu name="ASF">
-      <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" />
-      <item name="How Apache Works" href="http://www.apache.org/foundation/how-it-works.html" />
-      <item name="Sponsoring Apache" href="http://www.apache.org/foundation/sponsorship.html" />
+      <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" target="_blank" />
+      <item name="How Apache Works" href="http://www.apache.org/foundation/how-it-works.html" target="_blank" />
+      <item name="Sponsoring Apache" href="http://www.apache.org/foundation/sponsorship.html" target="_blank" />
     </menu>
   </body>
 </project>

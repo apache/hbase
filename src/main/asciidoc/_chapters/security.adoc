@@ -27,6 +27,16 @@
 :icons: font
 :experimental:
 
+[IMPORTANT]
+.Reporting Security Bugs
+====
+NOTE: To protect existing HBase installations from exploitation, please *do not* use JIRA to report security-related bugs. Instead, send your report to the mailing list private@apache.org, which allows anyone to send messages, but restricts who can read them. Someone on that list will contact you to follow up on your report.
+
+HBase adheres to the Apache Software Foundation's policy on reported vulnerabilities, available at http://apache.org/security/.
+
+If you wish to send an encrypted report, you can use the GPG details provided for the general ASF security list. This will likely increase the response time to your report.
+====
+
 HBase provides mechanisms to secure various components and aspects of HBase and how it relates to the rest of the Hadoop infrastructure, as well as clients and resources outside Hadoop.
 
 == Using Secure HTTP (HTTPS) for the Web UI
@@ -1273,13 +1283,59 @@ static Table createTableAndWriteDataWithLabels(TableName tableName, String... la
 ----
 ====
 
+<<reading_cells_with_labels>>
+==== Reading Cells with Labels
+When you issue a Scan or Get, HBase uses your default set of authorizations to filter out cells that you do not have access to. A superuser can set the default set of authorizations for a given user by using the `set_auths` HBase Shell command or the link:http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/security/visibility/VisibilityClient.html#setAuths(org.apache.hadoop.conf.Configuration,%20java.lang.String\[\],%20java.lang.String)[VisibilityClient.setAuths()] method.
+
+You can specify a different authorization during the Scan or Get, by passing the AUTHORIZATIONS option in HBase Shell, or the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setAuthorizations%28org.apache.hadoop.hbase.security.visibility.Authorizations%29[setAuthorizations()] method if you use the API. This authorization will be combined with your default set as an additional filter. It will further filter your results, rather than giving you additional authorization.
+
+.HBase Shell
+====
+----
+hbase> get_auths 'myUser'
+hbase> scan 'table1', AUTHORIZATIONS => ['private']
+----
+====
+
+.Java API
+====
+[source,java]
+----
+...
+public Void run() throws Exception {
+  String[] auths1 = { SECRET, CONFIDENTIAL };
+  GetAuthsResponse authsResponse = null;
+  try {
+    VisibilityClient.setAuths(conf, auths1, user);
+    try {
+      authsResponse = VisibilityClient.getAuths(conf, user);
+    } catch (Throwable e) {
+      fail("Should not have failed");
+    }
+  } catch (Throwable e) {
+  }
+  List<String> authsList = new ArrayList<String>();
+  for (ByteString authBS : authsResponse.getAuthList()) {
+    authsList.add(Bytes.toString(authBS.toByteArray()));
+  }
+  assertEquals(2, authsList.size());
+  assertTrue(authsList.contains(SECRET));
+  assertTrue(authsList.contains(CONFIDENTIAL));
+  return null;
+}
+...
+----
+====
+
+
 
 ==== Implementing Your Own Visibility Label Algorithm
 
 Interpreting the labels authenticated for a given get/scan request is a pluggable algorithm.
-You can specify a custom plugin by using the property `hbase.regionserver.scan.visibility.label.generator.class`.
-The default implementation class is `org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator`.
-You can also configure a set of `ScanLabelGenerators` to be used by the system, as a comma-separated list.
+
+You can specify a custom plugin or plugins by using the property `hbase.regionserver.scan.visibility.label.generator.class`. The output for the first `ScanLabelGenerator` will be the input for the next one, until the end of the list.
+
+The default implementation, which was implemented in link:https://issues.apache.org/jira/browse/HBASE-12466[HBASE-12466], loads two plugins, `FeedUserAuthScanLabelGenerator` and `DefinedSetFilterScanLabelGenerator`. See <<reading_cells_with_labels>>.
 
 ==== Replicating Visibility Tags as Strings
 
