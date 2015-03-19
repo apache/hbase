@@ -241,6 +241,19 @@ public final class TableName implements Comparable<TableName> {
     return namespaceAsString;
   }
 
+  /**
+   * Ideally, getNameAsString should contain namespace within it,
+   * but if the namespace is default, it just returns the name. This method
+   * takes care of this corner case.
+   */
+  public String getNameWithNamespaceInclAsString() {
+    if(getNamespaceAsString().equals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR)) {
+      return NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR +
+          TableName.NAMESPACE_DELIM + getNameAsString();
+    }
+    return getNameAsString();
+  }
+
   public byte[] getQualifier() {
     return qualifier;
   }

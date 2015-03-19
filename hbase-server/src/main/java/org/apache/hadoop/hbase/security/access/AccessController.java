@@ -432,6 +432,39 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   /**
+   * Authorizes that the current user has any of the given permissions for the
+   * given table, column family and column qualifier.
+   * @param tableName Table requested
+   * @param family Column family param
+   * @param qualifier Column qualifier param
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if user has no authorization
+   */
+  private void requireTablePermission(String request, TableName tableName, byte[] family,
+      byte[] qualifier, Action... permissions) throws IOException {
+    User user = getActiveUser();
+    AuthResult result = null;
+
+    for (Action permission : permissions) {
+      if (authManager.authorize(user, tableName, null, null, permission)) {
+        result = AuthResult.allow(request, "Table permission granted", user,
+            permission, tableName, null, null);
+        result.getParams().setFamily(family).setQualifier(qualifier);
+        break;
+      } else {
+        // rest of the world
+        result = AuthResult.deny(request, "Insufficient permissions", user,
+            permission, tableName, family, qualifier);
+        result.getParams().setFamily(family).setQualifier(qualifier);
+      }
+    }
+    logResult(result);
+    if (!result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
+    }
+  }
+
+  /**
    * Authorizes that the current user has any of the given permissions to access the table.
    *
    * @param tableName Table requested
@@ -507,10 +540,15 @@ public class AccessController extends BaseMasterAndRegionObserver
   private void requireGlobalPermission(String request, Action perm, TableName tableName,
       Map<byte[], ? extends Collection<byte[]>> familyMap) throws IOException {
     User user = getActiveUser();
+    AuthResult result = null;
     if (authManager.authorize(user, perm)) {
-      logResult(AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap));
+      result = AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap);
+      result.getParams().setTableName(tableName).setFamilies(familyMap);
+      logResult(result);
     } else {
-      logResult(AuthResult.deny(request, "Global check failed", user, perm, tableName, familyMap));
+      result = AuthResult.deny(request, "Global check failed", user, perm, tableName, familyMap);
+      result.getParams().setTableName(tableName).setFamilies(familyMap);
+      logResult(result);
       throw new AccessDeniedException("Insufficient permissions for user '" +
           (user != null ? user.getShortName() : "null") +"' (global, action=" +
           perm.toString() + ")");
@@ -527,10 +565,15 @@ public class AccessController extends BaseMasterAndRegionObserver
   private void requireGlobalPermission(String request, Action perm,
                                        String namespace) throws IOException {
     User user = getActiveUser();
+    AuthResult authResult = null;
     if (authManager.authorize(user, perm)) {
-      logResult(AuthResult.allow(request, "Global check allowed", user, perm, namespace));
+      authResult = AuthResult.allow(request, "Global check allowed", user, perm, null);
+      authResult.getParams().setNamespace(namespace);
+      logResult(authResult);
     } else {
-      logResult(AuthResult.deny(request, "Global check failed", user, perm, namespace));
+      authResult = AuthResult.deny(request, "Global check failed", user, perm, null);
+      authResult.getParams().setNamespace(namespace);
+      logResult(authResult);
       throw new AccessDeniedException("Insufficient permissions for user '" +
           (user != null ? user.getShortName() : "null") +"' (global, action=" +
           perm.toString() + ")");
@@ -556,6 +599,37 @@ public class AccessController extends BaseMasterAndRegionObserver
         // rest of the world
         result = AuthResult.deny(request, "Insufficient permissions", user,
             permission, namespace);
+      }
+    }
+    logResult(result);
+    if (!result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions "
+          + result.toContextString());
+    }
+  }
+
+  /**
+   * Checks that the user has the given global or namespace permission.
+   * @param namespace
+   * @param permissions Actions being requested
+   */
+  public void requireNamespacePermission(String request, String namespace, TableName tableName,
+      Map<byte[], ? extends Collection<byte[]>> familyMap, Action... permissions)
+      throws IOException {
+    User user = getActiveUser();
+    AuthResult result = null;
+
+    for (Action permission : permissions) {
+      if (authManager.authorize(user, namespace, permission)) {
+        result = AuthResult.allow(request, "Namespace permission granted",
+            user, permission, namespace);
+        result.getParams().setTableName(tableName).setFamilies(familyMap);
+        break;
+      } else {
+        // rest of the world
+        result = AuthResult.deny(request, "Insufficient permissions", user,
+            permission, namespace);
+        result.getParams().setTableName(tableName).setFamilies(familyMap);
       }
     }
     logResult(result);
@@ -919,7 +993,8 @@ public class AccessController extends BaseMasterAndRegionObserver
     for (byte[] family: families) {
       familyMap.put(family, null);
     }
-    requireNamespacePermission("createTable", desc.getTableName().getNamespaceAsString(), Action.CREATE);
+    requireNamespacePermission("createTable", desc.getTableName().getNamespaceAsString(),
+        desc.getTableName(), familyMap, Action.CREATE);
   }
 
   @Override
@@ -1050,7 +1125,8 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HColumnDescriptor column) throws IOException {
-    requirePermission("addColumn", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requireTablePermission("addColumn", tableName, column.getName(), null, Action.ADMIN,
+        Action.CREATE);
   }
 
   @Override
