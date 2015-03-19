@@ -224,7 +224,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(hcd);
     htd.setOwner(USER_OWNER);
     admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE.getTableName());
 
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE.getTableName()).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
