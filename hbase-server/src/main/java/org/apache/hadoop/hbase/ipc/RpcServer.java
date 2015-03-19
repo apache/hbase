@@ -1506,7 +1506,7 @@ public class RpcServer implements RpcServerInterface {
       // Else it will be length of the data to read (or -1 if a ping).  We catch the integer
       // length into the 4-byte this.dataLengthBuffer.
       int count = read4Bytes();
-      if (count < 0 || dataLengthBuffer.remaining() > 0 ){
+      if (count < 0 || dataLengthBuffer.remaining() > 0 ) {
         return count;
       }
 
@@ -1635,6 +1635,14 @@ public class RpcServer implements RpcServerInterface {
             user.setAuthenticationMethod(AuthenticationMethod.PROXY);
           }
         }
+      }
+      if (connectionHeader.hasVersionInfo()) {
+        AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
+            + " with version info: "
+            + TextFormat.shortDebugString(connectionHeader.getVersionInfo()));
+      } else {
+        AUDITLOG.info("Connection from " + this.hostAddress + " port: " + this.remotePort
+            + " with unknown version info");
       }
     }
 
