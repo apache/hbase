@@ -8,6 +8,7 @@ Bug
 
     [HBASE-10528] - DefaultBalancer selects plans to move regions onto draining nodes
     [HBASE-12792] - [backport] HBASE-5835: Catch and handle NotServingRegionException when close region attempt fails
+    [HBASE-12801] - Failed to truncate a table while maintaing binary region boundaries
     [HBASE-12968] - [0.94]SecureServer should not ignore CallQueueSize
     [HBASE-13039] - Add patchprocess/* to .gitignore to fix builds of branches
     [HBASE-13131] - ReplicationAdmin leaks connections if there's an error in the constructor
