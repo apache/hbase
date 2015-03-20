@@ -231,6 +231,9 @@ public final class Canary implements Tool {
       }
     }
 
+    // launches chore for refreshing kerberos ticket if security is enabled.
+    AuthUtil.launchAuthChore(conf);
+
     // Start to prepare the stuffs
     Monitor monitor = null;
     Thread monitorThread = null;
@@ -773,7 +776,6 @@ public final class Canary implements Tool {
 
   public static void main(String[] args) throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    AuthUtil.launchAuthChore(conf);
     int exitCode = ToolRunner.run(conf, new Canary(), args);
     System.exit(exitCode);
   }
