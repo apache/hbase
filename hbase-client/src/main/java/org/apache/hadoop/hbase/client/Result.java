@@ -89,7 +89,7 @@ public class Result implements CellScannable, CellScanner {
 
   private static ThreadLocal<byte[]> localBuffer = new ThreadLocal<byte[]>();
   private static final int PAD_WIDTH = 128;
-  public static final Result EMPTY_RESULT = new Result();
+  public static final Result EMPTY_RESULT = new Result(true);
 
   private final static int INITIAL_CELLSCANNER_INDEX = -1;
 
@@ -99,6 +99,8 @@ public class Result implements CellScannable, CellScanner {
   private int cellScannerIndex = INITIAL_CELLSCANNER_INDEX;
   private ClientProtos.RegionLoadStats stats;
 
+  private final boolean readonly;
+
   /**
    * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #rawCells()}.
    * Use this to represent no results if <code>null</code> won't do or in old 'mapred' as oppposed to 'mapreduce' package
@@ -106,7 +108,16 @@ public class Result implements CellScannable, CellScanner {
    * instance with a {@link #copyFrom(Result)} call.
    */
   public Result() {
-    super();
+    this(false);
+  }
+
+  /**
+   * Allows to construct special purpose immutable Result objects,
+   * such as EMPTY_RESULT.
+   * @param readonly whether this Result instance is readonly
+   */
+  private Result(boolean readonly) {
+    this.readonly = readonly;
   }
 
   /**
@@ -114,7 +125,7 @@ public class Result implements CellScannable, CellScanner {
    */
   @Deprecated
   public Result(KeyValue [] cells) {
-    this.cells = cells;
+    this(cells, null, false);
   }
 
   /**
@@ -167,6 +178,7 @@ public class Result implements CellScannable, CellScanner {
     this.cells = cells;
     this.exists = exists;
     this.stale = stale;
+    this.readonly = false;
   }
 
   /**
@@ -837,9 +849,12 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Copy another Result into this one. Needed for the old Mapred framework
+   * @throws UnsupportedOperationException if invoked on instance of EMPTY_RESULT
+   * (which is supposed to be immutable).
    * @param other
    */
   public void copyFrom(Result other) {
+    checkReadonly();
     this.row = null;
     this.familyMap = null;
     this.cells = other.cells;
@@ -869,6 +884,7 @@ public class Result implements CellScannable, CellScanner {
   }
 
   public void setExists(Boolean exists) {
+    checkReadonly();
     this.exists = exists;
   }
 
@@ -884,8 +900,11 @@ public class Result implements CellScannable, CellScanner {
   /**
    * Add load information about the region to the information about the result
    * @param loadStats statistics about the current region from which this was returned
+   * @throws UnsupportedOperationException if invoked on instance of EMPTY_RESULT
+   * (which is supposed to be immutable).
    */
   public void addResults(ClientProtos.RegionLoadStats loadStats) {
+    checkReadonly();
     this.stats = loadStats;
   }
 
@@ -895,5 +914,15 @@ public class Result implements CellScannable, CellScanner {
    */
   public ClientProtos.RegionLoadStats getStats() {
     return stats;
+  }
+
+  /**
+   * All methods modifying state of Result object must call this method
+   * to ensure that special purpose immutable Results can't be accidentally modified.
+   */
+  private void checkReadonly() {
+    if (readonly == true) {
+      throw new UnsupportedOperationException("Attempting to modify readonly EMPTY_RESULT!");
+    }
   }
 }
