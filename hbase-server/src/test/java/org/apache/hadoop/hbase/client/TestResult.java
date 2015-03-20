@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
@@ -228,6 +229,32 @@ public class TestResult extends TestCase {
     }
   }
 
+  /**
+   * Verifies that one can't modify instance of EMPTY_RESULT.
+   */
+  public void testEmptyResultIsReadonly() {
+    Result emptyResult = Result.EMPTY_RESULT;
+    Result otherResult = new Result();
+
+    try {
+      emptyResult.copyFrom(otherResult);
+      fail("UnsupportedOperationException should have been thrown!");
+    } catch (UnsupportedOperationException ex) {
+      LOG.debug("As expected: " + ex.getMessage());
+    }
+    try {
+      emptyResult.addResults(ClientProtos.RegionLoadStats.getDefaultInstance());
+      fail("UnsupportedOperationException should have been thrown!");
+    } catch (UnsupportedOperationException ex) {
+      LOG.debug("As expected: " + ex.getMessage());
+    }
+    try {
+      emptyResult.setExists(true);
+      fail("UnsupportedOperationException should have been thrown!");
+    } catch (UnsupportedOperationException ex) {
+      LOG.debug("As expected: " + ex.getMessage());
+    }
+  }
 
   /**
    * Microbenchmark that compares {@link Result#getValue} and {@link Result#loadValue} performance.
