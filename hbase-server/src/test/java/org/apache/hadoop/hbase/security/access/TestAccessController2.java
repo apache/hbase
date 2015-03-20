@@ -19,13 +19,18 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -34,9 +39,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TestTableName;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,6 +52,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestAccessController2 extends SecureTestUtil {
+  private static final Log LOG = LogFactory.getLog(TestAccessController2.class);
 
   private static final byte[] TEST_ROW = Bytes.toBytes("test");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f");
@@ -53,7 +62,27 @@ public class TestAccessController2 extends SecureTestUtil {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
 
-  @Rule public TestTableName TEST_TABLE = new TestTableName();
+  private final static byte[] Q1 = Bytes.toBytes("q1");
+  private final static byte[] value1 = Bytes.toBytes("value1");
+
+  private static byte[] TEST_FAMILY_2 = Bytes.toBytes("f2");
+  private static byte[] TEST_ROW_2 = Bytes.toBytes("r2");
+  private final static byte[] Q2 = Bytes.toBytes("q2");
+  private final static byte[] value2 = Bytes.toBytes("value2");
+
+  private static byte[] TEST_ROW_3 = Bytes.toBytes("r3");
+
+  private static final String TESTGROUP_1 = "testgroup_1";
+  private static final String TESTGROUP_2 = "testgroup_2";
+
+  private static User TESTGROUP1_USER1;
+  private static User TESTGROUP2_USER1;
+
+  @Rule
+  public TestTableName TEST_TABLE = new TestTableName();
+  private String namespace = "testNamespace";
+  private String tname = namespace + ":testtable1";
+  private byte[] tableName = Bytes.toBytes(tname);
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -64,7 +93,49 @@ public class TestAccessController2 extends SecureTestUtil {
     verifyConfiguration(conf);
     TEST_UTIL.startMiniCluster();
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
+
+    TESTGROUP1_USER1 =
+        User.createUserForTesting(conf, "testgroup1_user1", new String[] { TESTGROUP_1 });
+    TESTGROUP2_USER1 =
+        User.createUserForTesting(conf, "testgroup2_user2", new String[] { TESTGROUP_2 });
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
+    HTable table = null;
+    try {
+      table =
+          TEST_UTIL.createTable(TableName.valueOf(tableName),
+            new String[] { Bytes.toString(TEST_FAMILY), Bytes.toString(TEST_FAMILY_2) });
+
+      List<Put> puts = new ArrayList<Put>(5);
+      Put put_1 = new Put(TEST_ROW);
+      put_1.add(TEST_FAMILY, Q1, value1);
+
+      Put put_2 = new Put(TEST_ROW_2);
+      put_2.add(TEST_FAMILY, Q2, value2);
+
+      Put put_3 = new Put(TEST_ROW_3);
+      put_3.add(TEST_FAMILY_2, Q1, value1);
+
+      puts.add(put_1);
+      puts.add(put_2);
+      puts.add(put_3);
+
+      table.put(puts);
+    } finally {
+      table.close();
+    }
+
+    assertEquals(1, AccessControlLists.getTablePermissions(conf, TableName.valueOf(tableName))
+        .size());
+    try {
+      assertEquals(1, AccessControlClient.getUserPermissions(conf, tableName.toString()).size());
+    } catch (Throwable e) {
+      LOG.error("Error during call of AccessControlClient.getUserPermissions. ", e);
+    }
   }
 
   @AfterClass
@@ -72,11 +143,27 @@ public class TestAccessController2 extends SecureTestUtil {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @After
+  public void tearDown() throws Exception {
+    // Clean the _acl_ table
+    try {
+      TEST_UTIL.deleteTable(tableName);
+    } catch (TableNotFoundException ex) {
+      // Test deleted the table, no problem
+      LOG.info("Test deleted table " + tableName);
+    }
+    TEST_UTIL.getHBaseAdmin().deleteNamespace(namespace);
+    // Verify all table/namespace permissions are erased
+    assertEquals(0, AccessControlLists.getTablePermissions(conf, TableName.valueOf(tableName))
+        .size());
+    assertEquals(0, AccessControlLists.getNamespacePermissions(conf, namespace).size());
+  }
+
   @Test
   public void testCreateWithCorrectOwner() throws Exception {
     // Create a test user
-    User testUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser",
-      new String[0]);
+    User testUser =
+        User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser", new String[0]);
     // Grant the test user the ability to create tables
     SecureTestUtil.grantGlobal(TEST_UTIL, testUser.getShortName(), Action.CREATE);
     verifyAllowed(new AccessTestAction() {
@@ -96,8 +183,9 @@ public class TestAccessController2 extends SecureTestUtil {
     TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
     // Verify that owner permissions have been granted to the test user on the
     // table just created
-    List<TablePermission> perms = AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName())
-       .get(testUser.getShortName());
+    List<TablePermission> perms =
+        AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).get(
+          testUser.getShortName());
     assertNotNull(perms);
     assertFalse(perms.isEmpty());
     // Should be RWXCA
@@ -204,6 +292,163 @@ public class TestAccessController2 extends SecureTestUtil {
     verifyDenied(scanAction, nsCreate, nsAdmin, nsRead, nsWrite);
     verifyDenied(scanAction, tableCreate, tableAdmin, tableRead, tableWrite);
     verifyAllowed(scanAction, superUser, globalRead);
+  }
+
+  /*
+   * Test table scan operation at table, column family and column qualifier level.
+   */
+  @Test(timeout = 300000)
+  public void testPostGrantAndRevokeScanAction() throws Exception {
+    TableName name = TableName.valueOf(tableName);
+    AccessTestAction scanTableActionForGroupWithTableLevelAccess = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+        HTable table = new HTable(conf, tableName);
+        Scan s1 = new Scan();
+        ResultScanner scanner1 = table.getScanner(s1);
+        try {
+          Result[] next1 = scanner1.next(5);
+          assertTrue("User having table level access should be able to scan all "
+              + "the data in the table.", next1.length == 3);
+        } finally {
+          scanner1.close();
+          table.close();
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction scanTableActionForGroupWithFamilyLevelAccess = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+        HTable table = new HTable(conf, tableName);
+        Scan s1 = new Scan();
+        ResultScanner scanner1 = table.getScanner(s1);
+        try {
+          Result[] next1 = scanner1.next(5);
+          assertTrue("User having column family level access should be able to scan all "
+              + "the data belonging to that family.", next1.length == 2);
+        } finally {
+          scanner1.close();
+          table.close();
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction scanFamilyActionForGroupWithFamilyLevelAccess = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+        HTable table = new HTable(conf, tableName);
+        Scan s1 = new Scan();
+        s1.addFamily(TEST_FAMILY_2);
+        ResultScanner scanner1 = null;
+        try {
+          scanner1 = table.getScanner(s1);
+        } finally {
+          if (scanner1 != null) {
+            scanner1.close();
+          }
+          table.close();
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction scanTableActionForGroupWithQualifierLevelAccess = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+        HTable table = new HTable(conf, tableName);
+        Scan s1 = new Scan();
+        ResultScanner scanner1 = table.getScanner(s1);
+        try {
+          Result[] next1 = scanner1.next(5);
+          assertTrue("User having column qualifier level access should be able to scan "
+              + "that column family qualifier data.", next1.length == 1);
+        } finally {
+          scanner1.close();
+          table.close();
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction scanFamilyActionForGroupWithQualifierLevelAccess = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+
+        HTable table = new HTable(conf, tableName);
+        Scan s1 = new Scan();
+        s1.addFamily(TEST_FAMILY_2);
+        ResultScanner scanner1 = null;
+        try {
+          scanner1 = table.getScanner(s1);
+        } finally {
+          if (scanner1 != null) {
+            scanner1.close();
+          }
+          table.close();
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction scanQualifierActionForGroupWithQualifierLevelAccess = new AccessTestAction() {
+      @Override
+      public Void run() throws Exception {
+        HTable table = new HTable(conf, tableName);
+        Scan s1 = new Scan();
+        s1.addColumn(TEST_FAMILY, Q2);
+        ResultScanner scanner1 = null;
+        try {
+          scanner1 = table.getScanner(s1);
+        } finally {
+          if (scanner1 != null) {
+            scanner1.close();
+          }
+          table.close();
+        }
+        return null;
+      }
+    };
+
+    // Verify user from a group which has table level access can read all the data and group which
+    // has no access can't read any data.
+    grantOnTable(TEST_UTIL, '@' + TESTGROUP_1, name, null, null, Permission.Action.READ);
+    verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithTableLevelAccess);
+    verifyDenied(TESTGROUP2_USER1, scanTableActionForGroupWithTableLevelAccess);
+
+    // Verify user from a group whose table level access has been revoked can't read any data.
+    revokeFromTable(TEST_UTIL, '@' + TESTGROUP_1, name, null, null);
+    verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithTableLevelAccess);
+
+    // Verify user from a group which has column family level access can read all the data
+    // belonging to that family and group which has no access can't read any data.
+    grantOnTable(TEST_UTIL, '@' + TESTGROUP_1, name, TEST_FAMILY, null, Permission.Action.READ);
+    verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithFamilyLevelAccess);
+    verifyDenied(TESTGROUP1_USER1, scanFamilyActionForGroupWithFamilyLevelAccess);
+    verifyDenied(TESTGROUP2_USER1, scanTableActionForGroupWithFamilyLevelAccess);
+    verifyDenied(TESTGROUP2_USER1, scanFamilyActionForGroupWithFamilyLevelAccess);
+
+    // Verify user from a group whose column family level access has been revoked can't read any
+    // data from that family.
+    revokeFromTable(TEST_UTIL, '@' + TESTGROUP_1, name, TEST_FAMILY, null);
+    verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithFamilyLevelAccess);
+
+    // Verify user from a group which has column qualifier level access can read data that has this
+    // family and qualifier, and group which has no access can't read any data.
+    grantOnTable(TEST_UTIL, '@' + TESTGROUP_1, name, TEST_FAMILY, Q1, Permission.Action.READ);
+    verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
+    verifyDenied(TESTGROUP1_USER1, scanFamilyActionForGroupWithQualifierLevelAccess);
+    verifyDenied(TESTGROUP1_USER1, scanQualifierActionForGroupWithQualifierLevelAccess);
+    verifyDenied(TESTGROUP2_USER1, scanTableActionForGroupWithQualifierLevelAccess);
+    verifyDenied(TESTGROUP2_USER1, scanFamilyActionForGroupWithQualifierLevelAccess);
+    verifyDenied(TESTGROUP2_USER1, scanQualifierActionForGroupWithQualifierLevelAccess);
+
+    // Verify user from a group whose column qualifier level access has been revoked can't read the
+    // data having this column family and qualifier.
+    revokeFromTable(TEST_UTIL, '@' + TESTGROUP_1, name, TEST_FAMILY, Q1);
+    verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
   }
 
 }
