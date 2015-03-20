@@ -55,10 +55,10 @@ public class AuthUtil {
           conf.get("hbase.client.dns.nameserver", "default")));
       userProvider.login("hbase.client.keytab.file", "hbase.client.kerberos.principal", host);
     } catch (UnknownHostException e) {
-      LOG.error("Error resolving host name");
+      LOG.error("Error resolving host name: " + e.getMessage(), e);
       throw e;
     } catch (IOException e) {
-      LOG.error("Error while trying to perform the initial login");
+      LOG.error("Error while trying to perform the initial login: " + e.getMessage(), e);
       throw e;
     }
 
@@ -88,7 +88,7 @@ public class AuthUtil {
         try {
           ugi.checkTGTAndReloginFromKeytab();
         } catch (IOException e) {
-          LOG.info("Got exception while trying to refresh credentials ");
+          LOG.error("Got exception while trying to refresh credentials: " + e.getMessage(), e);
         }
       }
     };
