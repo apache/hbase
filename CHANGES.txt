@@ -5,6 +5,8 @@ Release 0.98.12 - 3/25/2015
 ** Sub-task
     * [HBASE-13207] - Backport to 0.98 "[PERF] Reuse the IPC buffers..."
     * [HBASE-13276] - Fix incorrect condition for minimum block locality in 0.98
+    * [HBASE-13283] - Document the steps for rolling back the security on hbase.
+    * [HBASE-13292] - Undo parent from 0.98 and 1.0: setting hbase.client.scanner.max.result.size is considered harmful
 
 ** Bug
     * [HBASE-12908] - Typos in MemStoreFlusher javadocs
@@ -20,6 +22,7 @@ Release 0.98.12 - 3/25/2015
     * [HBASE-13239] - HBase grant at specific column level does not work for Groups 
     * [HBASE-13253] - LoadIncrementalHFiles unify hfiles discovery
     * [HBASE-13269] - Limit result array preallocation to avoid OOME with large scan caching values
+    * [HBASE-13285] - Fix flaky getRegions() in TestAccessController.setUp()
 
 ** Improvement
     * [HBASE-13100] - Shell command to retrieve table splits
@@ -30,6 +33,7 @@ Release 0.98.12 - 3/25/2015
     * [HBASE-13183] - Make ZK tickTime configurable in standalone HBase
     * [HBASE-13223] - Add testMoveMeta to IntegrationTestMTTR
     * [HBASE-13236] - Clean up m2e-related warnings/errors from poms
+
 
 Release 0.98.11 - 3/9/2015
 
