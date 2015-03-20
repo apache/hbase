@@ -20,12 +20,13 @@ module Shell
     class SetAuths < Command
       def help
         return <<-EOF
-Add a set of visibility labels for an user
-Syntax : set_auths 'user1',[label1, label2]
+Add a set of visibility labels for a user or group
+Syntax : set_auths 'user',[label1, label2]
 
 For example:
 
     hbase> set_auths 'user1', ['SECRET','PRIVATE']
+    hbase> set_auths '@group1', ['SECRET','PRIVATE']
 EOF
       end
 
