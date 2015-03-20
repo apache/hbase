@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 
@@ -190,6 +191,28 @@ public class TestDurability {
     assertEquals(4, Bytes.toLong(res.getValue(FAMILY, col2)));
     assertEquals(3, Bytes.toLong(res.getValue(FAMILY, col3)));
     verifyWALCount(wals, wal, 2);
+  }
+  
+  /*
+   * Test when returnResults set to false in increment it should not return the result instead it
+   * resturn null.
+   */
+  @Test
+  public void testIncrementWithReturnResultsSetToFalse() throws Exception {
+    byte[] row1 = Bytes.toBytes("row1");
+    byte[] col1 = Bytes.toBytes("col1");
+
+    // Setting up region
+    final WALFactory wals = new WALFactory(CONF, null, "testIncrementWithReturnResultsSetToFalse");
+    byte[] tableName = Bytes.toBytes("testIncrementWithReturnResultsSetToFalse");
+    final WAL wal = wals.getWAL(tableName);
+    HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);
+
+    Increment inc1 = new Increment(row1);
+    inc1.setReturnResults(false);
+    inc1.addColumn(FAMILY, col1, 1);
+    Result res = region.increment(inc1);
+    assertNull(res);
   }
 
   private Put newPut(Durability durability) {
