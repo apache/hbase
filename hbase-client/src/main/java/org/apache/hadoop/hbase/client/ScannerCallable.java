@@ -153,7 +153,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
 
     // check how often we retry.
-    // HConnectionManager will call instantiateServer with reload==true
+    // ConnectionManager will call instantiateServer with reload==true
     // if and only if for retries.
     if (reload && this.scanMetrics != null) {
       this.scanMetrics.countOfRPCRetries.incrementAndGet();

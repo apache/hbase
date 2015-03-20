@@ -42,7 +42,6 @@ org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.client.Admin;
-org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.HTableDescriptor;

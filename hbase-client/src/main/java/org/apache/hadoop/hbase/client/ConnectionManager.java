@@ -335,7 +335,7 @@ final class ConnectionManager {
    * This is the recommended way to create HConnections.
    * {@code
    * ExecutorService pool = ...;
-   * HConnection connection = HConnectionManager.createConnection(conf, pool);
+   * HConnection connection = ConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
    * table.get(...);
    * ...
@@ -361,7 +361,7 @@ final class ConnectionManager {
    * This is the recommended way to create HConnections.
    * {@code
    * ExecutorService pool = ...;
-   * HConnection connection = HConnectionManager.createConnection(conf, pool);
+   * HConnection connection = ConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
    * table.get(...);
    * ...
@@ -386,7 +386,7 @@ final class ConnectionManager {
    * This is the recommended way to create HConnections.
    * {@code
    * ExecutorService pool = ...;
-   * HConnection connection = HConnectionManager.createConnection(conf, pool);
+   * HConnection connection = ConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
    * table.get(...);
    * ...
@@ -425,19 +425,6 @@ final class ConnectionManager {
   }
 
   /**
-   * Delete connection information for the instance specified by passed configuration.
-   * If there are no more references to the designated connection connection, this method will
-   * then close connection to the zookeeper ensemble and let go of all associated resources.
-   *
-   * @param conf configuration whose identity is used to find {@link HConnection} instance.
-   * @deprecated connection caching is going away.
-   */
-  @Deprecated
-  public static void deleteConnection(Configuration conf) {
-    deleteConnection(new HConnectionKey(conf), false);
-  }
-
-  /**
    * Cleanup a known stale connection.
    * This will then close connection to the zookeeper ensemble and let go of all resources.
    *
@@ -447,33 +434,6 @@ final class ConnectionManager {
   @Deprecated
   public static void deleteStaleConnection(HConnection connection) {
     deleteConnection(connection, true);
-  }
-
-  /**
-   * Delete information for all connections. Close or not the connection, depending on the
-   *  staleConnection boolean and the ref count. By default, you should use it with
-   *  staleConnection to true.
-   * @deprecated connection caching is going away.
-   */
-  @Deprecated
-  public static void deleteAllConnections(boolean staleConnection) {
-    synchronized (CONNECTION_INSTANCES) {
-      Set<HConnectionKey> connectionKeys = new HashSet<HConnectionKey>();
-      connectionKeys.addAll(CONNECTION_INSTANCES.keySet());
-      for (HConnectionKey connectionKey : connectionKeys) {
-        deleteConnection(connectionKey, staleConnection);
-      }
-      CONNECTION_INSTANCES.clear();
-    }
-  }
-
-  /**
-   * Delete information for all connections..
-   * @deprecated kept for backward compatibility, but the behavior is broken. HBASE-8983
-   */
-  @Deprecated
-  public static void deleteAllConnections() {
-    deleteAllConnections(false);
   }
 
   /**

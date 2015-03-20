@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -450,7 +449,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     @Override
     protected void handleFailure(Counters counters) throws IOException {
       Configuration conf = job.getConfiguration();
-      HConnection conn = HConnectionManager.getConnection(conf);
+      HConnection conn = (HConnection) ConnectionFactory.createConnection(conf);
       TableName tableName = TableName.valueOf(COMMON_TABLE_NAME);
       CounterGroup g = counters.getGroup("undef");
       Iterator<Counter> it = g.iterator();

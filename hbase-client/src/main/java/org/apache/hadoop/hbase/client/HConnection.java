@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 /**
  * A cluster connection.  Knows how to find the master, locate regions out on the cluster,
  * keeps a cache of locations and then knows how to re-calibrate after they move.  You need one
- * of these to talk to your HBase cluster. {@link HConnectionManager} manages instances of this
+ * of these to talk to your HBase cluster. {@link ConnectionFactory} manages instances of this
  * class.  See it for how to get one of these.
  *
  * <p>This is NOT a connection to a particular server but to ALL servers in the cluster.  Individual
@@ -49,11 +49,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * HConnection instances can be shared.  Sharing
  * is usually what you want because rather than each HConnection instance
  * having to do its own discovery of regions out on the cluster, instead, all
- * clients get to share the one cache of locations.  {@link HConnectionManager} does the
+ * clients get to share the one cache of locations.  {@link ConnectionManager} does the
  * sharing for you if you go by it getting connections.  Sharing makes cleanup of
- * HConnections awkward.  See {@link HConnectionManager} for cleanup discussion.
+ * HConnections awkward.  See {@link ConnectionFactory} for cleanup discussion.
  *
- * @see HConnectionManager
+ * @see ConnectionManager
+ * @see ConnectionFactory
  * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
  */
 @InterfaceAudience.Public
@@ -79,7 +80,7 @@ public interface HConnection extends Connection {
    * This is a lightweight operation, pooling or caching of the returned HTableInterface
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
-   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * (created with {@link ConnectionFactory#createConnection(Configuration)}).
    * @param tableName
    * @return an HTable to use for interactions with this table
    */
@@ -92,7 +93,7 @@ public interface HConnection extends Connection {
    * This is a lightweight operation, pooling or caching of the returned HTableInterface
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
-   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * (created with {@link ConnectionFactory#createConnection(Configuration)}).
    * @param tableName
    * @return an HTable to use for interactions with this table
    */
@@ -105,7 +106,7 @@ public interface HConnection extends Connection {
    * This is a lightweight operation, pooling or caching of the returned HTableInterface
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
-   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * (created with {@link ConnectionFactory#createConnection(Configuration)}).
    * @param tableName
    * @return an HTable to use for interactions with this table
    */
@@ -119,7 +120,7 @@ public interface HConnection extends Connection {
    * This is a lightweight operation, pooling or caching of the returned HTableInterface
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
-   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * (created with {@link ConnectionFactory#createConnection(Configuration)}).
    * @param tableName
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
@@ -133,7 +134,7 @@ public interface HConnection extends Connection {
    * This is a lightweight operation, pooling or caching of the returned HTableInterface
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
-   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * (created with {@link ConnectionFactory#createConnection(Configuration)}).
    * @param tableName
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
@@ -147,7 +148,7 @@ public interface HConnection extends Connection {
    * This is a lightweight operation, pooling or caching of the returned HTableInterface
    * is neither required nor desired.
    * Note that the HConnection needs to be unmanaged
-   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * (created with {@link ConnectionFactory#createConnection(Configuration)}).
    * @param tableName
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
@@ -163,7 +164,7 @@ public interface HConnection extends Connection {
    * required nor desired.
    *
    * RegionLocator needs to be unmanaged
-   * (created with {@link HConnectionManager#createConnection(Configuration)}).
+   * (created with {@link ConnectionFactory#createConnection(Configuration)}).
    *
    * @param tableName Name of the table who's region is to be examined
    * @return A RegionLocator instance

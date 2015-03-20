@@ -155,8 +155,8 @@ public class TestHCM {
         new SynchronousQueue<Runnable>(),
         Threads.newDaemonThreadFactory("test-hcm"));
 
-    HConnection con1 = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
-    HConnection con2 = HConnectionManager.createConnection(TEST_UTIL.getConfiguration(), otherPool);
+    HConnection con1 = ConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+    HConnection con2 = ConnectionManager.createConnection(TEST_UTIL.getConfiguration(), otherPool);
     // make sure the internally created ExecutorService is the one passed
     assertTrue(otherPool == ((HConnectionImplementation)con2).getCurrentBatchPool());
 
@@ -537,7 +537,7 @@ public class TestHCM {
     } finally {
       syncBlockingFilter.set(true);
       t.join();
-      HConnectionManager.getConnection(c2).close();
+      ConnectionManager.getConnection(c2).close();
       TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
     }
 
@@ -580,11 +580,11 @@ public class TestHCM {
     ConnectionManager.CONNECTION_INSTANCES.clear();
 
     try {
-      HConnection connection = HConnectionManager.getConnection(TEST_UTIL.getConfiguration());
+      HConnection connection = ConnectionManager.getConnection(TEST_UTIL.getConfiguration());
       connection.abort("test abortingHConnectionRemovesItselfFromHCM", new Exception(
           "test abortingHConnectionRemovesItselfFromHCM"));
       Assert.assertNotSame(connection,
-        HConnectionManager.getConnection(TEST_UTIL.getConfiguration()));
+        ConnectionManager.getConnection(TEST_UTIL.getConfiguration()));
     } finally {
       // Put original HConnections back
       ConnectionManager.CONNECTION_INSTANCES.clear();
@@ -861,7 +861,7 @@ public class TestHCM {
       configuration.set("some_key", String.valueOf(_randy.nextInt()));
       LOG.info("The hash code of the current configuration is: "
           + configuration.hashCode());
-      Connection currentConnection = HConnectionManager
+      Connection currentConnection = ConnectionManager
           .getConnection(configuration);
       if (previousConnection != null) {
         assertTrue(
@@ -877,59 +877,6 @@ public class TestHCM {
     }
   }
 
-  /**
-   * Makes sure that there is no leaking of
-   * {@link ConnectionManager.HConnectionImplementation} in the {@link HConnectionManager}
-   * class.
-   * @deprecated Tests deprecated functionality.  Remove in 1.0.
-   */
-  @Deprecated
-  @Test
-  public void testConnectionUniqueness() throws Exception {
-    int zkmaxconnections = TEST_UTIL.getConfiguration().
-      getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS,
-          HConstants.DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS);
-    // Test up to a max that is < the maximum number of zk connections.  If we
-    // go above zk connections, we just fall into cycle where we are failing
-    // to set up a session and test runs for a long time.
-    int maxConnections = Math.min(zkmaxconnections - 1, 20);
-    List<HConnection> connections = new ArrayList<HConnection>(maxConnections);
-    Connection previousConnection = null;
-    try {
-      for (int i = 0; i < maxConnections; i++) {
-        // set random key to differentiate the connection from previous ones
-        Configuration configuration = new Configuration(TEST_UTIL.getConfiguration());
-        configuration.set("some_key", String.valueOf(_randy.nextInt()));
-        configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
-            String.valueOf(_randy.nextInt()));
-        LOG.info("The hash code of the current configuration is: "
-            + configuration.hashCode());
-        HConnection currentConnection =
-          HConnectionManager.getConnection(configuration);
-        if (previousConnection != null) {
-          assertTrue("Got the same connection even though its key changed!",
-              previousConnection != currentConnection);
-        }
-        // change the configuration, so that it is no longer reachable from the
-        // client's perspective. However, since its part of the LRU doubly linked
-        // list, it will eventually get thrown out, at which time it should also
-        // close the corresponding {@link HConnection}.
-        configuration.set("other_key", String.valueOf(_randy.nextInt()));
-
-        previousConnection = currentConnection;
-        LOG.info("The current HConnectionManager#HBASE_INSTANCES cache size is: "
-            + getHConnectionManagerCacheSize());
-        Thread.sleep(50);
-        connections.add(currentConnection);
-      }
-    } finally {
-      for (Connection c: connections) {
-        // Clean up connections made so we don't interfere w/ subsequent tests.
-        HConnectionManager.deleteConnection(c.getConfiguration());
-      }
-    }
-  }
-
   @Test
   public void testClosing() throws Exception {
     Configuration configuration =
@@ -937,36 +884,26 @@ public class TestHCM {
     configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
         String.valueOf(_randy.nextInt()));
 
+    // as connection caching is going away, now we're just testing
+    // that closed connection does actually get closed.
+
     Connection c1 = ConnectionFactory.createConnection(configuration);
-    // We create two connections with the same key.
     Connection c2 = ConnectionFactory.createConnection(configuration);
+    // no caching, different connections
+    assertTrue(c1 != c2);
 
-    Connection c3 = HConnectionManager.getConnection(configuration);
-    Connection c4 = HConnectionManager.getConnection(configuration);
-    assertTrue(c3 == c4);
-
+    // closing independently
     c1.close();
     assertTrue(c1.isClosed());
     assertFalse(c2.isClosed());
-    assertFalse(c3.isClosed());
 
-    c3.close();
-    // still a reference left
-    assertTrue(c3.isClosed());
-    
-    Connection c5 = HConnectionManager.getConnection(configuration);
-    assertTrue(c5 != c3);
-
-    assertFalse(c2.isClosed());
     c2.close();
     assertTrue(c2.isClosed());
-    c5.close();
-    assertTrue(c5.isClosed());
   }
 
   /**
    * Trivial test to verify that nobody messes with
-   * {@link HConnectionManager#createConnection(Configuration)}
+   * {@link ConnectionFactory#createConnection(Configuration)}
    */
   @Test
   public void testCreateConnection() throws Exception {
@@ -977,7 +914,7 @@ public class TestHCM {
     assertTrue(c1 != c2);
     assertTrue(c1.getConfiguration() == c2.getConfiguration());
     // make sure these were not cached
-    Connection c3 = HConnectionManager.getConnection(configuration);
+    Connection c3 = ConnectionManager.getConnection(configuration);
     assertTrue(c1 != c3);
     assertTrue(c2 != c3);
   }
@@ -998,7 +935,7 @@ public class TestHCM {
       TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT));
 
     // This should be enough to connect
-    HConnection conn = HConnectionManager.getConnection(c);
+    HConnection conn = ConnectionManager.getConnection(c);
     assertTrue( conn.isMasterRunning() );
     conn.close();
   }
@@ -1222,9 +1159,9 @@ public class TestHCM {
       public void run() {
         while (!Thread.interrupted()) {
           try {
-            HConnection conn = HConnectionManager.getConnection(config);
+            HConnection conn = ConnectionManager.getConnection(config);
             LOG.info("Connection " + conn);
-            HConnectionManager.deleteStaleConnection(conn);
+            ConnectionManager.deleteStaleConnection(conn);
             LOG.info("Connection closed " + conn);
             // TODO: This sleep time should be less than the time that it takes to open and close
             // a table.  Ideally we would do a few runs first to measure.  For now this is

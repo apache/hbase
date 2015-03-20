@@ -30,9 +30,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HConnectable;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -129,22 +126,17 @@ public class VerifyReplication extends Configured implements Tool {
         }
 
         final TableSplit tableSplit = (TableSplit)(context.getInputSplit());
-        HConnectionManager.execute(new HConnectable<Void>(conf) {
-          @Override
-          public Void connect(HConnection conn) throws IOException {
-            String zkClusterKey = conf.get(NAME + ".peerQuorumAddress");
-            Configuration peerConf = HBaseConfiguration.create(conf);
-            ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
 
-            TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
-            connection = ConnectionFactory.createConnection(peerConf);
-            replicatedTable = connection.getTable(tableName);
-            scan.setStartRow(value.getRow());
-            scan.setStopRow(tableSplit.getEndRow());
-            replicatedScanner = replicatedTable.getScanner(scan);
-            return null;
-          }
-        });
+        String zkClusterKey = conf.get(NAME + ".peerQuorumAddress");
+        Configuration peerConf = HBaseConfiguration.create(conf);
+        ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
+
+        TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
+        connection = ConnectionFactory.createConnection(peerConf);
+        replicatedTable = connection.getTable(tableName);
+        scan.setStartRow(value.getRow());
+        scan.setStopRow(tableSplit.getEndRow());
+        replicatedScanner = replicatedTable.getScanner(scan);
         currentCompareRowInPeerTable = replicatedScanner.next();
       }
       while (true) {

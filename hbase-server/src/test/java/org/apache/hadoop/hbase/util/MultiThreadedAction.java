@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -155,7 +155,7 @@ public abstract class MultiThreadedAction {
     this.dataGenerator = dataGen;
     this.tableName = tableName;
     this.actionLetter = actionLetter;
-    this.connection = HConnectionManager.createConnection(conf);
+    this.connection = (HConnection) ConnectionFactory.createConnection(conf);
   }
 
   public void start(long startKey, long endKey, int numThreads) throws IOException {

@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Container for Actions (i.e. Get, Delete, or Put), which are grouped by
- * regionName. Intended to be used with HConnectionManager.processBatch()
+ * regionName. Intended to be used with ConnectionManager.processBatch()
  */
 @InterfaceAudience.Private
 public final class MultiAction<R> {

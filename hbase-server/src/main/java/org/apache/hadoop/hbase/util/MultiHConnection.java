@@ -35,8 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 
@@ -64,7 +64,7 @@ public class MultiHConnection {
     synchronized (this.hConnectionsLock) {
       hConnections = new HConnection[noOfConnections];
       for (int i = 0; i < noOfConnections; i++) {
-        HConnection conn = HConnectionManager.createConnection(conf);
+        HConnection conn = (HConnection) ConnectionFactory.createConnection(conf);
         hConnections[i] = conn;
       }
     }

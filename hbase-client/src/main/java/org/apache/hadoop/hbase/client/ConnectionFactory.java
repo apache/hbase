@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.security.UserProvider;
  * Similarly, {@link Connection} also returns {@link Admin} and {@link RegionLocator}
  * implementations.
  *
- * This class replaces {@link HConnectionManager}, which is now deprecated.
  * @see Connection
  * @since 0.99.0
  */

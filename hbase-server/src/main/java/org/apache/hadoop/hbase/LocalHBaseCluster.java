@@ -173,7 +173,7 @@ public class LocalHBaseCluster {
   throws IOException {
     // Create each regionserver with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
-    // the guts of HConnectionManager.
+    // the guts of ConnectionManager).
 
     // Also, create separate CoordinatedStateManager instance per Server.
     // This is special case when we have to have more than 1 CoordinatedStateManager
@@ -206,7 +206,7 @@ public class LocalHBaseCluster {
   throws IOException {
     // Create each master with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
-    // the guts of HConnectionManager.
+    // the guts of ConnectionManager.
 
     // Also, create separate CoordinatedStateManager instance per Server.
     // This is special case when we have to have more than 1 CoordinatedStateManager

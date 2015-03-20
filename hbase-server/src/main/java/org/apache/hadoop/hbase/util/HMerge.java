@@ -41,9 +41,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -106,14 +104,16 @@ class HMerge {
     final TableName tableName, final boolean testMasterRunning)
   throws IOException {
     boolean masterIsRunning = false;
+    HConnection hConnection = null;
     if (testMasterRunning) {
-      masterIsRunning = HConnectionManager
-          .execute(new HConnectable<Boolean>(conf) {
-            @Override
-            public Boolean connect(HConnection connection) throws IOException {
-              return connection.isMasterRunning();
-            }
-          });
+      try {
+        hConnection = (HConnection) ConnectionFactory.createConnection(conf);
+        masterIsRunning = hConnection.isMasterRunning();
+      } finally {
+        if (hConnection != null) {
+          hConnection.close();
+        }
+      }
     }
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       if (masterIsRunning) {

@@ -285,96 +285,6 @@ public class TestFromClientSide {
      table.close();
    }
 
-   /**
-    * @deprecated Tests deprecated functionality. Remove when we are past 1.0.
-    * @throws Exception
-    */
-   @Deprecated
-   @Test
-   public void testSharedZooKeeper() throws Exception {
-     Configuration newConfig = new Configuration(TEST_UTIL.getConfiguration());
-     newConfig.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "12345");
-
-     // First with a simple ZKW
-     ZooKeeperWatcher z0 = new ZooKeeperWatcher(
-       newConfig, "hconnection", new Abortable() {
-       @Override public void abort(String why, Throwable e) {}
-       @Override public boolean isAborted() {return false;}
-     });
-     z0.getRecoverableZooKeeper().getZooKeeper().exists("/oldZooKeeperWatcher", false);
-     z0.close();
-
-     // Then a ZooKeeperKeepAliveConnection
-     ConnectionManager.HConnectionImplementation connection1 =
-       (ConnectionManager.HConnectionImplementation)
-         HConnectionManager.getConnection(newConfig);
-
-     ZooKeeperKeepAliveConnection z1 = connection1.getKeepAliveZooKeeperWatcher();
-     z1.getRecoverableZooKeeper().getZooKeeper().exists("/z1", false);
-
-     z1.close();
-
-     // will still work, because the real connection is not closed yet
-     // Not do be done in real code
-     z1.getRecoverableZooKeeper().getZooKeeper().exists("/z1afterclose", false);
-
-
-     ZooKeeperKeepAliveConnection z2 = connection1.getKeepAliveZooKeeperWatcher();
-     assertTrue(
-       "ZooKeeperKeepAliveConnection equals on same connection", z1 == z2);
-
-
-
-     Configuration newConfig2 = new Configuration(TEST_UTIL.getConfiguration());
-     newConfig2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "6789");
-     ConnectionManager.HConnectionImplementation connection2 =
-       (ConnectionManager.HConnectionImplementation)
-         HConnectionManager.getConnection(newConfig2);
-
-     assertTrue("connections should be different ", connection1 != connection2);
-
-     ZooKeeperKeepAliveConnection z3 = connection2.getKeepAliveZooKeeperWatcher();
-     assertTrue(
-       "ZooKeeperKeepAliveConnection should be different" +
-         " on different connections", z1 != z3);
-
-     // Bypass the private access
-     Method m = ConnectionManager.HConnectionImplementation.class.
-       getDeclaredMethod("closeZooKeeperWatcher");
-     m.setAccessible(true);
-     m.invoke(connection2);
-
-     ZooKeeperKeepAliveConnection z4 = connection2.getKeepAliveZooKeeperWatcher();
-     assertTrue(
-       "ZooKeeperKeepAliveConnection should be recreated" +
-         " when previous connections was closed"
-       , z3 != z4);
-
-
-     z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
-     z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
-
-
-     HConnectionManager.deleteConnection(newConfig);
-     try {
-       z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
-       assertTrue("We should not have a valid connection for z2", false);
-     } catch (Exception e){
-     }
-
-     z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
-     // We expect success here.
-
-
-     HConnectionManager.deleteConnection(newConfig2);
-     try {
-       z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
-       assertTrue("We should not have a valid connection for z4", false);
-     } catch (Exception e){
-     }
-   }
-
-
   /**
    * Verifies that getConfiguration returns the same Configuration object used
    * to create the HTable instance.
@@ -4127,7 +4037,7 @@ public class TestFromClientSide {
    */
   HTable createUnmangedHConnectionHTable(final TableName tableName) throws IOException {
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+    HConnection conn = ConnectionManager.createConnection(TEST_UTIL.getConfiguration());
     return (HTable)conn.getTable(tableName);
   }
 

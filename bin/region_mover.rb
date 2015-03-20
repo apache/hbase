@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.client.Get
 import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.client.HTable
-import org.apache.hadoop.hbase.client.HConnectionManager
+import org.apache.hadoop.hbase.client.ConnectionFactory
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -243,7 +243,7 @@ end
 
 # Now get list of regions on targetServer
 def getRegions(config, servername)
-  connection = HConnectionManager::getConnection(config);
+  connection = ConnectionFactory::createConnection(config);
   return ProtobufUtil::getOnlineRegions(connection.getAdmin(ServerName.valueOf(servername)));
 end
 

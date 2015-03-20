@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -285,9 +284,9 @@ public class TestZooKeeper {
 
     // make sure they aren't the same
     ZooKeeperWatcher z1 =
-      getZooKeeperWatcher(HConnectionManager.getConnection(localMeta.getConfiguration()));
+      getZooKeeperWatcher(ConnectionFactory.createConnection(localMeta.getConfiguration()));
     ZooKeeperWatcher z2 =
-      getZooKeeperWatcher(HConnectionManager.getConnection(otherConf));
+      getZooKeeperWatcher(ConnectionFactory.createConnection(otherConf));
     assertFalse(z1 == z2);
     assertFalse(z1.getQuorum().equals(z2.getQuorum()));
 

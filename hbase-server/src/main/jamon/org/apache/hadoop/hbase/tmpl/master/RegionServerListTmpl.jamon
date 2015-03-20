@@ -34,7 +34,6 @@ HMaster master;
         org.apache.hadoop.hbase.ServerLoad;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.client.HBaseAdmin;
-        org.apache.hadoop.hbase.client.HConnectionManager;
         org.apache.hadoop.hbase.HTableDescriptor;
         org.apache.hadoop.hbase.HBaseConfiguration;
 </%import>

@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -107,8 +106,7 @@ public class TestEndToEndSplitTransaction {
     byte []firstRow = Bytes.toBytes("aaa");
     byte []splitRow = Bytes.toBytes("lll");
     byte []lastRow = Bytes.toBytes("zzz");
-    HConnection con = HConnectionManager
-        .getConnection(TEST_UTIL.getConfiguration());
+    HConnection con = (HConnection) ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     // this will also cache the region
     byte[] regionName = con.locateRegion(tableName, splitRow).getRegionInfo()
         .getRegionName();

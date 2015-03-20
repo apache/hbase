@@ -39,15 +39,14 @@ public class HConnectionTestingUtility {
   /*
    * Not part of {@link HBaseTestingUtility} because this class is not
    * in same package as {@link HConnection}.  Would have to reveal ugly
-   * {@link HConnectionManager} innards to HBaseTestingUtility to give it access.
+   * {@link ConnectionManager} innards to HBaseTestingUtility to give it access.
    */
   /**
    * Get a Mocked {@link HConnection} that goes with the passed <code>conf</code>
    * configuration instance.  Minimally the mock will return
    * <code>conf</conf> when {@link ClusterConnection#getConfiguration()} is invoked.
    * Be sure to shutdown the connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration)} else it
-   * will stick around; this is probably not what you want.
+   * {@link Connection#close()} else it will stick around; this is probably not what you want.
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
@@ -71,9 +70,8 @@ public class HConnectionTestingUtility {
    * Calls {@link #getMockedConnection(Configuration)} and then mocks a few
    * more of the popular {@link ClusterConnection} methods so they do 'normal'
    * operation (see return doc below for list). Be sure to shutdown the
-   * connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration)} else it
-   * will stick around; this is probably not what you want.
+   * connection when done by calling {@link Connection#close()} else it will stick around;
+   * this is probably not what you want.
    *
    * @param conf Configuration to use
    * @param admin An AdminProtocol; can be null but is usually
@@ -92,8 +90,7 @@ public class HConnectionTestingUtility {
    * {@link ClusterConnection#getAdmin(ServerName)} is called, returns the passed
    * {@link ClientProtos.ClientService.BlockingInterface} instance when
    * {@link ClusterConnection#getClient(ServerName)} is called (Be sure to call
-   * {@link HConnectionManager#deleteConnection(Configuration)}
-   * when done with this mocked Connection.
+   * {@link Connection#close()} when done with this mocked Connection.
    * @throws IOException
    */
   public static ClusterConnection getMockedConnectionAndDecorate(final Configuration conf,
@@ -146,8 +143,7 @@ public class HConnectionTestingUtility {
    * Get a Mockito spied-upon {@link ClusterConnection} that goes with the passed
    * <code>conf</code> configuration instance.
    * Be sure to shutdown the connection when done by calling
-   * {@link HConnectionManager#deleteConnection(Configuration)} else it
-   * will stick around; this is probably not what you want.
+   * {@link Connection#close()} else it will stick around; this is probably not what you want.
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException

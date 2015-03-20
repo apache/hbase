@@ -70,11 +70,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableState;
@@ -2140,7 +2141,7 @@ public class WALSplitter {
         synchronized (this.tableNameToHConnectionMap) {
           hconn = this.tableNameToHConnectionMap.get(tableName);
           if (hconn == null) {
-            hconn = HConnectionManager.getConnection(conf);
+            hconn = (HConnection) ConnectionFactory.createConnection(conf);
             this.tableNameToHConnectionMap.put(tableName, hconn);
           }
         }
