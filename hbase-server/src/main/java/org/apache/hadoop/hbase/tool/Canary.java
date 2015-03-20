@@ -153,14 +153,13 @@ public final class Canary implements Tool {
       } catch (IOException e) {
         LOG.debug("sniffRegion failed", e);
         sink.publishReadFailure(region, e);
-        return null;
-      } finally {
         if (table != null) {
           try {
             table.close();
-          } catch (IOException e) {
+          } catch (IOException ioe) {
           }
         }
+        return null;
       }
 
       byte[] startKey = null;
@@ -204,16 +203,14 @@ public final class Canary implements Tool {
           if (rs != null) {
             rs.close();
           }
-          if (table != null) {
-            try {
-              table.close();
-            } catch (IOException e) {
-            }
-          }
           scan = null;
           get = null;
           startKey = null;
         }
+      }
+      try {
+        table.close();
+      } catch (IOException e) {
       }
       return null;
     }
