@@ -160,6 +160,7 @@ public final class Canary implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     int index = -1;
+    ChoreService choreService = null;
 
     // Process command line args
     for (int i = 0; i < args.length; i++) {
@@ -233,6 +234,15 @@ public final class Canary implements Tool {
       }
     }
 
+    // Launches chore for refreshing kerberos credentials if security is enabled.
+    // Please see http://hbase.apache.org/book.html#_running_canary_in_a_kerberos_enabled_cluster
+    // for more details.
+    final ScheduledChore authChore = AuthUtil.getAuthChore(conf);
+    if (authChore != null) {
+      choreService = new ChoreService("CANARY_TOOL");
+      choreService.scheduleChore(authChore);
+    }
+
     // Start to prepare the stuffs
     Monitor monitor = null;
     Thread monitorThread = null;
@@ -287,6 +297,9 @@ public final class Canary implements Tool {
       } while (interval > 0);
     } // try-with-resources close
 
+    if (choreService != null) {
+      choreService.shutdown();
+    }
     return(monitor.errorCode);
   }
 
@@ -775,15 +788,7 @@ public final class Canary implements Tool {
 
   public static void main(String[] args) throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    final ChoreService choreService = new ChoreService("CANARY_TOOL");
-    final ScheduledChore authChore = AuthUtil.getAuthChore(conf);
-    if (authChore != null) {
-      choreService.scheduleChore(authChore);
-    }
-
     int exitCode = ToolRunner.run(conf, new Canary(), args);
-
-    choreService.shutdown();
     System.exit(exitCode);
   }
 }
