@@ -18,15 +18,16 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -53,6 +54,9 @@ public class TestInfoServers {
     //We need to make sure that the server can be started as read only.
     UTIL.getConfiguration().setBoolean("hbase.master.ui.readonly", true);
     UTIL.startMiniCluster();
+    if (!UTIL.getHBaseCluster().waitForActiveAndReadyMaster(30000)) {
+      throw new RuntimeException("Active master not ready");
+    }
   }
 
   @AfterClass
@@ -65,15 +69,11 @@ public class TestInfoServers {
    */
   @Test
   public void testInfoServersRedirect() throws Exception {
-    // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
-    assertContainsContent(new URL("http://localhost:" + port +
-        "/index.html"), "master-status");
-    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().
-      getInfoServer().getPort();
-    assertContainsContent(new URL("http://localhost:" + port +
-        "/index.html"), "rs-status");
+    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "master-status");
+    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
+        .getInfoServer().getPort();
+    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "rs-status");
   }
 
   /**
@@ -85,15 +85,11 @@ public class TestInfoServers {
    */
   @Test
   public void testInfoServersStatusPages() throws Exception {
-    // give the cluster time to start up
-    new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
-    assertContainsContent(new URL("http://localhost:" + port +
-        "/master-status"), "meta");
-    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().
-      getInfoServer().getPort();
-    assertContainsContent(new URL("http://localhost:" + port +
-        "/rs-status"), "meta");
+    assertContainsContent(new URL("http://localhost:" + port + "/master-status"), "meta");
+    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
+        .getInfoServer().getPort();
+    assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "meta");
   }
 
   @Test
@@ -101,44 +97,34 @@ public class TestInfoServers {
     TableName tableName = TableName.valueOf("testMasterServerReadOnly");
     byte[] cf = Bytes.toBytes("d");
     UTIL.createTable(tableName, cf);
-    new HTable(UTIL.getConfiguration(), tableName).close();
+    UTIL.waitTableAvailable(tableName);
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
+    assertDoesNotContainContent(new URL("http://localhost:" + port + "/table.jsp?name=" + tableName
+        + "&action=split&key="), "Table action request accepted");
     assertDoesNotContainContent(
-      new URL("http://localhost:" + port + "/table.jsp?name=" + tableName + "&action=split&key="),
-      "Table action request accepted");
-    assertDoesNotContainContent(
-      new URL("http://localhost:" + port + "/table.jsp?name=" + tableName),
-      "Actions:");
+      new URL("http://localhost:" + port + "/table.jsp?name=" + tableName), "Actions:");
   }
 
-  private void assertContainsContent(final URL u, final String expected)
-  throws IOException {
+  private void assertContainsContent(final URL u, final String expected) throws IOException {
     LOG.info("Testing " + u.toString() + " has " + expected);
     String content = getUrlContent(u);
-    assertTrue("expected=" + expected + ", content=" + content,
+    assertTrue("expected=" + expected + ", content=" + content, content.contains(expected));
+  }
+
+  private void assertDoesNotContainContent(final URL u, final String expected) throws IOException {
+    LOG.info("Testing " + u.toString() + " does not have " + expected);
+    String content = getUrlContent(u);
+    assertFalse("Does Not Contain =" + expected + ", content=" + content,
       content.contains(expected));
-  }
-
-
-
-  private void assertDoesNotContainContent(final URL u, final String expected)
-      throws IOException {
-    LOG.info("Testing " + u.toString() + " has " + expected);
-    String content = getUrlContent(u);
-    assertTrue("Does Not Contain =" + expected + ", content=" + content,
-        !content.contains(expected));
   }
 
   private String getUrlContent(URL u) throws IOException {
     java.net.URLConnection c = u.openConnection();
+    c.setConnectTimeout(2000);
+    c.setReadTimeout(2000);
     c.connect();
-    StringBuilder sb = new StringBuilder();
-    BufferedInputStream bis = new BufferedInputStream(c.getInputStream());
-    byte [] bytes = new byte[1024];
-    for (int read = -1; (read = bis.read(bytes)) != -1;) {
-      sb.append(new String(bytes, 0, read));
+    try (InputStream in = c.getInputStream()) {
+      return IOUtils.toString(in);
     }
-    bis.close();
-    return sb.toString();
   }
 }
