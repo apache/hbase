@@ -571,6 +571,21 @@ public final class CellUtil {
     return estimatedSerializedSizeOf(cell);
   }
 
+  /**
+   * This is a hack that should be removed once we don't care about matching
+   * up client- and server-side estimations of cell size. It needed to be
+   * backwards compatible with estimations done by older clients. We need to
+   * pretend that tags never exist and cells aren't serialized with tag
+   * length included. See HBASE-13262 and HBASE-13303
+   */
+  @Deprecated
+  public static long estimatedHeapSizeOfWithoutTags(final Cell cell) {
+    if (cell instanceof KeyValue) {
+      return ((KeyValue)cell).heapSizeWithoutTags();
+    }
+    return getSumOfCellKeyElementLengths(cell) + cell.getValueLength();
+  }
+
   /********************* tags *************************************/
   /**
    * Util method to iterate through the tags

@@ -2070,7 +2070,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             if (!results.isEmpty()) {
               for (Result r : results) {
                 for (Cell cell : r.rawCells()) {
-                  currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
+                  currentScanResultSize += CellUtil.estimatedHeapSizeOfWithoutTags(cell);
                   totalCellSize += CellUtil.estimatedSerializedSizeOf(cell);
                 }
               }
@@ -2101,7 +2101,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                   boolean moreRows = scanner.nextRaw(values);
                   if (!values.isEmpty()) {
                     for (Cell cell : values) {
-                      currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
+                      currentScanResultSize += CellUtil.estimatedHeapSizeOfWithoutTags(cell);
                       totalCellSize += CellUtil.estimatedSerializedSizeOf(cell);
                     }
                     results.add(Result.create(values, null, stale));
