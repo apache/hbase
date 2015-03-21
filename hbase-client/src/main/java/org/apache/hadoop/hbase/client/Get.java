@@ -98,6 +98,7 @@ public class Get extends Query
    * @param get
    */
   public Get(Get get) {
+    this(get.getRow());
     this.filter = get.getFilter();
     this.cacheBlocks = get.getCacheBlocks();
     this.maxVersions = get.getMaxVersions();
