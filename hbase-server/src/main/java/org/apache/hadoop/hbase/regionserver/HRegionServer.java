@@ -3254,7 +3254,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                 if (maxScannerResultSize < Long.MAX_VALUE){
                   for (Cell cell : r.rawCells()) {
                     KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                    currentScanResultSize += kv.heapSize();
+                    currentScanResultSize += kv.heapSizeWithoutTags();
                     totalKvSize += kv.getLength();
                   }
                 }
@@ -3286,7 +3286,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                   if (!values.isEmpty()) {
                     for (Cell cell : values) {
                       KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                      currentScanResultSize += kv.heapSize();
+                      currentScanResultSize += kv.heapSizeWithoutTags();
                       totalKvSize += kv.getLength();
                     }
                     results.add(Result.create(values));
