@@ -2121,7 +2121,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               for (Result r : results) {
                 for (Cell cell : r.rawCells()) {
                   totalCellSize += CellUtil.estimatedSerializedSizeOf(cell);
-                  currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
+                  currentScanResultSize += CellUtil.estimatedHeapSizeOfWithoutTags(cell);
                 }
               }
             }
@@ -2184,7 +2184,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
                       // If the calculation can't be skipped, then do it now.
                       if (!skipResultSizeCalculation) {
-                        currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
+                        currentScanResultSize += CellUtil.estimatedHeapSizeOfWithoutTags(cell);
                       }
                     }
                     // The size limit was reached. This means there are more cells remaining in
