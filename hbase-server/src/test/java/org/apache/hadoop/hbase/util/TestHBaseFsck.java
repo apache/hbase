@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -177,6 +178,11 @@ public class TestHBaseFsck {
     hbfsckExecutorService.shutdown();
     admin.close();
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Before
+  public void setUp() {
+    EnvironmentEdgeManager.reset();
   }
 
   @Test (timeout=180000)
