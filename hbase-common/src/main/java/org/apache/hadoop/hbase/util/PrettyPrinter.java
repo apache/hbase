@@ -34,7 +34,7 @@ public class PrettyPrinter {
     StringBuilder human = new StringBuilder();
     switch (unit) {
       case TIME_INTERVAL:
-        human.append(humanReadableTTL(Long.valueOf(value)));
+        human.append(humanReadableTTL(Long.parseLong(value)));
         break;
       default:
         human.append(value);

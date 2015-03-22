@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -105,7 +106,7 @@ public class TableAuthManager {
 
   private Configuration conf;
   private ZKPermissionWatcher zkperms;
-  private volatile long mtime;
+  private final AtomicLong mtime = new AtomicLong(0L);
 
   private TableAuthManager(ZooKeeperWatcher watcher, Configuration conf)
       throws IOException {
@@ -212,7 +213,7 @@ public class TableAuthManager {
         }
       }
       globalCache = newCache;
-      mtime++;
+      mtime.incrementAndGet();
     } catch (IOException e) {
       // Never happens
       LOG.error("Error occured while updating the global cache", e);
@@ -240,7 +241,7 @@ public class TableAuthManager {
     }
 
     tableCache.put(table, newTablePerms);
-    mtime++;
+    mtime.incrementAndGet();
   }
 
   /**
@@ -264,7 +265,7 @@ public class TableAuthManager {
     }
 
     nsCache.put(namespace, newTablePerms);
-    mtime++;
+    mtime.incrementAndGet();
   }
 
   private PermissionCache<TablePermission> getTablePermissions(TableName table) {
@@ -741,7 +742,7 @@ public class TableAuthManager {
   }
 
   public long getMTime() {
-    return mtime;
+    return mtime.get();
   }
 
   static Map<ZooKeeperWatcher,TableAuthManager> managerMap =

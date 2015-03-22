@@ -51,7 +51,7 @@ public class HbckTestingUtil {
     HBaseFsck fsck = new HBaseFsck(conf, exec);
     try {
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setFixAssignments(fixAssignments);
       fsck.setFixMeta(fixMeta);

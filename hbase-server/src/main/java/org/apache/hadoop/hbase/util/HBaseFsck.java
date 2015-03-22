@@ -3985,7 +3985,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Display the full report from fsck. This displays all live and dead region
    * servers, and all known regions.
    */
-  public void setDisplayFullReport() {
+  public static void setDisplayFullReport() {
     details = true;
   }
 
@@ -3993,7 +3993,7 @@ public class HBaseFsck extends Configured implements Closeable {
    * Set summary mode.
    * Print only summary of the tables and status (OK or INCONSISTENT)
    */
-  void setSummary() {
+  static void setSummary() {
     summary = true;
   }
 

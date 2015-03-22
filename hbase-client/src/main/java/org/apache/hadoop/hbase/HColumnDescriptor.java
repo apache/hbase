@@ -734,7 +734,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     String compressTagsStr = getValue(COMPRESS_TAGS);
     boolean compressTags = DEFAULT_COMPRESS_TAGS;
     if (compressTagsStr != null) {
-      compressTags = Boolean.valueOf(compressTagsStr);
+      compressTags = Boolean.parseBoolean(compressTagsStr);
     }
     return compressTags;
   }
@@ -747,7 +747,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     String compressTagsStr = getValue(COMPRESS_TAGS);
     boolean compressTags = DEFAULT_COMPRESS_TAGS;
     if (compressTagsStr != null) {
-      compressTags = Boolean.valueOf(compressTagsStr);
+      compressTags = Boolean.parseBoolean(compressTagsStr);
     }
     return compressTags;
   }
@@ -778,8 +778,9 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public boolean isInMemory() {
     String value = getValue(HConstants.IN_MEMORY);
-    if (value != null)
-      return Boolean.valueOf(value).booleanValue();
+    if (value != null) {
+      return Boolean.parseBoolean(value);
+    }
     return DEFAULT_IN_MEMORY;
   }
 
@@ -827,7 +828,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public int getTimeToLive() {
     String value = getValue(TTL);
-    return (value != null)? Integer.valueOf(value).intValue(): DEFAULT_TTL;
+    return (value != null)? Integer.parseInt(value) : DEFAULT_TTL;
   }
 
   /**
@@ -843,7 +844,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public int getMinVersions() {
     String value = getValue(MIN_VERSIONS);
-    return (value != null)? Integer.valueOf(value).intValue(): 0;
+    return (value != null)? Integer.parseInt(value) : 0;
   }
 
   /**
@@ -861,8 +862,9 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public boolean isBlockCacheEnabled() {
     String value = getValue(BLOCKCACHE);
-    if (value != null)
-      return Boolean.valueOf(value).booleanValue();
+    if (value != null) {
+      return Boolean.parseBoolean(value);
+    }
     return DEFAULT_BLOCKCACHE;
   }
 
@@ -900,7 +902,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   public int getScope() {
     byte[] value = getValue(REPLICATION_SCOPE_BYTES);
     if (value != null) {
-      return Integer.valueOf(Bytes.toString(value));
+      return Integer.parseInt(Bytes.toString(value));
     }
     return DEFAULT_REPLICATION_SCOPE;
   }
@@ -966,7 +968,9 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   private boolean setAndGetBoolean(final String key, final boolean defaultSetting) {
     String value = getValue(key);
-    if (value != null) return Boolean.valueOf(value).booleanValue();
+    if (value != null) {
+      return Boolean.parseBoolean(value);
+    }
     return defaultSetting;
   }
 
@@ -1201,7 +1205,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   @Override
   public int hashCode() {
     int result = Bytes.hashCode(this.name);
-    result ^= Byte.valueOf(COLUMN_DESCRIPTOR_VERSION).hashCode();
+    result ^= (int) COLUMN_DESCRIPTOR_VERSION;
     result ^= values.hashCode();
     result ^= configuration.hashCode();
     return result;

@@ -106,7 +106,9 @@ public class StorageClusterStatusModel
     /**
      * Represents a region hosted on a region server.
      */
-    public static class Region {
+    public static class Region implements Serializable {
+      private static final long serialVersionUID = -1326683840086398193L;
+
       private byte[] name;
       private int stores;
       private int storefiles;

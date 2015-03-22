@@ -1749,6 +1749,19 @@ public class HFileBlock implements Cacheable {
   }
 
   @Override
+  public int hashCode() {
+    int result = 1;
+    result = result * 31 + blockType.hashCode();
+    result = result * 31 + nextBlockOnDiskSizeWithHeader;
+    result = result * 31 + (int) (offset ^ (offset >>> 32));
+    result = result * 31 + onDiskSizeWithoutHeader;
+    result = result * 31 + (int) (prevBlockOffset ^ (prevBlockOffset >>> 32));
+    result = result * 31 + uncompressedSizeWithoutHeader;
+    result = result * 31 + buf.hashCode();
+    return result;
+  }
+
+  @Override
   public boolean equals(Object comparison) {
     if (this == comparison) {
       return true;

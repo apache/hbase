@@ -258,8 +258,9 @@ public class RegionCoprocessorHost
                 key + ", spec: " + spec);
               continue;
             }
-            int priority = matcher.group(3).trim().isEmpty() ?
-                Coprocessor.PRIORITY_USER : Integer.valueOf(matcher.group(3));
+            String priorityStr = matcher.group(3).trim();
+            int priority = priorityStr.isEmpty() ?
+                Coprocessor.PRIORITY_USER : Integer.parseInt(priorityStr);
             String cfgSpec = null;
             try {
               cfgSpec = matcher.group(4);

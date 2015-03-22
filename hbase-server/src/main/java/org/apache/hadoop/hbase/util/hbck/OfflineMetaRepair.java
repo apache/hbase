@@ -81,7 +81,7 @@ public class OfflineMetaRepair {
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
       if (cmd.equals("-details")) {
-        fsck.setDisplayFullReport();
+        HBaseFsck.setDisplayFullReport();
       } else if (cmd.equals("-base")) {
         if (i == args.length - 1) {
           System.err.println("OfflineMetaRepair: -base needs an HDFS path.");

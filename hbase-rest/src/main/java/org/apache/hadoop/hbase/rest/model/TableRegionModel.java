@@ -142,7 +142,7 @@ public class TableRegionModel implements Serializable {
     this.startKey = Bytes.toBytes(split[1]);
     String tail = split[2];
     split = tail.split("\\.");
-    id = Long.valueOf(split[0]);
+    id = Long.parseLong(split[0]);
   }
 
   /**
