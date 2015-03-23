@@ -60,7 +60,7 @@ import java.util.List;
  * @see Connection
  * @since 1.0.0
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface BufferedMutator extends Closeable {
   /**
