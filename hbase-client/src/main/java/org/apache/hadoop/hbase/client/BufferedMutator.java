@@ -122,6 +122,8 @@ public interface BufferedMutator extends Closeable {
   /**
    * Listens for asynchronous exceptions on a {@link BufferedMutator}.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   interface ExceptionListener {
     public void onException(RetriesExhaustedWithDetailsException exception,
         BufferedMutator mutator) throws RetriesExhaustedWithDetailsException;
