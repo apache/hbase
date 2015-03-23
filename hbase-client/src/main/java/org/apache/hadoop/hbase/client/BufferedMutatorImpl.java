@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
  * @since 1.0.0
  */
 @InterfaceAudience.Private
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public class BufferedMutatorImpl implements BufferedMutator {
 
   private static final Log LOG = LogFactory.getLog(BufferedMutatorImpl.class);
