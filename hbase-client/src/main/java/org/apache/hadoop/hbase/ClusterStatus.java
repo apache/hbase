@@ -118,6 +118,9 @@ public class ClusterStatus extends VersionedWritable {
    * @return the names of region servers on the dead list
    */
   public Collection<ServerName> getDeadServerNames() {
+    if (deadServers == null) {
+      return Collections.<ServerName>emptyList();
+    }
     return Collections.unmodifiableCollection(deadServers);
   }
 
@@ -125,14 +128,14 @@ public class ClusterStatus extends VersionedWritable {
    * @return the number of region servers in the cluster
    */
   public int getServersSize() {
-    return liveServers.size();
+    return liveServers != null ? liveServers.size() : 0;
   }
 
   /**
    * @return the number of dead region servers in the cluster
    */
   public int getDeadServers() {
-    return deadServers.size();
+    return deadServers != null ? deadServers.size() : 0;
   }
 
   /**
@@ -148,8 +151,10 @@ public class ClusterStatus extends VersionedWritable {
    */
   public int getRegionsCount() {
     int count = 0;
-    for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-      count += e.getValue().getNumberOfRegions();
+    if (liveServers != null && !liveServers.isEmpty()) {
+      for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
+        count += e.getValue().getNumberOfRegions();
+      }
     }
     return count;
   }
@@ -159,8 +164,10 @@ public class ClusterStatus extends VersionedWritable {
    */
   public int getRequestsCount() {
     int count = 0;
-    for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
-      count += e.getValue().getNumberOfRequests();
+    if (liveServers != null && !liveServers.isEmpty()) {
+      for (Map.Entry<ServerName, ServerLoad> e: this.liveServers.entrySet()) {
+        count += e.getValue().getNumberOfRequests();
+      }
     }
     return count;
   }
@@ -222,6 +229,9 @@ public class ClusterStatus extends VersionedWritable {
   }
 
   public Collection<ServerName> getServers() {
+    if (liveServers == null) {
+      return Collections.<ServerName>emptyList();
+    }
     return Collections.unmodifiableCollection(this.liveServers.keySet());
   }
 
@@ -237,13 +247,16 @@ public class ClusterStatus extends VersionedWritable {
    * @return the number of backup masters in the cluster
    */
   public int getBackupMastersSize() {
-    return this.backupMasters.size();
+    return backupMasters != null ? backupMasters.size() : 0;
   }
 
   /**
    * @return the names of backup masters
    */
   public Collection<ServerName> getBackupMasters() {
+    if (backupMasters == null) {
+      return Collections.<ServerName>emptyList();
+    }
     return Collections.unmodifiableCollection(this.backupMasters);
   }
 
@@ -252,7 +265,7 @@ public class ClusterStatus extends VersionedWritable {
    * @return Server's load or null if not found.
    */
   public ServerLoad getLoad(final ServerName sn) {
-    return this.liveServers.get(sn);
+    return liveServers != null ? liveServers.get(sn) : null;
   }
 
   @InterfaceAudience.Private
@@ -303,27 +316,41 @@ public class ClusterStatus extends VersionedWritable {
   public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     sb.append("Master: " + master);
-    sb.append("\nNumber of backup masters: " + backupMasters.size());
-    for (ServerName serverName: backupMasters) {
-      sb.append("\n  " + serverName);
+
+    int backupMastersSize = getBackupMastersSize();
+    sb.append("\nNumber of backup masters: " + backupMastersSize);
+    if (backupMastersSize > 0) {
+      for (ServerName serverName: backupMasters) {
+        sb.append("\n  " + serverName);
+      }
     }
 
-    sb.append("\nNumber of live region servers: " + liveServers.size());
-    for (ServerName serverName: liveServers.keySet()) {
-      sb.append("\n  " + serverName.getServerName());
+    int serversSize = getServersSize();
+    sb.append("\nNumber of live region servers: " + serversSize);
+    if (serversSize > 0) {
+      for (ServerName serverName: liveServers.keySet()) {
+        sb.append("\n  " + serverName.getServerName());
+      }
     }
 
-    sb.append("\nNumber of dead region servers: " + deadServers.size());
-    for (ServerName serverName: deadServers) {
-      sb.append("\n  " + serverName);
+    int deadServerSize = getDeadServers();
+    sb.append("\nNumber of dead region servers: " + deadServerSize);
+    if (deadServerSize > 0) {
+      for (ServerName serverName: deadServers) {
+        sb.append("\n  " + serverName);
+      }
     }
 
     sb.append("\nAverage load: " + getAverageLoad());
     sb.append("\nNumber of requests: " + getRequestsCount());
     sb.append("\nNumber of regions: " + getRegionsCount());
-    sb.append("\nNumber of regions in transition: " + intransition.size());
-    for (RegionState state: intransition.values()) {
-      sb.append("\n  " + state.toDescriptiveString());
+
+    int ritSize = (intransition != null) ? intransition.size() : 0;
+    sb.append("\nNumber of regions in transition: " + ritSize);
+    if (ritSize > 0) {
+      for (RegionState state: intransition.values()) {
+        sb.append("\n  " + state.toDescriptiveString());
+      }
     }
     return sb.toString();
   }
