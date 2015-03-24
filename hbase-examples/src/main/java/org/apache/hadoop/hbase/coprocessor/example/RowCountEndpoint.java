@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.RpcCallback;
@@ -81,7 +80,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
       byte[] lastRow = null;
       long count = 0;
       do {
-        hasMore = NextState.hasMoreValues(scanner.next(results));
+        hasMore = scanner.next(results);
         for (Cell kv : results) {
           byte[] currentRow = CellUtil.cloneRow(kv);
           if (lastRow == null || !Bytes.equals(lastRow, currentRow)) {
@@ -120,7 +119,7 @@ public class RowCountEndpoint extends ExampleProtos.RowCountService
       boolean hasMore = false;
       long count = 0;
       do {
-        hasMore = NextState.hasMoreValues(scanner.next(results));
+        hasMore = scanner.next(results);
         for (Cell kv : results) {
           count++;
         }

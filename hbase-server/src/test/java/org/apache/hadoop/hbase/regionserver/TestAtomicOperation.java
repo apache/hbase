@@ -60,11 +60,10 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -467,7 +466,8 @@ public class TestAtomicOperation {
               Scan s = new Scan(row);
               RegionScanner rs = region.getScanner(s);
               List<Cell> r = new ArrayList<Cell>();
-              while(NextState.hasMoreValues(rs.next(r)));
+              while (rs.next(r))
+                ;
               rs.close();
               if (r.size() != 1) {
                 LOG.debug(r);
@@ -561,7 +561,8 @@ public class TestAtomicOperation {
     Scan s = new Scan();
     RegionScanner scanner = region.getScanner(s);
     List<Cell> results = new ArrayList<Cell>();
-    scanner.next(results, 2);
+    ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(2).build();
+    scanner.next(results, scannerContext);
     for (Cell keyValue : results) {
       assertEquals("50",Bytes.toString(CellUtil.cloneValue(keyValue)));
     }
