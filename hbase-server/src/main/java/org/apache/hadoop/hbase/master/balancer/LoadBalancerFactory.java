@@ -30,6 +30,15 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class LoadBalancerFactory {
 
   /**
+   * The default {@link LoadBalancer} class. 
+   *
+   * @return The Class for the default {@link LoadBalancer}.
+   */
+  public static Class<? extends LoadBalancer> getDefaultLoadBalancerClass() {
+    return StochasticLoadBalancer.class;
+  }
+
+  /**
    * Create a loadbalancer from the given conf.
    * @param conf
    * @return A {@link LoadBalancer}
@@ -38,7 +47,7 @@ public class LoadBalancerFactory {
 
     // Create the balancer
     Class<? extends LoadBalancer> balancerKlass =
-        conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, StochasticLoadBalancer.class,
+        conf.getClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, getDefaultLoadBalancerClass(),
           LoadBalancer.class);
     return ReflectionUtils.newInstance(balancerKlass, conf);
 

@@ -92,6 +92,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -1303,6 +1305,14 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+    return response.build();
+  }
+
+  @Override
+  public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
+      IsBalancerEnabledRequest request) throws ServiceException {
+    IsBalancerEnabledResponse.Builder response = IsBalancerEnabledResponse.newBuilder();
+    response.setEnabled(master.isBalancerOn());
     return response.build();
   }
 }

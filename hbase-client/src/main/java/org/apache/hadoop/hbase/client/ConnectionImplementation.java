@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +54,8 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1588,6 +1591,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           RpcController controller, MasterProtos.MajorCompactionTimestampForRegionRequest request)
           throws ServiceException {
         return stub.getLastMajorCompactionTimestampForRegion(controller, request);
+      }
+
+      @Override
+      public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
+          IsBalancerEnabledRequest request) throws ServiceException {
+        return stub.isBalancerEnabled(controller, request);
       }
     };
   }

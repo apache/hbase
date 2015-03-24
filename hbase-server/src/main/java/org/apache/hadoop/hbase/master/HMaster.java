@@ -2302,4 +2302,25 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
     return getClusterStatus().getLastMajorCompactionTsForRegion(regionName);
   }
+
+  /**
+   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized,
+   * false is returned.
+   *
+   * @return The state of the load balancer, or false if the load balancer isn't defined.
+   */
+  public boolean isBalancerOn() {
+    if (null == loadBalancerTracker) return false;
+    return loadBalancerTracker.isBalancerOn();
+  }
+
+  /**
+   * Fetch the configured {@link LoadBalancer} class name. If none is set, a default is returned.
+   *
+   * @return The name of the {@link LoadBalancer} in use.
+   */
+  public String getLoadBalancerClassName() {
+    return conf.get(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, LoadBalancerFactory
+        .getDefaultLoadBalancerClass().getName());
+  }
 }
