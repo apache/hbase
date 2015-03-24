@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Rule;
@@ -137,7 +136,7 @@ public class TestScanner {
 
       InternalScanner s = r.getScanner(scan);
       int count = 0;
-      while (NextState.hasMoreValues(s.next(results))) {
+      while (s.next(results)) {
         count++;
       }
       s.close();
@@ -150,7 +149,7 @@ public class TestScanner {
       count = 0;
       Cell kv = null;
       results = new ArrayList<Cell>();
-      for (boolean first = true; NextState.hasMoreValues(s.next(results));) {
+      for (boolean first = true; s.next(results);) {
         kv = results.get(0);
         if (first) {
           assertTrue(CellUtil.matchingRow(kv,  startrow));
@@ -173,7 +172,7 @@ public class TestScanner {
     InternalScanner s = r.getScanner(scan);
     boolean hasMore = true;
     while (hasMore) {
-      hasMore = NextState.hasMoreValues(s.next(results));
+      hasMore = s.next(results);
       for (Cell kv : results) {
         assertEquals((byte)'a', CellUtil.cloneRow(kv)[0]);
         assertEquals((byte)'b', CellUtil.cloneRow(kv)[1]);
@@ -189,7 +188,7 @@ public class TestScanner {
     InternalScanner s = r.getScanner(scan);
     boolean hasMore = true;
     while (hasMore) {
-      hasMore = NextState.hasMoreValues(s.next(results));
+      hasMore = s.next(results);
       for (Cell kv : results) {
         assertTrue(Bytes.compareTo(CellUtil.cloneRow(kv), stopRow) <= 0);
       }
@@ -389,7 +388,7 @@ public class TestScanner {
           scan.addColumn(COLS[0],  EXPLICIT_COLS[ii]);
         }
         scanner = r.getScanner(scan);
-        while (NextState.hasMoreValues(scanner.next(results))) {
+        while (scanner.next(results)) {
           assertTrue(hasColumn(results, HConstants.CATALOG_FAMILY,
               HConstants.REGIONINFO_QUALIFIER));
           byte [] val = CellUtil.cloneValue(getColumn(results, HConstants.CATALOG_FAMILY,

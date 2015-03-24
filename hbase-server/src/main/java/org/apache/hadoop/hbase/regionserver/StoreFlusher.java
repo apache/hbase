@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 
 /**
@@ -110,10 +109,14 @@ abstract class StoreFlusher {
       Compactor.CellSink sink, long smallestReadPoint) throws IOException {
     int compactionKVMax =
       conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
+
+    ScannerContext scannerContext =
+        ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+
     List<Cell> kvs = new ArrayList<Cell>();
     boolean hasMore;
     do {
-      hasMore = NextState.hasMoreValues(scanner.next(kvs, compactionKVMax));
+      hasMore = scanner.next(kvs, scannerContext);
       if (!kvs.isEmpty()) {
         for (Cell c : kvs) {
           // If we know that this KV is going to be included always, then let us

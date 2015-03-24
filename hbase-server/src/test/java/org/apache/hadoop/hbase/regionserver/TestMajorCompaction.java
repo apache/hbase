@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
@@ -131,7 +130,7 @@ public class TestMajorCompaction {
     InternalScanner s = r.getScanner(new Scan());
     do {
       List<Cell> results = new ArrayList<Cell>();
-      boolean result = NextState.hasMoreValues(s.next(results));
+      boolean result = s.next(results);
       r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
       if (!result) break;
     } while(true);
@@ -144,7 +143,7 @@ public class TestMajorCompaction {
     int counter = 0;
     do {
       List<Cell> results = new ArrayList<Cell>();
-      boolean result = NextState.hasMoreValues(s.next(results));
+      boolean result = s.next(results);
       if (!result) break;
       counter++;
     } while(true);
@@ -455,7 +454,7 @@ public class TestMajorCompaction {
     InternalScanner s = r.getScanner(scan);
     do {
       List<Cell> results = new ArrayList<Cell>();
-      boolean result = NextState.hasMoreValues(s.next(results));
+      boolean result = s.next(results);
       assertTrue(!results.isEmpty());
       r.delete(new Delete(results.get(0).getRow()));
       if (!result) break;
@@ -471,7 +470,7 @@ public class TestMajorCompaction {
     int counter = 0;
     do {
       List<Cell> results = new ArrayList<Cell>();
-      boolean result = NextState.hasMoreValues(s.next(results));
+      boolean result = s.next(results);
       if (!result) break;
       counter++;
     } while (true);

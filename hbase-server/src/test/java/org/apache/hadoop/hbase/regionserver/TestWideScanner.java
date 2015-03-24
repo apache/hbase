@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
@@ -102,7 +101,7 @@ public class TestWideScanner extends HBaseTestCase {
       int i = 0;
       boolean more;
       do {
-        more = NextState.hasMoreValues(s.next(results));
+        more = s.next(results);
         i++;
         LOG.info("iteration #" + i + ", results.size=" + results.size());
 

@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -434,7 +433,7 @@ public class TestReversibleScanners {
     int rowCount = 0;
     int kvCount = 0;
     try {
-      while (NextState.hasMoreValues(scanner.next(kvList))) {
+      while (scanner.next(kvList)) {
         if (kvList.isEmpty()) continue;
         rowCount++;
         kvCount += kvList.size();
