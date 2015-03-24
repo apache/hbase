@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -94,7 +93,7 @@ public class TestIntraRowPagination {
       RegionScanner scanner = region.getScanner(scan);
       List<Cell> kvListScan = new ArrayList<Cell>();
       List<Cell> results = new ArrayList<Cell>();
-      while (NextState.hasMoreValues(scanner.next(results)) || !results.isEmpty()) {
+      while (scanner.next(results) || !results.isEmpty()) {
         kvListScan.addAll(results);
         results.clear();
       }

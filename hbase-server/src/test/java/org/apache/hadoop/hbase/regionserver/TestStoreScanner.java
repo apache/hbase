@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -91,7 +90,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
         getCols("a"), scanners);
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
     assertEquals(kvs[kvs.length - 1], results.get(0));
     // Scan limited TimeRange
@@ -101,7 +100,7 @@ public class TestStoreScanner extends TestCase {
     scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
         scanners);
     results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
     // Another range.
     scanSpec = new Scan(Bytes.toBytes(r1));
@@ -110,7 +109,7 @@ public class TestStoreScanner extends TestCase {
     scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
         scanners);
     results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     // See how TimeRange and Versions interact.
     // Another range.
@@ -120,7 +119,7 @@ public class TestStoreScanner extends TestCase {
     scan = new StoreScanner(scanSpec, scanInfo, scanType, getCols("a"),
         scanners);
     results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(3, results.size());
   }
 
@@ -141,7 +140,7 @@ public class TestStoreScanner extends TestCase {
         getCols("a"), scanners);
 
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[0], results.get(0));
   }
@@ -196,7 +195,7 @@ public class TestStoreScanner extends TestCase {
         getCols("a"), scanners);
 
     List<Cell> results = new ArrayList<Cell>();
-    assertFalse(NextState.hasMoreValues(scan.next(results)));
+    assertFalse(scan.next(results));
     assertEquals(0, results.size());
   }
 
@@ -216,14 +215,14 @@ public class TestStoreScanner extends TestCase {
         getCols("a"), scanners);
 
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(0, results.size());
 
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[2], results.get(0));
 
-    assertEquals(false, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(false, scan.next(results));
   }
 
   public void testDeleteVersionMaskingMultiplePuts() throws IOException {
@@ -245,7 +244,7 @@ public class TestStoreScanner extends TestCase {
     // the two put at ts=now will be masked by the 1 delete, and
     // since the scan default returns 1 version we'll return the newest
     // key, which is kvs[2], now-100.
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs2[1], results.get(0));
   }
@@ -267,7 +266,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(scanSpec, scanInfo, scanType,
         getCols("a"), scanners);
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
     assertEquals(kvs2[1], results.get(0));
     assertEquals(kvs2[0], results.get(1));
@@ -283,7 +282,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(new Scan(Bytes.toBytes("R1")),
         scanInfo, scanType, null, scanners);
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
     assertEquals(kvs[0], results.get(0));
     assertEquals(kvs[1], results.get(1));
@@ -312,7 +311,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(new Scan().setMaxVersions(2),
         scanInfo, scanType, null, scanners);
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(5, results.size());
     assertEquals(kvs[0], results.get(0));
     assertEquals(kvs[2], results.get(1));
@@ -341,13 +340,13 @@ public class TestStoreScanner extends TestCase {
         new Scan().setMaxVersions(Integer.MAX_VALUE), scanInfo, scanType, null,
         scanners);
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(0, results.size());
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[kvs.length-1], results.get(0));
 
-    assertEquals(false, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(false, scan.next(results));
   }
 
   public void testDeleteColumn() throws IOException {
@@ -361,7 +360,7 @@ public class TestStoreScanner extends TestCase {
     StoreScanner scan = new StoreScanner(new Scan(), scanInfo, scanType, null,
         scanners);
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[3], results.get(0));
   }
@@ -385,18 +384,18 @@ public class TestStoreScanner extends TestCase {
         getCols("a", "d"), scanners);
 
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(2, results.size());
     assertEquals(kvs[0], results.get(0));
     assertEquals(kvs[3], results.get(1));
     results.clear();
 
-    assertEquals(true, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(true, scan.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[kvs.length-1], results.get(0));
 
     results.clear();
-    assertEquals(false, NextState.hasMoreValues(scan.next(results)));
+    assertEquals(false, scan.next(results));
   }
 
   /*
@@ -426,20 +425,20 @@ public class TestStoreScanner extends TestCase {
           null, scanners);
 
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scanner.next(results)));
+    assertEquals(true, scanner.next(results));
     assertEquals(2, results.size());
     assertEquals(kvs[1], results.get(0));
     assertEquals(kvs[2], results.get(1));
     results.clear();
 
-    assertEquals(true, NextState.hasMoreValues(scanner.next(results)));
+    assertEquals(true, scanner.next(results));
     assertEquals(3, results.size());
     assertEquals(kvs[4], results.get(0));
     assertEquals(kvs[5], results.get(1));
     assertEquals(kvs[6], results.get(2));
     results.clear();
 
-    assertEquals(false, NextState.hasMoreValues(scanner.next(results)));
+    assertEquals(false, scanner.next(results));
   }
 
   public void testScannerReseekDoesntNPE() throws Exception {
@@ -496,12 +495,12 @@ public class TestStoreScanner extends TestCase {
         new StoreScanner(scan, scanInfo, scanType, null, scanners);
 
     List<Cell> results = new ArrayList<Cell>();
-    assertEquals(true, NextState.hasMoreValues(scanner.next(results)));
+    assertEquals(true, scanner.next(results));
     assertEquals(1, results.size());
     assertEquals(kvs[1], results.get(0));
     results.clear();
 
-    assertEquals(false, NextState.hasMoreValues(scanner.next(results)));
+    assertEquals(false, scanner.next(results));
   }
 
   public void testDeleteMarkerLongevity() throws Exception {
@@ -561,7 +560,7 @@ public class TestStoreScanner extends TestCase {
           HConstants.OLDEST_TIMESTAMP);
       List<Cell> results = new ArrayList<Cell>();
       results = new ArrayList<Cell>();
-      assertEquals(true, NextState.hasMoreValues(scanner.next(results)));
+      assertEquals(true, scanner.next(results));
       assertEquals(kvs[0], results.get(0));
       assertEquals(kvs[2], results.get(1));
       assertEquals(kvs[3], results.get(2));

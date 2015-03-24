@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -161,7 +160,7 @@ public class TestColumnSeeking {
         }
         InternalScanner scanner = region.getScanner(scan);
         List<Cell> results = new ArrayList<Cell>();
-        while (NextState.hasMoreValues(scanner.next(results)))
+        while (scanner.next(results))
           ;
         assertEquals(kvSet.size(), results.size());
         assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));
@@ -273,7 +272,7 @@ public class TestColumnSeeking {
       }
       InternalScanner scanner = region.getScanner(scan);
       List<Cell> results = new ArrayList<Cell>();
-      while (NextState.hasMoreValues(scanner.next(results)))
+      while (scanner.next(results))
         ;
       assertEquals(kvSet.size(), results.size());
       assertTrue(KeyValueTestUtil.containsIgnoreMvccVersion(results, kvSet));

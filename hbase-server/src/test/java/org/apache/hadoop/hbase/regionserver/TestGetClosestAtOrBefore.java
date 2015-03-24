@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -97,7 +96,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     InternalScanner s = mr.getScanner(new Scan());
     try {
       List<Cell> keys = new ArrayList<Cell>();
-        while (NextState.hasMoreValues(s.next(keys))) {
+        while (s.next(keys)) {
         LOG.info(keys);
         keys.clear();
       }
@@ -121,7 +120,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     s = mr.getScanner(scan);
     try {
       List<Cell> keys = new ArrayList<Cell>();
-        while (NextState.hasMoreValues(s.next(keys))) {
+        while (s.next(keys)) {
         mr.delete(new Delete(CellUtil.cloneRow(keys.get(0))));
         keys.clear();
       }

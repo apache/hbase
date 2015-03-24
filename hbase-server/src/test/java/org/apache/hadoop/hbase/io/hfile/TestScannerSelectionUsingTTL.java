@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -140,7 +139,7 @@ public class TestScannerSelectionUsingTTL {
     final int expectedKVsPerRow = numFreshFiles * NUM_COLS_PER_ROW;
     int numReturnedRows = 0;
     LOG.info("Scanning the entire table");
-    while (NextState.hasMoreValues(scanner.next(results)) || results.size() > 0) {
+    while (scanner.next(results) || results.size() > 0) {
       assertEquals(expectedKVsPerRow, results.size());
       ++numReturnedRows;
       results.clear();

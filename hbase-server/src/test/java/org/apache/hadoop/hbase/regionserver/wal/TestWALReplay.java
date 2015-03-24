@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.regionserver.FlushRequestListener;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -751,7 +750,7 @@ public class TestWALReplay {
     int scannedCount = 0;
     List<Cell> results = new ArrayList<Cell>();
     while (true) {
-      boolean existMore = NextState.hasMoreValues(scanner.next(results));
+      boolean existMore = scanner.next(results);
       if (!results.isEmpty())
         scannedCount++;
       if (!existMore)

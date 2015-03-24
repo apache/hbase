@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -250,7 +249,7 @@ public class TestMultiColumnScanner {
         String queryInfo = "columns queried: " + qualSet + " (columnBitMask="
             + columnBitMask + "), maxVersions=" + maxVersions;
 
-        while (NextState.hasMoreValues(scanner.next(results)) || results.size() > 0) {
+        while (scanner.next(results) || results.size() > 0) {
           for (Cell kv : results) {
             while (kvPos < kvs.size()
                 && !matchesQuery(kvs.get(kvPos), qualSet, maxVersions,
