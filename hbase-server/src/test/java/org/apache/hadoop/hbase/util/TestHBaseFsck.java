@@ -92,6 +92,10 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -158,6 +162,9 @@ public class TestHBaseFsck {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      MasterSyncObserver.class.getName());
+
     conf.setInt("hbase.regionserver.handler.count", 2);
     conf.setInt("hbase.regionserver.metahandler.count", 2);
 
@@ -180,6 +187,9 @@ public class TestHBaseFsck {
 
     admin = connection.getAdmin();
     admin.setBalancerRunning(false, true);
+
+    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.NAMESPACE_TABLE_NAME);
   }
 
   @AfterClass
@@ -199,7 +209,10 @@ public class TestHBaseFsck {
   public void testHBaseFsck() throws Exception {
     assertNoErrors(doFsck(conf, false));
     TableName table = TableName.valueOf("tableBadMetaAssign");
-    TEST_UTIL.createTable(table, FAM);
+    HTableDescriptor desc = new HTableDescriptor(table);
+    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
+    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
+    createTable(TEST_UTIL, desc, null);
 
     // We created 1 table, should be fine
     assertNoErrors(doFsck(conf, false));
@@ -418,7 +431,8 @@ public class TestHBaseFsck {
     desc.setRegionReplication(replicaCount);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    admin.createTable(desc, SPLITS);
+    createTable(TEST_UTIL, desc, SPLITS);
+
     tbl = (HTable) connection.getTable(tablename, tableExecutorService);
     List<Put> puts = new ArrayList<Put>();
     for (byte[] row : ROWKEYS) {
@@ -449,15 +463,14 @@ public class TestHBaseFsck {
    * @param tablename
    * @throws IOException
    */
-  void cleanupTable(TableName tablename) throws IOException {
+  void cleanupTable(TableName tablename) throws Exception {
     if (tbl != null) {
       tbl.close();
       tbl = null;
     }
 
     ((ClusterConnection) connection).clearRegionCache();
-    TEST_UTIL.deleteTable(tablename);
-
+    deleteTable(TEST_UTIL, tablename);
   }
 
   /**
@@ -598,9 +611,9 @@ public class TestHBaseFsck {
       assert(h2.getRetCode() >= 0);
     }
   }
-  
+
   /**
-   * This test makes sure that with 5 retries both parallel instances 
+   * This test makes sure that with 5 retries both parallel instances
    * of hbck will be completed successfully.
    *
    * @throws Exception
@@ -614,7 +627,7 @@ public class TestHBaseFsck {
 
       @Override
       public HBaseFsck call() throws Exception {
-        return doFsck(conf, false);        
+        return doFsck(conf, false);
       }
     }
     service = Executors.newFixedThreadPool(2);
@@ -630,7 +643,7 @@ public class TestHBaseFsck {
     assertNotNull(h2);
     assert(h1.getRetCode() >= 0);
     assert(h2.getRetCode() >= 0);
-  
+
   }
 
   /**
@@ -2387,11 +2400,12 @@ public class TestHBaseFsck {
     assertNoErrors(hbck);
 
     ServerName mockName = ServerName.valueOf("localhost", 60000, 1);
+    final TableName tableName = TableName.valueOf("foo");
 
     // obtain one lock
-    final TableLockManager tableLockManager = TableLockManager.createTableLockManager(conf, TEST_UTIL.getZooKeeperWatcher(), mockName);
-    TableLock writeLock = tableLockManager.writeLock(TableName.valueOf("foo"),
-        "testCheckTableLocks");
+    final TableLockManager tableLockManager =
+      TableLockManager.createTableLockManager(conf, TEST_UTIL.getZooKeeperWatcher(), mockName);
+    TableLock writeLock = tableLockManager.writeLock(tableName, "testCheckTableLocks");
     writeLock.acquire();
     hbck = doFsck(conf, false);
     assertNoErrors(hbck); // should not have expired, no problems
@@ -2406,8 +2420,7 @@ public class TestHBaseFsck {
     new Thread() {
       @Override
       public void run() {
-        TableLock readLock = tableLockManager.writeLock(TableName.valueOf("foo"),
-            "testCheckTableLocks");
+        TableLock readLock = tableLockManager.writeLock(tableName, "testCheckTableLocks");
         try {
           latch.countDown();
           readLock.acquire();
@@ -2441,10 +2454,10 @@ public class TestHBaseFsck {
     assertNoErrors(hbck);
 
     // ensure that locks are deleted
-    writeLock = tableLockManager.writeLock(TableName.valueOf("foo"),
-        "should acquire without blocking");
+    writeLock = tableLockManager.writeLock(tableName, "should acquire without blocking");
     writeLock.acquire(); // this should not block.
     writeLock.release(); // release for clean state
+    tableLockManager.tableDeleted(tableName);
   }
 
   /**
@@ -2559,7 +2572,7 @@ public class TestHBaseFsck {
       HTableDescriptor desc = new HTableDescriptor(table);
       HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
       desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-      admin.createTable(desc);
+      createTable(TEST_UTIL, desc, null);
       tbl = (HTable) connection.getTable(table, tableExecutorService);
 
       // Mess it up by leaving a hole in the assignment, meta, and hdfs data
@@ -2668,7 +2681,7 @@ public class TestHBaseFsck {
     try {
       HTableDescriptor desc = new HTableDescriptor(table);
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes("f")));
-      admin.createTable(desc);
+      createTable(TEST_UTIL, desc, null);
       tbl = new HTable(cluster.getConfiguration(), desc.getTableName());
       for (int i = 0; i < 5; i++) {
         Put p1 = new Put(("r" + i).getBytes());
@@ -2718,4 +2731,62 @@ public class TestHBaseFsck {
     }
   }
 
+
+  public static class MasterSyncObserver extends BaseMasterObserver {
+    volatile CountDownLatch tableCreationLatch = null;
+    volatile CountDownLatch tableDeletionLatch = null;
+
+    @Override
+    public void postCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      // the AccessController test, some times calls only and directly the postCreateTableHandler()
+      if (tableCreationLatch != null) {
+        tableCreationLatch.countDown();
+      }
+    }
+
+    @Override
+    public void postDeleteTableHandler(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                       TableName tableName)
+    throws IOException {
+      // the AccessController test, some times calls only and directly the postDeleteTableHandler()
+      if (tableDeletionLatch != null) {
+        tableDeletionLatch.countDown();
+      }
+    }
+  }
+
+  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
+    byte [][] splitKeys) throws Exception {
+    // NOTE: We need a latch because admin is not sync,
+    // so the postOp coprocessor method may be called after the admin operation returned.
+    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    observer.tableCreationLatch = new CountDownLatch(1);
+    if (splitKeys != null) {
+      admin.createTable(htd, splitKeys);
+    } else {
+      admin.createTable(htd);
+    }
+    observer.tableCreationLatch.await();
+    observer.tableCreationLatch = null;
+    testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
+  }
+
+  public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
+    throws Exception {
+    // NOTE: We need a latch because admin is not sync,
+    // so the postOp coprocessor method may be called after the admin operation returned.
+    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    observer.tableDeletionLatch = new CountDownLatch(1);
+    try {
+      admin.disableTable(tableName);
+    } catch (Exception e) {
+      LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+    }
+    admin.deleteTable(tableName);
+    observer.tableDeletionLatch.await();
+    observer.tableDeletionLatch = null;
+  }
 }
