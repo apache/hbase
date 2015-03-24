@@ -367,14 +367,27 @@ public class CatalogJanitor extends Chore {
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, daughter.getTable());
 
+    Path daughterRegionDir = new Path(tabledir, daughter.getEncodedName());
+
     HRegionFileSystem regionFs = null;
+
+    try {
+      if (!FSUtils.isExists(fs, daughterRegionDir)) {
+        return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
+      }
+    } catch (IOException ioe) {
+      LOG.warn("Error trying to determine if daughter region exists, " +
+               "assuming exists and has references", ioe);
+      return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
+    }
+
     try {
       regionFs = HRegionFileSystem.openRegionFromFileSystem(
           this.services.getConfiguration(), fs, tabledir, daughter, true);
     } catch (IOException e) {
-      LOG.warn("Daughter region does not exist: " + daughter.getEncodedName()
-        + ", parent is: " + parent.getEncodedName());
-      return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
+      LOG.warn("Error trying to determine referenced files from : " + daughter.getEncodedName()
+          + ", to: " + parent.getEncodedName() + " assuming has references", e);
+      return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
     }
 
     boolean references = false;
