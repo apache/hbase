@@ -231,6 +231,13 @@ message SetBalancerRunningResponse {
   optional bool prev_balance_value = 1;
 }
 
+message IsBalancerEnabledRequest {
+}
+
+message IsBalancerEnabledResponse {
+  required bool enabled = 1;
+}
+
 message RunCatalogScanRequest {
 }
 
@@ -484,6 +491,12 @@ service MasterService {
    */
   rpc SetBalancerRunning(SetBalancerRunningRequest)
     returns(SetBalancerRunningResponse);
+
+  /**
+   * Query whether the Region Balancer is running.
+   */
+  rpc IsBalancerEnabled(IsBalancerEnabledRequest)
+    returns(IsBalancerEnabledResponse);
 
   /** Get a run of the catalog janitor */
   rpc RunCatalogScan(RunCatalogScanRequest)

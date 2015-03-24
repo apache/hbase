@@ -699,6 +699,13 @@ public interface Admin extends Abortable, Closeable {
   boolean balancer() throws IOException;
 
   /**
+   * Query the current state of the balancer
+   *
+   * @return true if the balancer is enabled, false otherwise.
+   */
+  boolean isBalancerEnabled() throws IOException;
+
+  /**
    * Enable/Disable the catalog janitor
    *
    * @param enable if true enables the catalog janitor

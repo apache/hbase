@@ -1955,6 +1955,23 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
+   * Query the state of the balancer from the Master. It's not a guarantee that the balancer is
+   * actually running this very moment, but that it will run.
+   *
+   * @return True if the balancer is enabled, false otherwise.
+   */
+  @Override
+  public boolean isBalancerEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+      @Override
+      public Boolean call(int callTimeout) throws ServiceException {
+        return master.isBalancerEnabled(null, RequestConverter.buildIsBalancerEnabledRequest())
+            .getEnabled();
+      }
+    });
+  }
+
+  /**
    * Enable/Disable the catalog janitor
    * @param enable if true enables the catalog janitor
    * @return the previous state

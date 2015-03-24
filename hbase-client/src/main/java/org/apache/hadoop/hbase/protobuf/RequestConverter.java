@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusR
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
@@ -1344,6 +1345,15 @@ public final class RequestConverter {
    */
   public static SetBalancerRunningRequest buildSetBalancerRunningRequest(boolean on, boolean synchronous) {
     return SetBalancerRunningRequest.newBuilder().setOn(on).setSynchronous(synchronous).build();
+  }
+
+  /**
+   * Creates a protocol buffer IsBalancerEnabledRequest
+   *
+   * @return a IsBalancerEnabledRequest
+   */
+  public static IsBalancerEnabledRequest buildIsBalancerEnabledRequest() {
+    return IsBalancerEnabledRequest.newBuilder().build();
   }
 
   /**

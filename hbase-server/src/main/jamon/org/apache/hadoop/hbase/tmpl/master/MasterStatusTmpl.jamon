@@ -159,6 +159,13 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           re-enabled from the hbase shell by running the command 'catalogjanitor_switch true'
           </div>
         </%if>
+        <%if !master.isBalancerOn() %>
+          <div class="alert alert-warning">
+            The Load Balancer is not enabled which will eventually cause performance degradation
+            in HBase as Regions will not be distributed across all RegionServers. The balancer
+            is only expected to be disabled during rolling upgrade scenarios.
+          </div>
+        </%if>
 
         <section>
             <h2>Region Servers</h2>
@@ -298,6 +305,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 	                    <td><% master.getMasterCoprocessorHost() == null ? "[]" :
 	                      java.util.Arrays.toString(master.getMasterCoprocessors()) %></td>
 	                    <td>Coprocessors currently loaded by the master</td>
+	                </tr>
+	                <tr>
+	                    <td>LoadBalancer</td>
+	                    <td><% master.getLoadBalancerClassName() %></td>
+	                    <td>LoadBalancer to be used in the Master</td>
 	                </tr>
                 </%if>
             </table>
