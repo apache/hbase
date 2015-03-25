@@ -439,7 +439,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     
     // The other put should be covered by the tombstone
 
-    verifyDenied(getQ2, USER_OTHER);
+    verifyIfNull(getQ2, USER_OTHER);
   }
 
   @Test

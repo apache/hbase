@@ -28,10 +28,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -147,7 +147,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction modifyNamespace = new AccessTestAction() {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preModifyNamespace(ObserverContext.createAndPrepare(CP_ENV, null),
-          NamespaceDescriptor.create(TEST_NAMESPACE).addConfiguration("abc", "156").build());
+            NamespaceDescriptor.create(TEST_NAMESPACE).addConfiguration("abc", "156").build());
         return null;
       }
     };
@@ -248,7 +248,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     // Only an admin should be able to get the user permission
     verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN);
-    verifyDeniedWithException(revokeAction, USER_CREATE, USER_RW);
+    verifyDenied(revokeAction, USER_CREATE, USER_RW);
   }
 
   @Test

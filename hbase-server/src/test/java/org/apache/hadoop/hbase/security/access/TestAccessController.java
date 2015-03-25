@@ -307,7 +307,7 @@ public class TestAccessController extends SecureTestUtil {
         htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
         htd.addFamily(new HColumnDescriptor("fam_" + User.getCurrent().getShortName()));
         ACCESS_CONTROLLER.preModifyTable(ObserverContext.createAndPrepare(CP_ENV, null),
-          TEST_TABLE.getTableName(), htd);
+            TEST_TABLE.getTableName(), htd);
         return null;
       }
     };
@@ -338,13 +338,13 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         ACCESS_CONTROLLER
             .preTruncateTable(ObserverContext.createAndPrepare(CP_ENV, null),
-              TEST_TABLE.getTableName());
+                TEST_TABLE.getTableName());
         return null;
       }
     };
 
-    verifyAllowed(truncateTable, SUPERUSER, USER_ADMIN, USER_CREATE);
-    verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+    verifyAllowed(truncateTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
+    verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE);
   }
 
   @Test
@@ -354,7 +354,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preAddColumn(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE.getTableName(),
-          hcd);
+            hcd);
         return null;
       }
     };
@@ -371,7 +371,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preModifyColumn(ObserverContext.createAndPrepare(CP_ENV, null),
-          TEST_TABLE.getTableName(), hcd);
+            TEST_TABLE.getTableName(), hcd);
         return null;
       }
     };
@@ -386,7 +386,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDeleteColumn(ObserverContext.createAndPrepare(CP_ENV, null),
-          TEST_TABLE.getTableName(), TEST_FAMILY);
+            TEST_TABLE.getTableName(), TEST_FAMILY);
         return null;
       }
     };
@@ -401,7 +401,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDisableTable(ObserverContext.createAndPrepare(CP_ENV, null),
-          TEST_TABLE.getTableName());
+            TEST_TABLE.getTableName());
         return null;
       }
     };
@@ -452,7 +452,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preMove(ObserverContext.createAndPrepare(CP_ENV, null),
-          firstRegion.getKey(), server, server);
+            firstRegion.getKey(), server, server);
         return null;
       }
     };
@@ -476,7 +476,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preAssign(ObserverContext.createAndPrepare(CP_ENV, null),
-          firstRegion.getKey());
+            firstRegion.getKey());
         return null;
       }
     };
@@ -500,7 +500,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preUnassign(ObserverContext.createAndPrepare(CP_ENV, null),
-          firstRegion.getKey(), false);
+            firstRegion.getKey(), false);
         return null;
       }
     };
@@ -524,7 +524,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preRegionOffline(ObserverContext.createAndPrepare(CP_ENV, null),
-          firstRegion.getKey());
+            firstRegion.getKey());
         return null;
       }
     };
@@ -634,7 +634,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preMerge(
             ObserverContext.createAndPrepare(RSCP_ENV, null),
-            regions.get(0),regions.get(1));
+            regions.get(0), regions.get(1));
         return null;
       }
     };
@@ -663,27 +663,13 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preCompact(ObserverContext.createAndPrepare(RCP_ENV, null), null, null,
-          ScanType.COMPACT_RETAIN_DELETES);
+            ScanType.COMPACT_RETAIN_DELETES);
         return null;
       }
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
     verifyDenied(action, USER_RW, USER_RO, USER_NONE);
-  }
-
-  @Test
-  public void testPreCompactSelection() throws Exception {
-    AccessTestAction action = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preCompactSelection(ObserverContext.createAndPrepare(RCP_ENV, null), null, null);
-        return null;
-      }
-    };
-
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
   }
 
   private void verifyRead(AccessTestAction action) throws Exception {
@@ -704,6 +690,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Get g = new Get(TEST_ROW);
         g.addFamily(TEST_FAMILY);
+
         HTable t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.get(g);
@@ -1054,7 +1041,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(getTablePermissionsAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
 
     verifyAllowed(getGlobalPermissionsAction, SUPERUSER, USER_ADMIN);
-    verifyDeniedWithException(getGlobalPermissionsAction, USER_CREATE,
+    verifyDenied(getGlobalPermissionsAction, USER_CREATE,
         USER_OWNER, USER_RW, USER_RO, USER_NONE);
   }
 
@@ -1484,7 +1471,7 @@ public class TestAccessController extends SecureTestUtil {
     UserPermission ownerperm = new UserPermission(
       Bytes.toBytes(USER_OWNER.getName()), tableName, null, Action.values());
     assertTrue("Owner should have all permissions on table",
-      hasFoundUserPermission(ownerperm, perms));
+        hasFoundUserPermission(ownerperm, perms));
 
     User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "user", new String[0]);
     byte[] userName = Bytes.toBytes(user.getShortName());
@@ -1496,7 +1483,7 @@ public class TestAccessController extends SecureTestUtil {
 
     // grant read permission
     grantOnTable(TEST_UTIL, user.getShortName(),
-      tableName, family1, qualifier, Permission.Action.READ);
+        tableName, family1, qualifier, Permission.Action.READ);
 
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
@@ -1575,7 +1562,7 @@ public class TestAccessController extends SecureTestUtil {
     UserPermission newOwnerperm = new UserPermission(
       Bytes.toBytes(newOwner.getName()), tableName, null, Action.values());
     assertTrue("New owner should have all permissions on table",
-      hasFoundUserPermission(newOwnerperm, perms));
+        hasFoundUserPermission(newOwnerperm, perms));
 
     // delete table
     admin.deleteTable(tableName);

@@ -219,7 +219,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     }, USER_OTHER);
 
     // A scan of FAMILY2 will throw an AccessDeniedException
-    verifyDeniedWithException(new AccessTestAction() {
+    verifyDenied(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         // force a new RS connection
