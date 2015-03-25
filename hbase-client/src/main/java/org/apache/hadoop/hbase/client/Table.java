@@ -498,7 +498,9 @@ public interface Table extends Closeable {
    * The default value comes from the configuration parameter
    * {@code hbase.client.write.buffer}.
    * @return The size of the write buffer in bytes.
+    * @deprecated as of 1.0.1 (should not have been in 1.0.0). Replaced by {@link BufferedMutator#getWriteBufferSize()}
    */
+  @Deprecated
   long getWriteBufferSize();
 
   /**
@@ -508,7 +510,10 @@ public interface Table extends Closeable {
    * write buffer, the buffer gets flushed.
    * @param writeBufferSize The new write buffer size, in bytes.
    * @throws IOException if a remote or network exception occurs.
+   * @deprecated as of 1.0.1 (should not have been in 1.0.0). Replaced by {@link BufferedMutator} and
+   * {@link BufferedMutatorParams#writeBufferSize(long)}
    */
+  @Deprecated
   void setWriteBufferSize(long writeBufferSize) throws IOException;
 
   /**
