@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -156,8 +155,8 @@ public class TestNamespaceCommands extends SecureTestUtil {
   @Test
   public void testAclTableEntries() throws Exception {
     String userTestNamespace = "userTestNsp";
-    Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-    try {
+    try(Connection conn = ConnectionFactory.createConnection(conf);
+        Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
       ListMultimap<String, TablePermission> perms =
           AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
 
@@ -188,8 +187,6 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
       perms = AccessControlLists.getNamespacePermissions(conf, TEST_NAMESPACE);
       assertEquals(5, perms.size());
-    } finally {
-      acl.close();
     }
   }
 
@@ -208,16 +205,16 @@ public class TestNamespaceCommands extends SecureTestUtil {
       SUPERUSER,
       USER_GLOBAL_ADMIN);
 
-    verifyDeniedWithException(modifyNamespace,
-      USER_GLOBAL_CREATE,
-      USER_GLOBAL_WRITE,
-      USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC,
-      USER_NS_ADMIN,
-      USER_NS_CREATE,
-      USER_NS_WRITE,
-      USER_NS_READ,
-      USER_NS_EXEC);
+    verifyDenied(modifyNamespace,
+        USER_GLOBAL_CREATE,
+        USER_GLOBAL_WRITE,
+        USER_GLOBAL_READ,
+        USER_GLOBAL_EXEC,
+        USER_NS_ADMIN,
+        USER_NS_CREATE,
+        USER_NS_WRITE,
+        USER_NS_READ,
+        USER_NS_EXEC);
   }
 
   @Test
@@ -246,7 +243,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
       USER_GLOBAL_ADMIN);
 
     // all others should be denied
-    verifyDeniedWithException(createNamespace,
+    verifyDenied(createNamespace,
         USER_GLOBAL_CREATE,
         USER_GLOBAL_WRITE,
         USER_GLOBAL_READ,
@@ -264,18 +261,18 @@ public class TestNamespaceCommands extends SecureTestUtil {
       SUPERUSER,
       USER_GLOBAL_ADMIN);
 
-    verifyDeniedWithException(deleteNamespace,
-      USER_GLOBAL_CREATE,
-      USER_GLOBAL_WRITE,
-      USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC,
-      USER_NS_ADMIN,
-      USER_NS_CREATE,
-      USER_NS_WRITE,
-      USER_NS_READ,
-      USER_NS_EXEC,
-      USER_TABLE_CREATE,
-      USER_TABLE_WRITE);
+    verifyDenied(deleteNamespace,
+        USER_GLOBAL_CREATE,
+        USER_GLOBAL_WRITE,
+        USER_GLOBAL_READ,
+        USER_GLOBAL_EXEC,
+        USER_NS_ADMIN,
+        USER_NS_CREATE,
+        USER_NS_WRITE,
+        USER_NS_READ,
+        USER_NS_EXEC,
+        USER_TABLE_CREATE,
+        USER_TABLE_WRITE);
   }
 
   @Test
@@ -294,17 +291,17 @@ public class TestNamespaceCommands extends SecureTestUtil {
       USER_GLOBAL_ADMIN,
       USER_NS_ADMIN);
 
-    verifyDeniedWithException(getNamespaceAction,
-      USER_GLOBAL_CREATE,
-      USER_GLOBAL_WRITE,
-      USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC,
-      USER_NS_CREATE,
-      USER_NS_WRITE,
-      USER_NS_READ,
-      USER_NS_EXEC,
-      USER_TABLE_CREATE,
-      USER_TABLE_WRITE);
+    verifyDenied(getNamespaceAction,
+        USER_GLOBAL_CREATE,
+        USER_GLOBAL_WRITE,
+        USER_GLOBAL_READ,
+        USER_GLOBAL_EXEC,
+        USER_NS_CREATE,
+        USER_NS_WRITE,
+        USER_NS_READ,
+        USER_NS_EXEC,
+        USER_TABLE_CREATE,
+        USER_TABLE_WRITE);
   }
 
   @Test
@@ -359,15 +356,13 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           BlockingRpcChannel service =
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.grant(protocol, testUser, TEST_NAMESPACE, Action.WRITE);
-        } finally {
-          acl.close();
         }
         return null;
       }
@@ -375,15 +370,13 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     AccessTestAction revokeAction = new AccessTestAction() {
       public Object run() throws Exception {
-        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           BlockingRpcChannel service =
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.revoke(protocol, testUser, TEST_NAMESPACE, Action.WRITE);
-        } finally {
-          acl.close();
         }
         return null;
       }
@@ -392,14 +385,12 @@ public class TestNamespaceCommands extends SecureTestUtil {
     AccessTestAction getPermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
             AccessControlService.newBlockingStub(service);
           ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(TEST_NAMESPACE));
-        } finally {
-          acl.close();
         }
         return null;
       }
@@ -409,52 +400,52 @@ public class TestNamespaceCommands extends SecureTestUtil {
       SUPERUSER,
       USER_GLOBAL_ADMIN);
 
-    verifyDeniedWithException(grantAction,
-      USER_GLOBAL_CREATE,
-      USER_GLOBAL_WRITE,
-      USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC,
-      USER_NS_ADMIN,
-      USER_NS_CREATE,
-      USER_NS_WRITE,
-      USER_NS_READ,
-      USER_NS_EXEC,
-      USER_TABLE_CREATE,
-      USER_TABLE_WRITE);
+    verifyDenied(grantAction,
+        USER_GLOBAL_CREATE,
+        USER_GLOBAL_WRITE,
+        USER_GLOBAL_READ,
+        USER_GLOBAL_EXEC,
+        USER_NS_ADMIN,
+        USER_NS_CREATE,
+        USER_NS_WRITE,
+        USER_NS_READ,
+        USER_NS_EXEC,
+        USER_TABLE_CREATE,
+        USER_TABLE_WRITE);
 
     verifyAllowed(revokeAction,
       SUPERUSER,
       USER_GLOBAL_ADMIN);
 
-    verifyDeniedWithException(revokeAction,
-      USER_GLOBAL_CREATE,
-      USER_GLOBAL_WRITE,
-      USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC,
-      USER_NS_ADMIN,
-      USER_NS_CREATE,
-      USER_NS_WRITE,
-      USER_NS_READ,
-      USER_NS_EXEC,
-      USER_TABLE_CREATE,
-      USER_TABLE_WRITE);
+    verifyDenied(revokeAction,
+        USER_GLOBAL_CREATE,
+        USER_GLOBAL_WRITE,
+        USER_GLOBAL_READ,
+        USER_GLOBAL_EXEC,
+        USER_NS_ADMIN,
+        USER_NS_CREATE,
+        USER_NS_WRITE,
+        USER_NS_READ,
+        USER_NS_EXEC,
+        USER_TABLE_CREATE,
+        USER_TABLE_WRITE);
 
     verifyAllowed(getPermissionsAction,
       SUPERUSER,
       USER_GLOBAL_ADMIN,
       USER_NS_ADMIN);
 
-    verifyDeniedWithException(getPermissionsAction,
-      USER_GLOBAL_CREATE,
-      USER_GLOBAL_WRITE,
-      USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC,
-      USER_NS_CREATE,
-      USER_NS_WRITE,
-      USER_NS_READ,
-      USER_NS_EXEC,
-      USER_TABLE_CREATE,
-      USER_TABLE_WRITE);
+    verifyDenied(getPermissionsAction,
+        USER_GLOBAL_CREATE,
+        USER_GLOBAL_WRITE,
+        USER_GLOBAL_READ,
+        USER_GLOBAL_EXEC,
+        USER_NS_CREATE,
+        USER_NS_WRITE,
+        USER_NS_READ,
+        USER_NS_EXEC,
+        USER_TABLE_CREATE,
+        USER_TABLE_WRITE);
   }
 
   @Test
@@ -475,16 +466,16 @@ public class TestNamespaceCommands extends SecureTestUtil {
       USER_GLOBAL_CREATE,
       USER_NS_CREATE);
 
-    verifyDeniedWithException(createTable,
-      USER_GLOBAL_ADMIN,
-      USER_GLOBAL_WRITE,
-      USER_GLOBAL_READ,
-      USER_GLOBAL_EXEC,
-      USER_NS_ADMIN,
-      USER_NS_WRITE,
-      USER_NS_READ,
-      USER_NS_EXEC,
-      USER_TABLE_CREATE,
-      USER_TABLE_WRITE);
+    verifyDenied(createTable,
+        USER_GLOBAL_ADMIN,
+        USER_GLOBAL_WRITE,
+        USER_GLOBAL_READ,
+        USER_GLOBAL_EXEC,
+        USER_NS_ADMIN,
+        USER_NS_WRITE,
+        USER_NS_READ,
+        USER_NS_EXEC,
+        USER_TABLE_CREATE,
+        USER_TABLE_WRITE);
   }
 }

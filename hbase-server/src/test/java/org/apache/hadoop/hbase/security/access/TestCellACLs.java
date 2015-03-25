@@ -228,8 +228,8 @@ public class TestCellACLs extends SecureTestUtil {
 
     // Confirm this access does not extend to other cells
 
-    verifyDenied(getQ3, USER_OTHER);
-    verifyDenied(getQ4, USER_OTHER);
+    verifyIfNull(getQ3, USER_OTHER);
+    verifyIfNull(getQ4, USER_OTHER);
 
     /* ---- Scans ---- */
 

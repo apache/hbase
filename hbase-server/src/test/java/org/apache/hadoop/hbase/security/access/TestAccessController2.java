@@ -68,7 +68,7 @@ public class TestAccessController2 extends SecureTestUtil {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
 
-  private static Connection connection;
+  private static Connection systemUserConnection;
 
   private final static byte[] Q1 = Bytes.toBytes("q1");
   private final static byte[] value1 = Bytes.toBytes("value1");
@@ -108,7 +108,7 @@ public class TestAccessController2 extends SecureTestUtil {
     TESTGROUP2_USER1 =
         User.createUserForTesting(conf, "testgroup2_user2", new String[] { TESTGROUP_2 });
 
-    connection = ConnectionFactory.createConnection(conf);
+    systemUserConnection = ConnectionFactory.createConnection(conf);
   }
 
   @Before
@@ -138,7 +138,7 @@ public class TestAccessController2 extends SecureTestUtil {
 
     assertEquals(1, AccessControlLists.getTablePermissions(conf, tableName).size());
     try {
-      assertEquals(1, AccessControlClient.getUserPermissions(connection, tableName.toString())
+      assertEquals(1, AccessControlClient.getUserPermissions(systemUserConnection, tableName.toString())
           .size());
     } catch (Throwable e) {
       LOG.error("Error during call of AccessControlClient.getUserPermissions. ", e);
@@ -148,7 +148,6 @@ public class TestAccessController2 extends SecureTestUtil {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    connection.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -254,13 +253,11 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction writeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
             TEST_VALUE));
           return null;
-        } finally {
-          t.close();
         }
       }
     };
@@ -277,8 +274,8 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction scanAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           ResultScanner s = t.getScanner(new Scan());
           try {
             for (Result r = s.next(); r != null; r = s.next()) {
@@ -288,8 +285,6 @@ public class TestAccessController2 extends SecureTestUtil {
             s.close();
           }
           return null;
-        } finally {
-          t.close();
         }
       }
     };
