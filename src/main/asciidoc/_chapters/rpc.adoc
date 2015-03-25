@@ -28,7 +28,7 @@
 :icons: font
 :experimental:
 
-In 0.95, all client/server communication is done with link:https://code.google.com/p/protobuf/[protobuf'ed] Messages rather than with link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/Writable.html[Hadoop
+In 0.95, all client/server communication is done with link:https://developers.google.com/protocol-buffers/[protobuf'ed] Messages rather than with link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/Writable.html[Hadoop
             Writables].
 Our RPC wire format therefore changes.
 This document describes the client/server request/response protocol and our new RPC wire-format.
