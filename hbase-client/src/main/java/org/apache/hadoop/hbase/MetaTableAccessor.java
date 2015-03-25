@@ -122,6 +122,7 @@ public class MetaTableAccessor {
    */
 
   private static final Log LOG = LogFactory.getLog(MetaTableAccessor.class);
+  private static final Log METALOG = LogFactory.getLog("org.apache.hadoop.hbase.META");
 
   static final byte [] META_REGION_PREFIX;
   static {
@@ -1354,6 +1355,9 @@ public class MetaTableAccessor {
    */
   private static void put(final Table t, final Put p) throws IOException {
     try {
+      if (METALOG.isDebugEnabled()) {
+        METALOG.debug(mutationToString(p));
+      }
       t.put(p);
     } finally {
       t.close();
@@ -1370,6 +1374,9 @@ public class MetaTableAccessor {
     throws IOException {
     Table t = getMetaHTable(connection);
     try {
+      if (METALOG.isDebugEnabled()) {
+        METALOG.debug(mutationsToString(ps));
+      }
       t.put(ps);
     } finally {
       t.close();
@@ -1399,6 +1406,9 @@ public class MetaTableAccessor {
     throws IOException {
     Table t = getMetaHTable(connection);
     try {
+      if (METALOG.isDebugEnabled()) {
+        METALOG.debug(mutationsToString(deletes));
+      }
       t.delete(deletes);
     } finally {
       t.close();
@@ -1443,7 +1453,10 @@ public class MetaTableAccessor {
     throws IOException {
     Table t = getMetaHTable(connection);
     try {
-      t.batch(mutations);
+      if (METALOG.isDebugEnabled()) {
+        METALOG.debug(mutationsToString(mutations));
+      }
+      t.batch(mutations, new Object[mutations.size()]);
     } catch (InterruptedException e) {
       InterruptedIOException ie = new InterruptedIOException(e.getMessage());
       ie.initCause(e);
@@ -1494,6 +1507,9 @@ public class MetaTableAccessor {
     Put put = makePutFromRegionInfo(regionInfo);
     addDaughtersToPut(put, splitA, splitB);
     meta.put(put);
+    if (METALOG.isDebugEnabled()) {
+      METALOG.debug(mutationToString(put));
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Added " + regionInfo.getRegionNameAsString());
     }
@@ -1705,6 +1721,9 @@ public class MetaTableAccessor {
     CoprocessorRpcChannel channel = table.coprocessorService(row);
     MultiRowMutationProtos.MutateRowsRequest.Builder mmrBuilder
       = MultiRowMutationProtos.MutateRowsRequest.newBuilder();
+    if (METALOG.isDebugEnabled()) {
+      METALOG.debug(mutationsToString(mutations));
+    }
     for (Mutation mutation : mutations) {
       if (mutation instanceof Put) {
         mmrBuilder.addMutationRequest(ProtobufUtil.toMutation(
@@ -1899,5 +1918,29 @@ public class MetaTableAccessor {
     p.addImmutable(getCatalogFamily(), getStartCodeColumn(replicaId), now, null);
     p.addImmutable(getCatalogFamily(), getSeqNumColumn(replicaId), now, null);
     return p;
+  }
+
+  private static String mutationsToString(Mutation ... mutations) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    String prefix = "";
+    for (Mutation mutation : mutations) {
+      sb.append(prefix).append(mutationToString(mutation));
+      prefix = ", ";
+    }
+    return sb.toString();
+  }
+
+  private static String mutationsToString(List<? extends Mutation> mutations) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    String prefix = "";
+    for (Mutation mutation : mutations) {
+      sb.append(prefix).append(mutationToString(mutation));
+      prefix = ", ";
+    }
+    return sb.toString();
+  }
+
+  private static String mutationToString(Mutation p) throws IOException {
+    return p.getClass().getSimpleName() + p.toJSON();
   }
 }
