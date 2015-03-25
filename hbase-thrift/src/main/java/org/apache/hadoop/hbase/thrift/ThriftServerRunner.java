@@ -61,11 +61,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
@@ -738,7 +738,7 @@ public class ThriftServerRunner implements Runnable {
     /**
      * Obtain HBaseAdmin. Creates the instance if it is not already created.
      */
-    private HBaseAdmin getHBaseAdmin() throws IOException {
+    private Admin getAdmin() throws IOException {
       return connectionCache.getAdmin();
     }
 
@@ -749,7 +749,7 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public void enableTable(ByteBuffer tableName) throws IOError {
       try{
-        getHBaseAdmin().enableTable(getBytes(tableName));
+        getAdmin().enableTable(getTableName(tableName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -759,7 +759,7 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public void disableTable(ByteBuffer tableName) throws IOError{
       try{
-        getHBaseAdmin().disableTable(getBytes(tableName));
+        getAdmin().disableTable(getTableName(tableName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -778,8 +778,13 @@ public class ThriftServerRunner implements Runnable {
 
     @Override
     public void compact(ByteBuffer tableNameOrRegionName) throws IOError {
-      try{
-        getHBaseAdmin().compact(getBytes(tableNameOrRegionName));
+      byte[] tableNameOrRegionNameArray = getBytes(tableNameOrRegionName);
+      try {
+        try {
+          getAdmin().compactRegion(tableNameOrRegionNameArray);
+        } catch (IllegalArgumentException e) {
+          getAdmin().compact(TableName.valueOf(tableNameOrRegionNameArray));
+        }
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -788,8 +793,13 @@ public class ThriftServerRunner implements Runnable {
 
     @Override
     public void majorCompact(ByteBuffer tableNameOrRegionName) throws IOError {
-      try{
-        getHBaseAdmin().majorCompact(getBytes(tableNameOrRegionName));
+      byte[] tableNameOrRegionNameArray = getBytes(tableNameOrRegionName);
+      try {
+        try {
+          getAdmin().majorCompactRegion(tableNameOrRegionNameArray);
+        } catch (IllegalArgumentException e) {
+          getAdmin().majorCompact(TableName.valueOf(tableNameOrRegionNameArray));
+        }
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -799,7 +809,7 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public List<ByteBuffer> getTableNames() throws IOError {
       try {
-        TableName[] tableNames = this.getHBaseAdmin().listTableNames();
+        TableName[] tableNames = this.getAdmin().listTableNames();
         ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>(tableNames.length);
         for (int i = 0; i < tableNames.length; i++) {
           list.add(ByteBuffer.wrap(tableNames[i].getName()));
@@ -1164,17 +1174,17 @@ public class ThriftServerRunner implements Runnable {
     public void createTable(ByteBuffer in_tableName,
         List<ColumnDescriptor> columnFamilies) throws IOError,
         IllegalArgument, AlreadyExists {
-      byte [] tableName = getBytes(in_tableName);
+      TableName tableName = getTableName(in_tableName);
       try {
-        if (getHBaseAdmin().tableExists(tableName)) {
+        if (getAdmin().tableExists(tableName)) {
           throw new AlreadyExists("table name already in use");
         }
-        HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+        HTableDescriptor desc = new HTableDescriptor(tableName);
         for (ColumnDescriptor col : columnFamilies) {
           HColumnDescriptor colDesc = ThriftUtilities.colDescFromThrift(col);
           desc.addFamily(colDesc);
         }
-        getHBaseAdmin().createTable(desc);
+        getAdmin().createTable(desc);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -1184,17 +1194,21 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
+    private static TableName getTableName(ByteBuffer buffer) {
+      return TableName.valueOf(getBytes(buffer));
+    }
+
     @Override
     public void deleteTable(ByteBuffer in_tableName) throws IOError {
-      byte [] tableName = getBytes(in_tableName);
+      TableName tableName = getTableName(in_tableName);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("deleteTable: table=" + Bytes.toString(tableName));
+        LOG.debug("deleteTable: table=" + tableName);
       }
       try {
-        if (!getHBaseAdmin().tableExists(tableName)) {
+        if (!getAdmin().tableExists(tableName)) {
           throw new IOException("table does not exist");
         }
-        getHBaseAdmin().deleteTable(tableName);
+        getAdmin().deleteTable(tableName);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());

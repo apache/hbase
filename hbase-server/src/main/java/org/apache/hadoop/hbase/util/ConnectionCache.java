@@ -29,9 +29,9 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -128,14 +128,13 @@ public class ConnectionCache {
    * Caller doesn't close the admin afterwards.
    * We need to manage it and close it properly.
    */
-  @SuppressWarnings("deprecation")
-  public HBaseAdmin getAdmin() throws IOException {
+  public Admin getAdmin() throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
     if (connInfo.admin == null) {
       Lock lock = locker.acquireLock(getEffectiveUser());
       try {
         if (connInfo.admin == null) {
-          connInfo.admin = new HBaseAdmin(connInfo.connection);
+          connInfo.admin = connInfo.connection.getAdmin();
         }
       } finally {
         lock.unlock();
@@ -184,7 +183,7 @@ public class ConnectionCache {
     final Connection connection;
     final String userName;
 
-    volatile HBaseAdmin admin;
+    volatile Admin admin;
     private long lastAccessTime;
     private boolean closed;
 
