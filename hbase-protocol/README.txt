@@ -5,7 +5,7 @@ and then checked in.  The reasoning is that they change infrequently.
 To regenerate the classes after making definition file changes, ensure first that
 the protobuf protoc tool is in your $PATH (You may need to download it and build
 it first; its part of the protobuf package obtainable from here: 
-http://code.google.com/p/protobuf/downloads/list).
+https://github.com/google/protobuf/releases/tag/v2.5.0).
 
 HBase uses hadoop-maven-plugins:protoc goal to invoke the protoc command. You can 
 compile the protoc definitions by invoking maven with profile compile-protobuf or 
