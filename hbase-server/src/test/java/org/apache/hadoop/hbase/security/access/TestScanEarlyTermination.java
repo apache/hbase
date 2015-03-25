@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -229,7 +228,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
     }, USER_OTHER);
 
     // A scan of FAMILY2 will throw an AccessDeniedException
-    verifyDeniedWithException(new AccessTestAction() {
+    verifyDenied(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         // force a new RS connection

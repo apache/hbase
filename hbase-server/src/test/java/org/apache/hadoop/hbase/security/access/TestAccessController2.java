@@ -254,13 +254,13 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction writeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = TEST_UTIL.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME);
-        try {
+
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
             TEST_VALUE));
           return null;
         } finally {
-          t.close();
         }
       }
     };
@@ -277,8 +277,8 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction scanAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = TEST_UTIL.getConnection().getTable(AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           ResultScanner s = t.getScanner(new Scan());
           try {
             for (Result r = s.next(); r != null; r = s.next()) {
@@ -288,8 +288,6 @@ public class TestAccessController2 extends SecureTestUtil {
             s.close();
           }
           return null;
-        } finally {
-          t.close();
         }
       }
     };

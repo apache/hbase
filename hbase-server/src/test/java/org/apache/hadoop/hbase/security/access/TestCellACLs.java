@@ -147,9 +147,8 @@ public class TestCellACLs extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
           // with ro ACL
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
@@ -164,9 +163,6 @@ public class TestCellACLs extends SecureTestUtil {
             .add(TEST_FAMILY, TEST_Q3, ZERO)
             .add(TEST_FAMILY, TEST_Q4, ZERO);
           t.put(p);
-        } finally {
-          t.close();
-          connection.close();
         }
         return null;
       }
@@ -178,13 +174,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(get).listCells();
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     };
@@ -193,13 +185,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(get).listCells();
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     };
@@ -208,13 +196,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q3);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(get).listCells();
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     };
@@ -223,12 +207,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q4);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(get).listCells();
-        } finally {
-          t.close();
         }
       }
     };
@@ -240,8 +221,8 @@ public class TestCellACLs extends SecureTestUtil {
 
     // Confirm this access does not extend to other cells
 
-    verifyDenied(getQ3, USER_OTHER);
-    verifyDenied(getQ4, USER_OTHER);
+    verifyIfNull(getQ3, USER_OTHER);
+    verifyIfNull(getQ4, USER_OTHER);
 
     /* ---- Scans ---- */
 
@@ -291,13 +272,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1, 1L);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           t.increment(i);
-        } finally {
-          t.close();
-          connection.close();
         }
         return null;
       }
@@ -307,13 +284,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2, 1L);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           t.increment(i);
-        } finally {
-          t.close();
-          connection.close();
         }
         return null;
       }
@@ -325,13 +298,9 @@ public class TestCellACLs extends SecureTestUtil {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2, 1L);
         // Tag this increment with an ACL that denies write permissions to USER_OTHER
         i.setACL(USER_OTHER.getShortName(), new Permission(Action.READ));
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           t.increment(i);
-        } finally {
-          t.close();
-          connection.close();
         }
         return null;
       }
@@ -341,13 +310,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Increment i = new Increment(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q3, 1L);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           t.increment(i);
-        } finally {
-          t.close();
-          connection.close();
         }
         return null;
       }
@@ -370,13 +335,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Delete delete = new Delete(TEST_ROW).deleteFamily(TEST_FAMILY);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           t.delete(delete);
-        } finally {
-          t.close();
-          connection.close();
         }
         return null;
       }
@@ -386,13 +347,9 @@ public class TestCellACLs extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Delete delete = new Delete(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1);
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           t.delete(delete);
-        } finally {
-          t.close();
-          connection.close();
         }
         return null;
       }
@@ -419,13 +376,11 @@ public class TestCellACLs extends SecureTestUtil {
     verifyDenied(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
           t.put(p);
-        } finally {
-          t.close();
         }
         return null;
       }
@@ -435,13 +390,11 @@ public class TestCellACLs extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
           t.put(p);
-        } finally {
-          t.close();
         }
         return null;
       }
@@ -451,13 +404,11 @@ public class TestCellACLs extends SecureTestUtil {
     verifyDenied(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ONE);
           t.put(p);
-        } finally {
-          t.close();
         }
         return null;
       }
@@ -467,11 +418,9 @@ public class TestCellACLs extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = TEST_UTIL.getConnection().getTable(TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(new Get(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1));
-        } finally {
-          t.close();
         }
       }
     }, USER_OTHER);
