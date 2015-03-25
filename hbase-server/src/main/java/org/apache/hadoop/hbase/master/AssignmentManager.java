@@ -2836,7 +2836,8 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   Map<ServerName, List<HRegionInfo>> rebuildUserRegions() throws IOException, KeeperException {
     Set<TableName> enablingTables = ZKTable.getEnablingTables(watcher);
-    Set<TableName> disabledOrEnablingTables = ZKTable.getDisabledTables(watcher);
+    Set<TableName> disabledTables = ZKTable.getDisabledTables(watcher);
+    Set<TableName> disabledOrEnablingTables = new HashSet<TableName>(disabledTables);
     disabledOrEnablingTables.addAll(enablingTables);
     Set<TableName> disabledOrDisablingOrEnabling = ZKTable.getDisablingTables(watcher);
     disabledOrDisablingOrEnabling.addAll(disabledOrEnablingTables);
@@ -2854,6 +2855,10 @@ public class AssignmentManager extends ZooKeeperListener {
       if (regionInfo == null) continue;
       State state = RegionStateStore.getRegionState(result);
       ServerName regionLocation = RegionStateStore.getRegionServer(result);
+      if (disabledTables.contains(regionInfo.getTable())) {
+        // ignore regionLocation for disabled tables.
+        regionLocation = null;
+      }
       regionStates.createRegionState(regionInfo, state, regionLocation);
       if (!regionStates.isRegionInState(regionInfo, State.OPEN)) {
         // Region is not open (either offline or in transition), skip
