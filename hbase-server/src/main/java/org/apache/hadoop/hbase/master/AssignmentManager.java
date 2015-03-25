@@ -2854,6 +2854,13 @@ public class AssignmentManager extends ZooKeeperListener {
         State state = RegionStateStore.getRegionState(result, replicaId);
         ServerName lastHost = hrl.getServerName();
         ServerName regionLocation = RegionStateStore.getRegionServer(result, replicaId);
+        if (tableStateManager.isTableState(regionInfo.getTable(),
+            ZooKeeperProtos.Table.State.DISABLED)) {
+          // force region to forget it hosts for disabled/disabling tables.
+          // see HBASE-13326
+          lastHost = null;
+          regionLocation = null;
+        }
         regionStates.createRegionState(regionInfo, state, regionLocation, lastHost);
         if (!regionStates.isRegionInState(regionInfo, State.OPEN)) {
           // Region is not open (either offline or in transition), skip
