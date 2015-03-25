@@ -221,7 +221,7 @@ public class ConnectionFactory {
       final ExecutorService pool, final User user)
   throws IOException {
     String className = conf.get(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
-      ConnectionManager.HConnectionImplementation.class.getName());
+      ConnectionImplementation.class.getName());
     Class<?> clazz = null;
     try {
       clazz = Class.forName(className);

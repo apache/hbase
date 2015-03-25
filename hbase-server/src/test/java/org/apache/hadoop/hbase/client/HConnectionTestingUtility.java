@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.mockito.Mockito;
 
@@ -55,10 +54,10 @@ public class HConnectionTestingUtility {
   throws ZooKeeperConnectionException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      HConnectionImplementation connection =
+      ConnectionImplementation connection =
           ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = Mockito.mock(HConnectionImplementation.class);
+        connection = Mockito.mock(ConnectionImplementation.class);
         Mockito.when(connection.getConfiguration()).thenReturn(conf);
         ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
@@ -98,7 +97,7 @@ public class HConnectionTestingUtility {
       final ClientProtos.ClientService.BlockingInterface client,
       final ServerName sn, final HRegionInfo hri)
   throws IOException {
-    HConnectionImplementation c = Mockito.mock(HConnectionImplementation.class);
+    ConnectionImplementation c = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
     ConnectionManager.CONNECTION_INSTANCES.put(new HConnectionKey(conf), c);
     Mockito.doNothing().when(c).close();
@@ -154,10 +153,10 @@ public class HConnectionTestingUtility {
   throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      HConnectionImplementation connection =
+      ConnectionImplementation connection =
           ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = Mockito.spy(new HConnectionImplementation(conf, false));
+        connection = Mockito.spy(new ConnectionImplementation(conf, false));
         ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;
@@ -168,10 +167,10 @@ public class HConnectionTestingUtility {
   throws IOException {
     HConnectionKey connectionKey = new HConnectionKey(conf);
     synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      HConnectionImplementation connection =
+      ConnectionImplementation connection =
           ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = Mockito.spy(new HConnectionImplementation(conf, false));
+        connection = Mockito.spy(new ConnectionImplementation(conf, false));
         ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
       }
       return connection;

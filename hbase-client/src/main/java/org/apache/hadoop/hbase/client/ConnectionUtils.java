@@ -82,7 +82,7 @@ public final class ConnectionUtils {
    */
   public static NonceGenerator injectNonceGeneratorForTesting(
       ClusterConnection conn, NonceGenerator cnm) {
-    return ConnectionManager.injectNonceGeneratorForTesting(conn, cnm);
+    return ConnectionImplementation.injectNonceGeneratorForTesting(conn, cnm);
   }
 
   /**
@@ -146,7 +146,7 @@ public final class ConnectionUtils {
    * Some tests shut down the master. But table availability is a master RPC which is performed on
    * region re-lookups.
    */
-  static class MasterlessConnection extends ConnectionManager.HConnectionImplementation {
+  static class MasterlessConnection extends ConnectionImplementation {
     MasterlessConnection(Configuration conf, boolean managed,
       ExecutorService pool, User user) throws IOException {
       super(conf, managed, pool, user);

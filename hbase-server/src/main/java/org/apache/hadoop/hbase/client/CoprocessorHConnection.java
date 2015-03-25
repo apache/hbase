@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -40,7 +39,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class CoprocessorHConnection extends HConnectionImplementation {
+public class CoprocessorHConnection extends ConnectionImplementation {
   private static final NonceGenerator NO_NONCE_GEN = new ConnectionManager.NoNonceGenerator();
 
   /**

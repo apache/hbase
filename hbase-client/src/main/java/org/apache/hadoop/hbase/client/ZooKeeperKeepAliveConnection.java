@@ -39,14 +39,14 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 class ZooKeeperKeepAliveConnection extends ZooKeeperWatcher{
   ZooKeeperKeepAliveConnection(
     Configuration conf, String descriptor,
-    ConnectionManager.HConnectionImplementation conn) throws IOException {
+    ConnectionImplementation conn) throws IOException {
     super(conf, descriptor, conn);
   }
 
   @Override
   public void close() {
     if (this.abortable != null) {
-      ((ConnectionManager.HConnectionImplementation)abortable).releaseZooKeeperWatcher(this);
+      ((ConnectionImplementation)abortable).releaseZooKeeperWatcher(this);
     }
   }
 

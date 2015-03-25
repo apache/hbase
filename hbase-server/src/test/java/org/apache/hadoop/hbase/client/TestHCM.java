@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +55,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -158,13 +156,13 @@ public class TestHCM {
     HConnection con1 = ConnectionManager.createConnection(TEST_UTIL.getConfiguration());
     HConnection con2 = ConnectionManager.createConnection(TEST_UTIL.getConfiguration(), otherPool);
     // make sure the internally created ExecutorService is the one passed
-    assertTrue(otherPool == ((HConnectionImplementation)con2).getCurrentBatchPool());
+    assertTrue(otherPool == ((ConnectionImplementation)con2).getCurrentBatchPool());
 
     String tableName = "testClusterConnection";
     TEST_UTIL.createTable(tableName.getBytes(), FAM_NAM).close();
     HTable t = (HTable)con1.getTable(tableName, otherPool);
     // make sure passing a pool to the getTable does not trigger creation of an internal pool
-    assertNull("Internal Thread pool should be null", ((HConnectionImplementation)con1).getCurrentBatchPool());
+    assertNull("Internal Thread pool should be null", ((ConnectionImplementation)con1).getCurrentBatchPool());
     // table should use the pool passed
     assertTrue(otherPool == t.getPool());
     t.close();
@@ -185,7 +183,7 @@ public class TestHCM {
     t.close();
 
     t = (HTable)con1.getTable(tableName);
-    ExecutorService pool = ((HConnectionImplementation)con1).getCurrentBatchPool();
+    ExecutorService pool = ((ConnectionImplementation)con1).getCurrentBatchPool();
     // make sure an internal pool was created
     assertNotNull("An internal Thread pool should have been created", pool);
     // and that the table is using it
@@ -244,7 +242,7 @@ public class TestHCM {
         getRegionStates().isRegionsInTransition()){
       Thread.sleep(1);
     }
-    final HConnectionImplementation hci =  (HConnectionImplementation)t.getConnection();
+    final ConnectionImplementation hci =  (ConnectionImplementation)t.getConnection();
     while (t.getRegionLocation(rk).getPort() != sn.getPort()){
       TEST_UTIL.getHBaseAdmin().move(t.getRegionLocation(rk).getRegionInfo().
           getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
@@ -388,8 +386,8 @@ public class TestHCM {
     });
 
     ServerName sn = table.getRegionLocation(ROW).getServerName();
-    ConnectionManager.HConnectionImplementation conn =
-        (ConnectionManager.HConnectionImplementation) table.getConnection();
+    ConnectionImplementation conn =
+        (ConnectionImplementation) table.getConnection();
     RpcClient rpcClient = conn.getRpcClient();
 
     LOG.info("Going to cancel connections. connection=" + conn.toString() + ", sn=" + sn);
@@ -502,7 +500,7 @@ public class TestHCM {
     p.add(FAM_NAM, FAM_NAM, FAM_NAM);
     table.put(p);
 
-    final HConnectionImplementation hci =  (HConnectionImplementation)table.getConnection();
+    final ConnectionImplementation hci =  (ConnectionImplementation)table.getConnection();
     final HRegionLocation loc = table.getRegionLocation(FAM_NAM);
 
     Get get = new Get(FAM_NAM);
@@ -573,8 +571,8 @@ public class TestHCM {
   @Test
   public void abortingHConnectionRemovesItselfFromHCM() throws Exception {
     // Save off current HConnections
-    Map<HConnectionKey, HConnectionImplementation> oldHBaseInstances =
-        new HashMap<HConnectionKey, HConnectionImplementation>();
+    Map<HConnectionKey, ConnectionImplementation> oldHBaseInstances =
+        new HashMap<HConnectionKey, ConnectionImplementation>();
     oldHBaseInstances.putAll(ConnectionManager.CONNECTION_INSTANCES);
 
     ConnectionManager.CONNECTION_INSTANCES.clear();
@@ -609,8 +607,8 @@ public class TestHCM {
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
-    ConnectionManager.HConnectionImplementation conn =
-      (ConnectionManager.HConnectionImplementation)table.getConnection();
+    ConnectionImplementation conn =
+      (ConnectionImplementation)table.getConnection();
 
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
@@ -810,8 +808,8 @@ public class TestHCM {
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
-    ConnectionManager.HConnectionImplementation conn =
-      (ConnectionManager.HConnectionImplementation)table.getConnection();
+    ConnectionImplementation conn =
+      (ConnectionImplementation)table.getConnection();
 
     HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     assertNotNull(location);
@@ -940,7 +938,7 @@ public class TestHCM {
     conn.close();
   }
 
-  private int setNumTries(HConnectionImplementation hci, int newVal) throws Exception {
+  private int setNumTries(ConnectionImplementation hci, int newVal) throws Exception {
     Field numTries = hci.getClass().getDeclaredField("numTries");
     numTries.setAccessible(true);
     Field modifiersField = Field.class.getDeclaredField("modifiers");
@@ -956,8 +954,8 @@ public class TestHCM {
   public void testMulti() throws Exception {
     HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME3, FAM_NAM);
      try {
-       ConnectionManager.HConnectionImplementation conn =
-           ( ConnectionManager.HConnectionImplementation)table.getConnection();
+       ConnectionImplementation conn =
+           (ConnectionImplementation)table.getConnection();
 
        // We're now going to move the region and check that it works for the client
        // First a new put to add the location in the cache

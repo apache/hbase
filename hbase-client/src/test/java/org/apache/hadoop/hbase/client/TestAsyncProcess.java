@@ -338,7 +338,7 @@ public class TestAsyncProcess {
   /**
    * Returns our async process.
    */
-  static class MyConnectionImpl extends ConnectionManager.HConnectionImplementation {
+  static class MyConnectionImpl extends ConnectionImplementation {
     final AtomicInteger nbThreads = new AtomicInteger(0);
 
 

@@ -103,7 +103,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   @Before
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create();
-    // Run my HConnection overrides.  Use my little HConnectionImplementation below which
+    // Run my HConnection overrides.  Use my little ConnectionImplementation below which
     // allows me insert mocks and also use my Registry below rather than the default zk based
     // one so tests run faster and don't have zk dependency.
     this.conf.set("hbase.client.registry.impl", SimpleRegistry.class.getName());
@@ -262,7 +262,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Override to shutdown going to zookeeper for cluster id and meta location.
    */
   static class ScanOpenNextThenExceptionThenRecoverConnection
-  extends ConnectionManager.HConnectionImplementation {
+  extends ConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
     ScanOpenNextThenExceptionThenRecoverConnection(Configuration conf,
@@ -294,7 +294,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Override to shutdown going to zookeeper for cluster id and meta location.
    */
   static class RegionServerStoppedOnScannerOpenConnection
-  extends ConnectionManager.HConnectionImplementation {
+  extends ConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
     RegionServerStoppedOnScannerOpenConnection(Configuration conf, boolean managed,
@@ -326,7 +326,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Override to check we are setting rpc timeout right.
    */
   static class RpcTimeoutConnection
-  extends ConnectionManager.HConnectionImplementation {
+  extends ConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
     RpcTimeoutConnection(Configuration conf, boolean managed, ExecutorService pool, User user)
@@ -353,7 +353,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Fake many regionservers and many regions on a connection implementation.
    */
   static class ManyServersManyRegionsConnection
-  extends ConnectionManager.HConnectionImplementation {
+  extends ConnectionImplementation {
     // All access should be synchronized
     final Map<ServerName, ClientService.BlockingInterface> serversByClient;
 

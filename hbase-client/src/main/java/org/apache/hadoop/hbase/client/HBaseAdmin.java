@@ -2561,7 +2561,7 @@ public class HBaseAdmin implements Admin {
         ZooKeeperKeepAliveConnection zkw = null;
         try {
           // This is NASTY. FIX!!!! Dependent on internal implementation! TODO
-          zkw = ((ConnectionManager.HConnectionImplementation)connection).
+          zkw = ((ConnectionImplementation)connection).
             getKeepAliveZooKeeperWatcher();
           zkw.getRecoverableZooKeeper().getZooKeeper().exists(zkw.baseZNode, false);
         } catch (IOException e) {
@@ -3781,8 +3781,8 @@ public class HBaseAdmin implements Admin {
   @Override
   public int getMasterInfoPort() throws IOException {
     // TODO: Fix!  Reaching into internal implementation!!!!
-    ConnectionManager.HConnectionImplementation connection =
-        (ConnectionManager.HConnectionImplementation)this.connection;
+    ConnectionImplementation connection =
+        (ConnectionImplementation)this.connection;
     ZooKeeperKeepAliveConnection zkw = connection.getKeepAliveZooKeeperWatcher();
     try {
       return MasterAddressTracker.getMasterInfoPort(zkw);
