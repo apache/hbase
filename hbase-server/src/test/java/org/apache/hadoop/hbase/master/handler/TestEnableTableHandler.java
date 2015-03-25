@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -110,6 +109,27 @@ public class TestEnableTableHandler {
         rs2.getRegionServer().getServerName());
     assertEquals(2, onlineRegions.size());
     assertEquals(tableName, onlineRegions.get(1).getTable());
+  }
+
+
+  @Test(timeout = 300000)
+  public void testDisableTableAndRestart() throws Exception {
+    final TableName tableName = TableName.valueOf("testDisableTableAndRestart");
+    final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(FAMILYNAME));
+    admin.createTable(desc);
+    admin.disableTable(tableName);
+    TEST_UTIL.waitTableDisabled(tableName.getName());
+
+    TEST_UTIL.getHBaseCluster().shutdown();
+    TEST_UTIL.getHBaseCluster().waitUntilShutDown();
+
+    TEST_UTIL.restartHBaseCluster(2);
+
+    admin.enableTable(tableName);
+    TEST_UTIL.waitTableEnabled(tableName);
   }
 
   /**
