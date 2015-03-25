@@ -145,6 +145,7 @@ public class SecureTestUtil {
    */
   static interface AccessTestAction extends PrivilegedExceptionAction<Object> { }
 
+  /** This fails only in case of ADE or empty list for any of the actions. */
   public static void verifyAllowed(User user, AccessTestAction... actions) throws Exception {
     for (AccessTestAction action : actions) {
       try {
@@ -161,6 +162,7 @@ public class SecureTestUtil {
     }
   }
 
+  /** This fails only in case of ADE or empty list for any of the users. */
   public static void verifyAllowed(AccessTestAction action, User... users) throws Exception {
     for (User user : users) {
       verifyAllowed(user, action);
@@ -182,36 +184,53 @@ public class SecureTestUtil {
     }
   }
 
-  public static void verifyDeniedWithException(User user, AccessTestAction... actions)
-      throws Exception {
-    verifyDenied(user, true, actions);
-  }
-
-  public static void verifyDeniedWithException(AccessTestAction action, User... users)
-      throws Exception {
+  /** This passes only in case of ADE for all users. */
+  public static void verifyDenied(AccessTestAction action, User... users) throws Exception {
     for (User user : users) {
-      verifyDenied(user, true, action);
+      verifyDenied(user, action);
     }
   }
 
-  public static void verifyDenied(User user, AccessTestAction... actions) throws Exception {
-    verifyDenied(user, false, actions);
-  }
-
-  public static void verifyDenied(User user, boolean requireException,
-      AccessTestAction... actions) throws Exception {
-    for (AccessTestAction action : actions) {
+  /** This passes only in case of empty list for all users. */
+  public static void verifyIfEmptyList(AccessTestAction action, User... users) throws Exception {
+    for (User user : users) {
       try {
         Object obj = user.runAs(action);
-        if (requireException) {
-          fail("Expected exception was not thrown for user '" + user.getShortName() + "'");
-        }
         if (obj != null && obj instanceof List<?>) {
           List<?> results = (List<?>) obj;
           if (results != null && !results.isEmpty()) {
-            fail("Unexpected results for user '" + user.getShortName() + "'");
+            fail("Unexpected action results: " +  results + " for user '"
+                + user.getShortName() + "'");
           }
+        } else {
+          fail("Unexpected results for user '" + user.getShortName() + "'");
         }
+      } catch (AccessDeniedException ade) {
+        fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
+      }
+    }
+  }
+
+  /** This passes only in case of null for all users. */
+  public static void verifyIfNull(AccessTestAction  action, User... users) throws Exception {
+    for (User user : users) {
+      try {
+        Object obj = user.runAs(action);
+        if (obj != null) {
+          fail("Non null results from action for user '" + user.getShortName() + "'");
+        }
+      } catch (AccessDeniedException ade) {
+        fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
+      }
+    }
+  }
+
+  /** This passes only in case of ADE for all actions. */
+  public static void verifyDenied(User user, AccessTestAction... actions) throws Exception {
+    for (AccessTestAction action : actions) {
+      try {
+        user.runAs(action);
+        fail("Expected exception was not thrown for user '" + user.getShortName() + "'");
       } catch (IOException e) {
         boolean isAccessDeniedException = false;
         if(e instanceof RetriesExhaustedWithDetailsException) {
@@ -254,12 +273,6 @@ public class SecureTestUtil {
         }
         fail("Expected exception was not thrown for user '" + user.getShortName() + "'");
       }
-    }
-  }
-
-  public static void verifyDenied(AccessTestAction action, User... users) throws Exception {
-    for (User user : users) {
-      verifyDenied(user, action);
     }
   }
 
@@ -410,18 +423,39 @@ public class SecureTestUtil {
   }
 
   /**
-   * Revoke permissions on a namespace from the given user using AccessControl Client.
+   * Grant permissions on a namespace to the given user using AccessControl Client.
    * Will wait until all active AccessController instances have updated their permissions caches
    * or will throw an exception upon timeout (10 seconds).
    */
-  public static void revokeFromNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final String namespace,
+  public static void grantOnNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+      final Connection connection, final String user, final String namespace,
       final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.revoke(conf, namespace, user, actions);
+          AccessControlClient.grant(connection, namespace, user, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke permissions on a namespace from the given user using AccessControl Client.
+   * Will wait until all active AccessController instances have updated their permissions caches
+   * or will throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeFromNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+      final Connection connection, final String user, final String namespace,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.revoke(connection, namespace, user, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -483,13 +517,13 @@ public class SecureTestUtil {
    * throw an exception upon timeout (10 seconds).
    */
   public static void grantOnTableUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final TableName table, final byte[] family,
+      final Connection connection, final String user, final TableName table, final byte[] family,
       final byte[] qualifier, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.grant(conf, table, user, family, qualifier, actions);
+          AccessControlClient.grant(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -504,13 +538,13 @@ public class SecureTestUtil {
    * throw an exception upon timeout (10 seconds).
    */
   public static void grantGlobalUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final Permission.Action... actions)
+      final Connection connection, final String user, final Permission.Action... actions)
       throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.grant(conf, user, actions);
+          AccessControlClient.grant(connection, user, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -549,13 +583,13 @@ public class SecureTestUtil {
    * throw an exception upon timeout (10 seconds).
    */
   public static void revokeFromTableUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user, final TableName table, final byte[] family,
+      final Connection connection, final String user, final TableName table, final byte[] family,
       final byte[] qualifier, final Permission.Action... actions) throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.revoke(conf, table, user, family, qualifier, actions);
+          AccessControlClient.revoke(connection, table, user, family, qualifier, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }
@@ -570,13 +604,13 @@ public class SecureTestUtil {
    * throw an exception upon timeout (10 seconds).
    */
   public static void revokeGlobalUsingAccessControlClient(final HBaseTestingUtility util,
-      final Configuration conf, final String user,final Permission.Action... actions)
+      final Connection connection, final String user,final Permission.Action... actions)
       throws Exception {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
         try {
-          AccessControlClient.revoke(conf, user, actions);
+          AccessControlClient.revoke(connection, user, actions);
         } catch (Throwable t) {
           t.printStackTrace();
         }

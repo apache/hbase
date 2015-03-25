@@ -33,11 +33,9 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -249,13 +247,12 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction writeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
             TEST_VALUE));
           return null;
         } finally {
-          t.close();
         }
       }
     };
@@ -272,8 +269,8 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction scanAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
+        try(Connection conn = ConnectionFactory.createConnection(conf);
+            Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
           ResultScanner s = t.getScanner(new Scan());
           try {
             for (Result r = s.next(); r != null; r = s.next()) {
@@ -283,8 +280,6 @@ public class TestAccessController2 extends SecureTestUtil {
             s.close();
           }
           return null;
-        } finally {
-          t.close();
         }
       }
     };

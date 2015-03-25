@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -153,8 +152,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
           // with ro ACL
           p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
@@ -173,8 +172,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.WRITE));
           t.put(p);
-        } finally {
-          t.close();
         }
         return null;
       }
@@ -187,11 +184,9 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
         get.setMaxVersions(10);
-        Table t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(get).listCells();
-        } finally {
-          t.close();
         }
       }
     };
@@ -201,11 +196,9 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
         get.setMaxVersions(10);
-        Table t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           return t.get(get).listCells();
-        } finally {
-          t.close();
         }
       }
     };
@@ -218,8 +211,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Table t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
+        try(Connection connection = ConnectionFactory.createConnection(conf);
+            Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.WRITE));
@@ -230,8 +223,6 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.WRITE));
           t.put(p);
-        } finally {
-          t.close();
         }
         return null;
       }
@@ -439,7 +430,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     
     // The other put should be covered by the tombstone
 
-    verifyDenied(getQ2, USER_OTHER);
+    verifyIfNull(getQ2, USER_OTHER);
   }
 
   @Test

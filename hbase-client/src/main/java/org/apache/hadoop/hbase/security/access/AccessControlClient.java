@@ -68,16 +68,31 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
+  @Deprecated
   public static void grant(Configuration conf, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual,
       final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, tableName, family, qual,
-          actions);
-      }
+      grant(connection, tableName, userName, family, qual, actions);
+    }
+  }
+
+  /**
+   * Grants permission on the specified table for the specified user
+   * @param connection
+   * @param tableName
+   * @param userName
+   * @param family
+   * @param qual
+   * @param actions
+   * @throws Throwable
+   */
+  public static void grant(Connection connection, final TableName tableName,
+      final String userName, final byte[] family, final byte[] qual,
+      final Permission.Action... actions) throws Throwable {
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, tableName, family, qual,
+        actions);
     }
   }
 
@@ -89,39 +104,62 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
+  @Deprecated
   public static void grant(Configuration conf, final String namespace,
       final String userName, final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, namespace, actions);
-      }
+      grant(connection, namespace, userName, actions);
+    }
+  }
+
+  /**
+   * Grants permission on the specified namespace for the specified user.
+   * @param conf
+   * @param namespace
+   * @param userName
+   * @param actions
+   * @throws Throwable
+   */
+  public static void grant(Connection connection, final String namespace,
+      final String userName, final Permission.Action... actions) throws Throwable {
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, namespace, actions);
     }
   }
 
   /**
    * Grant global permissions for the specified user.
    */
+  @Deprecated
   public static void grant(Configuration conf, final String userName,
        final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.grant(getAccessControlServiceStub(table), userName, actions);
-      }
+      grant(connection, userName, actions);
     }
   }
 
+  /**
+   * Grant global permissions for the specified user.
+   */
+  public static void grant(Connection connection, final String userName,
+       final Permission.Action... actions) throws Throwable {
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.grant(getAccessControlServiceStub(table), userName, actions);
+    }
+  }
+
+  @Deprecated
   public static boolean isAccessControllerRunning(Configuration conf)
       throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Admin admin = connection.getAdmin()) {
-        return admin.isTableAvailable(ACL_TABLE_NAME);
-      }
+      return isAccessControllerRunning(connection);
+    }
+  }
+
+  public static boolean isAccessControllerRunning(Connection connection)
+      throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+    try (Admin admin = connection.getAdmin()) {
+      return admin.isTableAvailable(ACL_TABLE_NAME);
     }
   }
 
@@ -135,16 +173,31 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
+  @Deprecated
   public static void revoke(Configuration conf, final TableName tableName,
       final String username, final byte[] family, final byte[] qualifier,
       final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.revoke(getAccessControlServiceStub(table), username, tableName, family,
-          qualifier, actions);
-      }
+      revoke(connection, tableName, username, family, qualifier, actions);
+    }
+  }
+
+  /**
+   * Revokes the permission on the table
+   * @param connection
+   * @param tableName
+   * @param username
+   * @param family
+   * @param qualifier
+   * @param actions
+   * @throws Throwable
+   */
+  public static void revoke(Connection connection, final TableName tableName,
+      final String username, final byte[] family, final byte[] qualifier,
+      final Permission.Action... actions) throws Throwable {
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.revoke(getAccessControlServiceStub(table), username, tableName, family,
+        qualifier, actions);
     }
   }
 
@@ -156,28 +209,47 @@ public class AccessControlClient {
    * @param actions
    * @throws Throwable
    */
+  @Deprecated
   public static void revoke(Configuration conf, final String namespace,
     final String userName, final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, namespace, actions);
-      }
+      revoke(connection, namespace, userName, actions);
+    }
+  }
+
+  /**
+   * Revokes the permission on the table for the specified user.
+   * @param connection
+   * @param namespace
+   * @param userName
+   * @param actions
+   * @throws Throwable
+   */
+  public static void revoke(Connection connection, final String namespace,
+      final String userName, final Permission.Action... actions) throws Throwable {
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, namespace, actions);
     }
   }
 
   /**
    * Revoke global permissions for the specified user.
    */
+  @Deprecated
   public static void revoke(Configuration conf, final String userName,
       final Permission.Action... actions) throws Throwable {
-    // TODO: Make it so caller passes in a Connection rather than have us do this expensive
-    // setup each time.  This class only used in test and shell at moment though.
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, actions);
-      }
+      revoke(connection, userName, actions);
+    }
+  }
+
+  /**
+   * Revoke global permissions for the specified user.
+   */
+  public static void revoke(Connection connection, final String userName,
+      final Permission.Action... actions) throws Throwable {
+    try (Table table = connection.getTable(ACL_TABLE_NAME)) {
+      ProtobufUtil.revoke(getAccessControlServiceStub(table), userName, actions);
     }
   }
 
@@ -188,6 +260,7 @@ public class AccessControlClient {
    * @return - returns an array of UserPermissions
    * @throws Throwable
    */
+  @Deprecated
   public static List<UserPermission> getUserPermissions(Configuration conf, String tableRegex)
   throws Throwable {
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
