@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * An HLogKey specific to WalEdits coming from replay.
