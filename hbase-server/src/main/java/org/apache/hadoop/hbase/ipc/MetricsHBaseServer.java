@@ -63,6 +63,10 @@ public class MetricsHBaseServer {
     source.processedCall(processingTime);
   }
 
+  void totalCall(int totalTime) {
+    source.queuedAndProcessedCall(totalTime);
+  }
+
   public MetricsHBaseServerSource getMetricsSource() {
     return source;
   }
