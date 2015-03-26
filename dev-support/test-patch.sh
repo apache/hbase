@@ -324,7 +324,7 @@ setup () {
   echo ""
   echo ""
   echo "$MVN clean package checkstyle:checkstyle-aggregate findbugs:findbugs -DskipTests \
- -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+	 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
   $MVN clean package checkstyle:checkstyle-aggregate findbugs:findbugs -DskipTests \
@@ -757,13 +757,13 @@ $JIRA_COMMENT_FOOTER"
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 findbugs{color}.  The patch appears to introduce $findbugsWarnings \
- new Findbugs (version ${findbugs_version}) warnings."
+                 new Findbugs (version ${findbugs_version}) warnings."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 findbugs{color}.  The patch does not introduce any \
- new Findbugs (version ${findbugs_version}) warnings."
+                 new Findbugs (version ${findbugs_version}) warnings."
   return 0
 }
 
