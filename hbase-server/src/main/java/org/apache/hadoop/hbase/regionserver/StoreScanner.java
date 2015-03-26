@@ -544,7 +544,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             outResult.add(cell);
             count++;
             totalBytesRead += CellUtil.estimatedSerializedSizeOf(cell);
-            totalHeapSize += CellUtil.estimatedHeapSizeOf(cell);
+            totalHeapSize += CellUtil.estimatedHeapSizeOfWithoutTags(cell);
             if (totalBytesRead > maxRowSize) {
               throw new RowTooBigException("Max row size allowed: " + maxRowSize
               + ", but the row is bigger than that.");
