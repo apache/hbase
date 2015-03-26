@@ -433,6 +433,29 @@ checkAntiPatterns () {
 }
 
 ###############################################################################
+### Check that there are no incorrect annotations
+checkInterfaceAudience () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking against hadoop InterfaceAudience."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  warnings=`$GREP 'import org.apache.hadoop.classification' $PATCH_DIR/patch`
+  if [[ $warnings != "" ]]; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+		    {color:red}-1 InterfaceAudience{color}.  The patch appears to contain InterfaceAudience from hadoop rather than hbase:
+             $warnings."
+	  return 1
+  fi
+  return 0
+}
+
+###############################################################################
 ### Check there are no javadoc warnings
 checkJavadocWarnings () {
   echo ""
@@ -906,6 +929,8 @@ checkJavadocWarnings
 checkJavacWarnings
 (( RESULT = RESULT + $? ))
 checkCheckstyleErrors
+(( RESULT = RESULT + $? ))
+checkInterfaceAudience
 (( RESULT = RESULT + $? ))
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
