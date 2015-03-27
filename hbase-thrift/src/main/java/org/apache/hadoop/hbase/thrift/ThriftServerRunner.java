@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
@@ -778,13 +779,11 @@ public class ThriftServerRunner implements Runnable {
 
     @Override
     public void compact(ByteBuffer tableNameOrRegionName) throws IOError {
-      byte[] tableNameOrRegionNameArray = getBytes(tableNameOrRegionName);
       try {
-        try {
-          getAdmin().compactRegion(tableNameOrRegionNameArray);
-        } catch (IllegalArgumentException e) {
-          getAdmin().compact(TableName.valueOf(tableNameOrRegionNameArray));
-        }
+        // TODO: HBaseAdmin.compact(byte[]) deprecated and not trivial to replace here.
+        // ThriftServerRunner.compact should be deprecated and replaced with methods specific to
+        // table and region.
+        ((HBaseAdmin) getAdmin()).compact(getBytes(tableNameOrRegionName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
@@ -793,13 +792,11 @@ public class ThriftServerRunner implements Runnable {
 
     @Override
     public void majorCompact(ByteBuffer tableNameOrRegionName) throws IOError {
-      byte[] tableNameOrRegionNameArray = getBytes(tableNameOrRegionName);
       try {
-        try {
-          getAdmin().majorCompactRegion(tableNameOrRegionNameArray);
-        } catch (IllegalArgumentException e) {
-          getAdmin().majorCompact(TableName.valueOf(tableNameOrRegionNameArray));
-        }
+        // TODO: HBaseAdmin.majorCompact(byte[]) deprecated and not trivial to replace here.
+        // ThriftServerRunner.majorCompact should be deprecated and replaced with methods specific
+        // to table and region.
+        ((HBaseAdmin) getAdmin()).majorCompact(getBytes(tableNameOrRegionName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
         throw new IOError(e.getMessage());
