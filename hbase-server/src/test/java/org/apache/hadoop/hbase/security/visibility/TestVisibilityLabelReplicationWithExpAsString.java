@@ -36,18 +36,20 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController.VisibilityReplication;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.experimental.categories.Category;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
@@ -135,25 +137,15 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     TEST_UTIL1.startMiniCluster(1);
-    HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+    HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor desc = new HColumnDescriptor(fam);
     desc.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(desc);
-    try {
+    try (HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin()) {
       hBaseAdmin.createTable(table);
-    } finally {
-      if (hBaseAdmin != null) {
-        hBaseAdmin.close();
-      }
     }
-    HBaseAdmin hBaseAdmin1 = TEST_UTIL1.getHBaseAdmin();
-    try {
+    try (HBaseAdmin hBaseAdmin1 = TEST_UTIL1.getHBaseAdmin()){
       hBaseAdmin1.createTable(table);
-    } finally {
-      if (hBaseAdmin1 != null) {
-        hBaseAdmin1.close();
-      }
     }
     addLabels();
     setAuths(conf);
@@ -170,11 +162,9 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
       final boolean nullExpected, final String... auths) throws IOException,
       InterruptedException {
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
-      HTable table2 = null;
-
       public Void run() throws Exception {
-        try {
-          table2 = new HTable(conf1, TABLE_NAME_BYTES);
+        try (Connection connection = ConnectionFactory.createConnection(conf1);
+             Table table2 = connection.getTable(TableName.valueOf(TABLE_NAME))) {
           CellScanner cellScanner;
           Cell current;
           Get get = new Get(row);
@@ -200,10 +190,6 @@ public class TestVisibilityLabelReplicationWithExpAsString extends TestVisibilit
           doAssert(row, visString);
           assertTrue(foundNonVisTag);
           return null;
-        } finally {
-          if (table2 != null) {
-            table2.close();
-          }
         }
       }
     };

@@ -46,10 +46,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -217,13 +218,12 @@ public class TestVisibilityLabelsReplication {
 
   @Test
   public void testVisibilityReplication() throws Exception {
-    TableName tableName = TableName.valueOf(TABLE_NAME);
-    Table table = writeData(tableName, "(" + SECRET + "&" + PUBLIC + ")" + "|(" + CONFIDENTIAL
-        + ")&(" + TOPSECRET + ")", "(" + PRIVATE + "|" + CONFIDENTIAL + ")&(" + PUBLIC + "|"
-        + TOPSECRET + ")", "(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET,
-        CellVisibility.quote(UNICODE_VIS_TAG) + "&" + SECRET);
     int retry = 0;
-    try {
+    try (Table table = writeData(TableName.valueOf(TABLE_NAME),
+         "(" + SECRET + "&" + PUBLIC + ")" + "|(" + CONFIDENTIAL
+         + ")&(" + TOPSECRET + ")", "(" + PRIVATE + "|" + CONFIDENTIAL + ")&(" + PUBLIC + "|"
+         + TOPSECRET + ")", "(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!" + TOPSECRET,
+        CellVisibility.quote(UNICODE_VIS_TAG) + "&" + SECRET);) {
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL, PRIVATE, TOPSECRET,
           UNICODE_VIS_TAG));
@@ -251,9 +251,7 @@ public class TestVisibilityLabelsReplication {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row4, 0, row4.length));
-      HTable table2 = null;
-      try {
-        table2 = new HTable(TEST_UTIL1.getConfiguration(), TABLE_NAME_BYTES);
+      try (Table table2 = TEST_UTIL1.getConnection().getTable(TableName.valueOf(TABLE_NAME))) {
         s = new Scan();
         // Ensure both rows are replicated
         scanner = table2.getScanner(s);
@@ -272,14 +270,6 @@ public class TestVisibilityLabelsReplication {
         verifyGet(row3, expectedVisString[2], expected[2], false, PRIVATE, SECRET);
         verifyGet(row3, "", expected[3], true, TOPSECRET, SECRET);
         verifyGet(row4, expectedVisString[3], expected[4], false, UNICODE_VIS_TAG, SECRET);
-      } finally {
-        if (table2 != null) {
-          table2.close();
-        }
-      }
-    } finally {
-      if (table != null) {
-        table.close();
       }
     }
   }
@@ -313,11 +303,9 @@ public class TestVisibilityLabelsReplication {
       final boolean nullExpected, final String... auths) throws IOException,
       InterruptedException {
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
-      HTable table2 = null;
-
       public Void run() throws Exception {
-        try {
-          table2 = new HTable(conf1, TABLE_NAME_BYTES);
+        try (Connection connection = ConnectionFactory.createConnection(conf1);
+             Table table2 = connection.getTable(TableName.valueOf(TABLE_NAME))) {
           CellScanner cellScanner;
           Cell current;
           Get get = new Get(row);
@@ -351,10 +339,6 @@ public class TestVisibilityLabelsReplication {
           doAssert(row, visString);
           assertTrue(foundNonVisTag);
           return null;
-        } finally {
-          if (table2 != null) {
-            table2.close();
-          }
         }
       }
     };

@@ -100,8 +100,8 @@ public class TestEnforcingScanLabelGenerator {
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        Table table = TEST_UTIL.createTable(tableName, CF);
-        try {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+             Table table = TEST_UTIL.createTable(tableName, CF)) {
           Put put = new Put(ROW_1);
           put.add(CF, Q1, HConstants.LATEST_TIMESTAMP, value);
           put.setCellVisibility(new CellVisibility(SECRET));
@@ -114,8 +114,6 @@ public class TestEnforcingScanLabelGenerator {
           put.add(CF, Q3, HConstants.LATEST_TIMESTAMP, value);
           table.put(put);
           return null;
-        } finally {
-          table.close();
         }
       }
     });
@@ -123,9 +121,8 @@ public class TestEnforcingScanLabelGenerator {
     // Test that super user can see all the cells.
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table table = connection.getTable(tableName);
-        try {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+             Table table = connection.getTable(tableName)) {
           // Test that super user can see all the cells.
           Get get = new Get(ROW_1);
           Result result = table.get(get);
@@ -133,17 +130,14 @@ public class TestEnforcingScanLabelGenerator {
           assertTrue("Missing authorization", result.containsColumn(CF, Q2));
           assertTrue("Missing authorization", result.containsColumn(CF, Q3));
           return null;
-        } finally {
-          table.close();
-          connection.close();
         }
       }
     });
 
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        Table table = new HTable(conf, tableName);
-        try {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+             Table table = connection.getTable(tableName)) {
           // Test that we enforce the defined set
           Get get = new Get(ROW_1);
           get.setAuthorizations(new Authorizations(new String[] { SECRET, CONFIDENTIAL }));
@@ -158,8 +152,6 @@ public class TestEnforcingScanLabelGenerator {
           assertTrue("Missing authorization", result.containsColumn(CF, Q2));
           assertTrue("Inappropriate filtering", result.containsColumn(CF, Q3));
           return null;
-        } finally {
-          table.close();
         }
       }
     });
