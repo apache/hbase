@@ -116,7 +116,7 @@ public class HFileBlock implements Cacheable {
    */
   static final int CHECKSUM_SIZE = Bytes.SIZEOF_INT;
 
-  private static final CacheableDeserializer<Cacheable> blockDeserializer =
+  static final CacheableDeserializer<Cacheable> blockDeserializer =
       new CacheableDeserializer<Cacheable>() {
         public HFileBlock deserialize(ByteBuffer buf, boolean reuse) throws IOException{
           buf.limit(buf.limit() - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
@@ -130,13 +130,13 @@ public class HFileBlock implements Cacheable {
           buf.position(buf.limit());
           buf.limit(buf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
           boolean usesChecksum = buf.get() == (byte)1;
-          HFileBlock ourBuffer = new HFileBlock(newByteBuffer, usesChecksum);
-          ourBuffer.offset = buf.getLong();
-          ourBuffer.nextBlockOnDiskSizeWithHeader = buf.getInt();
-          if (ourBuffer.hasNextBlockHeader()) {
-            ourBuffer.buf.limit(ourBuffer.buf.limit() - ourBuffer.headerSize());
+          HFileBlock hFileBlock = new HFileBlock(newByteBuffer, usesChecksum);
+          hFileBlock.offset = buf.getLong();
+          hFileBlock.nextBlockOnDiskSizeWithHeader = buf.getInt();
+          if (hFileBlock.hasNextBlockHeader()) {
+            hFileBlock.buf.limit(hFileBlock.buf.limit() - hFileBlock.headerSize());
           }
-          return ourBuffer;
+          return hFileBlock;
         }
 
         @Override
@@ -671,7 +671,7 @@ public class HFileBlock implements Cacheable {
    * @return true if succeeded reading the extra bytes
    * @throws IOException if failed to read the necessary bytes
    */
-  public static boolean readWithExtra(InputStream in, byte buf[],
+  public static boolean readWithExtra(InputStream in, byte[] buf,
       int bufOffset, int necessaryLen, int extraLen) throws IOException {
     int bytesRemaining = necessaryLen + extraLen;
     while (bytesRemaining > 0) {
@@ -777,7 +777,8 @@ public class HFileBlock implements Cacheable {
     /**
      * Valid in the READY state. Contains the header and the uncompressed (but
      * potentially encoded, if this is a data block) bytes, so the length is
-     * {@link #uncompressedSizeWithoutHeader} + {@link org.apache.hadoop.hbase.HConstants#HFILEBLOCK_HEADER_SIZE}.
+     * {@link #uncompressedSizeWithoutHeader} +
+     * {@link org.apache.hadoop.hbase.HConstants#HFILEBLOCK_HEADER_SIZE}.
      * Does not store checksums.
      */
     private byte[] uncompressedBytesWithHeader;
@@ -1060,7 +1061,9 @@ public class HFileBlock implements Cacheable {
      */
     int getOnDiskSizeWithoutHeader() {
       expectState(State.BLOCK_READY);
-      return onDiskBytesWithHeader.length + onDiskChecksum.length - HConstants.HFILEBLOCK_HEADER_SIZE;
+      return onDiskBytesWithHeader.length
+          + onDiskChecksum.length
+          - HConstants.HFILEBLOCK_HEADER_SIZE;
     }
 
     /**
@@ -1820,7 +1823,8 @@ public class HFileBlock implements Cacheable {
     if (!fileContext.isUseHBaseChecksum() || this.fileContext.getBytesPerChecksum() == 0) {
       return 0;
     }
-    return (int)ChecksumUtil.numBytes(onDiskDataSizeWithHeader, this.fileContext.getBytesPerChecksum());
+    return (int) ChecksumUtil.numBytes(onDiskDataSizeWithHeader,
+        this.fileContext.getBytesPerChecksum());
   }
 
   /**
@@ -1874,8 +1878,8 @@ public class HFileBlock implements Cacheable {
     byte[] magicBuf = new byte[Math.min(buf.limit() - buf.position(), BlockType.MAGIC_LENGTH)];
     buf.get(magicBuf);
     BlockType bt = BlockType.parse(magicBuf, 0, BlockType.MAGIC_LENGTH);
-    int compressedBlockSizeNoHeader = buf.getInt();;
-    int uncompressedBlockSizeNoHeader = buf.getInt();;
+    int compressedBlockSizeNoHeader = buf.getInt();
+    int uncompressedBlockSizeNoHeader = buf.getInt();
     long prevBlockOffset = buf.getLong();
     byte cksumtype = buf.get();
     long bytesPerChecksum = buf.getInt();

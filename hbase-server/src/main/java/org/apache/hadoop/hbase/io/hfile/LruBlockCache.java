@@ -199,8 +199,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   private boolean forceInMemory;
 
   /** Where to send victims (blocks evicted/missing from the cache) */
-  // TODO: Fix it so this is not explicit reference to a particular BlockCache implementation.
-  private BucketCache victimHandler = null;
+  private BlockCache victimHandler = null;
 
   /**
    * Default constructor.  Specify maximum size and expected average block
@@ -421,8 +420,17 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     LruCachedBlock cb = map.get(cacheKey);
     if (cb == null) {
       if (!repeat && updateCacheMetrics) stats.miss(caching);
-      if (victimHandler != null) {
-        return victimHandler.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+      // If there is another block cache then try and read there.
+      // However if this is a retry ( second time in double checked locking )
+      // And it's already a miss then the l2 will also be a miss.
+      if (victimHandler != null && !repeat) {
+        Cacheable result = victimHandler.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+
+        // Promote this to L1.
+        if (result != null && caching) {
+          cacheBlock(cacheKey, result, /* inMemory = */ false, /* cacheData = */ true);
+        }
+        return result;
       }
       return null;
     }
@@ -491,10 +499,14 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     }
     stats.evicted(block.getCachedTime());
     if (evictedByEvictionProcess && victimHandler != null) {
-      boolean wait = getCurrentSize() < acceptableSize();
-      boolean inMemory = block.getPriority() == BlockPriority.MEMORY;
-      victimHandler.cacheBlockWithWait(block.getCacheKey(), block.getBuffer(),
-          inMemory, wait);
+      if (victimHandler instanceof BucketCache) {
+        boolean wait = getCurrentSize() < acceptableSize();
+        boolean inMemory = block.getPriority() == BlockPriority.MEMORY;
+        ((BucketCache)victimHandler).cacheBlockWithWait(block.getCacheKey(), block.getBuffer(),
+            inMemory, wait);
+      } else {
+        victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
+      }
     }
     return block.heapSize();
   }
@@ -789,7 +801,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
         synchronized(this) {
           try {
             this.wait(1000 * 10/*Don't wait for ever*/);
-          } catch(InterruptedException e) {}
+          } catch(InterruptedException e) {
+            LOG.warn("Interrupted eviction thread ", e);
+            Thread.currentThread().interrupt();
+          }
         }
         LruBlockCache cache = this.cache.get();
         if (cache == null) break;
@@ -1059,7 +1074,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return counts;
   }
 
-  public void setVictimCache(BucketCache handler) {
+  public void setVictimCache(BlockCache handler) {
     assert victimHandler == null;
     victimHandler = handler;
   }
@@ -1069,7 +1084,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return map;
   }
 
-  BucketCache getVictimHandler() {
+  BlockCache getVictimHandler() {
     return this.victimHandler;
   }
 

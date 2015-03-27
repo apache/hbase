@@ -206,6 +206,38 @@ org.apache.hadoop.util.StringUtils;
 </%if>
 </%def>
 
+<%def hits_tmpl>
+<%args>
+    BlockCache bc;
+</%args>
+    <tr>
+        <td>Hits</td>
+        <td><% String.format("%,d", bc.getStats().getHitCount()) %></td>
+        <td>Number requests that were cache hits</td>
+    </tr>
+    <tr>
+        <td>Hits Caching</td>
+        <td><% String.format("%,d", bc.getStats().getHitCachingCount()) %></td>
+        <td>Cache hit block requests but only requests set to cache block if a miss</td>
+    </tr>
+    <tr>
+        <td>Misses</td>
+        <td><% String.format("%,d", bc.getStats().getMissCount()) %></td>
+        <td>Block requests that were cache misses but set to cache missed blocks</td>
+    </tr>
+    <tr>
+        <td>Misses Caching</td>
+        <td><% String.format("%,d", bc.getStats().getMissCount()) %></td>
+        <td>Block requests that were cache misses but only requests set to use block cache</td>
+    </tr>
+    <tr>
+        <td>Hit Ratio</td>
+        <td><% String.format("%,.2f", bc.getStats().getHitRatio() * 100) %><% "%" %></td>
+        <td>Hit Count divided by total requests count</td>
+    </tr>
+
+</%def>
+
 <%def bc_stats>
 <%args>
     CacheConfig cacheConfig;
@@ -235,31 +267,7 @@ org.apache.hadoop.util.StringUtils;
         <td>Number of blocks in block cache</td>
     </tr>
     <& evictions_tmpl; bc = cacheConfig.getBlockCache(); &>
-    <tr>
-        <td>Hits</td>
-        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getHitCount()) %></td>
-        <td>Number requests that were cache hits</td>
-    </tr>
-    <tr>
-        <td>Hits Caching</td>
-        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getHitCachingCount()) %></td>
-        <td>Cache hit block requests but only requests set to cache block if a miss</td>
-    </tr>
-    <tr>
-        <td>Misses</td>
-        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getMissCount()) %></td>
-        <td>Block requests that were cache misses but set to cache missed blocks</td>
-    </tr>
-    <tr>
-        <td>Misses Caching</td>
-        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getMissCount()) %></td>
-        <td>Block requests that were cache misses but only requests set to use block cache</td>
-    </tr>
-    <tr>
-        <td>Hit Ratio</td>
-        <td><% String.format("%,.2f", cacheConfig.getBlockCache().getStats().getHitRatio() * 100) %><% "%" %></td>
-        <td>Hit Count divided by total requests count</td>
-    </tr>
+    <& hits_tmpl; bc = cacheConfig.getBlockCache(); &>
 </table>
 <p>If block cache is made up of more than one cache -- i.e. a L1 and a L2 -- then the above
 are combined counts. Request count is sum of hits and misses.</p>
@@ -349,7 +357,9 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td>Size of DATA Blocks</td>
     </tr>
 </%if> 
-<%if evictions %><& evictions_tmpl; bc = bc; &></%if> 
+<& evictions_tmpl; bc = bc; &>
+<& hits_tmpl; bc = bc; &>
+
 <%if bucketCache %>
     <tr>
         <td>Hits per Second</td>
