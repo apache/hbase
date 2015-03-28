@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -588,5 +589,22 @@ public class TestNamespaceAuditor {
       .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
     ADMIN.deleteTable(tableName);
     observer.tableDeletionLatch.await();
+  }
+
+  @Test(expected = QuotaExceededException.class, timeout = 30000)
+  public void testExceedTableQuotaInNamespace() throws Exception {
+    String nsp = prefix + "_testExceedTableQuotaInNamespace";
+    NamespaceDescriptor nspDesc =
+        NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "1")
+            .build();
+    ADMIN.createNamespace(nspDesc);
+    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    assertEquals(ADMIN.listNamespaceDescriptors().length, 3);
+    HTableDescriptor tableDescOne =
+        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1"));
+    HTableDescriptor tableDescTwo =
+        new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
+    ADMIN.createTable(tableDescOne);
+    ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
   }
 }
