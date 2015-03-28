@@ -40,14 +40,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
-import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -253,19 +251,6 @@ public class MetaTableAccessor {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
     if (connection == null || connection.isClosed()) {
       throw new NullPointerException("No connection");
-    }
-    // If the passed in 'connection' is 'managed' -- i.e. every second test uses
-    // a Table or an HBaseAdmin with managed connections -- then doing
-    // connection.getTable will throw an exception saying you are NOT to use
-    // managed connections getting tables.  Leaving this as it is for now. Will
-    // revisit when inclined to change all tests.  User code probaby makes use of
-    // managed connections too so don't change it till post hbase 1.0.
-    //
-    // There should still be a way to use this method with an unmanaged connection.
-    if (connection instanceof ClusterConnection) {
-      if (((ClusterConnection) connection).isManaged()) {
-        throw new NeedUnmanagedConnectionException();
-      }
     }
     return connection.getTable(TableName.META_TABLE_NAME);
   }

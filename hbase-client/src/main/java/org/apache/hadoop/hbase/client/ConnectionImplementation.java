@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabled
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -76,8 +77,10 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -93,6 +96,7 @@ import java.util.concurrent.atomic.AtomicInteger;
     justification="Access to the conncurrent hash map is under a lock so should be fine.")
 @InterfaceAudience.Private
 class ConnectionImplementation implements ClusterConnection, Closeable {
+  public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   static final Log LOG = LogFactory.getLog(ConnectionImplementation.class);
   private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
 
@@ -152,9 +156,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private int refCount;
 
-  // indicates whether this connection's life cycle is managed (by us)
-  private boolean managed;
-
   private User user;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
@@ -170,27 +171,15 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   private final ClientBackoffPolicy backoffPolicy;
 
-   ConnectionImplementation(Configuration conf, boolean managed) throws IOException {
-     this(conf, managed, null, null);
-   }
-
   /**
    * constructor
    * @param conf Configuration object
-   * @param managed If true, does not do full shutdown on close; i.e. cleanup of connection
-   * to zk and shutdown of all services; we just close down the resources this connection was
-   * responsible for and decrement usage counters.  It is up to the caller to do the full
-   * cleanup.  It is set when we want have connection sharing going on -- reuse of zk connection,
-   * and cached region locations, established regionserver connections, etc.  When connections
-   * are shared, we have reference counting going on and will only do full cleanup when no more
-   * users of an ConnectionImplementation instance.
    */
-  ConnectionImplementation(Configuration conf, boolean managed,
+  ConnectionImplementation(Configuration conf,
                            ExecutorService pool, User user) throws IOException {
     this(conf);
     this.user = user;
     this.batchPool = pool;
-    this.managed = managed;
     this.registry = setupRegistry();
     retrieveClusterId();
 
@@ -231,11 +220,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
-        HConstants.DEFAULT_USE_META_REPLICAS);
+      HConstants.DEFAULT_USE_META_REPLICAS);
     this.numTries = tableConfig.getRetriesNumber();
     this.rpcTimeout = conf.getInt(
-        HConstants.HBASE_RPC_TIMEOUT_KEY,
-        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+      HConstants.HBASE_RPC_TIMEOUT_KEY,
+      HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
       synchronized (nonceGeneratorCreateLock) {
         if (nonceGenerator == null) {
@@ -243,7 +232,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         }
       }
     } else {
-      nonceGenerator = new ConnectionManager.NoNonceGenerator();
+      nonceGenerator = new NoNonceGenerator();
     }
     stats = ServerStatisticTracker.create(conf);
     this.asyncProcess = createAsyncProcess(this.conf);
@@ -262,10 +251,50 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       ClusterConnection conn, NonceGenerator cnm) {
     ConnectionImplementation connImpl = (ConnectionImplementation)conn;
     NonceGenerator ng = connImpl.getNonceGenerator();
-    ConnectionManager.LOG.warn("Nonce generator is being replaced by test code for "
+    LOG.warn("Nonce generator is being replaced by test code for "
       + cnm.getClass().getName());
     nonceGenerator = cnm;
     return ng;
+  }
+
+  /**
+   * Look for an exception we know in the remote exception:
+   * - hadoop.ipc wrapped exceptions
+   * - nested exceptions
+   *
+   * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException
+   * @return null if we didn't find the exception, the exception otherwise.
+   */
+  public static Throwable findException(Object exception) {
+    if (exception == null || !(exception instanceof Throwable)) {
+      return null;
+    }
+    Throwable cur = (Throwable) exception;
+    while (cur != null) {
+      if (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
+          || cur instanceof RegionTooBusyException) {
+        return cur;
+      }
+      if (cur instanceof RemoteException) {
+        RemoteException re = (RemoteException) cur;
+        cur = re.unwrapRemoteException(
+            RegionOpeningException.class, RegionMovedException.class,
+            RegionTooBusyException.class);
+        if (cur == null) {
+          cur = re.unwrapRemoteException();
+        }
+        // unwrapRemoteException can return the exception given as a parameter when it cannot
+        //  unwrap it. In this case, there is no need to look further
+        // noinspection ObjectEquality
+        if (cur == re) {
+          return null;
+        }
+      } else {
+        cur = cur.getCause();
+      }
+    }
+
+    return null;
   }
 
   @Override
@@ -295,9 +324,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
-    if (managed) {
-      throw new NeedUnmanagedConnectionException();
-    }
     return new HTable(tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory, pool);
   }
 
@@ -330,9 +356,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public Admin getAdmin() throws IOException {
-    if (managed) {
-      throw new NeedUnmanagedConnectionException();
-    }
     return new HBaseAdmin(this);
   }
 
@@ -543,14 +566,15 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public boolean isTableAvailable(final TableName tableName, @Nullable final byte[][] splitKeys)
       throws IOException {
+    if (this.closed) throw new IOException(toString() + " closed");
     try {
       if (!isTableEnabled(tableName)) {
         LOG.debug("Table " + tableName + " not enabled");
         return false;
       }
-      ClusterConnection connection = ConnectionManager.getConnectionInternal(getConfiguration());
-      List<Pair<HRegionInfo, ServerName>> locations = MetaTableAccessor
-          .getTableRegionsAndLocations(connection, tableName, true);
+      List<Pair<HRegionInfo, ServerName>> locations =
+        MetaTableAccessor.getTableRegionsAndLocations(this, tableName, true);
+
       int notDeployed = 0;
       int regionCount = 0;
       for (Pair<HRegionInfo, ServerName> pair : locations) {
@@ -1004,6 +1028,99 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       MasterProtos.IsMasterRunningResponse response =
         this.stub.isMasterRunning(null, RequestConverter.buildIsMasterRunningRequest());
       return response != null? response.getIsMasterRunning(): false;
+    }
+  }
+
+  /** Dummy nonce generator for disabled nonces. */
+  static class NoNonceGenerator implements NonceGenerator {
+    @Override
+    public long getNonceGroup() {
+      return HConstants.NO_NONCE;
+    }
+    @Override
+    public long newNonce() {
+      return HConstants.NO_NONCE;
+    }
+  }
+
+  /**
+   * The record of errors for servers.
+   */
+  static class ServerErrorTracker {
+    // We need a concurrent map here, as we could have multiple threads updating it in parallel.
+    private final ConcurrentMap<ServerName, ServerErrors> errorsByServer =
+        new ConcurrentHashMap<ServerName, ServerErrors>();
+    private final long canRetryUntil;
+    private final int maxRetries;
+    private final long startTrackingTime;
+
+    public ServerErrorTracker(long timeout, int maxRetries) {
+      this.maxRetries = maxRetries;
+      this.canRetryUntil = EnvironmentEdgeManager.currentTime() + timeout;
+      this.startTrackingTime = new Date().getTime();
+    }
+
+    /**
+     * We stop to retry when we have exhausted BOTH the number of retries and the time allocated.
+     */
+    boolean canRetryMore(int numRetry) {
+      // If there is a single try we must not take into account the time.
+      return numRetry < maxRetries || (maxRetries > 1 &&
+          EnvironmentEdgeManager.currentTime() < this.canRetryUntil);
+    }
+
+    /**
+     * Calculates the back-off time for a retrying request to a particular server.
+     *
+     * @param server    The server in question.
+     * @param basePause The default hci pause.
+     * @return The time to wait before sending next request.
+     */
+    long calculateBackoffTime(ServerName server, long basePause) {
+      long result;
+      ServerErrors errorStats = errorsByServer.get(server);
+      if (errorStats != null) {
+        result = ConnectionUtils.getPauseTime(basePause, errorStats.getCount());
+      } else {
+        result = 0; // yes, if the server is not in our list we don't wait before retrying.
+      }
+      return result;
+    }
+
+    /**
+     * Reports that there was an error on the server to do whatever bean-counting necessary.
+     *
+     * @param server The server in question.
+     */
+    void reportServerError(ServerName server) {
+      ServerErrors errors = errorsByServer.get(server);
+      if (errors != null) {
+        errors.addError();
+      } else {
+        errors = errorsByServer.putIfAbsent(server, new ServerErrors());
+        if (errors != null){
+          errors.addError();
+        }
+      }
+    }
+
+    long getStartTrackingTime() {
+      return startTrackingTime;
+    }
+
+    /**
+     * The record of errors for a server.
+     */
+    private static class ServerErrors {
+      private final AtomicInteger retries = new AtomicInteger(0);
+
+      public int getCount() {
+        return retries.get();
+      }
+
+      public void addError() {
+        retries.incrementAndGet();
+      }
     }
   }
 
@@ -1710,7 +1827,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
 
     HRegionInfo regionInfo = oldLocation.getRegionInfo();
-    Throwable cause = ConnectionManager.findException(exception);
+    Throwable cause = findException(exception);
     if (cause != null) {
       if (cause instanceof RegionTooBusyException || cause instanceof RegionOpeningException) {
         // We know that the region is still on this region server
@@ -1936,16 +2053,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
-  /**
-   * Return if this client has no reference
-   *
-   * @return true if this client has no reference; false otherwise
-   */
-  boolean isZeroReference() {
-    return refCount == 0;
-  }
-
-  void internalClose() {
+  @Override
+  public void close() {
     if (this.closed) {
       return;
     }
@@ -1959,19 +2068,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
     if (rpcClient != null) {
       rpcClient.close();
-    }
-  }
-
-  @Override
-  public void close() {
-    if (managed) {
-      if (aborted) {
-        ConnectionManager.deleteStaleConnection(this);
-      } else {
-        ConnectionManager.deleteConnection(this, false);
-      }
-    } else {
-      internalClose();
     }
   }
 
@@ -2035,7 +2131,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     MasterKeepAliveConnection master = getKeepAliveMasterService();
     try {
       return ProtobufUtil.getTableNameArray(master.getTableNames(null,
-          MasterProtos.GetTableNamesRequest.newBuilder().build())
+        MasterProtos.GetTableNamesRequest.newBuilder().build())
         .getTableNamesList());
     } catch (ServiceException se) {
       throw ProtobufUtil.getRemoteException(se);
@@ -2125,8 +2221,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   @Override
   public TableState getTableState(TableName tableName) throws IOException {
-    ClusterConnection conn = ConnectionManager.getConnectionInternal(getConfiguration());
-    TableState tableState = MetaTableAccessor.getTableState(conn, tableName);
+    if (this.closed) throw new IOException(toString() + " closed");
+
+    TableState tableState = MetaTableAccessor.getTableState(this, tableName);
     if (tableState == null)
       throw new TableNotFoundException(tableName);
     return tableState;
@@ -2136,10 +2233,5 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
     return RpcRetryingCallerFactory
         .instantiate(conf, this.interceptor, this.getStatisticsTracker());
-  }
-
-  @Override
-  public boolean isManaged() {
-    return managed;
   }
 }

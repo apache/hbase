@@ -183,10 +183,8 @@ public class TestMetaTableAccessorNoCluster {
       // Return the RegionLocations object when locateRegion
       // The ugly format below comes of 'Important gotcha on spying real objects!' from
       // http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html
-      ClusterConnection cConnection =
-          HConnectionTestingUtility.getSpiedClusterConnection(UTIL.getConfiguration());
       Mockito.doReturn(rl).when
-      (cConnection).locateRegion((TableName)Mockito.any(), (byte[])Mockito.any(),
+      (connection).locateRegion((TableName)Mockito.any(), (byte[])Mockito.any(),
               Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.anyInt());
 
       // Now shove our HRI implementation into the spied-upon connection.

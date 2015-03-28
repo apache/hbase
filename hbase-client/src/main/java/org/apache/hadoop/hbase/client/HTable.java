@@ -319,12 +319,9 @@ public class HTable implements HTableInterface {
   @Deprecated
   public static boolean isTableEnabled(Configuration conf,
       final TableName tableName) throws IOException {
-    return ConnectionManager.execute(new HConnectable<Boolean>(conf) {
-      @Override
-      public Boolean connect(HConnection connection) throws IOException {
-        return connection.isTableEnabled(tableName);
-      }
-    });
+    try(Connection conn = ConnectionFactory.createConnection(conf)) {
+      return conn.getAdmin().isTableEnabled(tableName);
+    }
   }
 
   /**

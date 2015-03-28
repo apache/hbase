@@ -38,7 +38,7 @@ public class HConnectionTestingUtility {
   /*
    * Not part of {@link HBaseTestingUtility} because this class is not
    * in same package as {@link HConnection}.  Would have to reveal ugly
-   * {@link ConnectionManager} innards to HBaseTestingUtility to give it access.
+   * {@link ConnectionImplementation} innards to HBaseTestingUtility to give it access.
    */
   /**
    * Get a Mocked {@link HConnection} that goes with the passed <code>conf</code>
@@ -52,17 +52,9 @@ public class HConnectionTestingUtility {
    */
   public static ClusterConnection getMockedConnection(final Configuration conf)
   throws ZooKeeperConnectionException {
-    HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      ConnectionImplementation connection =
-          ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
-      if (connection == null) {
-        connection = Mockito.mock(ConnectionImplementation.class);
-        Mockito.when(connection.getConfiguration()).thenReturn(conf);
-        ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
-      }
-      return connection;
-    }
+    ConnectionImplementation connection = Mockito.mock(ConnectionImplementation.class);
+    Mockito.when(connection.getConfiguration()).thenReturn(conf);
+    return connection;
   }
 
   /**
@@ -99,7 +91,6 @@ public class HConnectionTestingUtility {
   throws IOException {
     ConnectionImplementation c = Mockito.mock(ConnectionImplementation.class);
     Mockito.when(c.getConfiguration()).thenReturn(conf);
-    ConnectionManager.CONNECTION_INSTANCES.put(new HConnectionKey(conf), c);
     Mockito.doNothing().when(c).close();
     // Make it so we return a particular location when asked.
     final HRegionLocation loc = new HRegionLocation(hri, sn);
@@ -151,38 +142,8 @@ public class HConnectionTestingUtility {
    */
   public static ClusterConnection getSpiedConnection(final Configuration conf)
   throws IOException {
-    HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      ConnectionImplementation connection =
-          ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
-      if (connection == null) {
-        connection = Mockito.spy(new ConnectionImplementation(conf, false));
-        ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
-      }
-      return connection;
-    }
-  }
-
-  public static ClusterConnection getSpiedClusterConnection(final Configuration conf)
-  throws IOException {
-    HConnectionKey connectionKey = new HConnectionKey(conf);
-    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      ConnectionImplementation connection =
-          ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
-      if (connection == null) {
-        connection = Mockito.spy(new ConnectionImplementation(conf, false));
-        ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
-      }
-      return connection;
-    }
-  }
-
-  /**
-   * @return Count of extant connection instances
-   */
-  public static int getConnectionCount() {
-    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
-      return ConnectionManager.CONNECTION_INSTANCES.size();
-    }
+    ConnectionImplementation connection =
+      Mockito.spy(new ConnectionImplementation(conf, null, null));
+    return connection;
   }
 }

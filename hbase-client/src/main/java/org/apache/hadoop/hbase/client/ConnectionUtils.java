@@ -147,9 +147,9 @@ public final class ConnectionUtils {
    * region re-lookups.
    */
   static class MasterlessConnection extends ConnectionImplementation {
-    MasterlessConnection(Configuration conf, boolean managed,
+    MasterlessConnection(Configuration conf,
       ExecutorService pool, User user) throws IOException {
-      super(conf, managed, pool, user);
+      super(conf, pool, user);
     }
 
     @Override

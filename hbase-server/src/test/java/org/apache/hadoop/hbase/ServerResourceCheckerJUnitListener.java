@@ -19,24 +19,9 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.ResourceChecker.Phase;
-import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
-
 /**
  * Monitor the resources. use by the tests All resources in {@link ResourceCheckerJUnitListener}
  *  plus the number of connection.
  */
 public class ServerResourceCheckerJUnitListener extends ResourceCheckerJUnitListener {
-
-  static class ConnectionCountResourceAnalyzer extends ResourceChecker.ResourceAnalyzer {
-    @Override
-    public int getVal(Phase phase) {
-      return HConnectionTestingUtility.getConnectionCount();
-    }
-  }
-
-  @Override
-  protected void addResourceAnalyzer(ResourceChecker rc) {
-    rc.addResourceAnalyzer(new ConnectionCountResourceAnalyzer());
-  }
 }

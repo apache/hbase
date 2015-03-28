@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
@@ -288,19 +287,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    */
   @SuppressWarnings("deprecation")
   public void doBulkLoad(Path hfofDir, final HTable table)
-    throws TableNotFoundException, IOException
-  {
-    Admin admin = null;
-    try {
-      try {
-        admin = table.getConnection().getAdmin();
-      } catch (NeedUnmanagedConnectionException ex) {
-        admin = new HBaseAdmin(table.getConfiguration());
-      }
-      doBulkLoad(hfofDir, admin, table, table.getRegionLocator());
-    } finally {
-      admin.close();
-    }
+      throws TableNotFoundException, IOException {
+    doBulkLoad(hfofDir, table.getConnection().getAdmin(), table, table.getRegionLocator());
   }
 
   /**

@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -630,20 +629,6 @@ public class TestAdmin2 {
   }
 
   /**
-   * HBASE-4417 checkHBaseAvailable() doesn't close zk connections
-   */
-  @Test (timeout=300000)
-  public void testCheckHBaseAvailableClosesConnection() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-
-    int initialCount = HConnectionTestingUtility.getConnectionCount();
-    HBaseAdmin.checkHBaseAvailable(conf);
-    int finalCount = HConnectionTestingUtility.getConnectionCount();
-
-    Assert.assertEquals(initialCount, finalCount) ;
-  }
-
-  /**
    * Check that we have an exception if the cluster is not there.
    */
   @Test (timeout=300000)
@@ -653,8 +638,6 @@ public class TestAdmin2 {
     // Change the ZK address to go to something not used.
     conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
       conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 9999)+10);
-
-    int initialCount = HConnectionTestingUtility.getConnectionCount();
 
     long start = System.currentTimeMillis();
     try {
@@ -666,10 +649,6 @@ public class TestAdmin2 {
     } catch (IOException ignored) {
     }
     long end = System.currentTimeMillis();
-
-    int finalCount = HConnectionTestingUtility.getConnectionCount();
-
-    Assert.assertEquals(initialCount, finalCount) ;
 
     LOG.info("It took "+(end-start)+" ms to find out that" +
       " HBase was not available");

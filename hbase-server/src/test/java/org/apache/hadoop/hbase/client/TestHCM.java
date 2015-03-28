@@ -23,15 +23,12 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
@@ -46,7 +43,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -73,7 +69,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.jboss.netty.util.internal.DetectionUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -141,11 +136,6 @@ public class TestHCM {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-
-  private static int getHConnectionManagerCacheSize(){
-    return HConnectionTestingUtility.getConnectionCount();
-  }
-
   @Test
   public void testClusterConnection() throws IOException {
     ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1,
@@ -153,26 +143,26 @@ public class TestHCM {
         new SynchronousQueue<Runnable>(),
         Threads.newDaemonThreadFactory("test-hcm"));
 
-    HConnection con1 = ConnectionManager.createConnection(TEST_UTIL.getConfiguration());
-    HConnection con2 = ConnectionManager.createConnection(TEST_UTIL.getConfiguration(), otherPool);
+    Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    Connection con2 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), otherPool);
     // make sure the internally created ExecutorService is the one passed
     assertTrue(otherPool == ((ConnectionImplementation)con2).getCurrentBatchPool());
 
     String tableName = "testClusterConnection";
     TEST_UTIL.createTable(tableName.getBytes(), FAM_NAM).close();
-    HTable t = (HTable)con1.getTable(tableName, otherPool);
+    HTable t = (HTable)con1.getTable(TableName.valueOf(tableName), otherPool);
     // make sure passing a pool to the getTable does not trigger creation of an internal pool
     assertNull("Internal Thread pool should be null", ((ConnectionImplementation)con1).getCurrentBatchPool());
     // table should use the pool passed
     assertTrue(otherPool == t.getPool());
     t.close();
 
-    t = (HTable)con2.getTable(tableName);
+    t = (HTable)con2.getTable(TableName.valueOf(tableName));
     // table should use the connectin's internal pool
     assertTrue(otherPool == t.getPool());
     t.close();
 
-    t = (HTable)con2.getTable(Bytes.toBytes(tableName));
+    t = (HTable)con2.getTable(TableName.valueOf(tableName));
     // try other API too
     assertTrue(otherPool == t.getPool());
     t.close();
@@ -182,7 +172,7 @@ public class TestHCM {
     assertTrue(otherPool == t.getPool());
     t.close();
 
-    t = (HTable)con1.getTable(tableName);
+    t = (HTable)con1.getTable(TableName.valueOf(tableName));
     ExecutorService pool = ((ConnectionImplementation)con1).getCurrentBatchPool();
     // make sure an internal pool was created
     assertNotNull("An internal Thread pool should have been created", pool);
@@ -190,7 +180,7 @@ public class TestHCM {
     assertTrue(t.getPool() == pool);
     t.close();
 
-    t = (HTable)con1.getTable(tableName);
+    t = (HTable)con1.getTable(TableName.valueOf(tableName));
     // still using the *same* internal pool
     assertTrue(t.getPool() == pool);
     t.close();
@@ -535,7 +525,6 @@ public class TestHCM {
     } finally {
       syncBlockingFilter.set(true);
       t.join();
-      ConnectionManager.getConnection(c2).close();
       TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
     }
 
@@ -565,28 +554,6 @@ public class TestHCM {
 
     public static Filter parseFrom(final byte [] pbBytes) throws DeserializationException{
       return new BlockingFilter();
-    }
-  }
-
-  @Test
-  public void abortingHConnectionRemovesItselfFromHCM() throws Exception {
-    // Save off current HConnections
-    Map<HConnectionKey, ConnectionImplementation> oldHBaseInstances =
-        new HashMap<HConnectionKey, ConnectionImplementation>();
-    oldHBaseInstances.putAll(ConnectionManager.CONNECTION_INSTANCES);
-
-    ConnectionManager.CONNECTION_INSTANCES.clear();
-
-    try {
-      HConnection connection = ConnectionManager.getConnection(TEST_UTIL.getConfiguration());
-      connection.abort("test abortingHConnectionRemovesItselfFromHCM", new Exception(
-          "test abortingHConnectionRemovesItselfFromHCM"));
-      Assert.assertNotSame(connection,
-        ConnectionManager.getConnection(TEST_UTIL.getConfiguration()));
-    } finally {
-      // Put original HConnections back
-      ConnectionManager.CONNECTION_INSTANCES.clear();
-      ConnectionManager.CONNECTION_INSTANCES.putAll(oldHBaseInstances);
     }
   }
 
@@ -710,7 +677,7 @@ public class TestHCM {
       Assert.assertArrayEquals(e.getRow(0).getRow(), ROW);
 
       // Check that we unserialized the exception as expected
-      Throwable cause = ConnectionManager.findException(e.getCause(0));
+      Throwable cause = ConnectionImplementation.findException(e.getCause(0));
       Assert.assertNotNull(cause);
       Assert.assertTrue(cause instanceof RegionMovedException);
     }
@@ -846,35 +813,6 @@ public class TestHCM {
     table.close();
   }
 
-  /**
-   * Make sure that {@link Configuration} instances that are essentially the
-   * same map to the same {@link HConnection} instance.
-   */
-  @Test
-  public void testConnectionSameness() throws Exception {
-    Connection previousConnection = null;
-    for (int i = 0; i < 2; i++) {
-      // set random key to differentiate the connection from previous ones
-      Configuration configuration = TEST_UTIL.getConfiguration();
-      configuration.set("some_key", String.valueOf(_randy.nextInt()));
-      LOG.info("The hash code of the current configuration is: "
-          + configuration.hashCode());
-      Connection currentConnection = ConnectionManager
-          .getConnection(configuration);
-      if (previousConnection != null) {
-        assertTrue(
-            "Did not get the same connection even though its key didn't change",
-            previousConnection == currentConnection);
-      }
-      previousConnection = currentConnection;
-      // change the configuration, so that it is no longer reachable from the
-      // client's perspective. However, since its part of the LRU doubly linked
-      // list, it will eventually get thrown out, at which time it should also
-      // close the corresponding {@link HConnection}.
-      configuration.set("other_key", String.valueOf(_randy.nextInt()));
-    }
-  }
-
   @Test
   public void testClosing() throws Exception {
     Configuration configuration =
@@ -911,12 +849,7 @@ public class TestHCM {
     // created from the same configuration, yet they are different
     assertTrue(c1 != c2);
     assertTrue(c1.getConfiguration() == c2.getConfiguration());
-    // make sure these were not cached
-    Connection c3 = ConnectionManager.getConnection(configuration);
-    assertTrue(c1 != c3);
-    assertTrue(c2 != c3);
   }
-
 
   /**
    * This test checks that one can connect to the cluster with only the
@@ -929,12 +862,12 @@ public class TestHCM {
     Configuration c = new Configuration();
     c.set(HConstants.ZOOKEEPER_QUORUM,
       TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_QUORUM));
-    c.set(HConstants.ZOOKEEPER_CLIENT_PORT ,
+    c.set(HConstants.ZOOKEEPER_CLIENT_PORT,
       TEST_UTIL.getConfiguration().get(HConstants.ZOOKEEPER_CLIENT_PORT));
 
     // This should be enough to connect
-    HConnection conn = ConnectionManager.getConnection(c);
-    assertTrue( conn.isMasterRunning() );
+    HConnection conn = (HConnection) ConnectionFactory.createConnection(c);
+    assertTrue(conn.isMasterRunning());
     conn.close();
   }
 
@@ -1074,8 +1007,8 @@ public class TestHCM {
     try {
       long timeBase = timeMachine.currentTime();
       long largeAmountOfTime = ANY_PAUSE * 1000;
-      ConnectionManager.ServerErrorTracker tracker =
-          new ConnectionManager.ServerErrorTracker(largeAmountOfTime, 100);
+      ConnectionImplementation.ServerErrorTracker tracker =
+          new ConnectionImplementation.ServerErrorTracker(largeAmountOfTime, 100);
 
       // The default backoff is 0.
       assertEquals(0, tracker.calculateBackoffTime(location, ANY_PAUSE));
@@ -1127,86 +1060,7 @@ public class TestHCM {
 
   private static void assertEqualsWithJitter(long expected, long actual, long jitterBase) {
     assertTrue("Value not within jitter: " + expected + " vs " + actual,
-        Math.abs(actual - expected) <= (0.01f * jitterBase));
-  }
-
-  /**
-   * Tests that a destroyed connection does not have a live zookeeper.
-   * Below is timing based.  We put up a connection to a table and then close the connection while
-   * having a background thread running that is forcing close of the connection to try and
-   * provoke a close catastrophe; we are hoping for a car crash so we can see if we are leaking
-   * zk connections.
-   * @throws Exception
-   */
-  @Ignore ("Flakey test: See HBASE-8996")@Test
-  public void testDeleteForZKConnLeak() throws Exception {
-    TEST_UTIL.createTable(TABLE_NAME4, FAM_NAM);
-    final Configuration config = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-    config.setInt("zookeeper.recovery.retry", 1);
-    config.setInt("zookeeper.recovery.retry.intervalmill", 1000);
-    config.setInt("hbase.rpc.timeout", 2000);
-    config.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-
-    ThreadPoolExecutor pool = new ThreadPoolExecutor(1, 10,
-      5, TimeUnit.SECONDS,
-      new SynchronousQueue<Runnable>(),
-      Threads.newDaemonThreadFactory("test-hcm-delete"));
-
-    pool.submit(new Runnable() {
-      @Override
-      public void run() {
-        while (!Thread.interrupted()) {
-          try {
-            HConnection conn = ConnectionManager.getConnection(config);
-            LOG.info("Connection " + conn);
-            ConnectionManager.deleteStaleConnection(conn);
-            LOG.info("Connection closed " + conn);
-            // TODO: This sleep time should be less than the time that it takes to open and close
-            // a table.  Ideally we would do a few runs first to measure.  For now this is
-            // timing based; hopefully we hit the bad condition.
-            Threads.sleep(10);
-          } catch (Exception e) {
-          }
-        }
-      }
-    });
-
-    // Use connection multiple times.
-    for (int i = 0; i < 30; i++) {
-      Connection c1 = null;
-      try {
-        c1 = ConnectionManager.getConnectionInternal(config);
-        LOG.info("HTable connection " + i + " " + c1);
-        Table table = c1.getTable(TABLE_NAME4, pool);
-        table.close();
-        LOG.info("HTable connection " + i + " closed " + c1);
-      } catch (Exception e) {
-        LOG.info("We actually want this to happen!!!!  So we can see if we are leaking zk", e);
-      } finally {
-        if (c1 != null) {
-          if (c1.isClosed()) {
-            // cannot use getZooKeeper as method instantiates watcher if null
-            Field zkwField = c1.getClass().getDeclaredField("keepAliveZookeeper");
-            zkwField.setAccessible(true);
-            Object watcher = zkwField.get(c1);
-
-            if (watcher != null) {
-              if (((ZooKeeperWatcher)watcher).getRecoverableZooKeeper().getState().isAlive()) {
-                // non-synchronized access to watcher; sleep and check again in case zk connection
-                // hasn't been cleaned up yet.
-                Thread.sleep(1000);
-                if (((ZooKeeperWatcher) watcher).getRecoverableZooKeeper().getState().isAlive()) {
-                  pool.shutdownNow();
-                  fail("Live zookeeper in closed connection");
-                }
-              }
-            }
-          }
-          c1.close();
-        }
-      }
-    }
-    pool.shutdownNow();
+      Math.abs(actual - expected) <= (0.01f * jitterBase));
   }
 
   @Test(timeout = 60000)

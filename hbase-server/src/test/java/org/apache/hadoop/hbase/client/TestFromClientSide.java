@@ -4033,7 +4033,7 @@ public class TestFromClientSide {
    */
   HTable createUnmangedHConnectionHTable(final TableName tableName) throws IOException {
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    HConnection conn = ConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     return (HTable)conn.getTable(tableName);
   }
 

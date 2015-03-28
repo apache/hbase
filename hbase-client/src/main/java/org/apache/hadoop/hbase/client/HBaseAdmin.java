@@ -204,9 +204,7 @@ public class HBaseAdmin implements Admin {
   @Deprecated
   public HBaseAdmin(Configuration c)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    // Will not leak connections, as the new implementation of the constructor
-    // does not throw exceptions anymore.
-    this(ConnectionManager.getConnectionInternal(new Configuration(c)));
+    this(ConnectionFactory.createConnection(new Configuration(c)));
     this.cleanupConnectionOnClose = true;
   }
 

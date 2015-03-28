@@ -214,15 +214,9 @@ public class ConnectionFactory {
       user = provider.getCurrent();
     }
 
-    return createConnection(conf, false, pool, user);
-  }
-
-  static Connection createConnection(final Configuration conf, final boolean managed,
-      final ExecutorService pool, final User user)
-  throws IOException {
     String className = conf.get(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
       ConnectionImplementation.class.getName());
-    Class<?> clazz = null;
+    Class<?> clazz;
     try {
       clazz = Class.forName(className);
     } catch (ClassNotFoundException e) {
@@ -232,9 +226,9 @@ public class ConnectionFactory {
       // Default HCM#HCI is not accessible; make it so before invoking.
       Constructor<?> constructor =
         clazz.getDeclaredConstructor(Configuration.class,
-          boolean.class, ExecutorService.class, User.class);
+          ExecutorService.class, User.class);
       constructor.setAccessible(true);
-      return (Connection) constructor.newInstance(conf, managed, pool, user);
+      return (Connection) constructor.newInstance(conf, pool, user);
     } catch (Exception e) {
       throw new IOException(e);
     }
