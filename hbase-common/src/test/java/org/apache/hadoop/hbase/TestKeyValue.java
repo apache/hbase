@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import static org.junit.Assert.assertNotEquals;
+
 public class TestKeyValue extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
 
@@ -613,5 +615,23 @@ public class TestKeyValue extends TestCase {
     a = new KeyValue(Bytes.toBytes("table,111,11,xxx"), now);
     b = new KeyValue(Bytes.toBytes("table,111,222,bbb"), now);
     assertTrue(c.compare(a, b) < 0);
+  }
+
+  public void testEqualsAndHashCode() throws Exception {
+    KeyValue kvA1 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"),
+        Bytes.toBytes("qualA"), Bytes.toBytes("1"));
+    KeyValue kvA2 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"),
+        Bytes.toBytes("qualA"), Bytes.toBytes("2"));
+    // We set a different sequence id on kvA2 to demonstrate that the equals and hashCode also
+    // don't take this into account.
+    kvA2.setSequenceId(2);
+    KeyValue kvB = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"),
+        Bytes.toBytes("qualB"), Bytes.toBytes("1"));
+
+    assertEquals(kvA1, kvA2);
+    assertNotEquals(kvA1, kvB);
+    assertEquals(kvA1.hashCode(), kvA2.hashCode());
+    assertNotEquals(kvA1.hashCode(), kvB.hashCode());
+
   }
 }
