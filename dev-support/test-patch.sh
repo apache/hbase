@@ -688,7 +688,7 @@ checkProtocErrors () {
   checkProtocCompilationErrors $PATCH_DIR/patchProtocErrors.txt
   JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:green}+1 javac{color}.  The applied patch does not increase the total number of javac compiler warnings."
+    {color:green}+1 protoc{color}.  The applied patch does not increase the total number of protoc compiler warnings."
   return 0
 }
 
