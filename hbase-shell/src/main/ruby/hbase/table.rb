@@ -49,7 +49,7 @@ module Hbase
          end
       end
     end
-    
+
     # General help for the table
     # class level so we can call it from anywhere
     def self.help
@@ -103,7 +103,7 @@ Note that after dropping a table, your reference to it becomes useless and furth
 is undefined (and not recommended).
 EOF
       end
-    
+
     #---------------------------------------------------------------------------------------------
 
     # let external objects read the underlying table object
@@ -150,7 +150,7 @@ EOF
           end
         end
         timestamp = nil
-      end  
+      end
       if timestamp
         p.add(family, qualifier, timestamp, value.to_s.to_java_bytes)
       else
@@ -161,14 +161,14 @@ EOF
 
     #----------------------------------------------------------------------------------------------
     # Delete a cell
-    def _delete_internal(row, column, 
+    def _delete_internal(row, column,
     			timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
       _deleteall_internal(row, column, timestamp, args)
     end
 
     #----------------------------------------------------------------------------------------------
     # Delete a row
-    def _deleteall_internal(row, column = nil, 
+    def _deleteall_internal(row, column = nil,
     		timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
       # delete operation doesn't need read permission. Retaining the read check for
       # meta table as a part of HBASE-5837.
@@ -185,7 +185,7 @@ EOF
       	  if v.kind_of?(String)
       	  	set_cell_visibility(d, v) if v
       	  end
-      	 end 
+      	 end
       end
       if args.any?
          visibility = args[VISIBILITY]
@@ -219,9 +219,14 @@ EOF
         set_op_ttl(incr, ttl) if ttl
       end
       incr.addColumn(family, qualifier, value)
-      @table.increment(incr)
+      result = @table.increment(incr)
+      return nil if result.isEmpty
+
+      # Fetch cell value
+      cell = result.listCells[0]
+      org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValue)
     end
-    
+
     #----------------------------------------------------------------------------------------------
     # appends the value atomically
     def _append_internal(row, column, value, args={})
@@ -262,7 +267,7 @@ EOF
         count += 1
         next unless (block_given? && count % interval == 0)
         # Allow command modules to visualize counting process
-        yield(count, 
+        yield(count,
               org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow))
       end
 
@@ -276,7 +281,7 @@ EOF
       get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
       maxlength = -1
       @converters.clear()
-      
+
       # Normalize args
       args = args.first if args.first.kind_of?(Hash)
       if args.kind_of?(String) || args.kind_of?(Array)
@@ -641,7 +646,7 @@ EOF
       end
       (maxlength != -1) ? val[0, maxlength] : val
     end
-    
+
     def convert(column, kv)
       #use org.apache.hadoop.hbase.util.Bytes as the default class
       klazz_name = 'org.apache.hadoop.hbase.util.Bytes'
@@ -653,7 +658,7 @@ EOF
         if matches.nil?
           # cannot match the pattern of 'c(className).functionname'
           # use the default klazz_name
-          converter = @converters[column] 
+          converter = @converters[column]
         else
           klazz_name = matches[1]
           converter = matches[2]
@@ -662,7 +667,7 @@ EOF
       method = eval(klazz_name).method(converter)
       return method.call(kv.getValue) # apply the converter
     end
-    
+
     # if the column spec contains CONVERTER information, to get rid of :CONVERTER info from column pair.
     # 1. return back normal column pair as usual, i.e., "cf:qualifier[:CONVERTER]" to "cf" and "qualifier" only
     # 2. register the CONVERTER information based on column spec - "cf:qualifier"
