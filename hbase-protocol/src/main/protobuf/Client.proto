@@ -276,6 +276,11 @@ message ScanResponse {
   // This field is mutually exclusive with cells_per_result (since the Cells will
   // be inside the pb'd Result)
   repeated Result results = 5;
+
+  // A server may choose to limit the number of results returned to the client for
+  // reasons such as the size in bytes or quantity of results accumulated. This field
+  // will true when more results exist in the current region.
+  optional bool more_results_in_region = 8;
 }
 
 /**

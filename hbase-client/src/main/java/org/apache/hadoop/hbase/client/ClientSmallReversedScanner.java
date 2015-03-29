@@ -135,6 +135,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
         // Server returns a null values if scanning is to stop. Else,
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
+        // TODO use context from server
         values = this.caller.callWithRetries(smallScanCallable, scannerTimeout);
         this.currentRegion = smallScanCallable.getHRegionInfo();
         long currentTime = System.currentTimeMillis();

@@ -330,114 +330,7 @@ public class ClientScanner extends AbstractClientScanner {
         return null;
       }
       if (cache.size() == 0) {
-        Result [] values = null;
-        long remainingResultSize = maxScannerResultSize;
-        int countdown = this.caching;
-        // We need to reset it if it's a new callable that was created
-        // with a countdown in nextScanner
-        callable.setCaching(this.caching);
-        // This flag is set when we want to skip the result returned.  We do
-        // this when we reset scanner because it split under us.
-        boolean skipFirst = false;
-        boolean retryAfterOutOfOrderException  = true;
-        do {
-          try {
-            if (skipFirst) {
-              // Skip only the first row (which was the last row of the last
-              // already-processed batch).
-              callable.setCaching(1);
-              values = this.caller.callWithRetries(callable);
-              callable.setCaching(this.caching);
-              skipFirst = false;
-            }
-            // Server returns a null values if scanning is to stop.  Else,
-            // returns an empty array if scanning is to go on and we've just
-            // exhausted current region.
-            values = this.caller.callWithRetries(callable);
-            if (skipFirst && values != null && values.length == 1) {
-              skipFirst = false; // Already skipped, unset it before scanning again
-              values = this.caller.callWithRetries(callable);
-            }
-            retryAfterOutOfOrderException  = true;
-          } catch (DoNotRetryIOException e) {
-            // DNRIOEs are thrown to make us break out of retries.  Some types of DNRIOEs want us
-            // to reset the scanner and come back in again.
-            if (e instanceof UnknownScannerException) {
-              long timeout = lastNext + scannerTimeout;
-              // If we are over the timeout, throw this exception to the client wrapped in
-              // a ScannerTimeoutException. Else, it's because the region moved and we used the old
-              // id against the new region server; reset the scanner.
-              if (timeout < System.currentTimeMillis()) {
-                long elapsed = System.currentTimeMillis() - lastNext;
-                ScannerTimeoutException ex = new ScannerTimeoutException(
-                    elapsed + "ms passed since the last invocation, " +
-                        "timeout is currently set to " + scannerTimeout);
-                ex.initCause(e);
-                throw ex;
-              }
-            } else {
-              // If exception is any but the list below throw it back to the client; else setup
-              // the scanner and retry.
-              Throwable cause = e.getCause();
-              if ((cause != null && cause instanceof NotServingRegionException) ||
-                (cause != null && cause instanceof RegionServerStoppedException) ||
-                e instanceof OutOfOrderScannerNextException) {
-                // Pass
-                // It is easier writing the if loop test as list of what is allowed rather than
-                // as a list of what is not allowed... so if in here, it means we do not throw.
-              } else {
-                throw e;
-              }
-            }
-            // Else, its signal from depths of ScannerCallable that we need to reset the scanner.
-            if (this.lastResult != null) {
-              // The region has moved. We need to open a brand new scanner at
-              // the new location.
-              // Reset the startRow to the row we've seen last so that the new
-              // scanner starts at the correct row. Otherwise we may see previously
-              // returned rows again.
-              // (ScannerCallable by now has "relocated" the correct region)
-              this.scan.setStartRow(this.lastResult.getRow());
-
-              // Skip first row returned.  We already let it out on previous
-              // invocation.
-              skipFirst = true;
-            }
-            if (e instanceof OutOfOrderScannerNextException) {
-              if (retryAfterOutOfOrderException) {
-                retryAfterOutOfOrderException = false;
-              } else {
-                // TODO: Why wrap this in a DNRIOE when it already is a DNRIOE?
-                throw new DoNotRetryIOException("Failed after retry of " +
-                  "OutOfOrderScannerNextException: was there a rpc timeout?", e);
-              }
-            }
-            // Clear region.
-            this.currentRegion = null;
-            // Set this to zero so we don't try and do an rpc and close on remote server when
-            // the exception we got was UnknownScanner or the Server is going down.
-            callable = null;
-            // This continue will take us to while at end of loop where we will set up new scanner.
-            continue;
-          }
-          long currentTime = System.currentTimeMillis();
-          if (this.scanMetrics != null ) {
-            this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime-lastNext);
-          }
-          lastNext = currentTime;
-          if (values != null && values.length > 0) {
-            for (Result rs : values) {
-              cache.add(rs);
-              for (Cell kv : rs.rawCells()) {
-                // TODO make method in Cell or CellUtil
-                remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
-              }
-              countdown--;
-              this.lastResult = rs;
-            }
-          }
-          // Values == null means server-side filter has determined we must STOP
-        } while (remainingResultSize > 0 && countdown > 0 && nextScanner(countdown, values == null));
+        loadCache();
       }
 
       if (cache.size() > 0) {
@@ -448,6 +341,136 @@ public class ClientScanner extends AbstractClientScanner {
       writeScanMetrics();
       return null;
     }
+
+  /**
+   * Contact the servers to load more {@link Result}s in the cache.
+   */
+  protected void loadCache() throws IOException {
+    Result [] values = null;
+    long remainingResultSize = maxScannerResultSize;
+    int countdown = this.caching;
+    // We need to reset it if it's a new callable that was created
+    // with a countdown in nextScanner
+    callable.setCaching(this.caching);
+    // This flag is set when we want to skip the result returned.  We do
+    // this when we reset scanner because it split under us.
+    boolean skipFirst = false;
+    boolean retryAfterOutOfOrderException  = true;
+    // We don't expect that the server will have more results for us if
+    // it doesn't tell us otherwise. We rely on the size or count of results
+    boolean serverHasMoreResults = false;
+    do {
+      try {
+        if (skipFirst) {
+          // Skip only the first row (which was the last row of the last
+          // already-processed batch).
+          callable.setCaching(1);
+          values = this.caller.callWithRetries(callable);
+          callable.setCaching(this.caching);
+          skipFirst = false;
+        }
+        // Server returns a null values if scanning is to stop.  Else,
+        // returns an empty array if scanning is to go on and we've just
+        // exhausted current region.
+        values = this.caller.callWithRetries(callable);
+        if (skipFirst && values != null && values.length == 1) {
+          skipFirst = false; // Already skipped, unset it before scanning again
+          values = this.caller.callWithRetries(callable);
+        }
+        retryAfterOutOfOrderException  = true;
+      } catch (DoNotRetryIOException e) {
+        // DNRIOEs are thrown to make us break out of retries.  Some types of DNRIOEs want us
+        // to reset the scanner and come back in again.
+        if (e instanceof UnknownScannerException) {
+          long timeout = lastNext + scannerTimeout;
+          // If we are over the timeout, throw this exception to the client wrapped in
+          // a ScannerTimeoutException. Else, it's because the region moved and we used the old
+          // id against the new region server; reset the scanner.
+          if (timeout < System.currentTimeMillis()) {
+            long elapsed = System.currentTimeMillis() - lastNext;
+            ScannerTimeoutException ex = new ScannerTimeoutException(
+                elapsed + "ms passed since the last invocation, " +
+                    "timeout is currently set to " + scannerTimeout);
+            ex.initCause(e);
+            throw ex;
+          }
+        } else {
+          // If exception is any but the list below throw it back to the client; else setup
+          // the scanner and retry.
+          Throwable cause = e.getCause();
+          if ((cause != null && cause instanceof NotServingRegionException) ||
+            (cause != null && cause instanceof RegionServerStoppedException) ||
+            e instanceof OutOfOrderScannerNextException) {
+            // Pass
+            // It is easier writing the if loop test as list of what is allowed rather than
+            // as a list of what is not allowed... so if in here, it means we do not throw.
+          } else {
+            throw e;
+          }
+        }
+        // Else, its signal from depths of ScannerCallable that we need to reset the scanner.
+        if (this.lastResult != null) {
+          // The region has moved. We need to open a brand new scanner at
+          // the new location.
+          // Reset the startRow to the row we've seen last so that the new
+          // scanner starts at the correct row. Otherwise we may see previously
+          // returned rows again.
+          // (ScannerCallable by now has "relocated" the correct region)
+          this.scan.setStartRow(this.lastResult.getRow());
+
+          // Skip first row returned.  We already let it out on previous
+          // invocation.
+          skipFirst = true;
+        }
+        if (e instanceof OutOfOrderScannerNextException) {
+          if (retryAfterOutOfOrderException) {
+            retryAfterOutOfOrderException = false;
+          } else {
+            // TODO: Why wrap this in a DNRIOE when it already is a DNRIOE?
+            throw new DoNotRetryIOException("Failed after retry of " +
+              "OutOfOrderScannerNextException: was there a rpc timeout?", e);
+          }
+        }
+        // Clear region.
+        this.currentRegion = null;
+        // Set this to zero so we don't try and do an rpc and close on remote server when
+        // the exception we got was UnknownScanner or the Server is going down.
+        callable = null;
+        // This continue will take us to while at end of loop where we will set up new scanner.
+        continue;
+      }
+      long currentTime = System.currentTimeMillis();
+      if (this.scanMetrics != null ) {
+        this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime-lastNext);
+      }
+      lastNext = currentTime;
+      if (values != null && values.length > 0) {
+        for (Result rs : values) {
+          cache.add(rs);
+          for (Cell kv : rs.rawCells()) {
+            // TODO make method in Cell or CellUtil
+            remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
+          }
+          countdown--;
+          this.lastResult = rs;
+        }
+      }
+      // We expect that the server won't have more results for us when we exhaust
+      // the size (bytes or count) of the results returned. If the server *does* inform us that
+      // there are more results, we want to avoid possiblyNextScanner(...). Only when we actually
+      // get results is the moreResults context valid.
+      if (null != values && values.length > 0 && callable.hasMoreResultsContext()) {
+        // Only adhere to more server results when we don't have any partialResults
+        // as it keeps the outer loop logic the same.
+        serverHasMoreResults = callable.getServerHasMoreResults();
+      }
+      // Values == null means server-side filter has determined we must STOP
+      // !partialResults.isEmpty() means that we are still accumulating partial Results for a
+      // row. We should not change scanners before we receive all the partial Results for that
+      // row.
+    } while (remainingResultSize > 0 && countdown > 0 && !serverHasMoreResults
+        && nextScanner(countdown, values == null));
+  }
 
     @Override
     public void close() {
