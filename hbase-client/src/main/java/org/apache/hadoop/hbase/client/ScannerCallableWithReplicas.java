@@ -111,6 +111,22 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     return currentScannerCallable.getHRegionInfo();
   }
 
+  public boolean getServerHasMoreResults() {
+    return currentScannerCallable.getServerHasMoreResults();
+  }
+
+  public void setServerHasMoreResults(boolean serverHasMoreResults) {
+    currentScannerCallable.setServerHasMoreResults(serverHasMoreResults);
+  }
+
+  public boolean hasMoreResultsContext() {
+    return currentScannerCallable.hasMoreResultsContext();
+  }
+
+  public void setHasMoreResultsContext(boolean serverHasMoreResultsContext) {
+    currentScannerCallable.setHasMoreResultsContext(serverHasMoreResultsContext);
+  }
+
   @Override
   public Result [] call(int timeout) throws IOException {
     // If the active replica callable was closed somewhere, invoke the RPC to

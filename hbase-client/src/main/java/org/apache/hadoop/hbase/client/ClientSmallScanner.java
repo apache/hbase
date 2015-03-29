@@ -136,11 +136,11 @@ public class ClientSmallScanner extends ClientScanner {
   }
 
 
-  static ScannerCallableWithReplicas getSmallScanCallable(
-      ClusterConnection connection, TableName table, Scan scan,
-      ScanMetrics scanMetrics,  byte[] localStartKey, final int cacheNum,
-      RpcControllerFactory controllerFactory, ExecutorService pool, int primaryOperationTimeout,
-      int retries, int scannerTimeout, Configuration conf, RpcRetryingCaller<Result []> caller) {
+  static ScannerCallableWithReplicas getSmallScanCallable(ClusterConnection connection,
+      TableName table, Scan scan, ScanMetrics scanMetrics, byte[] localStartKey,
+      final int cacheNum, RpcControllerFactory controllerFactory, ExecutorService pool,
+      int primaryOperationTimeout, int retries, int scannerTimeout, Configuration conf,
+      RpcRetryingCaller<Result[]> caller) {
     scan.setStartRow(localStartKey);
     SmallScannerCallable s = new SmallScannerCallable(
       connection, table, scan, scanMetrics, controllerFactory, cacheNum, 0);
@@ -173,8 +173,15 @@ public class ClientSmallScanner extends ClientScanner {
         controller.setPriority(getTableName());
         controller.setCallTimeout(timeout);
         response = getStub().scan(controller, request);
-        return ResponseConverter.getResults(controller.cellScanner(),
+        Result[] results = ResponseConverter.getResults(controller.cellScanner(),
             response);
+        if (response.hasMoreResultsInRegion()) {
+          setHasMoreResultsContext(true);
+          setServerHasMoreResults(response.getMoreResultsInRegion());
+        } else {
+          setHasMoreResultsContext(false);
+        }
+        return results;
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }
@@ -207,6 +214,7 @@ public class ClientSmallScanner extends ClientScanner {
         // exhausted current region.
         // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
         // we do a callWithRetries
+        // TODO Use the server's response about more results
         values = this.caller.callWithoutRetries(smallScanCallable, scannerTimeout);
         this.currentRegion = smallScanCallable.getHRegionInfo();
         long currentTime = System.currentTimeMillis();

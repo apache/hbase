@@ -308,6 +308,11 @@ message ScanResponse {
   // has false, false, true in it, then we know that on the client side, we need to
   // make another RPC request since the last result was only a partial.
   repeated bool partial_flag_per_result = 7;
+
+  // A server may choose to limit the number of results returned to the client for
+  // reasons such as the size in bytes or quantity of results accumulated. This field
+  // will true when more results exist in the current region.
+  optional bool more_results_in_region = 8;
 }
 
 /**

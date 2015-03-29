@@ -2213,10 +2213,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 boolean serverGuaranteesOrderOfPartials = currentScanResultSize == 0;
                 boolean enforceMaxResultSizeAtCellLevel =
                     clientHandlesPartials && serverGuaranteesOrderOfPartials && !isSmallScan;
+                NextState state = null;
 
                 while (i < rows) {
                   // Stop collecting results if we have exceeded maxResultSize
                   if (currentScanResultSize >= maxResultSize) {
+                    builder.setMoreResultsInRegion(true);
                     break;
                   }
 
@@ -2227,8 +2229,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                           : -1;
 
                   // Collect values to be returned here
-                  NextState state =
-                      scanner.nextRaw(values, scanner.getBatch(), remainingResultSize);
+                  state = scanner.nextRaw(values, scanner.getBatch(), remainingResultSize);
                   // Invalid states should never be returned. If one is seen, throw exception
                   // to stop the scan -- We have no way of telling how we should proceed
                   if (!NextState.isValidState(state)) {
@@ -2259,6 +2260,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     break;
                   }
                   values.clear();
+                }
+                // currentScanResultSize >= maxResultSize should be functionally equivalent to
+                // state.sizeLimitReached()
+                if (null != state
+                    && (currentScanResultSize >= maxResultSize || i >= rows || state
+                        .hasMoreValues())) {
+                  // We stopped prematurely
+                  builder.setMoreResultsInRegion(true);
+                } else {
+                  // We didn't get a single batch
+                  builder.setMoreResultsInRegion(false);
                 }
               }
               region.readRequestsCount.add(i);
