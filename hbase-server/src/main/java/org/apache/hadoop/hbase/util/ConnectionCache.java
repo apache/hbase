@@ -27,10 +27,12 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -139,6 +141,13 @@ public class ConnectionCache {
   public HTableInterface getTable(String tableName) throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
     return connInfo.connection.getTable(tableName);
+  }
+
+  /**
+   * Retrieve a regionLocator for the table. The user should close the RegionLocator.
+   */
+  public RegionLocator getRegionLocator(byte[] tableName) throws IOException {
+    return getCurrentConnection().connection.getRegionLocator(TableName.valueOf(tableName));
   }
 
   /**
