@@ -142,6 +142,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
         // exhausted current region.
         // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
         // we do a callWithRetries
+        // TODO use context from server
         values = this.caller.callWithoutRetries(smallScanCallable, scannerTimeout);
         this.currentRegion = smallScanCallable.getHRegionInfo();
         long currentTime = System.currentTimeMillis();

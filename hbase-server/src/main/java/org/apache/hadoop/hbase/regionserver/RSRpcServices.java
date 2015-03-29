@@ -2091,14 +2091,16 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               int i = 0;
               synchronized(scanner) {
                 boolean stale = (region.getRegionInfo().getReplicaId() != 0);
+                boolean moreRows = false;
                 while (i < rows) {
                   // Stop collecting results if maxScannerResultSize is set and we have exceeded it
                   if ((maxScannerResultSize < Long.MAX_VALUE) &&
                       (currentScanResultSize >= maxResultSize)) {
+                    builder.setMoreResultsInRegion(true);
                     break;
                   }
                   // Collect values to be returned here
-                  boolean moreRows = scanner.nextRaw(values);
+                  moreRows = scanner.nextRaw(values);
                   if (!values.isEmpty()) {
                     for (Cell cell : values) {
                       currentScanResultSize += CellUtil.estimatedHeapSizeOfWithoutTags(cell);
@@ -2111,6 +2113,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     break;
                   }
                   values.clear();
+                }
+                // currentScanResultSize >= maxResultSize should be functionally equivalent to
+                // state.sizeLimitReached()
+                if (currentScanResultSize >= maxResultSize || i >= rows || moreRows) {
+                  // We stopped prematurely
+                  builder.setMoreResultsInRegion(true);
+                } else {
+                  // We didn't get a single batch
+                  builder.setMoreResultsInRegion(false);
                 }
               }
               region.readRequestsCount.add(i);
