@@ -77,6 +77,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   private int logCutOffLatency = 1000;
   private static String myAddress;
   protected final int id;
+  protected boolean serverHasMoreResultsContext;
+  protected boolean serverHasMoreResults;
   static {
     try {
       myAddress = DNS.getDefaultHost("default", "default");
@@ -178,7 +180,6 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
 
 
   @Override
-  @SuppressWarnings("deprecation")
   public Result [] call(int callTimeout) throws IOException {
     if (Thread.interrupted()) {
       throw new InterruptedIOException();
@@ -224,11 +225,22 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
                   + rows + " rows from scanner=" + scannerId);
               }
             }
-            if (response.hasMoreResults()
-                && !response.getMoreResults()) {
+            // moreResults is only used for the case where a filter exhausts all elements
+            if (response.hasMoreResults() && !response.getMoreResults()) {
               scannerId = -1L;
               closed = true;
+              // Implied that no results were returned back, either.
               return null;
+            }
+            // moreResultsInRegion explicitly defines when a RS may choose to terminate a batch due
+            // to size or quantity of results in the response.
+            if (response.hasMoreResultsInRegion()) {
+              // Set what the RS said
+              setHasMoreResultsContext(true);
+              setServerHasMoreResults(response.getMoreResultsInRegion());
+            } else {
+              // Server didn't respond whether it has more results or not.
+              setHasMoreResultsContext(false);
             }
           } catch (ServiceException se) {
             throw ProtobufUtil.getRemoteException(se);
@@ -394,5 +406,31 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
         this.getScan(), this.scanMetrics, controllerFactory, id);
     s.setCaching(this.caching);
     return s;
+  }
+
+  /**
+   * Should the client attempt to fetch more results from this region
+   * @return True if the client should attempt to fetch more results, false otherwise.
+   */
+  protected boolean getServerHasMoreResults() {
+    assert serverHasMoreResultsContext;
+    return this.serverHasMoreResults;
+  }
+
+  protected void setServerHasMoreResults(boolean serverHasMoreResults) {
+    this.serverHasMoreResults = serverHasMoreResults;
+  }
+
+  /**
+   * Did the server respond with information about whether more results might exist.
+   * Not guaranteed to respond with older server versions
+   * @return True if the server responded with information about more results.
+   */
+  protected boolean hasMoreResultsContext() {
+    return serverHasMoreResultsContext;
+  }
+
+  protected void setHasMoreResultsContext(boolean serverHasMoreResultsContext) {
+    this.serverHasMoreResultsContext = serverHasMoreResultsContext;
   }
 }
