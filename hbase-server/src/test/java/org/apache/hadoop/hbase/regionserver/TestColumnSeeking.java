@@ -124,17 +124,17 @@ public class TestColumnSeeking {
           region.put(p);
           if (Math.random() < flushPercentage) {
             LOG.info("Flushing... ");
-            region.flushcache();
+            region.flush(true);
           }
 
           if (Math.random() < minorPercentage) {
             LOG.info("Minor compacting... ");
-            region.compactStores(false);
+            region.compact(false);
           }
 
           if (Math.random() < majorPercentage) {
             LOG.info("Major compacting... ");
-            region.compactStores(true);
+            region.compact(true);
           }
         }
       }
@@ -237,17 +237,17 @@ public class TestColumnSeeking {
       region.put(p);
       if (Math.random() < flushPercentage) {
         LOG.info("Flushing... ");
-        region.flushcache();
+        region.flush(true);
       }
 
       if (Math.random() < minorPercentage) {
         LOG.info("Minor compacting... ");
-        region.compactStores(false);
+        region.compact(false);
       }
 
       if (Math.random() < majorPercentage) {
         LOG.info("Major compacting... ");
-        region.compactStores(true);
+        region.compact(true);
       }
     }
 

@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUs
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
@@ -308,7 +308,7 @@ public class VisibilityUtils {
     return false;
   }
 
-  public static Filter createVisibilityLabelFilter(HRegion region, Authorizations authorizations)
+  public static Filter createVisibilityLabelFilter(Region region, Authorizations authorizations)
       throws IOException {
     Map<ByteRange, Integer> cfVsMaxVersions = new HashMap<ByteRange, Integer>();
     for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {

@@ -80,7 +80,7 @@ public class TestAtomicOperation {
   static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
   @Rule public TestName name = new TestName();
 
-  HRegion region = null;
+  Region region = null;
   private HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   // Test names
@@ -101,7 +101,7 @@ public class TestAtomicOperation {
   @After
   public void teardown() throws IOException {
     if (region != null) {
-      region.close();
+      ((HRegion)region).close();
       region = null;
     }
   }
@@ -125,11 +125,11 @@ public class TestAtomicOperation {
     a.setReturnResults(false);
     a.add(fam1, qual1, Bytes.toBytes(v1));
     a.add(fam1, qual2, Bytes.toBytes(v2));
-    assertNull(region.append(a));
+    assertNull(region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE));
     a = new Append(row);
     a.add(fam1, qual1, Bytes.toBytes(v2));
     a.add(fam1, qual2, Bytes.toBytes(v1));
-    Result result = region.append(a);
+    Result result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v1+v2), result.getValue(fam1, qual1)));
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
   }
@@ -216,12 +216,12 @@ public class TestAtomicOperation {
    */
   public static class Incrementer extends Thread {
 
-    private final HRegion region;
+    private final Region region;
     private final int numIncrements;
     private final int amount;
 
 
-    public Incrementer(HRegion region,
+    public Incrementer(Region region,
         int threadNumber, int amount, int numIncrements) {
       this.region = region;
       this.numIncrements = numIncrements;
@@ -238,7 +238,7 @@ public class TestAtomicOperation {
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
           inc.setDurability(Durability.ASYNC_WAL);
-          region.increment(inc);
+          region.increment(inc, HConstants.NO_NONCE, HConstants.NO_NONCE);
 
           // verify: Make sure we only see completed increments
           Get g = new Get(row);
@@ -276,7 +276,7 @@ public class TestAtomicOperation {
               a.add(fam1, qual2, val);
               a.add(fam2, qual3, val);
               a.setDurability(Durability.ASYNC_WAL);
-              region.append(a);
+              region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
 
               Get g = new Get(row);
               Result result = region.get(g);
@@ -340,9 +340,9 @@ public class TestAtomicOperation {
               if (i%10==0) {
                 synchronized(region) {
                   LOG.debug("flushing");
-                  region.flushcache();
+                  region.flush(true);
                   if (i%100==0) {
-                    region.compactStores();
+                    region.compact(false);
                   }
                 }
               }
@@ -433,9 +433,9 @@ public class TestAtomicOperation {
               if (i%10==0) {
                 synchronized(region) {
                   LOG.debug("flushing");
-                  region.flushcache();
+                  region.flush(true);
                   if (i%100==0) {
-                    region.compactStores();
+                    region.compact(false);
                   }
                 }
               }
@@ -460,7 +460,7 @@ public class TestAtomicOperation {
                 p.add(fam1, qual1, value2);
                 mrm.add(p);
               }
-              region.mutateRowsWithLocks(mrm, rowsToLock);
+              region.mutateRowsWithLocks(mrm, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
               op ^= true;
               // check: should always see exactly one column
               Scan s = new Scan(row);
@@ -499,13 +499,13 @@ public class TestAtomicOperation {
   }
 
   public static class AtomicOperation extends Thread {
-    protected final HRegion region;
+    protected final Region region;
     protected final int numOps;
     protected final AtomicLong timeStamps;
     protected final AtomicInteger failures;
     protected final Random r = new Random();
 
-    public AtomicOperation(HRegion region, int numOps, AtomicLong timeStamps,
+    public AtomicOperation(Region region, int numOps, AtomicLong timeStamps,
         AtomicInteger failures) {
       this.region = region;
       this.numOps = numOps;
@@ -546,7 +546,7 @@ public class TestAtomicOperation {
     put.add(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
     puts[0] = put;
     
-    region.batchMutate(puts);
+    region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
     MultithreadedTestUtil.TestContext ctx =
       new MultithreadedTestUtil.TestContext(conf);
     ctx.addThread(new PutThread(ctx, region));
@@ -567,8 +567,8 @@ public class TestAtomicOperation {
   }
 
   private class PutThread extends TestThread {
-    private MockHRegion region;
-    PutThread(TestContext ctx, MockHRegion region) {
+    private Region region;
+    PutThread(TestContext ctx, Region region) {
       super(ctx);
       this.region = region;
     }
@@ -579,13 +579,13 @@ public class TestAtomicOperation {
       put.add(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("50"));
       puts[0] = put;
       testStep = TestStep.PUT_STARTED;
-      region.batchMutate(puts);
+      region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
     }
   }
 
   private class CheckAndPutThread extends TestThread {
-    private MockHRegion region;
-    CheckAndPutThread(TestContext ctx, MockHRegion region) {
+    private Region region;
+    CheckAndPutThread(TestContext ctx, Region region) {
       super(ctx);
       this.region = region;
    }
@@ -620,10 +620,10 @@ public class TestAtomicOperation {
       return new WrappedRowLock(super.getRowLockInternal(row, waitForLock));
     }
     
-    public class WrappedRowLock extends RowLock {
+    public class WrappedRowLock extends RowLockImpl {
 
       private WrappedRowLock(RowLock rowLock) {
-        super(rowLock.context);
+        setContext(((RowLockImpl)rowLock).getContext());
       }
 
       @Override

@@ -55,7 +55,7 @@ public class TestRegionServerOnlineConfigChange {
   private static HTable t1 = null;
   private static HRegionServer rs1 = null;
   private static byte[] r1name = null;
-  private static HRegion r1 = null;
+  private static Region r1 = null;
 
   private final static String table1Str = "table1";
   private final static String columnFamily1Str = "columnFamily1";

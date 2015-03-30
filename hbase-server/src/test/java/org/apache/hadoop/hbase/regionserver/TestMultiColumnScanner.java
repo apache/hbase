@@ -220,7 +220,7 @@ public class TestMultiColumnScanner {
             region.delete(d);
         }
       }
-      region.flushcache();
+      region.flush(true);
     }
 
     Collections.sort(kvs, KeyValue.COMPARATOR);

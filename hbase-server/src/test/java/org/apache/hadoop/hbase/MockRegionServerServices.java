@@ -38,9 +38,9 @@ import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.Leases;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
@@ -57,7 +57,7 @@ import com.google.protobuf.Service;
  */
 public class MockRegionServerServices implements RegionServerServices {
   protected static final Log LOG = LogFactory.getLog(MockRegionServerServices.class);
-  private final Map<String, HRegion> regions = new HashMap<String, HRegion>();
+  private final Map<String, Region> regions = new HashMap<String, Region>();
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
@@ -88,27 +88,26 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public boolean removeFromOnlineRegions(HRegion r, ServerName destination) {
+  public boolean removeFromOnlineRegions(Region r, ServerName destination) {
     return this.regions.remove(r.getRegionInfo().getEncodedName()) != null;
   }
 
   @Override
-  public HRegion getFromOnlineRegions(String encodedRegionName) {
+  public Region getFromOnlineRegions(String encodedRegionName) {
     return this.regions.get(encodedRegionName);
   }
 
-  public List<HRegion> getOnlineRegions(TableName tableName) throws IOException {
+  public List<Region> getOnlineRegions(TableName tableName) throws IOException {
     return null;
   }
 
   @Override
-  public void addToOnlineRegions(HRegion r) {
+  public void addToOnlineRegions(Region r) {
     this.regions.put(r.getRegionInfo().getEncodedName(), r);
   }
 
   @Override
-  public void postOpenDeployTasks(HRegion r)
-      throws KeeperException, IOException {
+  public void postOpenDeployTasks(Region r) throws KeeperException, IOException {
     addToOnlineRegions(r);
   }
 
@@ -244,7 +243,7 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Map<String, HRegion> getRecoveringRegions() {
+  public Map<String, Region> getRecoveringRegions() {
     // TODO Auto-generated method stub
     return null;
   }

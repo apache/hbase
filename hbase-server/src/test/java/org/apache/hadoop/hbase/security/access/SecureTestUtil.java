@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -288,7 +288,7 @@ public class SecureTestUtil {
   private static List<AccessController> getAccessControllers(MiniHBaseCluster cluster) {
     List<AccessController> result = Lists.newArrayList();
     for (RegionServerThread t: cluster.getLiveRegionServerThreads()) {
-      for (HRegion region: t.getRegionServer().getOnlineRegionsLocalContext()) {
+      for (Region region: t.getRegionServer().getOnlineRegionsLocalContext()) {
         Coprocessor cp = region.getCoprocessorHost()
           .findCoprocessor(AccessController.class.getName());
         if (cp != null) {
@@ -323,7 +323,7 @@ public class SecureTestUtil {
         for (Map.Entry<AccessController,Long> e: mtimes.entrySet()) {
           if (!oldMTimes.containsKey(e.getKey())) {
             LOG.error("Snapshot of AccessController state does not include instance on region " +
-              e.getKey().getRegion().getRegionNameAsString());
+              e.getKey().getRegion().getRegionInfo().getRegionNameAsString());
             // Error out the predicate, we will try again
             return false;
           }
@@ -331,8 +331,8 @@ public class SecureTestUtil {
           long now = e.getValue();
           if (now <= old) {
             LOG.info("AccessController on region " +
-              e.getKey().getRegion().getRegionNameAsString() + " has not updated: mtime=" +
-              now);
+              e.getKey().getRegion().getRegionInfo().getRegionNameAsString() +
+              " has not updated: mtime=" + now);
             return false;
           }
         }

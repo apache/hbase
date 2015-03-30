@@ -24,7 +24,6 @@ import java.lang.management.MemoryMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -922,10 +921,10 @@ public class TestDefaultMemStore extends TestCase {
       HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
       HRegion region = hbaseUtility.createTestRegion("foobar", new HColumnDescriptor("foo"));
 
-      Map<byte[], Store> stores = region.getStores();
+      List<Store> stores = region.getStores();
       assertTrue(stores.size() == 1);
 
-      Store s = stores.entrySet().iterator().next().getValue();
+      Store s = stores.iterator().next();
       edge.setCurrentTimeMillis(1234);
       s.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"));
       edge.setCurrentTimeMillis(1234 + 100);

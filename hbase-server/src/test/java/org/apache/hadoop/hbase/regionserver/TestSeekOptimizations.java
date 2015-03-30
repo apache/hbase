@@ -433,7 +433,7 @@ public class TestSeekOptimizations {
       }
     }
 
-    region.flushcache();
+    region.flush(true);
   }
 
   @After

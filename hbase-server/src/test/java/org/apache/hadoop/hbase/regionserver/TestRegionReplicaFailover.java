@@ -183,7 +183,7 @@ public class TestRegionReplicaFailover {
       // read from it the same data from primary and secondaries
       boolean aborted = false;
       for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-        for (HRegion r : rs.getRegionServer().getOnlineRegions(htd.getTableName())) {
+        for (Region r : rs.getRegionServer().getOnlineRegions(htd.getTableName())) {
           if (r.getRegionInfo().getReplicaId() == 0) {
             LOG.info("Aborting region server hosting primary region replica");
             rs.getRegionServer().abort("for test");
@@ -244,7 +244,7 @@ public class TestRegionReplicaFailover {
       // read from it the same data
       boolean aborted = false;
       for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-        for (HRegion r : rs.getRegionServer().getOnlineRegions(htd.getTableName())) {
+        for (Region r : rs.getRegionServer().getOnlineRegions(htd.getTableName())) {
           if (r.getRegionInfo().getReplicaId() == 1) {
             LOG.info("Aborting region server hosting secondary region replica");
             rs.getRegionServer().abort("for test");
@@ -304,7 +304,7 @@ public class TestRegionReplicaFailover {
           try {
             boolean aborted = false;
             for (RegionServerThread rs : HTU.getMiniHBaseCluster().getRegionServerThreads()) {
-              for (HRegion r : rs.getRegionServer().getOnlineRegions(htd.getTableName())) {
+              for (Region r : rs.getRegionServer().getOnlineRegions(htd.getTableName())) {
                 if (r.getRegionInfo().getReplicaId() == 1) {
                   LOG.info("Aborting region server hosting secondary region replica");
                   rs.getRegionServer().abort("for test");

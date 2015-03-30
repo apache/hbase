@@ -204,16 +204,17 @@ class HMerge {
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
           // We merge two adjacent regions if their total size is less than
           // one half of the desired maximum size
-          LOG.info("Merging regions " + currentRegion.getRegionNameAsString() +
-            " and " + nextRegion.getRegionNameAsString());
+          LOG.info("Merging regions " + currentRegion.getRegionInfo().getRegionNameAsString() +
+            " and " + nextRegion.getRegionInfo().getRegionNameAsString());
           HRegion mergedRegion =
             HRegion.mergeAdjacent(currentRegion, nextRegion);
-          updateMeta(currentRegion.getRegionName(), nextRegion.getRegionName(),
-              mergedRegion);
+          updateMeta(currentRegion.getRegionInfo().getRegionName(),
+            nextRegion.getRegionInfo().getRegionName(), mergedRegion);
           break;
         }
-        LOG.info("not merging regions " + Bytes.toStringBinary(currentRegion.getRegionName())
-            + " and " + Bytes.toStringBinary(nextRegion.getRegionName()));
+        LOG.info("not merging regions " +
+          Bytes.toStringBinary(currentRegion.getRegionInfo().getRegionName()) +
+            " and " + Bytes.toStringBinary(nextRegion.getRegionInfo().getRegionName()));
         currentRegion.close();
         currentRegion = nextRegion;
         currentSize = nextSize;
@@ -339,7 +340,7 @@ class HMerge {
 
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "
-            + Bytes.toStringBinary(newRegion.getRegionName()));
+            + Bytes.toStringBinary(newRegion.getRegionInfo().getRegionName()));
       }
     }
   }

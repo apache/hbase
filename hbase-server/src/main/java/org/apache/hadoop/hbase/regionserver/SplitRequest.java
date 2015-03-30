@@ -42,9 +42,9 @@ class SplitRequest implements Runnable {
   private final HRegionServer server;
   private TableLock tableLock;
 
-  SplitRequest(HRegion region, byte[] midKey, HRegionServer hrs) {
+  SplitRequest(Region region, byte[] midKey, HRegionServer hrs) {
     Preconditions.checkNotNull(hrs);
-    this.parent = region;
+    this.parent = (HRegion)region;
     this.midKey = midKey;
     this.server = hrs;
   }
@@ -69,7 +69,7 @@ class SplitRequest implements Runnable {
       //acquire a shared read lock on the table, so that table schema modifications
       //do not happen concurrently
       tableLock = server.getTableLockManager().readLock(parent.getTableDesc().getTableName()
-          , "SPLIT_REGION:" + parent.getRegionNameAsString());
+          , "SPLIT_REGION:" + parent.getRegionInfo().getRegionNameAsString());
       try {
         tableLock.acquire();
       } catch (IOException ex) {
@@ -87,22 +87,22 @@ class SplitRequest implements Runnable {
         if (this.server.isStopping() || this.server.isStopped()) {
           LOG.info(
               "Skip rollback/cleanup of failed split of "
-                  + parent.getRegionNameAsString() + " because server is"
+                  + parent.getRegionInfo().getRegionNameAsString() + " because server is"
                   + (this.server.isStopping() ? " stopping" : " stopped"), e);
           return;
         }
         try {
           LOG.info("Running rollback/cleanup of failed split of " +
-            parent.getRegionNameAsString() + "; " + e.getMessage(), e);
+            parent.getRegionInfo().getRegionNameAsString() + "; " + e.getMessage(), e);
           if (st.rollback(this.server, this.server)) {
             LOG.info("Successful rollback of failed split of " +
-              parent.getRegionNameAsString());
+              parent.getRegionInfo().getRegionNameAsString());
           } else {
             this.server.abort("Abort; we got an error after point-of-no-return");
           }
         } catch (RuntimeException ee) {
           String msg = "Failed rollback of failed split of " +
-            parent.getRegionNameAsString() + " -- aborting server";
+            parent.getRegionInfo().getRegionNameAsString() + " -- aborting server";
           // If failed rollback, kill this server to avoid having a hole in table.
           LOG.info(msg, ee);
           this.server.abort(msg + " -- Cause: " + ee.getMessage());
@@ -132,7 +132,7 @@ class SplitRequest implements Runnable {
         server.metricsRegionServer.incrSplitSuccess();
         // Log success
         LOG.info("Region split, hbase:meta updated, and report to master. Parent="
-            + parent.getRegionNameAsString() + ", new regions: "
+            + parent.getRegionInfo().getRegionNameAsString() + ", new regions: "
             + st.getFirstDaughter().getRegionNameAsString() + ", "
             + st.getSecondDaughter().getRegionNameAsString() + ". Split took "
             + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTime(), startTime));
@@ -150,7 +150,7 @@ class SplitRequest implements Runnable {
         LOG.error("Could not release the table lock (something is really wrong). " 
            + "Aborting this server to avoid holding the lock forever.");
         this.server.abort("Abort; we got an error when releasing the table lock "
-                         + "on " + parent.getRegionNameAsString());
+                         + "on " + parent.getRegionInfo().getRegionNameAsString());
       }
     }
   }

@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
@@ -178,7 +179,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // replay the edits to the secondary using replay callable
     replicateUsingCallable(connection, entries);
 
-    HRegion region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
+    Region region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
 
     HTU.deleteNumericRows(table, f, 0, 1000);
@@ -218,7 +219,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // replay the edits to the secondary using replay callable
     replicateUsingCallable(connection, entries);
 
-    HRegion region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
+    Region region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
 
     HTU.loadNumericRows(table, f, 1000, 2000); // load some more data to primary
@@ -261,7 +262,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // replay the edits to the secondary using replay callable
     replicator.replicate(new ReplicateContext().setEntries(Lists.newArrayList(entries)));
 
-    HRegion region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
+    Region region = rs0.getFromOnlineRegions(hriSecondary.getEncodedName());
     HTU.verifyNumericRows(region, f, 0, 1000);
 
     HTU.deleteNumericRows(table, f, 0, 1000);

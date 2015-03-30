@@ -176,10 +176,11 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       if (hasRegion != null && (Boolean)hasRegion.invoke(param, (Object[])null)) {
         Method getRegion = methodMap.get("getRegion").get(rpcArgClass);
         regionSpecifier = (RegionSpecifier)getRegion.invoke(param, (Object[])null);
-        HRegion region = rpcServices.getRegion(regionSpecifier);
+        Region region = rpcServices.getRegion(regionSpecifier);
         if (region.getRegionInfo().isSystemTable()) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace("High priority because region=" + region.getRegionNameAsString());
+            LOG.trace("High priority because region=" +
+              region.getRegionInfo().getRegionNameAsString());
           }
           return HConstants.SYSTEMTABLE_QOS;
         }

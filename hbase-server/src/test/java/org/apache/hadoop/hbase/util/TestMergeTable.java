@@ -143,7 +143,7 @@ public class TestMergeTable {
   throws IOException {
     HRegionInfo hri = new HRegionInfo(desc.getTableName(), startKey, endKey);
     HRegion region = HRegion.createHRegion(hri, rootdir, UTIL.getConfiguration(), desc);
-    LOG.info("Created region " + region.getRegionNameAsString());
+    LOG.info("Created region " + region.getRegionInfo().getRegionNameAsString());
     for(int i = firstRow; i < firstRow + nrows; i++) {
       Put put = new Put(Bytes.toBytes("row_" + String.format("%1$05d", i)));
       put.setDurability(Durability.SKIP_WAL);
@@ -151,7 +151,7 @@ public class TestMergeTable {
       region.put(put);
       if (i % 10000 == 0) {
         LOG.info("Flushing write #" + i);
-        region.flushcache();
+        region.flush(true);
       }
     }
     HRegion.closeHRegion(region);

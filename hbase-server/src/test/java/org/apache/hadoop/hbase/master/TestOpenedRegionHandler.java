@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MockServer;
@@ -95,7 +96,7 @@ public class TestOpenedRegionHandler {
     abortMaster(cluster);
 
     HRegionServer regionServer = cluster.getRegionServer(0);
-    HRegion region = getRegionBeingServed(cluster, regionServer);
+    Region region = getRegionBeingServed(cluster, regionServer);
 
     // forcefully move a region to OPENED state in zk
     // Create a ZKW to use in the test
@@ -206,12 +207,12 @@ public class TestOpenedRegionHandler {
     cluster.waitOnMaster(0);
     log("Master has aborted");
   }
-  private HRegion getRegionBeingServed(MiniHBaseCluster cluster,
+  private Region getRegionBeingServed(MiniHBaseCluster cluster,
       HRegionServer regionServer) {
-    Collection<HRegion> onlineRegionsLocalContext = regionServer
+    Collection<Region> onlineRegionsLocalContext = regionServer
         .getOnlineRegionsLocalContext();
-    Iterator<HRegion> iterator = onlineRegionsLocalContext.iterator();
-    HRegion region = null;
+    Iterator<Region> iterator = onlineRegionsLocalContext.iterator();
+    Region region = null;
     while (iterator.hasNext()) {
       region = iterator.next();
       if (!region.getRegionInfo().isMetaTable()) {

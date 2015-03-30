@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
@@ -230,7 +231,7 @@ public class TestCoprocessorInterface {
       preSplitWithSplitRowCalled = true;
     }
     @Override
-    public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e, HRegion l, HRegion r) {
+    public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e, Region l, Region r) {
       postSplitCalled = true;
     }
 
@@ -296,20 +297,19 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initSplit();
-    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
+    Region region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{}, families);
 
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
-      region.flushcache();
+      region.flush(true);
     }
 
-    region.compactStores();
+    region.compact(false);
 
-    byte [] splitRow = region.checkSplit();
-
+    byte [] splitRow = ((HRegion)region).checkSplit();
     assertNotNull(splitRow);
-    HRegion [] regions = split(region, splitRow);
+    Region [] regions = split(region, splitRow);
     for (int i = 0; i < regions.length; i++) {
       regions[i] = reopenRegion(regions[i], CoprocessorImpl.class, CoprocessorII.class);
     }
@@ -335,7 +335,7 @@ public class TestCoprocessorInterface {
     // now have all Environments fail
     for (int i = 0; i < regions.length; i++) {
       try {
-        byte [] r = regions[i].getStartKey();
+        byte [] r = regions[i].getRegionInfo().getStartKey();
         if (r == null || r.length <= 0) {
           // Its the start row.  Can't ask for null.  Ask for minimal key instead.
           r = new byte [] {0};
@@ -374,23 +374,23 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initSplit();
-    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
+    Region region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
-      region.flushcache();
+      region.flush(true);
     }
 
-    region.compactStores();
+    region.compact(false);
 
-    byte [] splitRow = region.checkSplit();
+    byte [] splitRow = ((HRegion)region).checkSplit();
 
     assertNotNull(splitRow);
-    HRegion [] regions = split(region, splitRow);
+    Region [] regions = split(region, splitRow);
     for (int i = 0; i < regions.length; i++) {
       regions[i] = reopenRegion(regions[i], CoprocessorImpl.class);
     }
-    HRegion.closeHRegion(region);
+    HRegion.closeHRegion((HRegion)region);
     Coprocessor c = region.getCoprocessorHost().
       findCoprocessor(CoprocessorImpl.class.getName());
 
@@ -410,7 +410,7 @@ public class TestCoprocessorInterface {
     assertTrue(((CoprocessorImpl)c).wasSplit());
 
     for (int i = 0; i < regions.length; i++) {
-      HRegion.closeHRegion(regions[i]);
+      HRegion.closeHRegion((HRegion)regions[i]);
       c = region.getCoprocessorHost()
             .findCoprocessor(CoprocessorImpl.class.getName());
       assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
@@ -421,10 +421,10 @@ public class TestCoprocessorInterface {
     }
   }
 
-  HRegion reopenRegion(final HRegion closedRegion, Class<?> ... implClasses)
+  Region reopenRegion(final Region closedRegion, Class<?> ... implClasses)
       throws IOException {
     //HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    HRegion r = HRegion.openHRegion(closedRegion, null);
+    Region r = HRegion.openHRegion(closedRegion, null);
 
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
@@ -432,7 +432,7 @@ public class TestCoprocessorInterface {
     // and set it to region.
     Configuration conf = TEST_UTIL.getConfiguration();
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
-    r.setCoprocessorHost(host);
+    ((HRegion)r).setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
       host.load(implClass, Coprocessor.PRIORITY_USER, conf);
@@ -448,7 +448,7 @@ public class TestCoprocessorInterface {
     return r;
   }
 
-  HRegion initHRegion (TableName tableName, String callingMethod,
+  Region initHRegion (TableName tableName, String callingMethod,
       Configuration conf, Class<?> [] implClasses, byte [][] families)
       throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -495,10 +495,8 @@ public class TestCoprocessorInterface {
     return TEST_UTIL.getConfiguration();
   }
 
-  private HRegion [] split(final HRegion r, final byte [] splitRow)
-      throws IOException {
-
-    HRegion[] regions = new HRegion[2];
+  private Region [] split(final Region r, final byte [] splitRow) throws IOException {
+    Region[] regions = new Region[2];
 
     SplitTransaction st = new SplitTransaction(r, splitRow);
     int i = 0;
@@ -511,18 +509,18 @@ public class TestCoprocessorInterface {
       Server mockServer = Mockito.mock(Server.class);
       when(mockServer.getConfiguration()).thenReturn(
           TEST_UTIL.getConfiguration());
-      PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
-      for (HRegion each_daughter: daughters) {
+      PairOfSameType<Region> daughters = st.execute(mockServer, null);
+      for (Region each_daughter: daughters) {
         regions[i] = each_daughter;
         i++;
       }
     } catch (IOException ioe) {
-      LOG.info("Split transaction of " + r.getRegionNameAsString() +
+      LOG.info("Split transaction of " + r.getRegionInfo().getRegionNameAsString() +
           " failed:" + ioe.getMessage());
       assertTrue(false);
     } catch (RuntimeException e) {
       LOG.info("Failed rollback of failed split of " +
-          r.getRegionNameAsString() + e.getMessage());
+          r.getRegionInfo().getRegionNameAsString() + e.getMessage());
     }
 
     assertTrue(i == 2);

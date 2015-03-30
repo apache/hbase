@@ -188,7 +188,7 @@ public class TestCompaction {
         delete.deleteFamily(famAndQf[0]);
         r.delete(delete);
       }
-      r.flushcache();
+      r.flush(true);
 
       // Multiple versions allowed for an entry, so the delete isn't enough
       // Lower TTL and expire to ensure that all our entries have been wiped
@@ -203,7 +203,7 @@ public class TestCompaction {
       }
       Thread.sleep(ttl);
 
-      r.compactStores(true);
+      r.compact(true);
       assertEquals(0, count());
     }
   }
@@ -317,7 +317,7 @@ public class TestCompaction {
     CountDownLatch latch = new CountDownLatch(numStores);
     // create some store files and setup requests for each store on which we want to do a
     // compaction
-    for (Store store : r.getStores().values()) {
+    for (Store store : r.getStores()) {
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());
       createStoreFile(r, store.getColumnFamilyName());

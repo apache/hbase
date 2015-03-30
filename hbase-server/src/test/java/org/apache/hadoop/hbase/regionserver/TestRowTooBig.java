@@ -80,7 +80,7 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    HRegion region = HTU.createLocalHRegion(hri,  htd);
+    Region region = HTU.createLocalHRegion(hri,  htd);
 
     // Add 5 cells to memstore
     for (int i = 0; i < 5 ; i++) {
@@ -88,7 +88,7 @@ public class TestRowTooBig {
 
       put.add(fam1, Bytes.toBytes("col_" + i ), new byte[5 * 1024 * 1024]);
       region.put(put);
-      region.flushcache();
+      region.flush(true);
     }
 
     Get get = new Get(row1);
@@ -122,7 +122,7 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    HRegion region = HTU.createLocalHRegion(hri,  htd);
+    Region region = HTU.createLocalHRegion(hri,  htd);
 
     // Add to memstore
     for (int i = 0; i < 10; i++) {
@@ -131,9 +131,9 @@ public class TestRowTooBig {
         put.add(fam1, Bytes.toBytes("col_" + i + "_" + j), new byte[10]);
       }
       region.put(put);
-      region.flushcache();
+      region.flush(true);
     }
-    region.compactStores(true);
+    region.compact(true);
 
     Get get = new Get(row1);
     region.get(get);

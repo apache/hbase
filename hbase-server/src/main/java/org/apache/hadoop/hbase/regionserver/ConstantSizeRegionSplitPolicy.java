@@ -55,7 +55,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
     boolean force = region.shouldForceSplit();
     boolean foundABigStore = false;
 
-    for (Store store : region.getStores().values()) {
+    for (Store store : region.getStores()) {
       // If any of the stores are unable to split (eg they contain reference files)
       // then don't split
       if ((!store.canSplit())) {

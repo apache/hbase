@@ -34,7 +34,7 @@ public interface CompactionRequestor {
    *         compactions were started
    * @throws IOException
    */
-  List<CompactionRequest> requestCompaction(final HRegion r, final String why)
+  List<CompactionRequest> requestCompaction(final Region r, final String why)
       throws IOException;
 
   /**
@@ -48,7 +48,7 @@ public interface CompactionRequestor {
    * @throws IOException
    */
   List<CompactionRequest> requestCompaction(
-    final HRegion r, final String why, List<Pair<CompactionRequest, Store>> requests
+    final Region r, final String why, List<Pair<CompactionRequest, Store>> requests
   )
       throws IOException;
 
@@ -56,13 +56,13 @@ public interface CompactionRequestor {
    * @param r Region to compact
    * @param s Store within region to compact
    * @param why Why compaction was requested -- used in debug messages
-   * @param request custom compaction request for the {@link HRegion} and {@link Store}. Custom
+   * @param request custom compaction request for the {@link Region} and {@link Store}. Custom
    *          request must be <tt>null</tt> or be constructed with matching region and store.
    * @return The created {@link CompactionRequest} or <tt>null</tt> if no compaction was started.
    * @throws IOException
    */
   CompactionRequest requestCompaction(
-    final HRegion r, final Store s, final String why, CompactionRequest request
+    final Region r, final Store s, final String why, CompactionRequest request
   ) throws IOException;
 
   /**
@@ -77,7 +77,7 @@ public interface CompactionRequestor {
    * @throws IOException
    */
   List<CompactionRequest> requestCompaction(
-    final HRegion r, final String why, int pri, List<Pair<CompactionRequest, Store>> requests
+    final Region r, final String why, int pri, List<Pair<CompactionRequest, Store>> requests
   ) throws IOException;
 
   /**
@@ -85,12 +85,12 @@ public interface CompactionRequestor {
    * @param s Store within region to compact
    * @param why Why compaction was requested -- used in debug messages
    * @param pri Priority of this compaction. minHeap. <=0 is critical
-   * @param request custom compaction request to run. {@link Store} and {@link HRegion} for the
+   * @param request custom compaction request to run. {@link Store} and {@link Region} for the
    *          request must match the region and store specified here.
    * @return The created {@link CompactionRequest} or <tt>null</tt> if no compaction was started
    * @throws IOException
    */
   CompactionRequest requestCompaction(
-    final HRegion r, final Store s, final String why, int pri, CompactionRequest request
+    final Region r, final Store s, final String why, int pri, CompactionRequest request
   ) throws IOException;
 }

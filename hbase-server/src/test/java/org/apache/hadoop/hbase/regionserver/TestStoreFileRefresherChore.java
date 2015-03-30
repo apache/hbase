@@ -93,13 +93,15 @@ public class TestStoreFileRefresherChore {
     }
   }
 
-  private HRegion initHRegion(HTableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId) throws IOException {
+  private Region initHRegion(HTableDescriptor htd, byte[] startKey, byte[] stopKey, int replicaId)
+      throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     Path tableDir = FSUtils.getTableDir(testDir, htd.getTableName());
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false, 0, replicaId);
 
-    HRegionFileSystem fs = new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
+    HRegionFileSystem fs = new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir,
+      info);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, tableDir);
     final WALFactory wals = new WALFactory(walConf, null, "log_" + replicaId);
@@ -110,7 +112,8 @@ public class TestStoreFileRefresherChore {
     return region;
   }
 
-  private void putData(HRegion region, int startRow, int numRows, byte[] qf, byte[]... families) throws IOException {
+  private void putData(Region region, int startRow, int numRows, byte[] qf, byte[]... families)
+      throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
       Put put = new Put(Bytes.toBytes("" + i));
       put.setDurability(Durability.SKIP_WAL);
@@ -121,7 +124,7 @@ public class TestStoreFileRefresherChore {
     }
   }
 
-  private void verifyData(HRegion newReg, int startRow, int numRows, byte[] qf, byte[]... families)
+  private void verifyData(Region newReg, int startRow, int numRows, byte[] qf, byte[]... families)
       throws IOException {
     for (int i = startRow; i < startRow + numRows; i++) {
       byte[] row = Bytes.toBytes("" + i);
@@ -159,13 +162,13 @@ public class TestStoreFileRefresherChore {
     byte[] qf = Bytes.toBytes("cq");
 
     HRegionServer regionServer = mock(HRegionServer.class);
-    List<HRegion> regions = new ArrayList<HRegion>();
+    List<Region> regions = new ArrayList<Region>();
     when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
     HTableDescriptor htd = getTableDesc(TableName.valueOf("testIsStale"), families);
-    HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
-    HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
+    Region primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
+    Region replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);
     regions.add(replica1);
 
@@ -173,7 +176,7 @@ public class TestStoreFileRefresherChore {
 
     // write some data to primary and flush
     putData(primary, 0, 100, qf, families);
-    primary.flushcache();
+    primary.flush(true);
     verifyData(primary, 0, 100, qf, families);
 
     try {
@@ -186,11 +189,11 @@ public class TestStoreFileRefresherChore {
     verifyData(replica1, 0, 100, qf, families);
 
     // simulate an fs failure where we cannot refresh the store files for the replica
-    ((FailingHRegionFileSystem)replica1.getRegionFileSystem()).fail = true;
+    ((FailingHRegionFileSystem)((HRegion)replica1).getRegionFileSystem()).fail = true;
 
     // write some more data to primary and flush
     putData(primary, 100, 100, qf, families);
-    primary.flushcache();
+    primary.flush(true);
     verifyData(primary, 0, 200, qf, families);
 
     chore.chore(); // should not throw ex, but we cannot refresh the store files

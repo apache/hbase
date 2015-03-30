@@ -616,7 +616,7 @@ public class TestReversibleScanners {
     return nextReadableNum;
   }
 
-  private static void loadDataToRegion(HRegion region, byte[] additionalFamily)
+  private static void loadDataToRegion(Region region, byte[] additionalFamily)
       throws IOException {
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
@@ -627,7 +627,7 @@ public class TestReversibleScanners {
       }
       region.put(put);
       if (i == ROWSIZE / 3 || i == ROWSIZE * 2 / 3) {
-        region.flushcache();
+        region.flush(true);
       }
     }
   }

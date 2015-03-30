@@ -56,8 +56,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResul
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -294,7 +294,7 @@ public abstract class TestVisibilityLabels {
         List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
             .getRegionServerThreads();
         for (RegionServerThread rsThread : regionServerThreads) {
-          List<HRegion> onlineRegions = rsThread.getRegionServer().getOnlineRegions(
+          List<Region> onlineRegions = rsThread.getRegionServer().getOnlineRegions(
               LABELS_TABLE_NAME);
           if (onlineRegions.size() > 0) {
             rsThread.getRegionServer().abort("Aborting ");
@@ -328,7 +328,7 @@ public abstract class TestVisibilityLabels {
     for (RegionServerThread rsThread : regionServerThreads) {
       while (true) {
         if (!rsThread.getRegionServer().isAborted()) {
-          List<HRegion> onlineRegions = rsThread.getRegionServer().getOnlineRegions(
+          List<Region> onlineRegions = rsThread.getRegionServer().getOnlineRegions(
               LABELS_TABLE_NAME);
           if (onlineRegions.size() > 0) {
             break;
@@ -385,7 +385,7 @@ public abstract class TestVisibilityLabels {
       } catch (InterruptedException e) {
       }
     }
-    HRegion labelsTableRegion = regionServer.getOnlineRegions(LABELS_TABLE_NAME).get(0);
+    Region labelsTableRegion = regionServer.getOnlineRegions(LABELS_TABLE_NAME).get(0);
     while (labelsTableRegion.isRecovering()) {
       try {
         Thread.sleep(10);

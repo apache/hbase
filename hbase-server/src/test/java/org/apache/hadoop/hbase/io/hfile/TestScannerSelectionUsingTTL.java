@@ -127,7 +127,7 @@ public class TestScannerSelectionUsingTTL {
         }
         region.put(put);
       }
-      region.flushcache();
+      region.flush(true);
       version++;
     }
 
@@ -155,7 +155,7 @@ public class TestScannerSelectionUsingTTL {
       HStore store = (HStore)region.getStore(FAMILY_BYTES);
       store.compactRecentForTestingAssumingDefaultPolicy(totalNumFiles);
     } else {
-      region.compactStores();
+      region.compact(false);
     }
 
     region.close();

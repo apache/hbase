@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -210,22 +210,22 @@ public class TestRegionReplicaReplicationEndpoint {
   private void verifyReplication(TableName tableName, int regionReplication,
       final int startRow, final int endRow, final boolean present) throws Exception {
     // find the regions
-    final HRegion[] regions = new HRegion[regionReplication];
+    final Region[] regions = new Region[regionReplication];
 
     for (int i=0; i < NB_SERVERS; i++) {
       HRegionServer rs = HTU.getMiniHBaseCluster().getRegionServer(i);
-      List<HRegion> onlineRegions = rs.getOnlineRegions(tableName);
-      for (HRegion region : onlineRegions) {
+      List<Region> onlineRegions = rs.getOnlineRegions(tableName);
+      for (Region region : onlineRegions) {
         regions[region.getRegionInfo().getReplicaId()] = region;
       }
     }
 
-    for (HRegion region : regions) {
+    for (Region region : regions) {
       assertNotNull(region);
     }
 
     for (int i = 1; i < regionReplication; i++) {
-      final HRegion region = regions[i];
+      final Region region = regions[i];
       // wait until all the data is replicated to all secondary regions
       Waiter.waitFor(HTU.getConfiguration(), 90000, new Waiter.Predicate<Exception>() {
         @Override
@@ -234,8 +234,7 @@ public class TestRegionReplicaReplicationEndpoint {
           try {
             HTU.verifyNumericRows(region, HBaseTestingUtility.fam1, startRow, endRow, present);
           } catch(Throwable ex) {
-            LOG.warn("Verification from secondary region is not complete yet. Got:" + ex
-              + " " + ex.getMessage());
+            LOG.warn("Verification from secondary region is not complete yet", ex);
             // still wait
             return false;
           }

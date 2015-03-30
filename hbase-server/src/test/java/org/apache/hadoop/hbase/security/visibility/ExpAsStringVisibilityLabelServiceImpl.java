@@ -48,8 +48,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
@@ -79,7 +79,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   private final ExpressionParser expressionParser = new ExpressionParser();
   private final ExpressionExpander expressionExpander = new ExpressionExpander();
   private Configuration conf;
-  private HRegion labelsRegion;
+  private Region labelsRegion;
   private List<ScanLabelGenerator> scanLabelGenerators;
   private List<String> superUsers;
   private List<String> superGroups;

@@ -97,6 +97,7 @@ import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager;
 import org.apache.hadoop.hbase.regionserver.Leases;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
@@ -253,12 +254,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public void addToOnlineRegions(HRegion r) {
+  public void addToOnlineRegions(Region r) {
     // TODO Auto-generated method stub
   }
 
   @Override
-  public boolean removeFromOnlineRegions(HRegion r, ServerName destination) {
+  public boolean removeFromOnlineRegions(Region r, ServerName destination) {
     // TODO Auto-generated method stub
     return false;
   }
@@ -327,8 +328,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public void postOpenDeployTasks(HRegion r)
-      throws KeeperException, IOException {
+  public void postOpenDeployTasks(Region r) throws KeeperException, IOException {
     // TODO Auto-generated method stub
   }
 
@@ -524,7 +524,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public List<HRegion> getOnlineRegions(TableName tableName) throws IOException {
+  public List<Region> getOnlineRegions(TableName tableName) throws IOException {
     // TODO Auto-generated method stub
     return null;
   }
@@ -570,7 +570,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
-  public Map<String, HRegion> getRecoveringRegions() {
+  public Map<String, Region> getRecoveringRegions() {
     // TODO Auto-generated method stub
     return null;
   }

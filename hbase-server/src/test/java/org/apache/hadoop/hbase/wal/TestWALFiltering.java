@@ -36,8 +36,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -129,8 +129,8 @@ public class TestWALFiltering {
   private List<byte[]> getRegionsByServer(int rsId) throws IOException {
     List<byte[]> regionNames = Lists.newArrayList();
     HRegionServer hrs = getRegionServer(rsId);
-    for (HRegion r : hrs.getOnlineRegions(TABLE_NAME)) {
-      regionNames.add(r.getRegionName());
+    for (Region r : hrs.getOnlineRegions(TABLE_NAME)) {
+      regionNames.add(r.getRegionInfo().getRegionName());
     }
     return regionNames;
   }

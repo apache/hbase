@@ -26,14 +26,14 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
   /** @return the region associated with this coprocessor */
-  HRegion getRegion();
+  Region getRegion();
 
   /** @return region information for the region this coprocessor is running on */
   HRegionInfo getRegionInfo();

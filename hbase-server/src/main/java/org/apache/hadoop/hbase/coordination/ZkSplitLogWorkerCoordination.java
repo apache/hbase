@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
@@ -445,7 +445,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
           taskReadyLock.wait(checkInterval);
           if (server != null) {
             // check to see if we have stale recovering regions in our internal memory state
-            Map<String, HRegion> recoveringRegions = server.getRecoveringRegions();
+            Map<String, Region> recoveringRegions = server.getRecoveringRegions();
             if (!recoveringRegions.isEmpty()) {
               // Make a local copy to prevent ConcurrentModificationException when other threads
               // modify recoveringRegions

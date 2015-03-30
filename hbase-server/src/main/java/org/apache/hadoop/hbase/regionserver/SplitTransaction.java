@@ -204,11 +204,11 @@ public class SplitTransaction {
    * @param r Region to split
    * @param splitrow Row to split around
    */
-  public SplitTransaction(final HRegion r, final byte [] splitrow) {
-    this.parent = r;
+  public SplitTransaction(final Region r, final byte [] splitrow) {
+    this.parent = (HRegion)r;
     this.splitrow = splitrow;
     this.journal.add(new JournalEntry(JournalEntryType.STARTED));
-    useZKForAssignment = ConfigUtil.useZKForAssignment(r.getBaseConf());
+    useZKForAssignment = ConfigUtil.useZKForAssignment(parent.getBaseConf());
   }
 
   /**
@@ -267,7 +267,7 @@ public class SplitTransaction {
    *    Call {@link #rollback(Server, RegionServerServices)}
    * @return Regions created
    */
-  /* package */PairOfSameType<HRegion> createDaughters(final Server server,
+  /* package */PairOfSameType<Region> createDaughters(final Server server,
       final RegionServerServices services) throws IOException {
     LOG.info("Starting split of region " + this.parent);
     if ((server != null && server.isStopped()) ||
@@ -295,14 +295,14 @@ public class SplitTransaction {
         server.getConfiguration().getLong("hbase.regionserver.fileSplitTimeout",
           this.fileSplitTimeout);
 
-    PairOfSameType<HRegion> daughterRegions = stepsBeforePONR(server, services, testing);
+    PairOfSameType<Region> daughterRegions = stepsBeforePONR(server, services, testing);
 
     List<Mutation> metaEntries = new ArrayList<Mutation>();
     if (this.parent.getCoprocessorHost() != null) {
       if (this.parent.getCoprocessorHost().
           preSplitBeforePONR(this.splitrow, metaEntries)) {
         throw new IOException("Coprocessor bypassing region "
-            + this.parent.getRegionNameAsString() + " split.");
+            + this.parent.getRegionInfo().getRegionNameAsString() + " split.");
       }
       try {
         for (Mutation p : metaEntries) {
@@ -360,7 +360,7 @@ public class SplitTransaction {
     return daughterRegions;
   }
 
-  public PairOfSameType<HRegion> stepsBeforePONR(final Server server,
+  public PairOfSameType<Region> stepsBeforePONR(final Server server,
       final RegionServerServices services, boolean testing) throws IOException {
 
     if (useCoordinatedStateManager(server)) {
@@ -376,7 +376,7 @@ public class SplitTransaction {
       if (!services.reportRegionStateTransition(TransitionCode.READY_TO_SPLIT,
           parent.getRegionInfo(), hri_a, hri_b)) {
         throw new IOException("Failed to get ok from master to split "
-          + parent.getRegionNameAsString());
+          + parent.getRegionInfo().getRegionNameAsString());
       }
     }
     this.journal.add(new JournalEntry(JournalEntryType.SET_SPLITTING));
@@ -431,7 +431,7 @@ public class SplitTransaction {
     this.journal.add(new JournalEntry(JournalEntryType.STARTED_REGION_A_CREATION));
     assertReferenceFileCount(expectedReferences.getFirst(),
         this.parent.getRegionFileSystem().getSplitsDir(this.hri_a));
-    HRegion a = this.parent.createDaughterRegionFromSplits(this.hri_a);
+    Region a = this.parent.createDaughterRegionFromSplits(this.hri_a);
     assertReferenceFileCount(expectedReferences.getFirst(),
         new Path(this.parent.getRegionFileSystem().getTableDir(), this.hri_a.getEncodedName()));
 
@@ -439,11 +439,11 @@ public class SplitTransaction {
     this.journal.add(new JournalEntry(JournalEntryType.STARTED_REGION_B_CREATION));
     assertReferenceFileCount(expectedReferences.getSecond(),
         this.parent.getRegionFileSystem().getSplitsDir(this.hri_b));
-    HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b);
+    Region b = this.parent.createDaughterRegionFromSplits(this.hri_b);
     assertReferenceFileCount(expectedReferences.getSecond(),
         new Path(this.parent.getRegionFileSystem().getTableDir(), this.hri_b.getEncodedName()));
 
-    return new PairOfSameType<HRegion>(a, b);
+    return new PairOfSameType<Region>(a, b);
   }
 
   void assertReferenceFileCount(int expectedReferenceFileCount, Path dir)
@@ -464,7 +464,7 @@ public class SplitTransaction {
    *          Call {@link #rollback(Server, RegionServerServices)}
    */
   /* package */void openDaughters(final Server server,
-      final RegionServerServices services, HRegion a, HRegion b)
+      final RegionServerServices services, Region a, Region b)
       throws IOException {
     boolean stopped = server != null && server.isStopped();
     boolean stopping = services != null && services.isStopping();
@@ -477,8 +477,8 @@ public class SplitTransaction {
           " because stopping=" + stopping + ", stopped=" + stopped);
     } else {
       // Open daughters in parallel.
-      DaughterOpener aOpener = new DaughterOpener(server, a);
-      DaughterOpener bOpener = new DaughterOpener(server, b);
+      DaughterOpener aOpener = new DaughterOpener(server, (HRegion)a);
+      DaughterOpener bOpener = new DaughterOpener(server, (HRegion)b);
       aOpener.start();
       bOpener.start();
       try {
@@ -534,7 +534,7 @@ public class SplitTransaction {
    * @throws IOException
    * @see #rollback(Server, RegionServerServices)
    */
-  public PairOfSameType<HRegion> execute(final Server server,
+  public PairOfSameType<Region> execute(final Server server,
       final RegionServerServices services)
   throws IOException {
     useZKForAssignment = server == null ? true :
@@ -544,15 +544,15 @@ public class SplitTransaction {
           ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
               .getSplitTransactionCoordination().getDefaultDetails();
     }
-    PairOfSameType<HRegion> regions = createDaughters(server, services);
+    PairOfSameType<Region> regions = createDaughters(server, services);
     if (this.parent.getCoprocessorHost() != null) {
       this.parent.getCoprocessorHost().preSplitAfterPONR();
     }
     return stepsAfterPONR(server, services, regions);
   }
 
-  public PairOfSameType<HRegion> stepsAfterPONR(final Server server,
-      final RegionServerServices services, PairOfSameType<HRegion> regions)
+  public PairOfSameType<Region> stepsAfterPONR(final Server server,
+      final RegionServerServices services, PairOfSameType<Region> regions)
       throws IOException {
     openDaughters(server, services, regions.getFirst(), regions.getSecond());
     if (useCoordinatedStateManager(server)) {
@@ -857,7 +857,7 @@ public class SplitTransaction {
           this.parent.initialize();
         } catch (IOException e) {
           LOG.error("Failed rollbacking CLOSED_PARENT_REGION of region " +
-            this.parent.getRegionNameAsString(), e);
+            this.parent.getRegionInfo().getRegionNameAsString(), e);
           throw new RuntimeException(e);
         }
         break;

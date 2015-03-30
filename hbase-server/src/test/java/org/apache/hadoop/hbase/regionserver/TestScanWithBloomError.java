@@ -209,7 +209,7 @@ public class TestScanWithBloomError {
       p.add(kv);
     }
     region.put(p);
-    region.flushcache();
+    region.flush(true);
   }
 
 

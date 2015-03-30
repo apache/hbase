@@ -48,7 +48,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -196,9 +195,9 @@ public class TestEncryptionKeyRotation {
 
   private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
-    for (HRegion region:
+    for (Region region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(tableName)) {
-      for (Store store: region.getStores().values()) {
+      for (Store store: region.getStores()) {
         for (StoreFile storefile: store.getStorefiles()) {
           paths.add(storefile.getPath());
         }

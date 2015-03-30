@@ -110,7 +110,7 @@ public class TestScannerSelectionUsingKeyRange {
         }
         region.put(put);
       }
-      region.flushcache();
+      region.flush(true);
     }
 
     Scan scan = new Scan(Bytes.toBytes("aaa"), Bytes.toBytes("aaz"));

@@ -95,8 +95,8 @@ public class TestMinVersions {
       checkResult(r, c0, T4);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       r = region.getClosestRowBefore(T1, c0);
       checkResult(r, c0, T4);
@@ -131,8 +131,8 @@ public class TestMinVersions {
       region.put(p);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       p = new Put(T1, ts);
       p.add(c0, c0, T3);
@@ -205,8 +205,8 @@ public class TestMinVersions {
       checkResult(r, c0, T3);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       // try again
       g = new Get(T1);
@@ -253,8 +253,8 @@ public class TestMinVersions {
       region.put(p);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       // now put the first version (backdated)
       p = new Put(T1, ts-3);
@@ -360,7 +360,7 @@ public class TestMinVersions {
       checkResult(r, c0, T4,T3);
 
       // now flush
-      region.flushcache();
+      region.flush(true);
 
       // with HBASE-4241 a flush will eliminate the expired rows
       g = new Get(T1);
@@ -369,7 +369,7 @@ public class TestMinVersions {
       assertTrue(r.isEmpty());
 
       // major compaction
-      region.compactStores(true);
+      region.compact(true);
 
       // after compaction the 4th version is still available
       g = new Get(T1);
@@ -445,8 +445,8 @@ public class TestMinVersions {
       checkResult(r, c0, T2,T1);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       g = new Get(T1);
       g.addColumn(c1,c1);

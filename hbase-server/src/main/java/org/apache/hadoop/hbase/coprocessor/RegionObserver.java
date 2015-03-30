@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
@@ -364,8 +364,8 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated Use postCompleteSplit() instead
    */
-  void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final HRegion l,
-      final HRegion r) throws IOException;
+  void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final Region l,
+      final Region r) throws IOException;
 
   /**
    * This will be called before PONR step as part of split transaction. Calling
@@ -613,7 +613,7 @@ public interface RegionObserver extends Coprocessor {
    * called after acquiring the locks on the mutating rows and after applying the proper timestamp
    * for each Mutation at the server. The batch may contain Put/Delete. By setting OperationStatus
    * of Mutations ({@link MiniBatchOperationInProgress#setOperationStatus(int, OperationStatus)}),
-   * {@link RegionObserver} can make HRegion to skip these Mutations.
+   * {@link RegionObserver} can make Region to skip these Mutations.
    * @param c the environment provided by the region server
    * @param miniBatchOp batch of Mutations getting applied to region.
    * @throws IOException if an error occurred on the coprocessor
@@ -633,7 +633,7 @@ public interface RegionObserver extends Coprocessor {
 
   /**
    * This will be called for region operations where read lock is acquired in
-   * {@link HRegion#startRegionOperation()}.
+   * {@link Region#startRegionOperation()}.
    * @param ctx
    * @param operation The operation is about to be taken on the region
    * @throws IOException
@@ -642,7 +642,7 @@ public interface RegionObserver extends Coprocessor {
       Operation operation) throws IOException;
 
   /**
-   * Called after releasing read lock in {@link HRegion#closeRegionOperation(Operation)}.
+   * Called after releasing read lock in {@link Region#closeRegionOperation()}.
    * @param ctx
    * @param operation
    * @throws IOException

@@ -434,7 +434,7 @@ public class NamespaceUpgrade implements Tool {
         meta.delete(MetaTableAccessor.makeDeleteFromRegionInfo(oldRegionInfo));
       }
     } finally {
-      meta.flushcache();
+      meta.flush(true);
       meta.waitForFlushesAndCompactions();
       meta.close();
       walFactory.close();

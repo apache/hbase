@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -110,7 +110,7 @@ public class TestForceCacheImportantBlocks {
       setBloomFilterType(BLOOM_TYPE);
     hcd.setBlocksize(BLOCK_SIZE);
     hcd.setBlockCacheEnabled(cfCacheEnabled);
-    HRegion region = TEST_UTIL.createTestRegion(TABLE, hcd);
+    Region region = TEST_UTIL.createTestRegion(TABLE, hcd);
     BlockCache cache = region.getStore(hcd.getName()).getCacheConfig().getBlockCache();
     CacheStats stats = cache.getStats();
     writeTestData(region);
@@ -127,7 +127,7 @@ public class TestForceCacheImportantBlocks {
     else assertTrue(stats.getMissCount() > missCount);
   }
 
-  private void writeTestData(HRegion region) throws IOException {
+  private void writeTestData(Region region) throws IOException {
     for (int i = 0; i < NUM_ROWS; ++i) {
       Put put = new Put(Bytes.toBytes("row" + i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
@@ -138,7 +138,7 @@ public class TestForceCacheImportantBlocks {
       }
       region.put(put);
       if ((i + 1) % ROWS_PER_HFILE == 0) {
-        region.flushcache();
+        region.flush(true);
       }
     }
   }

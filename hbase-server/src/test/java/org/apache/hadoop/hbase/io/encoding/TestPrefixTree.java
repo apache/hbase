@@ -100,7 +100,7 @@ public class TestPrefixTree {
     put = new Put(row4_bytes);
     put.addColumn(fam, qual2, Bytes.toBytes("c2-value-3"));
     region.put(put);
-    region.flushcache();
+    region.flush(true);
     String[] rows = new String[3];
     rows[0] = row1;
     rows[1] = row2;
@@ -181,7 +181,7 @@ public class TestPrefixTree {
     region.put(new Put(Bytes.toBytes("obj29")).addColumn(fam, qual1, Bytes.toBytes("whatever")));
     region.put(new Put(Bytes.toBytes("obj2")).addColumn(fam, qual1, Bytes.toBytes("whatever")));
     region.put(new Put(Bytes.toBytes("obj3")).addColumn(fam, qual1, Bytes.toBytes("whatever")));
-    region.flushcache();
+    region.flush(true);
     Scan scan = new Scan(Bytes.toBytes("obj29995"));
     RegionScanner scanner = region.getScanner(scan);
     List<Cell> cells = new ArrayList<Cell>();

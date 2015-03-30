@@ -124,9 +124,9 @@ public class TestRegionMergeTransaction {
         false);
     RegionMergeTransaction spyMT = Mockito.spy(mt);
     doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
-        region_a.getRegionName());
+        region_a.getRegionInfo().getRegionName());
     doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
-        region_b.getRegionName());
+        region_b.getRegionInfo().getRegionName());
     assertTrue(spyMT.prepare(null));
     return spyMT;
   }
@@ -163,9 +163,9 @@ public class TestRegionMergeTransaction {
         true);
     RegionMergeTransaction spyMT = Mockito.spy(mt);
     doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
-        region_a.getRegionName());
+        region_a.getRegionInfo().getRegionName());
     doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
-        region_c.getRegionName());
+        region_c.getRegionInfo().getRegionName());
     assertTrue("Since focible is true, should merge two regions even if they are not adjacent",
         spyMT.prepare(null));
   }
@@ -205,9 +205,9 @@ public class TestRegionMergeTransaction {
         false);
     RegionMergeTransaction spyMT = Mockito.spy(mt);
     doReturn(true).when(spyMT).hasMergeQualifierInMeta(null,
-        region_a.getRegionName());
+        region_a.getRegionInfo().getRegionName());
     doReturn(true).when(spyMT).hasMergeQualifierInMeta(null,
-        region_b.getRegionName());
+        region_b.getRegionInfo().getRegionName());
     assertFalse(spyMT.prepare(null));
   }
 
@@ -238,10 +238,10 @@ public class TestRegionMergeTransaction {
     // to be under the merged region dirs.
     assertEquals(0, this.fs.listStatus(mt.getMergesDir()).length);
     // Check merged region have correct key span.
-    assertTrue(Bytes.equals(this.region_a.getStartKey(),
-        mergedRegion.getStartKey()));
-    assertTrue(Bytes.equals(this.region_b.getEndKey(),
-        mergedRegion.getEndKey()));
+    assertTrue(Bytes.equals(this.region_a.getRegionInfo().getStartKey(),
+        mergedRegion.getRegionInfo().getStartKey()));
+    assertTrue(Bytes.equals(this.region_b.getRegionInfo().getEndKey(),
+        mergedRegion.getRegionInfo().getEndKey()));
     // Count rows. merged region are already open
     try {
       int mergedRegionRowCount = countRows(mergedRegion);
@@ -467,7 +467,7 @@ public class TestRegionMergeTransaction {
         }
       }
       if (flush) {
-        r.flushcache();
+        r.flush(true);
       }
     }
     return rowCount;

@@ -173,11 +173,11 @@ public class Merge extends Configured implements Tool {
   throws IOException {
     if (info1 == null) {
       throw new IOException("Could not find " + Bytes.toStringBinary(region1) + " in " +
-          Bytes.toStringBinary(meta.getRegionName()));
+          Bytes.toStringBinary(meta.getRegionInfo().getRegionName()));
     }
     if (info2 == null) {
       throw new IOException("Could not find " + Bytes.toStringBinary(region2) + " in " +
-          Bytes.toStringBinary(meta.getRegionName()));
+          Bytes.toStringBinary(meta.getRegionInfo().getRegionName()));
     }
     HRegion merged = null;
     HRegion r1 = HRegion.openHRegion(info1, htd, utils.getLog(info1), getConf());

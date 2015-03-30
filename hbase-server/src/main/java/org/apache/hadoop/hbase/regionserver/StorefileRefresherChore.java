@@ -84,8 +84,8 @@ public class StorefileRefresherChore extends ScheduledChore {
 
   @Override
   protected void chore() {
-    for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
-      if (!r.writestate.isReadOnly()) {
+    for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+      if (!r.isReadOnly()) {
         // skip checking for this region if it can accept writes
         continue;
       }
@@ -98,7 +98,7 @@ public class StorefileRefresherChore extends ScheduledChore {
         lastRefreshTimes.put(encodedName, time);
       }
       try {
-        for (Store store : r.getStores().values()) {
+        for (Store store : r.getStores()) {
           // TODO: some stores might see new data from flush, while others do not which
           // MIGHT break atomic edits across column families. We can fix this with setting
           // mvcc read numbers that we know every store has seen
@@ -110,12 +110,12 @@ public class StorefileRefresherChore extends ScheduledChore {
 
         // Store files have a TTL in the archive directory. If we fail to refresh for that long, we stop serving reads
         if (isRegionStale(encodedName, time)) {
-          r.setReadsEnabled(false); // stop serving reads
+          ((HRegion)r).setReadsEnabled(false); // stop serving reads
         }
         continue;
       }
       lastRefreshTimes.put(encodedName, time);
-      r.setReadsEnabled(true); // restart serving reads
+      ((HRegion)r).setReadsEnabled(true); // restart serving reads
     }
 
     // remove closed regions

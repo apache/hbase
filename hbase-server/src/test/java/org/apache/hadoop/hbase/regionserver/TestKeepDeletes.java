@@ -130,15 +130,15 @@ public class TestKeepDeletes {
     checkResult(r, c0, c0, T2,T1);
 
     // flush
-    region.flushcache();
+    region.flush(true);
 
     // yep, T2 still there, T1 gone
     r = region.get(g);
     checkResult(r, c0, c0, T2);
 
     // major compact
-    region.compactStores(true);
-    region.compactStores(true);
+    region.compact(true);
+    region.compact(true);
 
     // one delete marker left (the others did not
     // have older puts)
@@ -169,9 +169,9 @@ public class TestKeepDeletes {
     r = region.get(g);
     assertTrue(r.isEmpty());
 
-    region.flushcache();
-    region.compactStores(true);
-    region.compactStores(true);
+    region.flush(true);
+    region.compact(true);
+    region.compact(true);
 
     // verify that the delete marker itself was collected
     region.put(p);
@@ -215,8 +215,8 @@ public class TestKeepDeletes {
     scan.next(kvs);
     assertEquals(2, kvs.size());
 
-    region.flushcache();
-    region.compactStores(true);
+    region.flush(true);
+    region.compact(true);
 
     // after compaction they are gone
     // (note that this a test with a Store without
@@ -267,10 +267,10 @@ public class TestKeepDeletes {
     assertTrue(kvs.isEmpty());
 
     // flushing and minor compaction keep delete markers
-    region.flushcache();
-    region.compactStores();
+    region.flush(true);
+    region.compact(false);
     assertEquals(1, countDeleteMarkers(region));
-    region.compactStores(true);
+    region.compact(true);
     // major compaction deleted it
     assertEquals(0, countDeleteMarkers(region));
 
@@ -422,13 +422,13 @@ public class TestKeepDeletes {
     assertEquals(4, countDeleteMarkers(region));
 
     // neither flush nor minor compaction removes any marker
-    region.flushcache();
+    region.flush(true);
     assertEquals(4, countDeleteMarkers(region));
-    region.compactStores(false);
+    region.compact(false);
     assertEquals(4, countDeleteMarkers(region));
 
     // major compaction removes all, since there are no puts they affect
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(0, countDeleteMarkers(region));
 
     HRegion.closeHRegion(region);
@@ -474,9 +474,9 @@ public class TestKeepDeletes {
     // 1 family marker, 1 column marker, 2 version markers
     assertEquals(4, countDeleteMarkers(region));
 
-    region.flushcache();
+    region.flush(true);
     assertEquals(4, countDeleteMarkers(region));
-    region.compactStores(false);
+    region.compact(false);
     assertEquals(4, countDeleteMarkers(region));
 
     // another put will push out the earlier put...
@@ -484,14 +484,14 @@ public class TestKeepDeletes {
     p.add(c0, c0, T1);
     region.put(p);
 
-    region.flushcache();
+    region.flush(true);
     // no markers are collected, since there is an affected put
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(4, countDeleteMarkers(region));
 
     // the last collections collected the earlier put
     // so after this collection all markers
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(0, countDeleteMarkers(region));
 
     HRegion.closeHRegion(region);
@@ -537,9 +537,9 @@ public class TestKeepDeletes {
     // 1 family marker, 1 column marker, 2 version markers
     assertEquals(4, countDeleteMarkers(region));
 
-    region.flushcache();
+    region.flush(true);
     assertEquals(4, countDeleteMarkers(region));
-    region.compactStores(false);
+    region.compact(false);
     assertEquals(4, countDeleteMarkers(region));
 
     // another put will push out the earlier put...
@@ -547,14 +547,14 @@ public class TestKeepDeletes {
     p.add(c0, c0, T1);
     region.put(p);
 
-    region.flushcache();
+    region.flush(true);
     // no markers are collected, since there is an affected put
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(4, countDeleteMarkers(region));
 
     // all markers remain, since we have the older row
     // and we haven't pushed the inlined markers past MAX_VERSIONS
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(4, countDeleteMarkers(region));
 
     // another put will push out the earlier put...
@@ -564,12 +564,12 @@ public class TestKeepDeletes {
 
     // this pushed out the column and version marker
     // but the family markers remains. THIS IS A PROBLEM!
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(1, countDeleteMarkers(region));
 
     // no amount of compacting is getting this of this one
     // KEEP_DELETED_CELLS=>TTL is an option to avoid this.
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(1, countDeleteMarkers(region));
 
     HRegion.closeHRegion(region);
@@ -690,9 +690,9 @@ public class TestKeepDeletes {
     d.deleteColumn(c0, c0, ts+3);
     region.delete(d);
 
-    region.flushcache();
-    region.compactStores(true);
-    region.compactStores(true);
+    region.flush(true);
+    region.compact(true);
+    region.compact(true);
     assertEquals(3, countDeleteMarkers(region));
 
     // add two more puts, since max version is 1
@@ -722,7 +722,7 @@ public class TestKeepDeletes {
     assertEquals(1, countDeleteMarkers(region));
 
     // flush cache only sees what is in the memstore
-    region.flushcache();
+    region.flush(true);
 
     // Here we have the three markers again, because the flush above
     // removed the 2nd put before the file is written.
@@ -731,7 +731,7 @@ public class TestKeepDeletes {
     // delete, put, delete, delete
     assertEquals(3, countDeleteMarkers(region));
 
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(3, countDeleteMarkers(region));
 
     // add one more put
@@ -739,12 +739,12 @@ public class TestKeepDeletes {
     p.add(c0, c0, T4);
     region.put(p);
 
-    region.flushcache();
+    region.flush(true);
     // one trailing delete marker remains (but only one)
     // because delete markers do not increase the version count
     assertEquals(1, countDeleteMarkers(region));
-    region.compactStores(true);
-    region.compactStores(true);
+    region.compact(true);
+    region.compact(true);
     assertEquals(1, countDeleteMarkers(region));
 
     HRegion.closeHRegion(region);
@@ -844,7 +844,7 @@ public class TestKeepDeletes {
     // 3 families, one column delete marker
     assertEquals(4, countDeleteMarkers(region));
 
-    region.flushcache();
+    region.flush(true);
     // no delete marker removes by the flush
     assertEquals(4, countDeleteMarkers(region));
 
@@ -853,7 +853,7 @@ public class TestKeepDeletes {
     p = new Put(T1, ts+1);
     p.add(c0, c0, T4);
     region.put(p);
-    region.flushcache();
+    region.flush(true);
 
     assertEquals(4, countDeleteMarkers(region));
 
@@ -866,14 +866,14 @@ public class TestKeepDeletes {
     p.add(c0, c0, T5);
     region.put(p);
 
-    region.flushcache();
-    region.compactStores(true);
+    region.flush(true);
+    region.compact(true);
     // the two family markers without puts are gone
     assertEquals(2, countDeleteMarkers(region));
 
     // the last compactStores updated the earliestPutTs,
     // so after the next compaction the last family delete marker is also gone
-    region.compactStores(true);
+    region.compact(true);
     assertEquals(0, countDeleteMarkers(region));
 
     HRegion.closeHRegion(region);
@@ -910,21 +910,21 @@ public class TestKeepDeletes {
     // 3 families, one column delete marker
     assertEquals(3, countDeleteMarkers(region));
 
-    region.flushcache();
+    region.flush(true);
     // no delete marker removes by the flush
     assertEquals(3, countDeleteMarkers(region));
 
     // but the Put is gone
     checkGet(region, T1, c0, c0, ts+1);
 
-    region.compactStores(true);
+    region.compact(true);
     // all delete marker gone
     assertEquals(0, countDeleteMarkers(region));
 
     HRegion.closeHRegion(region);
   }
 
-  private void checkGet(HRegion region, byte[] row, byte[] fam, byte[] col,
+  private void checkGet(Region region, byte[] row, byte[] fam, byte[] col,
       long time, byte[]... vals) throws IOException {
     Get g = new Get(row);
     g.addColumn(fam, col);
@@ -935,11 +935,11 @@ public class TestKeepDeletes {
 
   }
 
-  private int countDeleteMarkers(HRegion region) throws IOException {
+  private int countDeleteMarkers(Region region) throws IOException {
     Scan s = new Scan();
     s.setRaw(true);
     // use max versions from the store(s)
-    s.setMaxVersions(region.getStores().values().iterator().next().getScanInfo().getMaxVersions());
+    s.setMaxVersions(region.getStores().iterator().next().getScanInfo().getMaxVersions());
     InternalScanner scan = region.getScanner(s);
     List<Cell> kvs = new ArrayList<Cell>();
     int res = 0;

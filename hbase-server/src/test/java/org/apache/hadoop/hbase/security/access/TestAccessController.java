@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessCont
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
@@ -235,7 +236,7 @@ public class TestAccessController extends SecureTestUtil {
     admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
     TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE.getTableName());
 
-    HRegion region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE.getTableName()).get(0);
+    Region region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE.getTableName()).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
     RCP_ENV = rcpHost.createEnvironment(AccessController.class, ACCESS_CONTROLLER,
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
@@ -2198,7 +2199,7 @@ public class TestAccessController extends SecureTestUtil {
     for (JVMClusterUtil.RegionServerThread thread:
         TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
       HRegionServer rs = thread.getRegionServer();
-      for (HRegion region: rs.getOnlineRegions(TEST_TABLE.getTableName())) {
+      for (Region region: rs.getOnlineRegions(TEST_TABLE.getTableName())) {
         region.getCoprocessorHost().load(PingCoprocessor.class,
           Coprocessor.PRIORITY_USER, conf);
       }

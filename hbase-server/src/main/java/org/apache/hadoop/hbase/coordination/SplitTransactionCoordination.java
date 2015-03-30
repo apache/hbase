@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 /**
@@ -69,7 +70,7 @@ public interface SplitTransactionCoordination {
    * @throws IOException
    */
   void waitForSplitTransaction(final RegionServerServices services,
-      HRegion parent, HRegionInfo hri_a, HRegionInfo hri_b, SplitTransactionDetails std)
+      Region parent, HRegionInfo hri_a, HRegionInfo hri_b, SplitTransactionDetails std)
       throws IOException;
 
   /**
@@ -83,8 +84,8 @@ public interface SplitTransactionCoordination {
    *  {@link org.apache.hadoop.hbase.regionserver.
    *  SplitTransaction#rollback(Server, RegionServerServices)}
    */
-  void completeSplitTransaction(RegionServerServices services, HRegion first,
-      HRegion second, SplitTransactionDetails std, HRegion parent) throws IOException;
+  void completeSplitTransaction(RegionServerServices services, Region first,
+      Region second, SplitTransactionDetails std, Region parent) throws IOException;
 
   /**
    * clean the split transaction

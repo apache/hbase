@@ -109,12 +109,12 @@ public class TestEndToEndSplitTransaction {
       // this will also cache the region
       byte[] regionName = conn.getRegionLocator(tableName).getRegionLocation(splitRow)
           .getRegionInfo().getRegionName();
-      HRegion region = server.getRegion(regionName);
+      Region region = server.getRegion(regionName);
       SplitTransaction split = new SplitTransaction(region, splitRow);
       split.prepare();
 
       // 1. phase I
-      PairOfSameType<HRegion> regions = split.createDaughters(server, server);
+      PairOfSameType<Region> regions = split.createDaughters(server, server);
       assertFalse(test(conn, tableName, firstRow, server));
       assertFalse(test(conn, tableName, lastRow, server));
 
@@ -422,7 +422,7 @@ public class TestEndToEndSplitTransaction {
     admin.flushRegion(regionName);
     log("blocking until flush is complete: " + Bytes.toStringBinary(regionName));
     Threads.sleepWithoutInterrupt(500);
-    while (rs.getOnlineRegion(regionName).getMemstoreSize().get() > 0) {
+    while (rs.getOnlineRegion(regionName).getMemstoreSize() > 0) {
       Threads.sleep(50);
     }
   }
@@ -434,7 +434,7 @@ public class TestEndToEndSplitTransaction {
     log("blocking until compaction is complete: " + Bytes.toStringBinary(regionName));
     Threads.sleepWithoutInterrupt(500);
     outer: for (;;) {
-      for (Store store : rs.getOnlineRegion(regionName).getStores().values()) {
+      for (Store store : rs.getOnlineRegion(regionName).getStores()) {
         if (store.getStorefilesCount() > 1) {
           Threads.sleep(50);
           continue outer;

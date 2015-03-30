@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.test.LoadTestKVGenerator;
@@ -112,7 +112,7 @@ public class TestEncodedSeekers {
         setBlocksize(BLOCK_SIZE).
         setBloomFilterType(BloomType.NONE).
         setCompressTags(compressTags);
-    HRegion region = testUtil.createTestRegion(TABLE_NAME, hcd);
+    Region region = testUtil.createTestRegion(TABLE_NAME, hcd);
 
     //write the data, but leave some in the memstore
     doPuts(region);
@@ -121,9 +121,8 @@ public class TestEncodedSeekers {
     doGets(region);
 
     //verify correctness again after compacting
-    region.compactStores();
+    region.compact(false);
     doGets(region);
-
 
     Map<DataBlockEncoding, Integer> encodingCounts = cache.getEncodingCountsForTest();
 
@@ -137,7 +136,7 @@ public class TestEncodedSeekers {
   }
 
 
-  private void doPuts(HRegion region) throws IOException{
+  private void doPuts(Region region) throws IOException{
     LoadTestKVGenerator dataGenerator = new LoadTestKVGenerator(MIN_VALUE_SIZE, MAX_VALUE_SIZE);
      for (int i = 0; i < NUM_ROWS; ++i) {
       byte[] key = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
@@ -161,13 +160,13 @@ public class TestEncodedSeekers {
         region.put(put);
       }
       if (i % NUM_ROWS_PER_FLUSH == 0) {
-        region.flushcache();
+        region.flush(true);
       }
     }
   }
 
 
-  private void doGets(HRegion region) throws IOException{
+  private void doGets(Region region) throws IOException{
     for (int i = 0; i < NUM_ROWS; ++i) {
       final byte[] rowKey = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {

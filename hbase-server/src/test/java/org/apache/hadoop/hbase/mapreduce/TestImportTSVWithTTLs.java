@@ -39,13 +39,12 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -158,7 +157,7 @@ public class TestImportTSVWithTTLs implements Configurable {
     @Override
     public void prePut(ObserverContext<RegionCoprocessorEnvironment> e, Put put, WALEdit edit,
         Durability durability) throws IOException {
-      HRegion region = e.getEnvironment().getRegion();
+      Region region = e.getEnvironment().getRegion();
       if (!region.getRegionInfo().isMetaTable()
           && !region.getRegionInfo().getTable().isSystemTable()) {
         // The put carries the TTL attribute

@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.coordination.SplitTransactionCoordination;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -80,7 +81,7 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
 
     } catch (KeeperException e) {
       throw new IOException("Failed creating PENDING_SPLIT znode on "
-          + parent.getRegionNameAsString(), e);
+          + parent.getRegionInfo().getRegionNameAsString(), e);
     }
 
   }
@@ -139,7 +140,7 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
    * the node is removed or is not in pending_split state any more, we abort the split.
    */
   @Override
-  public void waitForSplitTransaction(final RegionServerServices services, HRegion parent,
+  public void waitForSplitTransaction(final RegionServerServices services, Region parent,
       HRegionInfo hri_a, HRegionInfo hri_b, SplitTransactionDetails sptd) throws IOException {
     ZkSplitTransactionDetails zstd = (ZkSplitTransactionDetails) sptd;
 
@@ -196,8 +197,8 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
-      throw new IOException("Failed getting SPLITTING znode on " + parent.getRegionNameAsString(),
-          e);
+      throw new IOException("Failed getting SPLITTING znode on " +
+        parent.getRegionInfo().getRegionNameAsString(), e);
     }
   }
 
@@ -213,8 +214,8 @@ public class ZKSplitTransactionCoordination implements SplitTransactionCoordinat
    *  Server, RegionServerServices)}
    */
   @Override
-  public void completeSplitTransaction(final RegionServerServices services, HRegion a, HRegion b,
-      SplitTransactionDetails std, HRegion parent) throws IOException {
+  public void completeSplitTransaction(final RegionServerServices services, Region a, Region b,
+      SplitTransactionDetails std, Region parent) throws IOException {
     ZkSplitTransactionDetails zstd = (ZkSplitTransactionDetails) std;
     // Tell master about split by updating zk. If we fail, abort.
     if (coordinationManager.getServer() != null) {

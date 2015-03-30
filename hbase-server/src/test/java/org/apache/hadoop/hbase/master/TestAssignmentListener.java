@@ -37,13 +37,12 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
@@ -232,8 +231,8 @@ public class TestAssignmentListener {
         admin.majorCompact(TABLE_NAME);
         mergeable = 0;
         for (JVMClusterUtil.RegionServerThread regionThread: miniCluster.getRegionServerThreads()) {
-          for (HRegion region: regionThread.getRegionServer().getOnlineRegions(TABLE_NAME)) {
-            mergeable += region.isMergeable() ? 1 : 0;
+          for (Region region: regionThread.getRegionServer().getOnlineRegions(TABLE_NAME)) {
+            mergeable += ((HRegion)region).isMergeable() ? 1 : 0;
           }
         }
       }

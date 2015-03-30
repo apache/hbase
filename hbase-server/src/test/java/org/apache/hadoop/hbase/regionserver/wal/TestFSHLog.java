@@ -450,7 +450,7 @@ public class TestFSHLog {
             System.currentTimeMillis(), clusterIds, -1, -1);
         wal.append(htd, info, logkey, edits, region.getSequenceId(), true, null);
       }
-      region.flushcache();
+      region.flush(true);
       // FlushResult.flushSequenceId is not visible here so go get the current sequence id.
       long currentSequenceId = region.getSequenceId().get();
       // Now release the appends

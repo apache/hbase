@@ -130,25 +130,26 @@ public class TestBulkLoad {
     };
     context.checking(expection);
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1)
-        .bulkLoadHFiles(familyPaths, false);
+        .bulkLoadHFiles(familyPaths, false, null);
   }
 
   @Test
   public void bulkHLogShouldThrowNoErrorAndWriteMarkerWithBlankInput() throws IOException {
-    testRegionWithFamilies(family1).bulkLoadHFiles(new ArrayList<Pair<byte[], String>>(), false);
+    testRegionWithFamilies(family1).bulkLoadHFiles(new ArrayList<Pair<byte[], String>>(),
+      false, null);
   }
 
   @Test
   public void shouldBulkLoadSingleFamilyHLog() throws IOException {
     context.checking(callOnce);
-    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1), false);
+    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1), false, null);
   }
 
   @Test
   public void shouldBulkLoadManyFamilyHLog() throws IOException {
     context.checking(callOnce);
     testRegionWithFamilies(family1, family2).bulkLoadHFiles(withFamilyPathsFor(family1, family2),
-        false);
+        false, null);
   }
 
   @Test
@@ -156,31 +157,32 @@ public class TestBulkLoad {
     context.checking(callOnce);
     TableName tableName = TableName.valueOf("test", "test");
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1, family2)
-        .bulkLoadHFiles(withFamilyPathsFor(family1, family2), false);
+        .bulkLoadHFiles(withFamilyPathsFor(family1, family2), false, null);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void shouldCrashIfBulkLoadFamiliesNotInTable() throws IOException {
-    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2), false);
+    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2), false,
+      null);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void bulkHLogShouldThrowErrorWhenFamilySpecifiedAndHFileExistsButNotInTableDescriptor()
       throws IOException {
-    testRegionWithFamilies().bulkLoadHFiles(withFamilyPathsFor(family1), false);
+    testRegionWithFamilies().bulkLoadHFiles(withFamilyPathsFor(family1), false, null);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void shouldThrowErrorIfBadFamilySpecifiedAsFamilyPath() throws IOException {
     testRegionWithFamilies()
         .bulkLoadHFiles(asList(withInvalidColumnFamilyButProperHFileLocation(family1)),
-            false);
+            false, null);
   }
 
   @Test(expected = FileNotFoundException.class)
   public void shouldThrowErrorIfHFileDoesNotExist() throws IOException {
     List<Pair<byte[], String>> list = asList(withMissingHFileForFamily(family1));
-    testRegionWithFamilies(family1).bulkLoadHFiles(list, false);
+    testRegionWithFamilies(family1).bulkLoadHFiles(list, false, null);
   }
 
   private Pair<byte[], String> withMissingHFileForFamily(byte[] family) {

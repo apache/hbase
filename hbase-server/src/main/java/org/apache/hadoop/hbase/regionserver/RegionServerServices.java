@@ -23,8 +23,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
@@ -37,9 +39,9 @@ import com.google.protobuf.Service;
 /**
  * Services provided by {@link HRegionServer}
  */
-@InterfaceAudience.Private
-public interface RegionServerServices
-    extends OnlineRegions, FavoredNodesForRegion {
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
+public interface RegionServerServices extends OnlineRegions, FavoredNodesForRegion {
   /**
    * @return True if this regionserver is stopping.
    */
@@ -77,8 +79,7 @@ public interface RegionServerServices
    * @throws KeeperException
    * @throws IOException
    */
-  void postOpenDeployTasks(final HRegion r)
-  throws KeeperException, IOException;
+  void postOpenDeployTasks(final Region r) throws KeeperException, IOException;
 
   /**
    * Notify master that a handler requests to change a region state
@@ -119,7 +120,7 @@ public interface RegionServerServices
   /**
    * @return set of recovering regions on the hosting region server
    */
-  Map<String, HRegion> getRecoveringRegions();
+  Map<String, Region> getRecoveringRegions();
 
   /**
    * Only required for "old" log replay; if it's removed, remove this.

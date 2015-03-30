@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -169,7 +169,7 @@ public class TestZooKeeperTableArchiveClient {
 
     // create the region
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
-    HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
+    Region region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
 
     loadFlushAndCompact(region, TEST_FAM);
 
@@ -219,12 +219,12 @@ public class TestZooKeeperTableArchiveClient {
 
     // create the region
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
-    HRegion region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
+    Region region = UTIL.createTestRegion(STRING_TABLE_NAME, hcd);
     loadFlushAndCompact(region, TEST_FAM);
 
     // create the another table that we don't archive
     hcd = new HColumnDescriptor(TEST_FAM);
-    HRegion otherRegion = UTIL.createTestRegion(otherTable, hcd);
+    Region otherRegion = UTIL.createTestRegion(otherTable, hcd);
     loadFlushAndCompact(otherRegion, TEST_FAM);
 
     // get the current hfiles in the archive directory
@@ -378,7 +378,7 @@ public class TestZooKeeperTableArchiveClient {
     return allFiles;
   }
 
-  private void loadFlushAndCompact(HRegion region, byte[] family) throws IOException {
+  private void loadFlushAndCompact(Region region, byte[] family) throws IOException {
     // create two hfiles in the region
     createHFileInRegion(region, family);
     createHFileInRegion(region, family);
@@ -390,7 +390,7 @@ public class TestZooKeeperTableArchiveClient {
 
     // compact the two files into one file to get files in the archive
     LOG.debug("Compacting stores");
-    region.compactStores(true);
+    region.compact(true);
   }
 
   /**
@@ -399,13 +399,13 @@ public class TestZooKeeperTableArchiveClient {
    * @param columnFamily family for which to add data
    * @throws IOException
    */
-  private void createHFileInRegion(HRegion region, byte[] columnFamily) throws IOException {
+  private void createHFileInRegion(Region region, byte[] columnFamily) throws IOException {
     // put one row in the region
     Put p = new Put(Bytes.toBytes("row"));
     p.add(columnFamily, Bytes.toBytes("Qual"), Bytes.toBytes("v1"));
     region.put(p);
     // flush the region to make a store file
-    region.flushcache();
+    region.flush(true);
   }
 
   /**

@@ -149,14 +149,14 @@ public class RegionMergeTransaction {
    * @param b region b to merge
    * @param forcible if false, we will only merge adjacent regions
    */
-  public RegionMergeTransaction(final HRegion a, final HRegion b,
+  public RegionMergeTransaction(final Region a, final Region b,
       final boolean forcible) {
     if (a.getRegionInfo().compareTo(b.getRegionInfo()) <= 0) {
-      this.region_a = a;
-      this.region_b = b;
+      this.region_a = (HRegion)a;
+      this.region_b = (HRegion)b;
     } else {
-      this.region_a = b;
-      this.region_b = a;
+      this.region_a = (HRegion)b;
+      this.region_b = (HRegion)a;
     }
     this.forcible = forcible;
     this.mergesdir = region_a.getRegionFileSystem().getMergesDir();
@@ -181,8 +181,8 @@ public class RegionMergeTransaction {
     }
     if (!forcible && !HRegionInfo.areAdjacent(region_a.getRegionInfo(),
             region_b.getRegionInfo())) {
-      String msg = "Skip merging " + this.region_a.getRegionNameAsString()
-          + " and " + this.region_b.getRegionNameAsString()
+      String msg = "Skip merging " + this.region_a.getRegionInfo().getRegionNameAsString()
+          + " and " + this.region_b.getRegionInfo().getRegionNameAsString()
           + ", because they are not adjacent.";
       LOG.info(msg);
       return false;
@@ -192,18 +192,19 @@ public class RegionMergeTransaction {
     }
     try {
       boolean regionAHasMergeQualifier = hasMergeQualifierInMeta(services,
-          region_a.getRegionName());
+          region_a.getRegionInfo().getRegionName());
       if (regionAHasMergeQualifier ||
-          hasMergeQualifierInMeta(services, region_b.getRegionName())) {
-        LOG.debug("Region " + (regionAHasMergeQualifier ? region_a.getRegionNameAsString()
-                : region_b.getRegionNameAsString())
+          hasMergeQualifierInMeta(services, region_b.getRegionInfo().getRegionName())) {
+        LOG.debug("Region " + (regionAHasMergeQualifier ?
+              region_a.getRegionInfo().getRegionNameAsString() :
+                region_b.getRegionInfo().getRegionNameAsString())
             + " is not mergeable because it has merge qualifier in META");
         return false;
       }
     } catch (IOException e) {
       LOG.warn("Failed judging whether merge transaction is available for "
-              + region_a.getRegionNameAsString() + " and "
-              + region_b.getRegionNameAsString(), e);
+              + region_a.getRegionInfo().getRegionNameAsString() + " and "
+              + region_b.getRegionInfo().getRegionNameAsString(), e);
       return false;
     }
 
@@ -275,7 +276,7 @@ public class RegionMergeTransaction {
   HRegion createMergedRegion(final Server server,
       final RegionServerServices services) throws IOException {
     LOG.info("Starting merge of " + region_a + " and "
-        + region_b.getRegionNameAsString() + ", forcible=" + forcible);
+        + region_b.getRegionInfo().getRegionNameAsString() + ", forcible=" + forcible);
     if ((server != null && server.isStopped())
         || (services != null && services.isStopping())) {
       throw new IOException("Server is stopped or stopping");
@@ -584,7 +585,7 @@ public class RegionMergeTransaction {
     boolean stopped = server != null && server.isStopped();
     boolean stopping = services != null && services.isStopping();
     if (stopped || stopping) {
-      LOG.info("Not opening merged region  " + merged.getRegionNameAsString()
+      LOG.info("Not opening merged region  " + merged.getRegionInfo().getRegionNameAsString()
           + " because stopping=" + stopping + ", stopped=" + stopped);
       return;
     }
@@ -695,7 +696,7 @@ public class RegionMergeTransaction {
             this.region_a.initialize();
           } catch (IOException e) {
             LOG.error("Failed rollbacking CLOSED_REGION_A of region "
-                + this.region_a.getRegionNameAsString(), e);
+                + this.region_a.getRegionInfo().getRegionNameAsString(), e);
             throw new RuntimeException(e);
           }
           break;
@@ -710,7 +711,7 @@ public class RegionMergeTransaction {
             this.region_b.initialize();
           } catch (IOException e) {
             LOG.error("Failed rollbacking CLOSED_REGION_A of region "
-                + this.region_b.getRegionNameAsString(), e);
+                + this.region_b.getRegionInfo().getRegionNameAsString(), e);
             throw new RuntimeException(e);
           }
           break;
