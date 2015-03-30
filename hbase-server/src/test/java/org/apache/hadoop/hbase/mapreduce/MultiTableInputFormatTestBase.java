@@ -32,6 +32,9 @@ import java.util.NavigableMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Base set of tests and setup for input formats touching multiple tables.
+ */
 public abstract class MultiTableInputFormatTestBase {
   static final Log LOG = LogFactory.getLog(TestMultiTableInputFormat.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
