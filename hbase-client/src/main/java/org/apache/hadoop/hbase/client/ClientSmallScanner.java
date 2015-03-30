@@ -22,13 +22,13 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -55,6 +56,7 @@ public class ClientSmallScanner extends ClientScanner {
   // When fetching results from server, skip the first result if it has the same
   // row with this one
   private byte[] skipRowOfFirstResult = null;
+  private SmallScannerCallableFactory callableFactory;
 
   /**
    * Create a new ClientSmallScanner for the specified table. An HConnection
@@ -99,11 +101,42 @@ public class ClientSmallScanner extends ClientScanner {
    * @param rpcFactory
    * @param controllerFactory 
    * @throws IOException
+   *           If the remote call fails
    */
   public ClientSmallScanner(final Configuration conf, final Scan scan, final TableName tableName,
       HConnection connection, RpcRetryingCallerFactory rpcFactory,
       RpcControllerFactory controllerFactory) throws IOException {
+    this(conf, scan, tableName, connection, rpcFactory, controllerFactory, new SmallScannerCallableFactory());
+  }
+
+  /**
+   * Create a new ShortClientScanner for the specified table. Take note that the passed {@link Scan}
+   * 's start row maybe changed changed. Intended for unit tests to provide their own
+   * {@link SmallScannerCallableFactory} implementation/mock.
+   *
+   * @param conf
+   *          The {@link Configuration} to use.
+   * @param scan
+   *          {@link Scan} to use in this scanner
+   * @param tableName
+   *          The table that we wish to rangeGet
+   * @param connection
+   *          Connection identifying the cluster
+   * @param rpcFactory
+   *          Factory used to create the {@link RpcRetryingCaller}
+   * @param controllerFactory
+   *          Factory used to access RPC payloads
+   * @param callableFactory
+   *          Factory used to create the callable for this scan
+   * @throws IOException
+   */
+  @VisibleForTesting
+  ClientSmallScanner(final Configuration conf, final Scan scan, final TableName tableName,
+      HConnection connection, RpcRetryingCallerFactory rpcFactory,
+      RpcControllerFactory controllerFactory, SmallScannerCallableFactory callableFactory)
+      throws IOException {
     super(conf, scan, tableName, connection, rpcFactory, controllerFactory);
+    this.callableFactory = callableFactory;
   }
 
   @Override
@@ -154,42 +187,12 @@ public class ClientSmallScanner extends ClientScanner {
       LOG.trace("Advancing internal small scanner to startKey at '"
           + Bytes.toStringBinary(localStartKey) + "'");
     }
-    smallScanCallable = getSmallScanCallable(
+    smallScanCallable = callableFactory.getCallable(
         scan, getConnection(), getTable(), localStartKey, cacheNum, rpcControllerFactory);
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
       this.scanMetrics.countOfRegions.incrementAndGet();
     }
     return true;
-  }
-
-  static RegionServerCallable<Result[]> getSmallScanCallable(
-      final Scan sc, HConnection connection, TableName table, byte[] localStartKey,
-      final int cacheNum, final RpcControllerFactory rpcControllerFactory) throws IOException { 
-    sc.setStartRow(localStartKey);
-    RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
-        connection, table, sc.getStartRow()) {
-      public Result[] call() throws IOException {
-        ScanRequest request = RequestConverter.buildScanRequest(getLocation()
-          .getRegionInfo().getRegionName(), sc, cacheNum, true);
-        ScanResponse response = null;
-        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
-        try {
-          controller.setPriority(getTableName());
-          response = getStub().scan(controller, request);
-          if (response.hasMoreResultsInRegion()) {
-            setHasMoreResultsContext(true);
-            setServerHasMoreResults(response.getMoreResultsInRegion());
-          } else {
-            setHasMoreResultsContext(false);
-          }
-          return ResponseConverter.getResults(controller.cellScanner(),
-              response);
-        } catch (ServiceException se) {
-          throw ProtobufUtil.getRemoteException(se);
-        }
-      }
-    };
-    return callable;
   }
 
   @Override
@@ -200,43 +203,7 @@ public class ClientSmallScanner extends ClientScanner {
       return null;
     }
     if (cache.size() == 0) {
-      Result[] values = null;
-      long remainingResultSize = maxScannerResultSize;
-      int countdown = this.caching;
-      boolean currentRegionDone = false;
-      // Values == null means server-side filter has determined we must STOP
-      while (remainingResultSize > 0 && countdown > 0
-          && nextScanner(countdown, values == null, currentRegionDone)) {
-        // Server returns a null values if scanning is to stop. Else,
-        // returns an empty array if scanning is to go on and we've just
-        // exhausted current region.
-        // TODO Use the server's response about more results
-        values = this.caller.callWithRetries(smallScanCallable);
-        this.currentRegion = smallScanCallable.getHRegionInfo();
-        long currentTime = System.currentTimeMillis();
-        if (this.scanMetrics != null) {
-          this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime
-              - lastNext);
-        }
-        lastNext = currentTime;
-        if (values != null && values.length > 0) {
-          for (int i = 0; i < values.length; i++) {
-            Result rs = values[i];
-            if (i == 0 && this.skipRowOfFirstResult != null
-                && Bytes.equals(skipRowOfFirstResult, rs.getRow())) {
-              // Skip the first result
-              continue;
-            }
-            cache.add(rs);
-            for (Cell kv : rs.rawCells()) {
-              remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
-            }
-            countdown--;
-            this.lastResult = rs;
-          }
-        }
-        currentRegionDone = countdown > 0;
-      }
+      loadCache();
     }
 
     if (cache.size() > 0) {
@@ -249,8 +216,103 @@ public class ClientSmallScanner extends ClientScanner {
   }
 
   @Override
+  protected void loadCache() throws IOException {
+    Result[] values = null;
+    long remainingResultSize = maxScannerResultSize;
+    int countdown = this.caching;
+    boolean currentRegionDone = false;
+    // Values == null means server-side filter has determined we must STOP
+    while (remainingResultSize > 0 && countdown > 0
+        && nextScanner(countdown, values == null, currentRegionDone)) {
+      // Server returns a null values if scanning is to stop. Else,
+      // returns an empty array if scanning is to go on and we've just
+      // exhausted current region.
+      values = this.caller.callWithRetries(smallScanCallable);
+      this.currentRegion = smallScanCallable.getHRegionInfo();
+      long currentTime = System.currentTimeMillis();
+      if (this.scanMetrics != null) {
+        this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime
+            - lastNext);
+      }
+      lastNext = currentTime;
+      if (values != null && values.length > 0) {
+        for (int i = 0; i < values.length; i++) {
+          Result rs = values[i];
+          if (i == 0 && this.skipRowOfFirstResult != null
+              && Bytes.equals(skipRowOfFirstResult, rs.getRow())) {
+            // Skip the first result
+            continue;
+          }
+          cache.add(rs);
+          for (Cell kv : rs.rawCells()) {
+            remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
+          }
+          countdown--;
+          this.lastResult = rs;
+        }
+      }
+      if (smallScanCallable.hasMoreResultsContext()) {
+        // If the server has more results, the current region is not done
+        currentRegionDone = !smallScanCallable.getServerHasMoreResults();
+      } else {
+        // not guaranteed to get the context in older versions, fall back to checking countdown
+        currentRegionDone = countdown > 0;
+      }
+    }
+  }
+
   public void close() {
     if (!scanMetricsPublished) writeScanMetrics();
     closed = true;
+  }
+
+  @VisibleForTesting
+  protected void setScannerCallableFactory(SmallScannerCallableFactory callableFactory) {
+    this.callableFactory = callableFactory;
+  }
+
+  @VisibleForTesting
+  protected void setRpcRetryingCaller(RpcRetryingCaller<Result []> caller) {
+    this.caller = caller;
+  }
+
+  @VisibleForTesting
+  protected void setRpcControllerFactory(RpcControllerFactory rpcControllerFactory) {
+    this.rpcControllerFactory = rpcControllerFactory;
+  }
+
+  @InterfaceAudience.Private
+  protected static class SmallScannerCallableFactory {
+
+    public RegionServerCallable<Result[]> getCallable(final Scan sc, HConnection connection,
+        TableName table, byte[] localStartKey, final int cacheNum,
+        final RpcControllerFactory rpcControllerFactory) throws IOException {
+      sc.setStartRow(localStartKey);
+      RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
+          connection, table, sc.getStartRow()) {
+        public Result[] call() throws IOException {
+          ScanRequest request = RequestConverter.buildScanRequest(getLocation()
+            .getRegionInfo().getRegionName(), sc, cacheNum, true);
+          ScanResponse response = null;
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+          try {
+            controller.setPriority(getTableName());
+            response = getStub().scan(controller, request);
+            if (response.hasMoreResultsInRegion()) {
+              setHasMoreResultsContext(true);
+              setServerHasMoreResults(response.getMoreResultsInRegion());
+            } else {
+              setHasMoreResultsContext(false);
+            }
+            return ResponseConverter.getResults(controller.cellScanner(),
+                response);
+          } catch (ServiceException se) {
+            throw ProtobufUtil.getRemoteException(se);
+          }
+        }
+      };
+      return callable;
+    }
+
   }
 }

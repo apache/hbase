@@ -29,7 +29,11 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ClientSmallScanner.SmallScannerCallableFactory;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 
@@ -46,6 +50,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
   private static final Log LOG = LogFactory.getLog(ClientSmallReversedScanner.class);
   private RegionServerCallable<Result[]> smallScanCallable = null;
   private byte[] skipRowOfFirstResult = null;
+  private SmallScannerCallableFactory callableFactory;
 
   /**
    * Create a new ReversibleClientScanner for the specified table Note that the
@@ -59,16 +64,42 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
    */
   public ClientSmallReversedScanner(Configuration conf, Scan scan, TableName tableName,
                                     HConnection connection) throws IOException {
-    super(conf, scan, tableName, connection);
+    this(conf, scan, tableName, connection, new SmallScannerCallableFactory());
   }
 
   /**
-   * Gets a scanner for following scan. Move to next region or continue from the
-   * last result or start from the start row.
+   * Create a new ReversibleClientScanner for the specified table. Take note that the passed
+   * {@link Scan}'s start row may be changed.
+   *
+   * @param conf
+   *          The {@link Configuration} to use.
+   * @param scan
+   *          {@link Scan} to use in this scanner
+   * @param tableName
+   *          The table that we wish to rangeGet
+   * @param connection
+   *          Connection identifying the cluster
+   * @param callableFactory
+   *          Factory used to create the callable for scans
+   * @throws IOException
+   *           If the remote call fails
+   */
+  @VisibleForTesting
+  ClientSmallReversedScanner(Configuration conf, Scan scan, TableName tableName,
+      HConnection connection, SmallScannerCallableFactory callableFactory) throws IOException {
+    super(conf, scan, tableName, connection);
+    this.callableFactory = callableFactory;
+  }
+
+  /**
+   * Gets a scanner for following scan. Move to next region or continue from the last result or
+   * start from the start row.
    *
    * @param nbRows
-   * @param done              true if Server-side says we're done scanning.
-   * @param currentRegionDone true if scan is over on current region
+   * @param done
+   *          true if Server-side says we're done scanning.
+   * @param currentRegionDone
+   *          true if scan is over on current region
    * @return true if has next scanner
    * @throws IOException
    */
@@ -108,7 +139,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
           + Bytes.toStringBinary(localStartKey) + "'");
     }
 
-    smallScanCallable = ClientSmallScanner.getSmallScanCallable(
+    smallScanCallable = callableFactory.getCallable(
         scan, getConnection(), getTable(), localStartKey, cacheNum, this.rpcControllerFactory);
 
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
@@ -125,43 +156,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
       return null;
     }
     if (cache.size() == 0) {
-      Result[] values = null;
-      long remainingResultSize = maxScannerResultSize;
-      int countdown = this.caching;
-      boolean currentRegionDone = false;
-      // Values == null means server-side filter has determined we must STOP
-      while (remainingResultSize > 0 && countdown > 0
-          && nextScanner(countdown, values == null, currentRegionDone)) {
-        // Server returns a null values if scanning is to stop. Else,
-        // returns an empty array if scanning is to go on and we've just
-        // exhausted current region.
-        // TODO use context from server
-        values = this.caller.callWithRetries(smallScanCallable, scannerTimeout);
-        this.currentRegion = smallScanCallable.getHRegionInfo();
-        long currentTime = System.currentTimeMillis();
-        if (this.scanMetrics != null) {
-          this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime
-              - lastNext);
-        }
-        lastNext = currentTime;
-        if (values != null && values.length > 0) {
-          for (int i = 0; i < values.length; i++) {
-            Result rs = values[i];
-            if (i == 0 && this.skipRowOfFirstResult != null
-                && Bytes.equals(skipRowOfFirstResult, rs.getRow())) {
-              // Skip the first result
-              continue;
-            }
-            cache.add(rs);
-            for (Cell kv : rs.rawCells()) {
-              remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
-            }
-            countdown--;
-            this.lastResult = rs;
-          }
-        }
-        currentRegionDone = countdown > 0;
-      }
+      loadCache();
     }
 
     if (cache.size() > 0) {
@@ -173,6 +168,49 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
     return null;
   }
 
+  @Override
+  protected void loadCache() throws IOException {
+    Result[] values = null;
+    long remainingResultSize = maxScannerResultSize;
+    int countdown = this.caching;
+    boolean currentRegionDone = false;
+    // Values == null means server-side filter has determined we must STOP
+    while (remainingResultSize > 0 && countdown > 0
+        && nextScanner(countdown, values == null, currentRegionDone)) {
+      // Server returns a null values if scanning is to stop. Else,
+      // returns an empty array if scanning is to go on and we've just
+      // exhausted current region.
+      values = this.caller.callWithRetries(smallScanCallable, scannerTimeout);
+      this.currentRegion = smallScanCallable.getHRegionInfo();
+      long currentTime = System.currentTimeMillis();
+      if (this.scanMetrics != null) {
+        this.scanMetrics.sumOfMillisSecBetweenNexts.addAndGet(currentTime
+            - lastNext);
+      }
+      lastNext = currentTime;
+      if (values != null && values.length > 0) {
+        for (int i = 0; i < values.length; i++) {
+          Result rs = values[i];
+          if (i == 0 && this.skipRowOfFirstResult != null
+              && Bytes.equals(skipRowOfFirstResult, rs.getRow())) {
+            // Skip the first result
+            continue;
+          }
+          cache.add(rs);
+          for (Cell kv : rs.rawCells()) {
+            remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
+          }
+          countdown--;
+          this.lastResult = rs;
+        }
+      }
+      if (smallScanCallable.hasMoreResultsContext()) {
+        currentRegionDone = !smallScanCallable.getServerHasMoreResults();
+      } else {
+        currentRegionDone = countdown > 0;
+      }
+    }
+  }
 
   @Override
   protected void initializeScannerInConstruction() throws IOException {
@@ -186,4 +224,18 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
     closed = true;
   }
 
+  @VisibleForTesting
+  protected void setScannerCallableFactory(SmallScannerCallableFactory callableFactory) {
+    this.callableFactory = callableFactory;
+  }
+
+  @VisibleForTesting
+  protected void setRpcRetryingCaller(RpcRetryingCaller<Result []> caller) {
+    this.caller = caller;
+  }
+
+  @VisibleForTesting
+  protected void setRpcControllerFactory(RpcControllerFactory rpcControllerFactory) {
+    this.rpcControllerFactory = rpcControllerFactory;
+  }
 }
