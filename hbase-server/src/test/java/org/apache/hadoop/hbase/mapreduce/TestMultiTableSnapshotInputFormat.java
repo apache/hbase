@@ -9,11 +9,14 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.experimental.categories.Category;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -22,6 +25,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+@Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTestBase {
 
   @BeforeClass

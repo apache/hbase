@@ -8,8 +8,7 @@ import org.apache.hadoop.mapreduce.*;
 import java.io.IOException;
 import java.util.List;
 
-public class MultiTableSnapshotInputFormat extends
-    InputFormat<ImmutableBytesWritable, Result> {
+public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat {
 
   @Override
   public List<InputSplit> getSplits(JobContext jobContext) throws IOException, InterruptedException {
@@ -21,10 +20,5 @@ public class MultiTableSnapshotInputFormat extends
     }
 
     return rtn;
-  }
-
-  @Override
-  public RecordReader<ImmutableBytesWritable, Result> createRecordReader(InputSplit inputSplit, TaskAttemptContext taskAttemptContext) throws IOException, InterruptedException {
-    return new TableSnapshotInputFormat.TableSnapshotRegionRecordReader();
   }
 }
