@@ -54,20 +54,6 @@
     </testResources>
     <plugins>
       <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default-compile</id>
-            <configuration>
-              <compilerId>${java.default.compiler}</compilerId>
-              <forceJavacCompilerUse>true</forceJavacCompilerUse>
-            </configuration>
-          </execution>
-          <!-- We can't check tests with default-testCompile because of generated
-            protobuf code (IncrementCounterProcessorTestProtos) -->
-       </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
         <configuration>
