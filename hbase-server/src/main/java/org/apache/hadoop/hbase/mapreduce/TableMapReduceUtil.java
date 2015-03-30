@@ -22,13 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -304,6 +298,28 @@ public class TableMapReduceUtil {
       HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     conf.setFloat(HConstants.BUCKET_CACHE_SIZE_KEY, 0f);
     conf.unset(HConstants.BUCKET_CACHE_IOENGINE_KEY);
+  }
+
+  /**
+   *  Sets up the job for reading from one or more multiple table snapshots, with one or more scan per snapshot.
+   *  It bypasses hbase servers and read directly from snapshot files.
+   *
+   * @param snapshotScans map of snapshot name to scans on that snapshot.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   */
+  public static void initMultiTableSnapshotMapperJob(Map<String, Collection<Scan>> snapshotScans,
+                                                     Class<? extends TableMapper> mapper,
+                                                     Class<?> outputKeyClass,
+                                                     Class<?> outputValueClass, Job job,
+                                                     boolean addDependencyJars, Path tmpRestoreDir
+  ) {
+
   }
 
   /**
