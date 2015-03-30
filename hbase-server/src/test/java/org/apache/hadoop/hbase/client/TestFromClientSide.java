@@ -343,11 +343,6 @@ public class TestFromClientSide {
       0, getNumberOfRows(keyPrefix2, value2, table));
     assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3,
       0, getNumberOfRows(keyPrefix3, value2, table));
-    ht.setScannerCaching(0);
-    assertEquals("Got back incorrect number of rows from scan", 0,
-      getNumberOfRows(keyPrefix1, value2, table)); ht.setScannerCaching(100);
-    assertEquals("Got back incorrect number of rows from scan", 0,
-      getNumberOfRows(keyPrefix2, value2, table));
   }
 
   private void deleteColumns(Table ht, String value, String keyPrefix)

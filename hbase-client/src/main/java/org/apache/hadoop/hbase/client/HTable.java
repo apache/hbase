@@ -385,39 +385,12 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * Gets the number of rows that a scanner will fetch at once.
-   * <p>
-   * The default value comes from {@code hbase.client.scanner.caching}.
-   * @deprecated Use {@link Scan#setCaching(int)} and {@link Scan#getCaching()}
-   */
-  @Deprecated
-  public int getScannerCaching() {
-    return scannerCaching;
-  }
-
-  /**
    * Kept in 0.96 for backward compatibility
    * @deprecated  since 0.96. This is an internal buffer that should not be read nor write.
    */
   @Deprecated
   public List<Row> getWriteBuffer() {
     return mutator == null ? null : mutator.getWriteBuffer();
-  }
-
-  /**
-   * Sets the number of rows that a scanner will fetch at once.
-   * <p>
-   * This will override the value specified by
-   * {@code hbase.client.scanner.caching}.
-   * Increasing this value will reduce the amount of work needed each time
-   * {@code next()} is called on a scanner, at the expense of memory use
-   * (since more rows will need to be maintained in memory by the scanners).
-   * @param scannerCaching the number of rows a scanner will fetch at once.
-   * @deprecated Use {@link Scan#setCaching(int)}
-   */
-  @Deprecated
-  public void setScannerCaching(int scannerCaching) {
-    this.scannerCaching = scannerCaching;
   }
 
   /**
@@ -643,7 +616,7 @@ public class HTable implements HTableInterface {
       throw new IllegalArgumentException("Small scan should not be used with batching");
     }
     if (scan.getCaching() <= 0) {
-      scan.setCaching(getScannerCaching());
+      scan.setCaching(scannerCaching);
     }
 
     if (scan.isReversed()) {
