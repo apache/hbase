@@ -34,7 +34,6 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
           ImmutableList.of(MultiTableInputFormatTestBase.INPUT_FAMILY), null,
           snapshotNameForTable(tableName), FSUtils.getRootDir(TEST_UTIL.getConfiguration()), TEST_UTIL.getTestFileSystem(), true);
     }
-
   }
 
   @Override
