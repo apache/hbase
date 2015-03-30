@@ -318,8 +318,26 @@ public class TableMapReduceUtil {
                                                      Class<?> outputKeyClass,
                                                      Class<?> outputValueClass, Job job,
                                                      boolean addDependencyJars, Path tmpRestoreDir
-  ) {
+  ) throws IOException {
+    MultiTableSnapshotInputFormatImpl.setInput(job.getConfiguration(), snapshotScans, tmpRestoreDir);
 
+    job.setInputFormatClass(MultiTableSnapshotInputFormat.class);
+    if (outputValueClass != null) {
+      job.setMapOutputValueClass(outputValueClass);
+    }
+    if (outputKeyClass != null) {
+      job.setMapOutputKeyClass(outputKeyClass);
+    }
+    job.setMapperClass(mapper);
+    Configuration conf = job.getConfiguration();
+    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
+
+    if (addDependencyJars) {
+      addDependencyJars(job);
+      addDependencyJars(job.getConfiguration(), MetricsRegistry.class);
+    }
+
+    resetCacheConfig(job.getConfiguration());
   }
 
   /**
