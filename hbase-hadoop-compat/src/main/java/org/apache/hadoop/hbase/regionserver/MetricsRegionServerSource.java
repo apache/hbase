@@ -180,6 +180,9 @@ public interface MetricsRegionServerSource extends BaseSource {
   String PERCENT_FILES_LOCAL = "percentFilesLocal";
   String PERCENT_FILES_LOCAL_DESC =
       "The percent of HFiles that are stored on the local hdfs data node.";
+  String PERCENT_FILES_LOCAL_SECONDARY_REGIONS = "percentFilesLocalSecondaryRegions";
+  String PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC =
+    "The percent of HFiles used by secondary regions that are stored on the local hdfs data node.";
   String SPLIT_QUEUE_LENGTH = "splitQueueLength";
   String SPLIT_QUEUE_LENGTH_DESC = "Length of the queue for splits.";
   String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
