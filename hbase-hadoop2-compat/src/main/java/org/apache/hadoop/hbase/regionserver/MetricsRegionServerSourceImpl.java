@@ -76,7 +76,7 @@ public class MetricsRegionServerSourceImpl
     slowGet = getMetricsRegistry().newCounter(SLOW_GET_KEY, SLOW_GET_DESC, 0l);
 
     incrementHisto = getMetricsRegistry().newHistogram(INCREMENT_KEY);
-    slowIncrement = getMetricsRegistry().newCounter(SLOW_INCREMENT_KEY, SLOW_INCREMENT_DESC, 0l);
+    slowIncrement = getMetricsRegistry().newCounter(SLOW_INCREMENT_KEY, SLOW_INCREMENT_DESC, 0L);
 
     appendHisto = getMetricsRegistry().newHistogram(APPEND_KEY);
     slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0l);
@@ -212,6 +212,9 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getDataInMemoryWithoutWAL())
           .addGauge(Interns.info(PERCENT_FILES_LOCAL, PERCENT_FILES_LOCAL_DESC),
               rsWrap.getPercentFileLocal())
+          .addGauge(Interns.info(PERCENT_FILES_LOCAL_SECONDARY_REGIONS,
+              PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC),
+              rsWrap.getPercentFileLocalSecondaryRegions())
           .addGauge(Interns.info(SPLIT_QUEUE_LENGTH, SPLIT_QUEUE_LENGTH_DESC),
               rsWrap.getSplitQueueSize())
           .addGauge(Interns.info(COMPACTION_QUEUE_LENGTH, COMPACTION_QUEUE_LENGTH_DESC),

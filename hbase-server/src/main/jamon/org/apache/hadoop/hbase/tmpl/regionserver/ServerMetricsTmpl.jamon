@@ -76,12 +76,14 @@ java.lang.management.ManagementFactory;
         <th>Requests Per Second</th>
         <th>Num. Regions</th>
         <th>Block locality</th>
+        <th>Block locality (Secondary replicas)</th>
         <th>Slow WAL Append Count</th>
     </tr>
     <tr>
         <td><% String.format("%.0f", mWrap.getRequestsPerSecond()) %></td>
         <td><% mWrap.getNumOnlineRegions() %></td>
         <td><% mWrap.getPercentFileLocal() %></td>
+        <td><% mWrap.getPercentFileLocalSecondaryRegions() %></td>
         <td><% 0 %></td>
     </tr>
 </table>

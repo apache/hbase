@@ -131,6 +131,11 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public int getPercentFileLocalSecondaryRegions() {
+    return 99;
+  }
+
+  @Override
   public int getCompactionQueueSize() {
     return 411;
   }

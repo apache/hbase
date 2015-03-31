@@ -76,6 +76,7 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("mutationsWithoutWALCount", 409, serverSource);
     HELPER.assertGauge("mutationsWithoutWALSize", 410, serverSource);
     HELPER.assertGauge("percentFilesLocal", 99, serverSource);
+    HELPER.assertGauge("percentFilesLocalSecondaryRegions", 99, serverSource);
     HELPER.assertGauge("compactionQueueLength", 411, serverSource);
     HELPER.assertGauge("flushQueueLength", 412, serverSource);
     HELPER.assertGauge("blockCacheFreeSize", 413, serverSource);

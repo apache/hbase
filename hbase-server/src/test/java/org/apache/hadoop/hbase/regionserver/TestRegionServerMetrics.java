@@ -97,6 +97,7 @@ public class TestRegionServerMetrics {
   @Test
   public void testLocalFiles() throws Exception {
     metricsHelper.assertGauge("percentFilesLocal", 0, serverSource);
+    metricsHelper.assertGauge("percentFilesLocalSecondaryRegions", 0, serverSource);
   }
 
   @Test

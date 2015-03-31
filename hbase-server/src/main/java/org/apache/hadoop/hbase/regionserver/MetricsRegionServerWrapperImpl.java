@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -71,6 +72,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long numMutationsWithoutWAL = 0;
   private volatile long dataInMemoryWithoutWAL = 0;
   private volatile int percentFileLocal = 0;
+  private volatile int percentFileLocalSecondaryRegions = 0;
   private volatile long flushedCellsCount = 0;
   private volatile long compactedCellsCount = 0;
   private volatile long majorCompactedCellsCount = 0;
@@ -376,6 +378,11 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public int getPercentFileLocalSecondaryRegions() {
+    return percentFileLocalSecondaryRegions;
+  }
+
+  @Override
   public long getUpdatesBlockedTime() {
     if (this.regionServer.cacheFlusher == null) {
       return 0;
@@ -430,6 +437,8 @@ class MetricsRegionServerWrapperImpl
 
       HDFSBlocksDistribution hdfsBlocksDistribution =
           new HDFSBlocksDistribution();
+      HDFSBlocksDistribution hdfsBlocksDistributionSecondaryRegions =
+          new HDFSBlocksDistribution();
 
       long tempNumStores = 0;
       long tempNumStoreFiles = 0;
@@ -445,6 +454,7 @@ class MetricsRegionServerWrapperImpl
       long tempNumMutationsWithoutWAL = 0;
       long tempDataInMemoryWithoutWAL = 0;
       int tempPercentFileLocal = 0;
+      int tempPercentFileLocalSecondaryRegions = 0;
       long tempFlushedCellsCount = 0;
       long tempCompactedCellsCount = 0;
       long tempMajorCompactedCellsCount = 0;
@@ -478,13 +488,20 @@ class MetricsRegionServerWrapperImpl
           tempMajorCompactedCellsSize += store.getMajorCompactedCellsSize();
         }
 
-        hdfsBlocksDistribution.add(r.getHDFSBlocksDistribution());
+        HDFSBlocksDistribution distro = r.getHDFSBlocksDistribution();
+        hdfsBlocksDistribution.add(distro);
+        if (r.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID) {
+          hdfsBlocksDistributionSecondaryRegions.add(distro);
+        }
       }
 
       float localityIndex = hdfsBlocksDistribution.getBlockLocalityIndex(
           regionServer.getServerName().getHostname());
       tempPercentFileLocal = (int) (localityIndex * 100);
 
+      float localityIndexSecondaryRegions = hdfsBlocksDistributionSecondaryRegions
+          .getBlockLocalityIndex(regionServer.getServerName().getHostname());
+      tempPercentFileLocalSecondaryRegions = (int) (localityIndexSecondaryRegions * 100);
 
       //Compute the number of requests per second
       long currentTime = EnvironmentEdgeManager.currentTime();
@@ -522,6 +539,7 @@ class MetricsRegionServerWrapperImpl
       numMutationsWithoutWAL = tempNumMutationsWithoutWAL;
       dataInMemoryWithoutWAL = tempDataInMemoryWithoutWAL;
       percentFileLocal = tempPercentFileLocal;
+      percentFileLocalSecondaryRegions = tempPercentFileLocalSecondaryRegions;
       flushedCellsCount = tempFlushedCellsCount;
       compactedCellsCount = tempCompactedCellsCount;
       majorCompactedCellsCount = tempMajorCompactedCellsCount;
