@@ -380,6 +380,10 @@ public class TestRegionServerMetrics {
       }
       metricsHelper.assertCounterGt("ScanNext_num_ops", numScanNext, serverSource);
     }
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
   }
 
   @Test
@@ -427,6 +431,10 @@ public class TestRegionServerMetrics {
         metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
       }
       metricsHelper.assertCounterGt("ScanNext_num_ops", numScanNext, serverSource);
+    }
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
     }
   }
 }
