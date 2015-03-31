@@ -2294,6 +2294,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               }
               region.updateReadRequestsCount(i);
               region.getMetrics().updateScanNext(totalCellSize);
+              if (regionServer.metricsRegionServer != null) {
+                regionServer.metricsRegionServer.updateScannerNext(totalCellSize);
+              }
             } finally {
               region.closeRegionOperation();
             }
