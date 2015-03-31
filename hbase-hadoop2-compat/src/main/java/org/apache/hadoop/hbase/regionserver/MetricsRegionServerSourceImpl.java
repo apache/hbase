@@ -42,6 +42,7 @@ public class MetricsRegionServerSourceImpl
   private final MetricHistogram incrementHisto;
   private final MetricHistogram appendHisto;
   private final MetricHistogram replayHisto;
+  private final MetricHistogram scanNextHisto;
 
   private final MutableCounterLong slowPut;
   private final MutableCounterLong slowDelete;
@@ -82,6 +83,7 @@ public class MetricsRegionServerSourceImpl
     slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0l);
     
     replayHisto = getMetricsRegistry().newHistogram(REPLAY_KEY);
+    scanNextHisto = getMetricsRegistry().newHistogram(SCAN_NEXT_KEY);
 
     splitTimeHisto = getMetricsRegistry().newHistogram(SPLIT_KEY);
     flushTimeHisto = getMetricsRegistry().newHistogram(FLUSH_KEY);
@@ -118,6 +120,11 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void updateReplay(long t) {
     replayHisto.add(t);
+  }
+
+  @Override
+  public void updateScannerNext(long scanSize) {
+    scanNextHisto.add(scanSize);
   }
 
   @Override

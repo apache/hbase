@@ -3311,6 +3311,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               }
               region.readRequestsCount.add(i);
               region.getMetrics().updateScanNext(totalKvSize);
+              if (metricsRegionServer != null) {
+                metricsRegionServer.updateScannerNext(totalKvSize);
+              }
             } finally {
               region.closeRegionOperation();
             }

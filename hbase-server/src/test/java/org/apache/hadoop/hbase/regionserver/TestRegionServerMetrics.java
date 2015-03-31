@@ -54,8 +54,9 @@ public class TestRegionServerMetrics {
   private static HBaseTestingUtility TEST_UTIL;
   private static MetricsRegionServer metricsRegionServer;
   private static MetricsRegionServerSource serverSource;
+  private static final int NUM_SCAN_NEXT = 30;
 
-  @BeforeClass
+  @BeforeClass  
   public static void startCluster() throws Exception {
     metricsHelper = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
     TEST_UTIL = new HBaseTestingUtility();
@@ -355,7 +356,6 @@ public class TestRegionServerMetrics {
     byte[] qualifier = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("One");
 
-
     TEST_UTIL.createTable(tableName, cf);
     HTable t = new HTable(conf, tableName);
     t.setAutoFlush(false, true);
@@ -371,11 +371,14 @@ public class TestRegionServerMetrics {
     s.setCaching(1);
     ResultScanner resultScanners = t.getScanner(s);
 
-    for (int nextCount = 0; nextCount < 30; nextCount++) {
+    long numScanNext = metricsHelper.getCounter("ScanNext_num_ops", serverSource);
+    for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
       Result result = resultScanners.next();
       assertNotNull(result);
       assertEquals(1, result.size());
     }
+    numScanNext += NUM_SCAN_NEXT;
+    metricsHelper.assertCounter("ScanNext_num_ops", numScanNext, serverSource);
     for ( HRegionInfo i:t.getRegionLocations().keySet()) {
       MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
           .getMetrics()
@@ -385,7 +388,59 @@ public class TestRegionServerMetrics {
           "_table_"+tableNameString +
           "_region_" + i.getEncodedName()+
           "_metric";
-      metricsHelper.assertCounter(prefix + "_scanNextNumOps", 30, agg);
+      metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
     }
+
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
+  }
+
+  @Test
+  public void testScanNextForSmallScan() throws IOException {
+    String tableNameString = "testScanNextSmall";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
+
+    TEST_UTIL.createTable(tableName, cf);
+    HTable t = new HTable(conf, tableName);
+    t.setAutoFlush(false, true);
+    for (int insertCount =0; insertCount < 100; insertCount++) {
+      Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
+      p.add(cf, qualifier, val);
+      t.put(p);
+    }
+    t.flushCommits();
+
+    Scan s = new Scan();
+    s.setSmall(true);
+    s.setCaching(1);
+    ResultScanner resultScanners = t.getScanner(s);
+
+    long numScanNext = metricsHelper.getCounter("ScanNext_num_ops", serverSource);
+    for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
+      Result result = resultScanners.next();
+      assertNotNull(result);
+      assertEquals(1, result.size());
+    }
+    numScanNext += NUM_SCAN_NEXT;
+    metricsHelper.assertCounter("ScanNext_num_ops", numScanNext, serverSource);
+    for ( HRegionInfo i:t.getRegionLocations().keySet()) {
+      MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+          .getMetrics()
+          .getSource()
+          .getAggregateSource();
+      String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+          "_table_"+tableNameString +
+          "_region_" + i.getEncodedName()+
+          "_metric";
+      metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
+    }
+
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
   }
 }

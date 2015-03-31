@@ -88,6 +88,13 @@ public interface MetricsRegionServerSource extends BaseSource {
   void updateReplay(long t);
 
   /**
+   * Update the scan size.
+   *
+   * @param scanSize size of the scan
+   */
+  void updateScannerNext(long scanSize);
+
+  /**
    * Increment the number of slow Puts that have happened.
    */
   void incrSlowPut();
