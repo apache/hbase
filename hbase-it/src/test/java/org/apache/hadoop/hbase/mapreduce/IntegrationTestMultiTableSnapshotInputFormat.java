@@ -7,6 +7,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Set;
 
@@ -47,6 +48,12 @@ public class IntegrationTestMultiTableSnapshotInputFormat extends IntegrationTes
   @Override
   protected Set<String> getColumnFamilies() {
     return null;
+  }
+
+  @Test
+  public void testMultipleSnapshotsMultipleScans() throws Exception {
+
+
   }
 
   public static void main(String[] args) throws Exception {

@@ -4,6 +4,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -16,6 +17,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import javax.annotation.Nullable;
@@ -30,6 +32,9 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
 
   @BeforeClass
   public static void setUpSnapshots() throws Exception {
+
+    TEST_UTIL.enableDebug(MultiTableSnapshotInputFormat.class);
+    TEST_UTIL.enableDebug(MultiTableSnapshotInputFormatImpl.class);
 
     // take a snapshot of every table we have.
     for (String tableName : TABLES) {
@@ -61,5 +66,19 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
 
   public static String snapshotNameForTable(String tableName) {
     return tableName + "_snapshot";
+  }
+
+  @Test
+  public void testSetInputPushesScans() throws Exception {
+
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+
+    MultiTableSnapshotInputFormatImpl.setInput(c, );
+
+  }
+
+  @Test
+  public void testSetInputPushesRestoreDirectories() throws Exception {
+
   }
 }

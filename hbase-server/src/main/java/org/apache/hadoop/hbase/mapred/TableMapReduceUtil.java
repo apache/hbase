@@ -140,10 +140,10 @@ public class TableMapReduceUtil {
                                                      Class<?> outputValueClass, JobConf job,
                                                      boolean addDependencyJars, Path tmpRestoreDir
   ) throws IOException {
-    MultiTableSnapshotInputFormatImpl.setInput(job, snapshotScans, tmpRestoreDir);
+    MultiTableSnapshotInputFormat.setInput(job, snapshotScans, tmpRestoreDir);
 
 
-    job.setInputFormat(org.apache.hadoop.hbase.mapred.MultiTableSnapshotInputFormat.class);
+    job.setInputFormat(MultiTableSnapshotInputFormat.class);
     if (outputValueClass != null) {
       job.setMapOutputValueClass(outputValueClass);
     }

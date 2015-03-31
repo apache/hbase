@@ -319,7 +319,7 @@ public class TableMapReduceUtil {
                                                      Class<?> outputValueClass, Job job,
                                                      boolean addDependencyJars, Path tmpRestoreDir
   ) throws IOException {
-    MultiTableSnapshotInputFormatImpl.setInput(job.getConfiguration(), snapshotScans, tmpRestoreDir);
+    MultiTableSnapshotInputFormat.setInput(job.getConfiguration(), snapshotScans, tmpRestoreDir);
 
     job.setInputFormatClass(MultiTableSnapshotInputFormat.class);
     if (outputValueClass != null) {

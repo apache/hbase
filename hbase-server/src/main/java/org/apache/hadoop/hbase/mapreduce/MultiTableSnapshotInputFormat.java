@@ -1,12 +1,17 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapreduce.*;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * MultiTableSnapshotInputFormat generalizes {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
@@ -60,5 +65,10 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat {
     }
 
     return rtn;
+  }
+
+
+  public static void setInput(Configuration configuration, Map<String, Collection<Scan>> snapshotScans, Path tmpRestoreDir) throws IOException {
+    MultiTableSnapshotInputFormatImpl.setInput(configuration, snapshotScans, tmpRestoreDir);
   }
 }

@@ -54,7 +54,6 @@ public abstract class MultiTableInputFormatTestBase {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // switch TIF to log at DEBUG level
-    TEST_UTIL.enableDebug(MultiTableInputFormat.class);
     TEST_UTIL.enableDebug(MultiTableInputFormatBase.class);
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
@@ -126,11 +125,11 @@ public abstract class MultiTableInputFormatTestBase {
 
     List<Scan> scans = new ArrayList<Scan>();
 
-    for(int i=0; i<3; i++){
+    for(String tableName : TABLES){
       Scan scan = new Scan();
 
       scan.addFamily(INPUT_FAMILY);
-      scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(TABLE_NAME + i));
+      scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName));
 
       if (start != null) {
         scan.setStartRow(Bytes.toBytes(start));

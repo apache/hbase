@@ -41,7 +41,6 @@ public class MultiTableSnapshotInputFormatImpl extends TableSnapshotInputFormatI
       SnapshotManifest manifest = TableSnapshotInputFormatImpl.getSnapshotManifest(conf, snapshotName, rootDir, fs);
       List<HRegionInfo> regionInfos = TableSnapshotInputFormatImpl.getRegionInfosFromManifest(manifest);
 
-      int i = 0;
       for (Scan scan : entry.getValue()) {
         List<TableSnapshotInputFormatImpl.InputSplit> splits = TableSnapshotInputFormatImpl.getSplits(
             scan,
@@ -52,7 +51,6 @@ public class MultiTableSnapshotInputFormatImpl extends TableSnapshotInputFormatI
         for (TableSnapshotInputFormatImpl.InputSplit split : splits) {
           rtn.add(split);
         }
-        i++;
       }
     }
     return rtn;
@@ -99,11 +97,15 @@ public class MultiTableSnapshotInputFormatImpl extends TableSnapshotInputFormatI
    * @throws IOException
    */
   public static void setInput(Configuration conf, Map<String, Collection<Scan>> snapshotScans, Path restoreDir) throws IOException {
-
-    conf.set(RESTORE_DIR_KEY, restoreDir.toString());
-
     Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
+
+    setInput(conf, snapshotScans, restoreDir, fs);
+  }
+
+  // package protected for testing (with potential injection of a mock FileSystem)
+  static void setInput(Configuration conf, Map<String, Collection<Scan>> snapshotScans, Path restoreDir, FileSystem fs) throws IOException {
+    conf.set(RESTORE_DIR_KEY, restoreDir.toString());
 
     Map<String, String> snapshotToRestoreDir = Maps.newHashMap();
 
@@ -125,13 +127,13 @@ public class MultiTableSnapshotInputFormatImpl extends TableSnapshotInputFormatI
       snapshotToRestoreDir.put(snapshotName, restoreSnapshotDir.toString());
 
       // TODO: restore from record readers to parallelize.
+      Path rootDir = FSUtils.getRootDir(conf);
       RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreSnapshotDir, snapshotName);
     }
 
     setKeyValues(conf, RESTORE_DIRS_KEY, snapshotToRestoreDir.entrySet());
     setKeyValues(conf, SNAPSHOT_TO_SCANS_KEY, snapshotToSerializedScans);
   }
-
 
 
   // TODO: these probably belong elsewhere/may already be implemented elsewhere.

@@ -59,6 +59,11 @@ import org.junit.experimental.categories.Category;
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestMultiTableInputFormat extends MultiTableInputFormatTestBase {
 
+  @BeforeClass
+  public static void setupLogging() {
+    TEST_UTIL.enableDebug(MultiTableInputFormat.class);
+  }
+
   @Override
   protected void initJob(List<Scan> scans, Job job) throws IOException {
     TableMapReduceUtil.initTableMapperJob(scans, ScanMapper.class,
