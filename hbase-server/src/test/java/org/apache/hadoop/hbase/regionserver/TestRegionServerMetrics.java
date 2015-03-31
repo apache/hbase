@@ -52,6 +52,8 @@ public class TestRegionServerMetrics {
   private static HBaseTestingUtility TEST_UTIL;
   private static MetricsRegionServer metricsRegionServer;
   private static MetricsRegionServerSource serverSource;
+  private static final int NUM_SCAN_NEXT = 30;
+  private static int numScanNext = 0;
 
   @BeforeClass
   public static void startCluster() throws Exception {
@@ -342,7 +344,6 @@ public class TestRegionServerMetrics {
     byte[] qualifier = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("One");
 
-
     List<Put> puts = new ArrayList<>();
     for (int insertCount =0; insertCount < 100; insertCount++) {
       Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
@@ -357,12 +358,13 @@ public class TestRegionServerMetrics {
       s.setCaching(1);
       ResultScanner resultScanners = t.getScanner(s);
 
-      for (int nextCount = 0; nextCount < 30; nextCount++) {
+      for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
         Result result = resultScanners.next();
         assertNotNull(result);
         assertEquals(1, result.size());
       }
     }
+    numScanNext += NUM_SCAN_NEXT;
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       for ( HRegionLocation location: locator.getAllRegionLocations()) {
         HRegionInfo i = location.getRegionInfo();
@@ -374,8 +376,57 @@ public class TestRegionServerMetrics {
             "_table_"+tableNameString +
             "_region_" + i.getEncodedName()+
             "_metric";
-        metricsHelper.assertCounter(prefix + "_scanNextNumOps", 30, agg);
+        metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
       }
+      metricsHelper.assertCounterGt("ScanNext_num_ops", numScanNext, serverSource);
+    }
+  }
+
+  @Test
+  public void testScanNextForSmallScan() throws IOException {
+    String tableNameString = "testScanNextSmall";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
+
+    List<Put> puts = new ArrayList<>();
+    for (int insertCount =0; insertCount < 100; insertCount++) {
+      Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
+      p.add(cf, qualifier, val);
+      puts.add(p);
+    }
+    try (HTable t = TEST_UTIL.createTable(tableName, cf)) {
+      t.put(puts);
+
+      Scan s = new Scan();
+      s.setSmall(true);
+      s.setCaching(1);
+      ResultScanner resultScanners = t.getScanner(s);
+
+      for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
+        Result result = resultScanners.next();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+      }
+    }
+    numScanNext += NUM_SCAN_NEXT;
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      int cnt = 0;
+      for (HRegionLocation location: locator.getAllRegionLocations()) {
+        cnt++;
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+            .getMetrics()
+            .getSource()
+            .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+            "_table_"+tableNameString +
+            "_region_" + i.getEncodedName()+
+            "_metric";
+        metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
+      }
+      metricsHelper.assertCounterGt("ScanNext_num_ops", numScanNext, serverSource);
     }
   }
 }
