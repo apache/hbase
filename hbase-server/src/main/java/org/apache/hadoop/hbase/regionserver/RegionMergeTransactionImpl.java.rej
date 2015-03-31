@@ -1,0 +1,10 @@
+--- hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/RegionMergeTransactionImpl.java
++++ hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/RegionMergeTransactionImpl.java
+@@ -41,6 +41,7 @@
+ import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+ import org.apache.hadoop.hbase.coordination.RegionMergeCoordination.RegionMergeDetails;
+ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
++import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl.JournalEntryImpl;
+ import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl.LoggingProgressable;
+ import org.apache.hadoop.hbase.util.Bytes;
+ import org.apache.hadoop.hbase.util.ConfigUtil;

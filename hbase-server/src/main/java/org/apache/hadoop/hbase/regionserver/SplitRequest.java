@@ -64,7 +64,7 @@ class SplitRequest implements Runnable {
     boolean success = false;
     server.metricsRegionServer.incrSplitRequest();
     long startTime = EnvironmentEdgeManager.currentTime();
-    SplitTransaction st = new SplitTransaction(parent, midKey);
+    SplitTransactionImpl st = new SplitTransactionImpl(parent, midKey);
     try {
       //acquire a shared read lock on the table, so that table schema modifications
       //do not happen concurrently

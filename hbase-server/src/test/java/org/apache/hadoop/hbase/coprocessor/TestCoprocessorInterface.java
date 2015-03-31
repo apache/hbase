@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
+import org.apache.hadoop.hbase.regionserver.SplitTransactionFactory;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -500,7 +501,8 @@ public class TestCoprocessorInterface {
   private Region [] split(final Region r, final byte [] splitRow) throws IOException {
     Region[] regions = new Region[2];
 
-    SplitTransaction st = new SplitTransaction(r, splitRow);
+    SplitTransaction st = new SplitTransactionFactory(TEST_UTIL.getConfiguration())
+      .create(r, splitRow);
     int i = 0;
 
     if (!st.prepare()) {
@@ -509,8 +511,7 @@ public class TestCoprocessorInterface {
     }
     try {
       Server mockServer = Mockito.mock(Server.class);
-      when(mockServer.getConfiguration()).thenReturn(
-          TEST_UTIL.getConfiguration());
+      when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
       PairOfSameType<Region> daughters = st.execute(mockServer, null);
       for (Region each_daughter: daughters) {
         regions[i] = each_daughter;

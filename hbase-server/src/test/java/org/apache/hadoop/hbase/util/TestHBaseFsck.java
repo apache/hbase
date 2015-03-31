@@ -100,7 +100,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.SplitTransaction;
+import org.apache.hadoop.hbase.regionserver.SplitTransactionFactory;
+import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl;
 import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -1251,7 +1252,9 @@ public class TestHBaseFsck {
       int serverWith = cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(serverWith);
       cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
-      SplitTransaction st = new SplitTransaction(regions.get(0), Bytes.toBytes("r3"));
+      SplitTransactionImpl st = (SplitTransactionImpl)
+        new SplitTransactionFactory(TEST_UTIL.getConfiguration())
+          .create(regions.get(0), Bytes.toBytes("r3"));
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
       AssignmentManager am = cluster.getMaster().getAssignmentManager();

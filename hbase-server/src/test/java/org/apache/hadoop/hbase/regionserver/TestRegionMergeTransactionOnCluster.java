@@ -81,7 +81,7 @@ import com.google.protobuf.ServiceException;
 
 /**
  * Like {@link TestRegionMergeTransaction} in that we're testing
- * {@link RegionMergeTransaction} only the below tests are against a running
+ * {@link RegionMergeTransactionImpl} only the below tests are against a running
  * cluster where {@link TestRegionMergeTransaction} is tests against bare
  * {@link HRegion}.
  */

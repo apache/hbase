@@ -6239,7 +6239,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       b.getRegionFileSystem().logFileSystemState(LOG);
     }
 
-    RegionMergeTransaction rmt = new RegionMergeTransaction(a, b, true);
+    RegionMergeTransactionImpl rmt = new RegionMergeTransactionImpl(a, b, true);
     if (!rmt.prepare(null)) {
       throw new IOException("Unable to merge regions " + a + " and " + b);
     }
@@ -6252,7 +6252,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         + Bytes.toStringBinary(mergedRegionInfo.getEndKey()) + ">");
     HRegion dstRegion;
     try {
-      dstRegion = rmt.execute(null, null);
+      dstRegion = (HRegion)rmt.execute(null, null);
     } catch (IOException ioe) {
       rmt.rollback(null, null);
       throw new IOException("Failed merging region " + a + " and " + b

@@ -106,7 +106,7 @@ public class TestEndToEndSplitTransaction {
       byte[] regionName = conn.getRegionLocator(tableName).getRegionLocation(splitRow)
           .getRegionInfo().getRegionName();
       Region region = server.getRegion(regionName);
-      SplitTransaction split = new SplitTransaction(region, splitRow);
+      SplitTransactionImpl split = new SplitTransactionImpl((HRegion) region, splitRow);
       split.prepare();
 
       // 1. phase I

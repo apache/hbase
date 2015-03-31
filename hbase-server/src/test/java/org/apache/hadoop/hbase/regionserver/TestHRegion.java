@@ -2490,7 +2490,7 @@ public class TestHRegion {
    */
   HRegion[] splitRegion(final HRegion parent, final byte[] midkey) throws IOException {
     PairOfSameType<Region> result = null;
-    SplitTransaction st = new SplitTransaction(parent, midkey);
+    SplitTransactionImpl st = new SplitTransactionImpl(parent, midkey);
     // If prepare does not return true, for some reason -- logged inside in
     // the prepare call -- we are not ready to split just now. Just return.
     if (!st.prepare()) {

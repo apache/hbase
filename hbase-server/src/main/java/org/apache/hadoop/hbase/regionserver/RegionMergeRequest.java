@@ -65,7 +65,7 @@ class RegionMergeRequest implements Runnable {
     }
     try {
       final long startTime = EnvironmentEdgeManager.currentTime();
-      RegionMergeTransaction mt = new RegionMergeTransaction(region_a,
+      RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(region_a,
           region_b, forcible);
 
       //acquire a shared read lock on the table, so that table schema modifications
