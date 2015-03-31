@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
+import org.apache.hadoop.hbase.regionserver.RegionMergeTransactionImpl;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -243,7 +243,7 @@ public class TestMasterFailover {
     assertEquals(2, mergingRegions.size());
     HRegionInfo a = mergingRegions.get(0);
     HRegionInfo b = mergingRegions.get(1);
-    HRegionInfo newRegion = RegionMergeTransaction.getMergedRegionInfo(a, b);
+    HRegionInfo newRegion = RegionMergeTransactionImpl.getMergedRegionInfo(a, b);
     ServerName mergingServer = regionStates.getRegionServerOfRegion(a);
     ServerName serverB = regionStates.getRegionServerOfRegion(b);
     if (!serverB.equals(mergingServer)) {

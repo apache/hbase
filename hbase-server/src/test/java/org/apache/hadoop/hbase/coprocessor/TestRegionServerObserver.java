@@ -42,7 +42,8 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
+import org.apache.hadoop.hbase.regionserver.RegionMergeTransactionFactory;
+import org.apache.hadoop.hbase.regionserver.RegionMergeTransactionImpl;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -110,7 +111,7 @@ public class TestRegionServerObserver {
   }
 
   public static class CPRegionServerObserver extends BaseRegionServerObserver {
-    private RegionMergeTransaction rmt = null;
+    private RegionMergeTransactionImpl rmt = null;
     private HRegion mergedRegion = null;
 
     private boolean preMergeCalled;
@@ -143,7 +144,8 @@ public class TestRegionServerObserver {
       HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
       List<Region> onlineRegions =
           rs.getOnlineRegions(TableName.valueOf("testRegionServerObserver_2"));
-      rmt = new RegionMergeTransaction(onlineRegions.get(0), onlineRegions.get(1), true);
+      rmt = (RegionMergeTransactionImpl) new RegionMergeTransactionFactory(rs.getConfiguration())
+        .create(onlineRegions.get(0), onlineRegions.get(1), true);
       if (!rmt.prepare(rs)) {
         LOG.error("Prepare for the region merge of table "
             + onlineRegions.get(0).getTableDesc().getNameAsString()

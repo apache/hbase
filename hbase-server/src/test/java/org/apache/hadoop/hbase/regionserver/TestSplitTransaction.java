@@ -66,7 +66,7 @@ import org.mockito.Mockito;
 import com.google.common.collect.ImmutableList;
 
 /**
- * Test the {@link SplitTransaction} class against an HRegion (as opposed to
+ * Test the {@link SplitTransactionImpl} class against an HRegion (as opposed to
  * running cluster).
  */
 @Category(SmallTests.class)
@@ -119,8 +119,8 @@ public class TestSplitTransaction {
     assertEquals(rowcount, parentRowCount);
 
     // Start transaction.
-    SplitTransaction st = prepareGOOD_SPLIT_ROW();
-    SplitTransaction spiedUponSt = spy(st);
+    SplitTransactionImpl st = prepareGOOD_SPLIT_ROW();
+    SplitTransactionImpl spiedUponSt = spy(st);
     Mockito
         .doThrow(new MockedFailedDaughterOpen())
         .when(spiedUponSt)
@@ -160,12 +160,13 @@ public class TestSplitTransaction {
     prepareGOOD_SPLIT_ROW();
   }
 
-  private SplitTransaction prepareGOOD_SPLIT_ROW() {
+  private SplitTransactionImpl prepareGOOD_SPLIT_ROW() throws IOException {
     return prepareGOOD_SPLIT_ROW(this.parent);
   }
 
-  private SplitTransaction prepareGOOD_SPLIT_ROW(final HRegion parentRegion) {
-    SplitTransaction st = new SplitTransaction(parentRegion, GOOD_SPLIT_ROW);
+  private SplitTransactionImpl prepareGOOD_SPLIT_ROW(final HRegion parentRegion)
+      throws IOException {
+    SplitTransactionImpl st = new SplitTransactionImpl(parentRegion, GOOD_SPLIT_ROW);
     assertTrue(st.prepare());
     return st;
   }
@@ -180,7 +181,7 @@ public class TestSplitTransaction {
     when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
     this.parent.stores.put(Bytes.toBytes(""), storeMock);
 
-    SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
+    SplitTransactionImpl st = new SplitTransactionImpl(this.parent, GOOD_SPLIT_ROW);
 
     assertFalse("a region should not be splittable if it has instances of store file references",
                 st.prepare());
@@ -191,19 +192,19 @@ public class TestSplitTransaction {
    */
   @Test public void testPrepareWithBadSplitRow() throws IOException {
     // Pass start row as split key.
-    SplitTransaction st = new SplitTransaction(this.parent, STARTROW);
+    SplitTransactionImpl st = new SplitTransactionImpl(this.parent, STARTROW);
     assertFalse(st.prepare());
-    st = new SplitTransaction(this.parent, HConstants.EMPTY_BYTE_ARRAY);
+    st = new SplitTransactionImpl(this.parent, HConstants.EMPTY_BYTE_ARRAY);
     assertFalse(st.prepare());
-    st = new SplitTransaction(this.parent, new byte [] {'A', 'A', 'A'});
+    st = new SplitTransactionImpl(this.parent, new byte [] {'A', 'A', 'A'});
     assertFalse(st.prepare());
-    st = new SplitTransaction(this.parent, ENDROW);
+    st = new SplitTransactionImpl(this.parent, ENDROW);
     assertFalse(st.prepare());
   }
 
   @Test public void testPrepareWithClosedRegion() throws IOException {
     this.parent.close();
-    SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
+    SplitTransactionImpl st = new SplitTransactionImpl(this.parent, GOOD_SPLIT_ROW);
     assertFalse(st.prepare());
   }
 
@@ -219,7 +220,7 @@ public class TestSplitTransaction {
     ((LruBlockCache) cacheConf.getBlockCache()).clearCache();
 
     // Start transaction.
-    SplitTransaction st = prepareGOOD_SPLIT_ROW();
+    SplitTransactionImpl st = prepareGOOD_SPLIT_ROW();
 
     // Run the execute.  Look at what it returns.
     Server mockServer = Mockito.mock(Server.class);
@@ -265,8 +266,8 @@ public class TestSplitTransaction {
 
     // Start transaction.
     HRegion spiedRegion = spy(this.parent);
-    SplitTransaction st = prepareGOOD_SPLIT_ROW(spiedRegion);
-    SplitTransaction spiedUponSt = spy(st);
+    SplitTransactionImpl st = prepareGOOD_SPLIT_ROW(spiedRegion);
+    SplitTransactionImpl spiedUponSt = spy(st);
     doThrow(new IOException("Failing split. Expected reference file count isn't equal."))
         .when(spiedUponSt).assertReferenceFileCount(anyInt(),
         eq(new Path(this.parent.getRegionFileSystem().getTableDir(),
@@ -293,8 +294,8 @@ public class TestSplitTransaction {
 
     // Start transaction.
     HRegion spiedRegion = spy(this.parent);
-    SplitTransaction st = prepareGOOD_SPLIT_ROW(spiedRegion);
-    SplitTransaction spiedUponSt = spy(st);
+    SplitTransactionImpl st = prepareGOOD_SPLIT_ROW(spiedRegion);
+    SplitTransactionImpl spiedUponSt = spy(st);
     doNothing().when(spiedUponSt).assertReferenceFileCount(anyInt(),
         eq(parent.getRegionFileSystem().getSplitsDir(st.getFirstDaughter())));
     when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter())).
