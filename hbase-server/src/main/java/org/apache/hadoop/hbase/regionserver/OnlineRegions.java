@@ -22,46 +22,49 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 
 /**
  * Interface to Map of online regions.  In the  Map, the key is the region's
- * encoded name and the value is an {@link HRegion} instance.
+ * encoded name and the value is an {@link Region} instance.
  */
-@InterfaceAudience.Private
-interface OnlineRegions extends Server {
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
+public interface OnlineRegions extends Server {
   /**
    * Add to online regions.
    * @param r
    */
-  void addToOnlineRegions(final HRegion r);
+  void addToOnlineRegions(final Region r);
 
   /**
-   * This method removes HRegion corresponding to hri from the Map of onlineRegions.
+   * This method removes Region corresponding to hri from the Map of onlineRegions.
    *
    * @param r Region to remove.
    * @param destination Destination, if any, null otherwise.
    * @return True if we removed a region from online list.
    */
-  boolean removeFromOnlineRegions(final HRegion r, ServerName destination);
+  boolean removeFromOnlineRegions(final Region r, ServerName destination);
 
   /**
-   * Return {@link HRegion} instance.
-   * Only works if caller is in same context, in same JVM. HRegion is not
+   * Return {@link Region} instance.
+   * Only works if caller is in same context, in same JVM. Region is not
    * serializable.
    * @param encodedRegionName
-   * @return HRegion for the passed encoded <code>encodedRegionName</code> or
+   * @return Region for the passed encoded <code>encodedRegionName</code> or
    * null if named region is not member of the online regions.
    */
-  HRegion getFromOnlineRegions(String encodedRegionName);
+  Region getFromOnlineRegions(String encodedRegionName);
 
    /**
     * Get all online regions of a table in this RS.
     * @param tableName
-    * @return List of HRegion
+    * @return List of Region
     * @throws java.io.IOException
     */
-   List<HRegion> getOnlineRegions(TableName tableName) throws IOException;
+   List<Region> getOnlineRegions(TableName tableName) throws IOException;
 }

@@ -76,7 +76,7 @@ public class TestScanWithBloomError {
   private static final String QUALIFIER_PREFIX = "qual";
   private static final byte[] ROW_BYTES = Bytes.toBytes(ROW);
   private static NavigableSet<Integer> allColIds = new TreeSet<Integer>();
-  private HRegion region;
+  private Region region;
   private BloomType bloomType;
   private FileSystem fs;
   private Configuration conf;
@@ -210,7 +210,7 @@ public class TestScanWithBloomError {
       p.add(kv);
     }
     region.put(p);
-    region.flushcache();
+    region.flush(true);
   }
 
 

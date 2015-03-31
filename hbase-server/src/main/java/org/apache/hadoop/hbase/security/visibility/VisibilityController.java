@@ -90,10 +90,10 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -513,7 +513,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     if (!initialized) {
       throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized!");
     }
-    HRegion region = e.getEnvironment().getRegion();
+    Region region = e.getEnvironment().getRegion();
     Authorizations authorizations = null;
     try {
       authorizations = scan.getAuthorizations();
@@ -547,7 +547,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   public DeleteTracker postInstantiateDeleteTracker(
       ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
       throws IOException {
-    HRegion region = ctx.getEnvironment().getRegion();
+    Region region = ctx.getEnvironment().getRegion();
     TableName table = region.getRegionInfo().getTable();
     if (table.isSystemTable()) {
       return delTracker;
@@ -611,7 +611,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     if (!initialized) {
       throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized!");
     }
-    HRegion region = e.getEnvironment().getRegion();
+    Region region = e.getEnvironment().getRegion();
     Authorizations authorizations = null;
     try {
       authorizations = get.getAuthorizations();

@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager.SnapshotSubprocedurePool;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 
@@ -45,14 +47,14 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 public class FlushSnapshotSubprocedure extends Subprocedure {
   private static final Log LOG = LogFactory.getLog(FlushSnapshotSubprocedure.class);
 
-  private final List<HRegion> regions;
+  private final List<Region> regions;
   private final SnapshotDescription snapshot;
   private final SnapshotSubprocedurePool taskManager;
   private boolean snapshotSkipFlush = false;
 
   public FlushSnapshotSubprocedure(ProcedureMember member,
       ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
-      List<HRegion> regions, SnapshotDescription snapshot,
+      List<Region> regions, SnapshotDescription snapshot,
       SnapshotSubprocedurePool taskManager) {
     super(member, snapshot.getName(), errorListener, wakeFrequency, timeout);
     this.snapshot = snapshot;
@@ -68,8 +70,8 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
    * Callable for adding files to snapshot manifest working dir.  Ready for multithreading.
    */
   private class RegionSnapshotTask implements Callable<Void> {
-    HRegion region;
-    RegionSnapshotTask(HRegion region) {
+    Region region;
+    RegionSnapshotTask(Region region) {
       this.region = region;
     }
 
@@ -94,9 +96,9 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
           LOG.debug("take snapshot without flush memstore first");
         } else {
           LOG.debug("Flush Snapshotting region " + region.toString() + " started...");
-          region.flushcache();
+          region.flush(true);
         }
-        region.addRegionToSnapshot(snapshot, monitor);
+        ((HRegion)region).addRegionToSnapshot(snapshot, monitor);
         if (snapshotSkipFlush) {
           LOG.debug("... SkipFlush Snapshotting region " + region.toString() + " completed.");
         } else {
@@ -126,7 +128,7 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
     }
 
     // Add all hfiles already existing in region.
-    for (HRegion region : regions) {
+    for (Region region : regions) {
       // submit one task per region for parallelize by region.
       taskManager.submitTask(new RegionSnapshotTask(region));
       monitor.rethrowException();

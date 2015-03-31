@@ -78,7 +78,7 @@ public class TestMajorCompaction {
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
   
-  private HRegion r = null;
+  private Region r = null;
   private HTableDescriptor htd = null;
   private static final byte [] COLUMN_FAMILY = fam1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
@@ -111,8 +111,8 @@ public class TestMajorCompaction {
 
   @After
   public void tearDown() throws Exception {
-    WAL wal = r.getWAL();
-    this.r.close();
+    WAL wal = ((HRegion)r).getWAL();
+    ((HRegion)r).close();
     wal.close();
   }
 
@@ -138,9 +138,9 @@ public class TestMajorCompaction {
     } while(true);
     s.close();
     // Flush
-    r.flushcache();
+    r.flush(true);
     // Major compact.
-    r.compactStores(true);
+    r.compact(true);
     s = r.getScanner(new Scan());
     int counter = 0;
     do {
@@ -174,24 +174,22 @@ public class TestMajorCompaction {
 
   public void majorCompactionWithDataBlockEncoding(boolean inCacheOnly)
       throws Exception {
-    Map<HStore, HFileDataBlockEncoder> replaceBlockCache =
-        new HashMap<HStore, HFileDataBlockEncoder>();
-    for (Entry<byte[], Store> pair : r.getStores().entrySet()) {
-      HStore store = (HStore) pair.getValue();
+    Map<Store, HFileDataBlockEncoder> replaceBlockCache =
+        new HashMap<Store, HFileDataBlockEncoder>();
+    for (Store store : r.getStores()) {
       HFileDataBlockEncoder blockEncoder = store.getDataBlockEncoder();
       replaceBlockCache.put(store, blockEncoder);
       final DataBlockEncoding inCache = DataBlockEncoding.PREFIX;
       final DataBlockEncoding onDisk = inCacheOnly ? DataBlockEncoding.NONE :
           inCache;
-      store.setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(onDisk));
+      ((HStore)store).setDataBlockEncoderInTest(new HFileDataBlockEncoderImpl(onDisk));
     }
 
     majorCompaction();
 
     // restore settings
-    for (Entry<HStore, HFileDataBlockEncoder> entry :
-        replaceBlockCache.entrySet()) {
-      entry.getKey().setDataBlockEncoderInTest(entry.getValue());
+    for (Entry<Store, HFileDataBlockEncoder> entry : replaceBlockCache.entrySet()) {
+      ((HStore)entry.getKey()).setDataBlockEncoderInTest(entry.getValue());
     }
   }
 
@@ -211,16 +209,16 @@ public class TestMajorCompaction {
     assertEquals(compactionThreshold, result.size());
 
     // see if CompactionProgress is in place but null
-    for (Store store : this.r.stores.values()) {
+    for (Store store : r.getStores()) {
       assertNull(store.getCompactionProgress());
     }
 
-    r.flushcache();
-    r.compactStores(true);
+    r.flush(true);
+    r.compact(true);
 
     // see if CompactionProgress has done its thing on at least one store
     int storeCount = 0;
-    for (Store store : this.r.stores.values()) {
+    for (Store store : r.getStores()) {
       CompactionProgress progress = store.getCompactionProgress();
       if( progress != null ) {
         ++storeCount;
@@ -259,20 +257,20 @@ public class TestMajorCompaction {
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
     assertTrue("Second row should have been deleted", result.isEmpty());
 
-    r.flushcache();
+    r.flush(true);
 
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
     assertTrue("Second row should have been deleted", result.isEmpty());
 
     // Add a bit of data and flush.  Start adding at 'bbb'.
     createSmallerStoreFile(this.r);
-    r.flushcache();
+    r.flush(true);
     // Assert that the second row is still deleted.
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
     assertTrue("Second row should still be deleted", result.isEmpty());
 
     // Force major compaction.
-    r.compactStores(true);
+    r.compact(true);
     assertEquals(r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size(), 1);
 
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).setMaxVersions(100));
@@ -286,7 +284,7 @@ public class TestMajorCompaction {
     // Multiple versions allowed for an entry, so the delete isn't enough
     // Lower TTL and expire to ensure that all our entries have been wiped
     final int ttl = 1000;
-    for (Store hstore : this.r.stores.values()) {
+    for (Store hstore : r.getStores()) {
       HStore store = ((HStore) hstore);
       ScanInfo old = store.getScanInfo();
       ScanInfo si = new ScanInfo(old.getFamily(),
@@ -296,7 +294,7 @@ public class TestMajorCompaction {
     }
     Thread.sleep(1000);
 
-    r.compactStores(true);
+    r.compact(true);
     int count = count();
     assertEquals("Should not see anything after TTL has expired", 0, count);
   }
@@ -314,11 +312,11 @@ public class TestMajorCompaction {
     try {
       createStoreFile(r);
       createStoreFile(r);
-      r.compactStores(true);
+      r.compact(true);
 
       // add one more file & verify that a regular compaction won't work
       createStoreFile(r);
-      r.compactStores(false);
+      r.compact(false);
       assertEquals(2, s.getStorefilesCount());
 
       // ensure that major compaction time is deterministic
@@ -338,7 +336,7 @@ public class TestMajorCompaction {
       Thread.sleep(mcTime);
 
       // trigger a compaction request and ensure that it's upgraded to major
-      r.compactStores(false);
+      r.compact(false);
       assertEquals(1, s.getStorefilesCount());
     } finally {
       // reset the timed compaction settings
@@ -346,7 +344,7 @@ public class TestMajorCompaction {
       conf.setFloat("hbase.hregion.majorcompaction.jitter", 0.20F);
       // run a major to reset the cache
       createStoreFile(r);
-      r.compactStores(true);
+      r.compact(true);
       assertEquals(1, s.getStorefilesCount());
     }
   }
@@ -354,7 +352,7 @@ public class TestMajorCompaction {
   private void verifyCounts(int countRow1, int countRow2) throws Exception {
     int count1 = 0;
     int count2 = 0;
-    for (StoreFile f: this.r.stores.get(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (StoreFile f: r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       scanner.seekTo();
       do {
@@ -373,8 +371,7 @@ public class TestMajorCompaction {
 
   private int count() throws IOException {
     int count = 0;
-    for (StoreFile f: this.r.stores.
-        get(COLUMN_FAMILY_TEXT).getStorefiles()) {
+    for (StoreFile f: r.getStore(COLUMN_FAMILY_TEXT).getStorefiles()) {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       if (!scanner.seekTo()) {
         continue;
@@ -386,17 +383,17 @@ public class TestMajorCompaction {
     return count;
   }
 
-  private void createStoreFile(final HRegion region) throws IOException {
+  private void createStoreFile(final Region region) throws IOException {
     createStoreFile(region, Bytes.toString(COLUMN_FAMILY));
   }
 
-  private void createStoreFile(final HRegion region, String family) throws IOException {
+  private void createStoreFile(final Region region, String family) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
     HBaseTestCase.addContent(loader, family);
     loader.flushcache();
   }
 
-  private void createSmallerStoreFile(final HRegion region) throws IOException {
+  private void createSmallerStoreFile(final Region region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
     HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
         "bbb").getBytes(), null);
@@ -466,9 +463,9 @@ public class TestMajorCompaction {
     } while (true);
     s.close();
     // Flush
-    r.flushcache();
+    r.flush(true);
     // Major compact.
-    r.compactStores(true);
+    r.compact(true);
     scan = new Scan();
     scan.setReversed(true);
     s = r.getScanner(scan);

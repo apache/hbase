@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.procedure.RegionServerProcedureManager;
 import org.apache.hadoop.hbase.procedure.Subprocedure;
 import org.apache.hadoop.hbase.procedure.SubprocedureFactory;
 import org.apache.hadoop.hbase.procedure.ZKProcedureMemberRpcs;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -137,7 +137,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     }
 
     // check to see if this server is hosting any regions for the table
-    List<HRegion> involvedRegions;
+    List<Region> involvedRegions;
     try {
       involvedRegions = getRegionsToFlush(table);
     } catch (IOException e1) {
@@ -172,7 +172,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * @return the list of online regions. Empty list is returned if no regions.
    * @throws IOException
    */
-  private List<HRegion> getRegionsToFlush(String table) throws IOException {
+  private List<Region> getRegionsToFlush(String table) throws IOException {
     return rss.getOnlineRegions(TableName.valueOf(table));
   }
 

@@ -225,7 +225,7 @@ public class TestSplitTransaction {
     // Run the execute.  Look at what it returns.
     Server mockServer = Mockito.mock(Server.class);
     when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
-    PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
+    PairOfSameType<Region> daughters = st.execute(mockServer, null);
     // Do some assertions about execution.
     assertTrue(this.fs.exists(this.parent.getRegionFileSystem().getSplitsDir()));
     // Assert the parent region is closed.
@@ -235,13 +235,15 @@ public class TestSplitTransaction {
     // to be under the daughter region dirs.
     assertEquals(0, this.fs.listStatus(this.parent.getRegionFileSystem().getSplitsDir()).length);
     // Check daughters have correct key span.
-    assertTrue(Bytes.equals(this.parent.getStartKey(), daughters.getFirst().getStartKey()));
-    assertTrue(Bytes.equals(GOOD_SPLIT_ROW, daughters.getFirst().getEndKey()));
-    assertTrue(Bytes.equals(daughters.getSecond().getStartKey(), GOOD_SPLIT_ROW));
-    assertTrue(Bytes.equals(this.parent.getEndKey(), daughters.getSecond().getEndKey()));
+    assertTrue(Bytes.equals(parent.getRegionInfo().getStartKey(),
+      daughters.getFirst().getRegionInfo().getStartKey()));
+    assertTrue(Bytes.equals(GOOD_SPLIT_ROW, daughters.getFirst().getRegionInfo().getEndKey()));
+    assertTrue(Bytes.equals(daughters.getSecond().getRegionInfo().getStartKey(), GOOD_SPLIT_ROW));
+    assertTrue(Bytes.equals(parent.getRegionInfo().getEndKey(),
+      daughters.getSecond().getRegionInfo().getEndKey()));
     // Count rows. daughters are already open
     int daughtersRowCount = 0;
-    for (HRegion openRegion: daughters) {
+    for (Region openRegion: daughters) {
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -322,10 +324,10 @@ public class TestSplitTransaction {
 
     // Now retry the split but do not throw an exception this time.
     assertTrue(st.prepare());
-    PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
+    PairOfSameType<Region> daughters = st.execute(mockServer, null);
     // Count rows. daughters are already open
     int daughtersRowCount = 0;
-    for (HRegion openRegion: daughters) {
+    for (Region openRegion: daughters) {
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -351,7 +353,7 @@ public class TestSplitTransaction {
   private class MockedFailedDaughterCreation extends IOException {}
   private class MockedFailedDaughterOpen extends IOException {}
 
-  private int countRows(final HRegion r) throws IOException {
+  private int countRows(final Region r) throws IOException {
     int rowcount = 0;
     InternalScanner scanner = r.getScanner(new Scan());
     try {

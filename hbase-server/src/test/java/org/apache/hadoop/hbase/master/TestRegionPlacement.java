@@ -55,8 +55,8 @@ import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -189,10 +189,10 @@ public class TestRegionPlacement {
       // kill a random non-meta server carrying at least one region
       killIndex = random.nextInt(SLAVES);
       serverToKill = TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getServerName();
-      Collection<HRegion> regs =
+      Collection<Region> regs =
           TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getOnlineRegionsLocalContext();
       isNamespaceServer = false;
-      for (HRegion r : regs) {
+      for (Region r : regs) {
         if (r.getRegionInfo().getTable().getNamespaceAsString()
             .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
           isNamespaceServer = true;
@@ -416,8 +416,7 @@ public class TestRegionPlacement {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     for (int i = 0; i < SLAVES; i++) {
       HRegionServer rs = cluster.getRegionServer(i);
-      for (HRegion region: rs.getOnlineRegions(
-          TableName.valueOf("testRegionAssignment"))) {
+      for (Region region: rs.getOnlineRegions(TableName.valueOf("testRegionAssignment"))) {
         InetSocketAddress[] favoredSocketAddress = rs.getFavoredNodesForRegion(
             region.getRegionInfo().getEncodedName());
         List<ServerName> favoredServerList = plan.getAssignmentMap().get(region.getRegionInfo());
@@ -446,7 +445,7 @@ public class TestRegionPlacement {
             assertNotNull(addrFromPlan);
             assertTrue("Region server " + rs.getServerName().getHostAndPort()
                 + " has the " + positions[j] +
-                " for region " + region.getRegionNameAsString() + " is " +
+                " for region " + region.getRegionInfo().getRegionNameAsString() + " is " +
                 addrFromRS + " which is inconsistent with the plan "
                 + addrFromPlan, addrFromRS.equals(addrFromPlan));
           }

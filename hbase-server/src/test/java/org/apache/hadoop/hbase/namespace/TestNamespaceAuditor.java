@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -281,7 +282,7 @@ public class TestNamespaceAuditor {
 
     @Override
     public synchronized void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-        HRegion regionA, HRegion regionB) throws IOException {
+        Region regionA, Region regionB) throws IOException {
       triggered = true;
       notifyAll();
       if (shouldFailMerge) {
@@ -458,7 +459,8 @@ public class TestNamespaceAuditor {
     observer = (CustomObserver) actualRegion.getCoprocessorHost().findCoprocessor(
       CustomObserver.class.getName());
     assertNotNull(observer);
-    ADMIN.split(tableOne, getSplitKey(actualRegion.getStartKey(), actualRegion.getEndKey()));
+    ADMIN.split(tableOne, getSplitKey(actualRegion.getRegionInfo().getStartKey(),
+      actualRegion.getRegionInfo().getEndKey()));
     observer.postSplit.await();
     // Make sure no regions have been added.
     List<HRegionInfo> hris = ADMIN.getTableRegions(tableOne);

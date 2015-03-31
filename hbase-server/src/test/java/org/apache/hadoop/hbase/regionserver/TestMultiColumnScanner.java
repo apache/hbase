@@ -146,7 +146,7 @@ public class TestMultiColumnScanner {
 
   @Test
   public void testMultiColumnScanner() throws IOException {
-    HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
+    Region region = TEST_UTIL.createTestRegion(TABLE_NAME,
         new HColumnDescriptor(FAMILY)
             .setCompressionType(comprAlgo)
             .setBloomFilterType(bloomType)
@@ -221,7 +221,7 @@ public class TestMultiColumnScanner {
             region.delete(d);
         }
       }
-      region.flushcache();
+      region.flush(true);
     }
 
     Collections.sort(kvs, KeyValue.COMPARATOR);

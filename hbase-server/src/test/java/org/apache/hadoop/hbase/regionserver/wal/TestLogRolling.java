@@ -53,8 +53,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
@@ -223,11 +223,8 @@ public class TestLogRolling  {
         " log files");
 
       // flush all regions
-
-      List<HRegion> regions =
-        new ArrayList<HRegion>(server.getOnlineRegionsLocalContext());
-      for (HRegion r: regions) {
-        r.flushcache();
+      for (Region r: server.getOnlineRegionsLocalContext()) {
+        r.flush(true);
       }
 
       // Now roll the log
@@ -530,9 +527,8 @@ public class TestLogRolling  {
       assertTrue(loggedRows.contains("row1005"));
 
       // flush all regions
-      List<HRegion> regions = new ArrayList<HRegion>(server.getOnlineRegionsLocalContext());
-      for (HRegion r: regions) {
-        r.flushcache();
+      for (Region r: server.getOnlineRegionsLocalContext()) {
+        r.flush(true);
       }
 
       ResultScanner scanner = table.getScanner(new Scan());
@@ -574,7 +570,7 @@ public class TestLogRolling  {
 
       server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
       final WAL log = server.getWAL(null);
-      HRegion region = server.getOnlineRegions(table2.getName()).get(0);
+      Region region = server.getOnlineRegions(table2.getName()).get(0);
       Store s = region.getStore(HConstants.CATALOG_FAMILY);
 
       //have to flush namespace to ensure it doesn't affect wall tests
@@ -595,7 +591,7 @@ public class TestLogRolling  {
       assertEquals("Should have WAL; one table is not flushed", 1,
           DefaultWALProvider.getNumRolledLogFiles(log));
       admin.flush(table2.getName());
-      region.compactStores();
+      region.compact(false);
       // Wait for compaction in case if flush triggered it before us.
       Assert.assertNotNull(s);
       for (int waitTime = 3000; s.getStorefilesCount() > 1 && waitTime > 0; waitTime -= 200) {

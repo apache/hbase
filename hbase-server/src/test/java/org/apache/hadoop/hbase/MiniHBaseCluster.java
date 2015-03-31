@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -535,8 +536,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   public void flushcache() throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        r.flushcache();
+      for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+        r.flush(true);
       }
     }
   }
@@ -548,9 +549,9 @@ public class MiniHBaseCluster extends HBaseCluster {
   public void flushcache(TableName tableName) throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+      for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
         if(r.getTableDesc().getTableName().equals(tableName)) {
-          r.flushcache();
+          r.flush(true);
         }
       }
     }
@@ -563,8 +564,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   public void compact(boolean major) throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
-        r.compactStores(major);
+      for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+        r.compact(major);
       }
     }
   }
@@ -576,9 +577,9 @@ public class MiniHBaseCluster extends HBaseCluster {
   public void compact(TableName tableName, boolean major) throws IOException {
     for (JVMClusterUtil.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegionsLocalContext()) {
+      for(Region r: t.getRegionServer().getOnlineRegionsLocalContext()) {
         if(r.getTableDesc().getTableName().equals(tableName)) {
-          r.compactStores(major);
+          r.compact(major);
         }
       }
     }
@@ -615,9 +616,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     List<HRegion> ret = new ArrayList<HRegion>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
-      for (HRegion region : hrs.getOnlineRegionsLocalContext()) {
+      for (Region region : hrs.getOnlineRegionsLocalContext()) {
         if (region.getTableDesc().getTableName().equals(tableName)) {
-          ret.add(region);
+          ret.add((HRegion)region);
         }
       }
     }
@@ -643,8 +644,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     int count = 0;
     for (JVMClusterUtil.RegionServerThread rst: getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
-      HRegion metaRegion =
-        hrs.getOnlineRegion(regionName);
+      Region metaRegion = hrs.getOnlineRegion(regionName);
       if (metaRegion != null) {
         index = count;
         break;
@@ -662,7 +662,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     // should hold some regions. Please refer to #countServedRegions
     // to see how we find out all regions.
     HMaster master = getMaster();
-    HRegion region = master.getOnlineRegion(regionName);
+    Region region = master.getOnlineRegion(regionName);
     if (region != null) {
       return master.getServerName();
     }
@@ -712,9 +712,9 @@ public class MiniHBaseCluster extends HBaseCluster {
     ArrayList<HRegion> ret = new ArrayList<HRegion>();
     for (JVMClusterUtil.RegionServerThread rst : getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
-      for (HRegion region : hrs.getOnlineRegions(tableName)) {
+      for (Region region : hrs.getOnlineRegions(tableName)) {
         if (region.getTableDesc().getTableName().equals(tableName)) {
-          ret.add(region);
+          ret.add((HRegion)region);
         }
       }
     }

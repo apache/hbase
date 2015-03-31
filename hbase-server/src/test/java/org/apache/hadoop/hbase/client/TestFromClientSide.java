@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateR
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -4180,7 +4181,7 @@ public class TestFromClientSide {
     // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
     // in Store.rowAtOrBeforeFromStoreFile
     String regionName = table.getRegionLocations().firstKey().getEncodedName();
-    HRegion region =
+    Region region =
         TEST_UTIL.getRSForFirstRegionInTable(tableAname).getFromOnlineRegions(regionName);
     Put put1 = new Put(firstRow);
     Put put2 = new Put(secondRow);
@@ -4199,7 +4200,7 @@ public class TestFromClientSide {
     table.put(put2);
     table.put(put3);
     table.put(put4);
-    region.flushcache();
+    region.flush(true);
     Result result = null;
 
     // Test before first that null is returned
@@ -5051,8 +5052,9 @@ public class TestFromClientSide {
     HTable table = TEST_UTIL.createTable(tableName, FAMILY);
     // get the block cache and region
     String regionName = table.getRegionLocations().firstKey().getEncodedName();
-    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
-    Store store = region.getStores().values().iterator().next();
+    Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
+      .getFromOnlineRegions(regionName);
+    Store store = region.getStores().iterator().next();
     CacheConfig cacheConf = store.getCacheConfig();
     cacheConf.setCacheDataOnWrite(true);
     cacheConf.setEvictOnClose(true);
@@ -5087,7 +5089,7 @@ public class TestFromClientSide {
     assertEquals(startBlockMiss, cache.getStats().getMissCount());
     // flush the data
     System.out.println("Flushing cache");
-    region.flushcache();
+    region.flush(true);
     // expect one more block in cache, no change in hits/misses
     long expectedBlockCount = startBlockCount + 1;
     long expectedBlockHits = startBlockHits;
@@ -5114,7 +5116,7 @@ public class TestFromClientSide {
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
     // flush, one new block
     System.out.println("Flushing cache");
-    region.flushcache();
+    region.flush(true);
     assertEquals(++expectedBlockCount, cache.getBlockCount());
     assertEquals(expectedBlockHits, cache.getStats().getHitCount());
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
@@ -5122,7 +5124,7 @@ public class TestFromClientSide {
     System.out.println("Compacting");
     assertEquals(2, store.getStorefilesCount());
     store.triggerMajorCompaction();
-    region.compactStores();
+    region.compact(true);
     waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
     assertEquals(1, store.getStorefilesCount());
     expectedBlockCount -= 2; // evicted two blocks, cached none

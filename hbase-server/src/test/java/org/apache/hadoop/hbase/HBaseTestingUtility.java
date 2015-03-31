@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
@@ -284,6 +285,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     htu.getConfiguration().set(HConstants.HBASE_DIR, dataTestDir);
     LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
     return htu;
+  }
+
+  /**
+   * Close both the region {@code r} and it's underlying WAL. For use in tests.
+   */
+  public static void closeRegionAndWAL(final Region r) throws IOException {
+    closeRegionAndWAL((HRegion)r);
   }
 
   /**
@@ -2131,6 +2139,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return loadRegion(r, f, false);
   }
 
+  public int loadRegion(final Region r, final byte[] f) throws IOException {
+    return loadRegion((HRegion)r, f);
+  }
+
   /**
    * Load region with rows from 'aaa' to 'zzz'.
    * @param r Region
@@ -2152,8 +2164,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           Put put = new Put(k);
           put.setDurability(Durability.SKIP_WAL);
           put.add(f, null, k);
-          if (r.getWAL() == null) put.setDurability(Durability.SKIP_WAL);
-
+          if (r.getWAL() == null) {
+            put.setDurability(Durability.SKIP_WAL);
+          }
           int preRowCount = rowCount;
           int pause = 10;
           int maxPause = 1000;
@@ -2169,7 +2182,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         }
       }
       if (flush) {
-        r.flushcache();
+        r.flush(true);
       }
     }
     return rowCount;
@@ -2204,9 +2217,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
+  public void verifyNumericRows(Region region, final byte[] f, int startRow, int endRow)
+      throws IOException {
+    verifyNumericRows((HRegion)region, f, startRow, endRow);
+  }
+
   public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow)
       throws IOException {
     verifyNumericRows(region, f, startRow, endRow, true);
+  }
+
+  public void verifyNumericRows(Region region, final byte[] f, int startRow, int endRow,
+      final boolean present) throws IOException {
+    verifyNumericRows((HRegion)region, f, startRow, endRow, present);
   }
 
   public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow,
@@ -3755,10 +3778,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           if (server.equals(rs.getServerName())) {
             continue;
           }
-          Collection<HRegion> hrs = rs.getOnlineRegionsLocalContext();
-          for (HRegion r: hrs) {
+          Collection<Region> hrs = rs.getOnlineRegionsLocalContext();
+          for (Region r: hrs) {
             assertTrue("Region should not be double assigned",
-              r.getRegionId() != hri.getRegionId());
+              r.getRegionInfo().getRegionId() != hri.getRegionId());
           }
         }
         return; // good, we are happy

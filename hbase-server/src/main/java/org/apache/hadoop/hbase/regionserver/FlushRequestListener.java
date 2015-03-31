@@ -32,5 +32,5 @@ public interface FlushRequestListener {
    * @param type The type of flush. (ie. Whether a normal flush or flush because of global heap preassure)
    * @param region The region for which flush is requested
    */
-  void flushRequested(FlushType type, HRegion region);
+  void flushRequested(FlushType type, Region region);
 }

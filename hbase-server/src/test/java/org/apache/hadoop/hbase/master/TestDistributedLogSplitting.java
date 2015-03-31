@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -1479,7 +1480,7 @@ public class TestDistributedLogSplitting {
         }
         LOG.debug("adding data to rs = " + rst.getName() +
             " region = "+ hri.getRegionNameAsString());
-        HRegion region = hrs.getOnlineRegion(hri.getRegionName());
+        Region region = hrs.getOnlineRegion(hri.getRegionName());
         assertTrue(region != null);
         putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), family);
       }
@@ -1500,7 +1501,7 @@ public class TestDistributedLogSplitting {
         }
         LOG.debug("adding data to rs = " + mt.getName() +
             " region = "+ hri.getRegionNameAsString());
-        HRegion region = hrs.getOnlineRegion(hri.getRegionName());
+        Region region = hrs.getOnlineRegion(hri.getRegionName());
         assertTrue(region != null);
         putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), family);
       }
@@ -1614,7 +1615,7 @@ public class TestDistributedLogSplitting {
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
   }
 
-  private void putData(HRegion region, byte[] startRow, int numRows, byte [] qf,
+  private void putData(Region region, byte[] startRow, int numRows, byte [] qf,
       byte [] ...families)
   throws IOException {
     for(int i = 0; i < numRows; i++) {

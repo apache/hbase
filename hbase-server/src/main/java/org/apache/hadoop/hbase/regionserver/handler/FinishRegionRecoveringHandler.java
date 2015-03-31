@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 
 public class FinishRegionRecoveringHandler extends EventHandler {
@@ -45,9 +46,9 @@ public class FinishRegionRecoveringHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
-    HRegion region = this.rss.getRecoveringRegions().remove(regionName);
+    Region region = this.rss.getRecoveringRegions().remove(regionName);
     if (region != null) {
-      region.setRecovering(false);
+      ((HRegion)region).setRecovering(false);
       LOG.info(path + " deleted; " + regionName + " recovered.");
     }
   }

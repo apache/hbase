@@ -90,10 +90,9 @@ public class TestBlocksScanned extends HBaseTestCase {
   }
 
   private void _testBlocksScanned(HTableDescriptor table) throws Exception {
-    HRegion r = createNewHRegion(table, START_KEY, END_KEY,
-        TEST_UTIL.getConfiguration());
+    Region r = createNewHRegion(table, START_KEY, END_KEY, TEST_UTIL.getConfiguration());
     addContent(r, FAMILY, COL);
-    r.flushcache();
+    r.flush(true);
 
     CacheStats stats = new CacheConfig(TEST_UTIL.getConfiguration()).getBlockCache().getStats();
     long before = stats.getHitCount() + stats.getMissCount();

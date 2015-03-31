@@ -107,7 +107,7 @@ public class TestSeekOptimizations {
   private static final int[] MAX_VERSIONS_VALUES = new int[] { 1, 2 };
 
   // Instance variables
-  private HRegion region;
+  private Region region;
   private Put put;
   private Delete del;
   private Random rand;
@@ -434,7 +434,7 @@ public class TestSeekOptimizations {
       }
     }
 
-    region.flushcache();
+    region.flush(true);
   }
 
   @After

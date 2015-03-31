@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.RowProcessorService;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RowProcessor;
 
 import com.google.protobuf.ByteString;
@@ -42,7 +42,7 @@ import com.google.protobuf.Service;
 
 /**
  * This class demonstrates how to implement atomic read-modify-writes
- * using {@link HRegion#processRowsWithLocks} and Coprocessor endpoints.
+ * using {@link Region#processRowsWithLocks} and Coprocessor endpoints.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -50,7 +50,7 @@ public abstract class BaseRowProcessorEndpoint<S extends Message, T extends Mess
 extends RowProcessorService implements CoprocessorService, Coprocessor {
   private RegionCoprocessorEnvironment env;
   /**
-   * Pass a processor to HRegion to process multiple rows atomically.
+   * Pass a processor to region to process multiple rows atomically.
    * 
    * The RowProcessor implementations should be the inner classes of your
    * RowProcessorEndpoint. This way the RowProcessor can be class-loaded with
@@ -68,7 +68,7 @@ extends RowProcessorService implements CoprocessorService, Coprocessor {
     ProcessResponse resultProto = null;
     try {
       RowProcessor<S,T> processor = constructRowProcessorFromRequest(request);
-      HRegion region = env.getRegion();
+      Region region = env.getRegion();
       long nonceGroup = request.hasNonceGroup() ? request.getNonceGroup() : HConstants.NO_NONCE;
       long nonce = request.hasNonce() ? request.getNonce() : HConstants.NO_NONCE;
       region.processRowsWithLocks(processor, nonceGroup, nonce);

@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MultiHConnection;
@@ -56,7 +56,7 @@ public class RegionStateStore {
   /** The delimiter for meta columns for replicaIds > 0 */
   protected static final char META_REPLICA_ID_DELIMITER = '_';
 
-  private volatile HRegion metaRegion;
+  private volatile Region metaRegion;
   private volatile boolean initialized;
   private MultiHConnection multiHConnection;
   private final Server server;

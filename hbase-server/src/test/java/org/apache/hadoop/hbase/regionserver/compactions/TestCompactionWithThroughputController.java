@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreEngine;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
@@ -73,8 +74,8 @@ public class TestCompactionWithThroughputController {
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     for (int i = 0; i < cluster.getRegionServerThreads().size(); i++) {
       HRegionServer hrs = rsts.get(i).getRegionServer();
-      for (HRegion region : hrs.getOnlineRegions(tableName)) {
-        return region.getStores().values().iterator().next();
+      for (Region region : hrs.getOnlineRegions(tableName)) {
+        return region.getStores().iterator().next();
       }
     }
     return null;
@@ -122,8 +123,6 @@ public class TestCompactionWithThroughputController {
       assertEquals(10, store.getStorefilesCount());
       long startTime = System.currentTimeMillis();
       TEST_UTIL.getHBaseAdmin().majorCompact(tableName);
-      Thread.sleep(5000);
-      assertEquals(10, store.getStorefilesCount());
       while (store.getStorefilesCount() != 1) {
         Thread.sleep(20);
       }

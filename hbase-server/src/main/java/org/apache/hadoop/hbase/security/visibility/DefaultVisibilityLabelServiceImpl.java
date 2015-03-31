@@ -44,6 +44,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -55,8 +56,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
@@ -76,7 +77,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
 
   private AtomicInteger ordinalCounter = new AtomicInteger(-1);
   private Configuration conf;
-  private HRegion labelsRegion;
+  private Region labelsRegion;
   private VisibilityLabelsCache labelsCache;
   private List<ScanLabelGenerator> scanLabelGenerators;
   private List<String> superUsers;
@@ -196,7 +197,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     return new Pair<Map<String, Integer>, Map<String, List<Integer>>>(labels, userAuths);
   }
 
-  protected void addSystemLabel(HRegion region, Map<String, Integer> labels,
+  protected void addSystemLabel(Region region, Map<String, Integer> labels,
       Map<String, List<Integer>> userAuths) throws IOException {
     if (!labels.containsKey(SYSTEM_LABEL)) {
       Put p = new Put(Bytes.toBytes(SYSTEM_LABEL_ORDINAL));
@@ -307,7 +308,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private boolean mutateLabelsRegion(List<Mutation> mutations, OperationStatus[] finalOpStatus)
       throws IOException {
     OperationStatus[] opStatus = this.labelsRegion.batchMutate(mutations
-        .toArray(new Mutation[mutations.size()]));
+        .toArray(new Mutation[mutations.size()]), HConstants.NO_NONCE, HConstants.NO_NONCE);
     int i = 0;
     boolean updateZk = false;
     for (OperationStatus status : opStatus) {

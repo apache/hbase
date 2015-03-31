@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -48,7 +49,7 @@ import org.apache.hadoop.hbase.util.Pair;
  * Interface for objects that hold a column family in a Region. Its a memstore and a set of zero or
  * more StoreFiles, which stretch backwards over time.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface Store extends HeapSize, StoreConfigInformation, PropagatingConfigurationObserver {
 
@@ -63,7 +64,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   Collection<StoreFile> getStorefiles();
 
   /**
-   * Close all the readers We don't need to worry about subsequent requests because the HRegion
+   * Close all the readers We don't need to worry about subsequent requests because the Region
    * holds a write lock that will prevent any more reads or writes.
    * @return the {@link StoreFile StoreFiles} that were previously being used.
    * @throws IOException on failure
@@ -241,7 +242,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   void assertBulkLoadHFileOk(Path srcPath) throws IOException;
 
   /**
-   * This method should only be called from HRegion. It is assumed that the ranges of values in the
+   * This method should only be called from Region. It is assumed that the ranges of values in the
    * HFile fit within the stores assigned region. (assertBulkLoadHFileOk checks this)
    *
    * @param srcPathStr

@@ -324,7 +324,7 @@ public class HeapMemoryManager {
     }
 
     @Override
-    public void flushRequested(FlushType type, HRegion region) {
+    public void flushRequested(FlushType type, Region region) {
       switch (type) {
       case ABOVE_HIGHER_MARK:
         blockedFlushCount.incrementAndGet();

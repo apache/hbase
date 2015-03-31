@@ -34,9 +34,9 @@ import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationW
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithErrorsProtos.SumResponse;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.RpcCallback;
@@ -88,9 +88,9 @@ implements Coprocessor, CoprocessorService  {
     int sumResult = 0;
     InternalScanner scanner = null;
     try {
-      HRegion region = this.env.getRegion();
+      Region region = this.env.getRegion();
       // throw an exception for requests to the last region in the table, to test error handling
-      if (Bytes.equals(region.getEndKey(), HConstants.EMPTY_END_ROW)) {
+      if (Bytes.equals(region.getRegionInfo().getEndKey(), HConstants.EMPTY_END_ROW)) {
         throw new DoNotRetryIOException("An expected exception");
       }
       scanner = region.getScanner(scan);

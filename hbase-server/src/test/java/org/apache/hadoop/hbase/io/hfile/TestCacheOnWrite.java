@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -433,7 +434,7 @@ public class TestCacheOnWrite {
     final String cf = "myCF";
     final byte[] cfBytes = Bytes.toBytes(cf);
     final int maxVersions = 3;
-    HRegion region = TEST_UTIL.createTestRegion(table, 
+    Region region = TEST_UTIL.createTestRegion(table, 
         new HColumnDescriptor(cf)
             .setCompressionType(compress)
             .setBloomFilterType(BLOOM_TYPE)
@@ -467,18 +468,18 @@ public class TestCacheOnWrite {
         p.setDurability(Durability.ASYNC_WAL);
         region.put(p);
       }
-      region.flushcache();
+      region.flush(true);
     }
     clearBlockCache(blockCache);
     assertEquals(0, blockCache.getBlockCount());
-    region.compactStores();
+    region.compact(false);
     LOG.debug("compactStores() returned");
 
     for (CachedBlock block: blockCache) {
       assertNotEquals(BlockType.ENCODED_DATA, block.getBlockType());
       assertNotEquals(BlockType.DATA, block.getBlockType());
     }
-    region.close();
+    ((HRegion)region).close();
   }
 
   @Test

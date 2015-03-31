@@ -69,7 +69,7 @@ public class TestBlocksRead extends HBaseTestCase {
     return conf;
   }
 
-  HRegion region = null;
+  Region region = null;
   private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
 
@@ -98,7 +98,7 @@ public class TestBlocksRead extends HBaseTestCase {
    * @throws IOException
    * @return created and initialized region.
    */
-  private HRegion initHRegion(byte[] tableName, String callingMethod,
+  private Region initHRegion(byte[] tableName, String callingMethod,
       HBaseConfiguration conf, String family) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor familyDesc;
@@ -112,7 +112,7 @@ public class TestBlocksRead extends HBaseTestCase {
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
     blockCache = new CacheConfig(conf).getBlockCache();
     return r;
   }
@@ -234,7 +234,7 @@ public class TestBlocksRead extends HBaseTestCase {
       putData(FAMILY, "row", "col5", 5);
       putData(FAMILY, "row", "col6", 6);
       putData(FAMILY, "row", "col7", 7);
-      region.flushcache();
+      region.flush(true);
 
       // Expected block reads: 1
       // The top block has the KV we are
@@ -287,12 +287,12 @@ public class TestBlocksRead extends HBaseTestCase {
       // File 1
       putData(FAMILY, "row", "col1", 1);
       putData(FAMILY, "row", "col2", 2);
-      region.flushcache();
+      region.flush(true);
 
       // File 2
       putData(FAMILY, "row", "col1", 3);
       putData(FAMILY, "row", "col2", 4);
-      region.flushcache();
+      region.flush(true);
 
       // Expected blocks read: 1.
       // File 2's top block is also the KV we are
@@ -312,7 +312,7 @@ public class TestBlocksRead extends HBaseTestCase {
 
       // File 3: Add another column
       putData(FAMILY, "row", "col3", 5);
-      region.flushcache();
+      region.flush(true);
 
       // Expected blocks read: 1
       // File 3's top block has the "col3" KV we are
@@ -331,7 +331,7 @@ public class TestBlocksRead extends HBaseTestCase {
 
       // File 4: Delete the entire row.
       deleteFamily(FAMILY, "row", 6);
-      region.flushcache();
+      region.flush(true);
 
       // For ROWCOL Bloom filter: Expected blocks read: 2.
       // For ROW Bloom filter: Expected blocks read: 3.
@@ -347,14 +347,14 @@ public class TestBlocksRead extends HBaseTestCase {
 
       // File 5: Delete
       deleteFamily(FAMILY, "row", 10);
-      region.flushcache();
+      region.flush(true);
 
       // File 6: some more puts, but with timestamps older than the
       // previous delete.
       putData(FAMILY, "row", "col1", 7);
       putData(FAMILY, "row", "col2", 8);
       putData(FAMILY, "row", "col3", 9);
-      region.flushcache();
+      region.flush(true);
 
       // Baseline expected blocks read: 6. [HBASE-4532]
       kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 6, 7, 7);
@@ -364,7 +364,7 @@ public class TestBlocksRead extends HBaseTestCase {
       putData(FAMILY, "row", "col1", 11);
       putData(FAMILY, "row", "col2", 12);
       putData(FAMILY, "row", "col3", 13);
-      region.flushcache();
+      region.flush(true);
 
 
       // Expected blocks read: 8. [HBASE-4585, HBASE-13109]
@@ -394,7 +394,7 @@ public class TestBlocksRead extends HBaseTestCase {
     try {
       putData(FAMILY, "row", "col1", 1);
       putData(FAMILY, "row", "col2", 2);
-      region.flushcache();
+      region.flush(true);
 
       // Execute a scan with caching turned off
       // Expected blocks stored: 0
@@ -441,7 +441,7 @@ public class TestBlocksRead extends HBaseTestCase {
         putData(FAMILY, "row", "col" + i, i);
       }
       putData(FAMILY, "row", "col99", 201);
-      region.flushcache();
+      region.flush(true);
 
       kvs = getData(FAMILY, "row", Arrays.asList("col0"), 2);
       assertEquals(0, kvs.length);

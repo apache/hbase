@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -53,6 +52,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -545,11 +545,8 @@ public class TestAdmin2 {
         + DefaultWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
 
     // flush all regions
-
-    List<HRegion> regions = new ArrayList<HRegion>(regionServer
-        .getOnlineRegionsLocalContext());
-    for (HRegion r : regions) {
-      r.flushcache();
+    for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+      r.flush(true);
     }
     admin.rollWALWriter(regionServer.getServerName());
     int count = DefaultWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));

@@ -164,7 +164,7 @@ public class LogRoller extends HasThread {
    */
   private void scheduleFlush(final byte [] encodedRegionName) {
     boolean scheduled = false;
-    HRegion r = this.services.getFromOnlineRegions(Bytes.toString(encodedRegionName));
+    Region r = this.services.getFromOnlineRegions(Bytes.toString(encodedRegionName));
     FlushRequester requester = null;
     if (r != null) {
       requester = this.services.getFlushRequester();

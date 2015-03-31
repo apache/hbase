@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -129,7 +129,7 @@ public class RegionServerQuotaManager {
    * @return the OperationQuota
    * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  public OperationQuota checkQuota(final HRegion region,
+  public OperationQuota checkQuota(final Region region,
       final OperationQuota.OperationType type) throws IOException, ThrottlingException {
     switch (type) {
       case SCAN:   return checkQuota(region, 0, 0, 1);
@@ -148,7 +148,7 @@ public class RegionServerQuotaManager {
    * @return the OperationQuota
    * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  public OperationQuota checkQuota(final HRegion region,
+  public OperationQuota checkQuota(final Region region,
       final List<ClientProtos.Action> actions) throws IOException, ThrottlingException {
     int numWrites = 0;
     int numReads = 0;
@@ -173,7 +173,7 @@ public class RegionServerQuotaManager {
    * @return the OperationQuota
    * @throws ThrottlingException if the operation cannot be executed due to quota exceeded.
    */
-  private OperationQuota checkQuota(final HRegion region,
+  private OperationQuota checkQuota(final Region region,
       final int numWrites, final int numReads, final int numScans)
       throws IOException, ThrottlingException {
     UserGroupInformation ugi;

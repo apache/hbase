@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -54,9 +53,9 @@ public class TestEncryptionRandomKeying {
 
   private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
-    for (HRegion region:
+    for (Region region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {
-      for (Store store: region.getStores().values()) {
+      for (Store store: region.getStores()) {
         for (StoreFile storefile: store.getStorefiles()) {
           paths.add(storefile.getPath());
         }

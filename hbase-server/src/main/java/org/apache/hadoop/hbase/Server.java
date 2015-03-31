@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -28,7 +29,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * Defines the set of shared functions implemented by HBase servers (Masters
  * and RegionServers).
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
 public interface Server extends Abortable, Stoppable {
   /**
    * Gets the configuration object for this server.

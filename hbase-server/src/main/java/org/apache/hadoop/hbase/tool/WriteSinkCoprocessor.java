@@ -60,7 +60,7 @@ public class WriteSinkCoprocessor extends BaseRegionObserver {
 
   @Override
   public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
-    regionName = e.getEnvironment().getRegion().getRegionNameAsString();
+    regionName = e.getEnvironment().getRegion().getRegionInfo().getRegionNameAsString();
   }
 
 

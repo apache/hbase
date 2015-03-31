@@ -57,7 +57,7 @@ public class TestMinorCompaction {
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
   
-  private HRegion r = null;
+  private Region r = null;
   private HTableDescriptor htd = null;
   private int compactionThreshold;
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
@@ -90,8 +90,8 @@ public class TestMinorCompaction {
 
   @After
   public void tearDown() throws Exception {
-    WAL wal = r.getWAL();
-    this.r.close();
+    WAL wal = ((HRegion)r).getWAL();
+    ((HRegion)r).close();
     wal.close();
   }
 
@@ -172,7 +172,7 @@ public class TestMinorCompaction {
         thirdRowBytes, i);
       HBaseTestCase.addContent(loader, Bytes.toString(fam2), Bytes.toString(col2), firstRowBytes,
         thirdRowBytes, i);
-      r.flushcache();
+      r.flush(true);
     }
 
     Result result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
@@ -193,7 +193,7 @@ public class TestMinorCompaction {
     result = r.get(new Get(firstRowBytes).addColumn(fam1, col1).setMaxVersions(100));
     assertEquals(compactionThreshold, result.size());
 
-    r.flushcache();
+    r.flush(true);
     // should not change anything.
     // Let us check again
 
@@ -205,7 +205,7 @@ public class TestMinorCompaction {
     assertEquals(compactionThreshold, result.size());
 
     // do a compaction
-    Store store2 = this.r.stores.get(fam2);
+    Store store2 = r.getStore(fam2);
     int numFiles1 = store2.getStorefiles().size();
     assertTrue("Was expecting to see 4 store files", numFiles1 > compactionThreshold); // > 3
     ((HStore)store2).compactRecentForTestingAssumingDefaultPolicy(compactionThreshold);   // = 3

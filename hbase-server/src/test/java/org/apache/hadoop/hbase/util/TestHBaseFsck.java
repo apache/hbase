@@ -1248,9 +1248,9 @@ public class TestHBaseFsck {
       }
       admin.flush(desc.getTableName());
       List<HRegion> regions = cluster.getRegions(desc.getTableName());
-      int serverWith = cluster.getServerWith(regions.get(0).getRegionName());
+      int serverWith = cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(serverWith);
-      cluster.getServerWith(regions.get(0).getRegionName());
+      cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
       SplitTransaction st = new SplitTransaction(regions.get(0), Bytes.toBytes("r3"));
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);

@@ -72,7 +72,7 @@ extends ConstantSizeRegionSplitPolicy {
     // Get size to check
     long sizeToCheck = getSizeToCheck(tableRegionsCount);
 
-    for (Store store : region.getStores().values()) {
+    for (Store store : region.getStores()) {
       // If any of the stores is unable to split (eg they contain reference files)
       // then don't split
       if ((!store.canSplit())) {
@@ -114,7 +114,7 @@ extends ConstantSizeRegionSplitPolicy {
     TableName tablename = this.region.getTableDesc().getTableName();
     int tableRegionsCount = 0;
     try {
-      List<HRegion> hri = rss.getOnlineRegions(tablename);
+      List<Region> hri = rss.getOnlineRegions(tablename);
       tableRegionsCount = hri == null || hri.isEmpty()? 0: hri.size();
     } catch (IOException e) {
       LOG.debug("Failed getOnlineRegions " + tablename, e);

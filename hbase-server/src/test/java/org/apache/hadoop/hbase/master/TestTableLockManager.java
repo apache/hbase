@@ -374,7 +374,7 @@ public class TestTableLockManager {
         try {
           HRegion region = TEST_UTIL.getSplittableRegion(tableName, -1);
           if (region != null) {
-            byte[] regionName = region.getRegionName();
+            byte[] regionName = region.getRegionInfo().getRegionName();
             admin.flushRegion(regionName);
             admin.compactRegion(regionName);
             admin.splitRegion(regionName);

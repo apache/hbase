@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationW
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.SumRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.ColumnAggregationWithNullResponseProtos.SumResponse;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.RpcCallback;
@@ -87,9 +87,9 @@ implements Coprocessor, CoprocessorService  {
     int sumResult = 0;
     InternalScanner scanner = null;
     try {
-      HRegion region = this.env.getRegion();
+      Region region = this.env.getRegion();
       // for the last region in the table, return null to test null handling
-      if (Bytes.equals(region.getEndKey(), HConstants.EMPTY_END_ROW)) {
+      if (Bytes.equals(region.getRegionInfo().getEndKey(), HConstants.EMPTY_END_ROW)) {
         done.run(null);
         return;
       }
@@ -123,6 +123,6 @@ implements Coprocessor, CoprocessorService  {
     }
     done.run(SumResponse.newBuilder().setSum(sumResult).build());
     LOG.info("Returning sum " + sumResult + " for region " +
-        Bytes.toStringBinary(env.getRegion().getRegionName()));
+        Bytes.toStringBinary(env.getRegion().getRegionInfo().getRegionName()));
   }
 }

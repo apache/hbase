@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -166,7 +167,7 @@ class MetricsRegionServerWrapperImpl
 
   @Override
   public long getNumOnlineRegions() {
-    Collection<HRegion> onlineRegionsLocalContext = regionServer.getOnlineRegionsLocalContext();
+    Collection<Region> onlineRegionsLocalContext = regionServer.getOnlineRegionsLocalContext();
     if (onlineRegionsLocalContext == null) {
       return 0;
     }
@@ -452,16 +453,17 @@ class MetricsRegionServerWrapperImpl
       long tempMajorCompactedCellsSize = 0;
       long tempBlockedRequestsCount = 0L;
 
-      for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
-        tempNumMutationsWithoutWAL += r.numMutationsWithoutWAL.get();
-        tempDataInMemoryWithoutWAL += r.dataInMemoryWithoutWAL.get();
-        tempReadRequestsCount += r.readRequestsCount.get();
-        tempWriteRequestsCount += r.writeRequestsCount.get();
-        tempCheckAndMutateChecksFailed += r.checkAndMutateChecksFailed.get();
-        tempCheckAndMutateChecksPassed += r.checkAndMutateChecksPassed.get();
+      for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+        tempNumMutationsWithoutWAL += r.getNumMutationsWithoutWAL();
+        tempDataInMemoryWithoutWAL += r.getDataInMemoryWithoutWAL();
+        tempReadRequestsCount += r.getReadRequestsCount();
+        tempWriteRequestsCount += r.getWriteRequestsCount();
+        tempCheckAndMutateChecksFailed += r.getCheckAndMutateChecksFailed();
+        tempCheckAndMutateChecksPassed += r.getCheckAndMutateChecksPassed();
         tempBlockedRequestsCount += r.getBlockedRequestsCount();
-        tempNumStores += r.stores.size();
-        for (Store store : r.stores.values()) {
+        List<Store> storeList = r.getStores();
+        tempNumStores += storeList.size();
+        for (Store store : storeList) {
           tempNumStoreFiles += store.getStorefilesCount();
           tempMemstoreSize += store.getMemStoreSize();
           tempStoreFileSize += store.getStorefilesSize();

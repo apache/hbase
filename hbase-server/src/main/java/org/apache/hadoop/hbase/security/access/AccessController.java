@@ -86,10 +86,10 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -199,7 +199,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   // This boolean having relevance only in the Master.
   private volatile boolean aclTabAvailable = false;
 
-  public HRegion getRegion() {
+  public Region getRegion() {
     return regionEnv != null ? regionEnv.getRegion() : null;
   }
 
@@ -208,7 +208,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   void initialize(RegionCoprocessorEnvironment e) throws IOException {
-    final HRegion region = e.getRegion();
+    final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
     Map<byte[], ListMultimap<String,TablePermission>> tables =
         AccessControlLists.loadAll(region);
@@ -1347,7 +1347,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e)
       throws IOException {
     RegionCoprocessorEnvironment env = e.getEnvironment();
-    final HRegion region = env.getRegion();
+    final Region region = env.getRegion();
     if (region == null) {
       LOG.error("NULL region from RegionCoprocessorEnvironment in preOpen()");
     } else {
@@ -1363,7 +1363,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
     RegionCoprocessorEnvironment env = c.getEnvironment();
-    final HRegion region = env.getRegion();
+    final Region region = env.getRegion();
     if (region == null) {
       LOG.error("NULL region from RegionCoprocessorEnvironment in postOpen()");
       return;
@@ -1467,7 +1467,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       throw new RuntimeException("Unhandled operation " + opType);
     }
     AuthResult authResult = permissionGranted(opType, user, env, families, Action.READ);
-    HRegion region = getRegion(env);
+    Region region = getRegion(env);
     TableName table = getTableName(region);
     Map<ByteRange, Integer> cfVsMaxVersions = Maps.newHashMap();
     for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
@@ -2312,19 +2312,19 @@ public class AccessController extends BaseMasterAndRegionObserver
     return AccessControlProtos.AccessControlService.newReflectiveService(this);
   }
 
-  private HRegion getRegion(RegionCoprocessorEnvironment e) {
+  private Region getRegion(RegionCoprocessorEnvironment e) {
     return e.getRegion();
   }
 
   private TableName getTableName(RegionCoprocessorEnvironment e) {
-    HRegion region = e.getRegion();
+    Region region = e.getRegion();
     if (region != null) {
       return getTableName(region);
     }
     return null;
   }
 
-  private TableName getTableName(HRegion region) {
+  private TableName getTableName(Region region) {
     HRegionInfo regionInfo = region.getRegionInfo();
     if (regionInfo != null) {
       return regionInfo.getTable();
@@ -2428,31 +2428,31 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
-  public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, HRegion regionA,
-      HRegion regionB) throws IOException {
+  public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
+      Region regionB) throws IOException {
     requirePermission("mergeRegions", regionA.getTableDesc().getTableName(), null, null,
       Action.ADMIN);
   }
 
   @Override
-  public void postMerge(ObserverContext<RegionServerCoprocessorEnvironment> c, HRegion regionA,
-      HRegion regionB, HRegion mergedRegion) throws IOException { }
+  public void postMerge(ObserverContext<RegionServerCoprocessorEnvironment> c, Region regionA,
+      Region regionB, Region mergedRegion) throws IOException { }
 
   @Override
   public void preMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      HRegion regionA, HRegion regionB, List<Mutation> metaEntries) throws IOException { }
+      Region regionA, Region regionB, List<Mutation> metaEntries) throws IOException { }
 
   @Override
   public void postMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      HRegion regionA, HRegion regionB, HRegion mergedRegion) throws IOException { }
+      Region regionA, Region regionB, Region mergedRegion) throws IOException { }
 
   @Override
   public void preRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      HRegion regionA, HRegion regionB) throws IOException { }
+      Region regionA, Region regionB) throws IOException { }
 
   @Override
   public void postRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      HRegion regionA, HRegion regionB) throws IOException { }
+      Region regionA, Region regionB) throws IOException { }
 
   @Override
   public void preRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)

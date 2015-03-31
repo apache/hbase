@@ -54,12 +54,12 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Region.Operation;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -151,8 +151,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     // from external packages
     RegionCoprocessorEnvironment re = (RegionCoprocessorEnvironment)e;
     Leases leases = re.getRegionServerServices().getLeases();
-    leases.createLease(re.getRegion().getRegionNameAsString(), 2000, null);
-    leases.cancelLease(re.getRegion().getRegionNameAsString());
+    leases.createLease(re.getRegion().getRegionInfo().getRegionNameAsString(), 2000, null);
+    leases.cancelLease(re.getRegion().getRegionInfo().getRegionNameAsString());
   }
 
   @Override
@@ -229,7 +229,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
   
   @Override
-  public void postSplit(ObserverContext<RegionCoprocessorEnvironment> c, HRegion l, HRegion r) {
+  public void postSplit(ObserverContext<RegionCoprocessorEnvironment> c, Region l, Region r) {
     ctPostSplit.incrementAndGet();
   }
 

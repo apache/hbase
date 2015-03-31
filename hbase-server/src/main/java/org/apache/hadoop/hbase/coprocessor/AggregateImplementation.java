@@ -115,7 +115,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
     }
     log.info("Maximum from this region is "
-        + env.getRegion().getRegionNameAsString() + ": " + max);
+        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + max);
     done.run(response);
   }
 
@@ -168,7 +168,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
     }
     log.info("Minimum from this region is "
-        + env.getRegion().getRegionNameAsString() + ": " + min);
+        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + min);
     done.run(response);
   }
 
@@ -223,7 +223,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
     }
     log.debug("Sum from this region is "
-        + env.getRegion().getRegionNameAsString() + ": " + sum);
+        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + sum);
     done.run(response);
   }
 
@@ -274,7 +274,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
     }
     log.info("Row counter from this region is "
-        + env.getRegion().getRegionNameAsString() + ": " + counter);
+        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + counter);
     done.run(response);
   }
 
