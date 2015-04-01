@@ -120,7 +120,7 @@ public class TestAsyncIPC extends AbstractTestIPC {
 
       @Override
       Codec getCodec() {
-        return super.getCodec();
+        return null;
       }
 
     };
