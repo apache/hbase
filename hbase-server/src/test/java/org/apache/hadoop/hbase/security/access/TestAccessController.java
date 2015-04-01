@@ -2269,7 +2269,7 @@ public class TestAccessController extends SecureTestUtil {
    public void testGetNamespacePermission() throws Exception {
      String namespace = "testGetNamespacePermission";
      NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
-     TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
+     createNamespace(TEST_UTIL, desc);
      grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
      try {
        List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(
@@ -2279,7 +2279,7 @@ public class TestAccessController extends SecureTestUtil {
      } catch (Throwable thw) {
        throw new HBaseException(thw);
      }
-     TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(namespace);
+     deleteNamespace(TEST_UTIL, namespace);
    }
 
   @Test
@@ -2350,7 +2350,7 @@ public class TestAccessController extends SecureTestUtil {
     String ns = "testNamespace";
     NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
     final TableName table2 = TableName.valueOf(ns, tableName);
-    TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
+    createNamespace(TEST_UTIL, desc);
     htd = new HTableDescriptor(table2);
     htd.addFamily(new HColumnDescriptor(family));
     createTable(TEST_UTIL, htd);
@@ -2378,7 +2378,7 @@ public class TestAccessController extends SecureTestUtil {
 
     deleteTable(TEST_UTIL, table1);
     deleteTable(TEST_UTIL, table2);
-    TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(ns);
+    deleteNamespace(TEST_UTIL, ns);
   }
 
   private void verifyAnyCreate(AccessTestAction action) throws Exception {
