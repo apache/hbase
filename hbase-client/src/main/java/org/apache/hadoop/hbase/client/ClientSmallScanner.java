@@ -53,9 +53,6 @@ import com.google.protobuf.ServiceException;
 public class ClientSmallScanner extends ClientScanner {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private ScannerCallableWithReplicas smallScanCallable = null;
-  // When fetching results from server, skip the first result if it has the same
-  // row with this one
-  private byte[] skipRowOfFirstResult = null;
   private SmallScannerCallableFactory callableFactory;
 
   /**
@@ -144,7 +141,7 @@ public class ClientSmallScanner extends ClientScanner {
     // Where to start the next getter
     byte[] localStartKey;
     int cacheNum = nbRows;
-    skipRowOfFirstResult = null;
+    boolean regionChanged = true;
     // if we're at end of table, close and return false to stop iterating
     if (this.currentRegion != null && currentRegionDone) {
       byte[] endKey = this.currentRegion.getEndKey();
@@ -161,9 +158,8 @@ public class ClientSmallScanner extends ClientScanner {
         LOG.trace("Finished with region " + this.currentRegion);
       }
     } else if (this.lastResult != null) {
-      localStartKey = this.lastResult.getRow();
-      skipRowOfFirstResult = this.lastResult.getRow();
-      cacheNum++;
+      regionChanged = false;
+      localStartKey = Bytes.add(lastResult.getRow(), new byte[1]);
     } else {
       localStartKey = this.scan.getStartRow();
     }
@@ -175,7 +171,7 @@ public class ClientSmallScanner extends ClientScanner {
     smallScanCallable = callableFactory.getCallable(getConnection(), getTable(), scan,
         getScanMetrics(), localStartKey, cacheNum, rpcControllerFactory, getPool(),
         getPrimaryOperationTimeout(), getRetries(), getScannerTimeout(), getConf(), caller);
-    if (this.scanMetrics != null && skipRowOfFirstResult == null) {
+    if (this.scanMetrics != null && regionChanged) {
       this.scanMetrics.countOfRegions.incrementAndGet();
     }
     return true;
@@ -269,11 +265,6 @@ public class ClientSmallScanner extends ClientScanner {
       if (values != null && values.length > 0) {
         for (int i = 0; i < values.length; i++) {
           Result rs = values[i];
-          if (i == 0 && this.skipRowOfFirstResult != null
-              && Bytes.equals(skipRowOfFirstResult, rs.getRow())) {
-            // Skip the first result
-            continue;
-          }
           cache.add(rs);
           // We don't make Iterator here
           for (Cell cell : rs.rawCells()) {
