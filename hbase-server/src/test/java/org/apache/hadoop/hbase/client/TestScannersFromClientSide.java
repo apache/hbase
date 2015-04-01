@@ -24,8 +24,10 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTestConst;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -69,6 +72,8 @@ public class TestScannersFromClientSide {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY, 10 * 1024 * 1024);
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -169,6 +174,85 @@ public class TestScannersFromClientSide {
     result = scanner.next();
     verifyResult(result, kvListExp, toLog, "Testing second batch of scan");
 
+  }
+
+  @Test
+  public void testSmallScan() throws Exception {
+    TableName TABLE = TableName.valueOf("testSmallScan");
+
+    int numRows = 10;
+    byte[][] ROWS = HTestConst.makeNAscii(ROW, numRows);
+
+    int numQualifiers = 10;
+    byte[][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, numQualifiers);
+
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+
+    Put put;
+    List<Put> puts = new ArrayList<Put>();
+    for (int row = 0; row < ROWS.length; row++) {
+      put = new Put(ROWS[row]);
+      for (int qual = 0; qual < QUALIFIERS.length; qual++) {
+        KeyValue kv = new KeyValue(ROWS[row], FAMILY, QUALIFIERS[qual], VALUE);
+        put.add(kv);
+      }
+      puts.add(put);
+    }
+    ht.put(puts);
+
+    int expectedRows = numRows;
+    int expectedCols = numRows * numQualifiers;
+
+    // Test normal and reversed
+    testSmallScan(ht, true, expectedRows, expectedCols);
+    testSmallScan(ht, false, expectedRows, expectedCols);
+  }
+
+  /**
+   * Run through a variety of test configurations with a small scan
+   * @param table
+   * @param reversed
+   * @param rows
+   * @param columns
+   * @throws Exception
+   */
+  public void testSmallScan(HTable table, boolean reversed, int rows, int columns) throws Exception {
+    Scan baseScan = new Scan();
+    baseScan.setReversed(reversed);
+    baseScan.setSmall(true);
+
+    Scan scan = new Scan(baseScan);
+    verifyExpectedCounts(table, scan, rows, columns);
+
+    scan = new Scan(baseScan);
+    scan.setMaxResultSize(1);
+    verifyExpectedCounts(table, scan, rows, columns);
+
+    scan = new Scan(baseScan);
+    scan.setMaxResultSize(1);
+    scan.setCaching(Integer.MAX_VALUE);
+    verifyExpectedCounts(table, scan, rows, columns);
+  }
+
+  private void verifyExpectedCounts(HTable table, Scan scan, int expectedRowCount,
+      int expectedCellCount) throws Exception {
+    ResultScanner scanner = table.getScanner(scan);
+    
+    int rowCount = 0;
+    int cellCount = 0;
+    Result r = null;
+    while ((r = scanner.next()) != null) {
+      rowCount++;
+      for (Cell c : r.rawCells()) {
+        cellCount++;
+      }
+    }
+
+    assertTrue("Expected row count: " + expectedRowCount + " Actual row count: " + rowCount,
+      expectedRowCount == rowCount);
+    assertTrue("Expected cell count: " + expectedCellCount + " Actual cell count: " + cellCount,
+      expectedCellCount == cellCount);
+    scanner.close();
   }
 
   /**
