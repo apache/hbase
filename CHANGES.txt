@@ -1,14 +1,18 @@
 HBase Change Log
 
-Release 0.98.12 - 3/25/2015
+Release 0.98.12 - 4/03/2015
 
 ** Sub-task
+    * [HBASE-13006] - Document visibility label support for groups
     * [HBASE-13207] - Backport to 0.98 "[PERF] Reuse the IPC buffers..."
     * [HBASE-13276] - Fix incorrect condition for minimum block locality in 0.98
     * [HBASE-13283] - Document the steps for rolling back the security on hbase.
     * [HBASE-13292] - Undo parent from 0.98 and 1.0: setting hbase.client.scanner.max.result.size is considered harmful
+    * [HBASE-13303] - Fix size calculation of results on the region server
+    * [HBASE-13335] - Update ClientSmallScanner and ClientSmallReversedScanner
 
 ** Bug
+    * [HBASE-10728] - get_counter value is never used.
     * [HBASE-12908] - Typos in MemStoreFlusher javadocs
     * [HBASE-12931] - The existing KeyValues in memstore are not removed completely after inserting cell into memStore 
     * [HBASE-12969] - Parameter Validation is not there for shell script, local-master-backup.sh and local-regionservers.sh
@@ -21,8 +25,18 @@ Release 0.98.12 - 3/25/2015
     * [HBASE-13229] - Specify bash for local-regionservers.sh and local-master-backup.sh
     * [HBASE-13239] - HBase grant at specific column level does not work for Groups 
     * [HBASE-13253] - LoadIncrementalHFiles unify hfiles discovery
+    * [HBASE-13262] - ResultScanner doesn't return all rows in Scan
     * [HBASE-13269] - Limit result array preallocation to avoid OOME with large scan caching values
+    * [HBASE-13273] - Make Result.EMPTY_RESULT read-only; currently it can be modified
+    * [HBASE-13282] - Fix the minor issues of running Canary on kerberized environment
     * [HBASE-13285] - Fix flaky getRegions() in TestAccessController.setUp()
+    * [HBASE-13294] - Fix the critical ancient loopholes in security testing infrastructure.
+    * [HBASE-13296] - Fix the deletion of acl notify nodes for namespace.
+    * [HBASE-13305] - Get(Get get) is not copying the row key
+    * [HBASE-13309] - Some tests do not reset EnvironmentEdgeManager
+    * [HBASE-13317] - Region server reportForDuty stuck looping if there is a master change
+    * [HBASE-13326] - Disabled table can't be enabled after HBase is restarted
+    * [HBASE-13331] - Exceptions from DFS client can cause CatalogJanitor to delete referenced files
 
 ** Improvement
     * [HBASE-13100] - Shell command to retrieve table splits
@@ -33,6 +47,9 @@ Release 0.98.12 - 3/25/2015
     * [HBASE-13183] - Make ZK tickTime configurable in standalone HBase
     * [HBASE-13223] - Add testMoveMeta to IntegrationTestMTTR
     * [HBASE-13236] - Clean up m2e-related warnings/errors from poms
+    * [HBASE-13241] - Add tests for group level grants
+    * [HBASE-13342] - Fix incorrect interface annotations
+    * [HBASE-13345] - Fix LocalHBaseCluster so that different region server impl can be used for different slaves
 
 
 Release 0.98.11 - 3/9/2015
