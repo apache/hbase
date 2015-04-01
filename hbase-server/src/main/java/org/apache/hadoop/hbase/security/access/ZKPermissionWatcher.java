@@ -211,4 +211,21 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
       watcher.abort("Failed deleting node " + zkNode, e);
     }
   }
+
+  /***
+   * Delete the acl notify node of namespace
+   */
+  public void deleteNamespaceACLNode(final String namespace) {
+    String zkNode = ZKUtil.joinZNode(watcher.baseZNode, ACL_NODE);
+    zkNode = ZKUtil.joinZNode(zkNode, AccessControlLists.NAMESPACE_PREFIX + namespace);
+
+    try {
+      ZKUtil.deleteNode(watcher, zkNode);
+    } catch (KeeperException.NoNodeException e) {
+      LOG.warn("No acl notify node of namespace '" + namespace + "'");
+    } catch (KeeperException e) {
+      LOG.error("Failed deleting acl node of namespace '" + namespace + "'", e);
+      watcher.abort("Failed deleting node " + zkNode, e);
+    }
+  }
 }

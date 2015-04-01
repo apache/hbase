@@ -1302,7 +1302,8 @@ public class AccessController extends BaseMasterAndRegionObserver
         return null;
       }
     });
-    LOG.info(namespace + "entry deleted in " + AccessControlLists.ACL_TABLE_NAME + " table.");
+    this.authManager.getZKPermissionWatcher().deleteNamespaceACLNode(namespace);
+    LOG.info(namespace + " entry deleted in " + AccessControlLists.ACL_TABLE_NAME + " table.");
   }
 
   @Override

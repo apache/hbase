@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -655,6 +656,16 @@ public class SecureTestUtil {
     deleteTable(testUtil, testUtil.getHBaseAdmin(), tableName);
   }
 
+  public static void createNamespace(HBaseTestingUtility testUtil, NamespaceDescriptor nsDesc)
+      throws Exception {
+    testUtil.getHBaseAdmin().createNamespace(nsDesc);
+  }
+
+  public static void deleteNamespace(HBaseTestingUtility testUtil, String namespace)
+      throws Exception {
+    testUtil.getHBaseAdmin().deleteNamespace(namespace);
+  }
+
   public static void deleteTable(HBaseTestingUtility testUtil, Admin admin, TableName tableName)
       throws Exception {
     // NOTE: We need a latch because admin is not sync,
@@ -670,5 +681,13 @@ public class SecureTestUtil {
     admin.deleteTable(tableName);
     observer.tableDeletionLatch.await();
     observer.tableDeletionLatch = null;
+  }
+
+  public static String convertToNamespace(String namespace) {
+    return AccessControlLists.NAMESPACE_PREFIX + namespace;
+  }
+
+  public static String convertToGroup(String group) {
+    return AccessControlLists.GROUP_PREFIX + group;
   }
 }
