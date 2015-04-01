@@ -55,7 +55,7 @@ public class TestRegionServerHostname {
   public void testInvalidRegionServerHostnameAbortsServer() throws Exception {
     final int NUM_MASTERS = 1;
     final int NUM_RS = 1;
-    String invalidHostname = "hostAddr";
+    String invalidHostname = "hostAddr.invalid";
     TEST_UTIL.getConfiguration().set(HRegionServer.HOSTNAME_KEY, invalidHostname);
     try {
       TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
