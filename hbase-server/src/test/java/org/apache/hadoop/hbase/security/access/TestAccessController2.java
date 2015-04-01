@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.*;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -110,21 +112,10 @@ public class TestAccessController2 extends SecureTestUtil {
           TEST_UTIL.createTable(TableName.valueOf(tableName),
             new String[] { Bytes.toString(TEST_FAMILY), Bytes.toString(TEST_FAMILY_2) });
 
-      List<Put> puts = new ArrayList<Put>(5);
-      Put put_1 = new Put(TEST_ROW);
-      put_1.add(TEST_FAMILY, Q1, value1);
-
-      Put put_2 = new Put(TEST_ROW_2);
-      put_2.add(TEST_FAMILY, Q2, value2);
-
-      Put put_3 = new Put(TEST_ROW_3);
-      put_3.add(TEST_FAMILY_2, Q1, value1);
-
-      puts.add(put_1);
-      puts.add(put_2);
-      puts.add(put_3);
-
-      table.put(puts);
+      // Ingesting test data.
+      table.put(Arrays.asList(new Put(TEST_ROW).add(TEST_FAMILY, Q1, value1),
+          new Put(TEST_ROW_2).add(TEST_FAMILY, Q2, value2),
+          new Put(TEST_ROW_3).add(TEST_FAMILY_2, Q1, value1)));
     } finally {
       table.close();
     }
@@ -451,4 +442,34 @@ public class TestAccessController2 extends SecureTestUtil {
     verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
   }
 
+  @Test
+  public void testACLZNodeDeletion() throws Exception {
+    String baseAclZNode = "/hbase/acl/";
+    String ns = "testACLZNodeDeletionNamespace";
+    NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
+    createNamespace(TEST_UTIL, desc);
+
+    final TableName table = TableName.valueOf(ns, "testACLZNodeDeletionTable");
+    final byte[] family = Bytes.toBytes("f1");
+    HTableDescriptor htd = new HTableDescriptor(table);
+    htd.addFamily(new HColumnDescriptor(family));
+    TEST_UTIL.getHBaseAdmin().createTable(htd);
+
+    // Namespace needs this, as they follow the lazy creation of ACL znode.
+    grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
+    ZooKeeperWatcher zkw = TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper();
+    assertTrue("The acl znode for table should exist",  ZKUtil.checkExists(zkw, baseAclZNode +
+        table.getNameAsString()) != -1);
+    assertTrue("The acl znode for namespace should exist", ZKUtil.checkExists(zkw, baseAclZNode +
+        convertToNamespace(ns)) != -1);
+
+    revokeFromNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
+    TEST_UTIL.deleteTable(table);
+    deleteNamespace(TEST_UTIL, ns);
+
+    assertTrue("The acl znode for table should have been deleted",
+        ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) == -1);
+    assertTrue( "The acl znode for namespace should have been deleted",
+        ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) == -1);
+  }
 }

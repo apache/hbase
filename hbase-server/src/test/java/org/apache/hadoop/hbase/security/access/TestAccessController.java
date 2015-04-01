@@ -2327,7 +2327,7 @@ public class TestAccessController extends SecureTestUtil {
   public void testGetNamespacePermission() throws Exception {
     String namespace = "testNamespace";
     NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
-    TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
+    createNamespace(TEST_UTIL, desc);
     grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
     try {
       List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(conf,
@@ -2337,7 +2337,7 @@ public class TestAccessController extends SecureTestUtil {
     } catch (Throwable thw) {
       throw new HBaseException(thw);
     }
-    TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(namespace);
+    deleteNamespace(TEST_UTIL, namespace);
   }
 
   @Test
