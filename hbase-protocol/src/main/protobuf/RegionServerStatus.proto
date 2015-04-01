@@ -36,6 +36,9 @@ message RegionServerStartupRequest {
 
   /** Current time of the region server in ms */
   required uint64 server_current_time = 3;
+
+  /** hostname for region server, optional */
+  optional string use_this_hostname_instead = 4;
 }
 
 message RegionServerStartupResponse {
