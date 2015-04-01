@@ -47,7 +47,7 @@ public class TestRegionServerHostname {
   public void testInvalidRegionServerHostnameAbortsServer() throws Exception {
     final int NUM_MASTERS = 1;
     final int NUM_RS = 1;
-    String invalidHostname = "hostAddr";
+    String invalidHostname = "hostAddr.invalid";
     TEST_UTIL.getConfiguration().set(HRegionServer.HOSTNAME_KEY, invalidHostname);
     try {
       TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
@@ -74,8 +74,7 @@ public class TestRegionServerHostname {
       // iterate through host addresses and use each as hostname
       while (addrList.hasMoreElements()) {
         InetAddress addr = addrList.nextElement();
-        if (addr.isLoopbackAddress() || addr.isLinkLocalAddress() || addr.isMulticastAddress()
-            || !ni.getDisplayName().startsWith("e")) {
+        if (addr.isLoopbackAddress() || addr.isLinkLocalAddress() || addr.isMulticastAddress()) {
           continue;
         }
         String hostName = addr.getHostName();
