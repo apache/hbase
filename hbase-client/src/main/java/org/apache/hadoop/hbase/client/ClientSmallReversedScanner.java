@@ -49,7 +49,6 @@ import com.google.common.annotations.VisibleForTesting;
 public class ClientSmallReversedScanner extends ReversedClientScanner {
   private static final Log LOG = LogFactory.getLog(ClientSmallReversedScanner.class);
   private ScannerCallableWithReplicas smallScanCallable = null;
-  private byte[] skipRowOfFirstResult = null;
   private SmallScannerCallableFactory callableFactory;
 
   /**
@@ -135,7 +134,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
     // Where to start the next getter
     byte[] localStartKey;
     int cacheNum = nbRows;
-    skipRowOfFirstResult = null;
+    boolean regionChanged = true;
     // if we're at end of table, close and return false to stop iterating
     if (this.currentRegion != null && currentRegionDone) {
       byte[] startKey = this.currentRegion.getStartKey();
@@ -154,9 +153,8 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
         LOG.debug("Finished with region " + this.currentRegion);
       }
     } else if (this.lastResult != null) {
-      localStartKey = this.lastResult.getRow();
-      skipRowOfFirstResult = this.lastResult.getRow();
-      cacheNum++;
+      regionChanged = false;
+      localStartKey = createClosestRowBefore(lastResult.getRow());
     } else {
       localStartKey = this.scan.getStartRow();
     }
@@ -170,7 +168,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
         getScanMetrics(), localStartKey, cacheNum, rpcControllerFactory, getPool(),
         getPrimaryOperationTimeout(), getRetries(), getScannerTimeout(), getConf(), caller);
 
-    if (this.scanMetrics != null && skipRowOfFirstResult == null) {
+    if (this.scanMetrics != null && regionChanged) {
       this.scanMetrics.countOfRegions.incrementAndGet();
     }
     return true;
@@ -221,11 +219,6 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
       if (values != null && values.length > 0) {
         for (int i = 0; i < values.length; i++) {
           Result rs = values[i];
-          if (i == 0 && this.skipRowOfFirstResult != null
-              && Bytes.equals(skipRowOfFirstResult, rs.getRow())) {
-            // Skip the first result
-            continue;
-          }
           cache.add(rs);
           // We don't make Iterator here
           for (Cell cell : rs.rawCells()) {
