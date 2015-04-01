@@ -399,6 +399,16 @@ public class HRegionServer extends HasThread implements
    */
   protected ServerName serverName;
 
+  /*
+   * hostname specified by hostname config
+   */
+  protected String useThisHostnameInstead;
+
+  // key to the config parameter of server hostname
+  // the specification of server hostname is optional. The hostname should be resolvable from
+  // both master and region server
+  final static String HOSTNAME_KEY = "hbase.regionserver.hostname";
+
   /**
    * This servers startcode.
    */
@@ -516,7 +526,9 @@ public class HRegionServer extends HasThread implements
 
     rpcServices = createRpcServices();
     this.startcode = System.currentTimeMillis();
-    String hostName = rpcServices.isa.getHostName();
+    useThisHostnameInstead = conf.get(HOSTNAME_KEY);
+    String hostName = shouldUseThisHostnameInstead() ? useThisHostnameInstead :
+      rpcServices.isa.getHostName();
     serverName = ServerName.valueOf(hostName, rpcServices.isa.getPort(), startcode);
 
     rpcControllerFactory = RpcControllerFactory.instantiate(this.conf);
@@ -580,6 +592,13 @@ public class HRegionServer extends HasThread implements
   protected TableDescriptors getFsTableDescriptors() throws IOException {
     return new FSTableDescriptors(this.conf,
       this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
+  }
+
+  /*
+   * Returns true if configured hostname should be used
+   */
+  protected boolean shouldUseThisHostnameInstead() {
+    return useThisHostnameInstead != null && !useThisHostnameInstead.isEmpty();
   }
 
   protected void login(UserProvider user, String host) throws IOException {
@@ -1290,9 +1309,18 @@ public class HRegionServer extends HasThread implements
           String hostnameFromMasterPOV = e.getValue();
           this.serverName = ServerName.valueOf(hostnameFromMasterPOV,
             rpcServices.isa.getPort(), this.startcode);
-          if (!hostnameFromMasterPOV.equals(rpcServices.isa.getHostName())) {
-            LOG.info("Master passed us a different hostname to use; was=" +
-              rpcServices.isa.getHostName() + ", but now=" + hostnameFromMasterPOV);
+          if (shouldUseThisHostnameInstead() &&
+              !hostnameFromMasterPOV.equals(useThisHostnameInstead)) {
+            String msg = "Master passed us a different hostname to use; was=" +
+                this.useThisHostnameInstead + ", but now=" + hostnameFromMasterPOV;
+            LOG.error(msg);
+            throw new IOException(msg);
+          }
+          if (!shouldUseThisHostnameInstead() &&
+              !hostnameFromMasterPOV.equals(rpcServices.isa.getHostName())) {
+            String msg = "Master passed us a different hostname to use; was=" +
+                rpcServices.isa.getHostName() + ", but now=" + hostnameFromMasterPOV;
+            LOG.error(msg);
           }
           continue;
         }
@@ -2203,6 +2231,9 @@ public class HRegionServer extends HasThread implements
       long now = EnvironmentEdgeManager.currentTime();
       int port = rpcServices.isa.getPort();
       RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
+      if (shouldUseThisHostnameInstead()) {
+        request.setUseThisHostnameInstead(useThisHostnameInstead);
+      }
       request.setPort(port);
       request.setServerStartCode(this.startcode);
       request.setServerCurrentTime(now);

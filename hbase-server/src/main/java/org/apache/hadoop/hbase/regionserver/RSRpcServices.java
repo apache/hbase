@@ -830,9 +830,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   public static String getHostname(Configuration conf) throws UnknownHostException {
-    return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-            conf.get("hbase.regionserver.dns.interface", "default"),
-            conf.get("hbase.regionserver.dns.nameserver", "default")));
+    String hostname = conf.get(HRegionServer.HOSTNAME_KEY);
+    if (hostname == null || hostname.isEmpty()) {
+      return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+        conf.get("hbase.regionserver.dns.interface", "default"),
+        conf.get("hbase.regionserver.dns.nameserver", "default")));
+    } else {
+      LOG.info("hostname is configured to be " + hostname);
+      return hostname;
+    }
   }
 
   RegionScanner getScanner(long scannerId) {

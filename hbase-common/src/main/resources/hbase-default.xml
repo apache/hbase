@@ -921,6 +921,13 @@ possible configurations would overwhelm and obscure the important.
     <description>Set no delay on rpc socket connections.  See
     http://docs.oracle.com/javase/1.5.0/docs/api/java/net/Socket.html#getTcpNoDelay()</description>
   </property>
+  <property>
+    <name>hbase.regionserver.hostname</name>
+    <value></value>
+    <description>This config is for experts: don't set its value unless you really know what you are doing.
+    When set to a non-empty value, this represents the (external facing) hostname for the underlying server.
+    See https://issues.apache.org/jira/browse/HBASE-12954 for details.</description>
+  </property>
   <!-- The following properties configure authentication information for
        HBase processes when using Kerberos security.  There are no default
        values, included here for documentation purposes -->

@@ -304,8 +304,9 @@ public class MasterRpcServices extends RSRpcServices
       master.checkServiceStarted();
       InetAddress ia = master.getRemoteInetAddress(
         request.getPort(), request.getServerStartCode());
-      ServerName rs = master.serverManager.regionServerStartup(ia, request.getPort(),
-        request.getServerStartCode(), request.getServerCurrentTime());
+      // if regionserver passed hostname to use,
+      // then use it instead of doing a reverse DNS lookup
+      ServerName rs = master.serverManager.regionServerStartup(request, ia);
 
       // Send back some config info
       RegionServerStartupResponse.Builder resp = createConfigurationSubset();
