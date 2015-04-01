@@ -993,7 +993,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    this.service.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
       conf.getInt("hbase.master.executor.serverops.threads", 5));
    this.service.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
-      conf.getInt("hbase.master.executor.serverops.threads", 5));
+      conf.getInt("hbase.master.executor.meta.serverops.threads", 5));
    this.service.startExecutorService(ExecutorType.M_LOG_REPLAY_OPS,
       conf.getInt("hbase.master.executor.logreplayops.threads", 10));
 
