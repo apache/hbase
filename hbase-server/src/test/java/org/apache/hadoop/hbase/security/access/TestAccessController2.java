@@ -22,7 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -66,7 +68,10 @@ public class TestAccessController2 extends SecureTestUtil {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
 
-  private static Connection connection;
+  /** The systemUserConnection created here is tied to the system user. In case, you are planning
+   * to create AccessTestAction, DON'T use this systemUserConnection as the 'doAs' user
+   * gets  eclipsed by the system user. */
+  private static Connection systemUserConnection;
 
   private final static byte[] Q1 = Bytes.toBytes("q1");
   private final static byte[] value1 = Bytes.toBytes("value1");
@@ -106,38 +111,26 @@ public class TestAccessController2 extends SecureTestUtil {
     TESTGROUP2_USER1 =
         User.createUserForTesting(conf, "testgroup2_user2", new String[] { TESTGROUP_2 });
 
-    connection = ConnectionFactory.createConnection(conf);
+    systemUserConnection = ConnectionFactory.createConnection(conf);
   }
 
   @Before
   public void setUp() throws Exception {
     TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
-    try (Table table =
-        TEST_UTIL.createTable(tableName,
+    try (Table table = TEST_UTIL.createTable(tableName,
           new String[] { Bytes.toString(TEST_FAMILY), Bytes.toString(TEST_FAMILY_2) })) {
-      TEST_UTIL.waitTableEnabled(tableName);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
-      List<Put> puts = new ArrayList<Put>(5);
-      Put put_1 = new Put(TEST_ROW);
-      put_1.addColumn(TEST_FAMILY, Q1, value1);
-
-      Put put_2 = new Put(TEST_ROW_2);
-      put_2.addColumn(TEST_FAMILY, Q2, value2);
-
-      Put put_3 = new Put(TEST_ROW_3);
-      put_3.addColumn(TEST_FAMILY_2, Q1, value1);
-
-      puts.add(put_1);
-      puts.add(put_2);
-      puts.add(put_3);
-
-      table.put(puts);
+      // Ingesting test data.
+      table.put(Arrays.asList(new Put(TEST_ROW).addColumn(TEST_FAMILY, Q1, value1),
+          new Put(TEST_ROW_2).addColumn(TEST_FAMILY, Q2, value2),
+          new Put(TEST_ROW_3).addColumn(TEST_FAMILY_2, Q1, value1)));
     }
 
     assertEquals(1, AccessControlLists.getTablePermissions(conf, tableName).size());
     try {
-      assertEquals(1, AccessControlClient.getUserPermissions(connection, tableName.toString())
-          .size());
+      assertEquals(1, AccessControlClient.getUserPermissions(systemUserConnection,
+          tableName.toString()).size());
     } catch (Throwable e) {
       LOG.error("Error during call of AccessControlClient.getUserPermissions. ", e);
     }
@@ -146,7 +139,7 @@ public class TestAccessController2 extends SecureTestUtil {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    connection.close();
+    systemUserConnection.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -389,17 +382,17 @@ public class TestAccessController2 extends SecureTestUtil {
 
     // Verify user from a group which has table level access can read all the data and group which
     // has no access can't read any data.
-    grantOnTable(TEST_UTIL, '@' + TESTGROUP_1, tableName, null, null, Permission.Action.READ);
+    grantOnTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, null, null, Action.READ);
     verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithTableLevelAccess);
     verifyDenied(TESTGROUP2_USER1, scanTableActionForGroupWithTableLevelAccess);
 
     // Verify user from a group whose table level access has been revoked can't read any data.
-    revokeFromTable(TEST_UTIL, '@' + TESTGROUP_1, tableName, null, null);
+    revokeFromTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, null, null);
     verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithTableLevelAccess);
 
     // Verify user from a group which has column family level access can read all the data
     // belonging to that family and group which has no access can't read any data.
-    grantOnTable(TEST_UTIL, '@' + TESTGROUP_1, tableName, TEST_FAMILY, null,
+    grantOnTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, TEST_FAMILY, null,
       Permission.Action.READ);
     verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithFamilyLevelAccess);
     verifyDenied(TESTGROUP1_USER1, scanFamilyActionForGroupWithFamilyLevelAccess);
@@ -408,12 +401,12 @@ public class TestAccessController2 extends SecureTestUtil {
 
     // Verify user from a group whose column family level access has been revoked can't read any
     // data from that family.
-    revokeFromTable(TEST_UTIL, '@' + TESTGROUP_1, tableName, TEST_FAMILY, null);
+    revokeFromTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, TEST_FAMILY, null);
     verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithFamilyLevelAccess);
 
     // Verify user from a group which has column qualifier level access can read data that has this
     // family and qualifier, and group which has no access can't read any data.
-    grantOnTable(TEST_UTIL, '@' + TESTGROUP_1, tableName, TEST_FAMILY, Q1, Permission.Action.READ);
+    grantOnTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, TEST_FAMILY, Q1, Action.READ);
     verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
     verifyDenied(TESTGROUP1_USER1, scanFamilyActionForGroupWithQualifierLevelAccess);
     verifyDenied(TESTGROUP1_USER1, scanQualifierActionForGroupWithQualifierLevelAccess);
@@ -423,7 +416,38 @@ public class TestAccessController2 extends SecureTestUtil {
 
     // Verify user from a group whose column qualifier level access has been revoked can't read the
     // data having this column family and qualifier.
-    revokeFromTable(TEST_UTIL, '@' + TESTGROUP_1, tableName, TEST_FAMILY, Q1);
+    revokeFromTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, TEST_FAMILY, Q1);
     verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
+  }
+
+  @Test
+  public void testACLZNodeDeletion() throws Exception {
+    String baseAclZNode = "/hbase/acl/";
+    String ns = "testACLZNodeDeletionNamespace";
+    NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
+    createNamespace(TEST_UTIL, desc);
+
+    final TableName table = TableName.valueOf(ns, "testACLZNodeDeletionTable");
+    final byte[] family = Bytes.toBytes("f1");
+    HTableDescriptor htd = new HTableDescriptor(table);
+    htd.addFamily(new HColumnDescriptor(family));
+    TEST_UTIL.getHBaseAdmin().createTable(htd);
+
+    // Namespace needs this, as they follow the lazy creation of ACL znode.
+    grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
+    ZooKeeperWatcher zkw = TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper();
+    assertTrue("The acl znode for table should exist",  ZKUtil.checkExists(zkw, baseAclZNode +
+        table.getNameAsString()) != -1);
+    assertTrue("The acl znode for namespace should exist", ZKUtil.checkExists(zkw, baseAclZNode +
+        convertToNamespace(ns)) != -1);
+
+    revokeFromNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
+    TEST_UTIL.deleteTable(table);
+    deleteNamespace(TEST_UTIL, ns);
+
+    assertTrue("The acl znode for table should have been deleted",
+        ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) == -1);
+    assertTrue( "The acl znode for namespace should have been deleted",
+        ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) == -1);
   }
 }

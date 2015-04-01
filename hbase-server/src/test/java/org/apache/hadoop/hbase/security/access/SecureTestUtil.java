@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Connection;
@@ -617,5 +618,23 @@ public class SecureTestUtil {
         return null;
       }
     });
+  }
+
+  public static void createNamespace(HBaseTestingUtility testUtil, NamespaceDescriptor nsDesc)
+      throws Exception {
+    testUtil.getHBaseAdmin().createNamespace(nsDesc);
+  }
+
+  public static void deleteNamespace(HBaseTestingUtility testUtil, String namespace)
+      throws Exception {
+    testUtil.getHBaseAdmin().deleteNamespace(namespace);
+  }
+
+  public static String convertToNamespace(String namespace) {
+    return AccessControlLists.NAMESPACE_PREFIX + namespace;
+  }
+
+  public static String convertToGroup(String group) {
+    return AccessControlLists.GROUP_PREFIX + group;
   }
 }
