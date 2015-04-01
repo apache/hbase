@@ -2105,13 +2105,14 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Get the current master from ZooKeeper and open the RPC connection to it.
-   *
+   * To get a fresh connection, the current rssStub must be null.
    * Method will block until a master is available. You can break from this
    * block by requesting the server stop.
    *
    * @return master + port, or null if server has been stopped
    */
-  private synchronized ServerName createRegionServerStatusStub() {
+  @VisibleForTesting
+  protected synchronized ServerName createRegionServerStatusStub() {
     if (rssStub != null) {
       return masterAddressTracker.getMasterAddress();
     }
@@ -2216,6 +2217,7 @@ public class HRegionServer extends HasThread implements
         LOG.debug("Master is not running yet");
       } else {
         LOG.warn("error telling master we are up", se);
+        rssStub = null;
       }
     }
     return result;
