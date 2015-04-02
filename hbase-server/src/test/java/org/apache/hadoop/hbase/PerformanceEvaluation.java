@@ -610,6 +610,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     int valueSize = DEFAULT_VALUE_LENGTH;
     int period = (this.perClientRunRows / 10) == 0? perClientRunRows: perClientRunRows / 10;
     int cycles = 1;
+    boolean addColumns = true;
 
     public TestOptions() {}
 
@@ -651,6 +652,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.period = that.period;
       this.randomSleep = that.randomSleep;
       this.measureAfter = that.measureAfter;
+      this.addColumns = that.addColumns;
     }
 
     public int getCycles() {
@@ -915,6 +917,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     public void setMeasureAfter(int measureAfter) {
       this.measureAfter = measureAfter;
+    }
+
+    public boolean getAddColumns() {
+      return addColumns;
+    }
+
+    public void setAddColumns(boolean addColumns) {
+      this.addColumns = addColumns;
     }
   }
 
@@ -1181,7 +1191,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException {
       Scan scan = new Scan(getRandomRow(this.rand, opts.totalRows));
       FilterList list = new FilterList();
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       if (opts.filterAll) {
         list.addFilter(new FilterAllFilter());
       }
@@ -1214,7 +1226,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.filterAll) {
         scan.setFilter(new FilterAllFilter());
       }
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       Result r = null;
       int count = 0;
       ResultScanner s = this.table.getScanner(scan);
@@ -1310,7 +1324,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         Thread.sleep(rd.nextInt(opts.randomSleep));
       }
       Get get = new Get(getRandomRow(this.rand, opts.totalRows));
-      get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
       }
@@ -1395,7 +1411,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (this.testScanner == null) {
         Scan scan = new Scan(format(opts.startRow));
         scan.setCaching(30);
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        if (opts.addColumns) {
+          scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        }
         if (opts.filterAll) {
           scan.setFilter(new FilterAllFilter());
         }
@@ -1415,7 +1433,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       Get get = new Get(format(i));
-      get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
       }
@@ -1486,7 +1506,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         list.addFilter(new FilterAllFilter());
       }
       Scan scan = new Scan();
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       scan.setFilter(list);
       return scan;
     }
@@ -1677,6 +1699,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "Default: opts.perClientRunRows / 10");
     System.err.println(" multiGet        Batch gets together into groups of N. Only supported " +
       "by randomRead. Default: disabled");
+    System.err.println(" addColumns      Adds columns to scans/gets explicitly. Default: true");
     System.err.println(" replicas        Enable region replica testing. Defaults: 1.");
     System.err.println(" cycles          How many times to cycle the test. Defaults: 1.");
     System.err.println(" splitPolicy     Specify a custom RegionSplitPolicy for the table.");
@@ -1903,6 +1926,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String period = "--period=";
       if (cmd.startsWith(period)) {
         opts.period = Integer.parseInt(cmd.substring(period.length()));
+        continue;
+      }
+
+      final String addColumns = "--addColumns=";
+      if (cmd.startsWith(addColumns)) {
+        opts.addColumns = Boolean.parseBoolean(cmd.substring(addColumns.length()));
         continue;
       }
 
