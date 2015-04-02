@@ -36,6 +36,13 @@ EOF
           admin.clone_snapshot(snapshot_name, table)
         end
       end
+
+      def handle_exceptions(cause, *args)
+        if cause.kind_of?(org.apache.hadoop.hbase.TableExistsException) then
+          tableName = args[1]
+          raise "Table already exists: #{tableName}!"
+        end
+      end
     end
   end
 end
