@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -140,6 +141,7 @@ import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
@@ -2908,4 +2910,19 @@ public final class ProtobufUtil {
     return rlsList;
   }
 
+  /**
+   * Get a protocol buffer VersionInfo
+   *
+   * @return the converted protocol buffer VersionInfo
+   */
+  public static RPCProtos.VersionInfo getVersionInfo() {
+    RPCProtos.VersionInfo.Builder builder = RPCProtos.VersionInfo.newBuilder();
+    builder.setVersion(VersionInfo.getVersion());
+    builder.setUrl(VersionInfo.getUrl());
+    builder.setRevision(VersionInfo.getRevision());
+    builder.setUser(VersionInfo.getUser());
+    builder.setDate(VersionInfo.getDate());
+    builder.setSrcChecksum(VersionInfo.getSrcChecksum());
+    return builder.build();
+  }
 }
