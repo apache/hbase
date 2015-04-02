@@ -244,10 +244,12 @@ fi
 
 # Generate annotation list dynamically; this way, there's no chance the file
 # gets stale and you have better visiblity into what classes are actually analyzed.
+declare -a ANNOTATION_LIST
 ANNOTATION_LIST+=(InterfaceAudience.Public)
+ANNOTATION_LIST+=(InterfaceAudience.LimitedPrivate)
 if ! [ -f ${SCRIPT_DIRECTORY}/target/compatibility/annotations ]; then
   cat > ${SCRIPT_DIRECTORY}/target/compatibility/annotations << __EOF
-$(tr " " "\n" <<< "${ANNOTATION_LIST}")
+$(tr " " "\n" <<< "${ANNOTATION_LIST[@]}")
 __EOF
 fi
 
