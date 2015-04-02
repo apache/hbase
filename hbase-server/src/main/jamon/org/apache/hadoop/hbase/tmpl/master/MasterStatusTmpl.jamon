@@ -80,14 +80,13 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     }
 
     for(int i = 0; i < zks.length; ++i) {
-      quorums.append(zks[i].trim()).append(",");
+      quorums.append(zks[i].trim());
 
-      if ((i+1) % 4 == 0 && i != (zks.length - 1)) {
+      if (i != (zks.length - 1)) {
         quorums.append("<br/>");
       }
     }
 
-    quorums.setLength(quorums.length() - 1);
     return quorums.toString();
   }
 </%class>
