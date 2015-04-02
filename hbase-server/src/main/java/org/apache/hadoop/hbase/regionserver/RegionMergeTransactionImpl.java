@@ -121,14 +121,14 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
    * @param b region b to merge
    * @param forcible if false, we will only merge adjacent regions
    */
-  public RegionMergeTransactionImpl(final HRegion a, final HRegion b,
+  public RegionMergeTransactionImpl(final Region a, final Region b,
       final boolean forcible) {
     if (a.getRegionInfo().compareTo(b.getRegionInfo()) <= 0) {
-      this.region_a = a;
-      this.region_b = b;
+      this.region_a = (HRegion)a;
+      this.region_b = (HRegion)b;
     } else {
-      this.region_a = b;
-      this.region_b = a;
+      this.region_a = (HRegion)b;
+      this.region_b = (HRegion)a;
     }
     this.forcible = forcible;
     this.mergesdir = region_a.getRegionFileSystem().getMergesDir();
