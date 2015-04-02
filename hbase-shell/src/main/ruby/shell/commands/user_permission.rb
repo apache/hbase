@@ -23,9 +23,13 @@ module Shell
         return <<-EOF
 Show all permissions for the particular user.
 Syntax : user_permission <table>
+
+Note: A namespace must always precede with '@' character.
+
 For example:
 
     hbase> user_permission
+    hbase> user_permission '@ns1'
     hbase> user_permission 'table1'
     hbase> user_permission 'namespace1:table1'
     hbase> user_permission '.*'

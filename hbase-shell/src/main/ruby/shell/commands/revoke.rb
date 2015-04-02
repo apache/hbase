@@ -22,10 +22,17 @@ module Shell
       def help
         return <<-EOF
 Revoke a user's access rights.
-Syntax : revoke <user> [<table> [<column family> [<column qualifier>]]
+Syntax : revoke <user> [<@namespace> [<table> [<column family> [<column qualifier>]]]]
+
+Note: Groups and users access are revoked in the same way, but groups are prefixed with an '@' 
+      character. In the same way, tables and namespaces are specified, but namespaces are 
+      prefixed with an '@' character.
+
 For example:
 
     hbase> revoke 'bobsmith'
+    hbase> revoke '@admins'
+    hbase> revoke 'bobsmith', '@ns1'
     hbase> revoke 'bobsmith', 't1', 'f1', 'col1'
     hbase> revoke 'bobsmith', 'ns1:t1', 'f1', 'col1'
 EOF
