@@ -124,8 +124,10 @@ import org.apache.zookeeper.KeeperException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.TreeMultimap;
 import com.google.protobuf.ServiceException;
 
@@ -1659,8 +1661,56 @@ public class HBaseFsck extends Configured {
    */
   private void checkAndFixConsistency()
   throws IOException, KeeperException, InterruptedException {
+    List<CheckRegionConsistencyWorkItem> workItems =
+        new ArrayList<CheckRegionConsistencyWorkItem>(regionInfoMap.size());
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfoMap.entrySet()) {
-      checkRegionConsistency(e.getKey(), e.getValue());
+      workItems.add(new CheckRegionConsistencyWorkItem(e.getKey(), e.getValue()));
+    }
+    checkRegionConsistencyConcurrently(workItems);
+  }
+  
+  /**
+   * Check consistency of all regions using mulitple threads concurrently.
+   */
+  private void checkRegionConsistencyConcurrently(
+    final List<CheckRegionConsistencyWorkItem> workItems)
+    throws IOException, KeeperException, InterruptedException {
+    if (workItems.isEmpty()) {
+      return;  // nothing to check
+    }
+
+    List<Future<Void>> workFutures = executor.invokeAll(workItems);
+    for(Future<Void> f: workFutures) {
+      try {
+        f.get();
+      } catch(ExecutionException e1) {
+        LOG.warn("Could not check region consistency " , e1.getCause());
+        if (e1.getCause() instanceof IOException) {
+          throw (IOException)e1.getCause();
+        } else if (e1.getCause() instanceof KeeperException) {
+          throw (KeeperException)e1.getCause();
+        } else if (e1.getCause() instanceof InterruptedException) {
+          throw (InterruptedException)e1.getCause();
+        } else {
+          throw new IOException(e1.getCause());
+        }
+      }
+    }
+  }
+
+  class CheckRegionConsistencyWorkItem implements Callable<Void> {
+    private final String key;
+    private final HbckInfo hbi;
+
+    CheckRegionConsistencyWorkItem(String key, HbckInfo hbi) {
+      this.key = key;
+      this.hbi = hbi;
+    }
+
+    @Override
+    public synchronized Void call() throws Exception {
+      checkRegionConsistency(key, hbi);
+      return null;
     }
   }
 
@@ -1908,16 +1958,7 @@ public class HBaseFsck extends Configured {
 
         HRegionInfo hri = hbi.getHdfsHRI();
         TableInfo tableInfo = tablesInfo.get(hri.getTable());
-        if (tableInfo.regionsFromMeta.isEmpty()) {
-          for (HbckInfo h : regionInfoMap.values()) {
-            if (hri.getTable().equals(h.getTableName())) {
-              if (h.metaEntry != null) tableInfo.regionsFromMeta
-                  .add((HRegionInfo) h.metaEntry);
-            }
-          }
-          Collections.sort(tableInfo.regionsFromMeta);
-        }
-        for (HRegionInfo region : tableInfo.regionsFromMeta) {
+        for (HRegionInfo region : tableInfo.getRegionsFromMeta()) {
           if (Bytes.compareTo(region.getStartKey(), hri.getStartKey()) <= 0
               && (region.getEndKey().length == 0 || Bytes.compareTo(region.getEndKey(),
                 hri.getEndKey()) >= 0)
@@ -2264,7 +2305,7 @@ public class HBaseFsck extends Configured {
       TreeMultimap.create(RegionSplitCalculator.BYTES_COMPARATOR, cmp);
 
     // list of regions derived from meta entries.
-    final List<HRegionInfo> regionsFromMeta = new ArrayList<HRegionInfo>();
+    private ImmutableList<HRegionInfo> regionsFromMeta = null;
 
     TableInfo(TableName name) {
       this.tableName = name;
@@ -2317,6 +2358,23 @@ public class HBaseFsck extends Configured {
 
     public int getNumRegions() {
       return sc.getStarts().size() + backwards.size();
+    }
+
+    public synchronized ImmutableList<HRegionInfo> getRegionsFromMeta() {
+      // lazy loaded, synchronized to ensure a single load
+      if (regionsFromMeta == null) {
+        List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+        for (HbckInfo h : HBaseFsck.this.regionInfoMap.values()) {
+          if (tableName.equals(h.getTableName())) {
+            if (h.metaEntry != null) {
+              regions.add((HRegionInfo) h.metaEntry);
+            }
+          }
+        }
+        regionsFromMeta = Ordering.natural().immutableSortedCopy(regions);
+      }
+      
+      return regionsFromMeta;
     }
 
     private class IntegrityFixSuggester extends TableIntegrityErrorHandlerImpl {
