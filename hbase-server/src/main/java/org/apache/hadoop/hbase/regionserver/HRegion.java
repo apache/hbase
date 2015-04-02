@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -3523,7 +3524,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   protected void checkReadOnly() throws IOException {
     if (isReadOnly()) {
-      throw new IOException("region is read only");
+      throw new DoNotRetryIOException("region is read only");
     }
   }
 
