@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifestV2;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -317,4 +319,16 @@ public class SnapshotDescriptionUtils {
     }
   }
 
+  /**
+   * Check if the user is this table snapshot's owner
+   * @param snapshot the table snapshot description
+   * @param user the user
+   * @return true if the user is the owner of the snapshot,
+   *         false otherwise or the snapshot owner field is not present.
+   */
+  public static boolean isSnapshotOwner(final SnapshotDescription snapshot, final User user) {
+    if (user == null) return false;
+    if (!snapshot.hasOwner()) return false;
+    return snapshot.getOwner().equals(user.getShortName());
+  }
 }

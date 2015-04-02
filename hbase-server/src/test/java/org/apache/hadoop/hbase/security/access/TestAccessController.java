@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -1799,11 +1800,17 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testSnapshot() throws Exception {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE.getTableName());
+    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
+    builder.setName(TEST_TABLE.getTableName().getNameAsString() + "-snapshot");
+    builder.setTable(TEST_TABLE.getTableName().getNameAsString());
+    final SnapshotDescription snapshot = builder.build();
     AccessTestAction snapshotAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
-          null, null);
+          snapshot, htd);
         return null;
       }
     };
@@ -1812,7 +1819,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
-          null);
+          snapshot);
         return null;
       }
     };
@@ -1821,7 +1828,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
-          null, null);
+          snapshot, htd);
         return null;
       }
     };
@@ -1835,8 +1842,8 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(snapshotAction, SUPERUSER, USER_ADMIN);
-    verifyDenied(snapshotAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+    verifyAllowed(snapshotAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(snapshotAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
 
     verifyAllowed(cloneAction, SUPERUSER, USER_ADMIN);
     verifyDenied(deleteAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
@@ -1845,6 +1852,62 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(restoreAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
 
     verifyAllowed(deleteAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testSnapshotWithOwner() throws Exception {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    final HTableDescriptor htd = admin.getTableDescriptor(TEST_TABLE.getTableName());
+    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
+    builder.setName(TEST_TABLE.getTableName().getNameAsString() + "-snapshot");
+    builder.setTable(TEST_TABLE.getTableName().getNameAsString());
+    builder.setOwner(USER_OWNER.getName());
+    final SnapshotDescription snapshot = builder.build();
+    AccessTestAction snapshotAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+          snapshot, htd);
+        return null;
+      }
+    };
+    verifyAllowed(snapshotAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(snapshotAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    AccessTestAction deleteAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preDeleteSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+          snapshot);
+        return null;
+      }
+    };
+    verifyAllowed(deleteAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(deleteAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    AccessTestAction restoreAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preRestoreSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+          snapshot, htd);
+        return null;
+      }
+    };
+    verifyAllowed(restoreAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(restoreAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    AccessTestAction cloneAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preCloneSnapshot(ObserverContext.createAndPrepare(CP_ENV, null),
+          null, null);
+        return null;
+      }
+    };
+    // Clone by snapshot owner is not allowed , because clone operation creates a new table,
+    // which needs global admin permission.
+    verifyAllowed(cloneAction, SUPERUSER, USER_ADMIN);
     verifyDenied(cloneAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
   }
 
