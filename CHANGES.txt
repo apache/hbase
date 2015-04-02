@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.12 - 4/03/2015
+Release 0.98.12 - 4/8/2015
 
 ** Sub-task
     * [HBASE-13006] - Document visibility label support for groups
