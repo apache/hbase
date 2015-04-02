@@ -94,9 +94,13 @@ module Shell
         
         # Get the special java exception which will be handled
         cause = e.cause
+         # let individual command handle exceptions first
+        if self.respond_to?(:handle_exceptions)
+          self.handle_exceptions(cause, *args)
+        end
+        # Global HBase exception handling below if not handled by respective command above
         if cause.kind_of?(org.apache.hadoop.hbase.TableNotFoundException) then
-          str = java.lang.String.new("#{cause}")
-          raise "Unknown table #{str}!"
+          raise "Unknown table #{args.first}!"
         end
         if cause.kind_of?(org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException) then
           exceptions = cause.getCauses
@@ -108,15 +112,7 @@ module Shell
           end
         end
         if cause.kind_of?(org.apache.hadoop.hbase.TableExistsException) then
-          str = java.lang.String.new("#{cause}")
-          strs = str.split("\n")
-          if strs.size > 0 then
-            s = strs[0].split(' ');
-            if(s.size > 1)
-              raise "Table already exists: #{s[1]}!"
-            end
-              raise "Table already exists: #{strs[0]}!"
-          end
+          raise "Table already exists: #{args.first}!"
         end
         # To be safe, here only AccessDeniedException is considered. In future
         # we might support more in more generic approach when possible.
