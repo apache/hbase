@@ -200,7 +200,6 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
     Subprocedure subproc = null;
     try {
       byte[] data = ZKUtil.getData(zkController.getWatcher(), path);
-      LOG.debug("start proc data length is " + data.length);
       if (!ProtobufUtil.isPBMagicPrefix(data)) {
         String msg = "Data in for starting procuedure " + opName +
           " is illegally formatted (no pb magic). " +
@@ -208,6 +207,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
         LOG.error(msg);
         throw new IllegalArgumentException(msg);
       }
+      LOG.debug("start proc data length is " + data.length);
       data = Arrays.copyOfRange(data, ProtobufUtil.lengthOfPBMagic(), data.length);
       LOG.debug("Found data for znode:" + path);
       subproc = member.createSubprocedure(opName, data);
