@@ -3237,7 +3237,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    */
   protected void checkReadOnly() throws IOException {
     if (this.writestate.isReadOnly()) {
-      throw new IOException("region is read only");
+      throw new DoNotRetryIOException("region is read only");
     }
   }
 
