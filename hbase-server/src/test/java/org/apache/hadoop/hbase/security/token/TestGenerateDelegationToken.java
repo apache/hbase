@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.ipc.AsyncRpcClient;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -45,6 +47,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRes
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -70,9 +74,32 @@ public class TestGenerateDelegationToken {
 
   private static String HOST = "localhost";
 
-  private static String USERNAME = System.getProperty("user.name");
+  private static String USERNAME;
 
   private static String PRINCIPAL;
+
+  private static String HTTP_PRINCIPAL;
+
+  private static void setHdfsSecuredConfiguration(Configuration conf) throws Exception {
+    // change XXX_USER_NAME_KEY to XXX_KERBEROS_PRINCIPAL_KEY after we drop support for hadoop-2.4.1
+    conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, PRINCIPAL + "@" + KDC.getRealm());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
+    conf.set(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, PRINCIPAL + "@" + KDC.getRealm());
+    conf.set(DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, KEYTAB_FILE.getAbsolutePath());
+    conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY, HTTP_PRINCIPAL + "@"
+        + KDC.getRealm());
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, "localhost:0");
+
+    File keystoresDir = new File(TEST_UTIL.getDataTestDir("keystore").toUri().getPath());
+    keystoresDir.mkdirs();
+    String sslConfDir = KeyStoreTestUtil.getClasspathDir(TestGenerateDelegationToken.class);
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir.getAbsolutePath(), sslConfDir, conf, false);
+
+    conf.setBoolean("ignore.secure.ports.for.testing", true);
+  }
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -80,18 +107,20 @@ public class TestGenerateDelegationToken {
     conf.put(MiniKdc.DEBUG, true);
     KDC = new MiniKdc(conf, new File(TEST_UTIL.getDataTestDir("kdc").toUri().getPath()));
     KDC.start();
+    USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     PRINCIPAL = USERNAME + "/" + HOST;
-    KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL);
-    TEST_UTIL.getConfiguration().setBoolean("ipc.client.fallback-to-simple-auth-allowed", true);
+    HTTP_PRINCIPAL = "HTTP/" + HOST;
+    KDC.createPrincipal(KEYTAB_FILE, PRINCIPAL, HTTP_PRINCIPAL);
     TEST_UTIL.startMiniZKCluster();
-    TEST_UTIL.startMiniDFSCluster(1);
 
     HBaseKerberosUtils.setKeytabFileForTesting(KEYTAB_FILE.getAbsolutePath());
     HBaseKerberosUtils.setPrincipalForTesting(PRINCIPAL + "@" + KDC.getRealm());
     HBaseKerberosUtils.setSecuredConfiguration(TEST_UTIL.getConfiguration());
+    setHdfsSecuredConfiguration(TEST_UTIL.getConfiguration());
     UserGroupInformation.setConfiguration(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       TokenProvider.class.getName());
+    TEST_UTIL.startMiniDFSCluster(1);
     CLUSTER = new LocalHBaseCluster(TEST_UTIL.getConfiguration(), 1);
     CLUSTER.startup();
   }
