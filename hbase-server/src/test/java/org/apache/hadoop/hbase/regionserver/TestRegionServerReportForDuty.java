@@ -83,9 +83,8 @@ public class TestRegionServerReportForDuty {
     // Start a master and wait for it to become the active/primary master.
     // Use a random unique port
     cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
-    // master has a rs. defaultMinToStart = 2
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 1);
     master = cluster.addMaster();
     rs = cluster.addRegionServer();
     LOG.debug("Starting master: " + master.getMaster().getServerName());
@@ -109,8 +108,8 @@ public class TestRegionServerReportForDuty {
     // Start a new master and use another random unique port
     // Also let it wait for exactly 2 region severs to report in.
     cluster.getConfiguration().setInt(HConstants.MASTER_PORT, HBaseTestingUtility.randomFreePort());
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 3);
-    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 3);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
+    cluster.getConfiguration().setInt(ServerManager.WAIT_ON_REGIONSERVERS_MAXTOSTART, 2);
     backupMaster = cluster.addMaster();
     LOG.debug("Starting new master: " + backupMaster.getMaster().getServerName());
     backupMaster.start();
@@ -120,7 +119,7 @@ public class TestRegionServerReportForDuty {
     // Do some checking/asserts here.
     assertTrue(backupMaster.getMaster().isActiveMaster());
     assertTrue(backupMaster.getMaster().isInitialized());
-    assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(), 3);
+    assertEquals(backupMaster.getMaster().getServerManager().getOnlineServersList().size(), 2);
 
   }
 
