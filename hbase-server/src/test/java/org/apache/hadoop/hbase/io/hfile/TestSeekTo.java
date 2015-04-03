@@ -70,7 +70,12 @@ public class TestSeekTo extends HBaseTestCase {
   }
 
   Path makeNewFile(TagUsage tagUsage) throws IOException {
-    Path ncTFile = new Path(testDir, "basic.hfile");
+    Path ncTFile = new Path(this.testDir, "basic.hfile");
+    if (tagUsage != TagUsage.NO_TAG) {
+      conf.setInt("hfile.format.version", 3);
+    } else {
+      conf.setInt("hfile.format.version", 2);
+    }
     FSDataOutputStream fout = this.fs.create(ncTFile);
     int blocksize = toKV("a", tagUsage).getLength() * 3;
     HFileContext context = new HFileContextBuilder().withBlockSize(blocksize)
@@ -133,7 +138,7 @@ public class TestSeekTo extends HBaseTestCase {
   }
 
   public void testSeekBeforeWithReSeekTo() throws Exception {
-    testSeekBeforeInternals(TagUsage.NO_TAG);
+    testSeekBeforeWithReSeekToInternals(TagUsage.NO_TAG);
     testSeekBeforeWithReSeekToInternals(TagUsage.ONLY_TAG);
     testSeekBeforeWithReSeekToInternals(TagUsage.PARTIAL_TAG);
   }
@@ -222,7 +227,7 @@ public class TestSeekTo extends HBaseTestCase {
   }
 
   public void testSeekTo() throws Exception {
-    testSeekBeforeInternals(TagUsage.NO_TAG);
+    testSeekToInternals(TagUsage.NO_TAG);
     testSeekToInternals(TagUsage.ONLY_TAG);
     testSeekToInternals(TagUsage.PARTIAL_TAG);
   }
@@ -250,7 +255,7 @@ public class TestSeekTo extends HBaseTestCase {
     reader.close();
   }
   public void testBlockContainingKey() throws Exception {
-    testSeekBeforeInternals(TagUsage.NO_TAG);
+    testBlockContainingKeyInternals(TagUsage.NO_TAG);
     testBlockContainingKeyInternals(TagUsage.ONLY_TAG);
     testBlockContainingKeyInternals(TagUsage.PARTIAL_TAG);
   }
@@ -259,7 +264,7 @@ public class TestSeekTo extends HBaseTestCase {
     Path p = makeNewFile(tagUsage);
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
     reader.loadFileInfo();
-    HFileBlockIndex.BlockIndexReader blockIndexReader =
+    HFileBlockIndex.BlockIndexReader blockIndexReader = 
       reader.getDataBlockIndexReader();
     System.out.println(blockIndexReader.toString());
     // falls before the start of the file.

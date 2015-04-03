@@ -24,9 +24,9 @@ import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileReaderV3;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterV3;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
-import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
@@ -46,8 +46,8 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
   static {
     // These log level changes are only useful when running on a localhost
     // cluster.
-    Logger.getLogger(HFileReaderImpl.class).setLevel(Level.TRACE);
-    Logger.getLogger(HFileWriterImpl.class).setLevel(Level.TRACE);
+    Logger.getLogger(HFileReaderV3.class).setLevel(Level.TRACE);
+    Logger.getLogger(HFileWriterV3.class).setLevel(Level.TRACE);
     Logger.getLogger(SecureProtobufLogReader.class).setLevel(Level.TRACE);
     Logger.getLogger(SecureProtobufLogWriter.class).setLevel(Level.TRACE);
   }
