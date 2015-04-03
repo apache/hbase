@@ -82,6 +82,8 @@ public class TestForceCacheImportantBlocks {
   public static Collection<Object[]> parameters() {
     // HFile versions
     return Arrays.asList(
+      new Object[] { 2, true },
+      new Object[] { 2, false },
       new Object[] { 3, true },
       new Object[] { 3, false }
     );

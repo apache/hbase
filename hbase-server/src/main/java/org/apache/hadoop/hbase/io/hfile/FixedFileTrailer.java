@@ -238,7 +238,7 @@ public class FixedFileTrailer {
     BlockType.TRAILER.readAndCheck(inputStream);
 
     if (majorVersion > 2
-        || (majorVersion == 2 && minorVersion >= HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION)) {
+        || (majorVersion == 2 && minorVersion >= HFileReaderV2.PBUF_TRAILER_MINOR_VERSION)) {
       deserializeFromPB(inputStream);
     } else {
       deserializeFromWritable(inputStream);
@@ -611,9 +611,7 @@ public class FixedFileTrailer {
   }
 
   public byte[] getEncryptionKey() {
-    // This is a v3 feature but if reading a v2 file the encryptionKey will just be null which
-    // if fine for this feature.
-    expectAtLeastMajorVersion(2);
+    expectAtLeastMajorVersion(3);
     return encryptionKey;
   }
 

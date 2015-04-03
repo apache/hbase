@@ -1256,40 +1256,13 @@ public class HFileBlock implements Cacheable {
 
     /** Get the default decoder for blocks from this file. */
     HFileBlockDecodingContext getDefaultBlockDecodingContext();
-
-    void setIncludesMemstoreTS(boolean includesMemstoreTS);
-    void setDataBlockEncoder(HFileDataBlockEncoder encoder);
   }
 
   /**
-   * We always prefetch the header of the next block, so that we know its
-   * on-disk size in advance and can read it in one operation.
+   * A common implementation of some methods of {@link FSReader} and some
+   * tools for implementing HFile format version-specific block readers.
    */
-  private static class PrefetchedHeader {
-    long offset = -1;
-    byte[] header = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
-    final ByteBuffer buf = ByteBuffer.wrap(header, 0, HConstants.HFILEBLOCK_HEADER_SIZE);
-  }
-
-  /** Reads version 2 blocks from the filesystem. */
-  static class FSReaderImpl implements FSReader {
-    /** The file system stream of the underlying {@link HFile} that
-     * does or doesn't do checksum validations in the filesystem */
-    protected FSDataInputStreamWrapper streamWrapper;
-
-    private HFileBlockDecodingContext encodedBlockDecodingCtx;
-
-    /** Default context used when BlockType != {@link BlockType#ENCODED_DATA}. */
-    private final HFileBlockDefaultDecodingContext defaultDecodingCtx;
-
-    private ThreadLocal<PrefetchedHeader> prefetchedHeaderForThread =
-        new ThreadLocal<PrefetchedHeader>() {
-      @Override
-      public PrefetchedHeader initialValue() {
-        return new PrefetchedHeader();
-      }
-    };
-
+  private abstract static class AbstractFSReader implements FSReader {
     /** Compression algorithm used by the {@link HFile} */
 
     /** The size of the file we are reading from, or -1 if unknown. */
@@ -1311,31 +1284,18 @@ public class HFileBlock implements Cacheable {
 
     protected HFileContext fileContext;
 
-    public FSReaderImpl(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
-        HFileContext fileContext) throws IOException {
+    public AbstractFSReader(long fileSize, HFileSystem hfs, Path path, HFileContext fileContext)
+        throws IOException {
       this.fileSize = fileSize;
       this.hfs = hfs;
       this.path = path;
       this.fileContext = fileContext;
       this.hdrSize = headerSize(fileContext.isUseHBaseChecksum());
-
-      this.streamWrapper = stream;
-      // Older versions of HBase didn't support checksum.
-      this.streamWrapper.prepareForBlockReader(!fileContext.isUseHBaseChecksum());
-      defaultDecodingCtx = new HFileBlockDefaultDecodingContext(fileContext);
-      encodedBlockDecodingCtx = defaultDecodingCtx;
     }
 
-    /**
-     * A constructor that reads files with the latest minor version.
-     * This is used by unit tests only.
-     */
-    FSReaderImpl(FSDataInputStream istream, long fileSize, HFileContext fileContext)
-    throws IOException {
-      this(new FSDataInputStreamWrapper(istream), fileSize, null, null, fileContext);
-    }
-
-    public BlockIterator blockRange(final long startOffset, final long endOffset) {
+    @Override
+    public BlockIterator blockRange(final long startOffset,
+        final long endOffset) {
       final FSReader owner = this; // handle for inner class
       return new BlockIterator() {
         private long offset = startOffset;
@@ -1430,6 +1390,56 @@ public class HFileBlock implements Cacheable {
 
       assert peekIntoNextBlock;
       return Bytes.toInt(dest, destOffset + size + BlockType.MAGIC_LENGTH) + hdrSize;
+    }
+
+  }
+
+  /**
+   * We always prefetch the header of the next block, so that we know its
+   * on-disk size in advance and can read it in one operation.
+   */
+  private static class PrefetchedHeader {
+    long offset = -1;
+    byte[] header = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
+    final ByteBuffer buf = ByteBuffer.wrap(header, 0, HConstants.HFILEBLOCK_HEADER_SIZE);
+  }
+
+  /** Reads version 2 blocks from the filesystem. */
+  static class FSReaderImpl extends AbstractFSReader {
+    /** The file system stream of the underlying {@link HFile} that
+     * does or doesn't do checksum validations in the filesystem */
+    protected FSDataInputStreamWrapper streamWrapper;
+
+    private HFileBlockDecodingContext encodedBlockDecodingCtx;
+
+    /** Default context used when BlockType != {@link BlockType#ENCODED_DATA}. */
+    private final HFileBlockDefaultDecodingContext defaultDecodingCtx;
+
+    private ThreadLocal<PrefetchedHeader> prefetchedHeaderForThread =
+        new ThreadLocal<PrefetchedHeader>() {
+          @Override
+          public PrefetchedHeader initialValue() {
+            return new PrefetchedHeader();
+          }
+        };
+
+    public FSReaderImpl(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
+        HFileContext fileContext) throws IOException {
+      super(fileSize, hfs, path, fileContext);
+      this.streamWrapper = stream;
+      // Older versions of HBase didn't support checksum.
+      this.streamWrapper.prepareForBlockReader(!fileContext.isUseHBaseChecksum());
+      defaultDecodingCtx = new HFileBlockDefaultDecodingContext(fileContext);
+      encodedBlockDecodingCtx = defaultDecodingCtx;
+    }
+
+    /**
+     * A constructor that reads files with the latest minor version.
+     * This is used by unit tests only.
+     */
+    FSReaderImpl(FSDataInputStream istream, long fileSize, HFileContext fileContext)
+    throws IOException {
+      this(new FSDataInputStreamWrapper(istream), fileSize, null, null, fileContext);
     }
 
     /**
@@ -1672,11 +1682,11 @@ public class HFileBlock implements Cacheable {
       return b;
     }
 
-    public void setIncludesMemstoreTS(boolean includesMemstoreTS) {
+    void setIncludesMemstoreTS(boolean includesMemstoreTS) {
       this.fileContext.setIncludesMvcc(includesMemstoreTS);
     }
 
-    public void setDataBlockEncoder(HFileDataBlockEncoder encoder) {
+    void setDataBlockEncoder(HFileDataBlockEncoder encoder) {
       encodedBlockDecodingCtx = encoder.newDataBlockDecodingContext(this.fileContext);
     }
 

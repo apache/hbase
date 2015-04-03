@@ -90,7 +90,7 @@ public class TestFixedFileTrailer {
   @Test
   public void testTrailer() throws IOException {
     FixedFileTrailer t = new FixedFileTrailer(version, 
-        HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
+        HFileReaderV2.PBUF_TRAILER_MINOR_VERSION);
     t.setDataIndexCount(3);
     t.setEntryCount(((long) Integer.MAX_VALUE) + 1);
 
@@ -123,7 +123,7 @@ public class TestFixedFileTrailer {
     {
       DataInputStream dis = new DataInputStream(bais);
       FixedFileTrailer t2 = new FixedFileTrailer(version, 
-          HFileReaderImpl.PBUF_TRAILER_MINOR_VERSION);
+          HFileReaderV2.PBUF_TRAILER_MINOR_VERSION);
       t2.deserialize(dis);
       assertEquals(-1, bais.read()); // Ensure we have read everything.
       checkLoadedTrailer(version, t, t2);
@@ -172,7 +172,7 @@ public class TestFixedFileTrailer {
   public void testTrailerForV2NonPBCompatibility() throws Exception {
     if (version == 2) {
       FixedFileTrailer t = new FixedFileTrailer(version,
-          HFileReaderImpl.MINOR_VERSION_NO_CHECKSUM);
+          HFileReaderV2.MINOR_VERSION_NO_CHECKSUM);
       t.setDataIndexCount(3);
       t.setEntryCount(((long) Integer.MAX_VALUE) + 1);
       t.setLastDataBlockOffset(291);
@@ -199,7 +199,7 @@ public class TestFixedFileTrailer {
       {
         DataInputStream dis = new DataInputStream(bais);
         FixedFileTrailer t2 = new FixedFileTrailer(version,
-            HFileReaderImpl.MINOR_VERSION_NO_CHECKSUM);
+            HFileReaderV2.MINOR_VERSION_NO_CHECKSUM);
         t2.deserialize(dis);
         assertEquals(-1, bais.read()); // Ensure we have read everything.
         checkLoadedTrailer(version, t, t2);

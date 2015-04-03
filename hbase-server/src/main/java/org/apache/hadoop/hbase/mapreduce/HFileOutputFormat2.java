@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
+import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -129,7 +129,7 @@ public class HFileOutputFormat2
     // Invented config.  Add to hbase-*.xml if other than default compression.
     final String defaultCompressionStr = conf.get("hfile.compression",
         Compression.Algorithm.NONE.getName());
-    final Algorithm defaultCompression = HFileWriterImpl
+    final Algorithm defaultCompression = AbstractHFileWriter
         .compressionByName(defaultCompressionStr);
     final boolean compactionExclude = conf.getBoolean(
         "hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
@@ -483,7 +483,7 @@ public class HFileOutputFormat2
     Map<byte[], Algorithm> compressionMap = new TreeMap<byte[],
         Algorithm>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
-      Algorithm algorithm = HFileWriterImpl.compressionByName(e.getValue());
+      Algorithm algorithm = AbstractHFileWriter.compressionByName(e.getValue());
       compressionMap.put(e.getKey(), algorithm);
     }
     return compressionMap;

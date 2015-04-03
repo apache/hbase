@@ -242,6 +242,7 @@ public class TestCacheOnWrite {
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     this.conf.set("dfs.datanode.data.dir.perm", "700");
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, INDEX_BLOCK_SIZE);
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZE);
@@ -271,7 +272,12 @@ public class TestCacheOnWrite {
   }
 
   private void readStoreFile(boolean useTags) throws IOException {
-    HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, conf);
+    AbstractHFileReader reader;
+    if (useTags) {
+        reader = (HFileReaderV3) HFile.createReader(fs, storeFilePath, cacheConf, conf);
+    } else {
+        reader = (HFileReaderV2) HFile.createReader(fs, storeFilePath, cacheConf, conf);
+    }
     LOG.info("HFile information: " + reader);
     HFileContext meta = new HFileContextBuilder().withCompression(compress)
       .withBytesPerCheckSum(CKBYTES).withChecksumType(ChecksumType.NULL)
@@ -372,6 +378,11 @@ public class TestCacheOnWrite {
   }
 
   private void writeStoreFile(boolean useTags) throws IOException {
+    if(useTags) {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    } else {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 2);
+    }
     Path storeFileParentDir = new Path(TEST_UTIL.getDataTestDir(),
         "test_cache_on_write");
     HFileContext meta = new HFileContextBuilder().withCompression(compress)
@@ -411,6 +422,11 @@ public class TestCacheOnWrite {
 
   private void testNotCachingDataBlocksDuringCompactionInternals(boolean useTags)
       throws IOException, InterruptedException {
+    if (useTags) {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    } else {
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 2);
+    }
     // TODO: need to change this test if we add a cache size threshold for
     // compactions, or if we implement some other kind of intelligent logic for
     // deciding what blocks to cache-on-write on compaction.
