@@ -226,6 +226,14 @@
       <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
+      <id>jerryjch</id>
+      <name>Jing Chen (Jerry) He</name>
+      <email>jerryjch@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>IBM</organization>
+      <organizationUrl>http://www.ibm.com</organizationUrl>
+    </developer>
+    <developer>
       <id>jyates</id>
       <name>Jesse Yates</name>
       <email>jyates@apache.org</email>
