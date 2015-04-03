@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
-import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -326,7 +326,7 @@ public class HFilePerformanceEvaluation {
     void setUp() throws Exception {
 
       HFileContextBuilder builder = new HFileContextBuilder()
-          .withCompression(AbstractHFileWriter.compressionByName(codec))
+          .withCompression(HFileWriterImpl.compressionByName(codec))
           .withBlockSize(RFILE_BLOCKSIZE);
       
       if (cipher == "aes") {

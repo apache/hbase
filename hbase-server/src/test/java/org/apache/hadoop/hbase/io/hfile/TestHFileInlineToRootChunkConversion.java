@@ -55,8 +55,7 @@ public class TestHFileInlineToRootChunkConversion {
     CacheConfig cacheConf = new CacheConfig(conf);
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize); 
     HFileContext context = new HFileContextBuilder().withBlockSize(16).build();
-    HFileWriterV2 hfw =
-        (HFileWriterV2) new HFileWriterV2.WriterFactoryV2(conf, cacheConf)
+    HFile.Writer hfw = new HFileWriterFactory(conf, cacheConf)
             .withFileContext(context)
             .withPath(fs, hfPath).create();
     List<byte[]> keys = new ArrayList<byte[]>();
@@ -78,7 +77,7 @@ public class TestHFileInlineToRootChunkConversion {
     }
     hfw.close();
 
-    HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs, hfPath, cacheConf, conf);
+    HFile.Reader reader = HFile.createReader(fs, hfPath, cacheConf, conf);
     // Scanner doesn't do Cells yet.  Fix.
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {
