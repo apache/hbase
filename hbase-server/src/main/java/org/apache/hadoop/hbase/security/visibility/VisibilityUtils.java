@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
@@ -326,8 +326,8 @@ public class VisibilityUtils {
    * @throws IOException When there is IOE in getting the system user (During non-RPC handling).
    */
   public static User getActiveUser() throws IOException {
-    User user = RequestContext.getRequestUser();
-    if (!RequestContext.isInRequestContext()) {
+    User user = RpcServer.getRequestUser();
+    if (user == null) {
       user = User.getCurrent();
     }
     if (LOG.isTraceEnabled()) {

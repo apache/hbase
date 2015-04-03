@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHan
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -296,9 +297,22 @@ public class RpcServer implements RpcServerInterface {
     protected TraceInfo tinfo;
     private ByteBuffer cellBlock = null;
 
+    private User user;
+    private InetAddress remoteAddress;
+
+    /**
+     * Deprecated, do not use
+     */
+    @Deprecated
+    Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
+      Message param, CellScanner cellScanner, Connection connection, Responder responder,
+      long size, TraceInfo tinfo) {
+      this(id, service, md, header, param, cellScanner, connection, responder, size, tinfo, null);
+    }
+
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
-         long size, TraceInfo tinfo) {
+         long size, TraceInfo tinfo, InetAddress remoteAddress) {
       this.id = id;
       this.service = service;
       this.md = md;
@@ -313,6 +327,8 @@ public class RpcServer implements RpcServerInterface {
       this.isError = false;
       this.size = size;
       this.tinfo = tinfo;
+      this.user = connection.user == null? null: userProvider.create(connection.user);
+      this.remoteAddress = remoteAddress;
     }
 
     /**
@@ -336,6 +352,22 @@ public class RpcServer implements RpcServerInterface {
 
     protected RequestHeader getHeader() {
       return this.header;
+    }
+
+    @Override
+    public User getRequestUser() {
+      return user;
+    }
+
+    @Override
+    public String getRequestUserName() {
+      User user = getRequestUser();
+      return user == null? null: user.getShortName();
+    }
+
+    @Override
+    public InetAddress getRemoteAddress() {
+      return remoteAddress;
     }
 
     /*
@@ -1183,13 +1215,13 @@ public class RpcServer implements RpcServerInterface {
     private static final int AUTHROIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall =
       new Call(AUTHROIZATION_FAILED_CALLID, this.service, null,
-        null, null, null, this, null, 0, null);
+        null, null, null, this, null, 0, null, null);
     private ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
     private final Call saslCall =
-      new Call(SASL_CALLID, this.service, null, null, null, null, this, null, 0, null);
+      new Call(SASL_CALLID, this.service, null, null, null, null, this, null, 0, null, null);
 
     public UserGroupInformation attemptingUser = null; // user name before auth
 
@@ -1556,7 +1588,7 @@ public class RpcServer implements RpcServerInterface {
 
     private int doBadPreambleHandling(final String msg, final Exception e) throws IOException {
       LOG.warn(msg);
-      Call fakeCall = new Call(-1, null, null, null, null, null, this, responder, -1, null);
+      Call fakeCall = new Call(-1, null, null, null, null, null, this, responder, -1, null, null);
       setupResponse(null, fakeCall, e, msg);
       responder.doRespond(fakeCall);
       // Returning -1 closes out the connection.
@@ -1708,7 +1740,7 @@ public class RpcServer implements RpcServerInterface {
       if ((totalRequestSize + callQueueSize.get()) > maxQueueSize) {
         final Call callTooBig =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null);
+            responder, totalRequestSize, null, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, callTooBig, new CallQueueTooBigException(),
           "Call queue is full on " + getListenerAddress() +
@@ -1753,7 +1785,7 @@ public class RpcServer implements RpcServerInterface {
 
         final Call readParamsFailedCall =
           new Call(id, this.service, null, null, null, null, this,
-            responder, totalRequestSize, null);
+            responder, totalRequestSize, null, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         setupResponse(responseBuffer, readParamsFailedCall, t,
           msg + "; " + t.getMessage());
@@ -1766,8 +1798,8 @@ public class RpcServer implements RpcServerInterface {
           : null;
       Call call = new Call(id, this.service, md, header, param, cellScanner, this, responder,
               totalRequestSize,
-              traceInfo);
-      scheduler.dispatch(new CallRunner(RpcServer.this, call, userProvider));
+              traceInfo, RpcServer.getRemoteIp());
+      scheduler.dispatch(new CallRunner(RpcServer.this, call));
     }
 
     private boolean authorizeConnection() throws IOException {
@@ -2331,6 +2363,33 @@ public class RpcServer implements RpcServerInterface {
   }
 
   /**
+   * Returns the user credentials associated with the current RPC request or
+   * <code>null</code> if no credentials were provided.
+   * @return A User
+   */
+  public static User getRequestUser() {
+    RpcCallContext ctx = getCurrentCall();
+    return ctx == null? null: ctx.getRequestUser();
+  }
+
+  /**
+   * Returns the username for any user associated with the current RPC
+   * request or <code>null</code> if no user is set.
+   */
+  public static String getRequestUserName() {
+    User user = getRequestUser();
+    return user == null? null: user.getShortName();
+  }
+
+  /**
+   * @return Address of remote client if a request is ongoing, else null
+   */
+  public static InetAddress getRemoteAddress() {
+    RpcCallContext ctx = getCurrentCall();
+    return ctx == null? null: ctx.getRemoteAddress();
+  }
+
+  /**
    * @param serviceName Some arbitrary string that represents a 'service'.
    * @param services Available service instances
    * @return Matching BlockingServiceAndInterface pair
@@ -2379,18 +2438,6 @@ public class RpcServer implements RpcServerInterface {
     Call call = CurCall.get();
     if (call != null && call.connection.socket != null) {
       return call.connection.socket.getInetAddress();
-    }
-    return null;
-  }
-
-  /** Returns remote address as a string when invoked inside an RPC.
-   *  Returns null in case of an error.
-   *  @return String
-   */
-  public static String getRemoteAddress() {
-    Call call = CurCall.get();
-    if (call != null) {
-      return call.connection.getHostAddress();
     }
     return null;
   }

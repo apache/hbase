@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ipc.RpcServer.Call;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -42,7 +41,6 @@ public class CallRunner {
   private Call call;
   private RpcServerInterface rpcServer;
   private MonitoredRPCHandler status;
-  private UserProvider userProvider;
 
   /**
    * On construction, adds the size of this call to the running count of outstanding call sizes.
@@ -50,13 +48,12 @@ public class CallRunner {
    * time we occupy heap.
    */
   // The constructor is shutdown so only RpcServer in this class can make one of these.
-  CallRunner(final RpcServerInterface rpcServer, final Call call, UserProvider userProvider) {
+  CallRunner(final RpcServerInterface rpcServer, final Call call) {
     this.call = call;
     this.rpcServer = rpcServer;
     // Add size of the call to queue size.
     this.rpcServer.addCallSize(call.getSize());
     this.status = getStatus();
-    this.userProvider = userProvider;
   }
 
   public Call getCall() {
@@ -70,7 +67,6 @@ public class CallRunner {
     this.call = null;
     this.rpcServer = null;
     this.status = null;
-    this.userProvider = null;
   }
 
   public void run() {
@@ -101,8 +97,6 @@ public class CallRunner {
         if (call.tinfo != null) {
           traceScope = Trace.startSpan(call.toTraceString(), call.tinfo);
         }
-        RequestContext.set(userProvider.create(call.connection.user), RpcServer.getRemoteIp(),
-          call.connection.service);
         // make the call
         resultPair = this.rpcServer.call(call.service, call.md, call.param, call.cellScanner,
           call.timestamp, this.status);
@@ -117,9 +111,6 @@ public class CallRunner {
         if (traceScope != null) {
           traceScope.close();
         }
-        // Must always clear the request context to avoid leaking
-        // credentials between requests.
-        RequestContext.clear();
       }
       RpcServer.CurCall.set(null);
       // Set the response for undelayed calls and delayed calls with

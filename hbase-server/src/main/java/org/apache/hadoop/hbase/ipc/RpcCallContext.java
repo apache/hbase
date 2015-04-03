@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import java.net.InetAddress;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.security.User;
+
+@InterfaceAudience.Private
 public interface RpcCallContext extends Delayable {
   /**
    * Check if the caller who made this IPC call has disconnected.
@@ -36,4 +41,21 @@ public interface RpcCallContext extends Delayable {
    * @return True if the client supports cellblocks, else return all content in pb
    */
   boolean isClientCellBlockSupport();
+
+  /**
+   * Returns the user credentials associated with the current RPC request or
+   * <code>null</code> if no credentials were provided.
+   * @return A User
+   */
+  User getRequestUser();
+
+  /** 
+   * @return Current request's user name or null if none ongoing.
+   */
+  String getRequestUserName();
+
+  /**
+   * @return Address of remote client if a request is ongoing, else null
+   */
+  InetAddress getRemoteAddress();
 }
