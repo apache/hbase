@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterImpl;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -129,7 +129,7 @@ public class HFileOutputFormat2
     // Invented config.  Add to hbase-*.xml if other than default compression.
     final String defaultCompressionStr = conf.get("hfile.compression",
         Compression.Algorithm.NONE.getName());
-    final Algorithm defaultCompression = AbstractHFileWriter
+    final Algorithm defaultCompression = HFileWriterImpl
         .compressionByName(defaultCompressionStr);
     final boolean compactionExclude = conf.getBoolean(
         "hbase.mapreduce.hfileoutputformat.compaction.exclude", false);
@@ -245,7 +245,7 @@ public class HFileOutputFormat2
                                     .withBlockSize(blockSize);
         contextBuilder.withDataBlockEncoding(encoding);
         HFileContext hFileContext = contextBuilder.build();
-                                    
+
         wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(tempConf), fs)
             .withOutputDir(familydir).withBloomType(bloomType)
             .withComparator(KeyValue.COMPARATOR)
@@ -358,7 +358,7 @@ public class HFileOutputFormat2
    * </ul>
    * The user should be sure to set the map output value class to either KeyValue or Put before
    * running this function.
-   * 
+   *
    * @deprecated Use {@link #configureIncrementalLoad(Job, Table, RegionLocator)} instead.
    */
   @Deprecated
@@ -448,7 +448,7 @@ public class HFileOutputFormat2
     TableMapReduceUtil.initCredentials(job);
     LOG.info("Incremental table " + regionLocator.getName() + " output configured.");
   }
-  
+
   public static void configureIncrementalLoadMap(Job job, Table table) throws IOException {
     Configuration conf = job.getConfiguration();
 
@@ -483,8 +483,7 @@ public class HFileOutputFormat2
     Map<byte[], Algorithm> compressionMap = new TreeMap<byte[],
         Algorithm>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], String> e : stringMap.entrySet()) {
-      Algorithm algorithm = AbstractHFileWriter.compressionByName
-          (e.getValue());
+      Algorithm algorithm = HFileWriterImpl.compressionByName(e.getValue());
       compressionMap.put(e.getKey(), algorithm);
     }
     return compressionMap;

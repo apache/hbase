@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.io.hfile.HFileReaderV2;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
@@ -220,7 +219,7 @@ public class TestCacheOnWriteInSchema {
     BlockCache cache = cacheConf.getBlockCache();
     StoreFile sf = new StoreFile(fs, path, conf, cacheConf,
       BloomType.ROWCOL);
-    HFileReaderV2 reader = (HFileReaderV2) sf.createReader().getHFileReader();
+    HFile.Reader reader = sf.createReader().getHFileReader();
     try {
       // Open a scanner with (on read) caching disabled
       HFileScanner scanner = reader.getScanner(false, false);

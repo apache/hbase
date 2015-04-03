@@ -88,8 +88,7 @@ public class TestLazyDataBlockDecompression {
    */
   private static void writeHFile(Configuration conf, CacheConfig cc, FileSystem fs, Path path,
       HFileContext cxt, int entryCount) throws IOException {
-    HFileWriterV2 writer = (HFileWriterV2)
-      new HFileWriterV2.WriterFactoryV2(conf, cc)
+    HFile.Writer writer = new HFileWriterFactory(conf, cc)
         .withPath(fs, path)
         .withFileContext(cxt)
         .create();
@@ -117,7 +116,7 @@ public class TestLazyDataBlockDecompression {
     long fileSize = fs.getFileStatus(path).getLen();
     FixedFileTrailer trailer =
       FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
-    HFileReaderV2 reader = new HFileReaderV2(path, trailer, fsdis, fileSize, cacheConfig,
+    HFile.Reader reader = new HFileReaderImpl(path, trailer, fsdis, fileSize, cacheConfig,
       fsdis.getHfs(), conf);
     reader.loadFileInfo();
     long offset = trailer.getFirstDataBlockOffset(),

@@ -55,7 +55,7 @@ import org.junit.experimental.categories.Category;
 
 /**
  * Testing writing a version 2 {@link HFile}. This is a low-level test written
- * during the development of {@link HFileWriterV2}.
+ * during the development of {@link HFileWriterImpl}.
  */
 @Category(SmallTests.class)
 public class TestHFileWriterV2 {
@@ -98,8 +98,7 @@ public class TestHFileWriterV2 {
                            .withBlockSize(4096)
                            .withCompression(compressAlgo)
                            .build();
-    HFileWriterV2 writer = (HFileWriterV2)
-        new HFileWriterV2.WriterFactoryV2(conf, new CacheConfig(conf))
+    HFile.Writer writer = new HFileWriterFactory(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
             .withFileContext(context)
             .create();
@@ -135,7 +134,6 @@ public class TestHFileWriterV2 {
     FixedFileTrailer trailer =
         FixedFileTrailer.readFromStream(fsdis, fileSize);
 
-    assertEquals(2, trailer.getMajorVersion());
     assertEquals(entryCount, trailer.getEntryCount());
 
     HFileContext meta = new HFileContextBuilder()
@@ -176,8 +174,7 @@ public class TestHFileWriterV2 {
     // File info
     FileInfo fileInfo = new FileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
-    byte [] keyValueFormatVersion = fileInfo.get(
-        HFileWriterV2.KEY_VALUE_VERSION);
+    byte [] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
     boolean includeMemstoreTS = keyValueFormatVersion != null &&
         Bytes.toInt(keyValueFormatVersion) > 0;
 
