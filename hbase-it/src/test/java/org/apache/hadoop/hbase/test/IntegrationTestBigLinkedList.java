@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.test;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -265,7 +266,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         public void initialize(InputSplit arg0, TaskAttemptContext context)
             throws IOException, InterruptedException {
           numNodes = context.getConfiguration().getLong(GENERATOR_NUM_ROWS_PER_MAP_KEY, 25000000);
-          rand = new Random();
+          // Use SecureRandom to avoid issue described in HBASE-13382.
+          rand = new SecureRandom();
         }
 
         @Override
@@ -965,7 +967,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       if (cmd.hasOption('n')) {
         maxQueries = Long.parseLong(cmd.getOptionValue("n"));
       }
-      Random rand = new Random();
+      Random rand = new SecureRandom();
       boolean isSpecificStart = cmd.hasOption('s');
       byte[] startKey = isSpecificStart ? Bytes.toBytesBinary(cmd.getOptionValue('s')) : null;
       int logEvery = cmd.hasOption('l') ? Integer.parseInt(cmd.getOptionValue('l')) : 1;
