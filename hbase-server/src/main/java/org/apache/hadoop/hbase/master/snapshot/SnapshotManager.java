@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -550,7 +550,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     if (!snapshot.hasVersion()) {
       builder.setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION);
     }
-    User user = RequestContext.getRequestUser();
+    User user = RpcServer.getRequestUser();
     if (User.isHBaseSecurityEnabled(master.getConfiguration()) && user != null) {
       builder.setOwner(user.getShortName());
     }

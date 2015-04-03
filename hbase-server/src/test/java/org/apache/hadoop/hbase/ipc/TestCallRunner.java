@@ -34,7 +34,7 @@ public class TestCallRunner {
     Mockito.when(mockRpcServer.isStarted()).thenReturn(true);
     RpcServer.Call mockCall = Mockito.mock(RpcServer.Call.class);
     mockCall.connection = Mockito.mock(RpcServer.Connection.class);
-    CallRunner cr = new CallRunner(mockRpcServer, mockCall, new UserProvider());
+    CallRunner cr = new CallRunner(mockRpcServer, mockCall);
     cr.run();
   }
 }

@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -335,8 +335,8 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   }
 
   private User getActiveUser() {
-    User user = RequestContext.getRequestUser();
-    if (!RequestContext.isInRequestContext()) {
+    User user = RpcServer.getRequestUser();
+    if (user == null) {
       return null;
     }
 

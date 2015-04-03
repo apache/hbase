@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -111,7 +110,7 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
             "No secret manager configured for token authentication");
       }
 
-      User currentUser = RequestContext.getRequestUser();
+      User currentUser = RpcServer.getRequestUser();
       UserGroupInformation ugi = null;
       if (currentUser != null) {
         ugi = currentUser.getUGI();
@@ -137,7 +136,7 @@ public class TokenProvider implements AuthenticationProtos.AuthenticationService
   @Override
   public void whoAmI(RpcController controller, AuthenticationProtos.WhoAmIRequest request,
                      RpcCallback<AuthenticationProtos.WhoAmIResponse> done) {
-    User requestUser = RequestContext.getRequestUser();
+    User requestUser = RpcServer.getRequestUser();
     AuthenticationProtos.WhoAmIResponse.Builder response =
         AuthenticationProtos.WhoAmIResponse.newBuilder();
     if (requestUser != null) {
