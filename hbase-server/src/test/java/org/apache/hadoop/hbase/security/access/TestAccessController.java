@@ -234,8 +234,7 @@ public class TestAccessController extends SecureTestUtil {
     hcd.setMaxVersions(100);
     htd.addFamily(hcd);
     htd.setOwner(USER_OWNER);
-    admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
-    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE.getTableName());
+    createTable(TEST_UTIL, htd, new byte[][] { Bytes.toBytes("s") });
 
     Region region = TEST_UTIL.getHBaseCluster().getRegions(TEST_TABLE.getTableName()).get(0);
     RegionCoprocessorHost rcpHost = region.getCoprocessorHost();
@@ -629,8 +628,8 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testMergeRegions() throws Exception {
-
     final List<HRegion> regions = TEST_UTIL.getHBaseCluster().findRegionsForTable(TEST_TABLE.getTableName());
+    assertTrue("not enough regions: " + regions.size(), regions.size() >= 2);
 
     AccessTestAction action = new AccessTestAction() {
       @Override

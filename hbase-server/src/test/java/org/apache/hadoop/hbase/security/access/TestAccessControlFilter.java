@@ -91,7 +91,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
 
   @Test
   public void testQualifierAccess() throws Exception {
-    final Table table = TEST_UTIL.createTable(TABLE, FAMILY);
+    final Table table = createTable(TEST_UTIL, TABLE, new byte[][] { FAMILY });
     try {
       doQualifierAccess(table);
     } finally {
