@@ -120,9 +120,9 @@ public class TestAccessController2 extends SecureTestUtil {
   @Before
   public void setUp() throws Exception {
     createNamespace(TEST_UTIL, NamespaceDescriptor.create(namespace).build());
-    try (Table table = TEST_UTIL.createTable(tableName,
-          new String[] { Bytes.toString(TEST_FAMILY), Bytes.toString(TEST_FAMILY_2) })) {
-      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    try (Table table = createTable(TEST_UTIL, tableName,
+          new byte[][] { TEST_FAMILY, TEST_FAMILY_2 })) {
+      TEST_UTIL.waitTableEnabled(tableName);
 
       // Ingesting test data.
       table.put(Arrays.asList(new Put(TEST_ROW).addColumn(TEST_FAMILY, Q1, value1),

@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -633,19 +634,44 @@ public class SecureTestUtil {
     }
   }
 
+  public static Table createTable(HBaseTestingUtility testUtil, TableName tableName,
+      byte[][] families) throws Exception {
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    for (byte[] family : families) {
+      HColumnDescriptor hcd = new HColumnDescriptor(family);
+      htd.addFamily(hcd);
+    }
+    createTable(testUtil, testUtil.getHBaseAdmin(), htd);
+    return testUtil.getConnection().getTable(htd.getTableName());
+  }
+
   public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd)
       throws Exception {
     createTable(testUtil, testUtil.getHBaseAdmin(), htd);
   }
 
+  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
+      byte[][] splitKeys) throws Exception {
+    createTable(testUtil, testUtil.getHBaseAdmin(), htd, splitKeys);
+  }
+
   public static void createTable(HBaseTestingUtility testUtil, Admin admin, HTableDescriptor htd)
       throws Exception {
+    createTable(testUtil, admin, htd, null);
+  }
+
+  public static void createTable(HBaseTestingUtility testUtil, Admin admin, HTableDescriptor htd,
+      byte[][] splitKeys) throws Exception {
     // NOTE: We need a latch because admin is not sync,
     // so the postOp coprocessor method may be called after the admin operation returned.
     MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
       .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
     observer.tableCreationLatch = new CountDownLatch(1);
-    admin.createTable(htd);
+    if (splitKeys != null) {
+      admin.createTable(htd, splitKeys);
+    } else {
+      admin.createTable(htd);
+    }
     observer.tableCreationLatch.await();
     observer.tableCreationLatch = null;
     testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
