@@ -55,9 +55,15 @@ import java.util.Map;
  */
 public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat {
 
+  private final MultiTableSnapshotInputFormatImpl delegate;
+
+  public MultiTableSnapshotInputFormat() {
+    this.delegate = new MultiTableSnapshotInputFormatImpl();
+  }
+
   @Override
   public List<InputSplit> getSplits(JobContext jobContext) throws IOException, InterruptedException {
-    List<TableSnapshotInputFormatImpl.InputSplit> splits = MultiTableSnapshotInputFormatImpl.getSplits(jobContext.getConfiguration());
+    List<TableSnapshotInputFormatImpl.InputSplit> splits = delegate.getSplits(jobContext.getConfiguration());
     List<InputSplit> rtn = Lists.newArrayListWithCapacity(splits.size());
 
     for (TableSnapshotInputFormatImpl.InputSplit split : splits) {
@@ -69,6 +75,6 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat {
 
 
   public static void setInput(Configuration configuration, Map<String, Collection<Scan>> snapshotScans, Path tmpRestoreDir) throws IOException {
-    MultiTableSnapshotInputFormatImpl.setInput(configuration, snapshotScans, tmpRestoreDir);
+    new MultiTableSnapshotInputFormatImpl().setInput(configuration, snapshotScans, tmpRestoreDir);
   }
 }

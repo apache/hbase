@@ -18,10 +18,16 @@ import java.util.Map;
 
 public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat implements InputFormat<ImmutableBytesWritable, Result> {
 
+  private final MultiTableSnapshotInputFormatImpl delegate;
+
+  public MultiTableSnapshotInputFormat() {
+    this.delegate = new MultiTableSnapshotInputFormatImpl();
+  }
+
   @Override
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     List<TableSnapshotInputFormatImpl.InputSplit> splits =
-        MultiTableSnapshotInputFormatImpl.getSplits(job);
+        delegate.getSplits(job);
     InputSplit[] results = new InputSplit[splits.size()];
     for (int i = 0; i < splits.size(); i++) {
       results[i] = new TableSnapshotRegionSplit(splits.get(i));
@@ -30,8 +36,8 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat impl
   }
 
   @Override
-  public RecordReader<ImmutableBytesWritable, Result>
-  getRecordReader(InputSplit split, JobConf job, Reporter reporter) throws IOException {
+  public RecordReader<ImmutableBytesWritable, Result> getRecordReader(InputSplit split, JobConf job, Reporter reporter)
+      throws IOException {
     return new TableSnapshotRecordReader((TableSnapshotRegionSplit) split, job);
   }
 
@@ -40,7 +46,6 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat impl
    * Configure conf to read from snapshotScans, with snapshots restored to a subdirectory of restoreDir.
    *
    * Sets: {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl#RESTORE_DIRS_KEY},
-   * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl#RESTORE_DIR_KEY},
    * {@link org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl#SNAPSHOT_TO_SCANS_KEY}
    * @param conf
    * @param snapshotScans
@@ -48,7 +53,7 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat impl
    * @throws IOException
    */
   public static void setInput(Configuration conf, Map<String, Collection<Scan>> snapshotScans, Path restoreDir) throws IOException {
-    MultiTableSnapshotInputFormatImpl.setInput(conf, snapshotScans, restoreDir);
+    new MultiTableSnapshotInputFormatImpl().setInput(conf, snapshotScans, restoreDir);
   }
 
 }

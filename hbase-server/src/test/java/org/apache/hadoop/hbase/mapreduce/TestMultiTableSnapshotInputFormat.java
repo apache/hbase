@@ -1,9 +1,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimaps;
+import com.google.common.collect.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
@@ -27,8 +25,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
+
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTestBase {
+
+  private Path restoreDir;
 
   @BeforeClass
   public static void setUpSnapshots() throws Exception {
@@ -45,12 +47,18 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
     }
   }
 
+  @Before
+  public void setUp() throws Exception {
+    this.restoreDir = new Path("/tmp");
+
+  }
+
   @Override
   protected void initJob(List<Scan> scans, Job job) throws IOException {
     TableMapReduceUtil.initMultiTableSnapshotMapperJob(
         getSnapshotScanMapping(scans), ScanMapper.class,
         ImmutableBytesWritable.class, ImmutableBytesWritable.class, job,
-        true, new Path("/tmp")
+        true, restoreDir
     );
   }
 
@@ -68,17 +76,4 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
     return tableName + "_snapshot";
   }
 
-  @Test
-  public void testSetInputPushesScans() throws Exception {
-
-    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
-
-    MultiTableSnapshotInputFormatImpl.setInput(c, );
-
-  }
-
-  @Test
-  public void testSetInputPushesRestoreDirectories() throws Exception {
-
-  }
 }
