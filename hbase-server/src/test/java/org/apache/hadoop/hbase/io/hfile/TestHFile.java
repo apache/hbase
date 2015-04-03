@@ -239,7 +239,7 @@ public class TestHFile extends HBaseTestCase {
     FSDataOutputStream fout = createFSOutput(ncTFile);
     HFileContext meta = new HFileContextBuilder()
                         .withBlockSize(minBlockSize)
-                        .withCompression(AbstractHFileWriter.compressionByName(codec))
+                        .withCompression(HFileWriterImpl.compressionByName(codec))
                         .build();
     Writer writer = HFile.getWriterFactory(conf, cacheConf)
         .withOutputStream(fout)
@@ -330,7 +330,7 @@ public class TestHFile extends HBaseTestCase {
     Path mFile = new Path(ROOT_DIR, "meta.hfile");
     FSDataOutputStream fout = createFSOutput(mFile);
     HFileContext meta = new HFileContextBuilder()
-                        .withCompression(AbstractHFileWriter.compressionByName(compress))
+                        .withCompression(HFileWriterImpl.compressionByName(compress))
                         .withBlockSize(minBlockSize).build();
     Writer writer = HFile.getWriterFactory(conf, cacheConf)
         .withOutputStream(fout)

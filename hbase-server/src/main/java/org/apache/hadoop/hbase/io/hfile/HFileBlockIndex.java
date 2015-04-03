@@ -54,9 +54,9 @@ import org.apache.hadoop.util.StringUtils;
  * ({@link BlockIndexReader}) single-level and multi-level block indexes.
  *
  * Examples of how to use the block index writer can be found in
- * {@link org.apache.hadoop.hbase.util.CompoundBloomFilterWriter} 
- * and {@link HFileWriterV2}. Examples of how to use the reader can be 
- * found in {@link HFileReaderV2} and TestHFileBlockIndex.
+ * {@link org.apache.hadoop.hbase.util.CompoundBloomFilterWriter} and
+ *  {@link HFileWriterImpl}. Examples of how to use the reader can be
+ *  found in {@link HFileWriterImpl} and TestHFileBlockIndex.
  */
 @InterfaceAudience.Private
 public class HFileBlockIndex {
@@ -193,7 +193,7 @@ public class HFileBlockIndex {
      * Return the BlockWithScanInfo which contains the DataBlock with other scan
      * info such as nextIndexedKey. This function will only be called when the
      * HFile version is larger than 1.
-     * 
+     *
      * @param key
      *          the key we are looking for
      * @param currentBlock
@@ -494,7 +494,7 @@ public class HFileBlockIndex {
      * Performs a binary search over a non-root level index block. Utilizes the
      * secondary index, which records the offsets of (offset, onDiskSize,
      * firstKey) tuples of all entries.
-     * 
+     *
      * @param key
      *          the key we are searching for offsets to individual entries in
      *          the blockIndex buffer
@@ -641,7 +641,7 @@ public class HFileBlockIndex {
         }
       }
     }
-    
+
     /**
      * Read in the root-level index from the given input stream. Must match
      * what was written into the root level by
