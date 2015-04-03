@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -176,9 +176,10 @@ public class RegionServerQuotaManager {
   private OperationQuota checkQuota(final Region region,
       final int numWrites, final int numReads, final int numScans)
       throws IOException, ThrottlingException {
+    User user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
-    if (RequestContext.isInRequestContext()) {
-      ugi = RequestContext.getRequestUser().getUGI();
+    if (user != null) {
+      ugi = user.getUGI();
     } else {
       ugi = User.getCurrent().getUGI();
     }

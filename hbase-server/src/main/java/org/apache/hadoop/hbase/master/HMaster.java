@@ -81,7 +81,6 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
-import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
@@ -1192,8 +1191,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return Client info for use as prefix on an audit log string; who did an action
    */
   String getClientIdAuditPrefix() {
-    return "Client=" + RequestContext.getRequestUserName() + "/" +
-      RequestContext.get().getRemoteAddress();
+    return "Client=" + RpcServer.getRequestUserName() + "/" + RpcServer.getRemoteAddress();
   }
 
   /**

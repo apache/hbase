@@ -73,7 +73,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
@@ -596,12 +596,11 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
    * access control is correctly enforced based on the checks performed in preScannerOpen()
    */
   private void requireScannerOwner(InternalScanner s) throws AccessDeniedException {
-    if (RequestContext.isInRequestContext()) {
-      String requestUName = RequestContext.getRequestUserName();
-      String owner = scannerOwners.get(s);
-      if (owner != null && !owner.equals(requestUName)) {
-        throw new AccessDeniedException("User '" + requestUName + "' is not the scanner owner!");
-      }
+    // This is duplicated code!
+    String requestUName = RpcServer.getRequestUserName();
+    String owner = scannerOwners.get(s);
+    if (owner != null && !owner.equals(requestUName)) {
+      throw new AccessDeniedException("User '" + requestUName + "' is not the scanner owner!");
     }
   }
 
@@ -825,12 +824,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   private void logResult(boolean isAllowed, String request, String reason, byte[] user,
       List<byte[]> labelAuths, String regex) {
     if (AUDITLOG.isTraceEnabled()) {
-      RequestContext ctx = RequestContext.get();
-      InetAddress remoteAddr = null;
-      if (ctx != null) {
-        remoteAddr = ctx.getRemoteAddress();
-      }
-
+      // This is more duplicated code!
+      InetAddress remoteAddr = RpcServer.getRemoteAddress();
       List<String> labelAuthsStr = new ArrayList<>();
       if (labelAuths != null) {
         int labelAuthsSize = labelAuths.size();
