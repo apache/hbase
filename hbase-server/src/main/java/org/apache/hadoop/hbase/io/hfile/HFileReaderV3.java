@@ -274,13 +274,9 @@ public class HFileReaderV3 extends HFileReaderV2 {
         }
         if (this.reader.shouldIncludeMemstoreTS()) {
           if (this.reader.decodeMemstoreTS) {
-            try {
-              memstoreTS = Bytes.readVLong(blockBuffer.array(), blockBuffer.arrayOffset()
-                  + blockBuffer.position());
-              memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
-            } catch (Exception e) {
-              throw new RuntimeException("Error reading memstore timestamp", e);
-            }
+            memstoreTS = Bytes.readAsVLong(blockBuffer.array(), blockBuffer.arrayOffset()
+                + blockBuffer.position());
+            memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
           } else {
             memstoreTS = 0;
             memstoreTSLen = 1;
