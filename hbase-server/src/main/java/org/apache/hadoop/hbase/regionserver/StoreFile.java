@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -408,7 +409,7 @@ public class StoreFile {
     }
     this.reader.setSequenceID(this.sequenceid);
 
-    b = metadataMap.get(HFile.Writer.MAX_MEMSTORE_TS_KEY);
+    b = metadataMap.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
     if (b != null) {
       this.maxMemstoreTS = Bytes.toLong(b);
     }

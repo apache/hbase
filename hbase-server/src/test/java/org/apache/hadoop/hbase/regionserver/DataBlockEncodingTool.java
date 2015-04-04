@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
+import org.apache.hadoop.hbase.io.hfile.HFileReaderV2;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
@@ -602,9 +602,8 @@ public class DataBlockEncodingTool {
     // run the utilities
     DataBlockEncodingTool comp = new DataBlockEncodingTool(compressionName);
     int majorVersion = reader.getHFileVersion();
-    comp.useHBaseChecksum = majorVersion > 2 ||
-      (majorVersion == 2 &&
-       reader.getHFileMinorVersion() >= HFileReaderImpl.MINOR_VERSION_WITH_CHECKSUM);
+    comp.useHBaseChecksum = majorVersion > 2
+        || (majorVersion == 2 && reader.getHFileMinorVersion() >= HFileReaderV2.MINOR_VERSION_WITH_CHECKSUM);
     comp.checkStatistics(scanner, kvLimit);
     if (doVerify) {
       comp.verifyCodecs(scanner, kvLimit);

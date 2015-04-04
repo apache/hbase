@@ -588,7 +588,7 @@ public interface Region extends ConfigurationObserver {
       byte[] now) throws IOException;
 
   /**
-   * Replace any cell timestamps set to {@link org.apache.hadoop.hbase.HConstants#LATEST_TIMESTAMP}
+   * Replace any cell timestamps set to HConstants#LATEST_TIMESTAMP with the
    * provided current timestamp.
    * @param values
    * @param now

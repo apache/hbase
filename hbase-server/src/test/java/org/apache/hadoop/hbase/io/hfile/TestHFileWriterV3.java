@@ -59,7 +59,8 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 /**
- * Testing writing a version 3 {@link HFile}.
+ * Testing writing a version 3 {@link HFile}. This is a low-level test written
+ * during the development of {@link HFileWriterV3}.
  */
 @RunWith(Parameterized.class)
 @Category(SmallTests.class)
@@ -118,7 +119,8 @@ public class TestHFileWriterV3 {
                            .withBlockSize(4096)
                            .withIncludesTags(useTags)
                            .withCompression(compressAlgo).build();
-    HFile.Writer writer = new HFileWriterFactory(conf, new CacheConfig(conf))
+    HFileWriterV3 writer = (HFileWriterV3)
+        new HFileWriterV3.WriterFactoryV3(conf, new CacheConfig(conf))
             .withPath(fs, hfilePath)
             .withFileContext(context)
             .withComparator(KeyValue.COMPARATOR)
@@ -203,7 +205,8 @@ public class TestHFileWriterV3 {
     // File info
     FileInfo fileInfo = new FileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
-    byte [] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
+    byte [] keyValueFormatVersion = fileInfo.get(
+        HFileWriterV3.KEY_VALUE_VERSION);
     boolean includeMemstoreTS = keyValueFormatVersion != null &&
         Bytes.toInt(keyValueFormatVersion) > 0;
 
