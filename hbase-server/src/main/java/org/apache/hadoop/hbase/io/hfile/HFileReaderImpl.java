@@ -585,13 +585,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         }
         if (this.reader.shouldIncludeMemstoreTS()) {
           if (this.reader.isDecodeMemstoreTS()) {
-            try {
-              memstoreTS = Bytes.readVLong(blockBuffer.array(), blockBuffer.arrayOffset()
-                  + blockBuffer.position());
-              memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
-            } catch (Exception e) {
-              throw new RuntimeException("Error reading memstore timestamp", e);
-            }
+            memstoreTS = Bytes.readAsVLong(blockBuffer.array(), blockBuffer.arrayOffset()
+                + blockBuffer.position());
+            memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
           } else {
             memstoreTS = 0;
             memstoreTSLen = 1;
@@ -973,13 +969,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     protected void readMvccVersion() {
       if (this.reader.shouldIncludeMemstoreTS()) {
         if (this.reader.isDecodeMemstoreTS()) {
-          try {
-            currMemstoreTS = Bytes.readVLong(blockBuffer.array(), blockBuffer.arrayOffset()
-                + blockBuffer.position());
-            currMemstoreTSLen = WritableUtils.getVIntSize(currMemstoreTS);
-          } catch (Exception e) {
-            throw new RuntimeException("Error reading memstore timestamp", e);
-          }
+          currMemstoreTS = Bytes.readAsVLong(blockBuffer.array(), blockBuffer.arrayOffset()
+              + blockBuffer.position());
+          currMemstoreTSLen = WritableUtils.getVIntSize(currMemstoreTS);
         } else {
           currMemstoreTS = 0;
           currMemstoreTSLen = 1;

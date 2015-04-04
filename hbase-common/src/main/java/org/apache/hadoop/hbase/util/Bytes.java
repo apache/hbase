@@ -1364,14 +1364,26 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
-   * Reads a zero-compressed encoded long from input stream and returns it.
+   * Reads a zero-compressed encoded long from input buffer and returns it.
    * @param buffer Binary array
    * @param offset Offset into array at which vint begins.
    * @throws java.io.IOException e
-   * @return deserialized long from stream.
+   * @return deserialized long from buffer.
+   * @deprecated Use {@link #readAsVLong()} instead.
    */
+  @Deprecated
   public static long readVLong(final byte [] buffer, final int offset)
   throws IOException {
+    return readAsVLong(buffer, offset);
+  }
+
+  /**
+   * Reads a zero-compressed encoded long from input buffer and returns it.
+   * @param buffer Binary array
+   * @param offset Offset into array at which vint begins.
+   * @return deserialized long from buffer.
+   */
+  public static long readAsVLong(final byte [] buffer, final int offset) {
     byte firstByte = buffer[offset];
     int len = WritableUtils.decodeVIntSize(firstByte);
     if (len == 1) {
