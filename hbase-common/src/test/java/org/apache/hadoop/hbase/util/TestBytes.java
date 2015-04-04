@@ -30,6 +30,7 @@ import java.util.Random;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.io.WritableUtils;
 import org.junit.Assert;
 import org.junit.experimental.categories.Category;
 
@@ -210,6 +211,19 @@ public class TestBytes extends TestCase {
     assertTrue(Arrays.equals(expected,  actual));
     assertEquals(2, target.position());
     assertEquals(7, target.limit());
+  }
+
+  public void testReadAsVLong() throws Exception {
+    long [] longs = {-1l, 123l, Long.MIN_VALUE, Long.MAX_VALUE};
+    for (int i = 0; i < longs.length; i++) {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      DataOutputStream output = new DataOutputStream(baos);
+      WritableUtils.writeVLong(output, longs[i]);
+      byte[] long_bytes_no_offset = baos.toByteArray();
+      assertEquals(longs[i], Bytes.readAsVLong(long_bytes_no_offset, 0));
+      byte[] long_bytes_with_offset = bytesWithOffset(long_bytes_no_offset);
+      assertEquals(longs[i], Bytes.readAsVLong(long_bytes_with_offset, 1));
+    }
   }
 
   public void testToStringBinaryForBytes() {
