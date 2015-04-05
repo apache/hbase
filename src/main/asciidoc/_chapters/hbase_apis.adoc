@@ -111,6 +111,13 @@ public static void upgradeFrom0 (Configuration config) {
     newColumn.setMaxVersions(HConstants.ALL_VERSIONS);
     admin.addColumn(tableName, newColumn);
 
+    // Update existing column family
+    HColumnDescriptor existingColumn = new HColumnDescriptor(CF_DEFAULT);
+    existingColumn.setCompactionCompressionType(Algorithm.GZ);
+    existingColumn.setMaxVersions(HConstants.ALL_VERSIONS);
+    table_assetmeta.modifyFamily(existingColumn)
+    admin.modifyTable(tableName, table_assetmeta);
+
     // Disable an existing table
     admin.disableTable(tableName);
 

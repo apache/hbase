@@ -579,7 +579,7 @@ Extract the tarball and make sure it looks good.
 A good test for the src tarball being 'complete' is to see if you can build new tarballs from this source bundle.
 If the source tarball is good, save it off to a _version directory_, a directory somewhere where you are collecting all of the tarballs you will publish as part of the release candidate.
 For example if you were building a hbase-0.96.0 release candidate, you might call the directory _hbase-0.96.0RC0_.
-Later you will publish this directory as our release candidate up on link:people.apache.org/~YOU[people.apache.org/~YOU/]. 
+Later you will publish this directory as our release candidate up on http://people.apache.org/~YOU. 
 
 . Build the binary tarball.
 +
