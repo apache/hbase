@@ -1,5 +1,117 @@
 HBase Change Log
 
+Release Notes - HBase - Version 1.0.1 04/11/2015
+
+** Sub-task
+    * [HBASE-13006] - Document visibility label support for groups
+    * [HBASE-13292] - Undo parent from 0.98 and 1.0: setting hbase.client.scanner.max.result.size is considered harmful
+    * [HBASE-13303] - Fix size calculation of results on the region server
+    * [HBASE-13327] - Use Admin in ConnectionCache
+    * [HBASE-13332] - Fix the usage of doAs/runAs in Visibility Controller tests.
+    * [HBASE-13335] - Update ClientSmallScanner and ClientSmallReversedScanner
+    * [HBASE-13386] - Backport HBASE-12601 to all active branches other than master
+
+** Bug
+    * [HBASE-10728] - get_counter value is never used.
+    * [HBASE-12102] - Duplicate keys in HBase.RegionServer metrics JSON
+    * [HBASE-12908] - Typos in MemStoreFlusher javadocs
+    * [HBASE-12931] - The existing KeyValues in memstore are not removed completely after inserting cell into memStore 
+    * [HBASE-12948] - Calling Increment#addColumn on the same column multiple times produces wrong result 
+    * [HBASE-12969] - Parameter Validation is not there for shell script, local-master-backup.sh and local-regionservers.sh
+    * [HBASE-12993] - Use HBase 1.0 interfaces in hbase-thrift
+    * [HBASE-13001] - NullPointer in master logs for table.jsp
+    * [HBASE-13040] - Possible failure of TestHMasterRPCException
+    * [HBASE-13047] - Add "HBase Configuration" link missing on the table details pages
+    * [HBASE-13048] - Use hbase.crypto.wal.algorithm in SecureProtobufLogReader while decrypting the data
+    * [HBASE-13049] - wal_roll ruby command doesn't work. 
+    * [HBASE-13050] - Hbase shell create_namespace command throws ArrayIndexOutOfBoundException for (invalid) empty text input.
+    * [HBASE-13055] - HRegion FIXED_OVERHEAD missed one boolean
+    * [HBASE-13061] - RegionStates can remove wrong region from server holdings
+    * [HBASE-13065] - Increasing -Xmx when running TestDistributedLogSplitting
+    * [HBASE-13069] - Thrift Http Server returns an error code of 500 instead of 401 when authentication fails
+    * [HBASE-13070] - Fix TestCacheOnWrite
+    * [HBASE-13072] - BucketCache.evictBlock returns true if block does not exist
+    * [HBASE-13075] - TableInputFormatBase spuriously warning about multiple initializeTable calls
+    * [HBASE-13077] - BoundedCompletionService doesn't pass trace info to server
+    * [HBASE-13083] - Master can be dead-locked while assigning META.
+    * [HBASE-13085] - Security issue in the implementation of Rest gataway 'doAs' proxy user support
+    * [HBASE-13091] - Split ZK Quorum on Master WebUI
+    * [HBASE-13102] - Fix Pseudo-distributed Mode which was broken in 1.0.0
+    * [HBASE-13111] - truncate_preserve command is failing with undefined method error
+    * [HBASE-13112] - quota.rb, security.rb and visibility_labels.rb leak connection
+    * [HBASE-13115] - Fix the usage of remote user in thrift doAs implementation.
+    * [HBASE-13123] - Minor bug in ROW bloom filter
+    * [HBASE-13131] - ReplicationAdmin leaks connections if there's an error in the constructor
+    * [HBASE-13133] - NPE when running TestSplitLogManager
+    * [HBASE-13134] - mutateRow and checkAndMutate apis don't throw region level exceptions
+    * [HBASE-13136] - TestSplitLogManager.testGetPreviousRecoveryMode is flakey
+    * [HBASE-13139] - Clean up missing JAVA_HOME message in bin/hbase-config.sh
+    * [HBASE-13141] - IntegrationTestAcidGuarantees returns incorrect values for getColumnFamilies
+    * [HBASE-13165] - Fix docs and scripts for default max heaps size after HBASE-11804
+    * [HBASE-13172] - TestDistributedLogSplitting.testThreeRSAbort fails several times on branch-1
+    * [HBASE-13174] - Apply HBASE-11804 to Windows scripts
+    * [HBASE-13176] - Flakey TestZooKeeper test.
+    * [HBASE-13192] - IntegrationTestBulkLoad doesn't wait for table modification sometimes leading to spurious test failures
+    * [HBASE-13206] - Fix TableLock tableName log format
+    * [HBASE-13224] - Minor formatting issue when logging a namespace scope in AuthResult#toContextString
+    * [HBASE-13227] - LoadIncrementalHFile should skip non-files inside a possible family-dir
+    * [HBASE-13229] - Specify bash for local-regionservers.sh and local-master-backup.sh
+    * [HBASE-13239] - HBase grant at specific column level does not work for Groups 
+    * [HBASE-13246] - Correct the assertion for namespace permissions in tearDown method of TestAccessController
+    * [HBASE-13253] - LoadIncrementalHFiles unify hfiles discovery
+    * [HBASE-13262] - ResultScanner doesn't return all rows in Scan
+    * [HBASE-13265] - Make thrift2 usable from c++
+    * [HBASE-13269] - Limit result array preallocation to avoid OOME with large scan caching values
+    * [HBASE-13273] - Make Result.EMPTY_RESULT read-only; currently it can be modified
+    * [HBASE-13274] - Fix misplaced deprecation in Delete#addXYZ
+    * [HBASE-13282] - Fix the minor issues of running Canary on kerberized environment
+    * [HBASE-13285] - Fix flaky getRegions() in TestAccessController.setUp()
+    * [HBASE-13294] - Fix the critical ancient loopholes in security testing infrastructure.
+    * [HBASE-13296] - Fix the deletion of acl notify nodes for namespace.
+    * [HBASE-13298] - Clarify if Table.{set|get}WriteBufferSize() is deprecated or not
+    * [HBASE-13305] - Get(Get get) is not copying the row key
+    * [HBASE-13309] - Some tests do not reset EnvironmentEdgeManager
+    * [HBASE-13314] - Fix NPE in HMaster.getClusterStatus()
+    * [HBASE-13315] - BufferedMutator should be @InterfaceAudience.Public
+    * [HBASE-13317] - Region server reportForDuty stuck looping if there is a master change
+    * [HBASE-13326] - Disabled table can't be enabled after HBase is restarted
+    * [HBASE-13331] - Exceptions from DFS client can cause CatalogJanitor to delete referenced files
+    * [HBASE-13374] - Small scanners (with particular configurations) do not return all rows
+    * [HBASE-13382] - IntegrationTestBigLinkedList should use SecureRandom
+    * [HBASE-13388] - Handling NullPointer in ZKProcedureMemberRpcs while getting ZNode data
+
+** Improvement
+    * [HBASE-13002] - Make encryption cipher configurable
+    * [HBASE-13044] - Configuration option for disabling coprocessor loading
+    * [HBASE-13054] - Provide more tracing information for locking/latching events.
+    * [HBASE-13056] - Refactor table.jsp code to remove repeated code and make it easier to add new checks
+    * [HBASE-13059] - Set executable bit for scripts in dev-support
+    * [HBASE-13080] - Hbase shell message containing extra quote at the end of error message.
+    * [HBASE-13086] - Show ZK root node on Master WebUI
+    * [HBASE-13109] - Make better SEEK vs SKIP decisions during scanning
+    * [HBASE-13120] - Allow disabling hadoop classpath and native library lookup
+    * [HBASE-13132] - Improve RemoveColumn action debug message 
+    * [HBASE-13162] - Add capability for cleaning hbase acls to hbase cleanup script.
+    * [HBASE-13168] - Backport HBASE-12590 "A solution for data skew in HBase-Mapreduce Job"
+    * [HBASE-13183] - Make ZK tickTime configurable in standalone HBase
+    * [HBASE-13189] - PrefixTreecell should implement HeapSize
+    * [HBASE-13223] - Add testMoveMeta to IntegrationTestMTTR
+    * [HBASE-13236] - Clean up m2e-related warnings/errors from poms
+    * [HBASE-13241] - Add tests for group level grants
+    * [HBASE-13342] - Fix incorrect interface annotations
+    * [HBASE-13345] - Fix LocalHBaseCluster so that different region server impl can be used for different slaves
+
+** New Feature
+    * [HBASE-12869] - Add a REST API implementation of the ClusterManager interface
+
+** Task
+    * [HBASE-12995] - Document that HConnection#getTable methods do not check table existence since 0.98.1
+    * [HBASE-13380] - Cherry pick the HBASE-12808 compatibility checker tool back to 0.98+
+
+** Test
+    * [HBASE-13106] - Ensure endpoint-only table coprocessors can be dynamically loaded
+
+
 Release Notes - HBase - Version 1.0.0 02/20/2015
 
 ** Sub-task
