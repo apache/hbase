@@ -47,6 +47,7 @@ Release Notes - HBase - Version 1.0.1 04/11/2015
     * [HBASE-13136] - TestSplitLogManager.testGetPreviousRecoveryMode is flakey
     * [HBASE-13139] - Clean up missing JAVA_HOME message in bin/hbase-config.sh
     * [HBASE-13141] - IntegrationTestAcidGuarantees returns incorrect values for getColumnFamilies
+    * [HBASE-13156] - Fix minor rat violation recently introduced (asciidoctor.css).
     * [HBASE-13165] - Fix docs and scripts for default max heaps size after HBASE-11804
     * [HBASE-13172] - TestDistributedLogSplitting.testThreeRSAbort fails several times on branch-1
     * [HBASE-13174] - Apply HBASE-11804 to Windows scripts
