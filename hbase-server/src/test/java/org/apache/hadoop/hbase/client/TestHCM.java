@@ -76,7 +76,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.jboss.netty.util.internal.DetectionUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -108,8 +107,6 @@ public class TestHCM {
   private static final byte[] ROW_X = Bytes.toBytes("xxx");
   private static Random _randy = new Random();
 
-  private static boolean isJavaOk = DetectionUtil.javaVersion() > 6;
-
 /**
 * This copro sleeps 20 second. The first call it fails. The second time, it works.
 */
@@ -131,11 +128,7 @@ public class TestHCM {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED,
-      HConstants.STATUS_PUBLISHED_DEFAULT);
-    if (isJavaOk) {
-      TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
-    }
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -223,10 +216,6 @@ public class TestHCM {
   // Fails too often!  Needs work.  HBASE-12558
   @Ignore @Test(expected = RegionServerStoppedException.class)
   public void testClusterStatus() throws Exception {
-    if (!isJavaOk){
-      // This test requires jdk 1.7+
-      throw new RegionServerStoppedException("as expected by the test...");
-    }
 
     TableName tn =
         TableName.valueOf("testClusterStatus");
@@ -475,10 +464,6 @@ public class TestHCM {
      */
   @Test
   public void testConnectionCut() throws Exception {
-    if (!isJavaOk){
-      // This test requires jdk 1.7+
-      return;
-    }
 
     TableName tableName = TableName.valueOf("HCM-testConnectionCut");
 
