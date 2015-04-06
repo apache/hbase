@@ -110,14 +110,21 @@ public class TestRegionSplitPolicy {
     // now be no longer be splittable since split size has gone up.
     regions.add(mockRegion);
     assertFalse(policy.shouldSplit());
-    // Quadruple (2 squared) the store size and make sure its just over; verify it'll split
-    Mockito.doReturn((flushSize * 2 * 2 * 2) + 1).when(mockStore).getSize();
+    // make sure its just over; verify it'll split
+    Mockito.doReturn((long)(maxSplitSize * 1.025 + 1)).when(mockStore).getSize();
     assertTrue(policy.shouldSplit());
 
     // Finally assert that even if loads of regions, we'll split at max size
-    assertEquals(maxSplitSize, policy.getSizeToCheck(1000));
+    assertWithinJitter(maxSplitSize, policy.getSizeToCheck(1000));
     // Assert same is true if count of regions is zero.
-    assertEquals(maxSplitSize, policy.getSizeToCheck(0));
+    assertWithinJitter(maxSplitSize, policy.getSizeToCheck(0));
+  }
+
+  private void assertWithinJitter(long maxSplitSize, long sizeToCheck) {
+    assertTrue("Size greater than lower bound of jitter",
+        (long)(maxSplitSize * 0.75) <= sizeToCheck);
+    assertTrue("Size less than upper bound of jitter",
+        (long)(maxSplitSize * 1.25) >= sizeToCheck);
   }
 
   @Test
@@ -129,13 +136,13 @@ public class TestRegionSplitPolicy {
     ConstantSizeRegionSplitPolicy policy =
         (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(
             mockRegion, conf);
-    assertEquals(1234L, policy.getDesiredMaxFileSize());
+    assertWithinJitter(1234L, policy.getDesiredMaxFileSize());
 
     // If specified in HTD, should use that
     htd.setMaxFileSize(9999L);
     policy = (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(
         mockRegion, conf);
-    assertEquals(9999L, policy.getDesiredMaxFileSize());
+    assertWithinJitter(9999L, policy.getDesiredMaxFileSize());
   }
 
   /**
