@@ -18,6 +18,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -613,5 +617,216 @@ public class TestKeyValue extends TestCase {
     a = new KeyValue(Bytes.toBytes("table,111,11,xxx"), now);
     b = new KeyValue(Bytes.toBytes("table,111,222,bbb"), now);
     assertTrue(c.compare(a, b) < 0);
+  }
+
+  public void testKeyValueSerialization() throws Exception {
+    KeyValue kvA1 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
+        Bytes.toBytes("1"));
+    KeyValue kvA2 = new KeyValue(Bytes.toBytes("key"), Bytes.toBytes("cf"), Bytes.toBytes("qualA"),
+        Bytes.toBytes("2"));
+    MockKeyValue mkvA1 = new MockKeyValue(kvA1);
+    MockKeyValue mkvA2 = new MockKeyValue(kvA2);
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    DataOutputStream os = new DataOutputStream(byteArrayOutputStream);
+    KeyValueUtil.oswrite(mkvA1, os, true);
+    KeyValueUtil.oswrite(mkvA2, os, true);
+    DataInputStream is = new DataInputStream(new ByteArrayInputStream(
+        byteArrayOutputStream.toByteArray()));
+    KeyValue deSerKV1 = KeyValue.iscreate(is);
+    assertTrue(kvA1.equals(deSerKV1));
+    KeyValue deSerKV2 = KeyValue.iscreate(is);
+    assertTrue(kvA2.equals(deSerKV2));
+  }
+
+  private class MockKeyValue implements Cell {
+    private final KeyValue kv;
+
+    public MockKeyValue(KeyValue kv) {
+      this.kv = kv;
+    }
+
+    /**
+     * This returns the offset where the tag actually starts.
+     */
+    @Override
+    public int getTagsOffset() {
+      return this.kv.getTagsOffset();
+    }
+
+    // used to achieve atomic operations in the memstore.
+    @Override
+    public long getMvccVersion() {
+      return this.kv.getMvccVersion();
+    }
+
+    /**
+     * used to achieve atomic operations in the memstore.
+     */
+    @Override
+    public long getSequenceId() {
+      return this.kv.getSequenceId();
+    }
+
+    /**
+     * This returns the total length of the tag bytes
+     */
+    @Override
+    public int getTagsLength() {
+      return this.kv.getTagsLength();
+    }
+
+    /**
+     * 
+     * @return Timestamp
+     */
+    @Override
+    public long getTimestamp() {
+      return this.kv.getTimestamp();
+    }
+
+    /**
+     * @return KeyValue.TYPE byte representation
+     */
+    @Override
+    public byte getTypeByte() {
+      return this.kv.getTypeByte();
+    }
+
+    /**
+     * @return the backing array of the entire KeyValue (all KeyValue fields are
+     *         in a single array)
+     */
+    @Override
+    public byte[] getValueArray() {
+      return this.kv.getValueArray();
+    }
+
+    /**
+     * @return the value offset
+     */
+    @Override
+    public int getValueOffset() {
+      return this.kv.getValueOffset();
+    }
+
+    /**
+     * @return Value length
+     */
+    @Override
+    public int getValueLength() {
+      return this.kv.getValueLength();
+    }
+
+    /**
+     * @return the backing array of the entire KeyValue (all KeyValue fields are
+     *         in a single array)
+     */
+    @Override
+    public byte[] getRowArray() {
+      return this.kv.getRowArray();
+    }
+
+    /**
+     * @return Row offset
+     */
+    @Override
+    public int getRowOffset() {
+      return this.kv.getRowOffset();
+    }
+
+    /**
+     * @return Row length
+     */
+    @Override
+    public short getRowLength() {
+      return this.kv.getRowLength();
+    }
+
+    /**
+     * @return the backing array of the entire KeyValue (all KeyValue fields are
+     *         in a single array)
+     */
+    @Override
+    public byte[] getFamilyArray() {
+      return this.kv.getFamilyArray();
+    }
+
+    /**
+     * @return Family offset
+     */
+    @Override
+    public int getFamilyOffset() {
+      return this.kv.getFamilyOffset();
+    }
+
+    /**
+     * @return Family length
+     */
+    @Override
+    public byte getFamilyLength() {
+      return this.kv.getFamilyLength();
+    }
+
+    /**
+     * @return the backing array of the entire KeyValue (all KeyValue fields are
+     *         in a single array)
+     */
+    @Override
+    public byte[] getQualifierArray() {
+      return this.kv.getQualifierArray();
+    }
+
+    /**
+     * @return Qualifier offset
+     */
+    @Override
+    public int getQualifierOffset() {
+      return this.kv.getQualifierOffset();
+    }
+
+    /**
+     * @return Qualifier length
+     */
+    @Override
+    public int getQualifierLength() {
+      return this.kv.getQualifierLength();
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getValue() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getFamily() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getQualifier() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getRow() {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    /**
+     * @return the backing array of the entire KeyValue (all KeyValue fields are
+     *         in a single array)
+     */
+    @Override
+    public byte[] getTagsArray() {
+      return this.kv.getTagsArray();
+    }
   }
 }
