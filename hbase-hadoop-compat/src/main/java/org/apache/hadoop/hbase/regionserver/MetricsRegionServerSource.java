@@ -275,7 +275,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   String SPLIT_KEY = "splitTime";
   String SPLIT_REQUEST_KEY = "splitRequestCount";
   String SPLIT_REQUEST_DESC = "Number of splits requested";
-  String SPLIT_SUCCESS_KEY = "splitSuccessCounnt";
+  String SPLIT_SUCCESS_KEY = "splitSuccessCount";
   String SPLIT_SUCCESS_DESC = "Number of successfully executed splits";
   String FLUSH_KEY = "flushTime";
 }
