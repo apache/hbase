@@ -574,7 +574,7 @@ public class KeyValueUtil {
       // write value
       out.write(cell.getValueArray(), cell.getValueOffset(), vlen);
       // write tags if we have to
-      if (withTags) {
+      if (withTags && tlen > 0) {
         // 2 bytes tags length followed by tags bytes
         // tags length is serialized with 2 bytes only(short way) even if the type is int. As this
         // is non -ve numbers, we save the sign bit. See HBASE-11437
