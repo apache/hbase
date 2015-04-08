@@ -178,6 +178,7 @@ public final class Canary implements Tool {
           get.addFamily(column.getName());
         } else {
           scan = new Scan();
+          scan.setRaw(true);
           scan.setCaching(1);
           scan.setCacheBlocks(false);
           scan.setFilter(new FirstKeyOnlyFilter());
