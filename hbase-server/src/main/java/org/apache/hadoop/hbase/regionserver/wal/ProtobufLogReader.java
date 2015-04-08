@@ -91,6 +91,9 @@ public class ProtobufLogReader extends ReaderBase {
   static {
     writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
   }
+  
+  // cell codec classname
+  private String codecClsName = null;
 
   enum WALHdrResult {
     EOF,                   // stream is at EOF when method starts
@@ -153,8 +156,15 @@ public class ProtobufLogReader extends ReaderBase {
   /*
    * Returns names of the accepted writer classes
    */
-  protected List<String> getWriterClsNames() {
+  public List<String> getWriterClsNames() {
     return writerClsNames;
+  }
+  
+  /*
+   * Returns the cell codec classname
+   */
+  public String getCodecClsName() {
+      return codecClsName;
   }
 
   protected WALHdrContext readHeader(Builder builder, FSDataInputStream stream)
@@ -207,6 +217,9 @@ public class ProtobufLogReader extends ReaderBase {
       LOG.trace("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
           + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + trailerPresent);
     }
+    
+    codecClsName = hdrCtxt.getCellCodecClsName();
+    
     return hdrCtxt.getCellCodecClsName();
   }
 

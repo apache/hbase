@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
 // imports for things that haven't moved yet.
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
@@ -242,11 +243,33 @@ public class WALPrettyPrinter {
     if (!fs.isFile(p)) {
       throw new IOException(p + " is not a file");
     }
+
+    WAL.Reader log = WALFactory.createReader(fs, p, conf);
+    
+    if (log instanceof ProtobufLogReader) {
+      List<String> writerClsNames = ((ProtobufLogReader) log).getWriterClsNames();
+      if (writerClsNames != null && writerClsNames.size() > 0) {
+        out.print("Writer Classes: ");
+        for (int i = 0; i < writerClsNames.size(); i++) {
+          out.print(writerClsNames.get(i));
+          if (i != writerClsNames.size() - 1) {
+            out.print(" ");
+          }
+        }
+        out.println();
+      }
+      
+      String cellCodecClsName = ((ProtobufLogReader) log).getCodecClsName();
+      if (cellCodecClsName != null) {
+        out.println("Cell Codec Class: " + cellCodecClsName);
+      }
+    }
+    
     if (outputJSON && !persistentOutput) {
       out.print("[");
       firstTxn = true;
     }
-    WAL.Reader log = WALFactory.createReader(fs, p, conf);
+    
     try {
       WAL.Entry entry;
       while ((entry = log.next()) != null) {
