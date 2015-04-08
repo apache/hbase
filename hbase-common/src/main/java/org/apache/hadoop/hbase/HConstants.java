@@ -391,7 +391,7 @@ public final class HConstants {
 
   /**
    * The hbase:meta table's name.
-   * @deprecated For 0.94 to 0.96 compatibility. Replaced by define in TableName
+   *
    */
   @Deprecated  // for compat from 0.94 -> 0.96.
   public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
@@ -579,7 +579,7 @@ public final class HConstants {
    * 1, 2, 3, 5, 10, 20, 40, 100, 100, 100.
    * With 100ms, a back-off of 200 means 20s
    */
-  public static final int [] RETRY_BACKOFF = {1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200};
+  public static final int RETRY_BACKOFF[] = {1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200};
 
   public static final String REGION_IMPL = "hbase.hregion.impl";
 
@@ -780,8 +780,7 @@ public final class HConstants {
   /**
    * timeout for short operation RPC
    */
-  public static final String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY =
-    "hbase.rpc.shortoperation.timeout";
+  public static final String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY = "hbase.rpc.shortoperation.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY}
@@ -836,8 +835,8 @@ public final class HConstants {
     */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
 
-  public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile(
-    "^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
+  public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
+      ("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
   public static final Pattern CP_HTD_ATTR_VALUE_PATTERN =
       Pattern.compile("(^[^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?$");
 
@@ -890,7 +889,7 @@ public final class HConstants {
    * 1   => Abort only all of the handers have died
    */
   public static final String REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT =
-    "hbase.regionserver.handler.abort.on.error.percent";
+		  "hbase.regionserver.handler.abort.on.error.percent";
   public static final double DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT = 0.5;
 
   //High priority handlers to deal with admin requests and system table operation requests
@@ -950,8 +949,7 @@ public final class HConstants {
   public static final String DEFAULT_WAL_STORAGE_POLICY = "NONE";
 
   /** Region in Transition metrics threshold time */
-  public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD =
-    "hbase.metrics.rit.stuck.warning.threshold";
+  public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD="hbase.metrics.rit.stuck.warning.threshold";
 
   public static final String LOAD_BALANCER_SLOP_KEY = "hbase.regions.slop";
 
@@ -1046,8 +1044,7 @@ public final class HConstants {
    * 0.0.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-9961">HBASE-9961</a>
    */
-  public static final String STATUS_MULTICAST_BIND_ADDRESS =
-    "hbase.status.multicast.bind.address.ip";
+  public static final String STATUS_MULTICAST_BIND_ADDRESS = "hbase.status.multicast.bind.address.ip";
   public static final String DEFAULT_STATUS_MULTICAST_BIND_ADDRESS = "0.0.0.0";
 
   /**

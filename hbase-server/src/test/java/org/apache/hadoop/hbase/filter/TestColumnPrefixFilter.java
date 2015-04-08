@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -104,8 +105,7 @@ public class TestColumnPrefixFilter {
 
         InternalScanner scanner = region.getScanner(scan);
         List<Cell> results = new ArrayList<Cell>();
-        while (scanner.next(results))
-          ;
+        while (NextState.hasMoreValues(scanner.next(results)));
         assertEquals(prefixMap.get(s).size(), results.size());
       }
     } finally {
@@ -170,8 +170,7 @@ public class TestColumnPrefixFilter {
 
         InternalScanner scanner = region.getScanner(scan);
         List<Cell> results = new ArrayList<Cell>();
-        while (scanner.next(results))
-          ;
+        while (NextState.hasMoreValues(scanner.next(results)));
         assertEquals(prefixMap.get(s).size(), results.size());
       }
     } finally {

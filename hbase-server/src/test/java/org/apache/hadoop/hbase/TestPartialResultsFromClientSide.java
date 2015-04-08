@@ -409,7 +409,6 @@ public class TestPartialResultsFromClientSide {
     scan.setBatch(batch);
     ResultScanner scanner = TABLE.getScanner(scan);
     Result result = scanner.next();
-    int repCount = 0;
 
     while ((result = scanner.next()) != null) {
       assertTrue(result.rawCells() != null);
@@ -417,12 +416,11 @@ public class TestPartialResultsFromClientSide {
       if (result.isPartial()) {
         final String error =
             "Cells:" + result.rawCells().length + " Batch size:" + batch
-                + " cellsPerPartialResult:" + cellsPerPartialResult + " rep:" + repCount;
+                + " cellsPerPartialResult:" + cellsPerPartialResult;
         assertTrue(error, result.rawCells().length <= Math.min(batch, cellsPerPartialResult));
       } else {
         assertTrue(result.rawCells().length <= batch);
       }
-      repCount++;
     }
 
     scanner.close();
@@ -460,7 +458,7 @@ public class TestPartialResultsFromClientSide {
       do {
         partialResult = partialScanner.next();
         partials.add(partialResult);
-      } while (partialResult != null && partialResult.isPartial());
+      } while (partialResult.isPartial());
 
       completeResult = Result.createCompleteResult(partials);
       oneShotResult = oneShotScanner.next();
@@ -698,7 +696,7 @@ public class TestPartialResultsFromClientSide {
       LOG.info("r2: " + r2);
     }
 
-    final String failureMessage = "Results r1:" + r1 + " \nr2:" + r2 + " are not equivalent";
+    final String failureMessage = "Results r1:" + r1 + " r2:" + r2 + " are not equivalent";
     if (r1 == null && r2 == null) fail(failureMessage);
     else if (r1 == null || r2 == null) fail(failureMessage);
 

@@ -574,7 +574,6 @@ public final class CellUtil {
    * backwards compatible with estimations done by older clients. We need to
    * pretend that tags never exist and cells aren't serialized with tag
    * length included. See HBASE-13262 and HBASE-13303
-   * @deprecated See above comment
    */
   @Deprecated
   public static long estimatedHeapSizeOfWithoutTags(final Cell cell) {

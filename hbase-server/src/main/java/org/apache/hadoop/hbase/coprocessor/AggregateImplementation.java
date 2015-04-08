@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateReque
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateService;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
@@ -91,7 +92,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       // qualifier can be null.
       boolean hasMoreRows = false;
       do {
-        hasMoreRows = scanner.next(results);
+        hasMoreRows = NextState.hasMoreValues(scanner.next(results));
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           temp = ci.getValue(colFamily, qualifier, results.get(i));
@@ -145,7 +146,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
       boolean hasMoreRows = false;
       do {
-        hasMoreRows = scanner.next(results);
+        hasMoreRows = NextState.hasMoreValues(scanner.next(results));
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           temp = ci.getValue(colFamily, qualifier, results.get(i));
@@ -199,7 +200,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       List<Cell> results = new ArrayList<Cell>();
       boolean hasMoreRows = false;
       do {
-        hasMoreRows = scanner.next(results);
+        hasMoreRows = NextState.hasMoreValues(scanner.next(results));
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           temp = ci.getValue(colFamily, qualifier, results.get(i));
@@ -253,7 +254,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       scanner = env.getRegion().getScanner(scan);
       boolean hasMoreRows = false;
       do {
-        hasMoreRows = scanner.next(results);
+        hasMoreRows = NextState.hasMoreValues(scanner.next(results));
         if (results.size() > 0) {
           counter++;
         }
@@ -312,7 +313,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
     
       do {
         results.clear();
-        hasMoreRows = scanner.next(results);
+        hasMoreRows = NextState.hasMoreValues(scanner.next(results));
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           sumVal = ci.add(sumVal, ci.castToReturnType(ci.getValue(colFamily,
@@ -373,7 +374,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
     
       do {
         tempVal = null;
-        hasMoreRows = scanner.next(results);
+        hasMoreRows = NextState.hasMoreValues(scanner.next(results));
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           tempVal = ci.add(tempVal, ci.castToReturnType(ci.getValue(colFamily,
@@ -440,7 +441,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       do {
         tempVal = null;
         tempWeight = null;
-        hasMoreRows = scanner.next(results);
+        hasMoreRows = NextState.hasMoreValues(scanner.next(results));
         int listSize = results.size();
         for (int i = 0; i < listSize; i++) {
           Cell kv = results.get(i);

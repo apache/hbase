@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionFactory;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -88,26 +87,36 @@ public class TestCoprocessorInterface {
     }
 
     @Override
-    public boolean next(List<Cell> results) throws IOException {
+    public NextState next(List<Cell> results) throws IOException {
       return delegate.next(results);
     }
 
     @Override
-    public boolean next(List<Cell> result, ScannerContext scannerContext)
-        throws IOException {
-      return delegate.next(result, scannerContext);
+    public NextState next(List<Cell> result, int limit) throws IOException {
+      return delegate.next(result, limit);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result)
+    public NextState next(List<Cell> result, int limit, long remainingResultSize)
+        throws IOException {
+      return delegate.next(result, limit, remainingResultSize);
+    }
+
+    @Override
+    public NextState nextRaw(List<Cell> result)
         throws IOException {
       return delegate.nextRaw(result);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result, ScannerContext context)
+    public NextState nextRaw(List<Cell> result, int limit) throws IOException {
+      return delegate.nextRaw(result, limit);
+    }
+
+    @Override
+    public NextState nextRaw(List<Cell> result, int limit, long remainingResultSize)
         throws IOException {
-      return delegate.nextRaw(result, context);
+      return delegate.nextRaw(result, limit, remainingResultSize);
     }
 
     @Override

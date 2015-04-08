@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * RegionScanner describes iterators over rows in an HRegion.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Evolving
+@InterfaceStability.Stable
 public interface RegionScanner extends InternalScanner {
   /**
    * @return The RegionInfo for this scanner.
@@ -74,22 +74,35 @@ public interface RegionScanner extends InternalScanner {
   int getBatch();
 
   /**
-   * Grab the next row's worth of values. This is a special internal method to be called from
-   * coprocessor hooks to avoid expensive setup. Caller must set the thread's readpoint, start and
-   * close a region operation, an synchronize on the scanner object. Caller should maintain and
-   * update metrics. See {@link #nextRaw(List, ScannerContext)}
+   * Grab the next row's worth of values with the default limit on the number of values to return.
+   * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
+   * Caller must set the thread's readpoint, start and close a region operation, an synchronize on
+   * the scanner object. Caller should maintain and update metrics. See
+   * {@link #nextRaw(List, int, long)}
    * @param result return output array
-   * @return true if more rows exist after this one, false if scanner is done
+   * @return a state where NextState#hasMoreValues() is true when more rows exist, false when
+   *         scanner is done.
    * @throws IOException e
    */
-  boolean nextRaw(List<Cell> result) throws IOException;
-  
+  NextState nextRaw(List<Cell> result) throws IOException;
+
   /**
-   * Grab the next row's worth of values. The {@link ScannerContext} is used to enforce and track
-   * any limits associated with this call. Any progress that exists in the {@link ScannerContext}
-   * prior to calling this method will be LOST if {@link ScannerContext#getKeepProgress()} is false.
-   * Upon returning from this method, the {@link ScannerContext} will contain information about the
-   * progress made towards the limits. This is a special internal method to be called from
+   * Grab the next row's worth of values with the default limit on the number of values to return.
+   * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
+   * Caller must set the thread's readpoint, start and close a region operation, an synchronize on
+   * the scanner object. Caller should maintain and update metrics. See
+   * {@link #nextRaw(List, int, long)}
+   * @param result return output array
+   * @param limit limit on row count to get
+   * @return a state where NextState#hasMoreValues() is true when more rows exist, false when
+   *         scanner is done.
+   * @throws IOException e
+   */
+  NextState nextRaw(List<Cell> result, int limit) throws IOException;
+
+  /**
+   * Grab the next row's worth of values with a limit on the number of values to return as well as a
+   * limit on the heap size of those values. This is a special internal method to be called from
    * coprocessor hooks to avoid expensive setup. Caller must set the thread's readpoint, start and
    * close a region operation, an synchronize on the scanner object. Example: <code><pre>
    * HRegion region = ...;
@@ -107,12 +120,13 @@ public interface RegionScanner extends InternalScanner {
    * }
    * </pre></code>
    * @param result return output array
-   * @param scannerContext The {@link ScannerContext} instance encapsulating all limits that should
-   *          be tracked during calls to this method. The progress towards these limits can be
-   *          tracked within this instance.
-   * @return true if more rows exist after this one, false if scanner is done
+   * @param limit limit on row count to get
+   * @param remainingResultSize the space remaining within the restriction on the result size.
+   *          Negative values indicate no limit
+   * @return a state where NextState#hasMoreValues() is true when more rows exist, false when
+   *         scanner is done.
    * @throws IOException e
    */
-  boolean nextRaw(List<Cell> result, ScannerContext scannerContext)
+  NextState nextRaw(List<Cell> result, int limit, final long remainingResultSize)
       throws IOException;
 }

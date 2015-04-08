@@ -401,9 +401,6 @@ public class ClientScanner extends AbstractClientScanner {
         // happens for the cases where we see exceptions. Since only openScanner
         // would have happened, values would be null
         if (values == null && callable.switchedToADifferentReplica()) {
-          // Any accumulated partial results are no longer valid since the callable will
-          // openScanner with the correct startkey and we must pick up from there
-          clearPartialResults();
           this.currentRegion = callable.getHRegionInfo();
           continue;
         }

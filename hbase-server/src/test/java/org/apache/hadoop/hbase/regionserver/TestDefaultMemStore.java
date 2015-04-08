@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -106,7 +107,7 @@ public class TestDefaultMemStore extends TestCase {
     StoreScanner s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     int count = 0;
     try {
-      while (s.next(result)) {
+      while (NextState.hasMoreValues(s.next(result))) {
         LOG.info(result);
         count++;
         // Row count is same as column count.
@@ -126,7 +127,7 @@ public class TestDefaultMemStore extends TestCase {
     s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
     try {
-      while (s.next(result)) {
+      while (NextState.hasMoreValues(s.next(result))) {
         LOG.info(result);
         // Assert the stuff is coming out in right order.
         assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
@@ -153,7 +154,7 @@ public class TestDefaultMemStore extends TestCase {
     count = 0;
     int snapshotIndex = 5;
     try {
-      while (s.next(result)) {
+      while (NextState.hasMoreValues(s.next(result))) {
         LOG.info(result);
         // Assert the stuff is coming out in right order.
         assertTrue(CellUtil.matchingRow(result.get(0), Bytes.toBytes(count)));
@@ -527,7 +528,7 @@ public class TestDefaultMemStore extends TestCase {
           Bytes.toBytes(startRowId)), scanInfo, scanType, null,
           memstore.getScanners(0));
       List<Cell> results = new ArrayList<Cell>();
-      for (int i = 0; scanner.next(results); i++) {
+      for (int i = 0; NextState.hasMoreValues(scanner.next(results)); i++) {
         int rowId = startRowId + i;
         Cell left = results.get(0);
         byte[] row1 = Bytes.toBytes(rowId);

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -567,7 +568,7 @@ public abstract class HBaseTestCase extends TestCase {
     @Override
     public boolean next(List<Cell> results)
     throws IOException {
-      return scanner.next(results);
+      return NextState.hasMoreValues(scanner.next(results));
     }
 
     @Override

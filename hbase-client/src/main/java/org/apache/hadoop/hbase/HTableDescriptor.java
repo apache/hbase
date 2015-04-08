@@ -159,9 +159,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    */
   @Deprecated
   public static final String DEFERRED_LOG_FLUSH = "DEFERRED_LOG_FLUSH";
-  /**
-   * @deprecated
-   */
   @Deprecated
   private static final Bytes DEFERRED_LOG_FLUSH_KEY =
       new Bytes(Bytes.toBytes(DEFERRED_LOG_FLUSH));
@@ -318,7 +315,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * Construct a table descriptor specifying a byte array table name
    * @param name Table name.
    * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
-   * @deprecated
    */
   @Deprecated
   public HTableDescriptor(final byte[] name) {
@@ -329,7 +325,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * Construct a table descriptor specifying a String table name
    * @param name Table name.
    * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
-   * @deprecated
    */
   @Deprecated
   public HTableDescriptor(final String name) {
@@ -704,7 +699,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * Set the name of the table.
    *
    * @param name name of table
-   * @deprecated
    */
   @Deprecated
   public HTableDescriptor setName(byte[] name) {
@@ -712,9 +706,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     return this;
   }
 
-  /**
-   * @deprecated
-   */
   @Deprecated
   public HTableDescriptor setName(TableName name) {
     this.name = name;
@@ -1349,7 +1340,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param rootdir qualified path of HBase root directory
    * @param tableName name of table
    * @return {@link Path} for table
-   * @deprecated
    */
   @Deprecated
   public static Path getTableDir(Path rootdir, final byte [] tableName) {
@@ -1363,7 +1353,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   /** Table descriptor for <code>hbase:meta</code> catalog table
    * Deprecated, use TableDescriptors#get(TableName.META_TABLE) or
    * Admin#getTableDescriptor(TableName.META_TABLE) instead.
-   * @deprecated
    */
   @Deprecated
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
@@ -1423,18 +1412,12 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
               .setCacheDataInL1(true)
       });
 
-  /**
-   * @deprecated
-   */
   @Deprecated
   public HTableDescriptor setOwner(User owner) {
     return setOwnerString(owner != null ? owner.getShortName() : null);
   }
 
-  /**
-   * used by admin.rb:alter(table_name,*args) to update owner.
-   * @deprecated
-   */
+  // used by admin.rb:alter(table_name,*args) to update owner.
   @Deprecated
   public HTableDescriptor setOwnerString(String ownerString) {
     if (ownerString != null) {
@@ -1445,9 +1428,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     return this;
   }
 
-  /**
-   * @deprecated
-   */
   @Deprecated
   public String getOwnerString() {
     if (getValue(OWNER_KEY) != null) {

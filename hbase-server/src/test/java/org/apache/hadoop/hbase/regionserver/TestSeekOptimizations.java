@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -224,7 +225,7 @@ public class TestSeekOptimizations {
     // result, not to the one already returned in results.
     boolean hasNext;
     do {
-      hasNext = scanner.next(results);
+      hasNext = NextState.hasMoreValues(scanner.next(results));
       actualKVs.addAll(results);
       results.clear();
     } while (hasNext);

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -231,7 +232,7 @@ public class TestMergeTool extends HBaseTestCase {
     List<Cell> testRes = null;
       while (true) {
         testRes = new ArrayList<Cell>();
-        boolean hasNext = scanner.next(testRes);
+        boolean hasNext = NextState.hasMoreValues(scanner.next(testRes));
         if (!hasNext) {
           break;
         }

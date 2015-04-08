@@ -128,10 +128,11 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.Stor
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.regionserver.Region.RowLock;
 import org.apache.hadoop.hbase.regionserver.TestStore.FaultyFileSystem;
-import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -1264,7 +1265,7 @@ public class TestHRegion {
     boolean more = false;
     List<Cell> results = new ArrayList<Cell>();
     do {
-      more = scanner.next(results);
+      more = NextState.hasMoreValues(scanner.next(results));
       if (results != null && !results.isEmpty())
         count++;
       else
@@ -1283,7 +1284,7 @@ public class TestHRegion {
     List<Cell> results = new ArrayList<Cell>();
     boolean more = false;
     do {
-      more = resultScanner.next(results);
+      more = NextState.hasMoreValues(resultScanner.next(results));
       if (results != null && !results.isEmpty())
         numberOfResults++;
       else
@@ -2273,7 +2274,7 @@ public class TestHRegion {
       InternalScanner s = region.getScanner(scan);
 
       List<Cell> results = new ArrayList<Cell>();
-      assertEquals(false, s.next(results));
+      assertEquals(false, NextState.hasMoreValues(s.next(results)));
       assertEquals(1, results.size());
       Cell kv = results.get(0);
 
@@ -2765,7 +2766,7 @@ public class TestHRegion {
       List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
-      boolean hasNext = scanner.next(actual);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(actual));
       assertEquals(false, hasNext);
 
       // Verify result
@@ -2828,7 +2829,7 @@ public class TestHRegion {
       List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
-      boolean hasNext = scanner.next(actual);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(actual));
       assertEquals(false, hasNext);
 
       // Verify result
@@ -2910,7 +2911,7 @@ public class TestHRegion {
       List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
-      boolean hasNext = scanner.next(actual);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(actual));
       assertEquals(false, hasNext);
 
       // Verify result
@@ -2971,7 +2972,7 @@ public class TestHRegion {
       List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
-      boolean hasNext = scanner.next(actual);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(actual));
       assertEquals(false, hasNext);
 
       // Verify result
@@ -3032,7 +3033,7 @@ public class TestHRegion {
       List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
-      boolean hasNext = scanner.next(actual);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(actual));
       assertEquals(false, hasNext);
 
       // Verify result
@@ -3085,7 +3086,7 @@ public class TestHRegion {
       InternalScanner s = region.getScanner(scan);
 
       List<Cell> results = new ArrayList<Cell>();
-      assertEquals(false, s.next(results));
+      assertEquals(false, NextState.hasMoreValues(s.next(results)));
       assertEquals(0, results.size());
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -3159,7 +3160,7 @@ public class TestHRegion {
       List<Cell> actual = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
 
-      boolean hasNext = scanner.next(actual);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(actual));
       assertEquals(false, hasNext);
 
       // Verify result
@@ -3222,18 +3223,18 @@ public class TestHRegion {
       InternalScanner s = region.getScanner(scan);
 
       List<Cell> results = new ArrayList<Cell>();
-      assertTrue(s.next(results));
+      assertTrue(NextState.hasMoreValues(s.next(results)));
       assertEquals(results.size(), 1);
       results.clear();
 
-      assertTrue(s.next(results));
+      assertTrue(NextState.hasMoreValues(s.next(results)));
       assertEquals(results.size(), 3);
       assertTrue("orderCheck", CellUtil.matchingFamily(results.get(0), cf_alpha));
       assertTrue("orderCheck", CellUtil.matchingFamily(results.get(1), cf_essential));
       assertTrue("orderCheck", CellUtil.matchingFamily(results.get(2), cf_joined));
       results.clear();
 
-      assertFalse(s.next(results));
+      assertFalse(NextState.hasMoreValues(s.next(results)));
       assertEquals(results.size(), 0);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -3316,9 +3317,8 @@ public class TestHRegion {
 
       List<Cell> results = new ArrayList<Cell>();
       int index = 0;
-      ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(3).build();
       while (true) {
-        boolean more = s.next(results, scannerContext);
+        boolean more = NextState.hasMoreValues(s.next(results, 3));
         if ((index >> 1) < 5) {
           if (index % 2 == 0)
             assertEquals(results.size(), 3);
@@ -3592,7 +3592,7 @@ public class TestHRegion {
           if (toggle) {
             flushThread.flush();
           }
-          while (scanner.next(res))
+          while (NextState.hasMoreValues(scanner.next(res)))
             ;
           if (!toggle) {
             flushThread.flush();
@@ -3717,7 +3717,7 @@ public class TestHRegion {
         boolean previousEmpty = res.isEmpty();
         res.clear();
         InternalScanner scanner = region.getScanner(scan);
-        while (scanner.next(res))
+        while (NextState.hasMoreValues(scanner.next(res)))
           ;
         if (!res.isEmpty() || !previousEmpty || i > compactInterval) {
           assertEquals("i=" + i, expectedCount, res.size());
@@ -3999,7 +3999,7 @@ public class TestHRegion {
       InternalScanner scanner = region.getScanner(idxScan);
       List<Cell> res = new ArrayList<Cell>();
 
-      while (scanner.next(res))
+      while (NextState.hasMoreValues(scanner.next(res)))
         ;
       assertEquals(1L, res.size());
     } finally {
@@ -4895,7 +4895,7 @@ public class TestHRegion {
     try {
       List<Cell> curVals = new ArrayList<Cell>();
       boolean first = true;
-      OUTER_LOOP: while (s.next(curVals)) {
+      OUTER_LOOP: while (NextState.hasMoreValues(s.next(curVals))) {
         for (Cell kv : curVals) {
           byte[] val = CellUtil.cloneValue(kv);
           byte[] curval = val;
@@ -5091,17 +5091,17 @@ public class TestHRegion {
       scan.setReversed(true);
       InternalScanner scanner = region.getScanner(scan);
       List<Cell> currRow = new ArrayList<Cell>();
-      boolean hasNext = scanner.next(currRow);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(2, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
       assertFalse(hasNext);
@@ -5148,17 +5148,17 @@ public class TestHRegion {
       scan.setReversed(true);
       scan.setMaxVersions(5);
       InternalScanner scanner = region.getScanner(scan);
-      boolean hasNext = scanner.next(currRow);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(2, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
       assertFalse(hasNext);
@@ -5202,17 +5202,17 @@ public class TestHRegion {
       List<Cell> currRow = new ArrayList<Cell>();
       scan.setReversed(true);
       InternalScanner scanner = region.getScanner(scan);
-      boolean hasNext = scanner.next(currRow);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
       assertFalse(hasNext);
@@ -5270,17 +5270,17 @@ public class TestHRegion {
       scan.setReversed(true);
       List<Cell> currRow = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
-      boolean hasNext = scanner.next(currRow);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
       assertFalse(hasNext);
@@ -5291,7 +5291,7 @@ public class TestHRegion {
       scan.setReversed(true);
       currRow.clear();
       scanner = region.getScanner(scan);
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
       scanner.close();
@@ -5350,17 +5350,17 @@ public class TestHRegion {
       scan.setReversed(true);
       List<Cell> currRow = new ArrayList<Cell>();
       InternalScanner scanner = region.getScanner(scan);
-      boolean hasNext = scanner.next(currRow);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
       assertFalse(hasNext);
@@ -5371,7 +5371,7 @@ public class TestHRegion {
       scan.setReversed(true);
       currRow.clear();
       scanner = region.getScanner(scan);
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
       scanner.close();
@@ -5495,42 +5495,42 @@ public class TestHRegion {
       // 1. scan out "row4" (5 kvs), "row5" can't be scanned out since not
       // included in scan range
       // "row4" takes 2 next() calls since batch=3
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(3, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(2, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
       assertTrue(hasNext);
       // 2. scan out "row3" (2 kv)
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(2, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row3));
       assertTrue(hasNext);
       // 3. scan out "row2" (4 kvs)
       // "row2" takes 2 next() calls since batch=3
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(3, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
       assertTrue(hasNext);
       // 4. scan out "row1" (2 kv)
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(2, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row1));
       assertTrue(hasNext);
       // 5. scan out "row0" (1 kv)
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row0));
       assertFalse(hasNext);
@@ -5591,22 +5591,22 @@ public class TestHRegion {
       scan.setBatch(10);
       InternalScanner scanner = region.getScanner(scan);
       List<Cell> currRow = new ArrayList<Cell>();
-      boolean hasNext = scanner.next(currRow);
+      boolean hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row3));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
       assertTrue(hasNext);
       currRow.clear();
-      hasNext = scanner.next(currRow);
+      hasNext = NextState.hasMoreValues(scanner.next(currRow));
       assertEquals(1, currRow.size());
       assertTrue(Bytes.equals(currRow.get(0).getRow(), row1));
       assertFalse(hasNext);
@@ -5659,7 +5659,7 @@ public class TestHRegion {
       boolean more = false;
       int verify = startRow + 2 * numRows - 1;
       do {
-        more = scanner.next(currRow);
+        more = NextState.hasMoreValues(scanner.next(currRow));
         assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
         verify--;
         currRow.clear();
@@ -5672,7 +5672,7 @@ public class TestHRegion {
       scanner = regions[1].getScanner(scan);
       verify = startRow + 2 * numRows - 1;
       do {
-        more = scanner.next(currRow);
+        more = NextState.hasMoreValues(scanner.next(currRow));
         assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
         verify--;
         currRow.clear();
@@ -5685,7 +5685,7 @@ public class TestHRegion {
       scanner = regions[0].getScanner(scan);
       verify = startRow + numRows - 1;
       do {
-        more = scanner.next(currRow);
+        more = NextState.hasMoreValues(scanner.next(currRow));
         assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
         verify--;
         currRow.clear();
@@ -5698,7 +5698,7 @@ public class TestHRegion {
       scanner = regions[0].getScanner(scan);
       verify = startRow + numRows - 1;
       do {
-        more = scanner.next(currRow);
+        more = NextState.hasMoreValues(scanner.next(currRow));
         assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
         verify--;
         currRow.clear();

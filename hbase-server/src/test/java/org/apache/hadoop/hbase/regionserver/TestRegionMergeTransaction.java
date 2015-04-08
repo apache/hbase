@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.InternalScanner.NextState;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -426,7 +427,7 @@ public class TestRegionMergeTransaction {
       List<Cell> kvs = new ArrayList<Cell>();
       boolean hasNext = true;
       while (hasNext) {
-        hasNext = scanner.next(kvs);
+        hasNext = NextState.hasMoreValues(scanner.next(kvs));
         if (!kvs.isEmpty())
           rowcount++;
       }
