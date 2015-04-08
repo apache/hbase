@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -186,7 +185,7 @@ public class TestClientSmallReversedScanner {
       for (int i = 3; i >= 1 && iter.hasNext(); i--) {
         Result result = iter.next();
         byte[] row = result.getRow();
-        assertEquals("row" + i, new String(row, StandardCharsets.UTF_8));
+        assertEquals("row" + i, new String(row, "UTF-8"));
         assertEquals(1, result.getMap().size());
       }
       assertTrue(csrs.closed);
@@ -263,7 +262,7 @@ public class TestClientSmallReversedScanner {
       for (int i = 3; i >= 2 && iter.hasNext(); i--) {
         Result result = iter.next();
         byte[] row = result.getRow();
-        assertEquals("row" + i, new String(row, StandardCharsets.UTF_8));
+        assertEquals("row" + i, new String(row, "UTF-8"));
         assertEquals(1, result.getMap().size());
       }
 
@@ -274,7 +273,7 @@ public class TestClientSmallReversedScanner {
 
       assertEquals(1, results.size());
       Result result = results.get(0);
-      assertEquals("row1", new String(result.getRow(), StandardCharsets.UTF_8));
+      assertEquals("row1", new String(result.getRow(), "UTF-8"));
       assertEquals(1, result.getMap().size());
 
       assertTrue(csrs.closed);
