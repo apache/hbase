@@ -567,9 +567,9 @@ public class MobUtils {
 
   /**
    * Commits the mob file.
-   * @param @param conf The current configuration.
+   * @param conf The current configuration.
    * @param fs The current file system.
-   * @param path The path where the mob file is saved.
+   * @param sourceFile The path where the mob file is saved.
    * @param targetPath The directory path where the source file is renamed to.
    * @param cacheConfig The current cache config.
    * @return The target file path the source file is renamed to.

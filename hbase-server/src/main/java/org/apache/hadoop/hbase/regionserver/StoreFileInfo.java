@@ -391,7 +391,7 @@ public class StoreFileInfo {
   }
 
   /**
-   * @param path Path to check.
+   * @param fileName Sting version of path to validate.
    * @return True if the file name has format of a del file.
    */
   public static boolean isDelFile(final String fileName) {
