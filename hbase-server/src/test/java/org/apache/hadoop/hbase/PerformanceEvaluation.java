@@ -506,6 +506,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.blockEncoding = that.blockEncoding;
       this.filterAll = that.filterAll;
       this.bloomType = that.bloomType;
+      this.addColumns = that.addColumns;
     }
 
     public boolean nomapred = false;
@@ -527,6 +528,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public Compression.Algorithm compression = Compression.Algorithm.NONE;
     public BloomType bloomType = BloomType.ROW;
     public DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
+    boolean addColumns = true;
   }
 
   /*
@@ -630,7 +632,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException {
       Scan scan = new Scan(getRandomRow(this.rand, opts.totalRows));
       FilterList list = new FilterList();
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       if (opts.filterAll) {
         list.addFilter(new FilterAllFilter());
       }
@@ -662,7 +666,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (opts.filterAll) {
         scan.setFilter(new FilterAllFilter());
       }
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       ResultScanner s = this.table.getScanner(scan);
       int count = 0;
       for (Result rr; (rr = s.next()) != null;) {
@@ -762,7 +768,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException {
       if (i % everyN == 0) {
         Get get = new Get(getRandomRow(this.rand, opts.totalRows));
-        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        if (opts.addColumns) {
+          get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        }
         if (opts.filterAll) {
           get.setFilter(new FilterAllFilter());
         }
@@ -870,7 +878,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (this.testScanner == null) {
         Scan scan = new Scan(format(opts.startRow));
         scan.setCaching(30);
-        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        if (opts.addColumns) {
+          scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        }
         if (opts.filterAll) {
           scan.setFilter(new FilterAllFilter());
         }
@@ -889,7 +899,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     @Override
     void testRow(final int i) throws IOException {
       Get get = new Get(format(i));
-      get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       if (opts.filterAll) {
         get.setFilter(new FilterAllFilter());
       }
@@ -957,7 +969,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         list.addFilter(new FilterAllFilter());
       }
       Scan scan = new Scan();
-      scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (opts.addColumns) {
+        scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      }
       scan.setFilter(list);
       return scan;
     }
@@ -1124,6 +1138,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" Note: -D properties will be applied to the conf used. ");
     System.err.println("  For example: ");
     System.err.println("   -Dmapred.output.compress=true");
+    System.err.println(" addColumns      Adds columns to scans/gets explicitly. Default: true");
     System.err.println("   -Dmapreduce.task.timeout=60000");
     System.err.println();
     System.err.println("Command:");
@@ -1271,6 +1286,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         final String bloomFilter = "--bloomFilter";
         if (cmd.startsWith(bloomFilter)) {
           opts.bloomType = BloomType.valueOf(cmd.substring(bloomFilter.length()));
+          continue;
+        }
+
+        final String addColumns = "--addColumns=";
+        if (cmd.startsWith(addColumns)) {
+          opts.addColumns = Boolean.parseBoolean(cmd.substring(addColumns.length()));
           continue;
         }
 
