@@ -240,14 +240,6 @@ possible configurations would overwhelm and obscure the important.
     in milliseconds.</description>
   </property>
   <property>
-    <name>hbase.regionserver.regionSplitLimit</name>
-    <value>2147483647</value>
-    <description>Limit for the number of regions after which no more region
-    splitting should take place. This is not a hard limit for the number of
-    regions but acts as a guideline for the regionserver to stop splitting after
-    a certain limit. Default is MAX_INT; i.e. do not block splitting.</description>
-  </property>
-  <property>
     <name>hbase.regionserver.logroll.period</name>
     <value>3600000</value>
     <description>Period at which we will roll the commit log regardless
