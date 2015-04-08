@@ -110,7 +110,7 @@ public class TestRegionSplitPolicy {
     regions.add(mockRegion);
     assertFalse(policy.shouldSplit());
     // make sure its just over; verify it'll split
-    Mockito.doReturn((long)(maxSplitSize * 1.025 + 1)).when(mockStore).getSize();
+    Mockito.doReturn((long)(maxSplitSize * 1.25 + 1)).when(mockStore).getSize();
     assertTrue(policy.shouldSplit());
 
     // Finally assert that even if loads of regions, we'll split at max size
