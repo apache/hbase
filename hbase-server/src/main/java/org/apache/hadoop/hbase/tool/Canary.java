@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -539,10 +540,15 @@ public final class Canary implements Tool {
       // Can't do a get on empty start row so do a Scan of first element if any instead.
       if (startKey.length > 0) {
         get = new Get(startKey);
+        get.setCacheBlocks(false);
+        get.setFilter(new FirstKeyOnlyFilter());
         get.addFamily(column.getName());
       } else {
         scan = new Scan();
+        scan.setRaw(true);
         scan.setCaching(1);
+        scan.setCacheBlocks(false);
+        scan.setFilter(new FirstKeyOnlyFilter());
         scan.addFamily(column.getName());
         scan.setMaxResultSize(1L);
       }
