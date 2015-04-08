@@ -36,11 +36,11 @@ t to table 't1', the corresponding command would be:
 EOF
       end
 
-      def command(table, row, column)
+      def command(table, row, column, dummy = nil)
         get_counter(table(table), row, column)
       end
 
-      def get_counter(table, row, column)
+      def get_counter(table, row, column, dummy = nil)
         if cnt = table._get_counter_internal(row, column)
           puts "COUNTER VALUE = #{cnt}"
         else
