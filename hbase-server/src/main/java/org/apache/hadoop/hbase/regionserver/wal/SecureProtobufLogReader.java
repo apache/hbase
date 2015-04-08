@@ -51,7 +51,7 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
   }
 
   @Override
-  protected List<String> getWriterClsNames() {
+  public List<String> getWriterClsNames() {
     return writerClsNames;
   }
 
