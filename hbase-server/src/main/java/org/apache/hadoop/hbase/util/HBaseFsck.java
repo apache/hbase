@@ -641,12 +641,16 @@ public class HBaseFsck extends Configured implements Closeable {
 
     // load regiondirs and regioninfos from HDFS
     if (shouldCheckHdfs()) {
+      LOG.info("Loading region directories from HDFS");
       loadHdfsRegionDirs();
+      LOG.info("Loading region information from HDFS");
       loadHdfsRegionInfos();
     }
 
     // fix the orphan tables
     fixOrphanTables();
+
+    LOG.info("Checking and fixing region consistency");
 
     // Check and fix consistency
     checkAndFixConsistency();
@@ -970,7 +974,10 @@ public class HBaseFsck extends Configured implements Closeable {
     Configuration conf = getConf();
     Path hbaseRoot = FSUtils.getRootDir(conf);
     FileSystem fs = hbaseRoot.getFileSystem(conf);
-    Map<String, Path> allFiles = FSUtils.getTableStoreFilePathMap(fs, hbaseRoot);
+    LOG.info("Computing mapping of all store files");
+    Map<String, Path> allFiles = FSUtils.getTableStoreFilePathMap(fs, hbaseRoot, errors);
+    errors.print("");
+    LOG.info("Validating mapping using HDFS state");
     for (Path path: allFiles.values()) {
       boolean isReference = false;
       try {
@@ -1168,6 +1175,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
 
     loadTableInfosForTablesWithNoRegion();
+    errors.print("");
 
     return tablesInfo;
   }
@@ -1358,6 +1366,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void suggestFixes(
       SortedMap<TableName, TableInfo> tablesInfo) throws IOException {
+    logParallelMerge();
     for (TableInfo tInfo : tablesInfo.values()) {
       TableIntegrityErrorHandler handler = tInfo.new IntegrityFixSuggester(tInfo, errors);
       tInfo.checkRegionChain(handler);
@@ -1431,9 +1440,23 @@ public class HBaseFsck extends Configured implements Closeable {
     return true;
   }
 
+  /**
+   * Log an appropriate message about whether or not overlapping merges are computed in parallel.
+   */
+  private void logParallelMerge() {
+    if (getConf().getBoolean("hbasefsck.overlap.merge.parallel", true)) {
+      LOG.info("Handling overlap merges in parallel. set hbasefsck.overlap.merge.parallel to" +
+          " false to run serially.");
+    } else {
+      LOG.info("Handling overlap merges serially.  set hbasefsck.overlap.merge.parallel to" +
+          " true to run in parallel.");
+    }
+  }
+
   private SortedMap<TableName, TableInfo> checkHdfsIntegrity(boolean fixHoles,
       boolean fixOverlaps) throws IOException {
     LOG.info("Checking HBase region split map from HDFS data...");
+    logParallelMerge();
     for (TableInfo tInfo : tablesInfo.values()) {
       TableIntegrityErrorHandler handler;
       if (fixHoles || fixOverlaps) {
@@ -1662,6 +1685,7 @@ public class HBaseFsck extends Configured implements Closeable {
         LOG.warn("Could not load region dir " , e.getCause());
       }
     }
+    errors.print("");
   }
 
   /**
@@ -2395,6 +2419,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     loadTableInfosForTablesWithNoRegion();
 
+    logParallelMerge();
     for (TableInfo tInfo : tablesInfo.values()) {
       TableIntegrityErrorHandler handler = tInfo.new IntegrityFixSuggester(tInfo, errors);
       if (!tInfo.checkRegionChain(handler)) {
@@ -3011,15 +3036,11 @@ public class HBaseFsck extends Configured implements Closeable {
 
       // TODO fold this into the TableIntegrityHandler
       if (getConf().getBoolean("hbasefsck.overlap.merge.parallel", true)) {
-        LOG.info("Handling overlap merges in parallel. set hbasefsck.overlap.merge.parallel to" +
-            " false to run serially.");
         boolean ok = handleOverlapsParallel(handler, prevKey);
         if (!ok) {
           return false;
         }
       } else {
-        LOG.info("Handling overlap merges serially.  set hbasefsck.overlap.merge.parallel to" +
-            " true to run in parallel.");
         for (Collection<HbckInfo> overlap : overlapGroups.asMap().values()) {
           handler.handleOverlapGroup(overlap);
         }
@@ -3745,6 +3766,8 @@ public class HBaseFsck extends Configured implements Closeable {
   static class PrintingErrorReporter implements ErrorReporter {
     public int errorCount = 0;
     private int showProgress;
+    // How frequently calls to progress() will create output
+    private static final int progressThreshold = 100;
 
     Set<TableInfo> errorTables = new HashSet<TableInfo>();
 
@@ -3859,7 +3882,7 @@ public class HBaseFsck extends Configured implements Closeable {
 
     @Override
     public synchronized void progress() {
-      if (showProgress++ == 10) {
+      if (showProgress++ == progressThreshold) {
         if (!summary) {
           System.out.print(".");
         }
@@ -3956,6 +3979,7 @@ public class HBaseFsck extends Configured implements Closeable {
         // level 2: <HBASE_DIR>/<table>/*
         FileStatus[] regionDirs = fs.listStatus(tableDir.getPath());
         for (FileStatus regionDir : regionDirs) {
+          errors.progress();
           String encodedName = regionDir.getPath().getName();
           // ignore directories that aren't hexadecimal
           if (!encodedName.toLowerCase().matches("[0-9a-f]+")) {
@@ -3983,6 +4007,7 @@ public class HBaseFsck extends Configured implements Closeable {
             FileStatus[] subDirs = fs.listStatus(regionDir.getPath());
             Path ePath = WALSplitter.getRegionDirRecoveredEditsDir(regionDir.getPath());
             for (FileStatus subDir : subDirs) {
+              errors.progress();
               String sdName = subDir.getPath().getName();
               if (!sdName.startsWith(".") && !sdName.equals(ePath.getName())) {
                 he.hdfsOnlyEdits = false;
@@ -4023,6 +4048,7 @@ public class HBaseFsck extends Configured implements Closeable {
       // only load entries that haven't been loaded yet.
       if (hbi.getHdfsHRI() == null) {
         try {
+          errors.progress();
           hbck.loadHdfsRegioninfo(hbi);
         } catch (IOException ioe) {
           String msg = "Orphan region in HDFS: Unable to load .regioninfo from table "

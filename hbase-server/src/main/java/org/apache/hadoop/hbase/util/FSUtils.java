@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -1546,6 +1547,28 @@ public abstract class FSUtils {
   public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
   final FileSystem fs, final Path hbaseRootDir, TableName tableName)
   throws IOException {
+    return getTableStoreFilePathMap(map, fs, hbaseRootDir, tableName, null);
+  }
+
+  /**
+   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
+   * table StoreFile names to the full Path.
+   * <br>
+   * Example...<br>
+   * Key = 3944417774205889744  <br>
+   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
+   *
+   * @param map map to add values.  If null, this method will create and populate one to return
+   * @param fs  The file system to use.
+   * @param hbaseRootDir  The root directory to scan.
+   * @param tableName name of the table to scan.
+   * @param errors ErrorReporter instance or null
+   * @return Map keyed by StoreFile name with a value of the full Path.
+   * @throws IOException When scanning the directory fails.
+   */
+  public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
+  final FileSystem fs, final Path hbaseRootDir, TableName tableName, ErrorReporter errors)
+  throws IOException {
     if (map == null) {
       map = new HashMap<String, Path>();
     }
@@ -1557,10 +1580,16 @@ public abstract class FSUtils {
     PathFilter familyFilter = new FamilyDirFilter(fs);
     FileStatus[] regionDirs = fs.listStatus(tableDir, new RegionDirFilter(fs));
     for (FileStatus regionDir : regionDirs) {
+      if (null != errors) {
+        errors.progress();
+      }
       Path dd = regionDir.getPath();
       // else its a region name, now look in region for families
       FileStatus[] familyDirs = fs.listStatus(dd, familyFilter);
       for (FileStatus familyDir : familyDirs) {
+        if (null != errors) {
+          errors.progress();
+        }
         Path family = familyDir.getPath();
         if (family.getName().equals(HConstants.RECOVERED_EDITS_DIR)) {
           continue;
@@ -1569,6 +1598,9 @@ public abstract class FSUtils {
         // put in map
         FileStatus[] familyStatus = fs.listStatus(family);
         for (FileStatus sfStatus : familyStatus) {
+          if (null != errors) {
+            errors.progress();
+          }
           Path sf = sfStatus.getPath();
           map.put( sf.getName(), sf);
         }
@@ -1589,7 +1621,6 @@ public abstract class FSUtils {
     return result;
   }
 
-
   /**
    * Runs through the HBase rootdir and creates a reverse lookup map for
    * table StoreFile names to the full Path.
@@ -1606,6 +1637,26 @@ public abstract class FSUtils {
   public static Map<String, Path> getTableStoreFilePathMap(
     final FileSystem fs, final Path hbaseRootDir)
   throws IOException {
+    return getTableStoreFilePathMap(fs, hbaseRootDir, null);
+  }
+
+  /**
+   * Runs through the HBase rootdir and creates a reverse lookup map for
+   * table StoreFile names to the full Path.
+   * <br>
+   * Example...<br>
+   * Key = 3944417774205889744  <br>
+   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
+   *
+   * @param fs  The file system to use.
+   * @param hbaseRootDir  The root directory to scan.
+   * @param errors ErrorReporter instance or null
+   * @return Map keyed by StoreFile name with a value of the full Path.
+   * @throws IOException When scanning the directory fails.
+   */
+  public static Map<String, Path> getTableStoreFilePathMap(
+    final FileSystem fs, final Path hbaseRootDir, ErrorReporter errors)
+  throws IOException {
     Map<String, Path> map = new HashMap<String, Path>();
 
     // if this method looks similar to 'getTableFragmentation' that is because
@@ -1614,7 +1665,7 @@ public abstract class FSUtils {
     // only include the directory paths to tables
     for (Path tableDir : FSUtils.getTableDirs(fs, hbaseRootDir)) {
       getTableStoreFilePathMap(map, fs, hbaseRootDir,
-          FSUtils.getTableName(tableDir));
+          FSUtils.getTableName(tableDir), errors);
     }
     return map;
   }
