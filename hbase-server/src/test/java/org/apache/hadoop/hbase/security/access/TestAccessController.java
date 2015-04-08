@@ -2484,4 +2484,67 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(replicateLogEntriesAction, SUPERUSER, USER_ADMIN);
     verifyDenied(replicateLogEntriesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
   }
+  
+  @Test
+  public void testSetQuota() throws Exception {
+    AccessTestAction setUserQuotaAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSetUserQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+          null, null);
+        return null;
+      }
+    };
+
+    AccessTestAction setUserTableQuotaAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSetUserQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+          null, TEST_TABLE.getTableName(), null);
+        return null;
+      }
+    };
+
+    AccessTestAction setUserNamespaceQuotaAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSetUserQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+          null, (String)null, null);
+        return null;
+      }
+    };
+
+    AccessTestAction setTableQuotaAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSetTableQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+          TEST_TABLE.getTableName(), null);
+        return null;
+      }
+    };
+
+    AccessTestAction setNamespaceQuotaAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preSetNamespaceQuota(ObserverContext.createAndPrepare(CP_ENV, null),
+          null, null);
+        return null;
+      }
+    };
+
+    verifyAllowed(setUserQuotaAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(setUserQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+
+    verifyAllowed(setUserTableQuotaAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(setUserTableQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    verifyAllowed(setUserNamespaceQuotaAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(setUserNamespaceQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+
+    verifyAllowed(setTableQuotaAction, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(setTableQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    verifyAllowed(setNamespaceQuotaAction, SUPERUSER, USER_ADMIN);
+    verifyDenied(setNamespaceQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
 }

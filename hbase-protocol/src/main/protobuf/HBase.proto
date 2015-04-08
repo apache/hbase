@@ -180,6 +180,16 @@ message ProcedureDescription {
 message EmptyMsg {
 }
 
+enum TimeUnit {
+  NANOSECONDS = 1;
+  MICROSECONDS = 2;
+  MILLISECONDS = 3;
+  SECONDS = 4;
+  MINUTES = 5;
+  HOURS = 6;
+  DAYS = 7;
+}
+
 message LongMsg {
   required int64 long_msg = 1;
 }

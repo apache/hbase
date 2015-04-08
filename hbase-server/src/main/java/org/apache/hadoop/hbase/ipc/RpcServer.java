@@ -2477,6 +2477,7 @@ public class RpcServer implements RpcServerInterface {
     }
   }
 
+  @Override
   public RpcScheduler getScheduler() {
     return scheduler;
   }

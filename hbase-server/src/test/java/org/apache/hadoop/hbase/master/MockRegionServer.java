@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
@@ -92,6 +93,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -326,6 +328,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public TableLockManager getTableLockManager() {
     return new NullTableLockManager();
   }
+  
+  @Override
+  public RegionServerQuotaManager getRegionServerQuotaManager() {
+    return null;
+  }
 
   @Override
   public void postOpenDeployTasks(Region r) throws KeeperException, IOException {
@@ -526,6 +533,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public List<Region> getOnlineRegions(TableName tableName) throws IOException {
     // TODO Auto-generated method stub
+    return null;
+  }
+  
+  @Override
+  public Set<TableName> getOnlineTables() {
     return null;
   }
 

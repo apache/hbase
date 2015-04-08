@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -117,6 +118,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
@@ -127,6 +129,9 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescripto
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
+import org.apache.hadoop.hbase.quotas.QuotaScope;
+import org.apache.hadoop.hbase.quotas.QuotaType;
+import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
 import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.security.access.Permission;
@@ -2858,6 +2863,163 @@ public final class ProtobufUtil {
       }
     }
     return result;
+  }
+  
+  /**
+   * Convert a protocol buffer TimeUnit to a client TimeUnit
+   * @param proto
+   * @return the converted client TimeUnit
+   */
+  public static TimeUnit toTimeUnit(final HBaseProtos.TimeUnit proto) {
+    switch (proto) {
+    case NANOSECONDS:
+      return TimeUnit.NANOSECONDS;
+    case MICROSECONDS:
+      return TimeUnit.MICROSECONDS;
+    case MILLISECONDS:
+      return TimeUnit.MILLISECONDS;
+    case SECONDS:
+      return TimeUnit.SECONDS;
+    case MINUTES:
+      return TimeUnit.MINUTES;
+    case HOURS:
+      return TimeUnit.HOURS;
+    case DAYS:
+      return TimeUnit.DAYS;
+    default:
+      throw new RuntimeException("Invalid TimeUnit " + proto);
+    }
+  }
+
+  /**
+   * Convert a client TimeUnit to a protocol buffer TimeUnit
+   * @param timeUnit
+   * @return the converted protocol buffer TimeUnit
+   */
+  public static HBaseProtos.TimeUnit toProtoTimeUnit(final TimeUnit timeUnit) {
+    switch (timeUnit) {
+    case NANOSECONDS:
+      return HBaseProtos.TimeUnit.NANOSECONDS;
+    case MICROSECONDS:
+      return HBaseProtos.TimeUnit.MICROSECONDS;
+    case MILLISECONDS:
+      return HBaseProtos.TimeUnit.MILLISECONDS;
+    case SECONDS:
+      return HBaseProtos.TimeUnit.SECONDS;
+    case MINUTES:
+      return HBaseProtos.TimeUnit.MINUTES;
+    case HOURS:
+      return HBaseProtos.TimeUnit.HOURS;
+    case DAYS:
+      return HBaseProtos.TimeUnit.DAYS;
+    default:
+      throw new RuntimeException("Invalid TimeUnit " + timeUnit);
+    }
+  }
+
+  /**
+   * Convert a protocol buffer ThrottleType to a client ThrottleType
+   * @param proto
+   * @return the converted client ThrottleType
+   */
+  public static ThrottleType toThrottleType(final QuotaProtos.ThrottleType proto) {
+    switch (proto) {
+    case REQUEST_NUMBER:
+      return ThrottleType.REQUEST_NUMBER;
+    case REQUEST_SIZE:
+      return ThrottleType.REQUEST_SIZE;
+    default:
+      throw new RuntimeException("Invalid ThrottleType " + proto);
+    }
+  }
+
+  /**
+   * Convert a client ThrottleType to a protocol buffer ThrottleType
+   * @param type
+   * @return the converted protocol buffer ThrottleType
+   */
+  public static QuotaProtos.ThrottleType toProtoThrottleType(final ThrottleType type) {
+    switch (type) {
+    case REQUEST_NUMBER:
+      return QuotaProtos.ThrottleType.REQUEST_NUMBER;
+    case REQUEST_SIZE:
+      return QuotaProtos.ThrottleType.REQUEST_SIZE;
+    default:
+      throw new RuntimeException("Invalid ThrottleType " + type);
+    }
+  }
+
+  /**
+   * Convert a protocol buffer QuotaScope to a client QuotaScope
+   * @param proto
+   * @return the converted client QuotaScope
+   */
+  public static QuotaScope toQuotaScope(final QuotaProtos.QuotaScope proto) {
+    switch (proto) {
+    case CLUSTER:
+      return QuotaScope.CLUSTER;
+    case MACHINE:
+      return QuotaScope.MACHINE;
+    default:
+      throw new RuntimeException("Invalid QuotaScope " + proto);
+    }
+  }
+
+  /**
+   * Convert a client QuotaScope to a protocol buffer QuotaScope
+   * @param scope
+   * @return the converted protocol buffer QuotaScope
+   */
+  public static QuotaProtos.QuotaScope toProtoQuotaScope(final QuotaScope scope) {
+    switch (scope) {
+    case CLUSTER:
+      return QuotaProtos.QuotaScope.CLUSTER;
+    case MACHINE:
+      return QuotaProtos.QuotaScope.MACHINE;
+    default:
+      throw new RuntimeException("Invalid QuotaScope " + scope);
+    }
+  }
+
+  /**
+   * Convert a protocol buffer QuotaType to a client QuotaType
+   * @param proto
+   * @return the converted client QuotaType
+   */
+  public static QuotaType toQuotaScope(final QuotaProtos.QuotaType proto) {
+    switch (proto) {
+    case THROTTLE:
+      return QuotaType.THROTTLE;
+    default:
+      throw new RuntimeException("Invalid QuotaType " + proto);
+    }
+  }
+
+  /**
+   * Convert a client QuotaType to a protocol buffer QuotaType
+   * @param type
+   * @return the converted protocol buffer QuotaType
+   */
+  public static QuotaProtos.QuotaType toProtoQuotaScope(final QuotaType type) {
+    switch (type) {
+    case THROTTLE:
+      return QuotaProtos.QuotaType.THROTTLE;
+    default:
+      throw new RuntimeException("Invalid QuotaType " + type);
+    }
+  }
+
+  /**
+   * Build a protocol buffer TimedQuota
+   * @param limit the allowed number of request/data per timeUnit
+   * @param timeUnit the limit time unit
+   * @param scope the quota scope
+   * @return the protocol buffer TimedQuota
+   */
+  public static QuotaProtos.TimedQuota toTimedQuota(final long limit, final TimeUnit timeUnit,
+      final QuotaScope scope) {
+    return QuotaProtos.TimedQuota.newBuilder().setSoftLimit(limit)
+        .setTimeUnit(toProtoTimeUnit(timeUnit)).setScope(toProtoQuotaScope(scope)).build();
   }
 
   /**

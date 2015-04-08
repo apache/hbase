@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 
 import java.io.IOException;
 import java.util.List;
@@ -927,6 +928,111 @@ public class MasterCoprocessorHost
       public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
           throws IOException {
         oserver.postTableFlush(ctx, tableName);
+      }
+    });
+  }
+  
+  public void preSetUserQuota(final String user, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetUserQuota(ctx, user, quotas);
+      }
+    });
+  }
+
+  public void postSetUserQuota(final String user, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetUserQuota(ctx, user, quotas);
+      }
+    });
+  }
+
+  public void preSetUserQuota(final String user, final TableName table, final Quotas quotas)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetUserQuota(ctx, user, table, quotas);
+      }
+    });
+  }
+
+  public void postSetUserQuota(final String user, final TableName table, final Quotas quotas)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetUserQuota(ctx, user, table, quotas);
+      }
+    });
+  }
+
+  public void preSetUserQuota(final String user, final String namespace, final Quotas quotas)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetUserQuota(ctx, user, namespace, quotas);
+      }
+    });
+  }
+
+  public void postSetUserQuota(final String user, final String namespace, final Quotas quotas)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetUserQuota(ctx, user, namespace, quotas);
+      }
+    });
+  }
+
+  public void preSetTableQuota(final TableName table, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetTableQuota(ctx, table, quotas);
+      }
+    });
+  }
+
+  public void postSetTableQuota(final TableName table, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetTableQuota(ctx, table, quotas);
+      }
+    });
+  }
+
+  public void preSetNamespaceQuota(final String namespace, final Quotas quotas) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSetNamespaceQuota(ctx, namespace, quotas);
+      }
+    });
+  }
+
+  public void postSetNamespaceQuota(final String namespace, final Quotas quotas) 
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSetNamespaceQuota(ctx, namespace, quotas);
       }
     });
   }

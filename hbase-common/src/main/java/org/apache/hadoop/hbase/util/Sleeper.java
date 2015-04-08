@@ -114,4 +114,11 @@ public class Sleeper {
       triggerWake = false;
     }
   }
+  
+  /**
+   * @return the sleep period in milliseconds
+   */
+  public final int getPeriod() {
+    return period;
+  }
 }

@@ -21,6 +21,7 @@ include Java
 
 require 'hbase/admin'
 require 'hbase/table'
+require 'hbase/quotas'
 require 'hbase/security'
 require 'hbase/visibility_labels'
 
@@ -61,6 +62,10 @@ module Hbase
 
     def visibility_labels_admin(formatter)
       ::Hbase::VisibilityLabelsAdmin.new(@connection.getAdmin, formatter)
+    end
+    
+    def quotas_admin(formatter)
+      ::Hbase::QuotasAdmin.new(@connection.getAdmin, formatter)
     end
 
     def shutdown

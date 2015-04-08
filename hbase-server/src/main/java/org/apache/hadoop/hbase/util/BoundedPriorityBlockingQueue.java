@@ -90,6 +90,7 @@ public class BoundedPriorityBlockingQueue<E> extends AbstractQueue<E> implements
 
     public E poll() {
       E elem = objects[head];
+      objects[head] = null;
       head = (head + 1) % objects.length;
       if (head == 0) tail = 0;
       return elem;

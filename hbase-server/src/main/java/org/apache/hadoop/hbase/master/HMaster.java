@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
@@ -290,6 +291,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   SnapshotManager snapshotManager;
   // monitor for distributed procedures
   MasterProcedureManagerHost mpmHost;
+  
+  private MasterQuotaManager quotaManager;
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
@@ -721,6 +724,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     status.setStatus("Starting namespace manager");
     initNamespace();
+    
+    status.setStatus("Starting quota manager");
+    initQuotaManager();
 
     if (this.cpHost != null) {
       try {
@@ -759,6 +765,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
 
     zombieDetector.interrupt();
+  }
+
+  private void initQuotaManager() throws IOException {
+    quotaManager = new MasterQuotaManager(this);
+    quotaManager.start();
   }
 
   /**
@@ -1063,6 +1074,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // Clean up and close up shop
     if (this.logCleaner != null) this.logCleaner.cancel(true);
     if (this.hfileCleaner != null) this.hfileCleaner.cancel(true);
+    if (this.quotaManager != null) this.quotaManager.stop();
     if (this.activeMasterManager != null) this.activeMasterManager.stop();
     if (this.serverManager != null) this.serverManager.stop();
     if (this.assignmentManager != null) this.assignmentManager.stop();
@@ -1860,6 +1872,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return cpHost;
+  }
+  
+  @Override
+  public MasterQuotaManager getMasterQuotaManager() {
+    return quotaManager;
   }
 
   @Override

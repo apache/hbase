@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
+import org.apache.hadoop.hbase.quotas.QuotaFilter;
+import org.apache.hadoop.hbase.quotas.QuotaRetriever;
+import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -1281,6 +1284,21 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void deleteSnapshots(final Pattern pattern) throws IOException;
+  
+  /**
+   * Apply the new quota settings.
+   * @param quota the quota settings
+   * @throws IOException if a remote or network exception occurs
+   */
+  void setQuota(final QuotaSettings quota) throws IOException;
+
+  /**
+   * Return a QuotaRetriever to list the quotas based on the filter.
+   * @param filter the quota settings filter
+   * @return the quota retriever
+   * @throws IOException if a remote or network exception occurs
+   */
+  QuotaRetriever getQuotaRetriever(final QuotaFilter filter) throws IOException;
 
   /**
    * Creates and returns a {@link com.google.protobuf.RpcChannel} instance connected to the active

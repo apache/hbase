@@ -362,6 +362,24 @@ public class Bytes {
                                 final byte [] b2) {
     return toString(b1, 0, b1.length) + sep + toString(b2, 0, b2.length);
   }
+  
+  /**
+   * This method will convert utf8 encoded bytes into a string. If the given byte array is null,
+   * this method will return null.
+   * @param b Presumed UTF-8 encoded byte array.
+   * @param off offset into array
+   * @return String made from <code>b</code> or null
+   */
+  public static String toString(final byte[] b, int off) {
+    if (b == null) {
+      return null;
+    }
+    int len = b.length - off;
+    if (len <= 0) {
+      return "";
+    }
+    return new String(b, off, len, UTF8_CHARSET);
+  }
 
   /**
    * This method will convert utf8 encoded bytes into a string. If

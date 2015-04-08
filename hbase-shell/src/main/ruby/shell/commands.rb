@@ -65,6 +65,10 @@ module Shell
       def visibility_labels_admin
         @shell.hbase_visibility_labels_admin
       end
+      
+      def quotas_admin
+        @shell.hbase_quotas_admin
+      end
 
       #----------------------------------------------------------------------
 

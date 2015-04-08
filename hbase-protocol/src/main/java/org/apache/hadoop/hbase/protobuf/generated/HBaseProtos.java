@@ -139,6 +139,133 @@ public final class HBaseProtos {
     // @@protoc_insertion_point(enum_scope:CompareType)
   }
 
+  /**
+   * Protobuf enum {@code TimeUnit}
+   */
+  public enum TimeUnit
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>NANOSECONDS = 1;</code>
+     */
+    NANOSECONDS(0, 1),
+    /**
+     * <code>MICROSECONDS = 2;</code>
+     */
+    MICROSECONDS(1, 2),
+    /**
+     * <code>MILLISECONDS = 3;</code>
+     */
+    MILLISECONDS(2, 3),
+    /**
+     * <code>SECONDS = 4;</code>
+     */
+    SECONDS(3, 4),
+    /**
+     * <code>MINUTES = 5;</code>
+     */
+    MINUTES(4, 5),
+    /**
+     * <code>HOURS = 6;</code>
+     */
+    HOURS(5, 6),
+    /**
+     * <code>DAYS = 7;</code>
+     */
+    DAYS(6, 7),
+    ;
+
+    /**
+     * <code>NANOSECONDS = 1;</code>
+     */
+    public static final int NANOSECONDS_VALUE = 1;
+    /**
+     * <code>MICROSECONDS = 2;</code>
+     */
+    public static final int MICROSECONDS_VALUE = 2;
+    /**
+     * <code>MILLISECONDS = 3;</code>
+     */
+    public static final int MILLISECONDS_VALUE = 3;
+    /**
+     * <code>SECONDS = 4;</code>
+     */
+    public static final int SECONDS_VALUE = 4;
+    /**
+     * <code>MINUTES = 5;</code>
+     */
+    public static final int MINUTES_VALUE = 5;
+    /**
+     * <code>HOURS = 6;</code>
+     */
+    public static final int HOURS_VALUE = 6;
+    /**
+     * <code>DAYS = 7;</code>
+     */
+    public static final int DAYS_VALUE = 7;
+
+
+    public final int getNumber() { return value; }
+
+    public static TimeUnit valueOf(int value) {
+      switch (value) {
+        case 1: return NANOSECONDS;
+        case 2: return MICROSECONDS;
+        case 3: return MILLISECONDS;
+        case 4: return SECONDS;
+        case 5: return MINUTES;
+        case 6: return HOURS;
+        case 7: return DAYS;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<TimeUnit>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<TimeUnit>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<TimeUnit>() {
+            public TimeUnit findValueByNumber(int number) {
+              return TimeUnit.valueOf(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.getDescriptor().getEnumTypes().get(1);
+    }
+
+    private static final TimeUnit[] VALUES = values();
+
+    public static TimeUnit valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int index;
+    private final int value;
+
+    private TimeUnit(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:TimeUnit)
+  }
+
   public interface TableNameOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -16524,9 +16651,11 @@ public final class HBaseProtos {
       "Info\022\020\n\010infoPort\030\001 \001(\005*r\n\013CompareType\022\010\n" +
       "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
       "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR" +
-      "EATER\020\005\022\t\n\005NO_OP\020\006B>\n*org.apache.hadoop." +
-      "hbase.protobuf.generatedB\013HBaseProtosH\001\240" +
-      "\001\001"
+      "EATER\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSE" +
+      "CONDS\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECOND" +
+      "S\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006" +
+      "\022\010\n\004DAYS\020\007B>\n*org.apache.hadoop.hbase.pr" +
+      "otobuf.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
