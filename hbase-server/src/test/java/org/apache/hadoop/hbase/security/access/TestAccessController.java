@@ -137,7 +137,7 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Rule public TestTableName TEST_TABLE = new TestTableName();
-  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
 
   /** The systemUserConnection created here is tied to the system user. In case, you are planning
@@ -1535,59 +1535,6 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(action, USER_CREATE, USER_RW, USER_NONE, USER_RO);
   }
 
-  public void checkGlobalPerms(Permission.Action... actions) throws IOException {
-    Permission[] perms = new Permission[actions.length];
-    for (int i = 0; i < actions.length; i++) {
-      perms[i] = new Permission(actions[i]);
-    }
-    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
-    for (Action a : actions) {
-      request.addPermission(AccessControlProtos.Permission.newBuilder()
-          .setType(AccessControlProtos.Permission.Type.Global)
-          .setGlobalPermission(
-              AccessControlProtos.GlobalPermission.newBuilder()
-                  .addAction(ProtobufUtil.toPermissionAction(a)).build()));
-    }
-    try(Connection conn = ConnectionFactory.createConnection(conf);
-        Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-      BlockingRpcChannel channel = acl.coprocessorService(new byte[0]);
-      AccessControlService.BlockingInterface protocol =
-        AccessControlService.newBlockingStub(channel);
-      try {
-        protocol.checkPermissions(null, request.build());
-      } catch (ServiceException se) {
-        ProtobufUtil.toIOException(se);
-      }
-    }
-  }
-
-  public void checkTablePerms(TableName table, byte[] family, byte[] column,
-      Permission.Action... actions) throws IOException {
-    Permission[] perms = new Permission[actions.length];
-    for (int i = 0; i < actions.length; i++) {
-      perms[i] = new TablePermission(table, family, column, actions[i]);
-    }
-
-    checkTablePerms(table, perms);
-  }
-
-  public void checkTablePerms(TableName table, Permission... perms) throws IOException {
-    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
-    for (Permission p : perms) {
-      request.addPermission(ProtobufUtil.toPermission(p));
-    }
-    try(Connection conn = ConnectionFactory.createConnection(conf);
-        Table acl = conn.getTable(table)) {
-      AccessControlService.BlockingInterface protocol =
-        AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
-      try {
-        protocol.checkPermissions(null, request.build());
-      } catch (ServiceException se) {
-        ProtobufUtil.toIOException(se);
-      }
-    }
-  }
-
   @Test
   public void testCheckPermissions() throws Exception {
     // --------------------------------------
@@ -1595,7 +1542,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction globalAdmin = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkGlobalPerms(Permission.Action.ADMIN);
+        checkGlobalPerms(TEST_UTIL, Permission.Action.ADMIN);
         return null;
       }
     };
@@ -1607,7 +1554,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction globalReadWrite = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkGlobalPerms(Permission.Action.READ, Permission.Action.WRITE);
+        checkGlobalPerms(TEST_UTIL, Permission.Action.READ, Permission.Action.WRITE);
         return null;
       }
     };
@@ -1636,7 +1583,8 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction tableRead = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_TABLE.getTableName(), null, null, Permission.Action.READ);
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(), null, null,
+          Permission.Action.READ);
         return null;
       }
     };
@@ -1644,7 +1592,8 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction columnRead = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_TABLE.getTableName(), TEST_FAMILY, null, Permission.Action.READ);
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(), TEST_FAMILY, null,
+          Permission.Action.READ);
         return null;
       }
     };
@@ -1652,7 +1601,8 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction qualifierRead = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q1, Permission.Action.READ);
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q1,
+          Permission.Action.READ);
         return null;
       }
     };
@@ -1660,9 +1610,11 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction multiQualifierRead = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_TABLE.getTableName(), new Permission[] {
-            new TablePermission(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q1, Permission.Action.READ),
-            new TablePermission(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q2, Permission.Action.READ), });
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(), new Permission[] {
+            new TablePermission(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q1,
+              Permission.Action.READ),
+            new TablePermission(TEST_TABLE.getTableName(), TEST_FAMILY, TEST_Q2,
+              Permission.Action.READ), });
         return null;
       }
     };
@@ -1670,8 +1622,10 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction globalAndTableRead = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_TABLE.getTableName(), new Permission[] { new Permission(Permission.Action.READ),
-            new TablePermission(TEST_TABLE.getTableName(), null, (byte[]) null, Permission.Action.READ), });
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(),
+          new Permission[] { new Permission(Permission.Action.READ),
+            new TablePermission(TEST_TABLE.getTableName(), null, (byte[]) null,
+            Permission.Action.READ), });
         return null;
       }
     };
@@ -1679,7 +1633,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction noCheck = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_TABLE.getTableName(), new Permission[0]);
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(), new Permission[0]);
         return null;
       }
     };
@@ -1705,8 +1659,8 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction familyReadWrite = new AccessTestAction() {
       @Override
       public Void run() throws Exception {
-        checkTablePerms(TEST_TABLE.getTableName(), TEST_FAMILY, null, Permission.Action.READ,
-          Permission.Action.WRITE);
+        checkTablePerms(TEST_UTIL, TEST_TABLE.getTableName(), TEST_FAMILY, null,
+          Permission.Action.READ, Permission.Action.WRITE);
         return null;
       }
     };

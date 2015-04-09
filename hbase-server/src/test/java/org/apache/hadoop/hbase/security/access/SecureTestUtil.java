@@ -55,11 +55,13 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 
 import com.google.common.collect.Lists;
@@ -75,14 +77,7 @@ public class SecureTestUtil {
   private static final Log LOG = LogFactory.getLog(SecureTestUtil.class);
   private static final int WAIT_TIME = 10000;
 
-  public static void enableSecurity(Configuration conf) throws IOException {
-    conf.set("hadoop.security.authorization", "false");
-    conf.set("hadoop.security.authentication", "simple");
-    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
-      "," + MasterSyncObserver.class.getName());
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
-      "," + SecureBulkLoadEndpoint.class.getName());
-    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
+  public static void configureSuperuser(Configuration conf) throws IOException {
     // The secure minicluster creates separate service principals based on the
     // current user's name, one for each slave. We need to add all of these to
     // the superuser list or security won't function properly. We expect the
@@ -97,8 +92,19 @@ public class SecureTestUtil {
       sb.append(currentUser); sb.append(".hfs."); sb.append(i);
     }
     conf.set("hbase.superuser", sb.toString());
+  }
+
+  public static void enableSecurity(Configuration conf) throws IOException {
+    conf.set("hadoop.security.authorization", "false");
+    conf.set("hadoop.security.authentication", "simple");
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
+      "," + MasterSyncObserver.class.getName());
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, AccessController.class.getName() +
+      "," + SecureBulkLoadEndpoint.class.getName());
+    conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, AccessController.class.getName());
     // Need HFile V3 for tags for security features
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+    configureSuperuser(conf);
   }
 
   public static void verifyConfiguration(Configuration conf) {
@@ -716,4 +722,60 @@ public class SecureTestUtil {
   public static String convertToGroup(String group) {
     return AccessControlLists.GROUP_PREFIX + group;
   }
+
+  public static void checkGlobalPerms(HBaseTestingUtility testUtil, Permission.Action... actions)
+      throws IOException {
+    Permission[] perms = new Permission[actions.length];
+    for (int i = 0; i < actions.length; i++) {
+      perms[i] = new Permission(actions[i]);
+    }
+    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
+    for (Action a : actions) {
+      request.addPermission(AccessControlProtos.Permission.newBuilder()
+          .setType(AccessControlProtos.Permission.Type.Global)
+          .setGlobalPermission(
+              AccessControlProtos.GlobalPermission.newBuilder()
+                  .addAction(ProtobufUtil.toPermissionAction(a)).build()));
+    }
+    try(Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
+        Table acl = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+      BlockingRpcChannel channel = acl.coprocessorService(new byte[0]);
+      AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(channel);
+      try {
+        protocol.checkPermissions(null, request.build());
+      } catch (ServiceException se) {
+        ProtobufUtil.toIOException(se);
+      }
+    }
+  }
+
+  public static void checkTablePerms(HBaseTestingUtility testUtil, TableName table, byte[] family,
+      byte[] column, Permission.Action... actions) throws IOException {
+    Permission[] perms = new Permission[actions.length];
+    for (int i = 0; i < actions.length; i++) {
+      perms[i] = new TablePermission(table, family, column, actions[i]);
+    }
+    checkTablePerms(testUtil, table, perms);
+  }
+
+  public static void checkTablePerms(HBaseTestingUtility testUtil, TableName table,
+      Permission... perms) throws IOException {
+    CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
+    for (Permission p : perms) {
+      request.addPermission(ProtobufUtil.toPermission(p));
+    }
+
+    try(Connection conn = ConnectionFactory.createConnection(testUtil.getConfiguration());
+        Table acl = conn.getTable(table)) {
+      AccessControlService.BlockingInterface protocol =
+        AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
+      try {
+        protocol.checkPermissions(null, request.build());
+      } catch (ServiceException se) {
+        ProtobufUtil.toIOException(se);
+      }
+    }
+  }
+
 }
