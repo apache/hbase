@@ -176,6 +176,7 @@
                           <include>MapReduce.proto</include>
                           <include>Master.proto</include>
                           <include>MultiRowMutation.proto</include>
+                          <include>Procedure.proto</include>
                           <include>Quota.proto</include>
                           <include>RegionServerStatus.proto</include>
                           <include>RowProcessor.proto</include>

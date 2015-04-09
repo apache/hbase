@@ -120,7 +120,7 @@ public class StreamUtils {
 
   /**
    * Reads a varInt value stored in an array.
-   * 
+   *
    * @param input
    *          Input array where the varInt is available
    * @param offset
@@ -197,5 +197,15 @@ public class StreamUtils {
     out.write((byte) (0xff & (v >> 16)));
     out.write((byte) (0xff & (v >> 8)));
     out.write((byte) (0xff & v));
+  }
+
+  public static long readLong(InputStream in) throws IOException {
+    long result = 0;
+    for (int shift = 56; shift >= 0; shift -= 8) {
+      long x = in.read();
+      if (x < 0) throw new IOException("EOF");
+      result |= (x << shift);
+    }
+    return result;
   }
 }
