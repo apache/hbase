@@ -61,16 +61,16 @@ class HBaseKerberosUtils {
   static Configuration getConfigurationWoPrincipal() {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    conf.set("hbase.security.authentication", "kerberos");
-    conf.setBoolean("hbase.security.authorization", true);
+    conf.set(User.HBASE_SECURITY_CONF_KEY, "kerberos");
+    conf.setBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
     return conf;
   }
 
   static Configuration getSecuredConfiguration() {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    conf.set("hbase.security.authentication", "kerberos");
-    conf.setBoolean("hbase.security.authorization", true);
+    conf.set(User.HBASE_SECURITY_CONF_KEY, "kerberos");
+    conf.setBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
     conf.set(KRB_KEYTAB_FILE, System.getProperty(KRB_KEYTAB_FILE));
     conf.set(KRB_PRINCIPAL, System.getProperty(KRB_PRINCIPAL));
     return conf;
