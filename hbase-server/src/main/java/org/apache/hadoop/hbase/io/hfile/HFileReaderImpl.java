@@ -478,21 +478,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public int seekTo(byte[] key) throws IOException {
-      return seekTo(key, 0, key.length);
-    }
-
-    @Override
-    public boolean seekBefore(byte[] key) throws IOException {
-      return seekBefore(key, 0, key.length);
-    }
-
-    @Override
-    public int reseekTo(byte[] key) throws IOException {
-      return reseekTo(key, 0, key.length);
-    }
-
-    @Override
     public HFile.Reader getReader() {
       return reader;
     }
@@ -652,18 +637,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public int seekTo(byte[] key, int offset, int length) throws IOException {
-      // Always rewind to the first key of the block, because the given key
-      // might be before or after the current key.
-      return seekTo(new KeyValue.KeyOnlyKeyValue(key, offset, length));
-    }
-
-    @Override
-    public int reseekTo(byte[] key, int offset, int length) throws IOException {
-      return reseekTo(new KeyValue.KeyOnlyKeyValue(key, offset, length));
-    }
-
-    @Override
     public int seekTo(Cell key) throws IOException {
       return seekTo(key, true);
     }
@@ -721,11 +694,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
       return loadBlockAndSeekToKey(blockWithScanInfo.getHFileBlock(),
           blockWithScanInfo.getNextIndexedKey(), rewind, key, false);
-    }
-
-    @Override
-    public boolean seekBefore(byte[] key, int offset, int length) throws IOException {
-      return seekBefore(new KeyValue.KeyOnlyKeyValue(key, offset, length));
     }
 
     @Override

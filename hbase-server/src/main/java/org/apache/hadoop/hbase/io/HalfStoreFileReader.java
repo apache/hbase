@@ -174,17 +174,6 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       }
 
       @Override
-      public boolean seekBefore(byte[] key) throws IOException {
-        return seekBefore(key, 0, key.length);
-      }
-
-      @Override
-      public boolean seekBefore(byte [] key, int offset, int length)
-      throws IOException {
-        return seekBefore(new KeyValue.KeyOnlyKeyValue(key, offset, length));
-      }
-
-      @Override
       public boolean seekTo() throws IOException {
         if (top) {
           int r = this.delegate.seekTo(new KeyValue.KeyOnlyKeyValue(splitkey, 0, splitkey.length));
@@ -210,29 +199,6 @@ public class HalfStoreFileReader extends StoreFile.Reader {
         return this.delegate.getReader().getComparator().
           compareFlatKey(k.array(), k.arrayOffset(), k.limit(),
             splitkey, 0, splitkey.length) < 0;
-      }
-
-      @Override
-      public int seekTo(byte[] key) throws IOException {
-        return seekTo(key, 0, key.length);
-      }
-
-      @Override
-      public int seekTo(byte[] key, int offset, int length) throws IOException {
-        return seekTo(new KeyValue.KeyOnlyKeyValue(key, offset, length));
-      }
-
-      @Override
-      public int reseekTo(byte[] key) throws IOException {
-        return reseekTo(key, 0, key.length);
-      }
-
-      @Override
-      public int reseekTo(byte[] key, int offset, int length)
-      throws IOException {
-        //This function is identical to the corresponding seekTo function except
-        //that we call reseekTo (and not seekTo) on the delegate.
-        return reseekTo(new KeyValue.KeyOnlyKeyValue(key, offset, length));
       }
 
       public org.apache.hadoop.hbase.io.hfile.HFile.Reader getReader() {
@@ -338,7 +304,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
     // Get a scanner that caches the block and that uses pread.
     HFileScanner scanner = getScanner(true, true);
     try {
-      if (scanner.seekBefore(this.splitkey)) {
+      if (scanner.seekBefore(this.splitCell)) {
         return Bytes.toBytes(scanner.getKey());
       }
     } catch (IOException e) {

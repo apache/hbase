@@ -422,8 +422,7 @@ public class StoreFileScanner implements KeyValueScanner {
         KeyValue seekKey = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
             key.getRowLength());
         if (seekCount != null) seekCount.incrementAndGet();
-        if (!hfs.seekBefore(seekKey.getBuffer(), seekKey.getKeyOffset(),
-            seekKey.getKeyLength())) {
+        if (!hfs.seekBefore(seekKey)) {
           close();
           return false;
         }

@@ -1870,8 +1870,7 @@ public class HStore implements Store {
     // Unlikely that there'll be an instance of actual first row in table.
     if (walkForwardInSingleRow(scanner, firstOnRow, state)) return true;
     // If here, need to start backing up.
-    while (scanner.seekBefore(firstOnRow.getBuffer(), firstOnRow.getKeyOffset(),
-       firstOnRow.getKeyLength())) {
+    while (scanner.seekBefore(firstOnRow)) {
       Cell kv = scanner.getKeyValue();
       if (!state.isTargetTable(kv)) break;
       if (!state.isBetterCandidate(kv)) break;

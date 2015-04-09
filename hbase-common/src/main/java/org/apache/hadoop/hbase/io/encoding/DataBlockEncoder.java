@@ -182,27 +182,6 @@ public interface DataBlockEncoder {
      * previous block if the requested key turns out to be the first key of the
      * current block.</li>
      * </ul>
-     * @param key byte array containing the key
-     * @param offset key position the array
-     * @param length key length in bytes
-     * @param seekBefore find the key strictly less than the given key in case
-     *          of an exact match. Does not matter in case of an inexact match.
-     * @return 0 on exact match, 1 on inexact match.
-     */
-    @Deprecated
-    int seekToKeyInBlock(
-      byte[] key, int offset, int length, boolean seekBefore
-    );
-    /**
-     * Moves the seeker position within the current block to:
-     * <ul>
-     * <li>the last key that that is less than or equal to the given key if
-     * <code>seekBefore</code> is false</li>
-     * <li>the last key that is strictly less than the given key if <code>
-     * seekBefore</code> is true. The caller is responsible for loading the
-     * previous block if the requested key turns out to be the first key of the
-     * current block.</li>
-     * </ul>
      * @param key - Cell to which the seek should happen
      * @param seekBefore find the key strictly less than the given key in case
      *          of an exact match. Does not matter in case of an inexact match.
