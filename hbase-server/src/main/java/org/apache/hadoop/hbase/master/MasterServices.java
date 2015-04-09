@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 
@@ -80,6 +82,11 @@ public interface MasterServices extends Server {
    * @return Master's instance of {@link MasterQuotaManager}
    */
   MasterQuotaManager getMasterQuotaManager();
+
+  /**
+   * @return Master's instance of {@link ProcedureExecutor}
+   */
+  ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor();
 
   /**
    * Check table is modifiable; i.e. exists and is offline.

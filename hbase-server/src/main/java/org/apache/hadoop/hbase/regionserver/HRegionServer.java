@@ -981,13 +981,14 @@ public class HRegionServer extends HasThread implements
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive? If OOME could have exited already
-    if(this.hMemManager != null) this.hMemManager.stop();
+    if (this.hMemManager != null) this.hMemManager.stop();
     if (this.cacheFlusher != null) this.cacheFlusher.interruptIfNecessary();
     if (this.compactSplitThread != null) this.compactSplitThread.interruptIfNecessary();
     if (this.compactionChecker != null) this.compactionChecker.cancel(true);
     if (this.healthCheckChore != null) this.healthCheckChore.cancel(true);
     if (this.nonceManagerChore != null) this.nonceManagerChore.cancel(true);
     if (this.storefileRefresher != null) this.storefileRefresher.cancel(true);
+    sendShutdownInterrupt();
 
     // Stop the quota manager
     if (rsQuotaManager != null) {
@@ -2070,6 +2071,12 @@ public class HRegionServer extends HasThread implements
   protected void kill() {
     this.killed = true;
     abort("Simulated kill");
+  }
+
+  /**
+   * Called on stop/abort before closing the cluster connection and meta locator.
+   */
+  protected void sendShutdownInterrupt() {
   }
 
   /**

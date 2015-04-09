@@ -63,6 +63,8 @@ import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLog
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -257,6 +259,11 @@ public class TestCatalogJanitor {
 
     @Override
     public MasterQuotaManager getMasterQuotaManager() {
+      return null;
+    }
+
+    @Override
+    public ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
       return null;
     }
 
@@ -912,7 +919,7 @@ public class TestCatalogJanitor {
     MasterServices services = new MockMasterServices(server);
 
     // create the janitor
-    
+
     CatalogJanitor janitor = new CatalogJanitor(server, services);
 
     // Create regions.

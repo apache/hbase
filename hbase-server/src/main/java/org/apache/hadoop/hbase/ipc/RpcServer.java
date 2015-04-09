@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.AuthMethod;
@@ -399,7 +400,7 @@ public class RpcServer implements RpcServerInterface {
           // Set the exception as the result of the method invocation.
           headerBuilder.setException(exceptionBuilder.build());
         }
-        // Pass reservoir to buildCellBlock. Keep reference to returne so can add it back to the 
+        // Pass reservoir to buildCellBlock. Keep reference to returne so can add it back to the
         // reservoir when finished. This is hacky and the hack is not contained but benefits are
         // high when we can avoid a big buffer allocation on each rpc.
         this.cellBlock = ipcUtil.buildCellBlock(this.connection.codec,
@@ -543,6 +544,11 @@ public class RpcServer implements RpcServerInterface {
     @Override
     public InetAddress getRemoteAddress() {
       return remoteAddress;
+    }
+
+    @Override
+    public VersionInfo getClientVersionInfo() {
+      return connection.getVersionInfo();
     }
   }
 
@@ -1271,6 +1277,13 @@ public class RpcServer implements RpcServerInterface {
 
     public void setLastContact(long lastContact) {
       this.lastContact = lastContact;
+    }
+
+    public VersionInfo getVersionInfo() {
+      if (connectionHeader.hasVersionInfo()) {
+        return connectionHeader.getVersionInfo();
+      }
+      return null;
     }
 
     /* Return true if the connection has no outstanding rpc */

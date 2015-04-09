@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
+import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
@@ -444,14 +444,11 @@ public class MasterQuotaManager implements RegionStateListener {
       new HRegionInfo(QuotaUtil.QUOTA_TABLE_NAME)
     };
 
-    masterServices.getExecutorService()
-      .submit(new CreateTableHandler(masterServices,
-        masterServices.getMasterFileSystem(),
-        QuotaUtil.QUOTA_TABLE_DESC,
-        masterServices.getConfiguration(),
-        newRegions,
-        masterServices)
-          .prepare());
+    masterServices.getMasterProcedureExecutor()
+      .submitProcedure(new CreateTableProcedure(
+          masterServices.getMasterProcedureExecutor().getEnvironment(),
+          QuotaUtil.QUOTA_TABLE_DESC,
+          newRegions));
   }
 
   private static class NamedLock<T> {

@@ -249,8 +249,10 @@ public class MetaTableAccessor {
   static Table getMetaHTable(final Connection connection)
   throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
-    if (connection == null || connection.isClosed()) {
+    if (connection == null) {
       throw new NullPointerException("No connection");
+    } else if (connection.isClosed()) {
+      throw new IOException("connection is closed");
     }
     return connection.getTable(TableName.META_TABLE_NAME);
   }
