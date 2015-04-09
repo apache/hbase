@@ -100,7 +100,7 @@ public interface MasterServices extends Server {
    * @param splitKeys Starting row keys for the initial table regions.  If null
    *     a single region is created.
    */
-  void createTable(HTableDescriptor desc, byte[][] splitKeys)
+  long createTable(HTableDescriptor desc, byte[][] splitKeys)
       throws IOException;
 
   /**
@@ -108,7 +108,7 @@ public interface MasterServices extends Server {
    * @param tableName The table name
    * @throws IOException
    */
-  void deleteTable(final TableName tableName) throws IOException;
+  long deleteTable(final TableName tableName) throws IOException;
 
   /**
    * Truncate a table

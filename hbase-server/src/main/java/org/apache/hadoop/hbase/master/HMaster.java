@@ -1360,7 +1360,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void createTable(HTableDescriptor hTableDescriptor,
+  public long createTable(HTableDescriptor hTableDescriptor,
       byte [][] splitKeys) throws IOException {
     if (isStopped()) {
       throw new MasterNotRunningException();
@@ -1391,9 +1391,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
 
-    // TODO: change the interface to return the procId,
-    //       and add it to the response protobuf.
-    //return procId;
+    return procId;
   }
 
   /**
@@ -1604,7 +1602,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void deleteTable(final TableName tableName) throws IOException {
+  public long deleteTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preDeleteTable(tableName);
@@ -1621,9 +1619,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.postDeleteTable(tableName);
     }
 
-    // TODO: change the interface to return the procId,
-    //       and add it to the response protobuf.
-    //return procId;
+    return procId;
   }
 
   @Override

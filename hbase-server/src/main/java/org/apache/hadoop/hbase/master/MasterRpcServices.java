@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureResult;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -85,6 +87,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnaps
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
@@ -157,6 +161,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 
@@ -404,11 +409,11 @@ public class MasterRpcServices extends RSRpcServices
     HTableDescriptor hTableDescriptor = HTableDescriptor.convert(req.getTableSchema());
     byte [][] splitKeys = ProtobufUtil.getSplitKeysArray(req);
     try {
-      master.createTable(hTableDescriptor, splitKeys);
+      long procId = master.createTable(hTableDescriptor, splitKeys);
+      return CreateTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return CreateTableResponse.newBuilder().build();
   }
 
   @Override
@@ -460,11 +465,11 @@ public class MasterRpcServices extends RSRpcServices
   public DeleteTableResponse deleteTable(RpcController controller,
       DeleteTableRequest request) throws ServiceException {
     try {
-      master.deleteTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.deleteTable(ProtobufUtil.toTableName(request.getTableName()));
+      return DeleteTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return DeleteTableResponse.newBuilder().build();
   }
 
   @Override
@@ -937,6 +942,44 @@ public class MasterRpcServices extends RSRpcServices
       IsSnapshotDoneResponse.Builder builder = IsSnapshotDoneResponse.newBuilder();
       boolean done = master.snapshotManager.isSnapshotDone(request.getSnapshot());
       builder.setDone(done);
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetProcedureResultResponse getProcedureResult(RpcController controller,
+      GetProcedureResultRequest request) throws ServiceException {
+    LOG.debug("Checking to see if procedure is done procId=" + request.getProcId());
+    try {
+      master.checkInitialized();
+      GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();
+
+      Pair<ProcedureResult, Procedure> v = master.getMasterProcedureExecutor()
+          .getResultOrProcedure(request.getProcId());
+      if (v.getFirst() != null) {
+        ProcedureResult result = v.getFirst();
+        builder.setState(GetProcedureResultResponse.State.FINISHED);
+        builder.setStartTime(result.getStartTime());
+        builder.setLastUpdate(result.getLastUpdate());
+        if (result.isFailed()) {
+          builder.setException(result.getException().convert());
+        }
+        if (result.hasResultData()) {
+          builder.setResult(ByteStringer.wrap(result.getResult()));
+        }
+        master.getMasterProcedureExecutor().removeResult(request.getProcId());
+      } else {
+        Procedure proc = v.getSecond();
+        if (proc == null) {
+          builder.setState(GetProcedureResultResponse.State.NOT_FOUND);
+        } else {
+          builder.setState(GetProcedureResultResponse.State.RUNNING);
+          builder.setStartTime(proc.getStartTime());
+          builder.setLastUpdate(proc.getLastUpdate());
+        }
+      }
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);

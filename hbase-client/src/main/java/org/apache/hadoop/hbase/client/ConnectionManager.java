@@ -118,6 +118,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
@@ -1907,6 +1909,12 @@ class ConnectionManager {
         }
 
         @Override
+        public GetProcedureResultResponse getProcedureResult(RpcController controller,
+            GetProcedureResultRequest request) throws ServiceException {
+          return stub.getProcedureResult(controller, request);
+        }
+
+        @Override
         public IsMasterRunningResponse isMasterRunning(
             RpcController controller, IsMasterRunningRequest request)
             throws ServiceException {
@@ -1990,7 +1998,7 @@ class ConnectionManager {
             throws ServiceException {
           return stub.getClusterStatus(controller, request);
         }
-        
+
         @Override
         public SetQuotaResponse setQuota(RpcController controller, SetQuotaRequest request)
             throws ServiceException {
