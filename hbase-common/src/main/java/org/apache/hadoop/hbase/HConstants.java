@@ -595,12 +595,19 @@ public final class HConstants {
    */
   public static final UUID DEFAULT_CLUSTER_ID = new UUID(0L,0L);
 
-    /**
-     * Parameter name for maximum number of bytes returned when calling a
-     * scanner's next method.
-     */
+  /**
+   * Parameter name for maximum number of bytes returned when calling a scanner's next method.
+   * Controlled by the client.
+   */
   public static final String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY =
       "hbase.client.scanner.max.result.size";
+
+  /**
+   * Parameter name for maximum number of bytes returned when calling a scanner's next method.
+   * Controlled by the server.
+   */
+  public static final String HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY =
+      "hbase.server.scanner.max.result.size";
 
   /**
    * Maximum number of bytes returned when calling a scanner's next method.
@@ -610,6 +617,16 @@ public final class HConstants {
    * The default value is 2MB.
    */
   public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = 2 * 1024 * 1024;
+
+  /**
+   * Maximum number of bytes returned when calling a scanner's next method.
+   * Note that when a single row is larger than this limit the row is still
+   * returned completely.
+   * Safety setting to protect the region server.
+   *
+   * The default value is 100MB. (a client would rarely request larger chunks on purpose)
+   */
+  public static final long DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE = 100 * 1024 * 1024;
 
   /**
    * Parameter name for client pause value, used mostly as value to wait
