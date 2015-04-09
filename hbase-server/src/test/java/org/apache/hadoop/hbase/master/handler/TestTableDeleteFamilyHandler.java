@@ -29,18 +29,24 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -57,15 +63,22 @@ public class TestTableDeleteFamilyHandler {
 
   /**
    * Start up a mini cluster and put a small table of empty regions into it.
-   * 
+   *
    * @throws Exception
    */
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniCluster(2);
+  }
 
+  @AfterClass
+  public static void afterAllTests() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Before
+  public void setup() throws IOException, InterruptedException {
     // Create a table of three families. This will assign a region.
     TEST_UTIL.createTable(TABLENAME, FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
@@ -84,22 +97,17 @@ public class TestTableDeleteFamilyHandler {
     TEST_UTIL.flush();
 
     t.close();
-  }
 
-  @AfterClass
-  public static void afterAllTests() throws Exception {
-    TEST_UTIL.deleteTable(TABLENAME);
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Before
-  public void setup() throws IOException, InterruptedException {
     TEST_UTIL.ensureSomeRegionServersAvailable(2);
+  }
+
+  @After
+  public void cleanup() throws Exception {
+    TEST_UTIL.deleteTable(TABLENAME);
   }
 
   @Test
   public void deleteColumnFamilyWithMultipleRegions() throws Exception {
-
     Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor beforehtd = admin.getTableDescriptor(TABLENAME);
 
@@ -112,7 +120,6 @@ public class TestTableDeleteFamilyHandler {
     assertEquals(3, beforehtd.getColumnFamilies().length);
     HColumnDescriptor[] families = beforehtd.getColumnFamilies();
     for (int i = 0; i < families.length; i++) {
-
       assertTrue(families[i].getNameAsString().equals("cf" + (i + 1)));
     }
 
@@ -174,6 +181,97 @@ public class TestTableDeleteFamilyHandler {
           }
         }
       }
+    }
+  }
+
+  @Test
+  public void deleteColumnFamilyTwice() throws Exception {
+
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    HTableDescriptor beforehtd = admin.getTableDescriptor(TABLENAME);
+    String cfToDelete = "cf1";
+
+    FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
+
+    // 1 - Check if table exists in descriptor
+    assertTrue(admin.isTableAvailable(TABLENAME));
+
+    // 2 - Check if all the target column family exist in descriptor
+    HColumnDescriptor[] families = beforehtd.getColumnFamilies();
+    Boolean foundCF = false;
+    int i;
+    for (i = 0; i < families.length; i++) {
+      if (families[i].getNameAsString().equals(cfToDelete)) {
+        foundCF = true;
+        break;
+      }
+    }
+    assertTrue(foundCF);
+
+    // 3 - Check if table exists in FS
+    Path tableDir = FSUtils.getTableDir(TEST_UTIL.getDefaultRootDirPath(), TABLENAME);
+    assertTrue(fs.exists(tableDir));
+
+    // 4 - Check if all the target column family exist in FS
+    FileStatus[] fileStatus = fs.listStatus(tableDir);
+    foundCF = false;
+    for (i = 0; i < fileStatus.length; i++) {
+      if (fileStatus[i].isDirectory() == true) {
+        FileStatus[] cf = fs.listStatus(fileStatus[i].getPath(), new PathFilter() {
+          @Override
+          public boolean accept(Path p) {
+            if (p.getName().contains(HConstants.RECOVERED_EDITS_DIR)) {
+              return false;
+            }
+            return true;
+          }
+        });
+        for (int j = 0; j < cf.length; j++) {
+          if (cf[j].isDirectory() == true && cf[j].getPath().getName().equals(cfToDelete)) {
+            foundCF = true;
+            break;
+          }
+        }
+      }
+      if (foundCF) {
+        break;
+      }
+    }
+    assertTrue(foundCF);
+
+    // TEST - Disable and delete the column family
+    if (admin.isTableEnabled(TABLENAME)) {
+      admin.disableTable(TABLENAME);
+    }
+    admin.deleteColumn(TABLENAME, Bytes.toBytes(cfToDelete));
+
+    // 5 - Check if the target column family is gone from the FS
+    fileStatus = fs.listStatus(tableDir);
+    for (i = 0; i < fileStatus.length; i++) {
+      if (fileStatus[i].isDirectory() == true) {
+        FileStatus[] cf = fs.listStatus(fileStatus[i].getPath(), new PathFilter() {
+          @Override
+          public boolean accept(Path p) {
+            if (WALSplitter.isSequenceIdFile(p)) {
+              return false;
+            }
+            return true;
+          }
+        });
+        for (int j = 0; j < cf.length; j++) {
+          if (cf[j].isDirectory() == true) {
+            assertFalse(cf[j].getPath().getName().equals(cfToDelete));
+          }
+        }
+      }
+    }
+
+    try {
+      // Test: delete again
+      admin.deleteColumn(TABLENAME, Bytes.toBytes(cfToDelete));
+      Assert.fail("Delete a non-exist column family should fail");
+    } catch (InvalidFamilyOperationException e) {
+      // Expected.
     }
   }
 

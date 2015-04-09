@@ -102,37 +102,6 @@ public class TestTableLockManager {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test(timeout = 600000)
-  public void testLockTimeoutException() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setInt(TableLockManager.TABLE_WRITE_LOCK_TIMEOUT_MS, 3000);
-    prepareMiniCluster();
-    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    master.getMasterCoprocessorHost().load(TestLockTimeoutExceptionMasterObserver.class,
-        0, TEST_UTIL.getConfiguration());
-
-    ExecutorService executor = Executors.newSingleThreadExecutor();
-    Future<Object> shouldFinish = executor.submit(new Callable<Object>() {
-      @Override
-      public Object call() throws Exception {
-        Admin admin = TEST_UTIL.getHBaseAdmin();
-        admin.deleteColumn(TABLE_NAME, FAMILY);
-        return null;
-      }
-    });
-
-    deleteColumn.await();
-
-    try {
-      Admin admin = TEST_UTIL.getHBaseAdmin();
-      admin.addColumn(TABLE_NAME, new HColumnDescriptor(NEW_FAMILY));
-      fail("Was expecting TableLockTimeoutException");
-    } catch (LockTimeoutException ex) {
-      //expected
-    }
-    shouldFinish.get();
-  }
-
   public static class TestLockTimeoutExceptionMasterObserver extends BaseMasterObserver {
     @Override
     public void preDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,

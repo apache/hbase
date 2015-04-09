@@ -295,6 +295,39 @@ public class MasterProcedureTestingUtility {
     ProcedureTestingUtility.assertIsAbortException(procExec.getResult(procId));
   }
 
+  public static void validateColumnFamilyAddition(final HMaster master, final TableName tableName,
+      final String family) throws IOException {
+    HTableDescriptor htd = master.getTableDescriptors().get(tableName);
+    assertTrue(htd != null);
+    assertTrue(htd.hasFamily(family.getBytes()));
+  }
+
+  public static void validateColumnFamilyDeletion(final HMaster master, final TableName tableName,
+      final String family) throws IOException {
+    // verify htd
+    HTableDescriptor htd = master.getTableDescriptors().get(tableName);
+    assertTrue(htd != null);
+    assertFalse(htd.hasFamily(family.getBytes()));
+
+    // verify fs
+    final FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
+    for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
+      final Path familyDir = new Path(regionDir, family);
+      assertFalse(family + " family dir should not exist", fs.exists(familyDir));
+    }
+  }
+
+  public static void validateColumnFamilyModification(final HMaster master,
+      final TableName tableName, final String family, HColumnDescriptor columnDescriptor)
+      throws IOException {
+    HTableDescriptor htd = master.getTableDescriptors().get(tableName);
+    assertTrue(htd != null);
+
+    HColumnDescriptor hcfd = htd.getFamily(family.getBytes());
+    assertTrue(hcfd.equals(columnDescriptor));
+  }
+
   public static class InjectAbortOnLoadListener
       implements ProcedureExecutor.ProcedureExecutorListener {
     private final ProcedureExecutor<MasterProcedureEnv> procExec;
