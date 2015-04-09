@@ -786,8 +786,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
     maxScannerResultSize = rs.conf.getLong(
-      HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
-      HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+      HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
+      HConstants.DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE);
 
     // Set our address, however we need the final port that was given to rpcServer
     isa = new InetSocketAddress(initialIsa.getHostName(), rpcServer.getListenerAddress().getPort());
@@ -2094,7 +2094,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 boolean moreRows = false;
                 while (i < rows) {
                   // Stop collecting results if maxScannerResultSize is set and we have exceeded it
-                  if ((maxScannerResultSize < Long.MAX_VALUE) &&
+                  if ((maxResultSize < Long.MAX_VALUE) &&
                       (currentScanResultSize >= maxResultSize)) {
                     builder.setMoreResultsInRegion(true);
                     break;

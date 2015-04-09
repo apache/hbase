@@ -603,13 +603,30 @@ public final class HConstants {
       "hbase.client.scanner.max.result.size";
 
   /**
+   * Parameter name for maximum number of bytes returned when calling a scanner's next method.
+   * Controlled by the server.
+   */
+  public static final String HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY =
+      "hbase.server.scanner.max.result.size";
+
+  /**
    * Maximum number of bytes returned when calling a scanner's next method.
    * Note that when a single row is larger than this limit the row is still
    * returned completely.
    *
-   * The default value is unlimited.
+   * The default value is 2MB.
    */
-  public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
+  public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = 2 * 1024 * 1024;
+
+  /**
+   * Maximum number of bytes returned when calling a scanner's next method.
+   * Note that when a single row is larger than this limit the row is still
+   * returned completely.
+   * Safety setting to protect the region server.
+   *
+   * The default value unlimited for backwards compatibility
+   */
+  public static final long DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
 
   /**
    * Parameter name for client pause value, used mostly as value to wait
