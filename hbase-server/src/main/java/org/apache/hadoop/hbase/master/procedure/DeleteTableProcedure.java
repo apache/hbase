@@ -125,6 +125,7 @@ public class DeleteTableProcedure
           LOG.debug("delete '" + getTableName() + "' from filesystem");
           DeleteTableProcedure.deleteFromFs(env, getTableName(), regions, true);
           setNextState(DeleteTableState.DELETE_TABLE_UPDATE_DESC_CACHE);
+          regions = null;
           break;
         case DELETE_TABLE_UPDATE_DESC_CACHE:
           LOG.debug("delete '" + getTableName() + "' descriptor");

@@ -227,9 +227,10 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public void createTable(HTableDescriptor desc, byte[][] splitKeys)
+    public long createTable(HTableDescriptor desc, byte[][] splitKeys)
         throws IOException {
       // no-op
+      return -1;
     }
 
     @Override
@@ -427,7 +428,9 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public void deleteTable(TableName tableName) throws IOException { }
+    public long deleteTable(TableName tableName) throws IOException {
+      return -1;
+    }
 
     @Override
     public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException { }

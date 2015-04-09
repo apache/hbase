@@ -1598,6 +1598,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.GetProcedureResultResponse getProcedureResult(RpcController controller,
+          MasterProtos.GetProcedureResultRequest request) throws ServiceException {
+        return stub.getProcedureResult(controller, request);
+      }
+
+      @Override
       public MasterProtos.IsMasterRunningResponse isMasterRunning(
           RpcController controller, MasterProtos.IsMasterRunningRequest request)
           throws ServiceException {
