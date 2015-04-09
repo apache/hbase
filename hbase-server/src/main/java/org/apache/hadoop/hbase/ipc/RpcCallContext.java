@@ -21,6 +21,7 @@ import java.net.InetAddress;
 
 import org.apache.hadoop.hbase.security.User;
 
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo;
 
 public interface RpcCallContext extends Delayable {
   /**
@@ -57,4 +58,9 @@ public interface RpcCallContext extends Delayable {
    * @return Address of remote client if a request is ongoing, else null
    */
   InetAddress getRemoteAddress();
+
+  /**
+   * @return the client version info, or null if the information is not present
+   */
+  VersionInfo getClientVersionInfo();
 }

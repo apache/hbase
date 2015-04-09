@@ -91,6 +91,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.AuthMethod;
@@ -542,6 +543,11 @@ public class RpcServer implements RpcServerInterface {
     @Override
     public InetAddress getRemoteAddress() {
       return remoteAddress;
+    }
+
+    @Override
+    public VersionInfo getClientVersionInfo() {
+      return connection.getVersionInfo();
     }
   }
 
@@ -1269,6 +1275,13 @@ public class RpcServer implements RpcServerInterface {
 
     public void setLastContact(long lastContact) {
       this.lastContact = lastContact;
+    }
+
+    public VersionInfo getVersionInfo() {
+      if (connectionHeader.hasVersionInfo()) {
+        return connectionHeader.getVersionInfo();
+      }
+      return null;
     }
 
     /* Return true if the connection has no outstanding rpc */

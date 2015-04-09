@@ -179,8 +179,10 @@ public class MetaTableAccessor {
   static Table getMetaHTable(final Connection connection)
   throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in Connection
-    if (connection == null || connection.isClosed()) {
+    if (connection == null) {
       throw new NullPointerException("No connection");
+    } else if (connection.isClosed()) {
+      throw new IOException("connection is closed");
     }
     // If the passed in 'connection' is 'managed' -- i.e. every second test uses
     // a Table or an HBaseAdmin with managed connections -- then doing

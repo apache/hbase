@@ -60,6 +60,30 @@ public abstract class ModifyRegionUtils {
     void editRegion(final HRegionInfo region) throws IOException;
   }
 
+  public static HRegionInfo[] createHRegionInfos(HTableDescriptor hTableDescriptor,
+      byte[][] splitKeys) {
+    long regionId = System.currentTimeMillis();
+    HRegionInfo[] hRegionInfos = null;
+    if (splitKeys == null || splitKeys.length == 0) {
+      hRegionInfos = new HRegionInfo[]{
+        new HRegionInfo(hTableDescriptor.getTableName(), null, null, false, regionId)
+      };
+    } else {
+      int numRegions = splitKeys.length + 1;
+      hRegionInfos = new HRegionInfo[numRegions];
+      byte[] startKey = null;
+      byte[] endKey = null;
+      for (int i = 0; i < numRegions; i++) {
+        endKey = (i == splitKeys.length) ? null : splitKeys[i];
+        hRegionInfos[i] =
+             new HRegionInfo(hTableDescriptor.getTableName(), startKey, endKey,
+                 false, regionId);
+        startKey = endKey;
+      }
+    }
+    return hRegionInfos;
+  }
+
   /**
    * Create new set of regions on the specified file-system.
    * NOTE: that you should add the regions to hbase:meta after this operation.

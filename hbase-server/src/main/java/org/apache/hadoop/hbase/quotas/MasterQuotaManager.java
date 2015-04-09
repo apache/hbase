@@ -24,8 +24,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
+import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
@@ -64,7 +64,7 @@ public class MasterQuotaManager implements RegionStateListener {
     }
 
     // Create the quota table if missing
-    if (!MetaTableAccessor.tableExists(masterServices.getConnection(), 
+    if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
         QuotaUtil.QUOTA_TABLE_NAME)) {
       LOG.info("Quota table not found. Creating...");
       createQuotaTable();
@@ -280,7 +280,7 @@ public class MasterQuotaManager implements RegionStateListener {
       }
     });
   }
-  
+
   public void setNamespaceQuota(NamespaceDescriptor desc) throws IOException {
     if (enabled) {
       this.namespaceQuotaManager.addNamespace(desc);
@@ -462,11 +462,11 @@ public class MasterQuotaManager implements RegionStateListener {
   private void createQuotaTable() throws IOException {
     HRegionInfo[] newRegions = new HRegionInfo[] { new HRegionInfo(QuotaUtil.QUOTA_TABLE_NAME) };
 
-    masterServices.getExecutorService()
-        .submit(
-          new CreateTableHandler(masterServices, masterServices.getMasterFileSystem(),
-              QuotaUtil.QUOTA_TABLE_DESC, masterServices.getConfiguration(), newRegions,
-              masterServices).prepare());
+    masterServices.getMasterProcedureExecutor()
+      .submitProcedure(new CreateTableProcedure(
+          masterServices.getMasterProcedureExecutor().getEnvironment(),
+          QuotaUtil.QUOTA_TABLE_DESC,
+          newRegions));
   }
 
   private static class NamedLock<T> {
@@ -488,7 +488,7 @@ public class MasterQuotaManager implements RegionStateListener {
       }
     }
   }
-  
+
   @Override
   public void onRegionSplitReverted(HRegionInfo hri) throws IOException {
     if (enabled) {

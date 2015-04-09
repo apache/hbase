@@ -18,18 +18,6 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.CoordinatedStateException;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableStateManager;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.zookeeper.KeeperException;
-
 import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,6 +25,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableStateManager;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.zookeeper.KeeperException;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Implementation of TableStateManager which reads, caches and sets state
@@ -190,24 +191,48 @@ public class ZKTableStateManager implements TableStateManager {
   }
 
   /**
-   * Checks if table is marked in specified state in ZK.
-   *
-   * {@inheritDoc}
+   * Checks if table is marked in specified state in ZK (using cache only). {@inheritDoc}
    */
   @Override
   public boolean isTableState(final TableName tableName,
       final ZooKeeperProtos.Table.State... states) {
+    return isTableState(tableName, false, states); // only check cache
+  }
+
+  /**
+   * Checks if table is marked in specified state in ZK. {@inheritDoc}
+   */
+  @Override
+  public boolean isTableState(final TableName tableName, final boolean checkSource,
+      final ZooKeeperProtos.Table.State... states) {
+    boolean isTableInSpecifiedState;
     synchronized (this.cache) {
       ZooKeeperProtos.Table.State currentState = this.cache.get(tableName);
+      if (checkSource) {
+        // The cache might be out-of-date, try to find it out from the master source (zookeeper
+        // server) and update the cache.
+        try {
+          ZooKeeperProtos.Table.State stateInZK = getTableState(watcher, tableName);
+
+          if (currentState != stateInZK) {
+            if (stateInZK != null) {
+              this.cache.put(tableName, stateInZK);
+            } else {
+              this.cache.remove(tableName);
+            }
+            currentState = stateInZK;
+          }
+        } catch (KeeperException | InterruptedException e) {
+          // Contacting zookeeper failed.  Let us just trust the value in cache.
+        }
+      }
       return isTableInState(Arrays.asList(states), currentState);
     }
   }
 
   /**
-   * Deletes the table in zookeeper.  Fails silently if the
-   * table is not currently disabled in zookeeper.  Sets no watches.
-   *
-   * {@inheritDoc}
+   * Deletes the table in zookeeper. Fails silently if the table is not currently disabled in
+   * zookeeper. Sets no watches. {@inheritDoc}
    */
   @Override
   public void setDeletedTable(final TableName tableName)

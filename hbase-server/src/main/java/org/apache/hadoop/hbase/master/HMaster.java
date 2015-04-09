@@ -90,8 +90,6 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
-import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -100,11 +98,18 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TruncateTableHandler;
+import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -125,6 +130,7 @@ import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -293,7 +299,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // monitor for distributed procedures
   MasterProcedureManagerHost mpmHost;
   
-  private MasterQuotaManager quotaManager;
+  // it is assigned after 'initialized' guard set to true, so should be volatile
+  private volatile MasterQuotaManager quotaManager;
+
+  private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
+  private WALProcedureStore procedureStore;
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
@@ -1032,6 +1042,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    // Any time changing this maxThreads to > 1, pls see the comment at
    // AccessController#postCreateTableHandler
    this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
+   startProcedureExecutor();
 
    // Start log cleaner thread
    int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
@@ -1053,6 +1064,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
+  protected void sendShutdownInterrupt() {
+    super.sendShutdownInterrupt();
+    stopProcedureExecutor();
+  }
+
+  @Override
   protected void stopServiceThreads() {
     if (masterJettyServer != null) {
       LOG.info("Stopping master jetty server");
@@ -1064,6 +1081,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     super.stopServiceThreads();
     stopChores();
+
     // Wait for all the remaining region servers to report in IFF we were
     // running a cluster shutdown AND we were NOT aborting.
     if (!isAborted() && this.serverManager != null &&
@@ -1082,6 +1100,34 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.assignmentManager != null) this.assignmentManager.stop();
     if (this.fileSystemManager != null) this.fileSystemManager.stop();
     if (this.mpmHost != null) this.mpmHost.stop("server shutting down.");
+  }
+
+  private void startProcedureExecutor() throws IOException {
+    final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
+    final Path logDir = new Path(fileSystemManager.getRootDir(),
+        MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR);
+
+    procedureStore = new WALProcedureStore(conf, fileSystemManager.getFileSystem(), logDir,
+        new MasterProcedureEnv.WALStoreLeaseRecovery(this));
+    procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
+    procedureExecutor = new ProcedureExecutor(conf, procEnv, procedureStore,
+        procEnv.getProcedureQueue());
+
+    final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS,
+        Math.max(Runtime.getRuntime().availableProcessors(),
+          MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS));
+    procedureStore.start(numThreads);
+    procedureExecutor.start(numThreads);
+  }
+
+  private void stopProcedureExecutor() {
+    if (procedureExecutor != null) {
+      procedureExecutor.stop();
+    }
+
+    if (procedureStore != null) {
+      procedureStore.stop(isAborted());
+    }
   }
 
   private void stopChores() {
@@ -1323,7 +1369,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
     ensureNamespaceExists(namespace);
 
-    HRegionInfo[] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
+    HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     sanityCheckTableDescriptor(hTableDescriptor);
     this.quotaManager.checkNamespaceTableAndRegionQuota(hTableDescriptor.getTableName(),
@@ -1332,13 +1378,22 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
     LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
-    this.service.submit(new CreateTableHandler(this,
-      this.fileSystemManager, hTableDescriptor, conf,
-      newRegions, this).prepare());
+
+    // TODO: We can handle/merge duplicate requests, and differentiate the case of
+    //       TableExistsException by saying if the schema is the same or not.
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
+    long procId = this.procedureExecutor.submitProcedure(
+      new CreateTableProcedure(procedureExecutor.getEnvironment(),
+        hTableDescriptor, newRegions, latch));
+    latch.await();
+
     if (cpHost != null) {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
 
+    // TODO: change the interface to return the procId,
+    //       and add it to the response protobuf.
+    //return procId;
   }
 
   /**
@@ -1544,29 +1599,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     RegionCoprocessorHost.testTableCoprocessorAttrs(conf, htd);
   }
 
-  private HRegionInfo[] getHRegionInfos(HTableDescriptor hTableDescriptor,
-    byte[][] splitKeys) {
-    long regionId = System.currentTimeMillis();
-    HRegionInfo[] hRegionInfos = null;
-    if (splitKeys == null || splitKeys.length == 0) {
-      hRegionInfos = new HRegionInfo[]{new HRegionInfo(hTableDescriptor.getTableName(), null, null,
-                false, regionId)};
-    } else {
-      int numRegions = splitKeys.length + 1;
-      hRegionInfos = new HRegionInfo[numRegions];
-      byte[] startKey = null;
-      byte[] endKey = null;
-      for (int i = 0; i < numRegions; i++) {
-        endKey = (i == splitKeys.length) ? null : splitKeys[i];
-        hRegionInfos[i] =
-             new HRegionInfo(hTableDescriptor.getTableName(), startKey, endKey,
-                 false, regionId);
-        startKey = endKey;
-      }
-    }
-    return hRegionInfos;
-  }
-
   private static boolean isCatalogTable(final TableName tableName) {
     return tableName.equals(TableName.META_TABLE_NAME);
   }
@@ -1578,10 +1610,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.preDeleteTable(tableName);
     }
     LOG.info(getClientIdAuditPrefix() + " delete " + tableName);
-    this.service.submit(new DeleteTableHandler(tableName, this, this).prepare());
+
+    // TODO: We can handle/merge duplicate request
+    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
+    long procId = this.procedureExecutor.submitProcedure(
+        new DeleteTableProcedure(procedureExecutor.getEnvironment(), tableName, latch));
+    latch.await();
+
     if (cpHost != null) {
       cpHost.postDeleteTable(tableName);
     }
+
+    // TODO: change the interface to return the procId,
+    //       and add it to the response protobuf.
+    //return procId;
   }
 
   @Override
@@ -1881,6 +1923,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public MasterQuotaManager getMasterQuotaManager() {
     return quotaManager;
+  }
+
+  @Override
+  public ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
+    return procedureExecutor;
   }
 
   @Override

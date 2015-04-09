@@ -18,11 +18,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-
 import java.io.InterruptedIOException;
 import java.util.Set;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 
 /**
  * Helper class for table state management for operations running inside
@@ -78,7 +78,13 @@ public interface TableStateManager {
   boolean isTableState(TableName tableName, ZooKeeperProtos.Table.State... states);
 
   /**
-   * Mark table as deleted.  Fails silently if the table is not currently marked as disabled.
+   * @return true if the table is in any one of the listed states, false otherwise.
+   */
+  boolean isTableState(TableName tableName, boolean checkSource,
+      ZooKeeperProtos.Table.State... states);
+
+  /**
+   * Mark table as deleted. Fails silently if the table is not currently marked as disabled.
    * @param tableName table to be deleted
    * @throws CoordinatedStateException if error happened while performing operation
    */
