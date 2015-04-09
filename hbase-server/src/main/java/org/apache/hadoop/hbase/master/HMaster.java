@@ -1675,7 +1675,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void enableTable(final TableName tableName) throws IOException {
+  public long enableTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preEnableTable(tableName);
@@ -1697,12 +1697,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.postEnableTable(tableName);
     }
 
-    // TODO: return procId as part of client-side change
-    // return procId;
+    return procId;
   }
 
   @Override
-  public void disableTable(final TableName tableName) throws IOException {
+  public long disableTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preDisableTable(tableName);
@@ -1725,8 +1724,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.postDisableTable(tableName);
     }
 
-    // TODO: return procId as part of client-side change
-    // return procId;
+    return procId;
   }
 
   /**

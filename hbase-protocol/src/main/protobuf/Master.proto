@@ -133,6 +133,7 @@ message EnableTableRequest {
 }
 
 message EnableTableResponse {
+  optional uint64 proc_id = 1;
 }
 
 message DisableTableRequest {
@@ -140,6 +141,7 @@ message DisableTableRequest {
 }
 
 message DisableTableResponse {
+  optional uint64 proc_id = 1;
 }
 
 message ModifyTableRequest {

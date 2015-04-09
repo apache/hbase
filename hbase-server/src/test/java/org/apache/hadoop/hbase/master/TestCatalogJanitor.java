@@ -441,10 +441,14 @@ public class TestCatalogJanitor {
         throws IOException { }
 
     @Override
-    public void enableTable(TableName tableName) throws IOException { }
+    public long enableTable(TableName tableName) throws IOException {
+      return -1;
+    }
 
     @Override
-    public void disableTable(TableName tableName) throws IOException { }
+    public long disableTable(TableName tableName) throws IOException {
+      return -1;
+    }
 
     @Override
     public void addColumn(TableName tableName, HColumnDescriptor column)

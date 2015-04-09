@@ -101,8 +101,10 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DisableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DispatchMergingRegionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetClusterStatusRequest;
@@ -944,12 +946,20 @@ public class HBaseAdmin implements Admin {
   @Override
   public void enableTable(final TableName tableName)
   throws IOException {
-    enableTableAsync(tableName);
-
-    // Wait until all regions are enabled
-    waitUntilTableIsEnabled(tableName);
-
-    LOG.info("Enabled table " + tableName);
+    Future<Void> future = enableTableAsyncV2(tableName);
+    try {
+      future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted when waiting for table to be disabled");
+    } catch (TimeoutException e) {
+      throw new TimeoutIOException(e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException)e.getCause();
+      } else {
+        throw new IOException(e.getCause());
+      }
+    }
   }
 
   public void enableTable(final byte[] tableName)
@@ -1016,16 +1026,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void enableTableAsync(final TableName tableName)
   throws IOException {
-    TableName.isLegalFullyQualifiedTableName(tableName.getName());
-    executeCallable(new MasterCallable<Void>(getConnection()) {
-      @Override
-      public Void call(int callTimeout) throws ServiceException {
-        LOG.info("Started enable of " + tableName);
-        EnableTableRequest req = RequestConverter.buildEnableTableRequest(tableName);
-        master.enableTable(null,req);
-        return null;
-      }
-    });
+    enableTableAsyncV2(tableName);
   }
 
   public void enableTableAsync(final byte[] tableName)
@@ -1036,6 +1037,84 @@ public class HBaseAdmin implements Admin {
   public void enableTableAsync(final String tableName)
   throws IOException {
     enableTableAsync(TableName.valueOf(tableName));
+  }
+
+  /**
+   * Enable the table but does not block and wait for it be completely enabled.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
+   *
+   * @param tableName name of table to delete
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async enable. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
+   */
+  // TODO: This should be called Async but it will break binary compatibility
+  private Future<Void> enableTableAsyncV2(final TableName tableName) throws IOException {
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    EnableTableResponse response = executeCallable(
+        new MasterCallable<EnableTableResponse>(getConnection()) {
+      @Override
+      public EnableTableResponse call(int callTimeout) throws ServiceException {
+        LOG.info("Started enable of " + tableName);
+        EnableTableRequest req = RequestConverter.buildEnableTableRequest(tableName);
+        return master.enableTable(null,req);
+      }
+    });
+    return new EnableTableFuture(this, tableName, response);
+  }
+
+  private static class EnableTableFuture extends ProcedureFuture<Void> {
+    private final TableName tableName;
+
+    public EnableTableFuture(final HBaseAdmin admin, final TableName tableName,
+        final EnableTableResponse response) {
+      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null);
+      this.tableName = tableName;
+    }
+
+    @Override
+    protected Void waitOperationResult(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitTableEnabled(deadlineTs);
+      return null;
+    }
+
+    @Override
+    protected Void postOperationResult(final Void result, final long deadlineTs)
+        throws IOException, TimeoutException {
+      LOG.info("Enabled " + tableName);
+      return result;
+    }
+
+    private void waitTableEnabled(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitForState(deadlineTs, new WaitForStateCallable() {
+        @Override
+        public boolean checkState(int tries) throws IOException {
+          boolean enabled;
+          try {
+            enabled = getAdmin().isTableEnabled(tableName);
+          } catch (TableNotFoundException tnfe) {
+            return false;
+          }
+          return enabled && getAdmin().isTableAvailable(tableName);
+        }
+
+        @Override
+        public void throwInterruptedException() throws InterruptedIOException {
+          throw new InterruptedIOException("Interrupted when waiting for table to be enabled");
+        }
+
+        @Override
+        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
+          throw new TimeoutException("Table " + tableName + " not yet enabled after " +
+              elapsedTime + "msec");
+        }
+      });
+    }
   }
 
   /**
@@ -1096,16 +1175,7 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public void disableTableAsync(final TableName tableName) throws IOException {
-    TableName.isLegalFullyQualifiedTableName(tableName.getName());
-    executeCallable(new MasterCallable<Void>(getConnection()) {
-      @Override
-      public Void call(int callTimeout) throws ServiceException {
-        LOG.info("Started disable of " + tableName);
-        DisableTableRequest req = RequestConverter.buildDisableTableRequest(tableName);
-        master.disableTable(null,req);
-        return null;
-      }
-    });
+    disableTableAsyncV2(tableName);
   }
 
   public void disableTableAsync(final byte[] tableName) throws IOException {
@@ -1130,32 +1200,20 @@ public class HBaseAdmin implements Admin {
   @Override
   public void disableTable(final TableName tableName)
   throws IOException {
-    disableTableAsync(tableName);
-    // Wait until table is disabled
-    boolean disabled = false;
-    for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
-      disabled = isTableDisabled(tableName);
-      if (disabled) {
-        break;
-      }
-      long sleep = getPauseTime(tries);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Sleeping= " + sleep + "ms, waiting for all regions to be " +
-          "disabled in " + tableName);
-      }
-      try {
-        Thread.sleep(sleep);
-      } catch (InterruptedException e) {
-        // Do this conversion rather than let it out because do not want to
-        // change the method signature.
-        throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
+    Future<Void> future = disableTableAsyncV2(tableName);
+    try {
+      future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted when waiting for table to be disabled");
+    } catch (TimeoutException e) {
+      throw new TimeoutIOException(e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException)e.getCause();
+      } else {
+        throw new IOException(e.getCause());
       }
     }
-    if (!disabled) {
-      throw new RegionException("Retries exhausted, it took too long to wait"+
-        " for the table " + tableName + " to be disabled.");
-    }
-    LOG.info("Disabled " + tableName);
   }
 
   public void disableTable(final byte[] tableName)
@@ -1166,6 +1224,78 @@ public class HBaseAdmin implements Admin {
   public void disableTable(final String tableName)
   throws IOException {
     disableTable(TableName.valueOf(tableName));
+  }
+
+  /**
+   * Disable the table but does not block and wait for it be completely disabled.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
+   *
+   * @param tableName name of table to delete
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async disable. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
+   */
+  // TODO: This should be called Async but it will break binary compatibility
+  private Future<Void> disableTableAsyncV2(final TableName tableName) throws IOException {
+    TableName.isLegalFullyQualifiedTableName(tableName.getName());
+    DisableTableResponse response = executeCallable(
+        new MasterCallable<DisableTableResponse>(getConnection()) {
+      @Override
+      public DisableTableResponse call(int callTimeout) throws ServiceException {
+        LOG.info("Started disable of " + tableName);
+        DisableTableRequest req = RequestConverter.buildDisableTableRequest(tableName);
+        return master.disableTable(null, req);
+      }
+    });
+    return new DisableTableFuture(this, tableName, response);
+  }
+
+  private static class DisableTableFuture extends ProcedureFuture<Void> {
+    private final TableName tableName;
+
+    public DisableTableFuture(final HBaseAdmin admin, final TableName tableName,
+        final DisableTableResponse response) {
+      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null);
+      this.tableName = tableName;
+    }
+
+    @Override
+    protected Void waitOperationResult(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitTableDisabled(deadlineTs);
+      return null;
+    }
+
+    @Override
+    protected Void postOperationResult(final Void result, final long deadlineTs)
+        throws IOException, TimeoutException {
+      LOG.info("Disabled " + tableName);
+      return result;
+    }
+
+    private void waitTableDisabled(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitForState(deadlineTs, new WaitForStateCallable() {
+        @Override
+        public boolean checkState(int tries) throws IOException {
+          return getAdmin().isTableDisabled(tableName);
+        }
+
+        @Override
+        public void throwInterruptedException() throws InterruptedIOException {
+          throw new InterruptedIOException("Interrupted when waiting for table to be disabled");
+        }
+
+        @Override
+        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
+          throw new TimeoutException("Table " + tableName + " not yet disabled after " +
+              elapsedTime + "msec");
+        }
+      });
+    }
   }
 
   /**

@@ -489,11 +489,11 @@ public class MasterRpcServices extends RSRpcServices
   public DisableTableResponse disableTable(RpcController controller,
       DisableTableRequest request) throws ServiceException {
     try {
-      master.disableTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.disableTable(ProtobufUtil.toTableName(request.getTableName()));
+      return DisableTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return DisableTableResponse.newBuilder().build();
   }
 
   @Override
@@ -575,11 +575,11 @@ public class MasterRpcServices extends RSRpcServices
   public EnableTableResponse enableTable(RpcController controller,
       EnableTableRequest request) throws ServiceException {
     try {
-      master.enableTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.enableTable(ProtobufUtil.toTableName(request.getTableName()));
+      return EnableTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return EnableTableResponse.newBuilder().build();
   }
 
   @Override
