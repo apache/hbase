@@ -580,10 +580,12 @@ public class MasterFileSystem {
     Path familyDir = new Path(tableDir,
       new Path(region.getEncodedName(), Bytes.toString(familyName)));
     if (fs.delete(familyDir, true) == false) {
-      throw new IOException("Could not delete family "
-          + Bytes.toString(familyName) + " from FileSystem for region "
-          + region.getRegionNameAsString() + "(" + region.getEncodedName()
-          + ")");
+      if (fs.exists(familyDir)) {
+        throw new IOException("Could not delete family "
+            + Bytes.toString(familyName) + " from FileSystem for region "
+            + region.getRegionNameAsString() + "(" + region.getEncodedName()
+            + ")");
+      }
     }
   }
 
