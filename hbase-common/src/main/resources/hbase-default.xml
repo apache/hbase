@@ -1307,6 +1307,16 @@ possible configurations would overwhelm and obscure the important.
   </property>
 
   <property>
+    <name>hbase.server.scanner.max.result.size</name>
+    <value>104857600</value>
+    <description>Maximum number of bytes returned when calling a scanner's next method.
+    Note that when a single row is larger than this limit the row is still returned completely.
+    The default value is 100MB.
+    This is a safety setting to protect the server from OOM situations.
+    </description>
+  </property>
+
+  <property>
     <name>hbase.status.published</name>
     <value>false</value>
     <description>
