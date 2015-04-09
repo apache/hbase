@@ -132,14 +132,14 @@ public interface MasterServices extends Server {
    * @param tableName The table name
    * @throws IOException
    */
-  void enableTable(final TableName tableName) throws IOException;
+  long enableTable(final TableName tableName) throws IOException;
 
   /**
    * Disable an existing table
    * @param tableName The table name
    * @throws IOException
    */
-  void disableTable(final TableName tableName) throws IOException;
+  long disableTable(final TableName tableName) throws IOException;
 
 
   /**
