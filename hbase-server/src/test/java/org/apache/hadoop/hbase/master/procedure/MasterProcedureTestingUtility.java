@@ -36,7 +36,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -170,6 +172,18 @@ public class MasterProcedureTestingUtility {
     };
     MetaTableAccessor.scanMetaForTableRegions(master.getConnection(), visitor, tableName);
     return actualRegCount.get();
+  }
+
+  public static void validateTableIsEnabled(final HMaster master, final TableName tableName)
+      throws IOException {
+    TableStateManager tsm = master.getAssignmentManager().getTableStateManager();
+    assertTrue(tsm.getTableState(tableName).equals(TableState.State.ENABLED));
+  }
+
+  public static void validateTableIsDisabled(final HMaster master, final TableName tableName)
+      throws IOException {
+    TableStateManager tsm = master.getAssignmentManager().getTableStateManager();
+    assertTrue(tsm.getTableState(tableName).equals(TableState.State.DISABLED));
   }
 
   public static <TState> void testRecoveryAndDoubleExecution(

@@ -87,14 +87,14 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
-import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.TruncateTableHandler;
 import org.apache.hadoop.hbase.master.procedure.AddColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.DisableTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.EnableTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
@@ -1681,11 +1681,24 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.preEnableTable(tableName);
     }
     LOG.info(getClientIdAuditPrefix() + " enable " + tableName);
-    this.service.submit(new EnableTableHandler(this, tableName,
-      assignmentManager, tableLockManager, false).prepare());
+
+    // Execute the operation asynchronously - client will check the progress of the operation
+    final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
+    long procId =
+        this.procedureExecutor.submitProcedure(new EnableTableProcedure(procedureExecutor
+            .getEnvironment(), tableName, false, prepareLatch));
+    // Before returning to client, we want to make sure that the table is prepared to be
+    // enabled (the table is locked and the table state is set).
+    //
+    // Note: if the procedure throws exception, we will catch it and rethrow.
+    prepareLatch.await();
+
     if (cpHost != null) {
       cpHost.postEnableTable(tableName);
-   }
+    }
+
+    // TODO: return procId as part of client-side change
+    // return procId;
   }
 
   @Override
@@ -1695,11 +1708,25 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.preDisableTable(tableName);
     }
     LOG.info(getClientIdAuditPrefix() + " disable " + tableName);
-    this.service.submit(new DisableTableHandler(this, tableName,
-      assignmentManager, tableLockManager, false).prepare());
+
+    // Execute the operation asynchronously - client will check the progress of the operation
+    final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
+    // Execute the operation asynchronously - client will check the progress of the operation
+    long procId =
+        this.procedureExecutor.submitProcedure(new DisableTableProcedure(procedureExecutor
+            .getEnvironment(), tableName, false, prepareLatch));
+    // Before returning to client, we want to make sure that the table is prepared to be
+    // enabled (the table is locked and the table state is set).
+    //
+    // Note: if the procedure throws exception, we will catch it and rethrow.
+    prepareLatch.await();
+
     if (cpHost != null) {
       cpHost.postDisableTable(tableName);
     }
+
+    // TODO: return procId as part of client-side change
+    // return procId;
   }
 
   /**

@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.TableName;
 
 /**
  * Procedures that operates on a specific Table (e.g. create, delete, snapshot, ...)
@@ -29,7 +29,9 @@ import org.apache.hadoop.hbase.TableName;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface TableProcedureInterface {
-  public enum TableOperationType { CREATE, DELETE, EDIT, READ };
+  public enum TableOperationType {
+    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
+  };
 
   /**
    * @return the name of the table the procedure is operating on
