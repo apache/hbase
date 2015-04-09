@@ -52,6 +52,8 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 public abstract class User {
   public static final String HBASE_SECURITY_CONF_KEY =
       "hbase.security.authentication";
+  public static final String HBASE_SECURITY_AUTHORIZATION_CONF_KEY =
+      "hbase.security.authorization";
 
   protected UserGroupInformation ugi;
 
