@@ -327,7 +327,11 @@ public class RpcServer implements RpcServerInterface {
       this.isError = false;
       this.size = size;
       this.tinfo = tinfo;
-      this.user = connection.user == null? null: userProvider.create(connection.user);
+      if (connection != null && connection.user != null) {
+        this.user = userProvider.create(connection.user);
+      } else {
+        this.user = null;
+      }
       this.remoteAddress = remoteAddress;
     }
 
