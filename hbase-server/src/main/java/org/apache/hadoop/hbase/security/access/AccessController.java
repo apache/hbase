@@ -1546,8 +1546,9 @@ public class AccessController extends BaseMasterAndRegionObserver
 
     logResult(authResult);
     if (authorizationEnabled && !authResult.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions (table=" + table +
-        ", action=READ)");
+      throw new AccessDeniedException("Insufficient permissions for user '"
+          + (user != null ? user.getShortName() : "null")
+          + "' (table=" + table + ", action=READ)");
     }
   }
 
