@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 
@@ -57,6 +58,10 @@ public class MobFileCompactionChore extends ScheduledChore {
       TableDescriptors htds = master.getTableDescriptors();
       Map<String, HTableDescriptor> map = htds.getAll();
       for (HTableDescriptor htd : map.values()) {
+        if (!master.getTableStateManager().isTableState(htd.getTableName(),
+          TableState.State.ENABLED)) {
+          continue;
+        }
         boolean reported = false;
         try {
           for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
