@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.12 - 4/8/2015
+Release 0.98.12 - 4/17/2015
 
 ** Sub-task
     * [HBASE-13006] - Document visibility label support for groups
@@ -10,12 +10,14 @@ Release 0.98.12 - 4/8/2015
     * [HBASE-13292] - Undo parent from 0.98 and 1.0: setting hbase.client.scanner.max.result.size is considered harmful
     * [HBASE-13303] - Fix size calculation of results on the region server
     * [HBASE-13335] - Update ClientSmallScanner and ClientSmallReversedScanner
+    * [HBASE-13386] - Backport HBASE-12601 to all active branches other than master
 
 ** Bug
     * [HBASE-10728] - get_counter value is never used.
     * [HBASE-12908] - Typos in MemStoreFlusher javadocs
     * [HBASE-12931] - The existing KeyValues in memstore are not removed completely after inserting cell into memStore 
     * [HBASE-12969] - Parameter Validation is not there for shell script, local-master-backup.sh and local-regionservers.sh
+    * [HBASE-13091] - Split ZK Quorum on Master WebUI
     * [HBASE-13136] - TestSplitLogManager.testGetPreviousRecoveryMode is flakey
     * [HBASE-13139] - Clean up missing JAVA_HOME message in bin/hbase-config.sh
     * [HBASE-13172] - TestDistributedLogSplitting.testThreeRSAbort fails several times on branch-1
@@ -28,8 +30,10 @@ Release 0.98.12 - 4/8/2015
     * [HBASE-13262] - ResultScanner doesn't return all rows in Scan
     * [HBASE-13269] - Limit result array preallocation to avoid OOME with large scan caching values
     * [HBASE-13273] - Make Result.EMPTY_RESULT read-only; currently it can be modified
+    * [HBASE-13275] - Setting hbase.security.authorization to false does not disable authorization
     * [HBASE-13282] - Fix the minor issues of running Canary on kerberized environment
     * [HBASE-13285] - Fix flaky getRegions() in TestAccessController.setUp()
+    * [HBASE-13289] - typo in splitSuccessCount  metric
     * [HBASE-13294] - Fix the critical ancient loopholes in security testing infrastructure.
     * [HBASE-13296] - Fix the deletion of acl notify nodes for namespace.
     * [HBASE-13305] - Get(Get get) is not copying the row key
@@ -37,8 +41,16 @@ Release 0.98.12 - 4/8/2015
     * [HBASE-13317] - Region server reportForDuty stuck looping if there is a master change
     * [HBASE-13326] - Disabled table can't be enabled after HBase is restarted
     * [HBASE-13331] - Exceptions from DFS client can cause CatalogJanitor to delete referenced files
+    * [HBASE-13374] - Small scanners (with particular configurations) do not return all rows
+    * [HBASE-13388] - Handling NullPointer in ZKProcedureMemberRpcs while getting ZNode data
+    * [HBASE-13397] - Purge duplicate rpc request thread local
+    * [HBASE-13409] - Add categories to uncategorized tests
+    * [HBASE-13422] - remove use of StandardCharsets in 0.98
+    * [HBASE-13433] - Backward compatibility in 1.0.z for shell broken for get_counter
 
 ** Improvement
+    * [HBASE-6919] - Remove unnecessary throws IOException from Bytes.readVLong
+    * [HBASE-12891] - Parallel execution for Hbck checkRegionConsistency
     * [HBASE-13100] - Shell command to retrieve table splits
     * [HBASE-13109] - Make better SEEK vs SKIP decisions during scanning
     * [HBASE-13120] - Allow disabling hadoop classpath and native library lookup
@@ -50,6 +62,12 @@ Release 0.98.12 - 4/8/2015
     * [HBASE-13241] - Add tests for group level grants
     * [HBASE-13342] - Fix incorrect interface annotations
     * [HBASE-13345] - Fix LocalHBaseCluster so that different region server impl can be used for different slaves
+    * [HBASE-13362] - Set max result size from client only (like scanner caching).
+    * [HBASE-13370] - PE tool could give option for using Explicit Column Tracker which leads to seeks
+    * [HBASE-13381] - Expand TestSizeFailures to include small scans
+
+** Task
+    * [HBASE-13380] - Cherry pick the HBASE-12808 compatibility checker tool back to 0.98+
 
 
 Release 0.98.11 - 3/9/2015
