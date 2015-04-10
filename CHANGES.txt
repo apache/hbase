@@ -47,6 +47,7 @@ Release 0.98.12 - 4/17/2015
     * [HBASE-13409] - Add categories to uncategorized tests
     * [HBASE-13422] - remove use of StandardCharsets in 0.98
     * [HBASE-13433] - Backward compatibility in 1.0.z for shell broken for get_counter
+    * [HBASE-13445] - RpcServer.Call change in backport of HBASE-13397 not sufficiently backwards compatible
 
 ** Improvement
     * [HBASE-6919] - Remove unnecessary throws IOException from Bytes.readVLong
