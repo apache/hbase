@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.0.1 04/11/2015
+Release Notes - HBase - Version 1.0.1 04/16/2015
 
 ** Sub-task
     * [HBASE-13006] - Document visibility label support for groups
@@ -65,8 +65,10 @@ Release Notes - HBase - Version 1.0.1 04/11/2015
     * [HBASE-13269] - Limit result array preallocation to avoid OOME with large scan caching values
     * [HBASE-13273] - Make Result.EMPTY_RESULT read-only; currently it can be modified
     * [HBASE-13274] - Fix misplaced deprecation in Delete#addXYZ
+    * [HBASE-13275] - Setting hbase.security.authorization to false does not disable authorization
     * [HBASE-13282] - Fix the minor issues of running Canary on kerberized environment
     * [HBASE-13285] - Fix flaky getRegions() in TestAccessController.setUp()
+    * [HBASE-13289] - typo in splitSuccessCount  metric
     * [HBASE-13294] - Fix the critical ancient loopholes in security testing infrastructure.
     * [HBASE-13296] - Fix the deletion of acl notify nodes for namespace.
     * [HBASE-13298] - Clarify if Table.{set|get}WriteBufferSize() is deprecated or not
@@ -80,6 +82,10 @@ Release Notes - HBase - Version 1.0.1 04/11/2015
     * [HBASE-13374] - Small scanners (with particular configurations) do not return all rows
     * [HBASE-13382] - IntegrationTestBigLinkedList should use SecureRandom
     * [HBASE-13388] - Handling NullPointer in ZKProcedureMemberRpcs while getting ZNode data
+    * [HBASE-13409] - Add categories to uncategorized tests
+    * [HBASE-13410] - Bug in KeyValueUtil.oswrite() for non Keyvalue cases
+    * [HBASE-13414] - TestHCM no longer needs to test for JRE 6.
+    * [HBASE-13433] - Backward compatibility in 1.0.z for shell broken for get_counter
 
 ** Improvement
     * [HBASE-13002] - Make encryption cipher configurable
@@ -90,6 +96,7 @@ Release Notes - HBase - Version 1.0.1 04/11/2015
     * [HBASE-13080] - Hbase shell message containing extra quote at the end of error message.
     * [HBASE-13086] - Show ZK root node on Master WebUI
     * [HBASE-13109] - Make better SEEK vs SKIP decisions during scanning
+    * [HBASE-13118] - [PE] Add being able to write many columns
     * [HBASE-13120] - Allow disabling hadoop classpath and native library lookup
     * [HBASE-13132] - Improve RemoveColumn action debug message 
     * [HBASE-13162] - Add capability for cleaning hbase acls to hbase cleanup script.
@@ -101,6 +108,9 @@ Release Notes - HBase - Version 1.0.1 04/11/2015
     * [HBASE-13241] - Add tests for group level grants
     * [HBASE-13342] - Fix incorrect interface annotations
     * [HBASE-13345] - Fix LocalHBaseCluster so that different region server impl can be used for different slaves
+    * [HBASE-13362] - Set max result size from client only (like scanner caching).
+    * [HBASE-13370] - PE tool could give option for using Explicit Column Tracker which leads to seeks
+    * [HBASE-13381] - Expand TestSizeFailures to include small scans
 
 ** New Feature
     * [HBASE-12869] - Add a REST API implementation of the ClusterManager interface
