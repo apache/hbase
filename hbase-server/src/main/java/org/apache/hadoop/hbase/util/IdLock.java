@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Allows multiple concurrent clients to lock on a numeric id with a minimal
  * memory overhead. The intended usage is as follows:
@@ -119,4 +121,18 @@ public class IdLock {
     assert map.size() == 0;
   }
 
+  @VisibleForTesting
+  public void waitForWaiters(long id, int numWaiters) throws InterruptedException {
+    for (Entry entry;;) {
+      entry = map.get(id);
+      if (entry != null) {
+        synchronized (entry) {
+          if (entry.numWaiters >= numWaiters) {
+            return;
+          }
+        }
+      }
+      Thread.sleep(100);
+    }
+  }
 }
