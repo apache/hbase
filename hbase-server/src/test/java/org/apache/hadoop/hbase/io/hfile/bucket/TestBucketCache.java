@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.BucketSizeInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.IndexStatistics;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.IdLock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,8 +45,7 @@ import org.junit.runners.Parameterized;
 /**
  * Basic test of BucketCache.Puts and gets.
  * <p>
- * Tests will ensure that blocks' data correctness under several threads
- * concurrency
+ * Tests will ensure that blocks' data correctness under several threads concurrency
  */
 @RunWith(Parameterized.class)
 @Category(SmallTests.class)
@@ -52,15 +53,15 @@ public class TestBucketCache {
 
   private static final Random RAND = new Random();
 
-  @Parameterized.Parameters(name="{index}: blockSize={0}, bucketSizes={1}")
+  @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
   public static Iterable<Object[]> data() {
     return Arrays.asList(new Object[][] {
-      { 8192, null }, // TODO: why is 8k the default blocksize for these tests?
-      { 16 * 1024, new int[] {
-        2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
-        28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-        128 * 1024 + 1024 } }
-    });
+        { 8192, null }, // TODO: why is 8k the default blocksize for these tests?
+        {
+            16 * 1024,
+            new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
+                28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
+                128 * 1024 + 1024 } } });
   }
 
   @Parameterized.Parameter(0)
@@ -75,7 +76,7 @@ public class TestBucketCache {
   final int BLOCK_SIZE = CACHE_SIZE / NUM_BLOCKS;
   final int NUM_THREADS = 1000;
   final int NUM_QUERIES = 10000;
-  
+
   final long capacitySize = 32 * 1024 * 1024;
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
@@ -85,10 +86,10 @@ public class TestBucketCache {
   private class MockedBucketCache extends BucketCache {
 
     public MockedBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
-      int writerThreads, int writerQLen, String persistencePath)
-        throws FileNotFoundException, IOException {
+        int writerThreads, int writerQLen, String persistencePath) throws FileNotFoundException,
+        IOException {
       super(ioEngineName, capacity, blockSize, bucketSizes, writerThreads, writerQLen,
-        persistencePath);
+          persistencePath);
       super.wait_when_cache = true;
     }
 
@@ -112,8 +113,9 @@ public class TestBucketCache {
 
   @Before
   public void setup() throws FileNotFoundException, IOException {
-    cache = new MockedBucketCache(ioEngineName, capacitySize, constructedBlockSize,
-      constructedBlockSizes, writeThreads, writerQLen, persistencePath);
+    cache =
+        new MockedBucketCache(ioEngineName, capacitySize, constructedBlockSize,
+            constructedBlockSizes, writeThreads, writerQLen, persistencePath);
   }
 
   @After
@@ -141,7 +143,7 @@ public class TestBucketCache {
     // Fill the allocated extents by choosing a random blocksize. Continues selecting blocks until
     // the cache is completely filled.
     List<Integer> tmp = new ArrayList<Integer>(BLOCKSIZES);
-    for (int i = 0; !full; i++) {
+    while (!full) {
       Integer blockSize = null;
       try {
         blockSize = randFrom(tmp);
@@ -155,9 +157,7 @@ public class TestBucketCache {
     for (Integer blockSize : BLOCKSIZES) {
       BucketSizeInfo bucketSizeInfo = mAllocator.roundUpToBucketSizeInfo(blockSize);
       IndexStatistics indexStatistics = bucketSizeInfo.statistics();
-      assertEquals(
-        "unexpected freeCount for " + bucketSizeInfo,
-        0, indexStatistics.freeCount());
+      assertEquals("unexpected freeCount for " + bucketSizeInfo, 0, indexStatistics.freeCount());
     }
 
     for (long offset : allocations) {
@@ -182,4 +182,40 @@ public class TestBucketCache {
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }
 
+  // BucketCache.cacheBlock is async, it first adds block to ramCache and writeQueue, then writer
+  // threads will flush it to the bucket and put reference entry in backingMap.
+  private void cacheAndWaitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey,
+      Cacheable block) throws InterruptedException {
+    cache.cacheBlock(cacheKey, block);
+    while (!cache.backingMap.containsKey(cacheKey)) {
+      Thread.sleep(100);
+    }
+  }
+
+  @Test
+  public void testMemoryLeak() throws Exception {
+    final BlockCacheKey cacheKey = new BlockCacheKey("dummy", 1L);
+    cacheAndWaitUntilFlushedToBucket(cache, cacheKey, new CacheTestUtils.ByteArrayCacheable(
+        new byte[10]));
+    long lockId = cache.backingMap.get(cacheKey).offset();
+    IdLock.Entry lockEntry = cache.offsetLock.getLockEntry(lockId);
+    Thread evictThread = new Thread("evict-block") {
+
+      @Override
+      public void run() {
+        cache.evictBlock(cacheKey);
+      }
+
+    };
+    evictThread.start();
+    cache.offsetLock.waitForWaiters(lockId, 1);
+    cache.blockEvicted(cacheKey, cache.backingMap.remove(cacheKey), true);
+    cacheAndWaitUntilFlushedToBucket(cache, cacheKey, new CacheTestUtils.ByteArrayCacheable(
+        new byte[10]));
+    cache.offsetLock.releaseLockEntry(lockEntry);
+    evictThread.join();
+    assertEquals(1L, cache.getBlockCount());
+    assertTrue(cache.getCurrentSize() > 0L);
+    assertTrue("We should have a block!", cache.iterator().hasNext());
+  }
 }
