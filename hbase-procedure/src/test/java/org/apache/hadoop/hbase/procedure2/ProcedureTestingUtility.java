@@ -67,8 +67,8 @@ public class ProcedureTestingUtility {
     int execThreads = procExecutor.getNumThreads();
     // stop
     procExecutor.stop();
-    procStore.stop(false);
     procExecutor.join();
+    procStore.stop(false);
     // nothing running...
     if (beforeStartAction != null) {
       beforeStartAction.run();
