@@ -28,6 +28,9 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class SnapshotExistsException extends HBaseSnapshotException {
+  public SnapshotExistsException(String msg) {
+    super(msg);
+  }
 
   /**
    * Failure due to the snapshot already existing
