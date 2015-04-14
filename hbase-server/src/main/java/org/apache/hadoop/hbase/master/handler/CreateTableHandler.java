@@ -186,9 +186,9 @@ public class CreateTableHandler extends EventHandler {
   public void process() {
     TableName tableName = this.hTableDescriptor.getTableName();
     LOG.info("Create table " + tableName);
-
+    HMaster master = ((HMaster) this.server);
     try {
-      final MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
+      final MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
       if (cpHost != null) {
         cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
       }
@@ -205,6 +205,14 @@ public class CreateTableHandler extends EventHandler {
       }
     } catch (Throwable e) {
       LOG.error("Error trying to create the table " + tableName, e);
+      if (master.isInitialized()) {
+        try {
+          ((HMaster) this.server).getMasterQuotaManager().removeTableFromNamespaceQuota(
+            hTableDescriptor.getTableName());
+        } catch (IOException e1) {
+          LOG.error("Error trying to update namespace quota " + e1);
+        }
+      }
       completed(e);
     }
   }

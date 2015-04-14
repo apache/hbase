@@ -133,6 +133,7 @@ public class DeleteTableHandler extends TableEventHandler {
     if (cpHost != null) {
       cpHost.postDeleteTableHandler(this.tableName);
     }
+    ((HMaster) this.server).getMasterQuotaManager().removeTableFromNamespaceQuota(tableName);
   }
 
   /**

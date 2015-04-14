@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.NavigableSet;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -30,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -70,6 +72,9 @@ public class TableNamespaceManager {
   private Table nsTable;
   private ZKNamespaceManager zkNamespaceManager;
   private boolean initialized;
+  
+  public static final String KEY_MAX_REGIONS = "hbase.namespace.quota.maxregions";
+  public static final String KEY_MAX_TABLES = "hbase.namespace.quota.maxtables";
 
   static final String NS_INIT_TIMEOUT = "hbase.master.namespace.init.timeout";
   static final int DEFAULT_NS_INIT_TIMEOUT = 300000;
@@ -149,13 +154,18 @@ public class TableNamespaceManager {
     if (get(table, ns.getName()) != null) {
       throw new NamespaceExistException(ns.getName());
     }
+    validateTableAndRegionCount(ns);
     FileSystem fs = masterServices.getMasterFileSystem().getFileSystem();
     fs.mkdirs(FSUtils.getNamespaceDir(
         masterServices.getMasterFileSystem().getRootDir(), ns.getName()));
     upsert(table, ns);
+    if (this.masterServices.isInitialized()) {
+      this.masterServices.getMasterQuotaManager().setNamespaceQuota(ns);
+    }
   }
 
   private void upsert(Table table, NamespaceDescriptor ns) throws IOException {
+    validateTableAndRegionCount(ns);
     Put p = new Put(Bytes.toBytes(ns.getName()));
     p.addImmutable(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
         HTableDescriptor.NAMESPACE_COL_DESC_BYTES,
@@ -204,6 +214,7 @@ public class TableNamespaceManager {
         masterServices.getMasterFileSystem().getRootDir(), name), true)) {
       throw new IOException("Failed to remove namespace: "+name);
     }
+    this.masterServices.getMasterQuotaManager().removeNamespaceQuota(name);
   }
 
   public synchronized NavigableSet<NamespaceDescriptor> list() throws IOException {
@@ -299,5 +310,48 @@ public class TableNamespaceManager {
   private boolean isTableAssigned() {
     return !masterServices.getAssignmentManager().getRegionStates().
       getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME).isEmpty();
+  }
+  
+  void validateTableAndRegionCount(NamespaceDescriptor desc) throws IOException {
+    if (getMaxRegions(desc) <= 0) {
+      throw new ConstraintException("The max region quota for " + desc.getName()
+          + " is less than or equal to zero.");
+    }
+    if (getMaxTables(desc) <= 0) {
+      throw new ConstraintException("The max tables quota for " + desc.getName()
+          + " is less than or equal to zero.");
+    }
+  }
+
+  public static long getMaxTables(NamespaceDescriptor ns) throws IOException {
+    String value = ns.getConfigurationValue(KEY_MAX_TABLES);
+    long maxTables = 0;
+    if (StringUtils.isNotEmpty(value)) {
+      try {
+        maxTables = Long.parseLong(value);
+      } catch (NumberFormatException exp) {
+        throw new DoNotRetryIOException("NumberFormatException while getting max tables.", exp);
+      }
+    } else {
+      // The property is not set, so assume its the max long value.
+      maxTables = Long.MAX_VALUE;
+    }
+    return maxTables;
+  }
+
+  public static long getMaxRegions(NamespaceDescriptor ns) throws IOException {
+    String value = ns.getConfigurationValue(KEY_MAX_REGIONS);
+    long maxRegions = 0;
+    if (StringUtils.isNotEmpty(value)) {
+      try {
+        maxRegions = Long.parseLong(value);
+      } catch (NumberFormatException exp) {
+        throw new DoNotRetryIOException("NumberFormatException while getting max regions.", exp);
+      }
+    } else {
+      // The property is not set, so assume its the max long value.
+      maxRegions = Long.MAX_VALUE;
+    }
+    return maxRegions;
   }
 }

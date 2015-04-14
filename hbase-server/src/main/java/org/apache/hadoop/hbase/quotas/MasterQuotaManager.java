@@ -19,11 +19,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
+import org.apache.hadoop.hbase.namespace.NamespaceAuditor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
@@ -40,7 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class MasterQuotaManager {
+public class MasterQuotaManager implements RegionStateListener {
   private static final Log LOG = LogFactory.getLog(MasterQuotaManager.class);
 
   private final MasterServices masterServices;
@@ -48,6 +50,7 @@ public class MasterQuotaManager {
   private NamedLock<TableName> tableLocks;
   private NamedLock<String> userLocks;
   private boolean enabled = false;
+  private NamespaceAuditor namespaceQuotaManager;
 
   public MasterQuotaManager(final MasterServices masterServices) {
     this.masterServices = masterServices;
@@ -72,6 +75,8 @@ public class MasterQuotaManager {
     tableLocks = new NamedLock<TableName>();
     userLocks = new NamedLock<String>();
 
+    namespaceQuotaManager = new NamespaceAuditor(masterServices);
+    namespaceQuotaManager.start();
     enabled = true;
   }
 
@@ -79,7 +84,7 @@ public class MasterQuotaManager {
   }
 
   public boolean isQuotaEnabled() {
-    return enabled;
+    return enabled && namespaceQuotaManager.isInitialized();
   }
 
   /*
@@ -275,6 +280,18 @@ public class MasterQuotaManager {
       }
     });
   }
+  
+  public void setNamespaceQuota(NamespaceDescriptor desc) throws IOException {
+    if (enabled) {
+      this.namespaceQuotaManager.addNamespace(desc);
+    }
+  }
+
+  public void removeNamespaceQuota(String namespace) throws IOException {
+    if (enabled) {
+      this.namespaceQuotaManager.deleteNamespace(namespace);
+    }
+  }
 
   private void setQuota(final SetQuotaRequest req, final SetQuotaOperations quotaOps)
       throws IOException, InterruptedException {
@@ -301,6 +318,39 @@ public class MasterQuotaManager {
       quotaOps.update(quotas);
     }
     quotaOps.postApply(quotas);
+  }
+
+  public void checkNamespaceTableAndRegionQuota(TableName tName, int regions) throws IOException {
+    if (enabled) {
+      namespaceQuotaManager.checkQuotaToCreateTable(tName, regions);
+    }
+  }
+
+  public void onRegionMerged(HRegionInfo hri) throws IOException {
+    if (enabled) {
+      namespaceQuotaManager.updateQuotaForRegionMerge(hri);
+    }
+  }
+
+  public void onRegionSplit(HRegionInfo hri) throws IOException {
+    if (enabled) {
+      namespaceQuotaManager.checkQuotaToSplitRegion(hri);
+    }
+  }
+
+  /**
+   * Remove table from namespace quota.
+   * @param tName - The table name to update quota usage.
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  public void removeTableFromNamespaceQuota(TableName tName) throws IOException {
+    if (enabled) {
+      namespaceQuotaManager.removeFromNamespaceUsage(tName);
+    }
+  }
+
+  public NamespaceAuditor getNamespaceQuotaManager() {
+    return this.namespaceQuotaManager;
   }
 
   private static interface SetQuotaOperations {
@@ -436,6 +486,13 @@ public class MasterQuotaManager {
         locks.remove(name);
         locks.notifyAll();
       }
+    }
+  }
+  
+  @Override
+  public void onRegionSplitReverted(HRegionInfo hri) throws IOException {
+    if (enabled) {
+      this.namespaceQuotaManager.removeRegionFromNamespaceUsage(hri);
     }
   }
 }

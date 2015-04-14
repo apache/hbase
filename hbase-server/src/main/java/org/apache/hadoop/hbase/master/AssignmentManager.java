@@ -45,7 +45,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -55,6 +54,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTransition;
@@ -63,9 +63,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableStateManager;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
@@ -90,11 +89,11 @@ import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.quotas.RegionStateListener;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.ConfigUtil;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
@@ -102,11 +101,13 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -254,6 +255,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /** Listeners that are called on assignment events. */
   private List<AssignmentListener> listeners = new CopyOnWriteArrayList<AssignmentListener>();
+  
+  private RegionStateListener regionStateListener;
 
   /**
    * Constructs a new assignment manager.
@@ -4211,17 +4214,33 @@ public class AssignmentManager extends ZooKeeperListener {
       break;
 
     case READY_TO_SPLIT:
+      try {
+        regionStateListener.onRegionSplit(hri);
+      } catch (IOException exp) {
+        errorMsg = StringUtils.stringifyException(exp);
+      }
     case SPLIT_PONR:
     case SPLIT:
     case SPLIT_REVERTED:
-      errorMsg = onRegionSplit(serverName, code, hri,
-        HRegionInfo.convert(transition.getRegionInfo(1)),
-        HRegionInfo.convert(transition.getRegionInfo(2)));
+      errorMsg =
+          onRegionSplit(serverName, code, hri, HRegionInfo.convert(transition.getRegionInfo(1)),
+            HRegionInfo.convert(transition.getRegionInfo(2)));
+      if (org.apache.commons.lang.StringUtils.isEmpty(errorMsg)) {
+        try {
+          regionStateListener.onRegionSplitReverted(hri);
+        } catch (IOException exp) {
+          LOG.warn(StringUtils.stringifyException(exp));
+        }
+      }
       break;
-
     case READY_TO_MERGE:
     case MERGE_PONR:
     case MERGED:
+      try {
+        regionStateListener.onRegionMerged(hri);
+      } catch (IOException exp) {
+        errorMsg = StringUtils.stringifyException(exp);
+      }
     case MERGE_REVERTED:
       errorMsg = onRegionMerge(serverName, code, hri,
         HRegionInfo.convert(transition.getRegionInfo(1)),
@@ -4248,5 +4267,9 @@ public class AssignmentManager extends ZooKeeperListener {
   public Map<ServerName, List<HRegionInfo>>
     getSnapShotOfAssignment(Collection<HRegionInfo> infos) {
     return getRegionStates().getRegionAssignments(infos);
+  }
+  
+  void setRegionStateListener(RegionStateListener listener) {
+    this.regionStateListener = listener;
   }
 }
