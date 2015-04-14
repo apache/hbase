@@ -59,7 +59,7 @@ Thus, an ensemble of 5 allows 2 peers to fail, and thus is more fault tolerant t
 Give each ZooKeeper server around 1GB of RAM, and if possible, its own dedicated disk (A dedicated disk is the best thing you can do to ensure a performant ZooKeeper ensemble). For very heavily loaded clusters, run ZooKeeper servers on separate machines from RegionServers (DataNodes and TaskTrackers).
 ====
 
-For example, to have HBase manage a ZooKeeper quorum on nodes _rs{1,2,3,4,5}.example.com_, bound to port 2222 (the default is 2181) ensure `HBASE_MANAGE_ZK` is commented out or set to `true` in _conf/hbase-env.sh_ and then edit _conf/hbase-site.xml_    and set `hbase.zookeeper.property.clientPort` and `hbase.zookeeper.quorum`.
+For example, to have HBase manage a ZooKeeper quorum on nodes _rs{1,2,3,4,5}.example.com_, bound to port 2222 (the default is 2181) ensure `HBASE_MANAGES_ZK` is commented out or set to `true` in _conf/hbase-env.sh_ and then edit _conf/hbase-site.xml_    and set `hbase.zookeeper.property.clientPort` and `hbase.zookeeper.quorum`.
 You should also set `hbase.zookeeper.property.dataDir` to other than the default as the default has ZooKeeper persist data under _/tmp_ which is often cleared on system restart.
 In the example below we have ZooKeeper persist to _/user/local/zookeeper_.
 
