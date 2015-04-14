@@ -120,7 +120,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
     boolean epollEnabled = conf.getBoolean(USE_NATIVE_TRANSPORT, false);
 
     // Use the faster native epoll transport mechanism on linux if enabled
-    if (epollEnabled && JVM.isLinux()) {
+    if (epollEnabled && JVM.isLinux() && JVM.isAmd64()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Create EpollEventLoopGroup with maxThreads = " + maxThreads);
       }
