@@ -106,13 +106,14 @@ public class DeleteTableProcedure
             return Flow.NO_MORE_STATE;
           }
 
-          preDelete(env);
-
           // TODO: Move out... in the acquireLock()
           LOG.debug("waiting for '" + getTableName() + "' regions in transition");
           regions = ProcedureSyncWait.getRegionsFromMeta(env, getTableName());
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
           ProcedureSyncWait.waitRegionInTransition(env, regions);
+
+          // Call coprocessors
+          preDelete(env);
 
           setNextState(DeleteTableState.DELETE_TABLE_REMOVE_FROM_META);
           break;

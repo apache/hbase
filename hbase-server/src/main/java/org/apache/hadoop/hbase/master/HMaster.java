@@ -91,7 +91,6 @@ import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
-import org.apache.hadoop.hbase.master.handler.TruncateTableHandler;
 import org.apache.hadoop.hbase.master.procedure.AddColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteColumnFamilyProcedure;
@@ -104,6 +103,7 @@ import org.apache.hadoop.hbase.master.procedure.ModifyColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
+import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -1630,9 +1630,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.preTruncateTable(tableName);
     }
     LOG.info(getClientIdAuditPrefix() + " truncate " + tableName);
-    TruncateTableHandler handler = new TruncateTableHandler(tableName, this, this, preserveSplits);
-    handler.prepare();
-    handler.process();
+
+    long procId = this.procedureExecutor.submitProcedure(
+        new TruncateTableProcedure(procedureExecutor.getEnvironment(), tableName, preserveSplits));
+    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+
     if (cpHost != null) {
       cpHost.postTruncateTable(tableName);
     }

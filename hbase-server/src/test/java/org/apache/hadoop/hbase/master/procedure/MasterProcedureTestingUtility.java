@@ -35,6 +35,10 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
@@ -46,6 +50,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.MD5Hash;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -87,6 +92,7 @@ public class MasterProcedureTestingUtility {
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertTrue(fs.exists(tableDir));
+    FSUtils.logFileSystemState(fs, tableDir, LOG);
     List<Path> allRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
     for (int i = 0; i < regions.length; ++i) {
       Path regionDir = new Path(tableDir, regions[i].getEncodedName());
@@ -340,6 +346,43 @@ public class MasterProcedureTestingUtility {
 
     HColumnDescriptor hcfd = htd.getFamily(family.getBytes());
     assertTrue(hcfd.equals(columnDescriptor));
+  }
+
+  public static void loadData(final Connection connection, final TableName tableName,
+      int rows, final byte[][] splitKeys,  final String... sfamilies) throws IOException {
+    byte[][] families = new byte[sfamilies.length][];
+    for (int i = 0; i < families.length; ++i) {
+      families[i] = Bytes.toBytes(sfamilies[i]);
+    }
+
+    BufferedMutator mutator = connection.getBufferedMutator(tableName);
+
+    // Ensure one row per region
+    assertTrue(rows >= splitKeys.length);
+    for (byte[] k: splitKeys) {
+      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), k);
+      byte[] key = Bytes.add(k, Bytes.toBytes(MD5Hash.getMD5AsHex(value)));
+      mutator.mutate(createPut(families, key, value));
+      rows--;
+    }
+
+    // Add other extra rows. more rows, more files
+    while (rows-- > 0) {
+      byte[] value = Bytes.add(Bytes.toBytes(System.currentTimeMillis()), Bytes.toBytes(rows));
+      byte[] key = Bytes.toBytes(MD5Hash.getMD5AsHex(value));
+      mutator.mutate(createPut(families, key, value));
+    }
+    mutator.flush();
+  }
+
+  private static Put createPut(final byte[][] families, final byte[] key, final byte[] value) {
+    byte[] q = Bytes.toBytes("q");
+    Put put = new Put(key);
+    put.setDurability(Durability.SKIP_WAL);
+    for (byte[] family: families) {
+      put.add(family, q, value);
+    }
+    return put;
   }
 
   public static class InjectAbortOnLoadListener
