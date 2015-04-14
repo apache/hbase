@@ -1356,6 +1356,33 @@ public class Bytes {
         return theUnsafe != null;
       }
 
+      private static final boolean unaligned=!"sparcv9".equals(System.getProperty("os.arch"));
+
+      private long getLong(Object address, long offset) {
+          if (unaligned) {
+            return theUnsafe.getLong(address, offset);
+          } else {
+            if (littleEndian) {
+              return (((long) theUnsafe.getByte(address, offset + 7)       ) << 56) |
+                     (((long) theUnsafe.getByte(address, offset + 6) & 0xff) << 48) |
+                     (((long) theUnsafe.getByte(address, offset + 5) & 0xff) << 40) |
+                     (((long) theUnsafe.getByte(address, offset + 4) & 0xff) << 32) |
+                     (((long) theUnsafe.getByte(address, offset + 3) & 0xff) << 24) |
+                     (((long) theUnsafe.getByte(address, offset + 2) & 0xff) << 16) |
+                     (((long) theUnsafe.getByte(address, offset + 1) & 0xff) <<  8) |
+                     (((long) theUnsafe.getByte(address, offset    ) & 0xff)      );
+            } else {
+              return (((long) theUnsafe.getByte(address, offset    )       ) << 56) |
+                     (((long) theUnsafe.getByte(address, offset + 1) & 0xff) << 48) |
+                     (((long) theUnsafe.getByte(address, offset + 2) & 0xff) << 40) |
+                     (((long) theUnsafe.getByte(address, offset + 3) & 0xff) << 32) |
+                     (((long) theUnsafe.getByte(address, offset + 4) & 0xff) << 24) |
+                     (((long) theUnsafe.getByte(address, offset + 5) & 0xff) << 16) |
+                     (((long) theUnsafe.getByte(address, offset + 6) & 0xff) <<  8) |
+                     (((long) theUnsafe.getByte(address, offset + 7) & 0xff)      );
+            }
+          }
+        }
       /**
        * Lexicographically compare two arrays.
        *
@@ -1388,8 +1415,8 @@ public class Bytes {
          * On the other hand, it is substantially faster on 64-bit.
          */
         for (int i = 0; i < minWords * SIZEOF_LONG; i += SIZEOF_LONG) {
-          long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
-          long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
+          long lw = getLong(buffer1, offset1Adj + (long) i);
+          long rw = getLong(buffer2, offset2Adj + (long) i);
           long diff = lw ^ rw;
           if(littleEndian){
             lw = Long.reverseBytes(lw);
