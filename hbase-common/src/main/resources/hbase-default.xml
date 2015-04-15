@@ -96,6 +96,11 @@ possible configurations would overwhelm and obscure the important.
   </property>
 
   <!--Master configurations-->
+  <property >
+    <name>hbase.master.port</name>
+    <value>16000</value>
+    <description>The port the HBase Master should bind to.</description>
+  </property>
   <property>
     <name>hbase.master.info.port</name>
     <value>16010</value>

@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -802,6 +803,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     String hostname = getHostname(rs.conf);
     int port = rs.conf.getInt(HConstants.REGIONSERVER_PORT,
       HConstants.DEFAULT_REGIONSERVER_PORT);
+    if(this instanceof MasterRpcServices) {
+      port = rs.conf.getInt(HConstants.MASTER_PORT,
+          HConstants.DEFAULT_MASTER_PORT);
+    }
     // Creation of a HSA will force a resolve.
     InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
     InetSocketAddress bindAddress = new InetSocketAddress(
