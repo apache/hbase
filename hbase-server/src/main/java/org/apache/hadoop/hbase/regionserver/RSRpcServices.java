@@ -555,6 +555,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     .setName(result.getClass().getName())
                     .setValue(result.toByteString())));
           } catch (IOException ioe) {
+            rpcServer.getMetrics().exception(ioe);
             resultOrExceptionBuilder.setException(ResponseConverter.buildException(ioe));
           }
         } else if (action.hasMutation()) {
@@ -604,6 +605,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // case the corresponding ResultOrException instance for the Put or Delete will be added
         // down in the doBatchOp method call rather than up here.
       } catch (IOException ie) {
+        rpcServer.getMetrics().exception(ie);
         resultOrExceptionBuilder = ResultOrException.newBuilder().
           setException(ResponseConverter.buildException(ie));
       }
@@ -1929,6 +1931,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         region = getRegion(regionAction.getRegion());
         quota = getQuotaManager().checkQuota(region, regionAction.getActionList());
       } catch (IOException e) {
+        rpcServer.getMetrics().exception(e);
         regionActionResultBuilder.setException(ResponseConverter.buildException(e));
         responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
         continue;  // For this region it's a failure.
@@ -1959,6 +1962,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             processed = Boolean.TRUE;
           }
         } catch (IOException e) {
+          rpcServer.getMetrics().exception(e);
           // As it's atomic, we may expect it's a global failure.
           regionActionResultBuilder.setException(ResponseConverter.buildException(e));
         }
