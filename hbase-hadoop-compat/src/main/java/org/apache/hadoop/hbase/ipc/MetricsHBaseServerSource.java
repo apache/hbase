@@ -58,6 +58,16 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String NUM_ACTIVE_HANDLER_NAME = "numActiveHandler";
   String NUM_ACTIVE_HANDLER_DESC = "Number of active rpc handlers.";
 
+  String EXCEPTIONS_NAME="exceptions";
+  String EXCEPTIONS_DESC="Exceptions caused by requests";
+  String EXCEPTIONS_TYPE_DESC="Number of requests that resulted in the specified type of Exception";
+  String EXCEPTIONS_OOO_NAME="exceptions.OutOfOrderScannerNextException";
+  String EXCEPTIONS_BUSY_NAME="exceptions.RegionTooBusyException";
+  String EXCEPTIONS_UNKNOWN_NAME="exceptions.UnknownScannerException";
+  String EXCEPTIONS_SANITY_NAME="exceptions.FailedSanityCheckException";
+  String EXCEPTIONS_MOVED_NAME="exceptions.RegionMovedException";
+  String EXCEPTIONS_NSRE_NAME="exceptions.NotServingRegionException";
+
   void authorizationSuccess();
 
   void authorizationFailure();
@@ -65,6 +75,18 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void authenticationSuccess();
 
   void authenticationFailure();
+
+  void exception();
+
+  /**
+   * Different types of exceptions
+   */
+  void outOfOrderException();
+  void failedSanityException();
+  void movedRegionException();
+  void notServingRegionException();
+  void unknownScannerException();
+  void tooBusyException();
 
   void sentBytes(long count);
 

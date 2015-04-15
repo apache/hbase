@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourceFactory {
-  private static enum SourceStorage {
+  private enum SourceStorage {
     INSTANCE;
     HashMap<String, MetricsHBaseServerSource>
         sources =
@@ -39,7 +39,7 @@ public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourc
   }
 
   private static synchronized MetricsHBaseServerSource getSource(String serverName,
-                                                                 MetricsHBaseServerWrapper wrapper) {
+                                                                 MetricsHBaseServerWrapper wrap) {
     String context = createContextName(serverName);
     MetricsHBaseServerSource source = SourceStorage.INSTANCE.sources.get(context);
 
@@ -49,7 +49,7 @@ public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourc
           context,
           METRICS_DESCRIPTION,
           context.toLowerCase(),
-          context + METRICS_JMX_CONTEXT_SUFFIX, wrapper);
+          context + METRICS_JMX_CONTEXT_SUFFIX, wrap);
 
       //Store back in storage
       SourceStorage.INSTANCE.sources.put(context, source);
