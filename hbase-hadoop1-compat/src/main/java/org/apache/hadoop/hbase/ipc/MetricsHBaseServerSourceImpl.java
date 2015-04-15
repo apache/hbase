@@ -35,6 +35,15 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private final MetricMutableCounterLong authenticationFailures;
   private final MetricMutableCounterLong sentBytes;
   private final MetricMutableCounterLong receivedBytes;
+
+  private final MetricMutableCounterLong exceptions;
+  private final MetricMutableCounterLong exceptionsOOO;
+  private final MetricMutableCounterLong exceptionsBusy;
+  private final MetricMutableCounterLong exceptionsUnknown;
+  private final MetricMutableCounterLong exceptionsSanity;
+  private final MetricMutableCounterLong exceptionsNSRE;
+  private final MetricMutableCounterLong exceptionsMoved;
+
   private MetricMutableHistogram queueCallTime;
   private MetricMutableHistogram processCallTime;
 
@@ -50,6 +59,20 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         AUTHORIZATION_SUCCESSES_DESC, 0l);
     this.authorizationFailures = this.getMetricsRegistry().newCounter(AUTHORIZATION_FAILURES_NAME,
         AUTHORIZATION_FAILURES_DESC, 0l);
+
+    this.exceptions = this.getMetricsRegistry().newCounter(EXCEPTIONS_NAME, EXCEPTIONS_DESC, 0L);
+    this.exceptionsOOO = this.getMetricsRegistry()
+        .newCounter(EXCEPTIONS_OOO_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsBusy = this.getMetricsRegistry()
+        .newCounter(EXCEPTIONS_BUSY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsUnknown = this.getMetricsRegistry()
+        .newCounter(EXCEPTIONS_UNKNOWN_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsSanity = this.getMetricsRegistry()
+        .newCounter(EXCEPTIONS_SANITY_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsMoved = this.getMetricsRegistry()
+        .newCounter(EXCEPTIONS_MOVED_NAME, EXCEPTIONS_TYPE_DESC, 0L);
+    this.exceptionsNSRE = this.getMetricsRegistry()
+        .newCounter(EXCEPTIONS_NSRE_NAME, EXCEPTIONS_TYPE_DESC, 0L);
 
     this.authenticationSuccesses = this.getMetricsRegistry().newCounter(
         AUTHENTICATION_SUCCESSES_NAME, AUTHENTICATION_SUCCESSES_DESC, 0l);
@@ -83,6 +106,41 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   @Override
   public void authenticationSuccess() {
     authenticationSuccesses.incr();
+  }
+
+  @Override
+  public void exception() {
+    exceptions.incr();
+  }
+
+  @Override
+  public void outOfOrderException() {
+    exceptionsOOO.incr();
+  }
+
+  @Override
+  public void failedSanityException() {
+    exceptionsSanity.incr();
+  }
+
+  @Override
+  public void movedRegionException() {
+    exceptionsMoved.incr();
+  }
+
+  @Override
+  public void notServingRegionException() {
+    exceptionsNSRE.incr();
+  }
+
+  @Override
+  public void unknownScannerException() {
+    exceptionsUnknown.incr();
+  }
+
+  @Override
+  public void tooBusyException() {
+    exceptionsBusy.incr();
   }
 
   @Override

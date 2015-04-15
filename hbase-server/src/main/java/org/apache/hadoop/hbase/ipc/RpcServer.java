@@ -153,6 +153,8 @@ public class RpcServer implements RpcServerInterface {
   // The logging package is deliberately outside of standard o.a.h.h package so it is not on
   // by default.
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RpcServer");
+  private static final CallQueueTooBigException CALL_QUEUE_TOO_BIG_EXCEPTION
+      = new CallQueueTooBigException();
 
   private final boolean authorize;
   private boolean isSecurityEnabled;
@@ -1458,6 +1460,7 @@ public class RpcServer implements RpcServerInterface {
           saslServer.dispose();
           saslServer = null;
         } catch (SaslException ignored) {
+          // Ignored. This is being disposed of anyway.
         }
       }
     }
@@ -1746,9 +1749,10 @@ public class RpcServer implements RpcServerInterface {
           new Call(id, this.service, null, null, null, null, this,
             responder, totalRequestSize, null, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
-        setupResponse(responseBuffer, callTooBig, new CallQueueTooBigException(),
-          "Call queue is full on " + getListenerAddress() +
-          ", is hbase.ipc.server.max.callqueue.size too small?");
+        metrics.exception(CALL_QUEUE_TOO_BIG_EXCEPTION);
+        setupResponse(responseBuffer, callTooBig, CALL_QUEUE_TOO_BIG_EXCEPTION,
+            "Call queue is full on " + getListenerAddress() +
+                ", is hbase.ipc.server.max.callqueue.size too small?");
         responder.doRespond(callTooBig);
         return;
       }
@@ -1777,6 +1781,8 @@ public class RpcServer implements RpcServerInterface {
         String msg = getListenerAddress() + " is unable to read call parameter from client " +
             getHostAddress();
         LOG.warn(msg, t);
+
+        metrics.exception(t);
 
         // probably the hbase hadoop version does not match the running hadoop version
         if (t instanceof LinkageError) {
@@ -2126,6 +2132,10 @@ public class RpcServer implements RpcServerInterface {
       // putting it on the wire.  Its needed to adhere to the pb Service Interface but we don't
       // need to pass it over the wire.
       if (e instanceof ServiceException) e = e.getCause();
+
+      // increment the number of requests that were exceptions.
+      metrics.exception(e);
+
       if (e instanceof LinkageError) throw new DoNotRetryIOException(e);
       if (e instanceof IOException) throw (IOException)e;
       LOG.error("Unexpected throwable object ", e);

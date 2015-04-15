@@ -3569,6 +3569,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       try {
         region = getRegion(regionAction.getRegion());
       } catch (IOException e) {
+        rpcServer.getMetrics().exception(e);
         regionActionResultBuilder.setException(ResponseConverter.buildException(e));
         responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
         continue;  // For this region it's a failure.
@@ -3599,6 +3600,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             processed = Boolean.TRUE;
           }
         } catch (IOException e) {
+          rpcServer.getMetrics().exception(e);
           // As it's atomic, we may expect it's a global failure.
           regionActionResultBuilder.setException(ResponseConverter.buildException(e));
         }
@@ -3655,6 +3657,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                     .setName(result.getClass().getName())
                     .setValue(result.toByteString())));
           } catch (IOException ioe) {
+            rpcServer.getMetrics().exception(ioe);
             resultOrExceptionBuilder.setException(ResponseConverter.buildException(ioe));
           }
         } else if (action.hasMutation()) {
@@ -3704,6 +3707,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         // case the corresponding ResultOrException instance for the Put or Delete will be added
         // down in the doBatchOp method call rather than up here.
       } catch (IOException ie) {
+        rpcServer.getMetrics().exception(ie);
         resultOrExceptionBuilder = ResultOrException.newBuilder().
           setException(ResponseConverter.buildException(ie));
       }
