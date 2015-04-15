@@ -43,6 +43,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.log4j.Level;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,6 +83,7 @@ import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
@@ -98,6 +100,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -5535,8 +5540,44 @@ public class TestFromClientSide {
 
     // check the conf settings to disable sanity checks
     htd.setMemStoreFlushSize(0);
+
+    // Check that logs warn on invalid table but allow it.
+    ListAppender listAppender = new ListAppender();
+    Logger log = Logger.getLogger(HMaster.class);
+    log.addAppender(listAppender);
+    log.setLevel(Level.WARN);
+
     htd.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
     checkTableIsLegal(htd);
+
+    assertFalse(listAppender.getMessages().isEmpty());
+    assertTrue(listAppender.getMessages().get(0).startsWith("MEMSTORE_FLUSHSIZE for table "
+        + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
+        + "cause very frequent flushing."));
+
+    log.removeAppender(listAppender);
+  }
+
+  private static class ListAppender extends AppenderSkeleton {
+    private final List<String> messages = new ArrayList<String>();
+
+    @Override
+    protected void append(LoggingEvent event) {
+      messages.add(event.getMessage().toString());
+    }
+
+    @Override
+    public void close() {
+    }
+
+    @Override
+    public boolean requiresLayout() {
+      return false;
+    }
+
+    public List<String> getMessages() {
+      return messages;
+    }
   }
 
   private void checkTableIsLegal(HTableDescriptor htd) throws IOException {

@@ -1405,12 +1405,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    */
   private void sanityCheckTableDescriptor(final HTableDescriptor htd) throws IOException {
     final String CONF_KEY = "hbase.table.sanity.checks";
+    boolean logWarn = false;
     if (!conf.getBoolean(CONF_KEY, true)) {
-      return;
+      logWarn = true;
     }
     String tableVal = htd.getConfigurationValue(CONF_KEY);
     if (tableVal != null && !Boolean.valueOf(tableVal)) {
-      return;
+      logWarn = true;
     }
 
     // check max file size
@@ -1420,11 +1421,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       maxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE, maxFileSizeLowerLimit);
     }
     if (maxFileSize < conf.getLong("hbase.hregion.max.filesize.limit", maxFileSizeLowerLimit)) {
-      throw new DoNotRetryIOException("MAX_FILESIZE for table descriptor or "
-        + "\"hbase.hregion.max.filesize\" (" + maxFileSize
-        + ") is too small, which might cause over splitting into unmanageable "
-        + "number of regions. Set " + CONF_KEY + " to false at conf or table descriptor "
-          + "if you want to bypass sanity checks");
+      String message = "MAX_FILESIZE for table descriptor or "
+          + "\"hbase.hregion.max.filesize\" (" + maxFileSize
+          + ") is too small, which might cause over splitting into unmanageable "
+          + "number of regions.";
+      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
     }
 
     // check flush size
@@ -1434,70 +1435,79 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       flushSize = conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeLowerLimit);
     }
     if (flushSize < conf.getLong("hbase.hregion.memstore.flush.size.limit", flushSizeLowerLimit)) {
-      throw new DoNotRetryIOException("MEMSTORE_FLUSHSIZE for table descriptor or "
+      String message = "MEMSTORE_FLUSHSIZE for table descriptor or "
           + "\"hbase.hregion.memstore.flush.size\" ("+flushSize+") is too small, which might cause"
-          + " very frequent flushing. Set " + CONF_KEY + " to false at conf or table descriptor "
-          + "if you want to bypass sanity checks");
+          + " very frequent flushing.";
+      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
     }
 
     // check that coprocessors and other specified plugin classes can be loaded
     try {
       checkClassLoading(conf, htd);
     } catch (Exception ex) {
-      throw new DoNotRetryIOException(ex);
+      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, ex.getMessage(), null);
     }
 
     // check compression can be loaded
     try {
       checkCompression(htd);
     } catch (IOException e) {
-      throw new DoNotRetryIOException(e.getMessage(), e);
+      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, e.getMessage(), e);
     }
 
     // check encryption can be loaded
     try {
       checkEncryption(conf, htd);
     } catch (IOException e) {
-      throw new DoNotRetryIOException(e.getMessage(), e);
+      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, e.getMessage(), e);
     }
 
     // check that we have at least 1 CF
     if (htd.getColumnFamilies().length == 0) {
-      throw new DoNotRetryIOException("Table should have at least one column family "
-          + "Set "+CONF_KEY+" at conf or table descriptor if you want to bypass sanity checks");
+      String message = "Table should have at least one column family.";
+      warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
     }
 
     for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
       if (hcd.getTimeToLive() <= 0) {
-        throw new DoNotRetryIOException("TTL for column family " + hcd.getNameAsString()
-          + "  must be positive. Set " + CONF_KEY + " to false at conf or table descriptor "
-          + "if you want to bypass sanity checks");
+        String message = "TTL for column family " + hcd.getNameAsString() + " must be positive.";
+        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
       }
 
       // check blockSize
       if (hcd.getBlocksize() < 1024 || hcd.getBlocksize() > 16 * 1024 * 1024) {
-        throw new DoNotRetryIOException("Block size for column family " + hcd.getNameAsString()
-          + "  must be between 1K and 16MB Set "+CONF_KEY+" to false at conf or table descriptor "
-          + "if you want to bypass sanity checks");
+        String message = "Block size for column family " + hcd.getNameAsString()
+            + "  must be between 1K and 16MB.";
+        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
       }
 
       // check versions
       if (hcd.getMinVersions() < 0) {
-        throw new DoNotRetryIOException("Min versions for column family " + hcd.getNameAsString()
-          + "  must be positive. Set " + CONF_KEY + " to false at conf or table descriptor "
-          + "if you want to bypass sanity checks");
+        String message = "Min versions for column family " + hcd.getNameAsString()
+          + "  must be positive.";
+        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
       }
       // max versions already being checked
 
       // check replication scope
       if (hcd.getScope() < 0) {
-        throw new DoNotRetryIOException("Replication scope for column family "
-          + hcd.getNameAsString() + "  must be positive. Set " + CONF_KEY + " to false at conf "
-          + "or table descriptor if you want to bypass sanity checks");
+        String message = "Replication scope for column family "
+          + hcd.getNameAsString() + "  must be positive.";
+        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
       }
 
       // TODO: should we check coprocessors and encryption ?
     }
+  }
+
+  // HBASE-13350 - Helper method to log warning on sanity check failures if checks disabled.
+  private static void warnOrThrowExceptionForFailure(boolean logWarn, String confKey,
+      String message, Exception cause) throws IOException {
+    if (!logWarn) {
+      throw new DoNotRetryIOException(message + " Set " + confKey +
+          " to false at conf or table descriptor if you want to bypass sanity checks", cause);
+    }
+    LOG.warn(message);
   }
 
   private void startActiveMasterManager(int infoPort) throws KeeperException {
