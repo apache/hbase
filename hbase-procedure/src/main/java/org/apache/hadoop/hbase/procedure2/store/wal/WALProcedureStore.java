@@ -389,7 +389,7 @@ public class WALProcedureStore implements ProcedureStore {
   }
 
   private long pushData(final ByteSlot slot) {
-    assert !logs.isEmpty() : "recoverLease() must be called before inserting data";
+    assert isRunning() && !logs.isEmpty() : "recoverLease() must be called before inserting data";
     long logId = -1;
 
     lock.lock();
@@ -677,7 +677,7 @@ public class WALProcedureStore implements ProcedureStore {
       try {
         log.readTracker(storeTracker);
       } catch (IOException e) {
-        LOG.error("Unable to read tracker for " + log, e);
+        LOG.warn("Unable to read tracker for " + log + " - " + e.getMessage());
         // try the next one...
         storeTracker.clear();
         storeTracker.setPartialFlag(true);

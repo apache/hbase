@@ -195,11 +195,12 @@ public class ProcedureStoreTracker {
     //  Grow/Merge Helpers
     // ========================================================================
     public boolean canGrow(final long procId) {
-      return (procId - start) < MAX_NODE_SIZE;
+      return Math.abs(procId - start) < MAX_NODE_SIZE;
     }
 
     public boolean canMerge(final BitSetNode rightNode) {
-      return (start + rightNode.getEnd()) < MAX_NODE_SIZE;
+      assert start < rightNode.getEnd();
+      return (rightNode.getEnd() - start) < MAX_NODE_SIZE;
     }
 
     public void grow(final long procId) {
@@ -256,6 +257,11 @@ public class ProcedureStoreTracker {
         updated[offset + i] = 0;
         deleted[offset + i] = WORD_MASK;
       }
+    }
+
+    @Override
+    public String toString() {
+      return "BitSetNode(" + getStart() + "-" + getEnd() + ")";
     }
 
     // ========================================================================
@@ -377,6 +383,7 @@ public class ProcedureStoreTracker {
   @InterfaceAudience.Private
   public void setDeleted(final long procId, final boolean isDeleted) {
     BitSetNode node = getOrCreateNode(procId);
+    assert node.contains(procId) : "expected procId in the node";
     node.updateState(procId, isDeleted);
   }
 
@@ -507,6 +514,7 @@ public class ProcedureStoreTracker {
   }
 
   private BitSetNode mergeNodes(BitSetNode leftNode, BitSetNode rightNode) {
+    assert leftNode.getStart() < rightNode.getStart();
     leftNode.merge(rightNode);
     map.remove(rightNode.getStart());
     return leftNode;

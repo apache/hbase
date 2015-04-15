@@ -95,6 +95,7 @@ public class ProcedureFairRunQueues<TKey, TQueue extends ProcedureFairRunQueues.
   public void clear() {
     lock.lock();
     try {
+      currentQuantum = 0;
       current = null;
       objMap.clear();
     } finally {

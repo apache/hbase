@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -164,5 +165,29 @@ public class TestProcedureStoreTracker {
     }
     tracker.delete(procs[5].getProcId());
     assertTrue(tracker.isEmpty());
+  }
+
+  @Test
+  public void testRandLoad() {
+    final int NPROCEDURES = 2500;
+    final int NRUNS = 5000;
+
+    final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+
+    Random rand = new Random(1);
+    for (int i = 0; i < NRUNS; ++i) {
+      assertTrue(tracker.isEmpty());
+
+      int count = 0;
+      while (count < NPROCEDURES) {
+        long procId = rand.nextLong();
+        if (procId < 1) continue;
+
+        tracker.setDeleted(procId, i % 2 == 0);
+        count++;
+      }
+
+      tracker.clear();
+    }
   }
 }
