@@ -1174,6 +1174,7 @@
     <joni.version>2.1.2</joni.version>
     <jcodings.version>1.0.8</jcodings.version>
     <spy.version>2.11.6</spy.version>
+    <bouncycastle.version>1.46</bouncycastle.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
@@ -1695,6 +1696,12 @@
           </exclusion>
         </exclusions>
       </dependency>
+     <dependency>
+       <groupId>org.bouncycastle</groupId>
+       <artifactId>bcprov-jdk16</artifactId>
+       <version>${bouncycastle.version}</version>
+       <scope>test</scope>
+     </dependency>
     </dependencies>
   </dependencyManagement>
   <!-- Dependencies needed by subprojects -->
