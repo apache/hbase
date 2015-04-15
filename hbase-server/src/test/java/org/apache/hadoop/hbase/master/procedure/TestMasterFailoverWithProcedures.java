@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateTa
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DisableTableState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.EnableTableState;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -212,6 +213,67 @@ public class TestMasterFailoverWithProcedures {
 
     MasterProcedureTestingUtility.validateTableDeletion(
       UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
+  }
+
+  // ==========================================================================
+  //  Test Truncate Table
+  // ==========================================================================
+  @Test(timeout=90000)
+  public void testTruncateWithFailover() throws Exception {
+    // TODO: Should we try every step? (master failover takes long time)
+    // It is already covered by TestTruncateTableProcedure
+    // but without the master restart, only the executor/store is restarted.
+    // Without Master restart we may not find bug in the procedure code
+    // like missing "wait" for resources to be available (e.g. RS)
+    testTruncateWithFailoverAtStep(true, TruncateTableState.TRUNCATE_TABLE_ADD_TO_META.ordinal());
+  }
+
+  private void testTruncateWithFailoverAtStep(final boolean preserveSplits, final int step)
+      throws Exception {
+    final TableName tableName = TableName.valueOf("testTruncateWithFailoverAtStep" + step);
+
+    // create the table
+    final String[] families = new String[] { "f1", "f2" };
+    final byte[][] splitKeys = new byte[][] {
+      Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c")
+    };
+    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
+      getMasterProcedureExecutor(), tableName, splitKeys, families);
+    // load and verify that there are rows in the table
+    MasterProcedureTestingUtility.loadData(
+      UTIL.getConnection(), tableName, 100, splitKeys, families);
+    assertEquals(100, UTIL.countRows(tableName));
+    // disable the table
+    UTIL.getHBaseAdmin().disableTable(tableName);
+
+    ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+
+    // Start the Truncate procedure && kill the executor
+    long procId = procExec.submitProcedure(
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, preserveSplits));
+    testRecoveryAndDoubleExecution(UTIL, procId, step, TruncateTableState.values());
+
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+
+    // validate the table regions and layout
+    if (preserveSplits) {
+      assertEquals(1 + splitKeys.length, UTIL.getHBaseAdmin().getTableRegions(tableName).size());
+    } else {
+      regions = UTIL.getHBaseAdmin().getTableRegions(tableName).toArray(new HRegionInfo[1]);
+      assertEquals(1, regions.length);
+    }
+    MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getHBaseCluster().getMaster(), tableName, regions, families);
+
+    // verify that there are no rows in the table
+    assertEquals(0, UTIL.countRows(tableName));
+
+    // verify that the table is read/writable
+    MasterProcedureTestingUtility.loadData(
+      UTIL.getConnection(), tableName, 50, splitKeys, families);
+    assertEquals(50, UTIL.countRows(tableName));
   }
 
   // ==========================================================================

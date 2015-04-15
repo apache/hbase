@@ -2291,6 +2291,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Return the number of rows in the given table.
+   */
+  public int countRows(final TableName tableName) throws IOException {
+    Table table = getConnection().getTable(tableName);
+    try {
+      return countRows(table);
+    } finally {
+      table.close();
+    }
+  }
+
+  /**
    * Return an md5 digest of the entire contents of a table.
    */
   public String checksumRows(final Table table) throws Exception {
