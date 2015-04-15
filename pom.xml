@@ -1088,6 +1088,7 @@
     <netty.version>4.0.23.Final</netty.version>
     <joni.version>2.1.2</joni.version>
     <jcodings.version>1.0.8</jcodings.version>
+    <bouncycastle.version>1.46</bouncycastle.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
@@ -1591,6 +1592,12 @@
         <artifactId>disruptor</artifactId>
         <version>${disruptor.version}</version>
       </dependency>
+     <dependency>
+       <groupId>org.bouncycastle</groupId>
+       <artifactId>bcprov-jdk16</artifactId>
+       <version>${bouncycastle.version}</version>
+       <scope>test</scope>
+     </dependency>
     </dependencies>
   </dependencyManagement>
   <!-- Dependencies needed by subprojects -->
