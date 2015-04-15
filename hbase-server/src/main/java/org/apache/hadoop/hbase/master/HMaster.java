@@ -417,6 +417,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
 
     RedirectServlet.regionServerInfoPort = infoServer.getPort();
+    if(RedirectServlet.regionServerInfoPort == infoPort) {
+      return infoPort;
+    }
     masterJettyServer = new org.mortbay.jetty.Server();
     Connector connector = new SelectChannelConnector();
     connector.setHost(addr);
