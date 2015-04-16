@@ -69,7 +69,8 @@ public class HFileReaderV3 extends HFileReaderV2 {
    * @param conf
    *          Configuration
    */
-  public HFileReaderV3(final Path path, FixedFileTrailer trailer, final FSDataInputStreamWrapper fsdis,
+  public HFileReaderV3(final Path path, FixedFileTrailer trailer,
+      final FSDataInputStreamWrapper fsdis,
       final long size, final CacheConfig cacheConf, final HFileSystem hfs,
       final Configuration conf) throws IOException {
     super(path, trailer, fsdis, size, cacheConf, hfs, conf);
@@ -89,7 +90,7 @@ public class HFileReaderV3 extends HFileReaderV2 {
       HFileSystem hfs, Path path, FixedFileTrailer trailer) throws IOException {
     trailer.expectMajorVersion(3);
     HFileContextBuilder builder = new HFileContextBuilder()
-      .withIncludesMvcc(this.includesMemstoreTS)
+      .withIncludesMvcc(shouldIncludeMemstoreTS())
       .withHBaseCheckSum(true)
       .withCompression(this.compressAlgo);
 
@@ -203,30 +204,37 @@ public class HFileReaderV3 extends HFileReaderV2 {
       return nextKvPos;
     }
 
-    protected void readKeyValueLen() {
-      blockBuffer.mark();
-      currKeyLen = blockBuffer.getInt();
-      currValueLen = blockBuffer.getInt();
-      if (currKeyLen < 0 || currValueLen < 0 || currKeyLen > blockBuffer.limit()
-          || currValueLen > blockBuffer.limit()) {
-        throw new IllegalStateException("Invalid currKeyLen " + currKeyLen + " or currValueLen "
-            + currValueLen + ". Block offset: "
-            + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
-            + blockBuffer.position() + " (without header).");
+    private final void checkTagsLen() {
+      if (checkLen(this.currTagsLen)) {
+        throw new IllegalStateException("Invalid currTagsLen " + this.currTagsLen +
+          ". Block offset: " + block.getOffset() + ", block length: " + this.blockBuffer.limit() +
+          ", position: " + this.blockBuffer.position() + " (without header).");
       }
-      ByteBufferUtils.skip(blockBuffer, currKeyLen + currValueLen);
+    }
+
+    protected final void readKeyValueLen() {
+      // TODO: METHOD (mostly) DUPLICATED IN V2!!!! FIXED in master branch by collapsing v3 and v2.
+      // This is a hot method. We go out of our way to make this method short so it can be
+      // inlined and is not too big to compile. We also manage position in ByteBuffer ourselves
+      // because it is faster than going via range-checked ByteBuffer methods or going through a
+      // byte buffer array a byte at a time.
+      int p = blockBuffer.position() + blockBuffer.arrayOffset();
+      // Get a long at a time rather than read two individual ints. In micro-benchmarking, even
+      // with the extra bit-fiddling, this is order-of-magnitude faster than getting two ints.
+      long ll = Bytes.toLong(blockBuffer.array(), p);
+      // Read top half as an int of key length and bottom int as value length
+      this.currKeyLen = (int)(ll >> Integer.SIZE);
+      this.currValueLen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
+      checkKeyValueLen();
+      // Move position past the key and value lengths and then beyond the key and value
+      p += (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
       if (reader.hfileContext.isIncludesTags()) {
-        // Read short as unsigned, high byte first
-        currTagsLen = ((blockBuffer.get() & 0xff) << 8) ^ (blockBuffer.get() & 0xff);
-        if (currTagsLen < 0 || currTagsLen > blockBuffer.limit()) {
-          throw new IllegalStateException("Invalid currTagsLen " + currTagsLen + ". Block offset: "
-              + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
-              + blockBuffer.position() + " (without header).");
-        }
-        ByteBufferUtils.skip(blockBuffer, currTagsLen);
+        // Tags length is a short.
+        this.currTagsLen = Bytes.toShort(blockBuffer.array(), p);
+        checkTagsLen();
+        p += (Bytes.SIZEOF_SHORT + currTagsLen);
       }
-      readMvccVersion();
-      blockBuffer.reset();
+      readMvccVersion(p);
     }
 
     /**
@@ -284,7 +292,8 @@ public class HFileReaderV3 extends HFileReaderV2 {
           }
         }
         blockBuffer.reset();
-        int keyOffset = blockBuffer.arrayOffset() + blockBuffer.position() + (Bytes.SIZEOF_INT * 2);
+        int keyOffset =
+          blockBuffer.arrayOffset() + blockBuffer.position() + (Bytes.SIZEOF_INT * 2);
         keyOnlyKv.setKey(blockBuffer.array(), keyOffset, klen);
         int comp = reader.getComparator().compareOnlyKeyPortion(key, keyOnlyKv);
 

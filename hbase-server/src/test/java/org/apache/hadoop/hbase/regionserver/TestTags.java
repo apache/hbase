@@ -278,7 +278,7 @@ public class TestTags {
         Put put = new Put(row);
         byte[] value = Bytes.toBytes("value");
         put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
-        int bigTagLen = Short.MAX_VALUE + 5;
+        int bigTagLen = Short.MAX_VALUE - 5;
         put.setAttribute("visibility", new byte[bigTagLen]);
         table.put(put);
         Put put1 = new Put(row1);

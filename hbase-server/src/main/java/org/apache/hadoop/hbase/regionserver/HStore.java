@@ -1757,8 +1757,8 @@ public class HStore implements Store {
    * @return true if the cell is expired
    */
   static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp, final long now) {
-    // Do not create an Iterator or Tag objects unless the cell actually has
-    // tags
+    // Do not create an Iterator or Tag objects unless the cell actually has tags.
+    // TODO: This check for tags is really expensive. We decode an int for key and value. Costs.
     if (cell.getTagsLength() > 0) {
       // Look for a TTL tag first. Use it instead of the family setting if
       // found. If a cell has multiple TTLs, resolve the conflict by using the

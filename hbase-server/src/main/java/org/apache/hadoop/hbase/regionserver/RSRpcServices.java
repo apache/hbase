@@ -2249,7 +2249,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             if (maxResultSize <= 0) {
               maxResultSize = maxQuotaResultSize;
             }
-            List<Cell> values = new ArrayList<Cell>();
+            // This is cells inside a row. Default size is 10 so if many versions or many cfs,
+            // then we'll resize. Resizings show in profiler. Set it higher than 10. For now
+            // arbitrary 32. TODO: keep record of general size of results being returned.
+            List<Cell> values = new ArrayList<Cell>(32);
             region.startRegionOperation(Operation.SCAN);
             try {
               int i = 0;

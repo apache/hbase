@@ -53,6 +53,7 @@ import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeComparer;
 
 /**
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeCo
  * comparisons, hash code generation, manufacturing keys for HashMaps or
  * HashSets, etc.
  */
+@SuppressWarnings("restriction")
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Bytes {
@@ -116,6 +118,11 @@ public class Bytes {
    */
   public static final int SIZEOF_SHORT = Short.SIZE / Byte.SIZE;
 
+  /**
+   * Mask to apply to a long to reveal the lower int only. Use like this:
+   * int i = (int)(0xFFFFFFFF00000000l ^ some_long_value);
+   */
+  public static final long MASK_FOR_LOWER_INT_IN_LONG = 0xFFFFFFFF00000000l;
 
   /**
    * Estimate of size cost to pay beyond payload in jvm for instance of byte [].

@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.io.WritableUtils;
@@ -70,14 +69,15 @@ public class HFileReaderV2 extends AbstractHFileReader {
    */
   public final static int KEY_VALUE_LEN_SIZE = 2 * Bytes.SIZEOF_INT;
 
-  protected boolean includesMemstoreTS = false;
+  private boolean includesMemstoreTS = false;
   protected boolean decodeMemstoreTS = false;
+
   protected boolean shouldIncludeMemstoreTS() {
     return includesMemstoreTS;
   }
 
   /** Filesystem-level block reader. */
-  protected HFileBlock.FSReader fsBlockReader;
+  private HFileBlock.FSReader fsBlockReader;
 
   /**
    * A "sparse lock" implementation allowing to lock on a particular block
@@ -104,7 +104,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
   /** Minor versions starting with this number have faked index key */
   static final int MINOR_VERSION_WITH_FAKED_KEY = 3;
 
-  protected HFileContext hfileContext;
+  HFileContext hfileContext;
 
   /**
    * Opens a HFile. You must load the index before you can use it by calling
@@ -158,7 +158,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
     fileInfo = new FileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
     byte[] creationTimeBytes = fileInfo.get(FileInfo.CREATE_TIME_TS);
-    this.hfileContext.setFileCreateTime(creationTimeBytes == null ? 0 : Bytes.toLong(creationTimeBytes));
+    this.hfileContext.setFileCreateTime(creationTimeBytes == null? 0:
+      Bytes.toLong(creationTimeBytes));
     lastKey = fileInfo.get(FileInfo.LASTKEY);
     avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
     avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));
@@ -792,16 +793,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
     }
 
     /**
-     * Go to the next key/value in the block section. Loads the next block if
-     * necessary. If successful, {@link #getKey()} and {@link #getValue()} can
-     * be called.
-     *
-     * @return true if successfully navigated to the next key/value
+     * Set the position on current backing blockBuffer.
      */
-    @Override
-    public boolean next() throws IOException {
-      assertSeeked();
-
+    private void positionThisBlockBuffer() {
       try {
         blockBuffer.position(getNextCellStartPosition());
       } catch (IllegalArgumentException e) {
@@ -812,30 +806,58 @@ public class HFileReaderV2 extends AbstractHFileReader {
             + "; currBlock currBlockOffset = " + block.getOffset());
         throw e;
       }
+    }
 
-      if (blockBuffer.remaining() <= 0) {
-        long lastDataBlockOffset =
-            reader.getTrailer().getLastDataBlockOffset();
-
-        if (block.getOffset() >= lastDataBlockOffset) {
-          setNonSeekedState();
-          return false;
-        }
-
-        // read the next block
-        HFileBlock nextBlock = readNextDataBlock();
-        if (nextBlock == null) {
-          setNonSeekedState();
-          return false;
-        }
-
-        updateCurrBlock(nextBlock);
-        return true;
+    /**
+     * Set our selves up for the next 'next' invocation, set up next block.
+     * @return True is more to read else false if at the end.
+     * @throws IOException
+     */
+    private boolean positionForNextBlock() throws IOException {
+      // Methods are small so they get inlined because they are 'hot'.
+      long lastDataBlockOffset = reader.getTrailer().getLastDataBlockOffset();
+      if (block.getOffset() >= lastDataBlockOffset) {
+        setNonSeekedState();
+        return false;
       }
+      return isNextBlock();
+    }
 
+    private boolean isNextBlock() throws IOException {
+      // Methods are small so they get inlined because they are 'hot'.
+      HFileBlock nextBlock = readNextDataBlock();
+      if (nextBlock == null) {
+        setNonSeekedState();
+        return false;
+      }
+      updateCurrBlock(nextBlock);
+      return true;
+    }
+
+    private final boolean _next() throws IOException {
+      // Small method so can be inlined. It is a hot one.
+      if (blockBuffer.remaining() <= 0) {
+        return positionForNextBlock();
+      }
       // We are still in the same block.
       readKeyValueLen();
       return true;
+    }
+
+    /**
+     * Go to the next key/value in the block section. Loads the next block if
+     * necessary. If successful, {@link #getKey()} and {@link #getValue()} can
+     * be called.
+     *
+     * @return true if successfully navigated to the next key/value
+     */
+    @Override
+    public boolean next() throws IOException {
+      // This is a hot method so extreme measures taken to ensure it is small and inlineable.
+      // Checked by setting: -XX:+UnlockDiagnosticVMOptions -XX:+PrintInlining -XX:+PrintCompilation
+      assertSeeked();
+      positionThisBlockBuffer();
+      return _next();
     }
 
     protected int getNextCellStartPosition() {
@@ -918,34 +940,87 @@ public class HFileReaderV2 extends AbstractHFileReader {
       this.nextIndexedKey = null;
     }
 
-    protected void readKeyValueLen() {
-      blockBuffer.mark();
-      currKeyLen = blockBuffer.getInt();
-      currValueLen = blockBuffer.getInt();
-      ByteBufferUtils.skip(blockBuffer, currKeyLen + currValueLen);
-      readMvccVersion();
-      if (currKeyLen < 0 || currValueLen < 0
-          || currKeyLen > blockBuffer.limit()
-          || currValueLen > blockBuffer.limit()) {
-        throw new IllegalStateException("Invalid currKeyLen " + currKeyLen
-            + " or currValueLen " + currValueLen + ". Block offset: "
-            + block.getOffset() + ", block length: " + blockBuffer.limit()
-            + ", position: " + blockBuffer.position() + " (without header).");
+    /**
+     * @param v
+     * @return True if v < 0 or v > current block buffer limit.
+     */
+    protected final boolean checkLen(final int v) {
+      return v < 0 || v > this.blockBuffer.limit();
+    }
+
+    /**
+     * Check key and value lengths are wholesome.
+     */
+    protected final void checkKeyValueLen() {
+      if (checkLen(this.currKeyLen) || checkLen(this.currValueLen)) {
+        throw new IllegalStateException("Invalid currKeyLen " + this.currKeyLen +
+          " or currValueLen " + this.currValueLen + ". Block offset: " + block.getOffset() +
+          ", block length: " + this.blockBuffer.limit() + ", position: " +
+           this.blockBuffer.position() + " (without header).");
       }
-      blockBuffer.reset();
+    }
+
+    protected void readKeyValueLen() {
+      // TODO: METHOD (mostly) DUPLICATED IN V3!!!!! FIXED in master branch by collapsing v3 and v2.
+      // This is a hot method. We go out of our way to make this method short so it can be
+      // inlined and is not too big to compile. We also manage position in ByteBuffer ourselves
+      // because it is faster than going via range-checked ByteBuffer methods or going through a
+      // byte buffer array a byte at a time.
+      int p = blockBuffer.position() + blockBuffer.arrayOffset();
+      // Get a long at a time rather than read two individual ints. In micro-benchmarking, even
+      // with the extra bit-fiddling, this is order-of-magnitude faster than getting two ints.
+      long ll = Bytes.toLong(blockBuffer.array(), p);
+      // Read top half as an int of key length and bottom int as value length
+      this.currKeyLen = (int)(ll >> Integer.SIZE);
+      this.currValueLen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
+      checkKeyValueLen();
+      // Move position past the key and value lengths and then beyond the key and value
+      p += (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
+      readMvccVersion(p);
+    }
+
+    /**
+     * Read mvcc. Does checks to see if we even need to read the mvcc at all.
+     * @param position
+     */
+    protected void readMvccVersion(final int position) {
+      // See if we even need to decode mvcc.
+      if (!this.reader.shouldIncludeMemstoreTS()) return;
+      if (!this.reader.decodeMemstoreTS) {
+        currMemstoreTS = 0;
+        currMemstoreTSLen = 1;
+        return;
+      }
+      _readMvccVersion(position);
+    }
+
+    /**
+     * Actually do the mvcc read. Does no checks.
+     * @param position
+     */
+    private void _readMvccVersion(final int position) {
+      // This is Bytes#bytesToVint inlined so can save a few instructions in this hot method; i.e.
+      // previous if one-byte vint, we'd redo the vint call to find int size.
+      // Also the method is kept small so can be inlined.
+      byte firstByte = blockBuffer.array()[position];
+      int len = WritableUtils.decodeVIntSize(firstByte);
+      if (len == 1) {
+        this.currMemstoreTS = firstByte;
+      } else {
+        long i = 0;
+        for (int idx = 0; idx < len - 1; idx++) {
+          byte b = blockBuffer.array()[position + 1 + idx];
+          i = i << 8;
+          i = i | (b & 0xFF);
+        }
+        currMemstoreTS = (WritableUtils.isNegativeVInt(firstByte) ? ~i : i);
+      }
+      this.currMemstoreTSLen = len;
     }
 
     protected void readMvccVersion() {
-      if (this.reader.shouldIncludeMemstoreTS()) {
-        if (this.reader.decodeMemstoreTS) {
-          currMemstoreTS = Bytes.readAsVLong(blockBuffer.array(), blockBuffer.arrayOffset()
-              + blockBuffer.position());
-          currMemstoreTSLen = WritableUtils.getVIntSize(currMemstoreTS);
-        } else {
-          currMemstoreTS = 0;
-          currMemstoreTSLen = 1;
-        }
-      }
+      // TODO CLEANUP!!!
+      readMvccVersion(blockBuffer.arrayOffset() + blockBuffer.position());
     }
 
     /**
