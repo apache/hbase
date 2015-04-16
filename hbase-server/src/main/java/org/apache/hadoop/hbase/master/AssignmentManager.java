@@ -4236,15 +4236,17 @@ public class AssignmentManager extends ZooKeeperListener {
     case READY_TO_MERGE:
     case MERGE_PONR:
     case MERGED:
-      try {
-        regionStateListener.onRegionMerged(hri);
-      } catch (IOException exp) {
-        errorMsg = StringUtils.stringifyException(exp);
-      }
     case MERGE_REVERTED:
       errorMsg = onRegionMerge(serverName, code, hri,
         HRegionInfo.convert(transition.getRegionInfo(1)),
         HRegionInfo.convert(transition.getRegionInfo(2)));
+      if (code == TransitionCode.MERGED && org.apache.commons.lang.StringUtils.isEmpty(errorMsg)) {
+        try {
+          regionStateListener.onRegionMerged(hri);
+        } catch (IOException exp) {
+          errorMsg = StringUtils.stringifyException(exp);
+        }
+      }
       break;
 
     default:
