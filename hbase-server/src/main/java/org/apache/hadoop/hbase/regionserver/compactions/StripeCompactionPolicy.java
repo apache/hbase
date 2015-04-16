@@ -248,7 +248,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
       req = new SplitStripeCompactionRequest(
           filesToCompact, si.getStartRow(bqIndex), si.getEndRow(bqIndex), targetCount, targetKvs);
     }
-    if (canDropDeletesWithoutL0 || includeL0) {
+    if (hasAllFiles && (canDropDeletesWithoutL0 || includeL0)) {
       req.setMajorRange(si.getStartRow(bqIndex), si.getEndRow(bqIndex));
     }
     req.getRequest().setOffPeak(isOffpeak);
