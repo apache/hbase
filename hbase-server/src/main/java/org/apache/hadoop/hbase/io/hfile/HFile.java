@@ -832,7 +832,7 @@ public class HFile {
   }
 
   /**
-   * Returns all files belonging to the given region directory. Could return an
+   * Returns all HFiles belonging to the given region directory. Could return an
    * empty list.
    *
    * @param fs  The file system reference.
@@ -842,18 +842,20 @@ public class HFile {
    */
   static List<Path> getStoreFiles(FileSystem fs, Path regionDir)
       throws IOException {
-    List<Path> res = new ArrayList<Path>();
+    List<Path> regionHFiles = new ArrayList<Path>();
     PathFilter dirFilter = new FSUtils.DirFilter(fs);
     FileStatus[] familyDirs = fs.listStatus(regionDir, dirFilter);
     for(FileStatus dir : familyDirs) {
       FileStatus[] files = fs.listStatus(dir.getPath());
       for (FileStatus file : files) {
-        if (!file.isDirectory()) {
-          res.add(file.getPath());
+        if (!file.isDirectory() &&
+            (!file.getPath().toString().contains(HConstants.HREGION_OLDLOGDIR_NAME)) &&
+            (!file.getPath().toString().contains(HConstants.RECOVERED_EDITS_DIR))) {
+          regionHFiles.add(file.getPath());
         }
       }
     }
-    return res;
+    return regionHFiles;
   }
 
   /**
