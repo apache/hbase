@@ -112,6 +112,11 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   public static final String REPLICATION_SCOPE = "REPLICATION_SCOPE";
   public static final byte[] REPLICATION_SCOPE_BYTES = Bytes.toBytes(REPLICATION_SCOPE);
   public static final String MIN_VERSIONS = "MIN_VERSIONS";
+  /**
+   * Retain all cells across flushes and compactions even if they fall behind
+   * a delete tombstone. To see all retained cells, do a 'raw' scan; see
+   * Scan#setRaw or pass RAW => true attribute in the shell.
+   */
   public static final String KEEP_DELETED_CELLS = "KEEP_DELETED_CELLS";
   public static final String COMPRESS_TAGS = "COMPRESS_TAGS";
 

@@ -25,8 +25,8 @@ module Shell
 Creates a table. Pass a table name, and a set of column family
 specifications (at least one), and, optionally, table configuration.
 Column specification can be a simple string (name), or a dictionary
-(dictionaries are described below in main help output), necessarily 
-including NAME attribute. 
+(dictionaries are described below in main help output), necessarily
+including NAME attribute.
 Examples:
 
 Create a table with namespace=ns1 and table qualifier=t1
@@ -38,7 +38,7 @@ Create a table with namespace=default and table qualifier=t1
   hbase> create 't1', 'f1', 'f2', 'f3'
   hbase> create 't1', {NAME => 'f1', VERSIONS => 1, TTL => 2592000, BLOCKCACHE => true}
   hbase> create 't1', {NAME => 'f1', CONFIGURATION => {'hbase.hstore.blockingStoreFiles' => '10'}}
-  
+
 Table configuration options can be put at the end.
 Examples:
 
