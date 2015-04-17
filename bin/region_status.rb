@@ -46,6 +46,7 @@ end
 require 'java'
 
 import org.apache.hadoop.hbase.HBaseConfiguration
+import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.MasterNotRunningException
 import org.apache.hadoop.hbase.client.HBaseAdmin
@@ -65,6 +66,7 @@ org.apache.log4j.Logger.getLogger("org.apache.hadoop.hbase").setLevel(log_level)
 
 config = HBaseConfiguration.create
 config.set 'fs.defaultFS', config.get(HConstants::HBASE_DIR)
+connection = ConnectionFactory.createConnection(config)
 
 # wait until the master is running
 admin = nil
@@ -100,7 +102,7 @@ table = nil
 iter = nil
 while true
   begin
-    table = HTable.new config, 'hbase:meta'.to_java_bytes
+    table = connection.getTable(TableName.valueOf('hbase:meta'))
     scanner = table.getScanner(scan)
     iter = scanner.iterator
     break
