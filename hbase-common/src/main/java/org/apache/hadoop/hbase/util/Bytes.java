@@ -55,6 +55,7 @@ import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeComparer;
 
 /**
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeCo
  * comparisons, hash code generation, manufacturing keys for HashMaps or
  * HashSets, and can be used as key in maps or trees.
  */
+@SuppressWarnings("restriction")
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
@@ -121,6 +123,11 @@ public class Bytes implements Comparable<Bytes> {
    */
   public static final int SIZEOF_SHORT = Short.SIZE / Byte.SIZE;
 
+  /**
+   * Mask to apply to a long to reveal the lower int only. Use like this:
+   * int i = (int)(0xFFFFFFFF00000000L ^ some_long_value);
+   */
+  public static final long MASK_FOR_LOWER_INT_IN_LONG = 0xFFFFFFFF00000000L;
 
   /**
    * Estimate of size cost to pay beyond payload in jvm for instance of byte [].
@@ -638,12 +645,12 @@ public class Bytes implements Comparable<Bytes> {
     // Just in case we are passed a 'len' that is > buffer length...
     if (off >= b.length) return result.toString();
     if (off + len > b.length) len = b.length - off;
-    for (int i = off; i < off + len ; ++i ) {
+    for (int i = off; i < off + len ; ++i) {
       int ch = b[i] & 0xFF;
       if ( (ch >= '0' && ch <= '9')
           || (ch >= 'A' && ch <= 'Z')
           || (ch >= 'a' && ch <= 'z')
-          || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0 ) {
+          || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0) {
         result.append((char)ch);
       } else {
         result.append(String.format("\\x%02X", ch));
@@ -665,7 +672,7 @@ public class Bytes implements Comparable<Bytes> {
    * @return The converted hex value as a byte.
    */
   public static byte toBinaryFromHex(byte ch) {
-    if ( ch >= 'A' && ch <= 'F' )
+    if (ch >= 'A' && ch <= 'F')
       return (byte) ((byte)10 + (byte) (ch - 'A'));
     // else
     return (byte) (ch - '0');

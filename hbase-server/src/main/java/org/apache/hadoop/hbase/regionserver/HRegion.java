@@ -348,7 +348,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private boolean disallowWritesInRecovering = false;
 
   // when a region is in recovering state, it can only accept writes not reads
-  private volatile boolean isRecovering = false;
+  private volatile boolean recovering = false;
 
   private volatile Optional<ConfigurationManager> configurationManager;
 
@@ -706,7 +706,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Map<String, Region> recoveringRegions = rsServices.getRecoveringRegions();
       String encodedName = getRegionInfo().getEncodedName();
       if (recoveringRegions != null && recoveringRegions.containsKey(encodedName)) {
-        this.isRecovering = true;
+        this.recovering = true;
         recoveringRegions.put(encodedName, this);
       }
     } else {
@@ -836,7 +836,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // overlaps used sequence numbers
     if (this.writestate.writesEnabled) {
       nextSeqid = WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(), this.fs
-          .getRegionDir(), nextSeqid, (this.isRecovering ? (this.flushPerChanges + 10000000) : 1));
+          .getRegionDir(), nextSeqid, (this.recovering ? (this.flushPerChanges + 10000000) : 1));
     } else {
       nextSeqid++;
     }
@@ -1148,7 +1148,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Reset recovering state of current region
    */
   public void setRecovering(boolean newState) {
-    boolean wasRecovering = this.isRecovering;
+    boolean wasRecovering = this.recovering;
     // before we flip the recovering switch (enabling reads) we should write the region open
     // event to WAL if needed
     if (wal != null && getRegionServerServices() != null && !writestate.readOnly
@@ -1189,8 +1189,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
-    this.isRecovering = newState;
-    if (wasRecovering && !isRecovering) {
+    this.recovering = newState;
+    if (wasRecovering && !recovering) {
       // Call only when wal replay is over.
       coprocessorHost.postLogReplay();
     }
@@ -1198,7 +1198,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public boolean isRecovering() {
-    return this.isRecovering;
+    return this.recovering;
   }
 
   @Override
@@ -5992,7 +5992,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.openSeqNum = initialize(reporter);
     this.setSequenceId(openSeqNum);
     if (wal != null && getRegionServerServices() != null && !writestate.readOnly
-        && !isRecovering) {
+        && !recovering) {
       // Only write the region open event marker to WAL if (1) we are not read-only
       // (2) dist log replay is off or we are not recovering. In case region is
       // recovering, the open event will be written at setRecovering(false)
