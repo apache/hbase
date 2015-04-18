@@ -18,15 +18,15 @@
 package org.apache.hadoop.hbase.master.cleaner;
 
 import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -57,7 +57,14 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
     if (HFileLink.isBackReferencesDir(parentDir)) {
       Path hfilePath = null;
       try {
-        hfilePath = HFileLink.getHFileFromBackReference(getConf(), filePath);
+        // Also check if the HFile is in the HBASE_TEMP_DIRECTORY; this is where the referenced
+        // file gets created when cloning a snapshot.
+        hfilePath = HFileLink.getHFileFromBackReference(
+            new Path(FSUtils.getRootDir(getConf()), HConstants.HBASE_TEMP_DIRECTORY), filePath);
+        if (fs.exists(hfilePath)) {
+          return false;
+        }
+        hfilePath = HFileLink.getHFileFromBackReference(FSUtils.getRootDir(getConf()), filePath);
         return !fs.exists(hfilePath);
       } catch (IOException e) {
         if (LOG.isDebugEnabled()) {

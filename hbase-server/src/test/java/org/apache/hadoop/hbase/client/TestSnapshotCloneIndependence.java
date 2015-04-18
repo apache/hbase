@@ -57,7 +57,9 @@ public class TestSnapshotCloneIndependence {
   private static final String STRING_TABLE_NAME = "test";
   private static final String TEST_FAM_STR = "fam";
   private static final byte[] TEST_FAM = Bytes.toBytes(TEST_FAM_STR);
-  private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
+
+  private static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
+  private static final int CLEANER_INTERVAL = 10;
 
   /**
    * Setup the config for the cluster and start it
@@ -87,6 +89,13 @@ public class TestSnapshotCloneIndependence {
     // Avoid potentially aggressive splitting which would cause snapshot to fail
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
+    // Execute cleaner frequently to induce failures
+    conf.setInt("hbase.master.cleaner.interval", CLEANER_INTERVAL);
+    conf.setInt("hbase.master.hfilecleaner.plugins.snapshot.period", CLEANER_INTERVAL);
+    // Effectively disable TimeToLiveHFileCleaner. Don't want to fully disable it because that
+    // will even trigger races between creating the directory containing back references and
+    // the back reference itself.
+    conf.setInt("hbase.master.hfilecleaner.ttl", CLEANER_INTERVAL);
   }
 
   @Before
@@ -162,6 +171,16 @@ public class TestSnapshotCloneIndependence {
   @Test (timeout=300000)
   public void testOnlineSnapshotRegionOperationsIndependent() throws Exception {
     runTestRegionOperationsIndependent(true);
+  }
+
+  @Test (timeout=300000)
+  public void testOfflineSnapshotDeleteIndependent() throws Exception {
+    runTestSnapshotDeleteIndependent(false);
+  }
+
+  @Test (timeout=300000)
+  public void testOnlineSnapshotDeleteIndependent() throws Exception {
+    runTestSnapshotDeleteIndependent(true);
   }
 
   private static void waitOnSplit(final HTable t, int originalCount) throws Exception {
@@ -369,5 +388,64 @@ public class TestSnapshotCloneIndependence {
       originalTableDescriptor.hasFamily(TEST_FAM_2));
     Assert.assertTrue("The new family was not found. ",
       !clonedTableDescriptor.hasFamily(TEST_FAM_2));
+  }
+
+  /*
+   * Take a snapshot of a table, add data, and verify that deleting the snapshot does not affect
+   * either table.
+   * @param online - Whether the table is online or not during the snapshot
+   */
+  private void runTestSnapshotDeleteIndependent(boolean online) throws Exception {
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+
+    final HBaseAdmin admin = UTIL.getHBaseAdmin();
+    final long startTime = System.currentTimeMillis();
+    final TableName localTableName =
+        TableName.valueOf(STRING_TABLE_NAME + startTime);
+
+    HTable original = UTIL.createTable(localTableName, TEST_FAM);
+    try {
+      UTIL.loadTable(original, TEST_FAM);
+    } finally {
+      original.close();
+    }
+
+    // Take a snapshot
+    final String snapshotNameAsString = "snapshot_" + localTableName;
+    byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
+
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
+        snapshotNameAsString, rootDir, fs, online);
+
+    if (!online) {
+      admin.enableTable(localTableName);
+    }
+    TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
+    admin.cloneSnapshot(snapshotName, cloneTableName);
+
+    // Ensure the original table does not reference the HFiles anymore
+    admin.majorCompact(localTableName.getNameAsString());
+
+    // Deleting the snapshot used to break the cloned table by deleting in-use HFiles
+    admin.deleteSnapshot(snapshotName);
+
+    // Wait for cleaner run and DFS heartbeats so that anything that is deletable is fully deleted
+    Thread.sleep(10000);
+
+    original = new HTable(UTIL.getConfiguration(), localTableName);
+    try {
+      HTable clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName);
+      try {
+        // Verify that all regions of both tables are readable
+        final int origTableRowCount = UTIL.countRows(original);
+        final int clonedTableRowCount = UTIL.countRows(clonedTable);
+        Assert.assertEquals(origTableRowCount, clonedTableRowCount);
+      } finally {
+        clonedTable.close();
+      }
+    } finally {
+      original.close();
+    }
   }
 }
